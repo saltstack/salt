@@ -86,7 +86,7 @@ def custom():
         keys = opt.split('.')
         if keys[0] != 'status':
             continue
-        func = '%s()' % keys[1]
+        func = '{0}()'.format(keys[1])
         vals = eval(func)
 
         for item in __opts__[opt]:
@@ -443,3 +443,19 @@ def all_status():
             'uptime': uptime(),
             'vmstats': vmstats(),
             'w': w()}
+
+
+def pid(sig):
+    '''
+    Return the PID or an empty string if the process is running or not.
+    Pass a signature to use to find the process via ps.
+
+    CLI Example::
+
+        salt '*' status.pid <sig>
+    '''
+    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
+            __grains__, sig)
+    return (__salt__['cmd.run_stdout'](cmd) or '').strip()
+
+

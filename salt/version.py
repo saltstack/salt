@@ -1,7 +1,23 @@
 import sys
 
-__version_info__ = (0, 10, 1)
+__version_info__ = (0, 10, 4)
 __version__ = '.'.join(map(str, __version_info__))
+
+# If we can get a version from Git use that instead, otherwise carry on
+try:
+    import subprocess
+    from salt.utils import which
+
+    git = which('git')
+    if git:
+        p = subprocess.Popen([git, 'describe'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        out, err = p.communicate()
+        if out:
+            __version__ = '{0}'.format(out.strip().lstrip('v'))
+            __version_info__ = tuple(__version__.split('-', 1)[0].split('.'))
+except Exception:
+    pass
 
 def versions_report():
     libs = (
@@ -12,14 +28,17 @@ def versions_report():
         ("pycrypto", "Crypto", "__version__"),
         ("PyYAML", "yaml", "__version__"),
         ("PyZMQ", "zmq", "__version__"),
-
     )
 
-    fmt = "{0:>%d}: {1}" % (len(max([lib[0] for lib in libs], key=len)) + 1)
+    padding = len(max([lib[0] for lib in libs], key=len)) + 1
 
-    yield fmt.format("Salt", __version__)
+    fmt = '{0:>{pad}}: {1}'
 
-    yield fmt.format("Python", sys.version.rsplit('\n')[0].strip())
+    yield fmt.format("Salt", __version__, pad=padding)
+
+    yield fmt.format(
+        "Python", sys.version.rsplit('\n')[0].strip(), pad=padding
+    )
 
     for name, imp, attr in libs:
         try:
@@ -27,9 +46,9 @@ def versions_report():
             version = getattr(imp, attr)
             if not isinstance(version, basestring):
                 version = '.'.join(map(str, version))
-            yield fmt.format(name, version)
+            yield fmt.format(name, version, pad=padding)
         except ImportError:
-            yield fmt.format(name, "not installed")
+            yield fmt.format(name, "not installed", pad=padding)
 
 
 if __name__ == '__main__':

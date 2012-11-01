@@ -72,7 +72,7 @@ def _format_pkgs(split):
     pkg = {}
     for k, v in split.items():
         if v[2]:
-            name = '%s--%s' % (v[0], v[2])
+            name = '{0}--{1}'.format(v[0], v[2])
         else:
             name = v[0]
         pkg[name] = v[1]

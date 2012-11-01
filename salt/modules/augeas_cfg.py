@@ -1,22 +1,28 @@
 '''
 Manages configuration files via augeas
 '''
+# Load Augeas libs
+load = False
+try:
+    from augeas import Augeas
+    load = True
+except ImportError:
+    pass
 
 
 def __virtual__():
-    ''' Only run this module if the augeas python module is installed '''
-    try:
-        from augeas import Augeas
-        _ = Augeas
-    except ImportError:
-        return False
+    '''
+    Only run this module if the augeas python module is installed
+    '''
+    if load:
+        return 'augeas'
     else:
-        return "augeas"
+        return False
 
 
 def _recurmatch(path, aug):
     '''
-    recursive generator providing the infrastructure for
+    Recursive generator providing the infrastructure for
     augtools print behaviour.
 
     This function is based on test_augeas.py from
@@ -27,7 +33,7 @@ def _recurmatch(path, aug):
         clean_path = path.rstrip('/*')
         yield (clean_path, aug.get(path))
 
-        for i in aug.match(clean_path + "/*"):
+        for i in aug.match(clean_path + '/*'):
             i = i.replace('!', '\!')  # escape some dirs
             for x in _recurmatch(i, aug):
                 yield x
@@ -60,7 +66,7 @@ def get(path, value=''):
 
     path = path.rstrip('/')
     if value:
-        path += "/{0}".format(value.strip('/'))
+        path += '/{0}'.format(value.strip('/'))
 
     try:
         _match = aug.match(path)
@@ -106,8 +112,6 @@ def setvalue(*args):
 
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     '''
-
-
     from augeas import Augeas
     aug = Augeas()
 
@@ -151,7 +155,6 @@ def match(path, value=''):
 
         salt '*' augeas.match /files/etc/services/service-name ssh
     '''
-
     from augeas import Augeas
     aug = Augeas()
 
@@ -205,7 +208,6 @@ def ls(path):
 
         salt '*' augeas.ls /files/etc/passwd
     '''
-
     def _match(path):
         ''' Internal match function '''
         try:
@@ -237,7 +239,6 @@ def ls(path):
 
 
 def tree(path):
-
     '''
     Returns recursively the complete tree of a node
 
@@ -245,7 +246,6 @@ def tree(path):
 
         salt '*' augeas.tree /files/etc/
     '''
-
     from augeas import Augeas
     aug = Augeas()
 

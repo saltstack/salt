@@ -70,7 +70,6 @@ truly make it work for you.
 .. sidebar:: More tutorials!
 
     * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
-    * :doc:`Installing Salt on FreeBSD <topics/installation/freebsd>`
     * :doc:`Preseeding Minions with Accepted Keys <topics/tutorials/preseed_key>`
 
 .. contents:: The components of Salt
@@ -158,8 +157,8 @@ effortless, simultaneous configuration of thousands of hosts.
     file type of your choice. The world doesn't need yet another DSL.
 
     :doc:`Full list of renderers <ref/renderers/all/index>`
-        YAML? JSON? Jinja? Mako? Python? We got you covered. (And if we
-        don't, new renderers are *tiny* and easy to write.)
+        YAML? JSON? Jinja? Mako? Wempy? Python? We got you covered. (And if
+        we don't, new renderers are *tiny* and easy to write.)
 
     :doc:`Renderers <ref/renderers/index>`
         Salt states are only concerned with the ultimate highstate data
@@ -197,9 +196,17 @@ Salt is many splendid things.
     management. The possibilities are endless and Salt's future looks
     bright.
 
+:doc:`Testing Salt <topics/tests/index>`
+    A howto for writing unit tests and integration tests.
+
 :doc:`Python API interface <ref/python-api>`
     Use Salt programmatically from your own scripts and programs easily and
     simply via ``import salt``.
+
+:doc:`Automatic Updates and Frozen Binary Deployments <topics/tutorials/esky>`
+    Use a frozen install to make deployments easier (Even on Windows!). Or
+    take advantage of automatic updates to keep your minions running your
+    latest builds.
 
 Reference
 ---------

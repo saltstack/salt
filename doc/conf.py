@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-
+# pylint: disable=C0103,W0622
+'''
+Sphinx documentation for Salt
+'''
 import sys
 import os
 import types
@@ -7,6 +10,7 @@ import types
 from sphinx.directives import TocTree
 
 
+# pylint: disable=R0903
 class Mock(object):
     '''
     Mock out specified imports
@@ -30,34 +34,37 @@ class Mock(object):
             return type(name, (), {})
         else:
             return Mock()
+# pylint: enable=R0903
 
 MOCK_MODULES = [
     # salt core
-    'yaml',
-    'yaml.nodes',
-    'yaml.constructor',
-    'msgpack',
-    'zmq',
     'Crypto',
     'Crypto.Cipher',
     'Crypto.Hash',
     'Crypto.PublicKey',
     'Crypto.Random',
     'M2Crypto',
+    'msgpack',
+    'yaml',
+    'yaml.constructor',
+    'yaml.nodes',
+    'zmq',
     # modules, renderers, states, returners, et al
+    'django',
+    'libvirt',
+    'mako',
+    'mako.template',
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
-    'libvirt',
-    'yum',
-    'mako',
-    'mako.template',
+    'pycassa',
     'pymongo',
+    'rabbitmq_server',
     'redis',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
-    'pycassa',
+    'yum',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -92,8 +99,12 @@ master_doc = 'contents'
 templates_path = ['_templates']
 exclude_patterns = ['_build']
 
-extensions = ['saltdocs', 'sphinx.ext.autodoc', 'sphinx.ext.extlinks',
-    'sphinx.ext.autosummary']
+extensions = [
+    'saltdocs',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.extlinks',
+]
 
 modindex_common_prefix = ['salt.']
 
@@ -107,7 +118,7 @@ rst_prolog = """\
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
-    'blob': ('https://github.com/saltstack/salt/blob/v%s/%%s' % __version__, None),
+    'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
 }
@@ -144,7 +155,7 @@ html_context = {
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
 }
 
-html_use_index = False
+html_use_index = True
 html_last_updated_fmt = '%b %d, %Y'
 html_show_sourcelink = False
 html_show_sphinx = True

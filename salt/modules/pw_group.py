@@ -53,11 +53,15 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    grinfo = grp.getgrnam(name)
-    return {'name': grinfo.gr_name,
-            'passwd': grinfo.gr_passwd,
-            'gid': grinfo.gr_gid,
-            'members': grinfo.gr_mem}
+    try:
+        grinfo = grp.getgrnam(name)
+    except KeyError:
+        return {}
+    else:
+        return {'name': grinfo.gr_name,
+                'passwd': grinfo.gr_passwd,
+                'gid': grinfo.gr_gid,
+                'members': grinfo.gr_mem}
 
 
 def getent():

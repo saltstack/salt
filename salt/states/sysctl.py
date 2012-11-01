@@ -32,7 +32,6 @@ def present(name, value, config='/etc/sysctl.conf'):
 
     current = __salt__['sysctl.show']()
     if __opts__['test']:
-        print current
         if name in current:
             if current[name] != str(value):
                 ret['result'] = None

@@ -45,6 +45,7 @@ class TestModulesGrains(integration.ModuleCase):
             'mem_total',
             'num_cpus',
             'os',
+            'os_family',
             'path',
             'ps',
             'pythonpath',

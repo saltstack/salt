@@ -967,8 +967,6 @@ def signal(signal=None):
 
         salt '*' solr.signal restart
     '''
-
-    ret = _get_return_dict()
     valid_signals = ('start', 'stop', 'restart')
 
     # Give a friendly error message for invalid signals
@@ -979,7 +977,7 @@ def signal(signal=None):
             signal, ', '.join(msg))
 
     cmd = "{0} {1}".format(__opts__['solr.init_script'], signal)
-    out = __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd)
 
 
 def reload_core(host=None, core_name=None):

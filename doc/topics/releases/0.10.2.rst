@@ -49,7 +49,7 @@ more powerful, since the minions that will match can be pre determined.
 Backup Files
 ------------
 
-By default all files replaced by the file.managed and file.recuse states we
+By default all files replaced by the file.managed and file.recurse states we
 simply deleted. 0.10.2 adds a new option. By setting the backup option to
 ``minion`` the files are backed up before they are replaced.
 
@@ -148,7 +148,7 @@ Bluetooth
 ^^^^^^^^^
 
 Baisc ``bluez`` support for managing and controlling Bluetooth devices.
-Supports scanning as well as pairing/unpairing.
+Supports scanning as well as pairing/unpairing by Joseph Hall.
 
 Test Updates
 ============

@@ -1,5 +1,5 @@
 '''
-A conveniance system to manage jobs, both active and already run
+A convenience system to manage jobs, both active and already run
 '''
 
 # Import Python Modules
@@ -9,11 +9,10 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
-from salt._compat import string_types
-from salt.exceptions import SaltException
-
-# Import Third party libs
-import yaml
+import salt.output
+import salt.minion
+#from salt._compat import string_types
+#from salt.exceptions import SaltException
 
 
 def active():
@@ -22,7 +21,6 @@ def active():
     perspective
     '''
     ret = {}
-    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     client = salt.client.LocalClient(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     for minion, data in active_.items():
@@ -51,47 +49,27 @@ def active():
                 continue
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
-    print(yaml.dump(ret))
+    salt.output.display_output(ret, 'yaml')
     return ret
 
 
-def lookup_jid(jid):
+def lookup_jid(jid, ext_source=None):
     '''
-    Return the printout from a previousely executed job
+    Return the printout from a previously executed job
     '''
-    def _format_ret(full_ret):
-        '''
-        Take the full return data and format it to simple output
-        '''
-        out = None
-        ret = {}
-        for key, data in full_ret.items():
-            ret[key] = data['ret']
-            if 'out' in data:
-                out = data['out']
-        return ret, out
+    if __opts__['ext_job_cache'] or ext_source:
+        returner = ext_source if ext_source else __opts__['ext_job_cache']
+        mminion = salt.minion.MasterMinion(__opts__)
+        return mminion.returners['{0}.get_jid'.format(returner)](jid)
 
+    # Fall back to the local job cache
     client = salt.client.LocalClient(__opts__['conf_file'])
-    full_ret = client.get_full_returns(jid, [], 0)
-    formatted = _format_ret(full_ret)
 
-    if formatted:
-        ret = formatted[0]
-        out = formatted[1]
-    else:
-        ret = SaltException('Job {0} hasn\'t finished. No data yet :('.format(jid))
-        out = ''
+    ret = {}
+    for mid, data in client.get_full_returns(jid, [], 0).items():
+        ret[mid] = data.get('ret')
+        salt.output.display_output({mid: ret[mid]}, data.get('out', None))
 
-    # Determine the proper output method and run it
-    get_outputter = salt.output.get_outputter
-    if isinstance(ret, (list, dict, string_types)) and out:
-        printout = get_outputter(out)
-    # Pretty print any salt exceptions
-    elif isinstance(ret, SaltException):
-        printout = get_outputter("txt")
-    else:
-        printout = get_outputter(None)
-    printout(ret)
     return ret
 
 
@@ -115,5 +93,40 @@ def list_jobs():
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
-    print(yaml.dump(ret))
+    salt.output.display_output(ret, 'yaml')
+    return ret
+
+def print_job(job_id):
+    '''
+    Print job available details, including return data.
+    '''
+    serial = salt.payload.Serial(__opts__)
+    ret = {}
+    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
+    for top in os.listdir(job_dir):
+        t_path = os.path.join(job_dir, top)
+        for final in os.listdir(t_path):
+            loadpath = os.path.join(t_path, final, '.load.p')
+            if not os.path.isfile(loadpath):
+                continue
+            load = serial.load(open(loadpath, 'rb'))
+            jid = load['jid']
+            if job_id == jid:
+                hosts_path = os.path.join(t_path, final)
+                hosts_return = {}
+                for host in os.listdir(hosts_path):
+                    host_path = os.path.join(hosts_path, host)
+                    if os.path.isdir(host_path):
+                        returnfile = os.path.join(host_path, 'return.p')
+                        if not os.path.isfile(returnfile):
+                            continue
+                        return_data = serial.load(open(returnfile, 'rb'))
+                        hosts_return[host] = return_data
+                        ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
+                                    'Function': load['fun'],
+                                    'Arguments': list(load['arg']),
+                                    'Target': load['tgt'],
+                                    'Target-type': load['tgt_type'],
+                                    'Result': hosts_return}
+                        salt.output.display_output(ret, 'yaml')
     return ret

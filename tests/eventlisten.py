@@ -8,9 +8,7 @@ This script is a generic tool to test event output
 # Import Python libs
 import optparse
 import pprint
-import os
 import time
-import tempfile
 
 # Import Salt libs
 import salt.utils.event
@@ -25,7 +23,7 @@ def parse():
     parser.add_option('-s',
             '--sock-dir',
             dest='sock_dir',
-            default=os.path.join(tempfile.gettempdir(), '.salt-unix'),
+            default='/var/run/salt',
             help=('Staticly define the directory holding the salt unix '
                   'sockets for communication'))
     parser.add_option('-n',
@@ -51,8 +49,8 @@ def listen(sock_dir, node):
     Attach to the pub socket and grab messages
     '''
     event = salt.utils.event.SaltEvent(
+            node,
             sock_dir,
-            node
             )
     while True:
         ret = event.get_event(full=True)

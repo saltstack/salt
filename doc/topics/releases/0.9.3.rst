@@ -22,7 +22,7 @@ Or from PiPy:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz
 
-For instructions on how to set up Salt please see the `installation`_
+For instructions on how to set up Salt please see the :ref:`installation`
 instructions.
 
 New Features
@@ -196,7 +196,7 @@ file.symlink
 file.recurse
     The recurse state function will recursively download a directory on the
     master file server and place it on the minion. Any change in the files on
-    the master will be pushed to the minion. The recuse function is very
+    the master will be pushed to the minion. The recurse function is very
     powerful and has been tested by pushing out the full Linux kernel source.
 
     .. code-block:: yaml

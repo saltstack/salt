@@ -101,19 +101,32 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def status(name, sig=None):
+def reload(name):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Reload the named service
 
     CLI Example::
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.reload <service name>
     '''
-    sig = sig or name
-    cmd = 'pgrep {0}'.format(sig)
-    return __salt__['cmd.run'](cmd).strip()
+    cmd = 'service {0} reload'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def status(name, sig=None):
+    '''
+    Return the status for a service, pass a signature to use to find
+    the service via ps
+
+    CLI Example::
+
+        salt '*' service.status <service name>
+    '''
+    if sig:
+        return bool(__salt__['status.pid'](sig))
+    cmd = 'service {0} status'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
 
 def enable(name):
     '''

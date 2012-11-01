@@ -182,3 +182,26 @@ Common YAML Gotchas
 An extensive list of
 :doc:`YAML idiosyncrasies</topics/troubleshooting/yaml_idiosyncrasies>`
 has been compiled.
+
+Live Python Debug Output
+========================
+
+If the minion or master seems to be unresponsive, a SIGUSR1 can be passed to
+the processes to display where in the code they are running. If encountering a
+situation like this, this debug information can be invaluable. First make
+sure the master of minion are running in the foreground:
+
+.. code-block:: bash
+
+    # salt-master -l debug
+    # salt-minion -l debug
+
+The pass the signal to the master or minion when it seems to be unresponsive:
+
+.. code-block:: bash
+
+    killall -SIGUSR1 salt-master
+    killall -SIGUSR1 salt-minion
+
+When filing an issue or sending questions to the mailing list for a problem
+with an unresponsive daemon this information can be invaluable.

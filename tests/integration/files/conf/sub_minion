@@ -12,11 +12,14 @@ log_file: minion
 
 # module extension
 test.foo: baz
-hosts.file: integration/tmp/hosts
-aliases.file: integration/tmp/aliases
+hosts.file: /tmp/salt-tests-tmpdir/hosts
+aliases.file: /tmp/salt-tests-tmpdir/aliases
 integration.test: True
 
 # Grains addons
 grains:
   test_grain: spam
   role: sub
+
+
+ipc_mode: tcp

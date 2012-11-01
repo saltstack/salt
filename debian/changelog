@@ -1,3 +1,22 @@
+salt (0.10.4-1precise1) precise; urgency=low
+
+  * New upstream version
+
+ -- Tom Vaughan <thomas.david.vaughan@gmail.com>  Wed, 24 Oct 2012 10:53:56 -0300
+
+salt (0.10.3) precise; urgency=low
+
+  * New upstream version
+
+ -- Tom Vaughan <thomas.david.vaughan@gmail.com>  Sun, 30 Aug 2012 13:34:10 -0700
+
+salt (0.10.2) precise; urgency=low
+
+  * Non-maintainer upload.
+  * New upstream version
+
+ -- Dave Rawks <drawks@mint>  Wed, 01 Aug 2012 13:34:10 -0700
+
 salt (0.9.9) precise; urgency=low
 
   * New upstream version

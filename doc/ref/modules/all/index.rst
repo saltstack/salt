@@ -1,8 +1,8 @@
 .. _all-salt.modules:
 
-============================
-Full list of builtin modules
-============================
+======================================
+Full list of builtin execution modules
+======================================
 
 .. admonition:: Virtual modules
 
@@ -21,19 +21,25 @@ Full list of builtin modules
     apache
     apt
     archive
+    at
     augeas_cfg
+    bluez
     brew
     butterkvm
+    cassandra
     cluster
     cmdmod
+    config
     cp
     cron
+    daemontools
     data
     debconfmod
     debian_service
     disk
-    django
+    djangomod
     ebuild
+    event
     file
     freebsdjail
     freebsdkmod
@@ -50,24 +56,34 @@ Full list of builtin modules
     kmod
     kvm_hyper
     launchctl
+    ldap
     linux_sysctl
     mdadm
+    mongodb
+    monit
     moosefs
     mount
     mysql
     network
     nginx
+    nzbget
+    openbsdpkg
+    openbsdservice
     osxdesktop
     pacman
+    pecl
     pillar
     pip
+    pkgng
+    pkgutil
     postgres
+    poudriere
     ps
     publish
     puppet
     pw_group
     pw_user
-    rabbitmq_server
+    rabbitmq
     reg
     rh_ip
     rh_service
@@ -76,13 +92,20 @@ Full list of builtin modules
     selinux
     service
     shadow
+    smf
+    solaris_group
+    solarispkg
+    solaris_shadow
+    solaris_user
     solr
     sqlite3
     ssh
     state
     status
+    supervisord
     systemd
     test
+    tls
     tomcat
     upstart
     useradd
@@ -98,4 +121,5 @@ Full list of builtin modules
     win_useradd
     yumpkg
     yumpkg5
+    zpool
     zypper

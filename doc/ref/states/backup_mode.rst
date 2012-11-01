@@ -3,7 +3,7 @@ State File Backups
 ==================
 
 In 0.10.2 a new feature was added for backing up files that are replaced by
-the file.managed and file.recuse states. The new feature is called the backup
+the file.managed and file.recurse states. The new feature is called the backup
 mode. Setting the backup mode is easy, but is can be set in a number of
 places.
 

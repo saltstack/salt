@@ -223,7 +223,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes:
+                    for key in v_node.attributes.keys():
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -231,7 +231,7 @@ def get_nics(vm_):
                 if v_node.tagName == "virtualport":
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes:
+                    for key in v_node.attributes.keys():
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -275,7 +275,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
-            for key in g_node.attributes:
+            for key in g_node.attributes.keys():
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -301,7 +301,7 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
+        if target.attributes.has_key('dev') and source.attributes.has_key('file'):
             disks[target.getAttribute('dev')] = {
                 'file': source.getAttribute('file')}
     for dev in disks:
@@ -313,6 +313,65 @@ def get_disks(vm_):
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
+
+
+def setmem(vm_, memory, config=False):
+    '''
+    Changes the amount of memory allocated to VM. The VM must be shutdown
+    for this to work.
+
+    memory is to be specified in MB
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setmem myvm 768
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # libvirt has a funny bitwise system for the flags in that the flag
+    # to affect the "current" setting is 0, which means that to set the
+    # current setting we have to call it a second time with just 0 set
+    flags = libvirt.VIR_DOMAIN_MEM_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setMemoryFlags(memory * 1024, flags)
+    ret2 = dom.setMemoryFlags(memory * 1024, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    # return True if both calls succeeded
+    return ret1 == ret2 == 0
+
+
+def setvcpus(vm_, vcpus, config=False):
+    '''
+    Changes the amount of vcpus allocated to VM. The VM must be shutdown
+    for this to work.
+
+    vcpus is an int representing the number to be assigned
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setvcpus myvm 2
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # see notes in setmem
+    flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setVcpusFlags(vcpus, flags)
+    ret2 = dom.setVcpusFlags(vcpus, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    return ret1 == ret2 == 0
 
 
 def freemem():
@@ -388,8 +447,7 @@ def shutdown(vm_):
         salt '*' virt.shutdown <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.shutdown()
-    return True
+    return dom.shutdown() == 0
 
 
 def pause(vm_):
@@ -401,8 +459,7 @@ def pause(vm_):
         salt '*' virt.pause <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.suspend()
-    return True
+    return dom.suspend() == 0
 
 
 def resume(vm_):
@@ -414,8 +471,7 @@ def resume(vm_):
         salt '*' virt.resume <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.resume()
-    return True
+    return dom.resume() == 0
 
 
 def create(vm_):
@@ -427,8 +483,7 @@ def create(vm_):
         salt '*' virt.create <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.create()
-    return True
+    return dom.create() == 0
 
 
 def start(vm_):
@@ -442,6 +497,49 @@ def start(vm_):
     return create(vm_)
 
 
+def reboot(vm_):
+    '''
+    Reboot a domain via ACPI request
+
+    CLI Example::
+    
+        salt '*' virt.reboot <vm name>
+    '''
+    dom = _get_dom(vm_)
+
+    # reboot has a few modes of operation, passing 0 in means the
+    # hypervisor will pick the best method for rebooting
+    return dom.reboot(0) == 0
+
+
+def reset(vm_):
+    '''
+    Reset a VM by emulating the reset button on a physical machine
+
+    CLI Example::
+
+        salt '*' virt.reset <vm name>
+    '''
+    dom = _get_dom(vm_)
+
+    # reset takes a flag, like reboot, but it is not yet used
+    # so we just pass in 0
+    # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
+    return dom.reset(0) == 0
+
+
+def ctrl_alt_del(vm_):
+    '''
+    Sends CTRL+ALT+DEL to a VM
+
+    CLI Example::
+    
+        salt '*' virt.ctrl_alt_del <vm name>
+    '''
+    dom = _get_dom(vm_)
+    return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+
+
 def create_xml_str(xml):
     '''
     Start a domain based on the xml passed to the function
@@ -451,8 +549,7 @@ def create_xml_str(xml):
         salt '*' virt.create_xml_str <xml in string format>
     '''
     conn = __get_conn()
-    conn.createXML(xml, 0)
-    return True
+    return conn.createXML(xml, 0) is not None
 
 
 def create_xml_path(path):
@@ -581,12 +678,8 @@ def destroy(vm_):
 
         salt '*' virt.destroy <vm name>
     '''
-    try:
-        dom = _get_dom(vm_)
-        dom.destroy()
-    except Exception:
-        return False
-    return True
+    dom = _get_dom(vm_)
+    return dom.destroy() == 0
 
 
 def undefine(vm_):
@@ -598,12 +691,8 @@ def undefine(vm_):
 
         salt '*' virt.undefine <vm name>
     '''
-    try:
-        dom = _get_dom(vm_)
-        dom.undefine()
-    except Exception:
-        return False
-    return True
+    dom = _get_dom(vm_)
+    return dom.undefine() == 0
 
 
 def purge(vm_, dirs=False):
@@ -617,7 +706,8 @@ def purge(vm_, dirs=False):
         salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
-    destroy(vm_)
+    if not destroy(vm_):
+        return False
     directories = set()
     for disk in disks:
         os.remove(disks[disk]['file'])

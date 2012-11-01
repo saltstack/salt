@@ -2,8 +2,11 @@
 The default service module, if not otherwise specified salt will fall back
 to this basic module
 '''
-
+# Import Python libs
 import os
+# Import Salt libs
+import salt.utils
+
 
 grainmap = {
            'Arch': '/etc/rc.d',
@@ -13,6 +16,7 @@ grainmap = {
            'Ubuntu': '/etc/init.d',
            'Gentoo': '/etc/init.d',
            'CentOS': '/etc/init.d',
+           'CloudLinux': '/etc/init.d',
            'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
           }
@@ -25,11 +29,14 @@ def __virtual__():
     disable = [
                'RedHat',
                'CentOS',
+               'Amazon',
                'Scientific',
+               'CloudLinux',
                'Fedora',
                'Gentoo',
                'Ubuntu',
                'Debian',
+               'Arch',
               ]
     if __grains__['os'] in disable:
         return False
@@ -73,6 +80,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' restart')
     return not __salt__['cmd.retcode'](cmd)
@@ -88,10 +97,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    sig = name if not sig else sig
-    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
-    return __salt__['cmd.run'](cmd).strip()
+    return __salt__['status.pid'](sig if sig else name)
 
 
 def reload(name):

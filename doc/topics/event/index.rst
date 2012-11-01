@@ -18,7 +18,7 @@ by the same system user that Salt is running as. To listen to events a
 SaltEvent object needs to be created and then the get_event function needs to
 be run. The SaltEvent object needs to know the location that the Salt unix
 sockets are kept. In the configuration this is the ``sock_dir`` option. The
-``sock_dir`` option defaults to "/tmp/.salt-unix" on most systems.
+``sock_dir`` option defaults to "/var/run/salt" on most systems.
 
 The following code will check for a single event:
 
@@ -26,7 +26,7 @@ The following code will check for a single event:
 
     import salt.utils.event
 
-    event = salt.utils.event.MasterEvent('/tmp/.salt-unix')
+    event = salt.utils.event.MasterEvent('/var/run/salt')
 
     data = event.get_event()
 
@@ -41,19 +41,19 @@ instead of the default 5.
 
     import salt.utils.event
 
-    event = salt.utils.event.MasterEvent('/tmp/.salt-unix')
+    event = salt.utils.event.MasterEvent('/var/run/salt')
 
     data = event.get_event(wait=10, tag='auth')
 
-Instead of looking for a single event, the iter_event method can be used to
-make a generator which will continually yield salt events. The iter_event
+Instead of looking for a single event, the iter_events method can be used to
+make a generator which will continually yield salt events. The iter_events
 method also accepts a tag, but not a wait time:
 
 .. code-block:: python
 
     import salt.utils.event
 
-    event = salt.utils.event.MasterEvent('/tmp/.salt-unix')
+    event = salt.utils.event.MasterEvent('/var/run/salt')
 
-    for data in event.iter_event(tag='auth'):
+    for data in event.iter_events(tag='auth'):
         print(data)

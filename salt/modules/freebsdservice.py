@@ -1,8 +1,10 @@
 '''
 The service module for FreeBSD
 '''
-
+# Import Python libs
 import os
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -13,6 +15,7 @@ def __virtual__():
     if __grains__['os'] == 'FreeBSD':
         return 'service'
     return False
+
 
 def get_enabled():
     '''
@@ -26,18 +29,13 @@ def get_enabled():
     for rcfn in ('/etc/rc.conf', '/etc/rc.conf.local'):
         if os.path.isfile(rcfn):
             for line in open(rcfn, 'r').readlines():
-                if not line.strip():
+                clean_line = line.split('#',1)[0].strip()
+                if not '_enable=' in clean_line:
                     continue
-                if line.startswith('#'):
+                (service, enabled) = clean_line.split('=')
+                if enabled.strip('"\'').upper() != 'YES':
                     continue
-                if not '_enable' in line:
-                    continue
-                if not '=' in line:
-                    continue
-                comps = line.split('=')
-                if 'YES' in comps[1]:
-                    # Is enabled!
-                    ret.append(comps[0].split('_')[0])
+                ret.append(service.replace('_enable', ''))
     return ret
 
 
@@ -104,6 +102,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} onerestart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -118,9 +118,6 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    sig = name if not sig else sig
-    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
-    return __salt__['cmd.run'](cmd).strip()
+    return __salt__['status.pid'](sig if sig else name)
 
 

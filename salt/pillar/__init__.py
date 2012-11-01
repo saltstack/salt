@@ -4,10 +4,8 @@ Render the pillar data
 
 # Import python libs
 import os
-import copy
 import collections
 import logging
-import subprocess
 
 # Import Salt libs
 import salt.loader
@@ -16,10 +14,7 @@ import salt.minion
 import salt.crypt
 from salt._compat import string_types
 from salt.template import compile_template
-
-# Import third party libs
-import zmq
-import yaml
+from salt.utils.dictupdate import update
 
 log = logging.getLogger(__name__)
 
@@ -57,11 +52,13 @@ class RemotePillar(object):
         load = {'id': self.id_,
                 'grains': self.grains,
                 'env': self.opts['environment'],
+                'ver': '2',
                 'cmd': '_pillar'}
-        return self.auth.crypticle.loads(
-                self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
-                )
-
+        ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
+        key = self.auth.get_keys()
+        aes = key.private_decrypt(ret['key'], 4)
+        pcrypt = salt.crypt.Crypticle(self.opts, aes)
+        return pcrypt.loads(ret['pillar'])
 
 
 class Pillar(object):
@@ -72,16 +69,19 @@ class Pillar(object):
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
-        self.matcher = salt.minion.Matcher(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts)
+        if opts.get('file_client', '') == 'local':
+            self.functions = salt.loader.minion_mods(opts)
+        else:
+            self.functions = salt.loader.minion_mods(self.opts)
+        self.matcher = salt.minion.Matcher(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
 
-    def __gen_opts(self, opts, grains, id_, env=None):
+    def __gen_opts(self, opts_in, grains, id_, env=None):
         '''
         The options need to be altered to conform to the file client
         '''
-        opts = copy.deepcopy(opts)
+        opts = dict(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
         opts['grains'] = grains
@@ -242,12 +242,6 @@ class Pillar(object):
                     for item in data:
                         if isinstance(item, string_types):
                             matches[env].append(item)
-        ext_matches = self.client.ext_nodes()
-        for env in ext_matches:
-            if env in matches:
-                matches[env] = list(set(ext_matches[env]).union(matches[env]))
-            else:
-                matches[env] = ext_matches[env]
         return matches
 
     def render_pstate(self, sls, env, mods):
@@ -310,7 +304,7 @@ class Pillar(object):
                     errors += err
         return pillar, errors
 
-    def ext_pillar(self):
+    def ext_pillar(self, pillar):
         '''
         Render the external pillar data
         '''
@@ -319,7 +313,6 @@ class Pillar(object):
         if not isinstance(self.opts['ext_pillar'], list):
             log.critical('The "ext_pillar" option is malformed')
             return {}
-        ext = {}
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
@@ -332,14 +325,15 @@ class Pillar(object):
                     continue
                 try:
                     if isinstance(val, dict):
-                        ext.update(self.ext_pillars[key](**val))
+                        ext = self.ext_pillars[key](pillar, **val)
                     elif isinstance(val, list):
-                        ext.update(self.ext_pillars[key](*val))
+                        ext = self.ext_pillars[key](pillar, *val)
                     else:
-                        ext.update(self.ext_pillars[key](val))
-                except Exception as e:
-                    log.critical('Failed to load ext_pillar {0}'.format(key))
-        return ext
+                        ext = self.ext_pillars[key](pillar, val)
+                    update(pillar, ext)
+                except Exception as exc:
+                    log.exception('Failed to load ext_pillar {0}: {1}'.format(key, exc))
+        return pillar
 
     def compile_pillar(self):
         '''
@@ -348,8 +342,15 @@ class Pillar(object):
         top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
-        pillar.update(self.ext_pillar())
+        self.ext_pillar(pillar)
         errors.extend(terrors)
+        if self.opts.get('pillar_opts', True):
+            mopts = dict(self.opts)
+            if 'grains' in mopts:
+                mopts.pop('grains')
+            if 'aes' in mopts:
+                mopts.pop('aes')
+            pillar['master'] = mopts
         if errors:
             for error in errors:
                 log.critical('Pillar render error: {0}'.format(error))

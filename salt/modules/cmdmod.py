@@ -4,12 +4,17 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
-
+# Import Python libs
 import pipes
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
+import sys
+from functools import partial
+
+# Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.grains.extra import shell as shell_grain
@@ -31,12 +36,55 @@ __outputter__ = {
 
 DEFAULT_SHELL = shell_grain()['shell']
 
+
 def __virtual__():
     '''
     Overwriting the cmd python module makes debugging modules
     with pdb a bit harder so lets do it this way instead.
     '''
     return 'cmd'
+
+
+def _chugid(runas):
+    uinfo = pwd.getpwnam(runas)
+
+    if os.getuid() == uinfo.pw_uid and os.getgid() == uinfo.pw_gid:
+        # No need to change user or group
+        return
+
+    # No logging can happen on this function
+    #
+    # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
+    #   File "/usr/lib/python2.7/logging/__init__.py", line 870, in emit
+    #     self.flush()
+    #   File "/usr/lib/python2.7/logging/__init__.py", line 832, in flush
+    #     self.stream.flush()
+    # IOError: [Errno 9] Bad file descriptor
+    # Logged from file cmdmod.py, line 59
+    # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
+    #
+    # apparently because we closed fd's on Popen, though if not closed, output
+    # would also go to it's stderr
+
+    if os.getgid() != uinfo.pw_gid:
+        try:
+            os.setgid(uinfo.pw_gid)
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to change from gid {0} to {1}. Error: {2}'.format(
+                    os.getgid(), uinfo.pw_gid, err
+                )
+            )
+
+    if os.getuid() != uinfo.pw_uid:
+        try:
+            os.setuid(uinfo.pw_uid)
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to change from uid {0} to {1}. Error: {2}'.format(
+                    os.getuid(), uinfo.pw_uid, err
+                )
+            )
 
 
 def _run(cmd,
@@ -58,7 +106,14 @@ def _run(cmd,
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
 
-    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+        # make sure we can access the cwd
+        # when run from sudo or another environment where the euid is
+        # changed ~ will expand to the home of the original uid and
+        # the euid might not have access to it. See issue #1844
+        if not os.access(cwd, os.R_OK):
+            cwd = '/'
+
+    if not sys.platform.startswith('win'):
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
@@ -76,30 +131,19 @@ def _run(cmd,
 
     if runas:
         # Save the original command before munging it
-        orig_cmd = cmd
         try:
-            p = pwd.getpwnam(runas)
+            pwd.getpwnam(runas)
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su -s {0}'.format(shell)
-
-        # Load the 'nix environment
-        if with_env:
-            cmd_prefix += ' -'
-            cmd = 'cd {0} && {1}'.format(cwd, cmd)
-
-        cmd_prefix += ' {0} -c'.format(runas)
-        cmd = '{0} {1}'.format(cmd_prefix, pipes.quote(cmd))
-
     if not quiet:
         # Put the most common case first
-        if not runas:
-            log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-        else:
-            log.info('Executing command {0} as user {1} in directory {2}'.format(
-                    orig_cmd, runas, cwd))
+        log.info(
+            'Executing command {0!r} {1}in directory {2!r}'.format(
+                cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
+            )
+        )
 
     run_env = os.environ
     run_env.update(env)
@@ -107,32 +151,31 @@ def _run(cmd,
               'shell': True,
               'env': run_env,
               'stdout': stdout,
-              'stderr':stderr}
-    if not os.environ.get('os', '').startswith('Windows'):
+              'stderr': stderr}
+
+    if runas:
+        kwargs['preexec_fn'] = partial(_chugid, runas)
+
+    if not sys.platform.startswith('win'):
+        # close_fds is not supported on Windows platforms if you redirect
+        # stdin/stdout/stderr
         kwargs['executable'] = shell
+        kwargs['close_fds'] = True
+
+    # If all we want is the return code then don't block on gathering input.
+    if retcode:
+        kwargs['stdout'] = None
+        kwargs['stderr'] = None
+
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
-
-    # If all we want is the return code then don't block on gathering input,
-    # this is used to bypass ampersand issues with background processes in
-    # scripts
-    if retcode:
-        while True:
-            retcode = proc.poll()
-            if retcode is None:
-                continue
-            else:
-                out = ''
-                err = ''
-                break
-    else:
-        out, err = proc.communicate()
+    out, err = proc.communicate()
 
     if rstrip:
-        if out:
+        if out is not None:
             out = out.rstrip()
         # None lacks a rstrip() method
-        if err:
+        if err is not None:
             err = err.rstrip()
 
     ret['stdout'] = out
@@ -148,6 +191,14 @@ def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT,
                 quiet=True, shell=shell, env=env)['stdout']
+
+
+def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+    '''
+    Helper for running commands quietly for minion startup.
+    Returns a dict of return data
+    '''
+    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True)
 
 
 def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
@@ -199,6 +250,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
     ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)
+
     if ret['retcode'] != 0:
         rcode = ret['retcode']
         msg = 'Command \'{0}\' failed with return code: {1}'
@@ -237,6 +289,7 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
 
 def script(
         source,
+        args=None,
         cwd=None,
         runas=None,
         shell=DEFAULT_SHELL,
@@ -252,20 +305,24 @@ def script(
     programming language.
 
     The script can also be formated as a template, the default is jinja.
+    Arguments for the script can be specified as well.
 
     CLI Example::
 
         salt '*' cmd.script salt://scripts/runme.sh
+        salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
     '''
     fd_, path = tempfile.mkstemp()
     os.close(fd_)
     if template:
-        fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
+        __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
+        shutil.copyfile(fn_, path)
     os.chmod(path, 320)
+    os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
-            path,
+            path +' '+ args if args else path,
             cwd=cwd,
             quiet=kwargs.get('quiet', False),
             runas=runas,

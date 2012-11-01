@@ -2,15 +2,15 @@ Source: salt
 Section: admin
 Priority: optional
 Maintainer: Corey Quinn <corey@sequestered.net>
-Build-Depends: debhelper (>= 8),
+Build-Depends: debhelper (>= 7.0.50),
                cython,
                python-yaml,
                python-setuptools,
                python-crypto,
                python-m2crypto,
                python-zmq (>= 2.1.9),
-               libzmq-dev (>= 2.1.9),
-               python-jinja2
+               python-jinja2,
+               msgpack-python
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
 #Vcs-Git: git://git.debian.org/collab-maint/salt.git
