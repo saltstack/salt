@@ -55,6 +55,7 @@ class LowDataAdapter(object):
 
         return lowdata
 
+    @cherrypy.tools.json_out()
     def POST(self, **kwargs):
         '''
         Run a given function in a given client with the given args
