@@ -11,19 +11,19 @@ import time
 
 __outputter__ = {
     'atc': 'txt',
+    'at': 'yaml',
+    'atq': 'yaml',
+    'atrm': 'yaml',
 }
 
 # OS Families that should work (Ubuntu and Debian are the
 # default)
 
-# Tested on CentOS 5.8
-rhel = ('CentOS', 'Scientific', 'RedHat', 'Fedora', 'CloudLinux')
-
 # Tested on OpenBSD 5.0
 bsd = ('OpenBSD', 'FreeBSD')
 
 # Known not to work
-bad = ('Windows')
+bad = ('Windows',)
 
 
 def __virtual__():
@@ -58,7 +58,8 @@ def atq(tag=None):
 
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
-    if __grains__['os'] in rhel:
+    # Tested on CentOS 5.8
+    if __grains__['os_family'] == "RedHat":
         output = _cmd('at', '-l')
     else:
         output = _cmd('atq')
@@ -73,7 +74,7 @@ def atq(tag=None):
     # Split each job into a dictionary and handle
     # pulling out tags or only listing jobs with a certain
     # tag
-    for line in output.split('\n'):
+    for line in output.splitlines():
         job_tag = ''
 
         # Jobs created with at.at() will use the following
@@ -81,7 +82,7 @@ def atq(tag=None):
         job_kw_regex = re.compile('^### SALT: (\w+)')
 
         # Redhat/CentOS
-        if __grains__['os'] in rhel:
+        if __grains__['os_family'] == 'RedHat':
             job, spec = line.split('\t')
             specs = spec.split()
         elif __grains__['os'] in bsd:
@@ -107,7 +108,7 @@ def atq(tag=None):
 
         # Search for any tags
         atc_out = _cmd('at', '-c', job)
-        for line in atc_out.split('\n'):
+        for line in atc_out.splitlines():
             tmp = job_kw_regex.match(line)
             if tmp:
                 job_tag = tmp.groups()[0]
@@ -197,7 +198,7 @@ def at(*pargs, **kwargs):
     if not bin:
         return '"{0}" is not available.'.format('at.at')
 
-    if __grains__['os'] in rhel:
+    if __grains__['os_family'] == 'RedHat':
         echo_cmd = 'echo -e'
     else:
         echo_cmd = 'echo'
@@ -222,10 +223,10 @@ def at(*pargs, **kwargs):
         return {'jobs': [], 'error': 'invalid timespec'}
 
     if output.startswith('warning: commands'):
-        output = output.split('\n')[1]
+        output = output.splitlines()[1]
 
     if output.startswith('commands will be executed'):
-        output = output.split('\n')[1]
+        output = output.splitlines()[1]
 
     if __grains__['os'] in bsd:
         return atq(str(output.split()[1]))
