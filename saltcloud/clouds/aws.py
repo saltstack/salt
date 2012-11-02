@@ -157,8 +157,8 @@ def get_availability_zone(conn, vm_):
     az = None
     if 'availability_zone' in vm_:
         az = vm_['availability_zone']
-    elif 'EC2.availability_zone' in __opts__:
-        az = __opts__['EC2.availability_zone']
+    elif 'AWS.availability_zone' in __opts__:
+        az = __opts__['AWS.availability_zone']
 
     if az is None:
         # Default to first zone
