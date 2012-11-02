@@ -24,6 +24,22 @@ logger = salt.log.logging.getLogger(__name__)
 def __virtual__():
     return 'rest'
 
+class SaltAuth(cherrypy.lib.cptools.SessionAuth):
+    session_key = 'token'
+
+    @classmethod
+    def runtool(cls, **kwargs):
+        '''
+        http://tools.cherrypy.org/wiki/CustomSessionAuth
+        '''
+        sa = cls()
+        for k, v in kwargs.iteritems():
+            setattr(sa, k, v)
+        return sa.run()
+
+# Put SaltAuth in the toolbox
+cherrypy.tools.salt_auth = cherrypy._cptools.HandlerTool(SaltAuth.runtool)
+
 class LowDataAdapter(object):
     '''
     '''
@@ -136,15 +152,21 @@ class API(object):
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
                 'request.error_response': error_page_default,
+
                 # 'response.stream': True,
+
                 'tools.trailing_slash.on': True,
                 'tools.json_out.handler': json_out_handler,
+
+                'tools.sessions.on': True,
+                'tools.sessions.timeout': 60 * 10, # 10 hours
+
+                'tools.salt_auth.on': True,
             },
         }
 
         conf['global'].update(apiopts)
         return conf
-
 
 def start():
     '''
