@@ -7,6 +7,11 @@ import salt.utils
 
 __outputter__ = {
     'signal': 'txt',
+    'version': 'txt',
+    'vhosts': 'yaml',
+    'modules': 'yaml',
+    'servermods': 'yaml',
+    'fullversion': 'yaml',
 }
 
 
@@ -24,11 +29,10 @@ def _detect_os():
     '''
     Apache commands and paths differ depending on packaging
     '''
-    httpd = ('CentOS', 'Scientific', 'RedHat', 'Fedora', 'Arch', 'CloudLinux')
-    apache2 = ('Ubuntu', 'Debian',)
-    if __grains__['os'] in httpd:
+    # TODO: Add pillar support for the apachectl location
+    if __grains__['os_family'] == 'RedHat':
         return 'apachectl'
-    elif __grains__['os'] in apache2:
+    elif __grains__['os_family'] == 'Debian':
         return 'apache2ctl'
     else:
         return 'apachectl'
@@ -42,7 +46,7 @@ def version():
 
         salt '*' apache.version
     '''
-    cmd = _detect_os() + ' -v'
+    cmd = '{0} -v'.format(_detect_os())
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
     return ret[1]
@@ -56,10 +60,13 @@ def fullversion():
 
         salt '*' apache.fullversion
     '''
-    cmd = _detect_os() + ' -V'
+    cmd = '{0} -V'.format(_detect_os())
     ret = {}
     ret['compiled_with'] = []
     out = __salt__['cmd.run'](cmd).split('\n')
+    # Example
+    #  -D APR_HAS_MMAP
+    define_re = re.compile('^\s+-D\s+')
     for line in out:
         if ': ' in line:
             comps = line.split(': ')
@@ -67,7 +74,7 @@ def fullversion():
                 continue
             ret[comps[0].strip().lower().replace(' ', '_')] = comps[1].strip()
         elif ' -D' in line:
-            cw = line.strip(' -D ')
+            cw = define_re.sub('', line)
             ret['compiled_with'].append(cw)
     return ret
 
@@ -80,7 +87,7 @@ def modules():
 
         salt '*' apache.modules
     '''
-    cmd = _detect_os() + ' -M'
+    cmd = '{0} -M'.format(_detect_os())
     ret = {}
     ret['static'] = []
     ret['shared'] = []
@@ -104,7 +111,7 @@ def servermods():
 
         salt '*' apache.servermods
     '''
-    cmd = _detect_os() + ' -l'
+    cmd = '{0} -l'.format(_detect_os())
     ret = []
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
@@ -124,7 +131,7 @@ def directives():
 
         salt '*' apache.directives
     '''
-    cmd = _detect_os() + ' -L'
+    cmd = '{0} -L'.format(_detect_os())
     ret = {}
     out = __salt__['cmd.run'](cmd)
     out = out.replace('\n\t', '\t')
@@ -148,7 +155,7 @@ def vhosts():
 
         salt -t 10 '*' apache.vhosts
     '''
-    cmd = _detect_os() + ' -S'
+    cmd = '{0} -S'.format(_detect_os())
     ret = {}
     namevhost = ''
     out = __salt__['cmd.run'](cmd)
