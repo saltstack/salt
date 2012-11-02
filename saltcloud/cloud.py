@@ -188,7 +188,6 @@ class Cloud(object):
                         print("{0} already exists on {1}".format(name, current_boxen[name]))
                         continue
                     vm_['name'] = name
-                    sys.exit(1)
                     if self.opts['parallel']:
                         multiprocessing.Process(
                                 target=lambda: self.create(vm_),
