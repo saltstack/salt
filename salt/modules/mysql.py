@@ -42,8 +42,12 @@ def __virtual__():
     '''
     Only load this module if the mysql config is set
     '''
-    if __salt__['config.dot_key']('mysql') and has_mysqldb:
-        return 'mysql'
+    if any(k.startswith('mysql.') for k in list(__opts__)):
+        if has_mysqldb:
+            return 'mysql'
+    elif any(k.startswith('mysql.') for k in list(__pillar__)):
+        if has_mysqldb:
+            return 'mysql'
     return False
 
 
