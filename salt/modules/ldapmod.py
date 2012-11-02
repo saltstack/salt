@@ -141,7 +141,9 @@ def search(filter, dn=None, scope=None, attrs=None, **kwargs):
 
 
 class _LDAPConnection:
-    """Setup a LDAP connection."""
+    '''
+    Setup a LDAP connection.
+    '''
     def __init__(self, server, port, tls, binddn, bindpw):
         '''
         Bind to a LDAP directory using passed credentials."""
