@@ -131,20 +131,20 @@ def search(filter, dn=None, scope=None, attrs=None, **kwargs):
         elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
     else:
         elapsed_h = str(round(elapsed, 2)) + 's'
-    ret = {}
-    ret['time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
-    ret['count'] = len(results)
-    ret['results'] = results
+
+    ret = {
+        'results': results,
+        'count': len(results),
+        'time': {'human': elapsed_h, 'raw': str(round(elapsed, 5))},
+    }
     return ret
 
 
 class _LDAPConnection:
-
-    """Setup an LDAP connection."""
-
+    """Setup a LDAP connection."""
     def __init__(self, server, port, tls, binddn, bindpw):
         '''
-        Bind to an LDAP directory using passed credentials."""
+        Bind to a LDAP directory using passed credentials."""
         '''
         self.server = server
         self.port = port
@@ -159,6 +159,6 @@ class _LDAPConnection:
                 self.LDAP.start_tls_s()
             self.LDAP.simple_bind_s(self.binddn, self.bindpw)
         except Exception:
-            msg = 'Failed to bind to LDAP server %s:%s as %s' % \
-                (self.server, self.port, self.binddn)
+            msg = 'Failed to bind to LDAP server {0}:{1} as {2}'.format(
+                self.server, self.port, self.binddn)
             raise CommandExecutionError(msg)
