@@ -666,3 +666,49 @@ def isorted(to_sort):
     >>>
     """
     return sorted(to_sort, key=lambda x: x.lower())
+
+
+def mysql_to_dict(data, key):
+    '''
+    Convert MySQL-style output to a python dictionary
+    '''
+    ret = {}
+    headers = ['']
+    for line in data:
+        if not line:
+            continue
+        if line.startswith('+'):
+            continue
+        comps = line.split('|')
+        for comp in range(len(comps)):
+            comps[comp] = comps[comp].strip()
+        if len(headers) > 1:
+            index = len(headers) - 1
+            row = {}
+            for field in range(index):
+                if field < 1:
+                    continue
+                else:
+                    row[headers[field]] = str_to_num(comps[field])
+            rowname = headers[0].replace(':', '')
+            ret[row[key]] = row
+        else:
+            headers = comps
+    return ret
+
+
+def str_to_num(text):
+    '''
+    Convert a string to a number.
+    Returns an integer if the string represents an integer, a floating
+    point number if the string is a real number, or the string unchanged
+    otherwise.
+    '''
+    try:
+        return int(text)
+    except ValueError:
+        try:
+            return float(text)
+        except ValueError:
+            return text
+
