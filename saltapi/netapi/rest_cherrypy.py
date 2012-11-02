@@ -65,11 +65,10 @@ class LowDataAdapter(object):
 
     @cherrypy.tools.json_out()
     def GET(self):
-        # FIXME: how to pass a compound command via lowdata?
-        lowdata = [
-            {'client': 'local', 'tgt': '*', 'fun': 'grains.items'},
-            {'client': 'local', 'tgt': '*', 'fun': 'sys.list_functions'},
-        ]
+        lowdata = [{'client': 'local', 'tgt': '*',
+                'fun': ['grains.items', 'sys.list_functions'],
+                'arg': [[], []],
+        }]
         return self.exec_lowdata(lowdata)
 
     @cherrypy.tools.json_out()
