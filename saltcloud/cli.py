@@ -208,29 +208,16 @@ class SaltCloud(object):
         mapper = saltcloud.cloud.Map(self.opts)
 
         if self.opts['query'] or self.opts['full_query']:
-            get_outputter = salt.output.get_outputter
-            if self.opts['raw_out']:
-                printout = get_outputter('raw')
-            elif self.opts['json_out']:
-                printout = get_outputter('json')
-            elif self.opts['txt_out']:
-                printout = get_outputter('txt')
-            elif self.opts['yaml_out']:
-                printout = get_outputter('yaml')
-            else:
-                printout = get_outputter(None)
-
             query = 'list_nodes'
             if self.opts['full_query']:
                 query = 'list_nodes_full'
 
-            color = not bool(self.opts['no_color'])
             query_map = {}
             if self.opts['map']:
                 query_map = mapper.interpolated_map(query=query)
             else:
                 query_map = mapper.map_providers(query=query)
-            printout(query_map, color=color)
+            salt.output.display_output(query_map, '', self.opts)
 
         if self.opts['version']:
             print VERSION
