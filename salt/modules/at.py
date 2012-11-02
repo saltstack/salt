@@ -6,8 +6,10 @@ easily tag jobs.
 '''
 
 import re
-import datetime
 import time
+import datetime
+
+import salt.utils
 
 __outputter__ = {
     'atc': 'txt',
@@ -16,8 +18,8 @@ __outputter__ = {
     'atrm': 'yaml',
 }
 
-# OS Families that should work (Ubuntu and Debian are the
-# default)
+# OS Families that should work (Ubuntu and Debian are the default)
+# TODO: Refactor some of this module to remove the checks for binaries
 
 # Tested on OpenBSD 5.0
 bsd = ('OpenBSD', 'FreeBSD')
@@ -30,17 +32,20 @@ def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    return False if __grains__['os'] in bad else 'at'
+    if __grains__['os'] in bad or not salt.utils.which('at'):
+        return False
+    return 'at'
 
 
-def _cmd(bin, *opts):
+def _cmd(binary, *args):
     '''
     Wrapper to run at(1) or return None.
     '''
-    bin = __salt__['cmd.which'](bin)
-    if bin:
-        return __salt__['cmd.run_stdout']('{0} {1}'.format(bin,
-            ' '.join(opts)))
+    # TODO: Use CommandNotFoundException for this
+    binary = salt.utils.which(binary)
+    if binary:
+        return __salt__['cmd.run_stdout']('{0} {1}'.format(binary,
+            ' '.join(args)))
 
 
 def atq(tag=None):
@@ -64,7 +69,7 @@ def atq(tag=None):
     else:
         output = _cmd('atq')
 
-    if output == None:
+    if output is None:
         return '"{0}" is not available.'.format('at.atq')
 
     # No jobs so return
@@ -120,7 +125,6 @@ def atq(tag=None):
 
         # If a tag is supplied, only list jobs with that tag
         if tag:
-
             # TODO: Looks like there is a difference between salt and salt-call
             # If I don't wrap job in an int(), it fails on salt but works on
             # salt-call. With the int(), it fails with salt-call but not salt.
@@ -134,7 +138,7 @@ def atq(tag=None):
     return {'jobs': jobs}
 
 
-def atrm(*pargs):
+def atrm(*args):
     '''
     Remove jobs from the queue.
 
@@ -147,34 +151,34 @@ def atrm(*pargs):
     opts = ''
 
     # Need to do this here also since we use atq()
-    if not __salt__['cmd.which']('at'):
+    if not salt.utils.which('at'):
         return '"{0}" is not available.'.format('at.atrm')
 
-    if not pargs:
+    if not args:
         return {'jobs': {'removed': [], 'tag': None}}
 
-    if pargs[0] == 'all':
-        if len(pargs) > 1:
-            opts = map(str, [j['job'] for j in atq(pargs[1])['jobs']])
-            ret = {'jobs': {'removed': opts, 'tag': pargs[1]}}
+    if args[0] == 'all':
+        if len(args) > 1:
+            opts = map(str, [j['job'] for j in atq(args[1])['jobs']])
+            ret = {'jobs': {'removed': opts, 'tag': args[1]}}
         else:
             opts = map(str, [j['job'] for j in atq()['jobs']])
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
         opts = map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in pargs])
+            if i['job'] in args])
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
     output = _cmd('at', '-d', ' '.join(opts))
-    if output == None:
+    if output is None:
         return '"{0}" is not available.'.format('at.atrm')
 
     return ret
 
 
-def at(*pargs, **kwargs):
+def at(*args, **kwargs):
     '''
     Add a job to the queue.
 
@@ -189,13 +193,13 @@ def at(*pargs, **kwargs):
     '''
     echo_cmd = ''
 
-    if len(pargs) < 2:
+    if len(args) < 2:
         return {'jobs': []}
 
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
-    bin = __salt__['cmd.which']('at')
-    if not bin:
+    binary = salt.utils.which('at')
+    if not binary:
         return '"{0}" is not available.'.format('at.at')
 
     if __grains__['os_family'] == 'RedHat':
@@ -205,10 +209,10 @@ def at(*pargs, **kwargs):
 
     if 'tag' in kwargs:
         cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(kwargs['tag'],
-            ' '.join(pargs[1:]), bin, pargs[0], echo_cmd)
+            ' '.join(args[1:]), binary, args[0], echo_cmd)
     else:
-        cmd = '{3} "{1}" | {2} {0}'.format(pargs[0], ' '.join(pargs[1:]),
-            bin, echo_cmd)
+        cmd = '{3} "{1}" | {2} {0}'.format(args[0], ' '.join(args[1:]),
+            binary, echo_cmd)
 
     # Can't use _cmd here since we need to prepend 'echo_cmd'
     if 'runas' in kwargs:
@@ -216,7 +220,7 @@ def at(*pargs, **kwargs):
     else:
         output = __salt__['cmd.run']('{0}'.format(cmd))
 
-    if output == None:
+    if output is None:
         return '"{0}" is not available.'.format('at.at')
 
     if output.endswith('Garbled time'):
@@ -228,10 +232,12 @@ def at(*pargs, **kwargs):
     if output.startswith('commands will be executed'):
         output = output.splitlines()[1]
 
+    output = output.split()[1]
+
     if __grains__['os'] in bsd:
-        return atq(str(output.split()[1]))
+        return atq(str(output))
     else:
-        return atq(int(output.split()[1]))
+        return atq(int(output))
 
 
 def atc(jobid):
@@ -247,10 +253,10 @@ def atc(jobid):
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
     output = _cmd('at', '-c', str(jobid))
-    if output == None:
-        return '"{0}" is not available.'.format('at.atc')
 
-    if output == '':
+    if output is None:
+        return '"{0}" is not available.'.format('at.atc')
+    elif output == '':
         return {'error': 'invalid job id "{0}"'.format(str(jobid))}
 
     return output
