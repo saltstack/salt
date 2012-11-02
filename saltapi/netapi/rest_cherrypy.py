@@ -114,7 +114,6 @@ def json_out_handler(*args, **kwargs):
     value = cherrypy.serving.request._json_inner_handler(*args, **kwargs)
     return salt.output.out_format(value, 'json_out', __opts__)
 
-
 class API(object):
     url_map = {
         'index': LowDataAdapter,
@@ -138,10 +137,6 @@ class API(object):
     def get_conf(self):
         # Grab config opts
         apiopts = self.opts.get('saltapi', {}).get(__name__.rsplit('.', 1)[-1], {})
-
-        # ssl_crt = apiopts.get('ssl_crt', '')
-        # ssl_key = apiopts.get('ssl_key', '')
-        # verify_certs(ssl_crt, ssl_key)
 
         conf = {
             'global': {
