@@ -186,7 +186,7 @@ def minion_config(path):
             'clean_dynamic_modules': True,
             'open_mode': False,
             'multiprocessing': True,
-            'sub_timeout': 60,
+            'sub_timeout': 0,
             'ipc_mode': 'ipc',
             'tcp_pub_port': 4510,
             'tcp_pull_port': 4511,
