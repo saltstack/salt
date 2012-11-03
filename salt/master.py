@@ -1534,9 +1534,10 @@ class ClearFuncs(object):
                     # User is authorised, check key and check perms
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
                         return ''
-                    good = False
+                    if not clear_load['user'] in self.opts['client_acl']:
+                        return ''
                     good = self.ckminions.auth_check(
-                            self.opts['client_acl'],
+                            self.opts['client_acl'][clear_load['user']],
                             clear_load['fun'],
                             clear_load['tgt'],
                             clear_load.get('tgt_type', 'glob'))
