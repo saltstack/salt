@@ -65,19 +65,15 @@ def latest(name,
                 )
         try:
             current_rev = __salt__['git.revision'](target, user=runas)
-        except Exception, exception:
-            return _fail(
-                    ret,
-                    str(exception))
-        if __opts__['test']:
-            return _neutral_test(
-                    ret,
-                    ('Repository {0} update is probably required (current '
-                    'revision is {1})').format(target, current_rev))
 
-        pull_out = __salt__['git.pull'](target, user=runas)
+            if __opts__['test']:
+                return _neutral_test(
+                        ret,
+                        ('Repository {0} update is probably required (current '
+                        'revision is {1})').format(target, current_rev))
 
-        try:
+            pull_out = __salt__['git.pull'](target, user=runas)
+
             if rev:
                 __salt__['git.checkout'](target, rev, user=runas)
 
@@ -100,27 +96,22 @@ def latest(name,
                     current_rev, new_rev)
     else:
         if os.path.isdir(target):
-            # git clone is required, but target exists -- however it is empty
-            if not os.listdir(target):
-                log.debug(
-                    'target {0} found, but not a git repository. Since empty,'
-                    ' automatically deleting.'.format(target))
-                shutil.rmtree(target)
             # git clone is required, target exists but force is turned on
-            elif force:
+            if force:
                 log.debug(
                     'target {0} found, but not a git repository. Since force option'
                     ' is in use, deleting.'.format(target))
                 shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
-            else:
+            elif os.listdir(target):
                 return _fail(ret, 'Directory exists, is non-empty, and force '
                     'option not in use')
-        else:
-            # git clone is required
-            log.debug(
-                    'target {0} is not found, "git clone" is required'.format(
-                        target))
+
+        # git clone is required
+        log.debug(
+                'target {0} is not found, "git clone" is required'.format(
+                    target))
+
         if __opts__['test']:
             return _neutral_test(
                     ret,
@@ -134,7 +125,7 @@ def latest(name,
                 __salt__['git.checkout'](target, rev, user=runas)
 
             if submodules:
-                __salt__['git.submodule'](target, user=runas)
+                __salt__['git.submodule'](target, user=runas, opts='--recursive')
 
             new_rev = __salt__['git.revision'](cwd=target, user=runas)
 
@@ -175,7 +166,7 @@ def present(name, bare=True, runas=None, force=False):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
-        elif not force:
+        elif not force and os.listdir(name):
             return _fail(ret,
                          'Directory which does not contain a git repo '
                          'is already present at {0}. To delete this '
@@ -187,7 +178,7 @@ def present(name, bare=True, runas=None, force=False):
         ret['changes']['new repository'] = name
         return _neutral_test(ret, 'New git repo set for creation at {0}'.format(name))
 
-    if os.path.isdir(name) and force:
+    if force and os.path.isdir(name):
         shutil.rmtree(name)
 
     opts = '--bare' if bare else ''
