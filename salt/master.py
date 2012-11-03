@@ -1526,6 +1526,9 @@ class ClearFuncs(object):
             elif clear_load['user'] == 'root':
                 if not clear_load.pop('key') == self.key.get(self.opts.get('user', 'root')):
                     return ''
+            elif clear_load['user'] == getpass.getuser():
+                if not clear_load.pop('key') == self.key.get(clear_load['user']):
+                    return ''
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
@@ -1605,7 +1608,10 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
         pub_sock.send(self.serial.dumps(payload))
-        minions = self.ckminions.check_minions(load['tgt'], load.get('tgt_type', 'glob'))
+        minions = self.ckminions.check_minions(
+                load['tgt'],
+                load.get('tgt_type', 'glob')
+                )
         return {'enc': 'clear',
                 'load': {'jid': clear_load['jid'],
                          'minions': minions}}
