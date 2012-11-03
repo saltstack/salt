@@ -41,6 +41,20 @@ def ping():
     '''
     return True
 
+
+def sleep(length):
+    '''
+    Instruct the minion to initiate a process that will sleep for a given
+    period of time.
+
+    CLI Example::
+
+        salt '*' test.sleep 20
+    '''
+    time.sleep(length)
+    return True
+
+
 def version():
     '''
     Return the version of salt on the minion
