@@ -51,7 +51,7 @@ def sleep(length):
 
         salt '*' test.sleep 20
     '''
-    time.sleep(length)
+    time.sleep(int(length))
     return True
 
 
