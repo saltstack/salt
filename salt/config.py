@@ -118,7 +118,8 @@ def include_config(include, opts, orig_path, verbose):
         # Catch situation where user typos path in config; also warns for
         # empty include dir (which might be by design)
         if len(glob.glob(path)) == 0:
-            msg = "Warning parsing configuration file: 'include' path/glob '{0}' matches no files"
+            msg = ('Warning parsing configuration file: "include" path/glob '
+                   '"{0}" matches no files').format(path)
             if verbose: log.warn(msg.format(path))
 
         for fn_ in glob.glob(path):
@@ -140,7 +141,9 @@ def prepend_root_dir(opts, path_options):
         if path_option in opts:
             if opts[path_option].startswith(opts['root_dir']):
                 opts[path_option] = opts[path_option][len(opts['root_dir']):]
-            opts[path_option] = salt.utils.path_join(root_dir, opts[path_option])
+            opts[path_option] = salt.utils.path_join(
+                    root_dir,
+                    opts[path_option])
 
 
 def minion_config(path):
