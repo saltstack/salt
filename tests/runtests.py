@@ -285,7 +285,7 @@ def parse_opts():
 
     # With greater verbosity we can also log to the console
     if options.verbosity > 2:
-        consolehandler = logging.StreamHandler(stream=sys.stderr)
+        consolehandler = logging.StreamHandler(sys.stderr)
         consolehandler.setLevel(logging.INFO)       # -vv
         consolehandler.setFormatter(formatter)
         if options.verbosity > 3:
