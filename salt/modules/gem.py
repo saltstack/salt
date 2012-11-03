@@ -13,7 +13,7 @@ def _gem(command, ruby=None, runas=None):
 
     ret = __salt__['cmd.run_all'](
         cmdline,
-        runas=runas or __salt__['config.option']('rvm.runas')
+        runas=runas
         )
 
     if ret['retcode'] == 0:
