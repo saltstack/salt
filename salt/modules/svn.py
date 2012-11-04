@@ -79,7 +79,7 @@ def info(cwd, targets=None, user=None, username=None, fmt="str"):
     if fmt == "xml":
         opts.append("--xml")
     if targets:
-        opts.append(shlex.split(targets))
+        opts += shlex.split(targets)
     infos = _run_svn("info", cwd, user, username, opts)
 
     if fmt in ("str", "xml"):
