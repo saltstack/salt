@@ -117,8 +117,11 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-
 '''
+        # Delete if exiting
+        if os.path.isfile('/tmp/salttest/issue-1879'):
+            os.unlink('/tmp/salttest/issue-1879')
+
         # Create the file
         self.run_function('state.sls', mods='issue-1879')
         # The first append
