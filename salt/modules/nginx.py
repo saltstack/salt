@@ -29,7 +29,7 @@ def version():
         salt '*' nginx.version
     '''
     cmd = __detect_os() + ' -v'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return ret[-1]
 

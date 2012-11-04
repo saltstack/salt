@@ -47,7 +47,7 @@ def version():
         salt '*' apache.version
     '''
     cmd = '{0} -v'.format(_detect_os())
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return ret[1]
 
@@ -63,7 +63,7 @@ def fullversion():
     cmd = '{0} -V'.format(_detect_os())
     ret = {}
     ret['compiled_with'] = []
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     # Example
     #  -D APR_HAS_MMAP
     define_re = re.compile('^\s+-D\s+')
@@ -91,7 +91,7 @@ def modules():
     ret = {}
     ret['static'] = []
     ret['shared'] = []
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split()
         if not comps:
@@ -113,7 +113,7 @@ def servermods():
     '''
     cmd = '{0} -l'.format(_detect_os())
     ret = []
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -135,7 +135,7 @@ def directives():
     ret = {}
     out = __salt__['cmd.run'](cmd)
     out = out.replace('\n\t', '\t')
-    for line in out.split('\n'):
+    for line in out.splitlines():
         if not line:
             continue
         comps = line.split('\t')
@@ -159,7 +159,7 @@ def vhosts():
     ret = {}
     namevhost = ''
     out = __salt__['cmd.run'](cmd)
-    for line in out.split('\n'):
+    for line in out.splitlines():
         if not line:
             continue
         comps = line.split()

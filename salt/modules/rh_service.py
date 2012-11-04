@@ -53,7 +53,7 @@ def get_enabled():
     rlevel = _runlevel()
     ret = set()
     cmd = '/sbin/chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -73,7 +73,7 @@ def get_disabled():
     rlevel = _runlevel()
     ret = set()
     cmd = '/sbin/chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:

@@ -29,7 +29,7 @@ def get_enabled():
     '''
     ret = set()
     cmd = 'svcs -H -o SVC,STATE -s SVC'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -49,7 +49,7 @@ def get_disabled():
     '''
     ret = set()
     cmd = 'svcs -aH -o SVC,STATE -s SVC'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -69,7 +69,7 @@ def get_all():
     '''
     ret = set()
     cmd = 'svcs -aH -o SVC,STATE -s SVC'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:

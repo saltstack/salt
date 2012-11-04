@@ -77,7 +77,7 @@ def conf():
     ret['stanzas'] = []
     for stanza in stanzas:
         mydict = {}
-        for line in stanza.strip().split('\n'):
+        for line in stanza.strip().splitlines():
             key, value = _parse_line(line)
             mydict[key] = value
         ret['stanzas'].append(mydict)

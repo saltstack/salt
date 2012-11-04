@@ -451,7 +451,7 @@ def freeze(bin_env=None,
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
-    return result['stdout'].split('\n')
+    return result['stdout'].splitlines()
 
 
 def list(prefix='',
@@ -474,7 +474,7 @@ def list(prefix='',
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
-    for line in result['stdout'].split('\n'):
+    for line in result['stdout'].splitlines():
         if line.startswith('-e'):
             line = line.split('-e ')[1]
             line, name = line.split('#egg=')

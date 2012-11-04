@@ -23,7 +23,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = set()
-    lines = __salt__['cmd.run']('rc-update show').strip().split('\n')
+    lines = __salt__['cmd.run']('rc-update show').strip().splitlines()
     for line in lines:
         if not '|' in line:
             continue
@@ -42,7 +42,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = set()
-    lines = __salt__['cmd.run']('rc-update -v show').strip().split('\n')
+    lines = __salt__['cmd.run']('rc-update -v show').strip().splitlines()
     for line in lines:
         if not '|' in line:
             continue

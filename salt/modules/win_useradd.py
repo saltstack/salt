@@ -172,7 +172,7 @@ def info(name):
     ret = {}
     items = {}
     cmd = 'net user {0}'.format(name)
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'name could not be found' in line:
             return False
@@ -231,7 +231,7 @@ def getent():
     users = []
     startusers = False
     cmd = 'net user'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if '----------' in line:
             startusers = True

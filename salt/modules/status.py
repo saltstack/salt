@@ -140,7 +140,7 @@ def cpustats():
     procf = '/proc/stat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -177,7 +177,7 @@ def meminfo():
     procf = '/proc/meminfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -203,7 +203,7 @@ def cpuinfo():
     procf = '/proc/cpuinfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -228,7 +228,7 @@ def diskstats():
     procf = '/proc/diskstats'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -318,7 +318,7 @@ def vmstats():
     procf = '/proc/vmstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -339,7 +339,7 @@ def netstats():
     procf = '/proc/net/netstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     headers = ['']
     for line in stats:
@@ -413,7 +413,7 @@ def w():
         salt '*' status.w
     '''
     user_list = []
-    users = __salt__['cmd.run']('w -h').split('\n')
+    users = __salt__['cmd.run']('w -h').splitlines()
     for row in users:
         if not row:
             continue

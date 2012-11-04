@@ -145,7 +145,7 @@ def sysctl():
     '''
     ret = {}
     sysctl=__salt__['cmd.run']('sysctl security.jail')
-    for s in sysctl.split('\n'):
+    for s in sysctl.splitlines():
         k, v = s.split(':')
         ret[k.strip()] = v.strip()
     return ret

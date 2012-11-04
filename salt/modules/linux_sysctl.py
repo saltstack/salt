@@ -30,7 +30,7 @@ def show():
     '''
     cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue

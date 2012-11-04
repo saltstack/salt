@@ -39,7 +39,7 @@ def _parse_yum(arg):
 
     results = []
 
-    for line in out.split('\n'):
+    for line in out.splitlines():
         if len(line.split()) == 3:
             namearchstr, pkgver, pkgstatus = line.split()
             pkgname = namearchstr.rpartition('.')[0]
