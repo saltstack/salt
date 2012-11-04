@@ -2,6 +2,8 @@
 Support for GRUB
 '''
 
+# TODO: Support grub2
+
 import os
 
 def __virtual__():
@@ -17,14 +19,10 @@ def _detect_conf():
     '''
     GRUB conf location differs depending on distro
     '''
-    conf = ('CentOS', 'Scientific', 'RedHat', 'Fedora', 'CloudLinux')
-    menu = ('Ubuntu', 'Debian', 'Arch')
-    if __grains__['os'] in conf:
+    if __grains__['os_family'] == 'RedHat':
         return '/boot/grub/grub.conf'
-    elif __grains__['os'] in menu:
-        return '/boot/grub/menu.lst'
-    else:
-        return '/boot/grub/menu.lst'
+    # Defaults for Ubuntu, Debian, Arch, and others
+    return '/boot/grub/menu.lst'
 
 def version():
     '''
