@@ -1,5 +1,4 @@
 /tmp/salttest/issue-1879:
-      
   file.append:
     - text: |
         # set variable identifying the chroot you work in (used in the prompt below)
