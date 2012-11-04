@@ -57,7 +57,7 @@ def _get_pkgs():
     cmd = '/usr/bin/pkginfo -x'
 
     line_count = 0
-    for line in __salt__['cmd.run'](cmd).split('\n'):
+    for line in __salt__['cmd.run'](cmd).splitlines():
         if line_count % 2 == 0:
             namever = line.split()[0].strip()
         if line_count % 2 == 1:
