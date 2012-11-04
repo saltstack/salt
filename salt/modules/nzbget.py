@@ -24,7 +24,7 @@ def version():
         salt '*' nzbget.version
     '''
     cmd = 'nzbget -v'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return {'version': ret[1] }
 
@@ -39,11 +39,11 @@ def serverversion():
         salt '*' nzbget.serverversion moe
     '''
     cmd = 'ps aux | grep "nzbget -D" | grep -v grep | cut -d " " -f 1'
-    user = __salt__['cmd.run'](cmd).strip()
+    user = __salt__['cmd.run'](cmd)
     if not user:
         return 'Server not running'
     cmd = 'nzbget -V -c ~' + user + '/.nzbget | grep "server returned"'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return {'user': user,
             'version': ret[1], }
@@ -61,7 +61,7 @@ def start(user=None):
     cmd = 'nzbget -D'
     if user:
         cmd = 'su - ' + user + ' -c "' + cmd + '"'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -77,7 +77,7 @@ def stop(user=None):
     cmd = 'nzbget -Q'
     if user:
         cmd = 'su - ' + user + ' -c "' + cmd + '"'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -96,7 +96,7 @@ def list(user=None):
     cmd = 'nzbget -L'
     if user:
         cmd = cmd + ' -c ~' + user + '/.nzbget'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if 'Queue List' in line:
             inqueue = 1
@@ -130,7 +130,7 @@ def pause(user=None):
     cmd = 'nzbget -P'
     if user:
         cmd = cmd + ' -c ~' + user + '/.nzbget'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -146,6 +146,6 @@ def unpause(user=None):
     cmd = 'nzbget -U'
     if user:
         cmd = cmd + ' -c ~' + user + '/.nzbget'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 

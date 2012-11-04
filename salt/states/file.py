@@ -1414,7 +1414,7 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
             continue
 
         try:
-            lines = chunk.split('\n')
+            lines = chunk.splitlines()
         except AttributeError:
             logger.debug(
                 'Error appending text to {0}; given object is: {1}'.format(

@@ -30,7 +30,7 @@ def show():
     '''
     cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -50,7 +50,7 @@ def get(name):
         salt '*' sysctl.get net.ipv4.ip_forward
     '''
     cmd = 'sysctl -n {0}'.format(name)
-    out = __salt__['cmd.run'](cmd).strip()
+    out = __salt__['cmd.run'](cmd)
     return out
 
 

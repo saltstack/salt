@@ -34,7 +34,7 @@ def _parse_pkg_meta(path):
     version = ''
     result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
     if result['retcode'] == 0:
-        for line in result['stdout'].split('\n'):
+        for line in result['stdout'].splitlines():
             if not name:
                 m = re.match('^Name\s*:\s*(.+)\s*$',line)
                 if m:
@@ -82,7 +82,7 @@ def list_upgrades():
     upgrades = {}
     lines = __salt__['cmd.run'](
             'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
-            ).split('\n')
+            ).splitlines()
     for line in lines:
         comps = line.split(' ')
         if len(comps) < 2:
@@ -118,7 +118,7 @@ def list_pkgs():
     '''
     cmd = 'pacman -Q'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -139,7 +139,7 @@ def refresh_db():
     '''
     cmd = 'LANG=C pacman -Sy'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if line.strip().startswith('::'):
             continue

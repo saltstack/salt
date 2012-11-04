@@ -138,7 +138,7 @@ def list_sebool():
 
         salt '*' selinux.list_sebool
     '''
-    bdata = __salt__['cmd.run']('semanage boolean -l').split('\n')
+    bdata = __salt__['cmd.run']('semanage boolean -l').splitlines()
     ret = {}
     for line in bdata[1:]:
         if not line.strip():
