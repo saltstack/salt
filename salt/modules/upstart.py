@@ -110,7 +110,7 @@ def _runlevel():
     '''
     Return the current runlevel
     '''
-    out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp())).strip()
+    out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp()))
     try:
         return out.split()[1]
     except IndexError:

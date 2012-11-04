@@ -44,7 +44,7 @@ def netstat():
     '''
     ret = []
     cmd = 'netstat -na'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if line.startswith('  TCP'):
@@ -72,7 +72,7 @@ def traceroute(host):
     '''
     ret = []
     cmd = 'tracert {0}'.format(sanitize_host(host))
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if not ' ' in line:
             continue
@@ -124,7 +124,7 @@ def nslookup(host):
     '''
     ret = []
     cmd = 'nslookup {0}'.format(sanitize_host(host))
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if line.startswith('Non-authoritative'):
             continue

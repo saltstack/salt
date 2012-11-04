@@ -293,7 +293,7 @@ def list_pkgs(regex_string=''):
 
     out = __salt__['cmd.run_stdout'](cmd)
 
-    for line in out.split('\n'):
+    for line in out.splitlines():
         cols = line.split()
         if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and 'installed' in cols[2]:
             ret[cols[3]] = cols[4]
