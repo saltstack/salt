@@ -53,6 +53,9 @@ class StateModuleTest(integration.ModuleCase):
         '''
         Verify that we can append a file's contents
         '''
+        if os.path.isfile('/tmp/salttest/test.append'):
+            os.unlink('/tmp/salttest/test.append')
+
         self.run_function('state.sls', mods='testappend')
         self.run_function('state.sls', mods='testappend.step-1')
         self.run_function('state.sls', mods='testappend.step-2')
@@ -66,7 +69,6 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-
 ''', open('/tmp/salttest/test.append', 'r').read())
 
         # Re-append switching order
@@ -82,7 +84,6 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-
 ''', open('/tmp/salttest/test.append', 'r').read())
 
     def test_issue_1876_syntax_error(self):
