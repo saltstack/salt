@@ -3,12 +3,15 @@ Subversion SCM
 '''
 
 import re
+import shlex
 from salt import utils, exceptions
 
-_INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$")
+_INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
+
 
 def _check_svn():
     utils.check_or_die('svn')
+
 
 def _run_svn(cmd, cwd, user, opts, **kwargs):
     """
@@ -27,9 +30,9 @@ def _run_svn(cmd, cwd, user, opts, **kwargs):
     opts
         Any additional options to add to the command line
     """
-    cmd = "svn --non-interactive %s" % cmd
+    cmd = "svn --non-interactive %s " % cmd
     if opts:
-        cmd += "'" + "' '".join(opts) + "'"
+        cmd += '"' + '" "'.join([optstr.replace('"', r'\"') for optstr in opts]) + '"'
 
     result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user)
 
@@ -38,9 +41,10 @@ def _run_svn(cmd, cwd, user, opts, **kwargs):
     if retcode == 0:
         return result['stdout']
     else:
-        raise exceptions.CommandExecutionError(result['stderr'])
+        raise exceptions.CommandExecutionError(result['stderr'] + '\n\n' + cmd)
 
-def info(cwd, user=None, targets=None, fmt="str"):
+
+def info(cwd, targets=None, user=None, username=None, fmt="str"):
     """
     Display the Subversion information from the checkout.
     cwd
@@ -57,53 +61,60 @@ def info(cwd, user=None, targets=None, fmt="str"):
     if fmt == "xml":
         opts.append("--xml")
     if targets:
-        opts.append(targets)
+        opts.append(shlex.split(targets))
     infos = _run_svn("info", cwd, user, opts)
 
     if fmt in ("str", "xml"):
         return infos
 
+    info_list = []
     for infosplit in infos.split("\n\n"):
-        info_list = _INI_RE.findall(infosplit, re.M)
+        info_list.append(_INI_RE.findall(infosplit))
 
     if fmt == "list":
         return info_list
     if fmt == "dict":
         return [dict(tmp) for tmp in info_list]
 
-def checkout(cwd, remote, user=None, target=None, *opts):
+
+def checkout(cwd, remote, target=None, user=None, username=None, *opts):
     opts += (remote,)
     if target:
         opts += (target,)
     return _run_svn("checkout", cwd, user, opts)
 
-def update(cwd, user=None, targets=None, *opts):
+
+def update(cwd, targets=None, user=None, *opts):
     if targets:
-        opts += (targets,)
+        opts += tuple(shlex.split(targets))
     return _run_svn("update", cwd, user, opts)
 
-def commit(cwd, user=None, targets=None, msg=None, *opts):
+
+def commit(cwd, targets=None, user=None, msg=None, username=None, *opts):
     if msg:
         opts += ("-m", msg)
     if targets:
-        opts += (targets,)
+        opts += tuple(shlex.split(targets))
     return _run_svn("commit", cwd, user, opts)
+
 
 def add(cwd, targets, user=None, *opts):
     if targets:
-        opts += (targets,)
+        opts += tuple(shlex.split(targets))
     return _run_svn("add", cwd, user, opts)
 
-def remove(cwd, targets, user=None, *opts):
+
+def remove(cwd, targets, user=None, username=None, *opts):
     """
     targets:
         This can either be a list of local files, or, a remote URL.
     """
     if targets:
-        opts += (targets,)
+        opts += tuple(shlex.split(targets))
     return _run_svn("remove", cwd, user, opts)
 
-def status(cwd, targets=None, user=None, *opts):
+
+def status(cwd, targets=None, user=None, username=None, *opts):
     if targets:
-        opts += (targets,)
+        opts += tuple(shlex.split(targets))
     return _run_svn("status", cwd, user, opts)
