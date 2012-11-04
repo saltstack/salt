@@ -61,7 +61,7 @@ def _compare_versions(old, new):
 def _get_pkgs():
     pkg = {}
     cmd = 'pkg_info -q -a'
-    for line in __salt__['cmd.run'](cmd).split('\n'):
+    for line in __salt__['cmd.run'](cmd).splitlines():
         namever = _splitpkg(line)
         if namever:
             pkg[namever[0]] = namever
