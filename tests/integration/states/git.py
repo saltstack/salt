@@ -99,8 +99,7 @@ class GitTest(integration.ModuleCase):
             result = self.state_result(ret)
             self.assertTrue(result)
         finally:
-            pass
-            #shutil.rmtree(name, ignore_errors=True)
+            shutil.rmtree(name, ignore_errors=True)
 
     def test_present(self):
         '''
