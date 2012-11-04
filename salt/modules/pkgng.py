@@ -132,6 +132,6 @@ def info(pkg=None):
     res = __salt__['cmd.run'](cmd)
 
     if not pkg:
-        res = res.split('\n')
+        res = res.splitlines()
 
     return res

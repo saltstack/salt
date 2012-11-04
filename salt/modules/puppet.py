@@ -95,7 +95,7 @@ def facts():
     # Loop over the facter output and  properly
     # parse it into a nice dictionary for using
     # elsewhere
-    for line in output.split('\n'):
+    for line in output.splitlines():
         if not line: continue
         fact, value = _format_fact(line)
         if not fact:
