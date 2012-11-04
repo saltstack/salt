@@ -3,11 +3,19 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-import fnmatch
 import os
 import re
+import fnmatch
 
 __opts__ = {}
+
+
+# TODO: Make this module support windows hosts
+# TODO: Make this module support BSD hosts properly, this is very Linux specific
+def __virtual__():
+    if 'Windows' in __grains__['os']:
+        return False
+    return 'status'
 
 
 def _number(text):
@@ -17,13 +25,12 @@ def _number(text):
     point number if the string is a real number, or the string unchanged
     otherwise.
     '''
-    try:
+    if text.isdigit():
         return int(text)
+    try:
+        return float(text)
     except ValueError:
-        try:
-            return float(text)
-        except ValueError:
-            return text
+        return text
 
 
 def procs():
@@ -39,7 +46,7 @@ def procs():
     uind = 0
     pind = 0
     cind = 0
-    plines = __salt__['cmd.run'](__grains__['ps']).split('\n')
+    plines = __salt__['cmd.run'](__grains__['ps']).splitlines()
     guide = plines.pop(0).split()
     if 'USER' in guide:
         uind = guide.index('USER')
@@ -101,7 +108,7 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    return __salt__['cmd.run']('uptime').strip()
+    return __salt__['cmd.run']('uptime')
 
 
 def loadavg():
@@ -365,7 +372,7 @@ def netdev():
     procf = '/proc/net/dev'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = open(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
