@@ -181,7 +181,6 @@ def add(cwd, targets, user=None, *opts):
 
     targets : None
         files and directories to pass to the command as arguments
-        Default: svn uses '.'
 
     user : None
         Run svn as a user other than what the minion runs as
@@ -191,7 +190,7 @@ def add(cwd, targets, user=None, *opts):
     return _run_svn("add", cwd, user, None, opts)
 
 
-def remove(cwd, targets, user=None, username=None, *opts):
+def remove(cwd, targets, msg=None, user=None, username=None, *opts):
     """
     Remove files and directories from the Subversion repository
 
@@ -200,7 +199,9 @@ def remove(cwd, targets, user=None, username=None, *opts):
 
     targets : None
         files, directories, and URLs to pass to the command as arguments
-        Default: svn uses '.'
+
+    msg : None
+        Message to attach to the commit log
 
     user : None
         Run svn as a user other than what the minion runs as
@@ -210,6 +211,8 @@ def remove(cwd, targets, user=None, username=None, *opts):
     """
     if username:
         opts += ("--username", username)
+    if msg:
+        opts += ("-m", msg)
     if targets:
         opts += tuple(shlex.split(targets))
     return _run_svn("remove", cwd, user, username, opts)
