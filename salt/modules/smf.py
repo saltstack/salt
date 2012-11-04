@@ -1,6 +1,6 @@
 '''
 Service support for Solaris 10 and 11, should work with other systems
-that use SMF also. (e.g. SmartOS) 
+that use SMF also. (e.g. SmartOS)
 '''
 
 
@@ -124,11 +124,11 @@ def status(name, sig=None):
         salt '*' service.status <service name>
     '''
     cmd = '/usr/bin/svcs -H -o STATE {0}'.format(name)
-    line = __salt__['cmd.run'](cmd).strip()
+    line = __salt__['cmd.run'](cmd)
     if line == 'online':
         return True
     else:
-        return False 
+        return False
 
 
 def enable(name):

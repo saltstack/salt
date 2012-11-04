@@ -19,7 +19,7 @@ def _get_runlevel():
     '''
     returns the current runlevel
     '''
-    return __salt__['cmd.run']('runlevel').strip().split()[1]
+    return __salt__['cmd.run']('runlevel').split()[1]
 
 
 def get_enabled():

@@ -25,7 +25,7 @@ def tar(options, tarfile, *sources):
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'tar -{0} {1} {2}'.format(options, tarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -38,7 +38,7 @@ def gzip(sourcefile):
         salt '*' archive.gzip /tmp/sourcefile.txt
     '''
     cmd = 'gzip {0}'.format(sourcefile)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -51,7 +51,7 @@ def gunzip(gzipfile):
         salt '*' archive.gunzip /tmp/sourcefile.txt.gz
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -65,7 +65,7 @@ def zip(zipfile, *sources):
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'zip {0} {1}'.format(zipfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -81,7 +81,7 @@ def unzip(zipfile, dest, *xfiles):
     cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
     if xfileslist:
         cmd = cmd + ' -x {0}'.format(xfiles)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -97,7 +97,7 @@ def rar(rarfile, *sources):
     # TODO: Check that len(sources) >= 1
     sourcefiles = ' '.join(sources)
     cmd = 'rar a -idp {0} {1}'.format(rarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -115,5 +115,5 @@ def unrar(rarfile, dest, *xfiles):
     if xfileslist:
         cmd = cmd + ' {0}'.format(xfiles)
     cmd = cmd + ' {0}'.format(dest)
-    out = __salt__['cmd.run'](cmd).strip().splitlines()
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out

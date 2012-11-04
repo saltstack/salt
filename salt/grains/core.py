@@ -705,7 +705,7 @@ def _hw_data(osdata):
                 'biosreleasedate': 'smbios.bios.reldate',
             }
             for key, val in fbsd_hwdata.items():
-                grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val)).strip()
+                grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
     elif osdata['kernel'] == 'OpenBSD':
         sysctl = salt.utils.which('sysctl')
         hwdata = {'biosversion': 'hw.version',

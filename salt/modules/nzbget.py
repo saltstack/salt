@@ -39,7 +39,7 @@ def serverversion():
         salt '*' nzbget.serverversion moe
     '''
     cmd = 'ps aux | grep "nzbget -D" | grep -v grep | cut -d " " -f 1'
-    user = __salt__['cmd.run'](cmd).strip()
+    user = __salt__['cmd.run'](cmd)
     if not user:
         return 'Server not running'
     cmd = 'nzbget -V -c ~' + user + '/.nzbget | grep "server returned"'

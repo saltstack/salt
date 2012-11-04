@@ -50,7 +50,7 @@ def get(name):
         salt '*' sysctl.get net.ipv4.ip_forward
     '''
     cmd = 'sysctl -n {0}'.format(name)
-    out = __salt__['cmd.run'](cmd).strip()
+    out = __salt__['cmd.run'](cmd)
     return out
 
 

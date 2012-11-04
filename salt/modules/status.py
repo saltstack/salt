@@ -461,6 +461,6 @@ def pid(sig):
     '''
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
-    return (__salt__['cmd.run_stdout'](cmd) or '').strip()
+    return (__salt__['cmd.run_stdout'](cmd) or '')
 
 
