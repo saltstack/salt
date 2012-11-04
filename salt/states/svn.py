@@ -65,3 +65,11 @@ def latest(target,
         __salt__[svn_cmd](cwd, basename, user=user, username=username, *opts)
     else:
         __salt__[svn_cmd](cwd, remote, basename, user=user, username=username, *opts)
+
+def dirty(target,
+          user=None,
+          ignore_unversioned=False):
+    """
+    Determine if the working directory has been changed.
+    """
+    pass
