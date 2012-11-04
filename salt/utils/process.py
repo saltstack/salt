@@ -37,8 +37,9 @@ def set_pidfile(pidfile, user):
         sys.exit(2)
     try:
         os.chown(pidfile, uid, gid)
-    except Exception as e:
-        msg = ('Failed to set the pid to user {0}').format(user)
+    except OSError as e:
+        msg = ('Failed to set the ownership of PID file {0} '
+               'to user {1}\n').format(pidfile, user)
         log.debug(msg, exc_info=True)
         sys.stderr.write(msg)
         sys.exit(e.errno)
