@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 from salt import exceptions
 from salt.states.git import _fail, _neutral_test
 
@@ -22,28 +21,32 @@ def latest(name,
            force=None,
            externals=True):
     """
-    Make sure the repository is cloned to the given directory and is up to date
-
-    target
-        Name of the target directory where the checkout will put the working directory
+    Checkout or update the working directory to the latest revision from the
+    remote repository.
 
     name
         Address of the name repository as passed to "svn checkout"
 
+    target
+        Name of the target directory where the checkout will put the working
+        directory
+
     rev : None
-        The name revision number to checkout. Enable "force" if the directory already exists.
+        The name revision number to checkout. Enable "force" if the directory
+        already exists.
 
     user : None
         Name of the user performing repository management operations
 
     username : None
-        The user to access the name repository with. The svn default is the current user
+        The user to access the name repository with. The svn default is the
+        current user
 
-    force : Fasle
-        Force svn to checkout into pre-existing directories (deletes contents)
+    force : False
+        Continue if conflicts are encountered
 
     externals : True
-        Checkout externally tracked files.
+        Change to False to not checkout or update externals
     """
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -54,7 +57,8 @@ def latest(name,
     opts = tuple()
 
     if os.path.exists(target) and not os.path.isdir(target):
-        return _fail(ret, "The path, %s, exists and is not a directory." % target)
+        return _fail(ret,
+                "The path, %s, exists and is not a directory." % target)
 
     try:
         __salt__["svn.info"](".", target, user=user)
@@ -84,4 +88,5 @@ def dirty(target,
     """
     Determine if the working directory has been changed.
     """
-    pass
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    return _fail(ret, "This function is not implemented yet.")
