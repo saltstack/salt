@@ -38,9 +38,9 @@ def flavor_list():
     nt = _auth()
     ret = {}
     for flavor in nt.flavors.list():
-        links = []
+        links = {}
         for link in flavor.links:
-            links.append(link['href'])
+            links[link['rel']] = link['href']
         ret[flavor.name] = {
                 'disk': flavor.disk,
                 'id': flavor.id,
@@ -142,6 +142,29 @@ def keypair_delete(name):
     nt.keypairs.delete(name)
     return 'Keypair deleted: {0}'.format(name)
 
+
+def image_list():
+    '''
+    Return a list of available images (nova images-list)
+
+    CLI Example::
+
+        salt '*' nova.image_list
+    '''
+    nt = _auth()
+    ret = {}
+    for image in nt.images.list():
+        links = {}
+        for link in image.links:
+            links[link['rel']] = link['href']
+        ret[image.name] = {
+                'name': image.name,
+                'id': image.id,
+                'status': image.status,
+                'progress': image.progress,
+                'links': links,
+            }
+    return ret
 
 def _item_list():
     '''
