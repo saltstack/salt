@@ -96,7 +96,7 @@ class Minion(parsers.MinionOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
-        except OSError, err:
+        except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
@@ -144,7 +144,7 @@ class Syndic(parsers.SyndicOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-        except OSError, err:
+        except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
