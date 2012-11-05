@@ -82,10 +82,10 @@ def latest(name,
 
             new_rev = __salt__['git.revision'](cwd=target, user=runas)
 
-        except Exception, exception:
+        except Exception as exc:
             return _fail(
                     ret,
-                    str(exception))
+                    str(exc))
 
         if current_rev != new_rev:
             log.info('Repository {0} updated: {1} => {2}'.format(target,
