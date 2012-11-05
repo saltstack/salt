@@ -560,7 +560,7 @@ class AESFuncs(object):
         pub = None
         try:
             pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError, e:
+        except RSA.RSAError as e:
             log.error('Unable to load temporary public key "{0}": {1}'
                       .format(tmp_pub, e))
         try:
