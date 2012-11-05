@@ -233,8 +233,9 @@ def interfaces():
     '''
     ifaces = dict()
     if __salt__['cmd.has_exec']('ip'):
-        cmd = __salt__['cmd.run']('ip addr show')
-        ifaces = _interfaces_ip(cmd)
+        cmd1 = __salt__['cmd.run']('ip link show')
+        cmd2 = __salt__['cmd.run']('ip addr show')
+        ifaces = _interfaces_ip(cmd1 + cmd2)
     elif __salt__['cmd.has_exec']('ifconfig'):
         cmd = __salt__['cmd.run']('ifconfig -a')
         ifaces = _interfaces_ifconfig(cmd)
