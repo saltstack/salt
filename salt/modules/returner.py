@@ -7,19 +7,19 @@ returner.
 import salt.loader
 
 
-def get_jid(jid):
+def get_jid(returner, jid):
     '''
     Return the information for a specified job id
 
     CLI Example::
 
-        salt '*' returner.get_jid 20421104181954700505
+        salt '*' returner.get_jid redis 20421104181954700505
     '''
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners.get_jid(jid)
+    return returners['{0}.get_jid'.format(returner)](jid)
 
 
-def get_fun(jid):
+def get_fun(returner, fun):
     '''
     Return the information for a specified job id
 
@@ -28,4 +28,4 @@ def get_fun(jid):
         salt '*' returner.get_fun network.interfaces
     '''
     returners = salt.loader.returners(__opts__, __salt__)
-    return returners.get_fun(fun)
+    return returners['{0}.get_fun'.format(returner)](fun)
