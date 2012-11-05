@@ -4,10 +4,10 @@ Module for handling openstack nova calls.
 This module is not usable until the user, password, tenant and auth url are
 specified either in a pillar or in the minion's config file. For example:
 
-nova.user: admin
-nova.password: verybadpass
-nova.tenant: admin
-nova.auth_url: 'http://127.0.0.1:5000/v2.0/'
+keystone.user: admin
+keystone.password: verybadpass
+keystone.tenant: admin
+keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
 
 from novaclient.v1_1 import client
@@ -19,12 +19,13 @@ def _auth():
     '''
     Set up nova credentials
     '''
-    user = __salt__['config.option']('nova.user')
-    password = __salt__['config.option']('nova.password')
-    tenant = __salt__['config.option']('nova.tenant')
-    auth_url = __salt__['config.option']('nova.auth_url')
+    user = __salt__['config.option']('keystone.user')
+    password = __salt__['config.option']('keystone.password')
+    tenant = __salt__['config.option']('keystone.tenant')
+    auth_url = __salt__['config.option']('keystone.auth_url')
     nt = client.Client(user, password, tenant, auth_url, service_type="compute")
     return nt
+
 
 def flavor_list():
     '''
@@ -37,9 +38,9 @@ def flavor_list():
     nt = _auth()
     ret = {}
     for flavor in nt.flavors.list():
-        links = []
+        links = {}
         for link in flavor.links:
-            links.append(link['href'])
+            links[link['rel']] = link['href']
         ret[flavor.name] = {
                 'disk': flavor.disk,
                 'id': flavor.id,
@@ -51,6 +52,44 @@ def flavor_list():
                 'links': links,
             }
     return ret
+
+
+def flavor_create(name, id=0, ram=0, disk=0, vcpus=1):
+    '''
+    Add a flavor to nova (nova flavor-create). The following parameters are
+    required:
+
+    <name>   Name of the new flavor (must be first)
+    <id>     Unique integer ID for the new flavor
+    <ram>    Memory size in MB
+    <disk>   Disk size in GB
+    <vcpus>  Number of vcpus
+
+    CLI Example::
+
+        salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
+    '''
+    nt = _auth()
+    nt.flavors.create(name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus)
+    return {'name': name,
+            'id': id,
+            'ram': ram,
+            'disk': disk,
+            'vcpus': vcpus}
+
+
+def flavor_delete(id):
+    '''
+    Delete a flavor from nova by id (nova flavor-delete)
+
+    CLI Example::
+
+        salt '*' nova.flavor_delete 7'
+    '''
+    nt = _auth()
+    nt.flavors.delete(id)
+    return 'Flavor deleted: {0}'.format(id)
+
 
 def keypair_list():
     '''
@@ -69,6 +108,7 @@ def keypair_list():
                 'public_key': keypair.public_key,
             }
     return ret
+
 
 def keypair_add(name, pubfile=None, pubkey=None):
     '''
@@ -89,6 +129,7 @@ def keypair_add(name, pubfile=None, pubkey=None):
     ret = { 'name': name, 'pubkey': pubkey }
     return ret
 
+
 def keypair_delete(name):
     '''
     Add a keypair to nova (nova keypair-delete)
@@ -99,9 +140,84 @@ def keypair_delete(name):
     '''
     nt = _auth()
     nt.keypairs.delete(name)
-    return '{0} deleted'.format(name)
+    return 'Keypair deleted: {0}'.format(name)
 
-def item_list():
+
+def image_list(name=None):
+    '''
+    Return a list of available images (nova images-list + nova image-show)
+    If a name is provided, only that image will be displayed.
+
+    CLI Examples::
+
+        salt '*' nova.image_list
+        salt '*' nova.image_list myimage
+    '''
+    nt = _auth()
+    ret = {}
+    for image in nt.images.list():
+        links = {}
+        for link in image.links:
+            links[link['rel']] = link['href']
+        ret[image.name] = {
+                'name': image.name,
+                'id': image.id,
+                'status': image.status,
+                'progress': image.progress,
+                'created': image.created,
+                'updated': image.updated,
+                'minDisk': image.minDisk,
+                'minRam': image.minRam,
+                'metadata': image.metadata,
+                'links': links,
+            }
+    if name:
+        return {name: ret[name]}
+    return ret
+
+
+def image_meta_set(id=None, name=None, **kwargs):
+    '''
+    Sets a key=value pair in the metadata for an image (nova image-meta set)
+
+    CLI Examples::
+
+        salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
+        salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
+    '''
+    nt = _auth()
+    if name:
+        for image in nt.images.list():
+            if image.name == name:
+                id = image.id
+    if not id:
+        return {'Error': 'A valid image name or id was not specified'}
+    nt.images.set_meta(id, kwargs)
+    return {id: kwargs}
+
+
+def image_meta_delete(id=None, name=None, keys=None):
+    '''
+    Delete a key=value pair from the metadata for an image (nova image-meta set)
+
+    CLI Examples::
+
+        salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete name=myimage keys=salad,beans
+    '''
+    nt = _auth()
+    if name:
+        for image in nt.images.list():
+            if image.name == name:
+                id = image.id
+    pairs = keys.split(',')
+    if not id:
+        return {'Error': 'A valid image name or id was not specified'}
+    nt.images.delete_meta(id, pairs)
+    return {id: 'Deleted: {0}'.format(pairs)}
+
+
+def _item_list():
     '''
     Template for writing list functions
     Return a list of available items (nova items-list)
@@ -159,8 +275,6 @@ def item_list():
                         and name.
     endpoints           Discover endpoints that get returned from the
                         authenticate services
-    flavor-create       Create a new flavor
-    flavor-delete       Delete a specific flavor
     floating-ip-create  Allocate a floating IP for the current tenant.
     floating-ip-delete  De-allocate a floating IP.
     floating-ip-list    List floating ips for this tenant.
@@ -172,9 +286,6 @@ def item_list():
     image-create        Create a new image by taking a snapshot of a running
                         server.
     image-delete        Delete an image.
-    image-list          Print a list of available images to boot from.
-    image-meta          Set or Delete metadata on an image.
-    image-show          Show details about the given image.
     list                List active servers.
     live-migration      Migrates a running instance to a new machine.
     lock                Lock a server.
