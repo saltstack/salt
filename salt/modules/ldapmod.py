@@ -50,15 +50,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# Defaults in the event that these are not found in the minion or pillar config
-__opts__ = {'ldap.server': 'localhost',
-            'ldap.port': '389',
-            'ldap.tls': False,
-            'ldap.scope': 2,
-            'ldap.attrs': None,
-            'ldap.binddn': '',
-            'ldap.bindpw': ''}
-
 
 def __virtual__():
     '''
@@ -80,9 +71,8 @@ def _config(name, key=None, **kwargs):
     if name in kwargs:
         value = kwargs[name]
     else:
-        try:
-            value = __opts__['ldap.{0}'.format(key)]
-        except KeyError:
+        value = __salt__['config.option']('ldap.{0}'.format(key))
+        if not value:
             msg = 'missing ldap.{0} in config or {1} in args'.format(key, name)
             raise SaltInvocationError(msg)
     return value
@@ -141,20 +131,22 @@ def search(filter, dn=None, scope=None, attrs=None, **kwargs):
         elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
     else:
         elapsed_h = str(round(elapsed, 2)) + 's'
-    ret = {}
-    ret['time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
-    ret['count'] = len(results)
-    ret['results'] = results
+
+    ret = {
+        'results': results,
+        'count': len(results),
+        'time': {'human': elapsed_h, 'raw': str(round(elapsed, 5))},
+    }
     return ret
 
 
 class _LDAPConnection:
-
-    """Setup an LDAP connection."""
-
+    '''
+    Setup a LDAP connection.
+    '''
     def __init__(self, server, port, tls, binddn, bindpw):
         '''
-        Bind to an LDAP directory using passed credentials."""
+        Bind to a LDAP directory using passed credentials."""
         '''
         self.server = server
         self.port = port
@@ -169,6 +161,6 @@ class _LDAPConnection:
                 self.LDAP.start_tls_s()
             self.LDAP.simple_bind_s(self.binddn, self.bindpw)
         except Exception:
-            msg = 'Failed to bind to LDAP server %s:%s as %s' % \
-                (self.server, self.port, self.binddn)
+            msg = 'Failed to bind to LDAP server {0}:{1} as {2}'.format(
+                self.server, self.port, self.binddn)
             raise CommandExecutionError(msg)

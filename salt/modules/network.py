@@ -100,7 +100,7 @@ def _interfaces_ip(out):
         iface = None
         data = dict()
 
-        for line in group.split('\n'):
+        for line in group.splitlines():
             if not ' ' in line:
                 continue
             m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
@@ -179,7 +179,7 @@ def _interfaces_ifconfig(out):
         data = dict()
         iface = ''
         updown = False
-        for line in group.split('\n'):
+        for line in group.splitlines():
             miface = piface.match(line)
             mmac = pmac.match(line)
             mip = pip.match(line)
@@ -366,7 +366,7 @@ def netstat():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split()
         if line.startswith('tcp'):

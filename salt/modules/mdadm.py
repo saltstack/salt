@@ -26,7 +26,7 @@ def list():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                 ('mdadm --detail --scan').split('\n')):
+                 ('mdadm --detail --scan').splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -50,7 +50,7 @@ def detail(device='/dev/md0'):
     ret = {}
     ret['members'] = {}
     cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).split('\n'):
+    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:

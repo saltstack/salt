@@ -54,7 +54,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        raise TypeError('Cannot inspect argument list for "{0}"'.format(func))
 
     return aspec
 

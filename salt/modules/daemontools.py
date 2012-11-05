@@ -1,25 +1,29 @@
 '''
-daemontools service module. This module will create daemontools type 
-service watcher. 
+daemontools service module. This module will create daemontools type
+service watcher.
 This module is states.service compatible so it can be used to maintain
 service state via provider interface:
- 
+
   - provider: daemontools
 '''
 # Import Python libs
+import os
 import re
 
-# Local variable
-service_dir="/service"
+__outputter__ = {
+    'get_all': 'yaml',
+}
+
+SERVICE_DIR = "/service"
 
 def _service_path(name):
     '''
     build service path
     '''
-    return '{0}/{1}'.format(service_dir,name)
-	
+    return '{0}/{1}'.format(SERVICE_DIR, name)
+
 #-- states.service  compatible args
-def start(name,enable=None,sig=None):
+def start(name, enable=None, sig=None):
     '''
     Starts service via daemontools
 
@@ -30,9 +34,9 @@ def start(name,enable=None,sig=None):
     cmd = 'svc -u {0}'.format(_service_path(name))
     return not __salt__['cmd.retcode'](cmd)
 
-	
-#-- states.service compatible	
-def stop(name,enable=None,sig=None):
+
+#-- states.service compatible
+def stop(name, enable=None, sig=None):
     '''
     Stops service via daemontools
 
@@ -54,12 +58,12 @@ def term(name):
     cmd = 'svc -t {0}'.format(_service_path(name))
     return not __salt__['cmd.retcode'](cmd)
 
-	
+
 #-- states.service compatible
 def reload(name):
     '''
     Wrapper for term()
-	
+
     CLI Example:
     salt '*' daemontools.reload <service name>
     '''
@@ -70,22 +74,22 @@ def reload(name):
 def restart(name):
     '''
     Restart service via daemontools. This will stop/start service
-   
+
     CLI Example:
      salt '*' daemontools.restart <service name>
     '''
     ret = 'restart False'
     if stop(name) and start(name):
         ret = 'restart True'
-    return ret		
+    return ret
 
-	
+
 #-- states.service compatible
-def full_restart(name):		
+def full_restart(name):
     ''' Calls daemontools.restart() function '''
     restart(name)
-	
-	
+
+
 #-- states.service compatible
 def status(name, sig=None):
     '''
@@ -97,7 +101,7 @@ def status(name, sig=None):
     '''
     cmd = 'svstat {0}'.format(_service_path(name))
     ret = __salt__['cmd.run_stdout'](cmd)
-    m = re.search('\(pid (\d+)\)',ret)
+    m = re.search('\(pid (\d+)\)', ret)
     try:
       pid = m.group(1)
     except:
@@ -113,9 +117,4 @@ def get_all():
         salt '*' daemontools.get_all
     '''
     #- List all daemontools services in
-    cmd = 'ls {0}/'.format(service_dir)
-    all_srv = __salt__['cmd.run_stdout'](cmd)
-    ret=set()
-    for srv in all_srv.split():
-      ret.add(srv)
-    return sorted(ret) 
+    return sorted(os.listdir(SERVICE_DIR))

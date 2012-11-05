@@ -49,7 +49,7 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
-    for path in __salt__['cmd.run']('ls /boot/kernel | grep .ko$').split('\n'):
+    for path in __salt__['cmd.run']('ls /boot/kernel | grep .ko$').splitlines():
         bpath = os.path.basename(path)
         comps = bpath.split('.')
         if 'ko' in comps:
@@ -78,7 +78,7 @@ def lsmod():
         salt '*' kmod.lsmod
     '''
     ret = []
-    for line in __salt__['cmd.run']('kldstat').split('\n'):
+    for line in __salt__['cmd.run']('kldstat').splitlines():
         comps = line.split()
         if not len(comps) > 2:
             continue

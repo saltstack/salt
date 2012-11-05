@@ -8,17 +8,20 @@ __outputter__ = {
     'signal': 'txt',
 }
 
+# Cache the output of running which('nginx') so this module
+# doesn't needlessly walk $PATH looking for the same binary
+# for nginx over and over and over for each function herein
+@salt.utils.memoize
+def __detect_os():
+    return salt.utils.which('nginx')
+
 def __virtual__():
     '''
     Only load the module if nginx is installed
     '''
-    cmd = __detect_os()
-    if salt.utils.which(cmd):
+    if __detect_os():
         return 'nginx'
     return False
-
-def __detect_os():
-    return 'nginx'
 
 def version():
     '''
@@ -28,8 +31,8 @@ def version():
 
         salt '*' nginx.version
     '''
-    cmd = __detect_os() + ' -v'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    cmd = '{0} -v'.format(__detect_os())
+    out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return ret[-1]
 

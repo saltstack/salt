@@ -54,7 +54,6 @@ def top(**kwargs):
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0])
-    print ndata
     ret = {}
     if 'environment' in ndata:
         env = ndata['environment']

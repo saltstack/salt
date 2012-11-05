@@ -116,7 +116,7 @@ def list_tab(user):
            'special': [],
            'env': []}
     flag = False
-    for line in data.split('\n'):
+    for line in data.splitlines():
         if line == '# Lines below here are managed by Salt, do not edit':
             flag = True
             continue

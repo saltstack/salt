@@ -62,7 +62,7 @@ def _parse_pkg_meta(path):
     rel = ''
     result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
     if result['retcode'] == 0:
-        for line in result['stdout'].split('\n'):
+        for line in result['stdout'].splitlines():
             if not name:
                 m = re.match('^Name\s*:\s*(.+)\s*$',line)
                 if m:

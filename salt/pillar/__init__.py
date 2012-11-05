@@ -344,8 +344,13 @@ class Pillar(object):
         pillar, errors = self.render_pillar(matches)
         self.ext_pillar(pillar)
         errors.extend(terrors)
-        if self.opts.get('pillar_opts', False):
-            pillar['master'] = self.opts
+        if self.opts.get('pillar_opts', True):
+            mopts = dict(self.opts)
+            if 'grains' in mopts:
+                mopts.pop('grains')
+            if 'aes' in mopts:
+                mopts.pop('aes')
+            pillar['master'] = mopts
         if errors:
             for error in errors:
                 log.critical('Pillar render error: {0}'.format(error))
