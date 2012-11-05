@@ -29,7 +29,7 @@ def get_enabled():
     for rcfn in ('/etc/rc.conf', '/etc/rc.conf.local'):
         if os.path.isfile(rcfn):
             for line in open(rcfn, 'r').readlines():
-                clean_line = line.split('#',1)[0].strip()
+                clean_line = line.split('#', 1)[0].strip()
                 if not '_enable=' in clean_line:
                     continue
                 (service, enabled) = clean_line.split('=')
@@ -50,6 +50,75 @@ def get_disabled():
     en_ = get_enabled()
     all_ = get_all()
     return sorted(set(all_) - set(en_))
+
+
+def enable(name):
+    '''
+    Enable the named service to start at boot
+
+    CLI Example::
+
+        salt '*' service.enable <service name>
+    '''
+    nlines = []
+    edited = False
+    config = '/etc/rc.conf'
+    for line in open(config, 'r').readlines():
+        if not line.startswith("%s_enable=" % name):
+            nlines.append(line)
+            continue
+        rest = line[len(line.split()[0]):]  # keep comments etc
+        nlines.append("%s_enable=\"YES\"%s" % (name, rest))
+        edited = True
+    if not edited:
+        nlines.append("%s_enable=\"YES\"\n" % name)
+    open(config, 'w+').writelines(nlines)
+    return True
+
+
+def disable(name):
+    '''
+    Disable the named service to start at boot
+
+    CLI Example::
+
+        salt '*' service.disable <service name>
+    '''
+    nlines = []
+    edited = False
+    config = '/etc/rc.conf'
+    for line in open(config, 'r').readlines():
+        if not line.startswith("%s_enable=" % name):
+            nlines.append(line)
+        else:
+            edited = True
+        continue
+    if edited:
+        open(config, 'w+').writelines(nlines)
+
+    return True
+
+
+def enabled(name):
+    '''
+    Return True if the named servioce is enabled, false otherwise
+
+    CLI Example::
+
+        salt '*' service.enabled <service name>
+    '''
+    return name in get_enabled()
+
+
+def disabled(name):
+    '''
+    Return True if the named servioce is enabled, false otherwise
+
+    CLI Example::
+
+        salt '*' service.disabled <service name>
+    '''
+    return name in get_disabled()
 
 
 def get_all():
@@ -108,6 +177,18 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def reload(name):
+    '''
+    Restart the named service
+
+    CLI Example::
+
+        salt '*' service.reload <service name>
+    '''
+    cmd = 'service {0} onereload'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
 def status(name, sig=None):
     '''
     Return the status for a service, returns the PID or an empty string if the
@@ -119,5 +200,3 @@ def status(name, sig=None):
         salt '*' service.status <service name> [service signature]
     '''
     return __salt__['status.pid'](sig if sig else name)
-
-
