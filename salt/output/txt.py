@@ -17,7 +17,7 @@ def output(data):
             value = data[key]
             # Don't blow up on non-strings
             try:
-                for line in value.split('\n'):
+                for line in value.splitlines():
                     ret += '{0}: {1}\n'.format(key, line)
             except AttributeError:
                 ret += '{0}: {1}\n'.format(key, value)

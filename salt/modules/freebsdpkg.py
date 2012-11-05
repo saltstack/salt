@@ -24,7 +24,7 @@ def search(pkg_name):
     '''
     if _check_pkgng():
         res = __salt__['cmd.run']('pkg search {0}'.format(pkg_name))
-        res = [x for x in res.split('\n')]
+        res = [x for x in res.splitlines()]
         return {"Results": res}
 
 
@@ -108,7 +108,7 @@ def list_pkgs():
     else:
         pkg_command = "pkg_info"
     ret = {}
-    for line in __salt__['cmd.run'](pkg_command).split('\n'):
+    for line in __salt__['cmd.run'](pkg_command).splitlines():
         if not line:
             continue
         comps = line.split(' ')[0].split('-')
