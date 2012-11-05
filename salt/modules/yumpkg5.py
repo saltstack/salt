@@ -1,11 +1,12 @@
 '''
 Support for YUM
 '''
+import re
 import logging
 from collections import namedtuple
 
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -39,7 +40,7 @@ def _parse_yum(arg):
 
     results = []
 
-    for line in out.split('\n'):
+    for line in out.splitlines():
         if len(line.split()) == 3:
             namearchstr, pkgver, pkgstatus = line.split()
             pkgname = namearchstr.rpartition('.')[0]
@@ -58,6 +59,38 @@ def _list_removed(old, new):
         if pkg not in new:
             pkgs.append(pkg)
     return pkgs
+
+
+def _parse_pkg_meta(path):
+    '''
+    Retrieve package name and version number from package metadata
+    '''
+    name = ''
+    version = ''
+    rel = ''
+    result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
+    if result['retcode'] == 0:
+        for line in result['stdout'].split('\n'):
+            # Older versions of rpm command produce two-column output when run
+            # with -qpi. So, regexes should not look for EOL after capture
+            # group.
+            if not name:
+                m = re.match('^Name\s*:\s*(\S+)\s*',line)
+                if m:
+                    name = m.group(1)
+                    continue
+            if not version:
+                m = re.match('^Version\s*:\s*(\S+)\s*',line)
+                if m:
+                    version = m.group(1)
+                    continue
+            if not rel:
+                m = re.match('^Release\s*:\s*(\S+)\s*',line)
+                if m:
+                    version = m.group(1)
+                    continue
+    if rel: version += '-{0}'.format(rel)
+    return name,version
 
 
 def available_version(name):
@@ -138,11 +171,11 @@ def refresh_db():
     return True
 
 
-def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
+def install(name, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Install the passed package
 
-    pkg
+    name
         The name of the package to be installed
     refresh : False
         Clean out the yum database before executing
@@ -161,16 +194,27 @@ def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    old = list_pkgs()
+    if 'source' in kwargs:
+        if __salt__['config.valid_fileproto'](kwargs['source']):
+            pkg_file = __salt__['cp.cache_file'](kwargs['source'])
+        else:
+            pkg_file = kwargs['source']
+        pname,pversion = _parse_pkg_meta(pkg_file)
+        if name != pname:
+            log.error('Package file {0} (Name: {1}) does not match the '
+                      'specified package name ({2})'.format(kwargs['source'],
+                                                            pname,
+                                                            name))
+            return {}
 
     cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
         repo='--enablerepo={0}'.format(repo) if repo else '',
         gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkg=pkg,
+        pkg=pkg_file if pkg_file is not None else name,
     )
 
-    if refresh:
-        refresh_db()
+    if refresh: refresh_db()
+    old = list_pkgs()
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}

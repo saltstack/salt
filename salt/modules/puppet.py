@@ -52,9 +52,9 @@ def run(tags=None):
     _check_puppet()
 
     if not tags:
-        cmd = 'puppet --test'
+        cmd = 'puppet agent --test'
     else:
-        cmd = 'puppet --test --tags "{0}"'.format(tags)
+        cmd = 'puppet agent --test --tags "{0}"'.format(tags)
 
     return __salt__['cmd.run_all'](cmd)
 
@@ -73,9 +73,9 @@ def noop(tags=None):
     _check_puppet()
 
     if not tags:
-        cmd = 'puppet --test --noop'
+        cmd = 'puppet agent --test --noop'
     else:
-        cmd = 'puppet --test --tags "{0}" --noop'.format(tags)
+        cmd = 'puppet agent --test --tags "{0}" --noop'.format(tags)
 
     return __salt__['cmd.run_all'](cmd)
 
@@ -95,7 +95,7 @@ def facts():
     # Loop over the facter output and  properly
     # parse it into a nice dictionary for using
     # elsewhere
-    for line in output.split('\n'):
+    for line in output.splitlines():
         if not line: continue
         fact, value = _format_fact(line)
         if not fact:

@@ -77,7 +77,7 @@ def lsmod():
         salt '*' kmod.lsmod
     '''
     ret = []
-    for line in __salt__['cmd.run']('lsmod').split('\n'):
+    for line in __salt__['cmd.run']('lsmod').splitlines():
         comps = line.split()
         if not len(comps) > 2:
             continue

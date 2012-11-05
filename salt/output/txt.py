@@ -1,5 +1,7 @@
 '''
-The txt outputter
+The txt outputter has been developed to make the output from shell
+commands on minions appear as they do when the command is executed
+on the minion.
 '''
 
 # Import python libs
@@ -15,7 +17,7 @@ def output(data):
             value = data[key]
             # Don't blow up on non-strings
             try:
-                for line in value.split('\n'):
+                for line in value.splitlines():
                     ret += '{0}: {1}\n'.format(key, line)
             except AttributeError:
                 ret += '{0}: {1}\n'.format(key, value)

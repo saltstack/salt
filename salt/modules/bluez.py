@@ -24,7 +24,7 @@ def version():
         salt '*' bluetoothd.version
     '''
     cmd = 'bluetoothd -v'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out[0]
 
 
@@ -39,7 +39,7 @@ def address():
     cmd = ('dbus-send --system --print-reply --dest=org.bluez / '
            'org.bluez.Manager.DefaultAdapter|awk \'/object path/ '
            '{print $3}\' | sed \'s/"//g\'')
-    path = __salt__['cmd.run'](cmd).split('\n')
+    path = __salt__['cmd.run'](cmd).splitlines()
     devname = path[0].split('/')
     syspath = '/sys/class/bluetooth/{0}/address'.format(devname[-1])
     sysfile = open(syspath, 'r')
@@ -62,7 +62,7 @@ def scan():
     '''
     cmd = 'hcitool scan'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -89,7 +89,7 @@ def pair(address, key):
     cmd = 'echo "{0}" | bluez-simple-agent {1} {2}'.format(
         address['devname'], address, key
     )
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
@@ -106,7 +106,7 @@ def unpair(address):
     '''
     address = address()
     cmd = 'bluez-test-device remove {0}'.format(address)
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 

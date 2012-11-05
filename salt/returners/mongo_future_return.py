@@ -14,6 +14,9 @@ to the minion config files::
     mongo.password: <MongoDB user password>
     mongo.port: 27017
 
+This mongo returner is being developed to replace the default mongodb returner
+in the future and should not be considered api stable yet.
+
 '''
 
 # Import python libs
@@ -33,7 +36,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not has_pymongo:
         return False
-    return 'mongo_return'
+    return 'mongo'
 
 
 def _remove_dots(d):

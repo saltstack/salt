@@ -62,7 +62,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func)
     elif inspect.ismethod(func):
         aspec = inspect.getargspec(func)
-        del aspec.args[0] # self
+        del aspec.args[0]  # self
     elif isinstance(func, object):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
@@ -350,7 +350,7 @@ def required_module_list(docstring=None):
     '''
     ret = []
     txt = 'Required python modules: '
-    data = docstring.split('\n') if docstring else []
+    data = docstring.splitlines() if docstring else []
     mod_list = list(x for x in data if x.startswith(txt))
     if not mod_list:
         return []
@@ -653,3 +653,73 @@ def istextfile(fp_, blocksize=512):
     nontext = block.translate(None, text_characters)
     return float(len(nontext)) / len(block) <= 0.30
 
+
+def isorted(to_sort):
+    """
+    Sort a list of strings ignoring case.
+
+    >>> L = ['foo', 'Foo', 'bar', 'Bar']
+    >>> sorted(L)
+    ['Bar', 'Foo', 'bar', 'foo']
+    >>> sorted(L, key=lambda x: x.lower())
+    ['bar', 'Bar', 'foo', 'Foo']
+    >>>
+    """
+    return sorted(to_sort, key=lambda x: x.lower())
+
+
+def mysql_to_dict(data, key):
+    '''
+    Convert MySQL-style output to a python dictionary
+    '''
+    ret = {}
+    headers = ['']
+    for line in data:
+        if not line:
+            continue
+        if line.startswith('+'):
+            continue
+        comps = line.split('|')
+        for comp in range(len(comps)):
+            comps[comp] = comps[comp].strip()
+        if len(headers) > 1:
+            index = len(headers) - 1
+            row = {}
+            for field in range(index):
+                if field < 1:
+                    continue
+                else:
+                    row[headers[field]] = str_to_num(comps[field])
+            rowname = headers[0].replace(':', '')
+            ret[row[key]] = row
+        else:
+            headers = comps
+    return ret
+
+
+def str_to_num(text):
+    '''
+    Convert a string to a number.
+    Returns an integer if the string represents an integer, a floating
+    point number if the string is a real number, or the string unchanged
+    otherwise.
+    '''
+    try:
+        return int(text)
+    except ValueError:
+        try:
+            return float(text)
+        except ValueError:
+            return text
+
+def memoize(func):
+    '''
+    Memoize aka cache the return output of a function
+    given a specific set of arguments
+    '''
+    cache = {}
+    def _m(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+    return _m

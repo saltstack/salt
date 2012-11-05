@@ -28,10 +28,8 @@ try:
 except ImportError:
     pass
 
-# Import Salt libs
-from salt.exceptions import CommandExecutionError
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -46,11 +44,7 @@ def _cert_base_path():
     '''
     Return the base path for certs
     '''
-    if 'ca.cert_base_path' in __opts__:
-        return __opts__['ca.cert_base_path']
-    raise CommandExecutionError(
-            "Please set the 'ca.cert_base_path' in the minion configuration"
-            )
+    return __salt__['config.option']('ca.cert_base_path')
 
 
 def _new_serial(ca_name, CN):

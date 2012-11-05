@@ -238,7 +238,7 @@ def install(pkgs=None,
             raise Exception(
                 '\'{0}\' must be a valid url'.format(extra_index_url)
             )
-        cmd = '{cmd} --extra-index_url="{extra_index_url}" '.format(
+        cmd = '{cmd} --extra-index-url="{extra_index_url}" '.format(
             cmd=cmd, extra_index_url=extra_index_url)
 
     if no_index:
@@ -263,7 +263,7 @@ def install(pkgs=None,
             cmd=cmd, download=download)
 
     if download_cache:
-        cmd = '{cmd} --download_cache={download_cache} '.format(
+        cmd = '{cmd} --download-cache={download_cache} '.format(
             cmd=cmd, download_cache=download_cache)
 
     if source:
@@ -451,7 +451,7 @@ def freeze(bin_env=None,
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
-    return result['stdout'].split('\n')
+    return result['stdout'].splitlines()
 
 
 def list(prefix='',
@@ -474,7 +474,7 @@ def list(prefix='',
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
-    for line in result['stdout'].split('\n'):
+    for line in result['stdout'].splitlines():
         if line.startswith('-e'):
             line = line.split('-e ')[1]
             line, name = line.split('#egg=')

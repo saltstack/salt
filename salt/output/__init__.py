@@ -14,6 +14,7 @@ STATIC = (
           'json_out',
           )
 
+
 def display_output(data, out, opts=None):
     '''
     Print the passed data using the desired output
@@ -25,6 +26,8 @@ def get_printout(out, opts=None, **kwargs):
     '''
     Return a printer function
     '''
+    if opts is None:
+        opts = {}
     for outputter in STATIC:
         if outputter in opts:
             if opts[outputter]:

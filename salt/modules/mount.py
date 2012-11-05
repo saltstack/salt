@@ -288,7 +288,7 @@ def is_fuse_exec(cmd):
         if not __salt__['cmd.has_exec'](path):
             continue
         out = __salt__['cmd.run']('ldd {0}'.format(path))
-        for line in out.split('\n'):
+        for line in out.splitlines():
             if 'libfuse' in line:
                 return True
     return False

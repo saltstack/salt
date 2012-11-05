@@ -90,7 +90,7 @@ def returners(opts, functions):
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.filter_func('returner', pack)
+    return load.gen_functions(pack)
 
 
 def pillars(opts, functions):

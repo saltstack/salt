@@ -65,6 +65,10 @@ def _changes(
             if gid:
                 if lusr['gid'] != gid:
                     change['gid'] = gid
+            # remove the default group from the list for
+            # comparison purposes
+            if __salt__['file.gid_to_group'](gid or lusr['gid']) in lusr['groups']:
+                lusr['groups'].remove(__salt__['file.gid_to_group'](gid or lusr['gid']))
             if wanted_groups:
                 if lusr['groups'] != wanted_groups:
                     change['groups'] = wanted_groups

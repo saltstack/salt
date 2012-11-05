@@ -1,5 +1,5 @@
 '''
-JSON outputter
+The JSON output module converts the return data into JSON.
 '''
 # Import python libs
 import json

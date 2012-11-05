@@ -8,12 +8,19 @@ import re
 # Import Salt libs
 import salt.utils
 
+__outputter__ = {
+    'upgrade_available': 'txt',
+    'available_version': 'txt',
+    'list_upgrades': 'txt',
+    'install': 'yaml',
+}
+
 
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'pkg' if __grains__['os'] in ('Debian', 'Ubuntu') else False
+    return 'pkg' if __grains__['os_family'] == 'Debian' else False
 
 
 def __init__(opts):
@@ -91,7 +98,7 @@ def refresh_db():
         cols = line.split()
         if not len(cols):
             continue
-        ident = " ".join(cols[1:4])
+        ident = ' '.join(cols[1:4])
         if 'Get' in cols[0]:
             servers[ident] = True
         else:
@@ -129,7 +136,11 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
 
         salt '*' pkg.install <package name>
     '''
+    # Note that this function will daemonize the subprocess
+    # preventing a restart resulting from a salt-minion upgrade
+    # from killing the apt and hence hosing the dpkg database
     salt.utils.daemonize_if(__opts__, **kwargs)
+
     if refresh:
         refresh_db()
 
@@ -140,15 +151,17 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
     old_pkgs = list_pkgs()
 
     if version:
-        pkg = "{0}={1}".format(pkg, version)
+        pkg = '{0}={1}'.format(pkg, version)
     elif 'eq' in kwargs:
-        pkg = "{0}={1}".format(pkg, kwargs['eq'])
+        pkg = '{0}={1}'.format(pkg, kwargs['eq'])
 
-    cmd = 'apt-get -q -y {confold}{verify}{target} install {pkg}'.format(
-            confold=' -o DPkg::Options::=--force-confold',
-            verify=' --allow-unauthenticated' if skip_verify else '',
-            target=' -t {0}'.format(repo) if repo else '',
-            pkg=pkg)
+    kwargs = {
+        'pkg': pkg,
+        'target': ' -t {0}'.format(repo) if repo else '',
+        'confold': ' -o DPkg::Options::=--force-confold',
+        'verify': ' --allow-unauthenticated' if skip_verify else '',
+    }
+    cmd = 'apt-get -q -y {confold}{verify}{target} install {pkg}'.format(**kwargs)
 
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
@@ -259,7 +272,7 @@ def upgrade(refresh=True, **kwargs):
     return ret_pkgs
 
 
-def list_pkgs(regex_string=""):
+def list_pkgs(regex_string=''):
     '''
     List the packages currently installed in a dict::
 
@@ -280,7 +293,7 @@ def list_pkgs(regex_string=""):
 
     out = __salt__['cmd.run_stdout'](cmd)
 
-    for line in out.split('\n'):
+    for line in out.splitlines():
         cols = line.split()
         if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and 'installed' in cols[2]:
             ret[cols[3]] = cols[4]

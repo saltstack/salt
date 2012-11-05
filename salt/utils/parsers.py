@@ -368,7 +368,7 @@ class PidfileMixin(object):
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
-        set_pidfile(self.config['pidfile'])
+        set_pidfile(self.config['pidfile'], self.config['user'])
 
 
 class TargetOptionsMixIn(object):
@@ -1016,6 +1016,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             action='store_true',
             help=('Return the documentation for the specified module or for '
                   'all modules if none are specified.')
+        )
+        self.add_option(
+            '--return',
+            default='',
+            metavar='RETURNER',
+            help=('Set salt-call to pass the return data to one or many '
+                  'returner interfaces.')
         )
         self.add_option(
             '--local',
