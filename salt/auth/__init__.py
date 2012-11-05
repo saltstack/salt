@@ -162,12 +162,12 @@ class Resolver(object):
         '''
         ret = {}
         if not eauth:
-            print 'External authentication system has not been specified'
+            print('External authentication system has not been specified')
             return ret
         fstr = '{0}.auth'.format(eauth)
         if not fstr in self.auth:
-            print ('The specified external authentication system "{0}" is '
-                   'not available').format(eauth)
+            print(('The specified external authentication system "{0}" is '
+                   'not available').format(eauth))
             return ret
 
         args = salt.utils.arg_lookup(self.auth[fstr])
