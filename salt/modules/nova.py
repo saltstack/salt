@@ -143,13 +143,15 @@ def keypair_delete(name):
     return 'Keypair deleted: {0}'.format(name)
 
 
-def image_list():
+def image_list(name=None):
     '''
-    Return a list of available images (nova images-list)
+    Return a list of available images (nova images-list + nova image-show)
+    If a name is provided, only that image will be displayed.
 
-    CLI Example::
+    CLI Examples::
 
         salt '*' nova.image_list
+        salt '*' nova.image_list myimage
     '''
     nt = _auth()
     ret = {}
@@ -162,9 +164,58 @@ def image_list():
                 'id': image.id,
                 'status': image.status,
                 'progress': image.progress,
+                'created': image.created,
+                'updated': image.updated,
+                'minDisk': image.minDisk,
+                'minRam': image.minRam,
+                'metadata': image.metadata,
                 'links': links,
             }
+    if name:
+        return {name: ret[name]}
     return ret
+
+
+def image_meta_set(id=None, name=None, **kwargs):
+    '''
+    Sets a key=value pair in the metadata for an image (nova image-meta set)
+
+    CLI Examples::
+
+        salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
+        salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
+    '''
+    nt = _auth()
+    if name:
+        for image in nt.images.list():
+            if image.name == name:
+                id = image.id
+    if not id:
+        return {'Error': 'A valid image name or id was not specified'}
+    nt.images.set_meta(id, kwargs)
+    return {id: kwargs}
+
+
+def image_meta_delete(id=None, name=None, keys=None):
+    '''
+    Delete a key=value pair from the metadata for an image (nova image-meta set)
+
+    CLI Examples::
+
+        salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete name=myimage keys=salad,beans
+    '''
+    nt = _auth()
+    if name:
+        for image in nt.images.list():
+            if image.name == name:
+                id = image.id
+    pairs = keys.split(',')
+    if not id:
+        return {'Error': 'A valid image name or id was not specified'}
+    nt.images.delete_meta(id, pairs)
+    return {id: 'Deleted: {0}'.format(pairs)}
+
 
 def _item_list():
     '''
@@ -235,9 +286,6 @@ def _item_list():
     image-create        Create a new image by taking a snapshot of a running
                         server.
     image-delete        Delete an image.
-    image-list          Print a list of available images to boot from.
-    image-meta          Set or Delete metadata on an image.
-    image-show          Show details about the given image.
     list                List active servers.
     live-migration      Migrates a running instance to a new machine.
     lock                Lock a server.
