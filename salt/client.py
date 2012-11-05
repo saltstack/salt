@@ -872,6 +872,13 @@ class LocalClient(object):
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 
+        # If an external job cache is specified add it to the ret list
+        if self.opts.get('ext_job_cache'):
+            if ret:
+                ret += ',{0}'.format(self.opts['ext_job_cache'])
+            else:
+                ret = self.opts['ext_job_cache']
+
         # format the payload - make a function that does this in the payload
         #   module
         # make the zmq client
