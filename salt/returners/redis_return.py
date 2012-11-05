@@ -23,7 +23,7 @@ except ImportError:
 def __virtual__():
     if not has_redis:
         return False
-    return 'redis_return'
+    return 'redis'
 
 
 def _get_serv():
