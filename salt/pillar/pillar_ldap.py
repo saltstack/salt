@@ -165,7 +165,7 @@ def ext_pillar(pillar, config_file):
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
-        print 'source %s got result %s' % (source, result)
+        print 'source {0} got result {1}'.format(source, result)
         if result:
             data = _result_to_dict(data, result, config)
     return data
