@@ -4,10 +4,10 @@ Module for handling openstack nova calls.
 This module is not usable until the user, password, tenant and auth url are
 specified either in a pillar or in the minion's config file. For example:
 
-nova.user: admin
-nova.password: verybadpass
-nova.tenant: admin
-nova.auth_url: 'http://127.0.0.1:5000/v2.0/'
+keystone.user: admin
+keystone.password: verybadpass
+keystone.tenant: admin
+keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
 
 from novaclient.v1_1 import client
@@ -19,10 +19,10 @@ def _auth():
     '''
     Set up nova credentials
     '''
-    user = __salt__['config.option']('nova.user')
-    password = __salt__['config.option']('nova.password')
-    tenant = __salt__['config.option']('nova.tenant')
-    auth_url = __salt__['config.option']('nova.auth_url')
+    user = __salt__['config.option']('keystone.user')
+    password = __salt__['config.option']('keystone.password')
+    tenant = __salt__['config.option']('keystone.tenant')
+    auth_url = __salt__['config.option']('keystone.auth_url')
     nt = client.Client(user, password, tenant, auth_url, service_type="compute")
     return nt
 
