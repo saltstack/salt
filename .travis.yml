@@ -4,10 +4,6 @@ python:
   - '2.6'
   - '2.7'
 
-branches:
-  only:
-    - develop
-
 before_install:
   - sudo apt-get update && sudo apt-get install swig supervisor rabbitmq-server
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
