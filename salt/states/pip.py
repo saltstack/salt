@@ -160,7 +160,7 @@ def removed(name,
 
     try:
         pip_list = __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd)
-    except (CommandExecutionError, CommandNotFoundError), err:
+    except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret
