@@ -1,9 +1,12 @@
 '''
 Support for poudriere
 '''
+
+# Import Python libs
 import os
 import logging
 
+# Import Salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -23,22 +26,14 @@ def _config_file():
     '''
     Return the config file location to use
     '''
-    if 'poudriere.config' in __opts__:
-        return __opts__['poudriere.config']
-    elif 'poudriere.config' in __pillar__:
-        return __pillar__['poudriere.config']
-    return '/usr/local/etc/poudriere.conf'
+    return __salt__['config.option']('poudriere.config')
 
 
 def _config_dir():
     '''
     Return the configuration directory to use
     '''
-    if 'poudriere.config' in __opts__:
-        return __opts__['poudriere.config_dir']
-    elif 'poudriere.config' in __pillar__:
-        return __pillar__['poudriere.config_dir']
-    return '/usr/local/etc/poudriere.d'
+    return __salt__['config.option']('poudriere.config_dir')
 
 
 def _check_config_exists(config_file=None):
@@ -147,7 +142,7 @@ def list_jails():
     _check_config_exists()
     cmd = 'poudriere jails -l'
     res = __salt__['cmd.run'](cmd)
-    return res.split('\n')
+    return res.splitlines()
 
 
 def list_ports():
@@ -160,7 +155,7 @@ def list_ports():
     '''
     _check_config_exists()
     cmd = 'poudriere ports -l'
-    res = __salt__['cmd.run'](cmd).split('\n')
+    res = __salt__['cmd.run'](cmd).splitlines()
     return res
 
 
@@ -262,7 +257,7 @@ def bulk_build(jail, pkg_file, keep=False):
 
     # Bulk build this can take some time, depending on pkg_file ... hours
     res = __salt__['cmd.run'](cmd)
-    lines = res.split('\n')
+    lines = res.splitlines()
     for line in lines:
         if "packages built" in line:
             return line

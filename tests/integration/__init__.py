@@ -398,14 +398,14 @@ class ShellCase(TestCase):
             # Force closing stderr/stdout to release file descriptors
             process.stdout.close()
             process.stderr.close()
-            return out.split('\n'), err.split('\n')
+            return out.splitlines(), err.splitlines()
 
         process = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE
         )
         data = process.communicate()
         process.stdout.close()
-        return data[0].split('\n')
+        return data[0].splitlines()
 
     def run_salt(self, arg_str):
         '''
