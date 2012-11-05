@@ -26,6 +26,7 @@ def _auth():
     nt = client.Client(user, password, tenant, auth_url, service_type="compute")
     return nt
 
+
 def flavor_list():
     '''
     Return a list of available flavors (nova flavor-list)
@@ -52,6 +53,44 @@ def flavor_list():
             }
     return ret
 
+
+def flavor_create(name, id=0, ram=0, disk=0, vcpus=1):
+    '''
+    Add a flavor to nova (nova flavor-create). The following parameters are
+    required:
+
+    <name>   Name of the new flavor (must be first)
+    <id>     Unique integer ID for the new flavor
+    <ram>    Memory size in MB
+    <disk>   Disk size in GB
+    <vcpus>  Number of vcpus
+
+    CLI Example::
+
+        salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
+    '''
+    nt = _auth()
+    nt.flavors.create(name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus)
+    return {'name': name,
+            'id': id,
+            'ram': ram,
+            'disk': disk,
+            'vcpus': vcpus}
+
+
+def flavor_delete(id):
+    '''
+    Delete a flavor from nova by id (nova flavor-delete)
+
+    CLI Example::
+
+        salt '*' nova.flavor_delete 7'
+    '''
+    nt = _auth()
+    nt.flavors.delete(id)
+    return 'Flavor deleted: {0}'.format(id)
+
+
 def keypair_list():
     '''
     Return a list of available keypairs (nova keypair-list)
@@ -69,6 +108,7 @@ def keypair_list():
                 'public_key': keypair.public_key,
             }
     return ret
+
 
 def keypair_add(name, pubfile=None, pubkey=None):
     '''
@@ -89,6 +129,7 @@ def keypair_add(name, pubfile=None, pubkey=None):
     ret = { 'name': name, 'pubkey': pubkey }
     return ret
 
+
 def keypair_delete(name):
     '''
     Add a keypair to nova (nova keypair-delete)
@@ -99,9 +140,10 @@ def keypair_delete(name):
     '''
     nt = _auth()
     nt.keypairs.delete(name)
-    return '{0} deleted'.format(name)
+    return 'Keypair deleted: {0}'.format(name)
 
-def item_list():
+
+def _item_list():
     '''
     Template for writing list functions
     Return a list of available items (nova items-list)
@@ -159,8 +201,6 @@ def item_list():
                         and name.
     endpoints           Discover endpoints that get returned from the
                         authenticate services
-    flavor-create       Create a new flavor
-    flavor-delete       Delete a specific flavor
     floating-ip-create  Allocate a floating IP for the current tenant.
     floating-ip-delete  De-allocate a floating IP.
     floating-ip-list    List floating ips for this tenant.
