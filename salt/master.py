@@ -780,7 +780,7 @@ class AESFuncs(object):
                     self.opts['hash_type'])
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
-        if not self.opts['job_cache']:
+        if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
         jid_dir = salt.utils.jid_dir(
                 load['jid'],
