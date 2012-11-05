@@ -100,7 +100,7 @@ def _result_to_dict(data, result, conf):
                         data[k] = [v]
                     else:
                         data[k].append(v)
-    print 'Returning data %s' % data
+    print 'Returning data {0}'.format(data)
     return data
 
 
