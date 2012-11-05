@@ -49,7 +49,7 @@ class Master(parsers.MasterOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
-        except OSError, err:
+        except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
