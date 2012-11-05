@@ -99,6 +99,7 @@ def list_jobs():
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
+
 def print_job(job_id):
     '''
     Print job available details, including return data.
