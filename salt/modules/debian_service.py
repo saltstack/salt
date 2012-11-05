@@ -19,7 +19,7 @@ def _get_runlevel():
     '''
     returns the current runlevel
     '''
-    return __salt__['cmd.run']('runlevel').strip().split()[1]
+    return __salt__['cmd.run']('runlevel').split()[1]
 
 
 def get_enabled():
@@ -100,6 +100,7 @@ def restart(name):
     cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def reload(name):
     '''
     Reload the named service
@@ -111,19 +112,21 @@ def reload(name):
     cmd = 'service {0} reload'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service, pass a signature to use to find
+    the service via ps
 
     CLI Example::
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
-    sig = sig or name
-    cmd = 'pgrep {0}'.format(sig)
-    return __salt__['cmd.run'](cmd).strip()
+    if sig:
+        return bool(__salt__['status.pid'](sig))
+    cmd = 'service {0} status'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
 
 def enable(name):
     '''

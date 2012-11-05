@@ -83,7 +83,7 @@ class LocalClient(object):
             if self.opts.get('user', 'root') != 'root':
                 key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
-            key_user = 'root'
+            key_user = self.opts.get('user', 'root')
         keyfile = os.path.join(
                 self.opts['cachedir'], '.{0}_key'.format(key_user)
                 )
@@ -871,6 +871,13 @@ class LocalClient(object):
         if expr_form == 'range' and RANGE:
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
+
+        # If an external job cache is specified add it to the ret list
+        if self.opts.get('ext_job_cache'):
+            if ret:
+                ret += ',{0}'.format(self.opts['ext_job_cache'])
+            else:
+                ret = self.opts['ext_job_cache']
 
         # format the payload - make a function that does this in the payload
         #   module

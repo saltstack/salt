@@ -123,6 +123,30 @@ class SMinion(object):
         self.functions['sys.reload_modules'] = self.gen_modules
 
 
+class MasterMinion(object):
+    '''
+    Create a fully loaded minion function object for generic use on the
+    master. What makes this class different is that the pillar is
+    omitted, otherwise everything else is loaded cleanly.
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.opts['grains'] = salt.loader.grains(opts)
+        self.opts['pillar'] = {}
+        self.gen_modules()
+
+    def gen_modules(self):
+        '''
+        Load all of the modules for the minion
+        '''
+        self.functions = salt.loader.minion_mods(self.opts)
+        self.returners = salt.loader.returners(self.opts, self.functions)
+        self.states = salt.loader.states(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
+        self.matcher = Matcher(self.opts, self.functions)
+        self.functions['sys.reload_modules'] = self.gen_modules
+
+
 class Minion(object):
     '''
     This class instantiates a minion, runs connections for a minion,
@@ -331,7 +355,9 @@ class Minion(object):
             for returner in set(data['ret'].split(',')):
                 ret['id'] = opts['id']
                 try:
-                    minion_instance.returners[returner](ret)
+                    minion_instance.returners['{0}.returner'.format(
+                        returner
+                        )](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
@@ -387,7 +413,9 @@ class Minion(object):
             for returner in set(data['ret'].split(',')):
                 ret['id'] = opts['id']
                 try:
-                    minion_instance.returners[returner](ret)
+                    minion_instance.returners['{0}.returner'.format(
+                        returner
+                        )](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
@@ -944,6 +972,6 @@ class Matcher(object):
         '''
         if tgt in nodegroups:
             return self.compound_match(
-                    salt.utils.nodegroup_comp(tgt, nodegroups)
+                    salt.utils.minions.nodegroup_comp(tgt, nodegroups)
                     )
         return False

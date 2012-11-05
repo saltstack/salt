@@ -39,7 +39,7 @@ def list_users(runas=None):
     '''
     d = {}
     res = __salt__['cmd.run']('rabbitmqctl list_users')
-    for line in res.split('\n'):
+    for line in res.splitlines():
         if '...' not in line or line == '\n':
             s = line.split('\t')
             if len(s) < 2:
@@ -58,7 +58,7 @@ def list_vhosts(runas=None):
         salt '*' rabbitmq.list_vhosts
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_vhosts')
-    lines = res.split('\n')
+    lines = res.splitlines()
     vhost_list = [line for line in lines if '...' not in line]
     return vhost_list
 
@@ -199,4 +199,4 @@ def list_user_permissions(name, user=None):
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl list_user_permissions {0}'.format(name))
-    return [r.split('\t') for r in res.split('\n')]
+    return [r.split('\t') for r in res.splitlines()]

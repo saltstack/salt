@@ -64,7 +64,7 @@ def installed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
         pip_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
-    except (CommandNotFoundError, CommandExecutionError), err:
+    except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
@@ -160,7 +160,7 @@ def removed(name,
 
     try:
         pip_list = __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd)
-    except (CommandExecutionError, CommandNotFoundError), err:
+    except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret

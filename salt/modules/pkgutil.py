@@ -44,7 +44,7 @@ def _get_pkgs():
     cmd = '/usr/bin/pkginfo -x'
 
     line_count = 0
-    for line in __salt__['cmd.run'](cmd).split('\n'):
+    for line in __salt__['cmd.run'](cmd).splitlines():
         if line_count % 2 == 0:
             namever = line.split()[0].strip()
         if line_count % 2 == 1:
@@ -94,7 +94,7 @@ def list_upgrades():
         salt '*' pkgutil.list_upgrades
     '''
     upgrades = {}
-    lines = __salt__['cmd.run_stdout']('/opt/csw/bin/pkgutil -A --parse').split('\n')
+    lines = __salt__['cmd.run_stdout']('/opt/csw/bin/pkgutil -A --parse').splitlines()
     for line in lines:
         comps = line.split('\t')
         if comps[2] == "SAME":
