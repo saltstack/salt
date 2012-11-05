@@ -36,7 +36,7 @@ def get_yaml_loader(argline):
 """Example usage: #!yaml [-o]
 Options:
   -o   Use OrderedDict for YAML map and omap.
-       This option is only useful when combined with other renderer that
+       This option is only useful when combined with another renderer that
        takes advantage of the ordering.
 """)
         raise
