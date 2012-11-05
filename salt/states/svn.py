@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 from salt import exceptions
+from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
 
@@ -13,8 +14,8 @@ def __virtual__():
         return "svn"
     return False
 
-def latest(target,
-           remote,
+def latest(name,
+           target=None,
            rev=None,
            user=None,
            username=None,
@@ -25,29 +26,38 @@ def latest(target,
 
     target
         Name of the target directory where the checkout will put the working directory
-    remote
-        Address of the remote repository as passed to "svn checkout"
+
+    name
+        Address of the name repository as passed to "svn checkout"
+
     rev : None
-        The remote revision number to checkout. Enable "force" if the directory already exists.
+        The name revision number to checkout. Enable "force" if the directory already exists.
+
     user : None
         Name of the user performing repository management operations
+
     username : None
-        The user to access the remote repository with. The svn default is the current user
+        The user to access the name repository with. The svn default is the current user
+
     force : Fasle
         Force svn to checkout into pre-existing directories (deletes contents)
+
     externals : True
         Checkout externally tracked files.
     """
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not target:
+        return _fail(ret, '"target option is required')
+
     svn_cmd = "svn.checkout"
     cwd, basename = os.path.split(target)
     opts = tuple()
 
     if os.path.exists(target) and not os.path.isdir(target):
-        log.fatal("The path, %s, exists and is not a directory." % target)
-        return False
+        return _fail(ret, "The path, %s, exists and is not a directory." % target)
 
     try:
-        __salt["svn.info"](".", target, user=user)
+        __salt__["svn.info"](".", target, user=user)
         svn_cmd = "svn.update"
     except exceptions.CommandExecutionError:
         pass
@@ -62,9 +72,11 @@ def latest(target,
         opts += ("--ignore-externals",)
 
     if svn_cmd == "svn.update":
-        __salt__[svn_cmd](cwd, basename, user=user, username=username, *opts)
+        out = __salt__[svn_cmd](cwd, basename, user, *opts)
     else:
-        __salt__[svn_cmd](cwd, remote, basename, user=user, username=username, *opts)
+        out = __salt__[svn_cmd](cwd, name, basename, user, username, *opts)
+    ret["comment"] = out
+    return ret
 
 def dirty(target,
           user=None,
