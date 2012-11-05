@@ -10,11 +10,9 @@ import salt.client
 import salt.payload
 import salt.utils
 import salt.output
-from salt._compat import string_types
-from salt.exceptions import SaltException
-
-# Import Third party libs
-import yaml
+import salt.minion
+#from salt._compat import string_types
+#from salt.exceptions import SaltException
 
 
 def active():
@@ -51,20 +49,29 @@ def active():
                 continue
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
-    print(yaml.dump(ret))
+    salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
 
-def lookup_jid(jid):
+def lookup_jid(jid, ext_source=None):
     '''
     Return the printout from a previously executed job
     '''
+    if __opts__['ext_job_cache'] or ext_source:
+        returner = ext_source if ext_source else __opts__['ext_job_cache']
+        mminion = salt.minion.MasterMinion(__opts__)
+        return mminion.returners['{0}.get_jid'.format(returner)](jid)
+
+    # Fall back to the local job cache
     client = salt.client.LocalClient(__opts__['conf_file'])
 
     ret = {}
     for mid, data in client.get_full_returns(jid, [], 0).items():
         ret[mid] = data.get('ret')
-        salt.output.display_output({mid: ret[mid]}, data.get('out', None))
+        salt.output.display_output(
+                {mid: ret[mid]},
+                data.get('out', None),
+                __opts__)
 
     return ret
 
@@ -89,8 +96,9 @@ def list_jobs():
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
-    print(yaml.dump(ret))
+    salt.output.display_output(ret, 'yaml', __opts__)
     return ret
+
 
 def print_job(job_id):
     '''
@@ -124,5 +132,5 @@ def print_job(job_id):
                                     'Target': load['tgt'],
                                     'Target-type': load['tgt_type'],
                                     'Result': hosts_return}
-                        salt.output.display_output(ret, 'yaml')
+                        salt.output.display_output(ret, 'yaml', __opts__)
     return ret

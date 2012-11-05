@@ -1,5 +1,22 @@
 '''
-Print out highstate data
+The return data from the Highstate command is a standard data structure
+which is parsed by the highstate outputter to deliver a clean and readable
+set of information about the HighState run on minions.
+
+Two configurations can be set to modify the highstate outputter. These values
+can be set in the master config to change the output of the ``salt`` command or
+set in the minion config to change the output of the ``salt-call`` command.
+
+state_verbose:
+    By default `state_verbose` is set to `True`, setting this to `False` will
+    instruct the highstate outputter to omit displaying anything in green, this
+    means that nothing with a result of True and no chnages will not be printed
+state_output:
+    The highstate outputter has two output modes, `full` and `terse`. The
+    default is set to full, which will display many lines of detailed
+    information for each executed chunk. If the `state_output` option is
+    set to `terse` then the output is greatly simplified and shown in only one
+    line
 '''
 # Import salt libs
 import pprint

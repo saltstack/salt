@@ -1,5 +1,6 @@
 '''
-The default outputter, just fall back to python pretty print
+The python pretty print system is the default outputter. This outputter
+simply passed the data passed into it through the pprint module.
 '''
 
 # Import python libs
