@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 # Import Python Modules
+import getopt
 import logging
 import warnings
 
@@ -28,8 +29,18 @@ except ImportError:
 
 
 def get_yaml_loader(argline):
-    # since -o is currently the only option, we parse argline the simple way.
-    if argline == '-o':
+    try:
+        opts, args = getopt.getopt(argline.split(), 'o')
+    except getopt.GetoptError:
+        log.error(
+"""Example usage: #!yaml [-o]
+Options:
+  -o   Use OrderedDict for YAML map and omap.
+       This option is only useful when combined with other renderer that
+       takes advantage of the ordering.
+""")
+        raise
+    if ('-o', '') in opts:
         if HAS_ORDERED_DICT:
             def Loader(*args):
                 return CustomLoader(*args, dictclass=OrderedDict)

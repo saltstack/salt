@@ -79,13 +79,6 @@ list of features provided by this module.
 """
 
 # TODO:
-#   - Generate a sls goal state that requires all the other states in the
-#     salt file.
-#
-#   - Optionally, add require's to states in the salt file to enforce
-#     the execution of the states in the order they are defined in the salt
-#     file. (use orderded dict for yaml map)
-#
 #   - sls meta/info state: Eg, 
 #       sls_info:
 #         author: Jack Kuan
@@ -119,8 +112,8 @@ list of features provided by this module.
 #
 
 import logging
-import warnings
 import re
+import getopt
 from os import path as ospath
 from cStringIO import StringIO
 
@@ -131,54 +124,83 @@ log = logging.getLogger(__name__)
 __opts__ = {
   'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
   # eg, something like "# --- end of state config --" works by default.
+
+  'stateconf_goal_state': 'goal'
+  # name of the state id for the generated goal state.
 }
+NO_GOAL_STATE = False
 
 
 MOD_BASENAME = ospath.basename(__file__)
 INVALID_USAGE_ERROR = SaltRenderError(
-    "Invalid use of %s renderer! "
-    "Usage: #!%s <data_renderer>.<template_renderer>" % (
-         MOD_BASENAME, MOD_BASENAME))
+  "Invalid use of %s renderer!\n"
+  """Usage: #!%s [-Go] <data_renderer> [options] . <template_renderer> [options]
+
+Options:
+
+  -G   Do not generate the goal state that requires all other states in the sls.
+
+  -o   Indirectly order the states by adding requires such that they will be 
+       executed in the order they are defined in the sls. Implies using yaml -o.
+  """ % (MOD_BASENAME, MOD_BASENAME)
+)
 
 
-def render(template_file, env='', sls='', argline='yaml.jinja', **kws):
+def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
     renderers = kws['renderers']
+
+    opts, args = getopt.getopt(argline.split(), "Go")
+    argline = ' '.join(args)
+
+    if ('-G', '') in opts:
+        NO_GOAL_STATE = True
+
+    # Split on the first dot surrounded by spaces but not preceded by a
+    # backslash. A backslash preceded dot will be replaced with just dot.
+    args = [ arg.strip().replace('\\.', '.') \
+                for arg in re.split(r'\s+(?<!\\)\.\s+', argline, 1) ]
     try:
-        args = [ arg.strip() for arg in argline.split('.') ]
-    except:
-        raise INVALID_USAGE_ERROR
-    try:
-        render_data = renderers[args[0]] # eg, the yaml renderer
-        render_template = renderers[args[1]] # eg, the mako renderer
+        name, rd_argline = (args[0]+' ').split(' ', 1)
+        render_data = renderers[name] # eg, the yaml renderer
+        IMPLICIT_REQUIRE = False
+        if ('-o', '') in opts:
+            if name == 'yaml':
+                IMPLICIT_REQUIRE = True
+                rd_argline = '-o ' + rd_argline
+            else:
+                raise SaltRenderError("Implicit ordering is only supported "
+                                      "if the yaml renderer is used!")
+        name, rt_argline = (args[1]+' ').split(' ', 1)
+        render_template = renderers[name] # eg, the mako renderer
     except KeyError, e:
         raise SaltRenderError("Renderer: %s is not available!" % e)
     except IndexError, e:
         raise INVALID_USAGE_ERROR
 
-
     def process_sls_data(data, context=None):
+        global NO_GOAL_STATE
         if not context:
             match = re.search(__opts__['stateconf_end_marker'], data)
             if match:
                 data = data[:match.start()]
         
-        data = render_data(
-                   render_template(StringIO(data), env, sls, context=context),
-                   env, sls)
+        tmplout = render_template(StringIO(data), env, sls,
+                                  context=context, argline=rt_argline.strip())
+        data = render_data(tmplout, env, sls, argline=rd_argline.strip())
         try: 
             rewrite_sls_includes_excludes(data, sls)
             rename_state_ids(data, sls)
             if not context:
                 extract_state_confs(data)
+            add_implicit_requires(data)
+            if not NO_GOAL_STATE:
+                add_goal_state(data)
         except Exception:
             log.exception((
                 "Error found while pre-processing the salt file, %s.\n"
                 "It's likely due to a formatting error in your salt file.\n"
                 "Pre-processing aborted. Stack trace:---------") % sls)
-
-            # not raising the error because ususally if something went wrong
-            # with the rendering then the rendered result will contain errors,
-            # which salt will complain anyway.
+            raise SaltRenderError("sls preprocessing/rendering failed!")
         return data
 
     if isinstance(template_file, basestring):
@@ -205,7 +227,8 @@ def render(template_file, env='', sls='', argline='yaml.jinja', **kws):
 
         data = process_sls_data(sls_templ, tmplctx)
 
-    log.debug('Rendered sls: %s' % (data,))
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug('Rendered sls: %s' % (data,))
     return data
 
 
@@ -232,40 +255,159 @@ def rewrite_sls_includes_excludes(data, sls):
 
 
 
-RESERVED_SIDS = set(['include', 'exclude'])
-REQUISITES = set(['require', 'require_in', 'watch', 'watch_in', 'use', 'use_in'])
 
 def _local_to_abs_sid(sid, sls): # id must starts with '.'
     return _parent_sls(sls)+sid[1:] if '::' in sid else sls+'::'+sid[1:] 
 
+def nvlist(thelist, names=None):
+    """Given a list of items::
+
+        - whatever
+        - name1: value1
+        - name2:
+          - key: value
+          - key: value
+
+    return a generator that yields each (item, key, value) tuple, skipping
+    items that are not name-value's(dictionaries) or those not in the 
+    list of matching names. The item in the returned tuple is the single-key
+    dictionary.
+    """
+    # iterate over the list under the state dict.
+    for nvitem in thelist:
+        if isinstance(nvitem, dict):
+            # then nvitem is a name-value item(a dict) of the list.
+
+            name, value = nvitem.iteritems().next()
+            if names is None or name in names:
+                yield nvitem, name, value
+
+def nvlist2(thelist, names=None):
+    """Like nvlist but applied one more time to each returned value.
+    So, given a list, args,  of arguments to a state like this::
+
+      - name: echo test
+      - cwd: /
+      - require:
+        - file: test.sh
+
+    nvlist2(args, ['require']) would yield the tuple,
+    (dict_item, 'file', 'test.sh') where dict_item is the single-key
+    dictionary of {'file': 'test.sh'}.
+    
+    """
+    for _, _, value in nvlist(thelist, names):
+        for each in nvlist(value):
+            yield each
+
+def statelist(states_dict, sid_excludes=set(['include', 'exclude'])):
+    for sid, states in states_dict.iteritems():
+        if sid in sid_excludes:
+            continue
+        for sname, args in states.iteritems():
+            yield sid, states, sname, args
+
+
+REQUISITES = set(['require', 'require_in', 'watch', 'watch_in', 'use', 'use_in'])
 def rename_state_ids(data, sls, is_extend=False):
     # if the .sls file is salt://my/salt/file.sls
     # then rename all state ids defined in it that start with a dot(.) with
     # "my.salt.file::" + the_state_id_without_the_first_dot.
 
     # update "local" references to the renamed states.
-    for sid, states in data.items():
-        if sid in RESERVED_SIDS:
-            continue
 
+    for sid, states, _, args in statelist(data):
         if sid == 'extend' and not is_extend:
             rename_state_ids(states, sls, True)
             continue
-
-        for args in states.itervalues():
-            for name, value in (nv.iteritems().next() for nv in args):
-                if name not in REQUISITES:
-                    continue
-                for req in value:
-                    sid = req.itervalues().next()
-                    if sid.startswith('.'):
-                        req[req.iterkeys().next()] = _local_to_abs_sid(sid, sls)
+        for req, sname, sid in nvlist2(args, REQUISITES):
+            if sid.startswith('.'):
+                req[sname] = _local_to_abs_sid(sid, sls)
 
     for sid in data.keys():
         if sid.startswith('.'):
             data[_local_to_abs_sid(sid, sls)] = data[sid]
             del data[sid]
 
+
+REQUIRE = set(['require', 'watch'])
+REQUIRE_IN = set(['require_in', 'watch_in'])
+EXTENDED_REQUIRE = {}
+EXTENDED_REQUIRE_IN = {}
+
+from itertools import chain
+
+# To avoid cycles among states when each state requires the one before it:
+#   explicit require/watch can only contain states before it
+#   explicit require_in/watch_in can only contain states after it
+def add_implicit_requires(data):
+    def T(sid, state):
+        return "%s:%s" % (sid, state.split('.', 1)[0])
+
+    states_before = set()
+    states_after = set()
+
+    for sid in data:
+        for state in data[sid]:
+            states_after.add(T(sid, state))
+
+    prev_state = (None, None) # (sname, sid)
+    for sid, states, sname, args in statelist(data):
+        if sid == 'extend':
+            for esid, _, _, eargs in statelist(states):
+                for _, rstate, rsid in nvlist2(eargs, REQUIRE):
+                    EXTENDED_REQUIRE.setdefault(
+                        T(esid, rstate), []).append((None, rstate, rsid))
+                for _, rstate, rsid in nvlist2(eargs, REQUIRE_IN):
+                    EXTENDED_REQUIRE_IN.setdefault(
+                        T(esid, rstate), []).append((None, rstate, rsid))
+            continue
+
+        tag = T(sid, sname)
+        states_after.remove(tag)
+
+        reqs = nvlist2(args, REQUIRE)
+        if tag in EXTENDED_REQUIRE:
+            reqs = chain(reqs, EXTENDED_REQUIRE[tag])
+        for _, rstate, rsid in reqs:
+            if T(rsid, rstate) in states_after:
+                raise SaltRenderError(
+                        "State(%s) can't require/watch a state(%s) "
+                        "defined after it!" % (tag, T(rsid, rstate)))
+
+        reqs = nvlist2(args, REQUIRE_IN)
+        if tag in EXTENDED_REQUIRE_IN:
+            reqs = chain(reqs, EXTENDED_REQUIRE_IN[tag])
+        for _, rstate, rsid in reqs:
+            if T(rsid, rstate) in states_before:
+                raise SaltRenderError(
+                        "State(%s) can't require_in/watch_in a state(%s) "
+                        "defined before it!" % (tag, T(rsid, rstate)))
+
+        # add a (- state: sid) item, at the beginning of the require of this
+        # state if there's a state before this one.
+        if prev_state[0] is not None:
+            try:
+                nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
+            except StopIteration: # ie, there's no require
+                args.append(dict(require=[dict([prev_state])]))
+
+        states_before.add(tag)
+        prev_state = (sname, sid)
+
+
+def add_goal_state(data):
+    if 'goal' in data:
+        return
+    else:
+        reqlist = []
+        for sid, _, state, _ in statelist(data):
+            reqlist.append({state.split('.', 1)[0]: sid})
+        data[__opts__['stateconf_goal_state']] = {
+                'state.config': [
+                    [ dict(require=reqlist) ]
+                ]
+        }
 
 
 
@@ -304,6 +446,8 @@ def extract_state_confs(data, is_extend=False):
         to_dict = STATE_CONF_EXT if is_extend else STATE_CONF
         conf = to_dict.setdefault(state_id, Bunch())
         for d in state_dict[key]:
+            if not isinstance(d, dict):
+                continue
             k, v = d.iteritems().next()
             conf[k] = v
 

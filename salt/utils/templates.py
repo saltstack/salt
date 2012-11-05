@@ -19,23 +19,26 @@ logger = logging.getLogger(__name__)
 class SaltTemplateRenderError(Exception):
     pass
 
-utf_8_encode = codecs.getencoder('utf-8') # this one has no BOM.
+#FIXME: also in salt/template.py
+sls_encoding = 'utf-8' # this one has no BOM.
+sls_encoder = codecs.getencoder(sls_encoding)
 
 def wrap_tmpl_func(render_str):
-    def render_tmpl(source, from_str=False, to_str=False, context=None, **kws):
+    def render_tmpl(tmplsrc, from_str=False, to_str=False,
+                             context=None, **kws):
         if context is None:
             context = {}
         context.update(kws)
         assert 'opts' in context
         assert 'env' in context
-        if isinstance(source, basestring):
+        if isinstance(tmplsrc, basestring):
             if from_str:
-                tmplstr = source
+                tmplstr = tmplsrc 
             else:
-                with codecs.open(source, 'r', encoding='utf-8') as tmplsrc:
+                with codecs.open(tmplsrc, 'r', sls_encoding) as tmplsrc:
                     tmplstr = tmplsrc.read()
-        else: # assume source is file-like.
-            tmplstr = source.read()
+        else: # assume tmplsrc is file-like.
+            tmplstr = tmplsrc.read()
         try:
             output = render_str(tmplstr, context)
         except SaltTemplateRenderError, exc:
@@ -46,10 +49,11 @@ def wrap_tmpl_func(render_str):
             if to_str: # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False) as outf:
-                outf.write(utf_8_encode(output)[0])
+                outf.write(sls_encoder(output)[0])
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
+            return dict(result=True, data=outf.name)
 
     render_tmpl.render_str = render_str
     return render_tmpl
@@ -71,7 +75,6 @@ def render_jinja_tmpl(tmplstr, context):
         return env.from_string(tmplstr).render(**context)
     except TemplateSyntaxError, exc:
         raise SaltTemplateRenderError(str(exc))
-#FIXME: what about the newline thing?
 
 
 def render_mako_tmpl(tmplstr, context):
