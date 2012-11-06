@@ -36,7 +36,7 @@ except ImportError:
     code_coverage = None
 
 
-REQUIRED_OPEN_FILES = 2048
+REQUIRED_OPEN_FILES = 3072
 
 TEST_RESULTS = []
 

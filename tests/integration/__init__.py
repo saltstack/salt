@@ -45,7 +45,7 @@ SYS_TMP_DIR = tempfile.gettempdir()
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
-MINIONS_CONNECT_TIMEOUT = 60
+MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 60
 
 
 def print_header(header, sep='~', top=True, bottom=True, inline=False,
@@ -120,7 +120,9 @@ class TestDaemon(object):
 
     def __init__(self, clean):
         self.clean = clean
-        self.__evt_miconn = multiprocessing.Event()
+        self.__evt_minions_connect = multiprocessing.Event()
+        self.__evt_minions_sync = multiprocessing.Event()
+        self.__minion_targets = set(['minion', 'sub_minion'])
 
     def __enter__(self):
         '''
@@ -224,16 +226,27 @@ class TestDaemon(object):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
-        # Wait for minions to connect back and sync_all
-        sync_minions = multiprocessing.Process(
+        # Wait for minions to connect back
+        wait_minions_connection = multiprocessing.Process(
             target=self.__wait_for_minions_connections,
-            args=(self.__evt_miconn,)
+            args=(self.__evt_minions_connect, self.__minion_targets)
         )
-        sync_minions.start()
-
-        if self.__evt_miconn.wait(MINIONS_CONNECT_TIMEOUT) is not True:
+        wait_minions_connection.start()
+        if self.__evt_minions_connect.wait(MINIONS_CONNECT_TIMEOUT) is False:
             print('WARNING: Minions failed to connect back. Tests requiring '
                   'them WILL fail')
+        wait_minions_connection.terminate()
+
+        # Wait for minions to "sync_all"
+        sync_minions = multiprocessing.Process(
+            target=self.__sync_minions,
+            args=(self.__evt_minions_sync, self.__minion_targets)
+        )
+        sync_minions.start()
+        if self.__evt_minions_sync.wait(MINIONS_SYNC_TIMEOUT) is False:
+            print('WARNING: Minions failed to sync. Tests requiring the '
+                  'testing `runtests_helper` module WILL fail')
+        sync_minions.terminate()
 
         return self
 
@@ -280,10 +293,13 @@ class TestDaemon(object):
         if os.path.isdir(TMP):
             shutil.rmtree(TMP)
 
-    def __wait_for_minions_connections(self, evt):
+    def __wait_for_minions_connections(self, evt, targets):
         print_header(
             'Waiting at most {0} secs for local minions to connect '
-            'back'.format(MINIONS_CONNECT_TIMEOUT), sep='=', centered=True
+            'back and another {1} secs for them to '
+            '"saltutil.sync_all()"'.format(
+                MINIONS_CONNECT_TIMEOUT, MINIONS_SYNC_TIMEOUT
+            ), sep='=', centered=True
         )
         targets = set(['minion', 'sub_minion'])
         expected_connections = set(targets)
@@ -301,7 +317,9 @@ class TestDaemon(object):
                 # All expected connections have connected
                 break
             time.sleep(1)
+        evt.set()
 
+    def __sync_minions(self, evt, targets):
         # Let's sync all connected minions
         print('  * Syncing local minion\'s dynamic data(saltutil.sync_all)')
         syncing = set(targets)
