@@ -27,6 +27,7 @@ The following paramters are required in order to create a node:
 import os
 import sys
 import subprocess
+import time
 import types
 
 # Import libcloud 
@@ -85,6 +86,8 @@ def create(vm_):
     kwargs['size'] = get_size(conn, vm_)
     kwargs['location'] = get_location(conn, vm_)
     kwargs['auth'] = NodeAuthSSHKey(__opts__['IBMSCE.ssh_key_name'])
+
+    print('Creating instance on {0} at {1}'.format(time.strftime('%Y-%m-%d'), time.strftime('%H:%M:%S')))
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -97,12 +100,38 @@ def create(vm_):
         sys.stderr.write(err)
         print()
         return False
+
+    not_ready = True
+    nr_count = 0
+    while not_ready:
+        print('Looking for IP addresses for IBM SCE host {0} ({1} {2})'.format(
+                vm_['name'],
+                time.strftime('%Y-%m-%d'),
+                time.strftime('%H:%M:%S'),
+            ))
+        nodelist = list_nodes()
+        private = nodelist[vm_['name']]['private_ips']
+        if private:
+            data.private_ips = private
+        public = nodelist[vm_['name']]['public_ips']
+        if public:
+            data.public_ips = public
+            not_ready = False
+        nr_count += 1
+        if nr_count > 100:
+            not_ready = False
+        time.sleep(15)
+
+    print('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
+
     deployed = saltcloud.utils.deploy_script(
         host=data.public_ips[0],
         username='idcuser',
-        password=data.extra['password'],
+        key_filename=__opts__['IBMSCE.ssh_key_file'],
         script=deploy_script.script,
         name=vm_['name'],
+        provider='ibmsce',
+        sudo=True,
         sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
