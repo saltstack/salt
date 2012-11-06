@@ -249,35 +249,49 @@ fi
                 os.unlink(testfile)
 
     def test_include(self):
-        fnames = ('/tmp/include-test', '/tmp/to-include-test')
+        fnames = (
+            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
+            os.path.join(integration.SYS_TMP_DIR, 'to-include-test')
+        )
+        exclude_test_file = os.path.join(
+            integration.SYS_TMP_DIR, 'exclude-test'
+        )
         try:
             ret = self.run_function('state.sls', mods='include-test')
             for part in ret.itervalues():
                 self.assertTrue(part['result'])
             for fname in fnames:
                 self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile('/tmp/exclude-test'))
+            self.assertFalse(os.path.isfile(exclude_test_file))
         finally:
-            for fname in list(fnames) + ['/tmp/exclude-test']:
+            for fname in list(fnames) + [exclude_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
 
     def test_exclude(self):
-        fnames = ('/tmp/include-test', '/tmp/exclude-test')
+        fnames = (
+            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
+            os.path.join(integration.SYS_TMP_DIR, 'exclude-test')
+        )
+        to_include_test_file = os.path.join(
+            integration.SYS_TMP_DIR, 'to-include-test'
+        )
         try:
             ret = self.run_function('state.sls', mods='exclude-test')
             for part in ret.itervalues():
                 self.assertTrue(part['result'])
             for fname in fnames:
                 self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile('/tmp/to-include-test'))
+            self.assertFalse(os.path.isfile(to_include_test_file))
         finally:
-            for fname in list(fnames) + ['/tmp/to-include-test']:
+            for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
 
     def test_issue_2068_template_str(self):
-        venv_dir = '/tmp/issue-2068-template-str'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'issue-2068-template-str'
+        )
 
         try:
             ret = self.run_function(

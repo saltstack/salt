@@ -7,9 +7,9 @@
 # Import python libs
 import os
 import shutil
-import integration
 
 # Import salt libs
+import integration
 from saltunittest import skipIf, destructiveTest
 
 
@@ -24,7 +24,9 @@ class VirtualenvTest(integration.ModuleCase):
 
         uinfo = self.run_function('user.info', [user])
 
-        venv_dir = '/tmp/issue-1959-virtualenv-runas'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'issue-1959-virtualenv-runas'
+        )
         try:
             ret = self.run_function(
                 'state.sls', mods='issue-1959-virtualenv-runas'
