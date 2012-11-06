@@ -64,14 +64,14 @@ def enable(name):
     edited = False
     config = '/etc/rc.conf'
     for line in open(config, 'r').readlines():
-        if not line.startswith("%s_enable=" % name):
+        if not line.startswith('{0}_enable='.format(name)):
             nlines.append(line)
             continue
         rest = line[len(line.split()[0]):]  # keep comments etc
-        nlines.append("%s_enable=\"YES\"%s" % (name, rest))
+        nlines.append('{0}_enable="YES"{1}'.format(name, rest))
         edited = True
     if not edited:
-        nlines.append("%s_enable=\"YES\"\n" % name)
+        nlines.append("{0}_enable=\"YES\"\n".format(name))
     open(config, 'w+').writelines(nlines)
     return True
 
@@ -88,7 +88,7 @@ def disable(name):
     edited = False
     config = '/etc/rc.conf'
     for line in open(config, 'r').readlines():
-        if not line.startswith("%s_enable=" % name):
+        if not line.startswith('{0}_enable='.format(name)):
             nlines.append(line)
         else:
             edited = True
