@@ -10,6 +10,7 @@ import sys
 import shutil
 import subprocess
 import tempfile
+import time
 try:
     import pwd
 except ImportError:
@@ -24,6 +25,14 @@ import salt.runner
 from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
+try:
+    import console
+    width, height = console.getTerminalSize()
+    PNUM = width
+except:
+    PNUM = 70
+
+
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -35,6 +44,30 @@ PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 TMP = os.path.join(tempfile.gettempdir(), 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
+MINIONS_CONNECT_TIMEOUT = 60
+
+
+def print_header(header, sep='~', top=True, bottom=True, inline=False,
+                 centered=False):
+    '''
+    Allows some pretty printing of headers on the console, either with a
+    "ruler" on bottom and/or top, inline, centered, etc.
+    '''
+    if top and not inline:
+        print(sep * PNUM)
+
+    if centered and not inline:
+        fmt = u'{0:^{width}}'
+    elif inline and not centered:
+        fmt = u'{0:{sep}<{width}}'
+    elif inline and centered:
+        fmt = u'{0:{sep}^{width}}'
+    else:
+        fmt = u'{0}'
+    print(fmt.format(header, sep=sep, width=PNUM))
+
+    if bottom and not inline:
+        print(sep * PNUM)
 
 
 def run_tests(TestCase):
@@ -86,6 +119,7 @@ class TestDaemon(object):
 
     def __init__(self, clean):
         self.clean = clean
+        self.__evt_miconn = multiprocessing.Event()
 
     def __enter__(self):
         '''
@@ -131,9 +165,11 @@ class TestDaemon(object):
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
-            self.master_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
-            self.minion_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
-            self.sub_minion_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+            optname = '{0}.file'.format(name)
+            optname_path = os.path.join(TMP, name)
+            self.master_opts[optname] = optname_path
+            self.minion_opts[optname] = optname_path
+            self.sub_minion_opts[optname] = optname_path
 
         verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
@@ -182,6 +218,22 @@ class TestDaemon(object):
         self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
         self.syndic_process.start()
 
+        # Let's create a local client to ping and sync minions
+        self.client = salt.client.LocalClient(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        )
+
+        # Wait for minions to connect back and sync_all
+        sync_minions = multiprocessing.Process(
+            target=self.__wait_for_minions_connections,
+            args=(self.__evt_miconn,)
+        )
+        sync_minions.start()
+
+        if self.__evt_miconn.wait(MINIONS_CONNECT_TIMEOUT) is not True:
+            print('WARNING: Minions failed to connect back. Tests requiring '
+                  'them WILL fail')
+
         return self
 
     def __exit__(self, type, value, traceback):
@@ -226,6 +278,52 @@ class TestDaemon(object):
             shutil.rmtree(self.smaster_opts['root_dir'])
         if os.path.isdir(TMP):
             shutil.rmtree(TMP)
+
+    def __wait_for_minions_connections(self, evt):
+        print_header(
+            'Waiting at most {0} secs for local minions to connect '
+            'back'.format(MINIONS_CONNECT_TIMEOUT), sep='=', centered=True
+        )
+        targets = set(['minion', 'sub_minion'])
+        expected_connections = set(targets)
+        while True:
+            # If enough time passes, a timeout will be triggered by
+            # multiprocessing.Event, so, we can have this while True here
+            targets = self.client.cmd('*', 'test.ping')
+            for target in targets:
+                if target not in expected_connections:
+                    # Someone(minion) else "listening"?
+                    continue
+                expected_connections.remove(target)
+                print('  * {0} minion connected'.format(target))
+            if not expected_connections:
+                # All expected connections have connected
+                break
+            time.sleep(1)
+
+        # Let's sync all connected minions
+        print('  * Syncing local minion\'s dynamic data(saltutil.sync_all)')
+        syncing = set(targets)
+        jid_info = self.client.run_job(
+            ','.join(targets), 'saltutil.sync_all',
+            expr_form='list',
+            timeout=9999999999999999,
+        )
+
+        while syncing:
+            rdata = self.client.get_returns(jid_info['jid'], syncing, 1)
+            if rdata:
+                for idx, (name, output) in enumerate(rdata.iteritems()):
+                    print('    * Synced {0}: {1}'.format(name, output))
+                    # Synced!
+                    try:
+                        syncing.remove(name)
+                    except KeyError:
+                        print('    * {0} already synced???  {1}'.format(
+                            name, output
+                        ))
+        print_header('', sep='=', inline=True)
+        evt.set()
 
 
 class ModuleCase(TestCase):
@@ -322,7 +420,7 @@ class ModuleCase(TestCase):
             pass
         else:
             if isinstance(res, dict):
-                if res['result'] == True:
+                if res['result'] is True:
                     return
                 if 'comment' in res:
                     raise AssertionError(res['comment'])
