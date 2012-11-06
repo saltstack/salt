@@ -414,6 +414,7 @@ _OS_NAME_MAP = {
     'arch': 'Arch',
     'amazonlinu': 'Amazon',
     'centoslinu': 'CentOS',
+    'scientific': 'Scientific',
 }
 
 # Map the 'os' grain to the 'os_family' grain
