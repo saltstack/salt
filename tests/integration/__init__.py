@@ -41,7 +41,8 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
-TMP = os.path.join(tempfile.gettempdir(), 'salt-tests-tmpdir')
+SYS_TMP_DIR = tempfile.gettempdir()
+TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 MINIONS_CONNECT_TIMEOUT = 60
