@@ -118,8 +118,9 @@ class TestDaemon(object):
     Set up the master and minion daemons, and run related cases
     '''
 
-    def __init__(self, clean):
-        self.clean = clean
+    def __init__(self, opts=None):
+        self.opts = opts
+        self.clean = opts.clean
         self.__evt_minions_connect = multiprocessing.Event()
         self.__evt_minions_sync = multiprocessing.Event()
         self.__minion_targets = set(['minion', 'sub_minion'])
@@ -221,6 +222,21 @@ class TestDaemon(object):
         self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
         self.syndic_process.start()
 
+        #if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
+        #    try:
+        #        import yaml
+        #        os.makedirs('/tmp/salttest/conf')
+        #    except OSError:
+        #        pass
+        #    self.master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
+        #    self.minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
+        #    open('/tmp/salttest/conf/master', 'w').write(
+        #        yaml.dump(self.master_opts)
+        #    )
+        #    open('/tmp/salttest/conf/minion', 'w').write(
+        #        yaml.dump(self.minion_opts)
+        #    )
+
         # Let's create a local client to ping and sync minions
         self.client = salt.client.LocalClient(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
@@ -247,6 +263,20 @@ class TestDaemon(object):
             print('WARNING: Minions failed to sync. Tests requiring the '
                   'testing `runtests_helper` module WILL fail')
         sync_minions.terminate()
+
+        if self.opts.sysinfo:
+            from salt import version
+            print_header('~~~~~~~ Versions Report ', inline=True)
+            print('\n'.join(version.versions_report()))
+
+            print_header(
+                '~~~~~~~ Minion Grains Information ', inline=True,
+            )
+            grains = self.client.cmd('minion', 'grains.items')
+            import pprint
+            pprint.pprint(grains['minion'])
+
+        print_header('', sep='=', inline=True)
 
         return self
 
@@ -341,7 +371,6 @@ class TestDaemon(object):
                         print('    * {0} already synced???  {1}'.format(
                             name, output
                         ))
-        print_header('', sep='=', inline=True)
         evt.set()
 
 
