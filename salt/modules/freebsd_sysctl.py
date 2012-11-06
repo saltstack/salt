@@ -12,9 +12,9 @@ __outputter__ = {
 
 def _formatfor(name, value, config, tail=''):
     if config == '/boot/loader.conf':
-        return "%s=\"%s\"%s" % (name, value, tail)
+        return '{0}="{1}"{2}'.format(name, value, tail)
     else:
-        return "%s=%s%s" % (name, value, tail)
+        return '{0}={1}{2}'.format(name, value, tail)
 
 
 def __virtual__():
@@ -52,7 +52,7 @@ def show():
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if line.split('.')[0] not in roots:
-            ret[comps[0]] += "%s\n" % line
+            ret[comps[0]] += "{0}\n".format(line)
             continue
         comps = line.split('=')
         ret[comps[0]] = comps[1]
@@ -106,7 +106,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     value = str(value)
 
     for l in open(config, 'r').readlines():
-        if not l.startswith("%s=" % name):
+        if not l.startswith('{0}='.format(name)):
             nlines.append(l)
             continue
         else:
@@ -124,7 +124,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
             nlines.append(new_line)
             edited = True
     if not edited:
-        nlines.append("%s\n" % _formatfor(name, value, config))
+        nlines.append("{0}\n".format(_formatfor(name, value, config)))
     open(config, 'w+').writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)
