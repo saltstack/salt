@@ -76,11 +76,11 @@ def _psql_cmd(*args, **kwargs):
                                               kwargs.get('host'),
                                               kwargs.get('port'))
     cmd = ['psql', '--no-align', '--no-readline', '--no-password']
-    if user is not None:
+    if user:
         cmd += ['--username', user]
-    if host is not None:
+    if host:
         cmd += ['--host', host]
-    if port is not None:
+    if port:
         cmd += ['--port', port]
     cmd += args
     cmdstr = ' '.join(map(pipes.quote, cmd))
