@@ -56,6 +56,7 @@ Full Table of Contents
     ref/file_server/file_roots
     ref/file_server/dynamic-modules
     ref/configuration/*
+    ref/internals/index
 
     ref/cli/index
     ref/cli/salt
