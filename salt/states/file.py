@@ -330,8 +330,8 @@ def _symlink_check(name, target, force):
             return None, ('The file or directory {0} is set for removal to '
                           'make way for a new symlink targeting {1}').format(
                                   name, target)
-        return _error(ret, ('File or directory exists where the symlink {0} '
-                            'should be. Did you mean to use force?'.format(name)))
+        return False, ('File or directory exists where the symlink {0} '
+                       'should be. Did you mean to use force?'.format(name))
 
 
 def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
