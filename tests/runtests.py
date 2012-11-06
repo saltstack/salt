@@ -101,7 +101,7 @@ def run_integration_tests(opts):
     if not any([opts.client, opts.module, opts.runner,
                 opts.shell, opts.state, opts.name]):
         return status
-    with TestDaemon(clean=opts.clean):
+    with TestDaemon(opts=opts):
         if opts.name:
             for name in opts.name:
                 results = run_suite(opts, '', name)
@@ -218,11 +218,15 @@ def parse_opts():
             action='store_true',
             help='Do NOT show the overall tests result'
     )
-
     parser.add_option('--coverage',
             default=False,
             action='store_true',
             help='Run tests and report code coverage'
+    )
+    parser.add_option('--sysinfo',
+            default=False,
+            action='store_true',
+            help='Print some system information.'
     )
 
     options, _ = parser.parse_args()
