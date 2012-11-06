@@ -110,6 +110,15 @@ class SaltCloud(object):
                 help=('Execute a query and return all information about the '
                       'nodes running on configured cloud providers'))
 
+        parser.add_option('--list-locations',
+                dest='list_locations',
+                default=False,
+                help=('Display a list of locations available in configured '
+                      'cloud providers. Pass the cloud provider that '
+                      'available locations are desired on, aka "linode", '
+                      'or pass "all" to list locations for all configured '
+                      'cloud providers'))
+
         parser.add_option('--list-images',
                 dest='list_images',
                 default=False,
@@ -221,6 +230,10 @@ class SaltCloud(object):
 
         if self.opts['version']:
             print VERSION
+        if self.opts['list_locations']:
+            saltcloud.output.double_layer(
+                    mapper.location_list(self.opts['list_locations'])
+                    )
         if self.opts['list_images']:
             saltcloud.output.double_layer(
                     mapper.image_list(self.opts['list_images'])

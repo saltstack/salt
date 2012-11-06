@@ -70,6 +70,25 @@ class Cloud(object):
                 pmap[prov] = []
         return pmap
 
+    def location_list(self, lookup='all'):
+        '''
+        Return a mapping of all location data for available providers
+        '''
+        provs = self.get_providers()
+        locations = {}
+        for prov in provs:
+            # If all providers are not desired, then don't get them
+            if not lookup == 'all':
+                if not lookup == prov:
+                    continue
+            fun = '{0}.avail_locations'.format(prov)
+            if not fun in self.clouds:
+                # The capability to gather locations is not supported by this
+                # cloud module
+                continue
+            locations[prov] = self.clouds[fun]()
+        return locations
+
     def image_list(self, lookup='all'):
         '''
         Return a mapping of all image data for available providers

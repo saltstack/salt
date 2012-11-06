@@ -42,6 +42,23 @@ def ssh_pub(vm_):
     return SSHKeyDeployment(open(os.path.expanduser(ssh)).read())
 
 
+def avail_locations():
+    '''
+    Return a dict of all available vm locations on the cloud provider with
+    relevant data
+    '''
+    conn = get_conn()
+    locations = conn.list_locations()
+    ret = {}
+    for img in locations:
+        ret[img.name] = {}
+        for attr in dir(img):
+            if attr.startswith('_'):
+                continue
+            ret[img.name][attr] = getattr(img, attr)
+    return ret
+
+
 def avail_images():
     '''
     Return a dict of all available vm images on the cloud provider with
@@ -77,6 +94,19 @@ def avail_sizes():
             except Exception:
                 pass
     return ret
+
+
+def get_location(conn, vm_):
+    '''
+    Return the location object to use
+    '''
+    locations = conn.list_locations()
+    for img in locations:
+        if str(img.id) == str(vm_['location']):
+            return img
+        if img.name == str(vm_['location']):
+            return img
+    raise ValueError("The specified location could not be found.")
 
 
 def get_image(conn, vm_):
