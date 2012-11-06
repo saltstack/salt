@@ -12,5 +12,5 @@ import tempfile
 TMP = os.path.join(tempfile.gettempdir(), 'salt-tests-tmpdir')
 
 
-def get_temp_dir_for_path(path):
+def get_salt_temp_dir_for_path(path):
     return os.path.join(TMP, path)
