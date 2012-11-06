@@ -72,7 +72,7 @@ def compile_template_str(template, renderers, default):
     fd_, fn_ = tempfile.mkstemp()
     os.close(fd_)
     with open(fn_, 'wb') as f:
-        f.write(sls_encoder(template))
+        f.write(sls_encoder(template)[0])
     return compile_template(fn_, renderers, default)
 
 
