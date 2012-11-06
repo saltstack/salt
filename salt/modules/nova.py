@@ -9,8 +9,21 @@ keystone.password: verybadpass
 keystone.tenant: admin
 keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
+has_nova = False
+try:
+    from novaclient.v1_1 import client
+    has_nova = True
+except ImportError:
+    pass
 
-from novaclient.v1_1 import client
+def __virtual__():
+    '''
+    Only load this module if nova
+    is installed on this minion.
+    '''
+    if has_nova:
+        return 'nova'
+    return False
 
 __opts__ = {}
 
