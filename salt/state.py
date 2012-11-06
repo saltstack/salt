@@ -1635,14 +1635,12 @@ class BaseHighState(object):
         #File exists so continue
         err = []
         top = self.get_top()
-        if not top:
-            msg = ('Top data not found. Either this minion is not matched '
-                   'in the top file or the top file was not found on the '
-                   'master')
-            ret[tag_name]['comment'] = msg
-            return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
+        if not matches:
+            msg = ('No Top file or external nodes data matches found')
+            ret[tag_name]['comment'] = msg
+            return ret
         self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
         err += errors
