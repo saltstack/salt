@@ -53,12 +53,43 @@ class StateModuleTest(integration.ModuleCase):
         '''
         Verify that we can append a file's contents
         '''
-        if os.path.isfile('/tmp/salttest/test.append'):
-            os.unlink('/tmp/salttest/test.append')
+        testfile = os.path.join(integration.TMP, 'test.append')
+        if os.path.isfile(testfile):
+            os.unlink(testfile)
 
-        self.run_function('state.sls', mods='testappend')
-        self.run_function('state.sls', mods='testappend.step-1')
-        self.run_function('state.sls', mods='testappend.step-2')
+        ret = self.run_function('state.sls', mods='testappend')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
+        ret = self.run_function('state.sls', mods='testappend.step-1')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
+        ret = self.run_function('state.sls', mods='testappend.step-2')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
         self.assertMultiLineEqual('''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
@@ -69,11 +100,31 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-''', open('/tmp/salttest/test.append', 'r').read())
+''', open(testfile, 'r').read())
 
         # Re-append switching order
-        self.run_function('state.sls', mods='testappend.step-2')
-        self.run_function('state.sls', mods='testappend.step-1')
+        ret = self.run_function('state.sls', mods='testappend.step-2')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
+        ret = self.run_function('state.sls', mods='testappend.step-1')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
         self.assertMultiLineEqual('''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
@@ -84,7 +135,7 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-''', open('/tmp/salttest/test.append', 'r').read())
+''', open(testfile, 'r').read())
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -100,10 +151,12 @@ fi
                 - text: foo
 
         '''
+        testfile = os.path.join(integration.TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
-            'Name "/tmp/salttest/issue-1876" in sls "issue-1876" contains '
-            'multiple state decs of the same type', sls
+            'Name "{0}" in sls "issue-1876" contains multiple state decs of '
+            'the same type'.format(testfile),
+            sls
         )
 
     def test_issue_1879_too_simple_contains_check(self):
@@ -117,63 +170,128 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 '''
+        testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting
-        if os.path.isfile('/tmp/salttest/issue-1879'):
-            os.unlink('/tmp/salttest/issue-1879')
+        if os.path.isfile(testfile):
+            os.unlink(testfile)
 
         # Create the file
-        self.run_function('state.sls', mods='issue-1879')
+        ret = self.run_function('state.sls', mods='issue-1879')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
         # The first append
-        self.run_function('state.sls', mods='issue-1879.step-1')
-        # The seccond append
-        self.run_function('state.sls', mods='issue-1879.step-2')
+        ret = self.run_function('state.sls', mods='issue-1879.step-1')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
+        # The second append
+        ret = self.run_function('state.sls', mods='issue-1879.step-2')
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+        except AssertionError:
+            print ret
+            raise
+
         # Does it match?
         try:
             self.assertMultiLineEqual(
-                contents, open('/tmp/salttest/issue-1879', 'r').read()
+                contents,
+                open(testfile, 'r').read()
             )
             # Make sure we don't re-append existing text
-            self.run_function('state.sls', mods='issue-1879.step-1')
-            self.run_function('state.sls', mods='issue-1879.step-2')
+            ret = self.run_function('state.sls', mods='issue-1879.step-1')
+            try:
+                self.assertTrue(isinstance(ret, dict)), ret
+                self.assertNotEqual(ret, {})
+                for key in ret.iterkeys():
+                    self.assertTrue(ret[key]['result'])
+            except AssertionError:
+                print ret
+                raise
+            ret = self.run_function('state.sls', mods='issue-1879.step-2')
+            try:
+                self.assertTrue(isinstance(ret, dict)), ret
+                self.assertNotEqual(ret, {})
+                for key in ret.iterkeys():
+                    self.assertTrue(ret[key]['result'])
+            except AssertionError:
+                print ret
+                raise
             self.assertMultiLineEqual(
-                contents, open('/tmp/salttest/issue-1879', 'r').read()
+                contents,
+                open(testfile, 'r').read()
             )
         except Exception:
-            shutil.copy('/tmp/salttest/issue-1879', '/tmp/salttest/issue-1879.bak')
+            if os.path.exists(testfile):
+                shutil.copy(testfile, testfile + '.bak')
             raise
         finally:
-            os.unlink('/tmp/salttest/issue-1879')
+            if os.path.exists(testfile):
+                os.unlink(testfile)
 
     def test_include(self):
-        fnames = ('/tmp/include-test', '/tmp/to-include-test')
+        fnames = (
+            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
+            os.path.join(integration.SYS_TMP_DIR, 'to-include-test')
+        )
+        exclude_test_file = os.path.join(
+            integration.SYS_TMP_DIR, 'exclude-test'
+        )
         try:
             ret = self.run_function('state.sls', mods='include-test')
             for part in ret.itervalues():
                 self.assertTrue(part['result'])
             for fname in fnames:
                 self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile('/tmp/exclude-test'))
+            self.assertFalse(os.path.isfile(exclude_test_file))
         finally:
-            for fname in list(fnames) + ['/tmp/exclude-test']:
+            for fname in list(fnames) + [exclude_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
 
     def test_exclude(self):
-        fnames = ('/tmp/include-test', '/tmp/exclude-test')
+        fnames = (
+            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
+            os.path.join(integration.SYS_TMP_DIR, 'exclude-test')
+        )
+        to_include_test_file = os.path.join(
+            integration.SYS_TMP_DIR, 'to-include-test'
+        )
         try:
             ret = self.run_function('state.sls', mods='exclude-test')
             for part in ret.itervalues():
                 self.assertTrue(part['result'])
             for fname in fnames:
                 self.assertTrue(os.path.isfile(fname))
-            self.assertFalse(os.path.isfile('/tmp/to-include-test'))
+            self.assertFalse(os.path.isfile(to_include_test_file))
         finally:
-            for fname in list(fnames) + ['/tmp/to-include-test']:
+            for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
 
     def test_issue_2068_template_str(self):
-        venv_dir = '/tmp/issue-2068-template-str'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'issue-2068-template-str'
+        )
 
         try:
             ret = self.run_function(

@@ -1,4 +1,4 @@
-/tmp/issue-2068-template-str:
+{{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}:
   virtualenv:
     - managed
     - no_site_packages: True
@@ -8,7 +8,7 @@ pep8-pip:
   pip:
     - installed
     - name: pep8
-    - bin_env: /tmp/issue-2068-template-str
+    - bin_env: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}
     - mirrors: http://testpypi.python.org/pypi
     - require:
-      - virtualenv: /tmp/issue-2068-template-str
+      - virtualenv: {{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-2068-template-str') }}
