@@ -5,6 +5,7 @@ The service module for FreeBSD
 import os
 # Import Salt libs
 import salt.utils
+from salt.exceptions import CommandNotFoundError
 
 
 def __virtual__():
@@ -26,17 +27,12 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = []
-    for rcfn in ('/etc/rc.conf', '/etc/rc.conf.local'):
-        if os.path.isfile(rcfn):
-            for line in open(rcfn, 'r').readlines():
-                clean_line = line.split('#', 1)[0].strip()
-                if not '_enable=' in clean_line:
-                    continue
-                (service, enabled) = clean_line.split('=')
-                if enabled.strip('"\'').upper() != 'YES':
-                    continue
-                ret.append(service.replace('_enable', ''))
-    return ret
+    service = salt.utils.which('service')
+    if not service:
+        raise CommandNotFoundError
+    for s in __salt__['cmd.run']('{0} -e'.format(service)).splitlines():
+        ret.append(os.path.basename(s))
+    return sorted(ret)
 
 
 def get_disabled():
@@ -52,7 +48,32 @@ def get_disabled():
     return sorted(set(all_) - set(en_))
 
 
-def enable(name):
+def _switch(name, on, config='/etc/rc.conf'):
+    '''
+    '''
+    nlines = []
+    edited = False
+
+    if on:
+        val = "YES"
+    else:
+        val = "NO"
+
+    if os.path.exists(config):
+        for line in open(config, 'r').readlines():
+            if not line.startswith('{0}_enable='.format(name)):
+                nlines.append(line)
+                continue
+            rest = line[len(line.split()[0]):]  # keep comments etc
+            nlines.append('{0}_enable="{1}"{2}'.format(name, val, rest))
+            edited = True
+    if not edited:
+        nlines.append("{0}_enable=\"{1}\"\n".format(name, val))
+    open(config, 'w+').writelines(nlines)
+    return True
+
+
+def enable(name, config='/etc/rc.conf'):
     '''
     Enable the named service to start at boot
 
@@ -60,23 +81,10 @@ def enable(name):
 
         salt '*' service.enable <service name>
     '''
-    nlines = []
-    edited = False
-    config = '/etc/rc.conf'
-    for line in open(config, 'r').readlines():
-        if not line.startswith('{0}_enable='.format(name)):
-            nlines.append(line)
-            continue
-        rest = line[len(line.split()[0]):]  # keep comments etc
-        nlines.append('{0}_enable="YES"{1}'.format(name, rest))
-        edited = True
-    if not edited:
-        nlines.append("{0}_enable=\"YES\"\n".format(name))
-    open(config, 'w+').writelines(nlines)
-    return True
+    return _switch(name, True, config)
 
 
-def disable(name):
+def disable(name, config='/etc/rc.conf'):
     '''
     Disable the named service to start at boot
 
@@ -84,19 +92,7 @@ def disable(name):
 
         salt '*' service.disable <service name>
     '''
-    nlines = []
-    edited = False
-    config = '/etc/rc.conf'
-    for line in open(config, 'r').readlines():
-        if not line.startswith('{0}_enable='.format(name)):
-            nlines.append(line)
-        else:
-            edited = True
-        continue
-    if edited:
-        open(config, 'w+').writelines(nlines)
-
-    return True
+    return _switch(name, False, config)
 
 
 def enabled(name):
@@ -129,14 +125,15 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    ret = set()
-    for rcdir in ('/etc/rc.d/', '/usr/local/etc/rc.d/'):
-        ret.update(os.listdir(rcdir))
-    rm_ = set()
-    for srv in ret:
-        if srv.isupper():
-            rm_.add(srv)
-    return sorted(ret - rm_)
+    ret = []
+    service = salt.utils.which('service')
+    if not service:
+        raise CommandNotFoundError
+    for s in __salt__['cmd.run']('{0} -r'.format(service)).splitlines():
+        srv = os.path.basename(s)
+        if not srv.isupper():
+            ret.append(srv)
+    return sorted(ret)
 
 
 def start(name):
