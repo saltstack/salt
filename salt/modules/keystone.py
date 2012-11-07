@@ -523,6 +523,4 @@ def _item_list():
                         protocols and
     bootstrap           Grants a new role to a new user on a new tenant, after
                         creating each.
-    bash-completion     Prints all of the commands and options to stdout.
-
     '''
