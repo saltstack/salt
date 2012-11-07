@@ -41,6 +41,7 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
+from salt.exceptions import EauthAuthenticationError
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -142,9 +143,8 @@ class LocalClient(object):
         '''
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
+                   'commands?')
+            raise EauthAuthenticationError(err)
 
         # Failed to connect to the master and send the pub
         if not 'jid' in pub_data or pub_data['jid'] == '0':
