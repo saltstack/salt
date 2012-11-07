@@ -48,7 +48,7 @@ def get_disabled():
     return sorted(set(all_) - set(en_))
 
 
-def _switch(name, on, config='/etc/rc.conf'):
+def _switch(name, on, config='/etc/rc.conf', **kwargs):
     '''
     '''
     nlines = []
@@ -73,7 +73,7 @@ def _switch(name, on, config='/etc/rc.conf'):
     return True
 
 
-def enable(name, config='/etc/rc.conf'):
+def enable(name, config='/etc/rc.conf', **kwargs):
     '''
     Enable the named service to start at boot
 
@@ -81,10 +81,10 @@ def enable(name, config='/etc/rc.conf'):
 
         salt '*' service.enable <service name>
     '''
-    return _switch(name, True, config)
+    return _switch(name, True, config, **kwargs)
 
 
-def disable(name, config='/etc/rc.conf'):
+def disable(name, config='/etc/rc.conf' **kwargs):
     '''
     Disable the named service to start at boot
 
@@ -92,7 +92,7 @@ def disable(name, config='/etc/rc.conf'):
 
         salt '*' service.disable <service name>
     '''
-    return _switch(name, False, config)
+    return _switch(name, False, config, **kwargs)
 
 
 def enabled(name):
