@@ -24,6 +24,24 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
+    def text_get_file_templated_paths(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'cheese')
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://{{grain.test_grain}}',
+                tgt.replace('cheese', '{{grain.test_grain}}'),
+            ])
+        with open(tgt, 'r') as cheese:
+            data = cheese.read()
+            self.assertIn('Gromit', data)
+            self.assertNotIn('bacon', data)
+
+
+
     def test_get_template(self):
         '''
         cp.get_template
