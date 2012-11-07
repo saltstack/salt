@@ -45,6 +45,37 @@ def _auth():
     return nt
 
 
+def ec2_credentials_get(id=None, name=None, access=None):
+    '''
+    Return ec2_credentials for a user (keystone ec2-credentials-get)
+
+    CLI Examples::
+
+        salt '*' keystone.ec2_credentials_get c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
+        salt '*' keystone.ec2_credentials_get id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
+        salt '*' keystone.ec2_credentials_get name=nova access=722787eb540849158668370dc627ec5f
+    '''
+    nt = _auth()
+    ret = {}
+    if name:
+        for user in nt.users.list():
+            if user.name == name:
+                id = user.id
+                continue
+    if not id:
+        return {'Error': 'Unable to resolve user id'}
+    if not access:
+        return {'Error': 'Access key is required'}
+    ec2_credentials = nt.ec2.get(user_id=id, access=access)
+    ret[ec2_credentials.user_id] = {
+            'user_id': ec2_credentials.user_id,
+            'tenant': ec2_credentials.tenant_id,
+            'access': ec2_credentials.access,
+            'secret': ec2_credentials.secret,
+            }
+    return ret
+
+
 def ec2_credentials_list(id=None, name=None):
     '''
     Return a list of ec2_credentials for a specific user (keystone ec2-credentials-list)
@@ -74,6 +105,18 @@ def ec2_credentials_list(id=None, name=None):
     return ret
 
 
+def endpoint_get(service):
+    '''
+    Return a specific endpoint (keystone endpoint-get)
+
+    CLI Example::
+
+        salt '*' keystone.endpoint_get ec2
+    '''
+    nt = _auth()
+    return nt.service_catalog.url_for(service_type=service)
+
+
 def endpoint_list():
     '''
     Return a list of available endpoints (keystone endpoints-list)
@@ -96,6 +139,33 @@ def endpoint_list():
     return ret
 
 
+def role_get(id=None, name=None):
+    '''
+    Return a specific roles (keystone role-get)
+
+    CLI Examples::
+
+        salt '*' keystone.role_get c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.role_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.role_get name=nova
+    '''
+    nt = _auth()
+    ret = {}
+    if name:
+        for role in nt.roles.list():
+            if role.name == name:
+                id = role.id
+                continue
+    if not id:
+        return {'Error': 'Unable to resolve role id'}
+    role = nt.roles.get(id)
+    ret[role.name] = {
+            'id': role.id,
+            'name': role.name,
+            }
+    return ret
+
+
 def role_list():
     '''
     Return a list of available roles (keystone role-list)
@@ -111,6 +181,35 @@ def role_list():
                 'id': role.id,
                 'name': role.name,
                 }
+    return ret
+
+
+def service_get(id=None, name=None):
+    '''
+    Return a specific services (keystone service-get)
+
+    CLI Examples::
+
+        salt '*' keystone.service_get c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.service_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.service_get name=nova
+    '''
+    nt = _auth()
+    ret = {}
+    if name:
+        for service in nt.services.list():
+            if service.name == name:
+                id = service.id
+                continue
+    if not id:
+        return {'Error': 'Unable to resolve service id'}
+    service = nt.services.get(id)
+    ret[service.name] = {
+            'id': service.id,
+            'name': service.name,
+            'type': service.type,
+            'description': service.description,
+            }
     return ret
 
 
@@ -134,6 +233,35 @@ def service_list():
     return ret
 
 
+def tenant_get(id=None, name=None):
+    '''
+    Return a specific tenants (keystone tenant-get)
+
+    CLI Examples::
+
+        salt '*' keystone.tenant_get c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_get id=c965f79c4f864eaaa9c3b41904e67082
+        salt '*' keystone.tenant_get name=nova
+    '''
+    nt = _auth()
+    ret = {}
+    if name:
+        for tenant in nt.tenants.list():
+            if tenant.name == name:
+                id = tenant.id
+                continue
+    if not id:
+        return {'Error': 'Unable to resolve tenant id'}
+    tenant = nt.tenants.get(id)
+    ret[tenant.name] = {
+            'id': tenant.id,
+            'name': tenant.name,
+            'description': tenant.description,
+            'enabled': tenant.enabled,
+            }
+    return ret
+
+
 def tenant_list():
     '''
     Return a list of available tenants (keystone tenants-list)
@@ -152,6 +280,24 @@ def tenant_list():
                 'enabled': tenant.enabled,
                 }
     return ret
+
+
+def token_get():
+    '''
+    Return the configured tokens (keystone token-get)
+
+    CLI Example::
+
+        salt '*' keystone.token_get c965f79c4f864eaaa9c3b41904e67082
+    '''
+    nt = _auth()
+    token = nt.service_catalog.get_token()
+    return {
+            'id': token['id'],
+            'expires': token['expires'],
+            'user_id': token['user_id'],
+            'tenant_id': token['tenant_id'],
+            }
 
 
 def user_list():
@@ -362,22 +508,15 @@ def _item_list():
                         Create EC2-compatibile credentials for user per tenant
     ec2-credentials-delete
                         Delete EC2-compatibile credentials
-    ec2-credentials-get
-                        Display EC2-compatibile credentials
     endpoint-create     Create a new endpoint associated with a service
     endpoint-delete     Delete a service endpoint
-    endpoint-get
     role-create         Create new role
     role-delete         Delete role
-    role-get            Display role details
     service-create      Add service to Service Catalog
     service-delete      Delete service from Service Catalog
-    service-get         Display service from Service Catalog
     tenant-create       Create new tenant
     tenant-delete       Delete tenant
-    tenant-get          Display tenant details
     tenant-update       Update tenant name, description, enabled status
-    token-get
     user-role-add       Add role to user
     user-role-remove    Remove role from user
     discover            Discover Keystone servers and show authentication
