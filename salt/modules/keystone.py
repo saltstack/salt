@@ -376,7 +376,6 @@ def _item_list():
     tenant-update       Update tenant name, description, enabled status
     token-get
     user-role-add       Add role to user
-    user-role-list      List roles granted to a user
     user-role-remove    Remove role from user
     discover            Discover Keystone servers and show authentication
                         protocols and
