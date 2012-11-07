@@ -4,6 +4,7 @@
     :license: Apache 2.0, see LICENSE for more details
 '''
 
+# Import python libs
 import os
 import shutil
 
@@ -20,7 +21,9 @@ class PipStateTest(integration.ModuleCase):
             self.skipTest('virtualenv not installed')
 
     def test_pip_installed_errors(self):
-        venv_dir = '/tmp/pip-installed-errors'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'pip-installed-errors'
+        )
         try:
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
@@ -38,7 +41,7 @@ class PipStateTest(integration.ModuleCase):
 
             # We now create the missing virtualenv
             ret = self.run_function('virtualenv.create', [venv_dir])
-            self.assertTrue(ret['retcode']==0)
+            self.assertEqual(ret['retcode'], 0)
 
             # The state should not have any issues running now
             ret = self.run_function('state.sls', mods='pip-installed-errors')
@@ -70,7 +73,9 @@ class PipStateTest(integration.ModuleCase):
             if os.path.isdir(ographite):
                 shutil.rmtree(ographite)
 
-        venv_dir = '/tmp/pip-installed-weird-install'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'pip-installed-weird-install'
+        )
         try:
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
@@ -98,7 +103,9 @@ class PipStateTest(integration.ModuleCase):
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
 
-        venv_dir = '/tmp/issue-2028-pip-installed'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'issue-2028-pip-installed'
+        )
 
         try:
             self.assertTrue(isinstance(ret, dict)), ret
@@ -115,7 +122,10 @@ class PipStateTest(integration.ModuleCase):
                 shutil.rmtree(venv_dir)
 
     def test_issue_2087_missing_pip(self):
-        venv_dir = '/tmp/issue-2087-missing-pip'
+        venv_dir = os.path.join(
+            integration.SYS_TMP_DIR, 'issue-2087-missing-pip'
+        )
+
         try:
             # XXX: Once state.template_str is fixed, consider not using a file
             # for this test.

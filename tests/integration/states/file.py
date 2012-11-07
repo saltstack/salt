@@ -1,8 +1,12 @@
 '''
 Tests for the file state
 '''
+
+# Import python libs
 import os
 import shutil
+
+# Import salt libs
 import integration
 
 
@@ -409,7 +413,9 @@ class FileTest(integration.ModuleCase):
         '''
         # let's make use of existing state to create a file with contents to
         # test against
-        tmp_file_append = '/tmp/salttest/test.append'
+        tmp_file_append = os.path.join(
+            integration.TMP, 'test.append'
+        )
         if os.path.isfile(tmp_file_append):
             os.remove(tmp_file_append)
         self.run_function('state.sls', mods='testappend')
