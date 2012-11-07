@@ -128,7 +128,7 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def enable(name):
+def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
@@ -140,7 +140,7 @@ def enable(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def disable(name):
+def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 

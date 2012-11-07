@@ -114,7 +114,7 @@ def status(name, sig=None):
     '''
     return __salt__['status.pid'](sig if sig else name)
 
-def enable(name):
+def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
@@ -125,7 +125,7 @@ def enable(name):
     cmd = 'rc-update add {0} default'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
-def disable(name):
+def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
