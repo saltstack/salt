@@ -307,29 +307,36 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     setattr(yb.conf, 'gpgcheck', not skip_verify)
 
     if repo:
+        log.debug("Enabling repo '{0}'".format(repo))
         yb.repos.enableRepo(repo)
     for i in range(0,len(pkgs)):
         try:
             if sources is not None:
                 target = sources[i]
+                log.debug("Selecting '{0}' for local installation".format(target))
                 a = yb.installLocal(target)
                 # if yum didn't install anything, maybe its a downgrade?
                 if len(a) == 0:
-                  a = yb.downgradeLocal(target)
+                    log.debug('Upgrade failed, trying local downgrade')
+                    a = yb.downgradeLocal(target)
             else:
                 target = pkgs[i]
+                log.debug("Selecting '{0}' for installation".format(target))
                 # Changed to pattern to allow specific package versions
                 a = yb.install(pattern=target)
                 # if yum didn't install anything, maybe its a downgrade?
                 if len(a) == 0:
-                  a = yb.downgrade(pattern=target)
+                    log.debug('Upgrade failed, trying downgrade')
+                    a = yb.downgrade(pattern=target)
         except Exception:
             log.exception('Package {0} failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this
     # process.  For now only the version of the package(s) you request be
     # installed is tracked.
+    log.debug('Resolving dependencies')
     yb.resolveDeps()
+    log.debug('Processing transaction')
     yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
     yb.closeRpmDB()
 
