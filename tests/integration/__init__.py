@@ -553,9 +553,8 @@ class ShellCase(TestCase):
             try:
                 process.terminate()
             except OSError, err:
-                if err.errno != 3:
-                    # No such process
-                    raise err
+                # process already terminated
+                pass
             return out.splitlines(), err.splitlines()
 
         process = subprocess.Popen(
@@ -566,9 +565,8 @@ class ShellCase(TestCase):
         try:
             process.terminate()
         except OSError, err:
-            if err.errno != 3:
-                # No such process
-                raise err
+            # process already terminated
+            pass
         return data[0].splitlines()
 
     def run_salt(self, arg_str):
