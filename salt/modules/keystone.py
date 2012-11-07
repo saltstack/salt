@@ -300,9 +300,12 @@ def user_role_list(user_id=None, tenant_id=None, user_name=None, tenant_name=Non
     '''
     Return a list of available user_roles (keystone user_roles-list)
 
-    CLI Example::
+    CLI Examples::
 
-        salt '*' keystone.user_role_list
+        salt '*' keystone.user_role_list user_id=298ce377245c4ec9b70e1c639c89e654
+        salt '*' keystone.user_role_list tenant_id=7167a092ece84bae8cead4bf9d15bb3b
+        salt '*' keystone.user_role_list user_name=admin
+        salt '*' keystone.user_role_list tenant_name=admin
     '''
     nt = _auth()
     ret = {}
