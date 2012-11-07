@@ -75,6 +75,7 @@ def get_file(path, dest, env='base', template=None):
                 string=True,
                 **kwargs
             )
+            salt.utils.safe_rm(tmp_path_fn)
             if not data['result']:
                 # Failed to render the template
                 raise CommandExecutionError('Failed to render file path with error: {0}'.format(
@@ -82,6 +83,7 @@ def get_file(path, dest, env='base', template=None):
                 ))
             else:
                 return data['data']
+
 
         try:
             path = _render(path)
