@@ -121,9 +121,6 @@ class TestDaemon(object):
     def __init__(self, opts=None):
         self.opts = opts
         self.clean = opts.clean
-        self.__evt_minions_connect = multiprocessing.Event()
-        self.__evt_minions_sync = multiprocessing.Event()
-        self.__minion_targets = set(['minion', 'sub_minion'])
 
     def __enter__(self):
         '''
@@ -242,27 +239,33 @@ class TestDaemon(object):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
+        evt_minions_connect = multiprocessing.Event()
+        evt_minions_sync = multiprocessing.Event()
+        minion_targets = set(['minion', 'sub_minion'])
+
         # Wait for minions to connect back
         wait_minions_connection = multiprocessing.Process(
             target=self.__wait_for_minions_connections,
-            args=(self.__evt_minions_connect, self.__minion_targets)
+            args=(evt_minions_connect, minion_targets)
         )
         wait_minions_connection.start()
-        if self.__evt_minions_connect.wait(MINIONS_CONNECT_TIMEOUT) is False:
+        if evt_minions_connect.wait(MINIONS_CONNECT_TIMEOUT) is False:
             print('WARNING: Minions failed to connect back. Tests requiring '
                   'them WILL fail')
         wait_minions_connection.terminate()
+        del(evt_minions_connect, wait_minions_connection)
 
         # Wait for minions to "sync_all"
         sync_minions = multiprocessing.Process(
             target=self.__sync_minions,
-            args=(self.__evt_minions_sync, self.__minion_targets)
+            args=(evt_minions_sync, minion_targets)
         )
         sync_minions.start()
-        if self.__evt_minions_sync.wait(MINIONS_SYNC_TIMEOUT) is False:
+        if evt_minions_sync.wait(MINIONS_SYNC_TIMEOUT) is False:
             print('WARNING: Minions failed to sync. Tests requiring the '
                   'testing `runtests_helper` module WILL fail')
         sync_minions.terminate()
+        del(evt_minions_sync, sync_minions)
 
         if self.opts.sysinfo:
             from salt import version
@@ -378,13 +381,16 @@ class ModuleCase(TestCase):
     '''
     Execute a module function
     '''
-    def setUp(self):
-        '''
-        Generate the tools to test a module
-        '''
-        self.client = salt.client.LocalClient(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
-        )
+
+    _client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = salt.client.LocalClient(
+                os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+            )
+        return self._client
 
     def minion_run(self, _function, *args, **kw):
         '''
@@ -544,6 +550,12 @@ class ShellCase(TestCase):
             # Force closing stderr/stdout to release file descriptors
             process.stdout.close()
             process.stderr.close()
+            try:
+                process.terminate()
+            except OSError, err:
+                if err.errno != 3:
+                    # No such process
+                    raise err
             return out.splitlines(), err.splitlines()
 
         process = subprocess.Popen(
@@ -551,6 +563,12 @@ class ShellCase(TestCase):
         )
         data = process.communicate()
         process.stdout.close()
+        try:
+            process.terminate()
+        except OSError, err:
+            if err.errno != 3:
+                # No such process
+                raise err
         return data[0].splitlines()
 
     def run_salt(self, arg_str):
