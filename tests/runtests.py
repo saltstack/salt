@@ -12,14 +12,8 @@ import resource
 import tempfile
 
 # Import salt libs
-try:
-    import console
-    width, height = console.getTerminalSize()
-    PNUM = width
-except:
-    PNUM = 70
 import saltunittest
-from integration import TestDaemon
+from integration import print_header, PNUM, TestDaemon
 
 try:
     import xmlrunner
@@ -42,27 +36,9 @@ except ImportError:
     code_coverage = None
 
 
-REQUIRED_OPEN_FILES = 2048
+REQUIRED_OPEN_FILES = 3072
 
 TEST_RESULTS = []
-
-def print_header(header, sep='~', top=True, bottom=True, inline=False,
-                 centered=False):
-    if top and not inline:
-        print(sep * PNUM)
-
-    if centered and not inline:
-        fmt = u'{0:^{width}}'
-    elif inline and not centered:
-        fmt = u'{0:{sep}<{width}}'
-    elif inline and centered:
-        fmt = u'{0:{sep}^{width}}'
-    else:
-        fmt = u'{0}'
-    print(fmt.format(header, sep=sep, width=PNUM))
-
-    if bottom and not inline:
-        print(sep * PNUM)
 
 
 def run_suite(opts, path, display_name, suffix='[!_]*.py'):
@@ -125,7 +101,7 @@ def run_integration_tests(opts):
     if not any([opts.client, opts.module, opts.runner,
                 opts.shell, opts.state, opts.name]):
         return status
-    with TestDaemon(clean=opts.clean):
+    with TestDaemon(opts=opts):
         if opts.name:
             for name in opts.name:
                 results = run_suite(opts, '', name)
@@ -242,11 +218,15 @@ def parse_opts():
             action='store_true',
             help='Do NOT show the overall tests result'
     )
-
     parser.add_option('--coverage',
             default=False,
             action='store_true',
             help='Run tests and report code coverage'
+    )
+    parser.add_option('--sysinfo',
+            default=False,
+            action='store_true',
+            help='Print some system information.'
     )
 
     options, _ = parser.parse_args()
