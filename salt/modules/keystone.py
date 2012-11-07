@@ -141,6 +141,32 @@ def user_delete(id=None, name=None):
     return ret
 
 
+def user_password_update(id=None, name=None, password=None):
+    '''
+    Update a user's password (keystone user-password-update)
+
+    CLI Examples::
+
+        salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_delete name=nova pasword=12345
+    '''
+    nt = _auth()
+    ret = {}
+    if name:
+        for user in nt.users.list():
+            if user.name == name:
+                id = user.id
+                continue
+    if not id:
+        return {'Error': 'Unable to resolve user id'}
+    nt.users.update_password(user=id, password=password)
+    ret = 'Password updated for user ID {0}'.format(id)
+    if name:
+        ret += ' ({0})'.format(name)
+    return ret
+
+
 def _item_list():
     '''
     Template for writing list functions
@@ -191,8 +217,6 @@ def _item_list():
     tenant-list         List all tenants
     tenant-update       Update tenant name, description, enabled status
     token-get
-    user-password-update
-                        Update user password
     user-role-add       Add role to user
     user-role-list      List roles granted to a user
     user-role-remove    Remove role from user
