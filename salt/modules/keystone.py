@@ -141,6 +141,26 @@ def user_delete(id=None, name=None):
     return ret
 
 
+def user_update(id=None, name=None, email=None, enabled=None):
+    '''
+    Update a user's information (keystone user-update)
+    The following fields may be updated: name, email, enabled.
+    Because the name is one of the fields, a valid user id is required.
+
+    CLI Examples::
+
+        salt '*' keystone.user_update id=c965f79c4f864eaaa9c3b41904e67082 name=newname
+        salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
+    '''
+    nt = _auth()
+    ret = {}
+    if not id:
+        return {'Error': 'Unable to resolve user id'}
+    nt.users.update(user=id, name=name, email=email, enabled=enabled)
+    ret = 'Info updated for user ID {0}'.format(id)
+    return ret
+
+
 def user_password_update(id=None, name=None, password=None):
     '''
     Update a user's password (keystone user-password-update)
