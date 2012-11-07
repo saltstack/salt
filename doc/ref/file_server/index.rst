@@ -38,6 +38,17 @@ the master, the syntax looks like this:
 This will instruct all Salt minions to download the vimrc file and copy it
 to /etc/vimrc
 
+Template rendering can be enabled on both the source and destination file names
+like so:
+
+.. code-block:: bash
+
+    # salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
+
+This example would instruct all Salt minions to download the vimrc from a
+directory with the same name as their os grain and copy it to /etc/vimrc
+
+
 File Server Client API
 ----------------------
 
