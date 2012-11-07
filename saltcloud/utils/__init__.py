@@ -207,7 +207,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
-                  name=None, pub_key=None, sock_dir=None):
+                  name=None, pub_key=None, sock_dir=None, provider=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -230,6 +230,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 ssh.connect(**kwargs)
             except Exception as exc:
                 print('There was an error in deploy_script: {0}'.format(exc))
+            if provider == 'ibmsce':
+                ssh.exec_command('sudo sed -i "s/#Subsystem/Subsystem/" /etc/ssh/sshd_config')
+                stdin, stdout, stderr = ssh.exec_command('sudo service sshd restart')
+                for line in stdout:
+                    sys.stdout.write(line)
+                ssh.connect(**kwargs)
             tmpfh, tmppath = tempfile.mkstemp()
             tmpfile = open(tmppath, 'w')
             tmpfile.write(script)
