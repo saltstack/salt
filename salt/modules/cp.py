@@ -86,12 +86,12 @@ def get_file(path, dest, env='base', template=None):
         try:
             path = _render(path)
         except CommandExecutionError as exc:
-            log.error(exc.message)
+            log.error(str(exc))
             return ''
         try:
             dest = _render(dest)
         except CommandExecutionError as exc:
-            log.error(exc.message)
+            log.error(str(exc))
             return ''
 
     if not hash_file(path, env):
