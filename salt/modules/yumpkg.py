@@ -324,7 +324,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
                 if len(a) == 0:
                   a = yb.downgrade(pattern=target)
         except Exception:
-            log.error('Package {0} failed to install'.format(target))
+            log.exception('Package {0} failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this
     # process.  For now only the version of the package(s) you request be
