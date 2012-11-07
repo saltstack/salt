@@ -551,23 +551,28 @@ class ShellCase(TestCase):
             process.stdout.close()
             process.stderr.close()
             try:
-                process.terminate()
-            except OSError, err:
-                # process already terminated
-                pass
-            return out.splitlines(), err.splitlines()
+                return out.splitlines(), err.splitlines()
+            finally:
+                try:
+                    process.terminate()
+                except OSError, err:
+                    # process already terminated
+                    pass
 
         process = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE
         )
         data = process.communicate()
         process.stdout.close()
+
         try:
-            process.terminate()
-        except OSError, err:
-            # process already terminated
-            pass
-        return data[0].splitlines()
+            return data[0].splitlines()
+        finally:
+            try:
+                process.terminate()
+            except OSError, err:
+                # process already terminated
+                pass
 
     def run_salt(self, arg_str):
         '''
