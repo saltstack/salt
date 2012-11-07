@@ -96,6 +96,64 @@ def endpoint_list():
     return ret
 
 
+def role_list():
+    '''
+    Return a list of available roles (keystone role-list)
+
+    CLI Example::
+
+        salt '*' keystone.role_list
+    '''
+    nt = _auth()
+    ret = {}
+    for role in nt.roles.list():
+        ret[role.name] = {
+                'id': role.id,
+                'name': role.name,
+                }
+    return ret
+
+
+def service_list():
+    '''
+    Return a list of available services (keystone services-list)
+
+    CLI Example::
+
+        salt '*' keystone.service_list
+    '''
+    nt = _auth()
+    ret = {}
+    for service in nt.services.list():
+        ret[service.name] = {
+                'id': service.id,
+                'name': service.name,
+                'description': service.description,
+                'type': service.type,
+                }
+    return ret
+
+
+def tenant_list():
+    '''
+    Return a list of available tenants (keystone tenants-list)
+
+    CLI Example::
+
+        salt '*' keystone.tenant_list
+    '''
+    nt = _auth()
+    ret = {}
+    for tenant in nt.tenants.list():
+        ret[tenant.name] = {
+                'id': tenant.id,
+                'name': tenant.name,
+                'description': tenant.description,
+                'enabled': tenant.enabled,
+                }
+    return ret
+
+
 def user_list():
     '''
     Return a list of available users (keystone user-list)
@@ -235,64 +293,6 @@ def user_password_update(id=None, name=None, password=None):
     ret = 'Password updated for user ID {0}'.format(id)
     if name:
         ret += ' ({0})'.format(name)
-    return ret
-
-
-def role_list():
-    '''
-    Return a list of available roles (keystone role-list)
-
-    CLI Example::
-
-        salt '*' keystone.role_list
-    '''
-    nt = _auth()
-    ret = {}
-    for role in nt.roles.list():
-        ret[role.name] = {
-                'id': role.id,
-                'name': role.name,
-                }
-    return ret
-
-
-def service_list():
-    '''
-    Return a list of available services (keystone services-list)
-
-    CLI Example::
-
-        salt '*' keystone.service_list
-    '''
-    nt = _auth()
-    ret = {}
-    for service in nt.services.list():
-        ret[service.name] = {
-                'id': service.id,
-                'name': service.name,
-                'description': service.description,
-                'type': service.type,
-                }
-    return ret
-
-
-def tenant_list():
-    '''
-    Return a list of available tenants (keystone tenants-list)
-
-    CLI Example::
-
-        salt '*' keystone.tenant_list
-    '''
-    nt = _auth()
-    ret = {}
-    for tenant in nt.tenants.list():
-        ret[tenant.name] = {
-                'id': tenant.id,
-                'name': tenant.name,
-                'description': tenant.description,
-                'enabled': tenant.enabled,
-                }
     return ret
 
 
