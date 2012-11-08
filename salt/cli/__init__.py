@@ -38,14 +38,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             self.exit(2, '{0}\n'.format(exc))
             return
 
-        if self.options.query:
-            ret = local.find_cmd(self.config['cmd'])
-            for jid in ret:
-                if isinstance(ret, list) or isinstance(ret, dict):
-                    print('Return data for job {0}:'.format(jid))
-                    salt.output.display_output(ret[jid], None, self.config)
-                    print('')
-        elif self.options.batch:
+        if self.options.batch:
             batch = salt.cli.batch.Batch(self.config)
             batch.run()
         else:
