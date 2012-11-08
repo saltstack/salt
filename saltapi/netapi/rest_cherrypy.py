@@ -1,10 +1,12 @@
 '''
-A REST interface for Salt using the CherryPy framework
+A hypermedia REST API for Salt using the CherryPy framework
 '''
 # Import Python libs
 import itertools
 import signal
 import os
+import json
+import yaml
 
 # Import third-party libs
 import cherrypy
@@ -24,6 +26,25 @@ logger = salt.log.logging.getLogger(__name__)
 def __virtual__():
     return 'rest'
 
+class SimpleTool(cherrypy.Tool):
+    '''
+    http://ionrock.org/better-cherrypy-tools.html
+    '''
+    def __init__(self, point=None, callable=None):
+        self._point = point
+        self._name = None
+        self._priority = 50
+        self._setargs()
+
+    def _setup(self):
+        conf = self._merged_args()
+        hooks = cherrypy.request.hooks
+        for hookpoint in cherrypy._cprequest.hookpoints:
+            if hasattr(self, hookpoint):
+                func = getattr(self, hookpoint)
+                p = getattr(func, 'priority', self._priority)
+                hooks.attach(hookpoint, func, priority=p, **conf)
+
 def salt_auth_tool(default=False):
     ignore_urls = ('/login',)
     sid = (cherrypy.session.get('token', None) or
@@ -32,6 +53,54 @@ def salt_auth_tool(default=False):
         raise cherrypy.InternalRedirect('/login')
 
 cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
+
+class HypermediaTool(SimpleTool):
+    '''
+    A tool to set the in/out handler based on the Accept header
+    '''
+    ct_in_map = {
+        'application/json': json.loads,
+        'application/x-yaml': yaml.loads,
+    }
+
+    ct_out_map = {
+        'application/json': 'json_out',
+    }
+
+    def before_handler(self, **conf):
+        '''
+        Unserialize POST/PUT data of a specified content type, if possible
+        '''
+        if cherrypy.request.method in ("POST", "PUT"):
+            ct_type = cherrypy.request.headers['content-type'].lower()
+            ct_in = self.ct_in_map.get(ct_type, None)
+
+            if not ct_in:
+                raise cherrypy.HTTPError(406, 'Content type not supported')
+
+            body = cherrypy.request.body.read()
+            cherrypy.request.params['body'] = ct_in(body)
+
+    def before_finalize(self, *args, **kwargs):
+        '''
+        Run the return data from the handler through a Salt outputter then
+        return the reponse
+        '''
+        accepts = cherrypy.request.headers.elements('Accept')
+        for content_type in accepts:
+            out = self.ct_out_map.get(content_type, None)
+
+            if not out:
+                raise cherrypy.HTTPError(406, 'Accept format not supported')
+
+        ret = cherrypy.serving.request.handler(*args, **kwargs)
+        cherrypy.response.body = salt.output.out_format(ret, out, __opts__)
+        cherrypy.response.headers['Content-Type'] = content_type
+
+    before_finalize.priority = 70 # late
+    callable = before_finalize
+
+cherrypy.tools.hypermedia_handler = HypermediaTool()
 
 class LowDataAdapter(object):
     '''
@@ -131,16 +200,13 @@ class Login(LowDataAdapter):
         cherrypy.session['token'] = token
         raise cherrypy.HTTPRedirect('/', 302)
 
+@cherrypy.tools.hypermedia_handler()
 def error_page_default():
     cherrypy.response.status = 500
     ret = {
             'success': False,
             'message': '{0}'.format(cherrypy._cperror.format_exc())}
     cherrypy.response.body = [salt.output.out_format(ret, 'json_out', __opts__)]
-
-def json_out_handler(*args, **kwargs):
-    value = cherrypy.serving.request._json_inner_handler(*args, **kwargs)
-    return salt.output.out_format(value, 'json_out', __opts__)
 
 class API(object):
     url_map = {
@@ -177,12 +243,12 @@ class API(object):
                 'request.error_response': error_page_default,
 
                 'tools.trailing_slash.on': True,
-                'tools.json_out.handler': json_out_handler,
 
                 'tools.sessions.on': True,
                 'tools.sessions.timeout': 60 * 10, # 10 hours
 
                 'tools.salt_auth.on': True,
+                'tools.hypermedia_handler.on': True,
             },
         }
 
