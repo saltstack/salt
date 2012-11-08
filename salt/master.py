@@ -1500,7 +1500,7 @@ class ClearFuncs(object):
                     return ''
                 if not self.loadauth.time_auth(extra):
                     return ''
-            except Exception:
+            except Exception as exc:
                 log.error(
                         ('Exception occured while authenticating: {0}'
                             ).format(exc)

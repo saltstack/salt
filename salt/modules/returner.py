@@ -1,5 +1,5 @@
 '''
-Module to integrate with the returner system and retrive data sent to a salt
+Module to integrate with the returner system and retrieve data sent to a salt
 returner.
 '''
 

@@ -18,7 +18,7 @@ import salt.key
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env
-from salt.exceptions import SaltInvocationError, SaltClientError
+from salt.exceptions import SaltInvocationError, SaltClientError, EauthAuthenticationError
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -106,9 +106,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         for full_ret in local.cmd_cli(**kwargs):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
-            except SaltInvocationError as exc:
+            except (SaltInvocationError, EauthAuthenticationError) as exc:
                 ret = exc
                 out = ''
+                self._output_ret(ret, out)
 
     def _output_ret(self, ret, out):
         '''
