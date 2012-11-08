@@ -24,21 +24,14 @@ logger = salt.log.logging.getLogger(__name__)
 def __virtual__():
     return 'rest'
 
-class SaltAuth(cherrypy.lib.cptools.SessionAuth):
-    session_key = 'token'
+def salt_auth_tool(default=False):
+    ignore_urls = ('/login',)
+    sid = (cherrypy.session.get('token', None) or
+            cherrypy.request.headers.get('X-Auth-Token', None))
+    if not cherrypy.request.path_info in ignore_urls and not sid :
+        raise cherrypy.InternalRedirect('/login')
 
-    @classmethod
-    def runtool(cls, **kwargs):
-        '''
-        http://tools.cherrypy.org/wiki/CustomSessionAuth
-        '''
-        sa = cls()
-        for k, v in kwargs.iteritems():
-            setattr(sa, k, v)
-        return sa.run()
-
-# Put SaltAuth in the toolbox
-cherrypy.tools.salt_auth = cherrypy._cptools.HandlerTool(SaltAuth.runtool)
+cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
 
 class LowDataAdapter(object):
     '''
@@ -99,9 +92,44 @@ class Login(LowDataAdapter):
     '''
     exposed = True
 
+    def GET(self):
+        cherrypy.response.status = '401 Unauthorized'
+        cherrypy.response.headers['WWW-Authenticate'] = 'HTML'
+
+        return '''\
+            <html>
+                <head>
+                    <title>{status} - {message}</title>
+                </head>
+                <body>
+                    <h1>{status}</h1>
+                    <p>{message}</p>
+                    <form method="post" action="/login">
+                        <p>
+                            <label for="username">Username:</label>
+                            <input type="text" name="username">
+                            <br>
+                            <label for="password">Password:</label>
+                            <input type="password" name="password">
+                            <br>
+                            <label for="eauth">Eauth:</label>
+                            <input type="text" name="eauth" value="pam">
+                        </p>
+                        <p>
+                            <button type="submit">Log in</button>
+                        </p>
+                    </form>
+                </body>
+            </html>'''.format(
+                    status=cherrypy.response.status,
+                    message="Please log in")
+
     def POST(self, **kwargs):
         auth = salt.auth.LoadAuth(self.opts)
-        token = auth.mk_token(self.fmt_lowdata(kwargs)).get('token', False)
+        token = auth.mk_token(kwargs).get('token', False)
+        cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
+        cherrypy.session['token'] = token
+        raise cherrypy.HTTPRedirect('/', 302)
 
 def error_page_default():
     cherrypy.response.status = 500
