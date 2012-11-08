@@ -7,7 +7,7 @@ or in the minion's config file:
 keystone.user: admin
 keystone.password: verybadpass
 keystone.tenant: admin
-keystone.tenant_id: f80919baedab48ec8931f200c65a50df   #(optional)
+keystone.tenant_id: f80919baedab48ec8931f200c65a50df
 keystone.insecure: False   #(optional)
 keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
