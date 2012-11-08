@@ -526,6 +526,8 @@ class AESFuncs(object):
         self.tops = salt.loader.tops(self.opts)
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
+        # Create the master minion to access the external job cache
+        self.mminion = salt.minion.MasterMinion(self.opts)
 
     def __find_file(self, path, env='base'):
         '''
@@ -995,6 +997,16 @@ class AESFuncs(object):
                         ),
                     'w+')
                 )
+        # Save the load to the ext_job_cace if it is turned on
+        if self.opts['ext_job_cache']:
+            try:
+                fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
+                self.mminion.returners[fstr](clear_load['jid'], clear_load)
+            except KeyError:
+                msg = ('The specified returner used for the external job '
+                       'cache "{0}" does not have a save_load function!'
+                       ).format(self.opts['ext_job_cache'])
+                log.critical(msg)
         payload = {'enc': 'aes'}
         expr_form = 'glob'
         timeout = 5
