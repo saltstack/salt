@@ -54,6 +54,17 @@ def save_load(jid, load):
     serv.set(jid, json.dumps(load))
 
 
+def get_load(jid):
+    '''
+    Return the load data that marks a specified jid
+    '''
+    serv = _get_serv()
+    data = serv.get(jid)
+    if data:
+        return json.loads(data)
+    return {}
+
+
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
