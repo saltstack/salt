@@ -41,6 +41,38 @@ def __virtual__():
             return False
 
 
+class _YumErrorLogger(yum.rpmtrans.NoOutputCallBack):
+    '''
+    A YUM callback handler that logs failed packages with their associated
+    script output.
+    '''
+    def __init__(self):
+        self.messages = {}
+        self.failed = []
+
+    def log_accumulated_errors(self):
+        '''
+        Convenience method for logging all messages from failed packages
+        '''
+        for pkg in self.failed:
+            log.error('{0} {1}'.format(pkg, self.messages[pkg]))
+
+    def errorlog(self, msg):
+        # Log any error we receive
+        log.error(msg)
+
+    def filelog(self, package, action):
+        # TODO: extend this for more conclusive transaction handling for
+        # installs and removes VS. the pkg list compare method used now.
+        if action == yum.constants.TS_FAILED:
+            self.failed.append(package)
+
+    def scriptout(self, package, msgs):
+        # This handler covers ancillary messages coming from the RPM script.
+        # Will sometimes contain more detailed error messages.
+        self.messages[package] = msgs
+
+
 def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
@@ -307,26 +339,28 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     setattr(yb.conf, 'gpgcheck', not skip_verify)
 
     if repo:
-        log.debug("Enabling repo '{0}'".format(repo))
+        log.info("Enabling repo '{0}'".format(repo))
         yb.repos.enableRepo(repo)
     for i in range(0,len(pkgs)):
         try:
             if sources is not None:
                 target = sources[i]
-                log.debug("Selecting '{0}' for local installation".format(target))
+                log.info("Selecting '{0}' for local installation".format(target))
                 a = yb.installLocal(target)
                 # if yum didn't install anything, maybe its a downgrade?
+                log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0:
-                    log.debug('Upgrade failed, trying local downgrade')
+                    log.info('Upgrade failed, trying local downgrade')
                     a = yb.downgradeLocal(target)
             else:
                 target = pkgs[i]
-                log.debug("Selecting '{0}' for installation".format(target))
+                log.info("Selecting '{0}' for installation".format(target))
                 # Changed to pattern to allow specific package versions
                 a = yb.install(pattern=target)
                 # if yum didn't install anything, maybe its a downgrade?
+                log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0:
-                    log.debug('Upgrade failed, trying downgrade')
+                    log.info('Upgrade failed, trying downgrade')
                     a = yb.downgrade(pattern=target)
         except Exception:
             log.exception('Package {0} failed to install'.format(target))
@@ -334,10 +368,13 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     # by also tracking any deps that may get upgraded/installed during this
     # process.  For now only the version of the package(s) you request be
     # installed is tracked.
-    log.debug('Resolving dependencies')
+    log.info('Resolving dependencies')
     yb.resolveDeps()
-    log.debug('Processing transaction')
-    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    log.info('Processing transaction')
+    yumlogger = _YumErrorLogger()
+    yb.processTransaction(rpmDisplay=yumlogger)
+    yumlogger.log_accumulated_errors()
+
     yb.closeRpmDB()
 
     new = list_pkgs(*pkgs)
@@ -367,8 +404,12 @@ def upgrade():
     # packages that are going to be upgraded and only look up old/new version
     # info on those packages.
     yb.update()
+    log.info('Resolving dependencies')
     yb.resolveDeps()
-    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yumlogger = _YumErrorLogger()
+    log.info('Processing transaction')
+    yb.processTransaction(rpmDisplay=yumlogger)
+    yumlogger.log_accumulated_errors()
     yb.closeRpmDB()
 
     new = list_pkgs()
@@ -394,8 +435,12 @@ def remove(pkgs):
     for pkg in pkgs:
         yb.remove(name=pkg)
 
+    log.info('Resolving dependencies')
     yb.resolveDeps()
-    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yumlogger = _YumErrorLogger()
+    log.info('Processing transaction')
+    yb.processTransaction(rpmDisplay=yumlogger)
+    yumlogger.log_accumulated_errors()
     yb.closeRpmDB()
 
     new = list_pkgs(*pkgs)
