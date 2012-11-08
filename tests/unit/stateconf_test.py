@@ -25,7 +25,7 @@ class StateConfigRendererTestCase(TestCase):
 
     def test_state_config(self):
         result = render_sls("""
-sls_params:
+.sls_params:
   state.config:
     - name1: value1
     - name2: value2
@@ -36,9 +36,9 @@ test:
   cmd.run:
     - name: echo name1={{sls_params.name1}} name2={{sls_params.name2}}
     - cwd: /
-"""     )
+""", sls='test')
         self.assertEqual(len(result), 2)
-        self.assertTrue('sls_params' in result and 'test' in result)
+        self.assertTrue('test::sls_params' in result and 'test' in result)
         self.assertEqual(result['test']['cmd.run'][0]['name'],
                          'echo name1=value1 name2=value2')
 
