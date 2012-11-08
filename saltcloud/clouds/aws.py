@@ -252,5 +252,4 @@ def create_attach_volumes(volumes, location, data):
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
-            print created_volume.id +  " attached to " + data.id + " aka " + data.name + " as device " + volume['device']
 	    print ('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
