@@ -339,7 +339,7 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
      Check for glob or regexp patterns for include_pat and exclude_pat in the
      'path_str' string and return True/False conditions as follows.
       - Default: return 'True' if no include_pat or exclude_pat patterns are supplied
-      - If only include_pat or exclude_pat is supplied. Return 'True' if string passes 
+      - If only include_pat or exclude_pat is supplied. Return 'True' if string passes
         the include_pat test or failed exclude_pat test respectively
       - If both include_pat and exclude_pat are supplied, return Ture if include_pat
         matches 'AND' exclude_pat does not matches
@@ -351,7 +351,7 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
             retchk_include = True if re.search(include_pat[2:], path_str) else False
         else:
             retchk_include = True if fnmatch.fnmatch(path_str,include_pat) else False
- 
+
     if exclude_pat:
         if re.match('E@',exclude_pat):
             retchk_exclude = False if re.search(exclude_pat[2:], path_str) else True
@@ -359,7 +359,7 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
             retchk_exclude = False if fnmatch.fnmatch(path_str,exclude_pat) else True
 
     # Now apply include/exclude conditions
-    if include_pat and not exclude_pat:  
+    if include_pat and not exclude_pat:
         ret = retchk_include
     elif exclude_pat and not include_pat:
         ret = retchk_exclude
@@ -488,7 +488,7 @@ def absent(name):
 
 def exists(name):
     '''
-    Verify that the named file or directory is present or exists. 
+    Verify that the named file or directory is present or exists.
     Ensures pre-requisites outside of salts per-vue have been previously
     satisified (aka, keytabs, private keys, etc.) before deployment
 
@@ -568,7 +568,7 @@ def managed(name,
 
     replace
         If this file should be replaced.  If false, this command will
-        not overwrite file contents but will enforce permissions if the file 
+        not overwrite file contents but will enforce permissions if the file
         exists already.  Default is true.
 
     context
@@ -935,20 +935,20 @@ def recurse(name,
         Example::
 
           - include_pat: hello*       :: glob matches 'hello01', 'hello02' ... but not 'otherhello'
-          - include_pat: E@hello      :: regexp matches 'otherhello', 'hello01' ...  
+          - include_pat: E@hello      :: regexp matches 'otherhello', 'hello01' ...
 
     exclude_pat
 	When copying, exclude this pattern from the source. If both
         include_pat and exclude_pat are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat and
         then with in that result, applies exclude_pat.
-        
+
         Also when 'clean=True', exclude this pattern from the removal
         list and preserve in the destination.
         Example::
 
           - exclude: APPDATA*               :: glob matches APPDATA.01, APPDATA.02,.. for exclusion
-          - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion 
+          - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion
     '''
     ret = {'name': name,
            'changes': {},
@@ -1035,7 +1035,7 @@ def recurse(name,
                 os.remove(path)
                 _ret['changes'] = { 'diff': 'Replaced file with a directory' }
                 merge_ret(path, _ret)
- 
+
         _ret = directory(
             path,
             user=user,

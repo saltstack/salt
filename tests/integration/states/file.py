@@ -442,6 +442,9 @@ class FileTest(integration.ModuleCase):
 
             self.assertEqual(contents, open(tmp_file_append, 'r').read())
 
+        except AssertionError:
+            shutil.copy(tmp_file_append, tmp_file_append + '.bak')
+            raise
         finally:
             if os.path.isfile(tmp_file_append):
                 os.remove(tmp_file_append)
@@ -477,6 +480,51 @@ class FileTest(integration.ModuleCase):
         result = self.state_result(ret, raw=True)
         self.assertEqual(result['comment'], 'Patch is already applied')
         self.assertEqual(result['result'], True)
+
+    def test_issue_2401_file_comment(self):
+        # Get a path to the temporary file
+        tmp_file = os.path.join(integration.TMP, 'issue-2041-comment.txt')
+        # Write some data to it
+        open(tmp_file, 'w').write('hello\nworld\n')
+        # create the sls template
+        template_lines = [
+            "{0}:".format(tmp_file),
+            "  file.comment:",
+            "    - regex: ^world"
+        ]
+        template = '\n'.join(template_lines)
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+                self.assertNotEqual(
+                    part['comment'], 'Pattern already commented'
+                )
+                self.assertEqual(
+                    part['comment'], 'Commented lines successfully'
+                )
+
+            # This next time, it is already commented.
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+                self.assertEqual(
+                    part['comment'], 'Pattern already commented'
+                )
+        except AssertionError:
+            shutil.copy(tmp_file, tmp_file + '.bak')
+            raise
+        finally:
+            if os.path.isfile(tmp_file):
+                os.remove(tmp_file)
 
 
 if __name__ == '__main__':
