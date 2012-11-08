@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.parsers
-    ~~~~~~~~~~~~~~~~~~
+salt.utils.parsers
+~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details.
+:copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+:license: Apache 2.0, see LICENSE for more details.
 '''
 
 import os
@@ -710,14 +710,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'send the return data from the command back to the master, '
                   'but the return data can be redirected into any number of '
                   'systems, databases or applications.')
-        )
-        self.add_option(
-            '-Q', '--query',
-            action='store_true',
-            help=('This option is deprecated and will be removed in a future '
-                  'release, please use salt-run jobs instead.\n'
-                  'Execute a salt command query, this can be used to find '
-                  'the results of a previous function call: -Q test.echo')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
