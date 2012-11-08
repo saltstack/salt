@@ -14,7 +14,6 @@ keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 has_glance = False
 try:
     from glanceclient import client
-    from keystoneclient.v2_0 import client as ksclient
     has_glance = True
 except ImportError:
     pass
@@ -35,21 +34,7 @@ def _auth():
     '''
     Set up keystone credentials
     '''
-    user = __salt__['config.option']('keystone.user')
-    password = __salt__['config.option']('keystone.password')
-    tenant = __salt__['config.option']('keystone.tenant')
-    tenant_id = __salt__['config.option']('keystone.tenant_id')
-    auth_url = __salt__['config.option']('keystone.auth_url')
-    insecure = __salt__['config.option']('keystone.insecure')
-    kwargs = {
-        'username': user,
-        'password': password,
-        'tenant_name': tenant,
-        'tenant_id': tenant_id,
-        'auth_url': auth_url,
-        'insecure': insecure,
-        }
-    ks = ksclient.Client(**kwargs)
+    ks = __salt__['keystone.auth']()
     token = ks.auth_token
     endpoint = ks.service_catalog.url_for(
         service_type='image',
