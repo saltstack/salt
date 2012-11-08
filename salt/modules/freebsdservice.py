@@ -84,7 +84,7 @@ def enable(name, config='/etc/rc.conf', **kwargs):
     return _switch(name, True, config, **kwargs)
 
 
-def disable(name, config='/etc/rc.conf' **kwargs):
+def disable(name, config='/etc/rc.conf', **kwargs):
     '''
     Disable the named service to start at boot
 
