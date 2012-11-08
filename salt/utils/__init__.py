@@ -563,7 +563,7 @@ def build_whitepace_splited_regex(text):
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
-    return r'^{0}$'.format(regex)
+    return r'(?m)^{0}$'.format(regex)
 
 
 def format_call(fun, data):
