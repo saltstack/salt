@@ -526,6 +526,40 @@ class FileTest(integration.ModuleCase):
             if os.path.isfile(tmp_file):
                 os.remove(tmp_file)
 
+    def test_issue_2379_file_append(self):
+        # Get a path to the temporary file
+        tmp_file = os.path.join(integration.TMP, 'issue-2379-file-append.txt')
+        # Write some data to it
+        open(tmp_file, 'w').write(
+            'hello\nworld\n' +          # Some junk
+            '#PermitRootLogin yes\n' +  # Commented text
+            '# PermitRootLogin yes\n'   # Commented text with space
+        )
+        # create the sls template
+        template_lines = [
+            "{0}:".format(tmp_file),
+            "  file.append:",
+            "    - text: PermitRootLogin yes"
+        ]
+        template = '\n'.join(template_lines)
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+                self.assertEqual(
+                    part['comment'], 'Appended 1 lines'
+                )
+        except AssertionError:
+            shutil.copy(tmp_file, tmp_file + '.bak')
+            raise
+        finally:
+            if os.path.isfile(tmp_file):
+                os.remove(tmp_file)
+
 
 if __name__ == '__main__':
     from integration import run_tests
