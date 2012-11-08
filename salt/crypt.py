@@ -211,10 +211,6 @@ class Auth(object):
 
         Returns a bool
         '''
-        fd_, tmp_pub = tempfile.mkstemp()
-        os.close(fd_)
-        with open(tmp_pub, 'w+') as fp_:
-            fp_.write(master_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = open(m_pub_fn).read()

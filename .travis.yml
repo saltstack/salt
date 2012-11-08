@@ -10,7 +10,7 @@ before_install:
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2; fi"
 
 install: pip install -r requirements.txt --use-mirrors
-script: sudo -E python setup.py test --runtests-opts='--run-destructive -v'
+script: sudo -E python setup.py test --runtests-opts='--run-destructive --sysinfo -v'
 
 notifications:
   irc:
