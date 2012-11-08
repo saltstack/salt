@@ -637,7 +637,7 @@ def contains_regex(path, regex, lchar=''):
             for chunk in br:
                 if lchar:
                     chunk = chunk.lstrip(lchar)
-                if re.search(regex, chunk):
+                if re.search(regex, chunk, re.MULTILINE):
                     return True
             return False
     except (IOError, OSError):
