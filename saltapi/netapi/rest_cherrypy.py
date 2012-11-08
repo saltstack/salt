@@ -176,8 +176,6 @@ class API(object):
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
                 'request.error_response': error_page_default,
 
-                # 'response.stream': True,
-
                 'tools.trailing_slash.on': True,
                 'tools.json_out.handler': json_out_handler,
 
