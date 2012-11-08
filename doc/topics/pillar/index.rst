@@ -55,7 +55,6 @@ files.
     apache: apache2
     git: git-core
     {% endif %}
-    somekey: globalvalue
 
 Now this data can be used from within modules, renderers, State SLS files, and
 more via the shared pillar `dict`_:
@@ -73,35 +72,6 @@ more via the shared pillar `dict`_:
       pkg:
         - installed
         - name: {{ pillar['git'] }}
-
-To use pillar data in a file that is managed on a minion, use a file state like
-this:
-
-``/srv/salt/top.sls``
-
-.. code-block:: yaml
-
-    base:
-      '*':
-        - managed_files
-
-``/srv/salt/managed_files.sls``
-
-.. code-block:: yaml
-
-    /tmp/some-managed-file.txt:
-      file:
-        - managed
-        - template: jinja
-        - source: salt://files/some-managed-file.txt
-
-``/srv/salt/files/some-managed-file.txt``
-
-.. code-block:: yaml
-
-    This will yield 'globalvalue' on all minions but will yield 'specialvalue'
-    on 'someminion':
-    somekey has value: {{ pillar['somekey'] }}
 
 .. _`dict`: http://docs.python.org/library/stdtypes.html#mapping-types-dict
 
