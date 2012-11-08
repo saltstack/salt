@@ -79,6 +79,8 @@ list of features provided by this module.
 """
 
 # TODO:
+#   - names declaration is not supported...
+#
 #   - sls meta/info state: Eg, 
 #       sls_info:
 #         author: Jack Kuan
