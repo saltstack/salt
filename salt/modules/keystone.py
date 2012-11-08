@@ -1,12 +1,14 @@
 '''
 Module for handling openstack keystone calls.
 
-This module is not usable until the user, password, tenant and auth url are
-specified either in a pillar or in the minion's config file. For example:
+This module is not usable until the following are specified either in a pillar
+or in the minion's config file:
 
 keystone.user: admin
 keystone.password: verybadpass
 keystone.tenant: admin
+keystone.tenant_id: f80919baedab48ec8931f200c65a50df
+keystone.insecure: False   #(optional)
 keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
 has_keystone = False
@@ -28,21 +30,28 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth():
+def auth():
     '''
     Set up keystone credentials
+
+    Only intended to be used within Keystone-enabled modules
     '''
     user = __salt__['config.option']('keystone.user')
     password = __salt__['config.option']('keystone.password')
     tenant = __salt__['config.option']('keystone.tenant')
+    tenant_id = __salt__['config.option']('keystone.tenant_id')
     auth_url = __salt__['config.option']('keystone.auth_url')
-    nt = client.Client(
-        username = user,
-        password = password,
-        tenant_name = tenant,
-        auth_url = auth_url,
-        )
-    return nt
+    insecure = __salt__['config.option']('keystone.insecure')
+    kwargs = {
+        'username': user,
+        'password': password,
+        'tenant_name': tenant,
+        'tenant_id': tenant_id,
+        'auth_url': auth_url,
+        'insecure': insecure,
+        }
+    ks = client.Client(**kwargs)
+    return ks
 
 
 def ec2_credentials_get(id=None, name=None, access=None):
@@ -55,10 +64,10 @@ def ec2_credentials_get(id=None, name=None, access=None):
         salt '*' keystone.ec2_credentials_get id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
         salt '*' keystone.ec2_credentials_get name=nova access=722787eb540849158668370dc627ec5f
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for user in nt.users.list():
+        for user in ks.users.list():
             if user.name == name:
                 id = user.id
                 continue
@@ -66,7 +75,7 @@ def ec2_credentials_get(id=None, name=None, access=None):
         return {'Error': 'Unable to resolve user id'}
     if not access:
         return {'Error': 'Access key is required'}
-    ec2_credentials = nt.ec2.get(user_id=id, access=access)
+    ec2_credentials = ks.ec2.get(user_id=id, access=access)
     ret[ec2_credentials.user_id] = {
             'user_id': ec2_credentials.user_id,
             'tenant': ec2_credentials.tenant_id,
@@ -86,16 +95,16 @@ def ec2_credentials_list(id=None, name=None):
         salt '*' keystone.ec2_credentials_list id=298ce377245c4ec9b70e1c639c89e654
         salt '*' keystone.ec2_credentials_list name=jack
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for user in nt.users.list():
+        for user in ks.users.list():
             if user.name == name:
                 id = user.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
-    for ec2_credential in nt.ec2.list(id):
+    for ec2_credential in ks.ec2.list(id):
         ret[ec2_credential.user_id] = {
                 'user_id': ec2_credential.user_id,
                 'tenant_id': ec2_credential.tenant_id,
@@ -113,8 +122,8 @@ def endpoint_get(service):
 
         salt '*' keystone.endpoint_get ec2
     '''
-    nt = _auth()
-    return nt.service_catalog.url_for(service_type=service)
+    ks = auth()
+    return ks.service_catalog.url_for(service_type=service)
 
 
 def endpoint_list():
@@ -125,9 +134,9 @@ def endpoint_list():
 
         salt '*' keystone.endpoint_list
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
-    for endpoint in nt.endpoints.list():
+    for endpoint in ks.endpoints.list():
         ret[endpoint.id] = {
                 'id': endpoint.id,
                 'region': endpoint.region,
@@ -149,16 +158,16 @@ def role_get(id=None, name=None):
         salt '*' keystone.role_get id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_get name=nova
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for role in nt.roles.list():
+        for role in ks.roles.list():
             if role.name == name:
                 id = role.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve role id'}
-    role = nt.roles.get(id)
+    role = ks.roles.get(id)
     ret[role.name] = {
             'id': role.id,
             'name': role.name,
@@ -174,9 +183,9 @@ def role_list():
 
         salt '*' keystone.role_list
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
-    for role in nt.roles.list():
+    for role in ks.roles.list():
         ret[role.name] = {
                 'id': role.id,
                 'name': role.name,
@@ -194,16 +203,16 @@ def service_get(id=None, name=None):
         salt '*' keystone.service_get id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_get name=nova
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for service in nt.services.list():
+        for service in ks.services.list():
             if service.name == name:
                 id = service.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve service id'}
-    service = nt.services.get(id)
+    service = ks.services.get(id)
     ret[service.name] = {
             'id': service.id,
             'name': service.name,
@@ -221,9 +230,9 @@ def service_list():
 
         salt '*' keystone.service_list
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
-    for service in nt.services.list():
+    for service in ks.services.list():
         ret[service.name] = {
                 'id': service.id,
                 'name': service.name,
@@ -243,16 +252,16 @@ def tenant_get(id=None, name=None):
         salt '*' keystone.tenant_get id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_get name=nova
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for tenant in nt.tenants.list():
+        for tenant in ks.tenants.list():
             if tenant.name == name:
                 id = tenant.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve tenant id'}
-    tenant = nt.tenants.get(id)
+    tenant = ks.tenants.get(id)
     ret[tenant.name] = {
             'id': tenant.id,
             'name': tenant.name,
@@ -270,9 +279,9 @@ def tenant_list():
 
         salt '*' keystone.tenant_list
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
-    for tenant in nt.tenants.list():
+    for tenant in ks.tenants.list():
         ret[tenant.name] = {
                 'id': tenant.id,
                 'name': tenant.name,
@@ -290,8 +299,8 @@ def token_get():
 
         salt '*' keystone.token_get c965f79c4f864eaaa9c3b41904e67082
     '''
-    nt = _auth()
-    token = nt.service_catalog.get_token()
+    ks = auth()
+    token = ks.service_catalog.get_token()
     return {
             'id': token['id'],
             'expires': token['expires'],
@@ -308,9 +317,9 @@ def user_list():
 
         salt '*' keystone.user_list
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
-    for user in nt.users.list():
+    for user in ks.users.list():
         ret[user.name] = {
                 'id': user.id,
                 'name': user.name,
@@ -331,16 +340,16 @@ def user_get(id=None, name=None):
         salt '*' keystone.user_get id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_get name=nova
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for user in nt.users.list():
+        for user in ks.users.list():
             if user.name == name:
                 id = user.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
-    user = nt.users.get(id)
+    user = ks.users.get(id)
     ret[user.name] = {
             'id': user.id,
             'name': user.name,
@@ -359,8 +368,8 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
 
         salt '*' keystone.user_create name=jack password=zero email=jack@halloweentown.org tenant_id=a28a7b5a999a455f84b1f5210264375e enabled=True
     '''
-    nt = _auth()
-    item = nt.users.create(
+    ks = auth()
+    item = ks.users.create(
         name=name,
         password=password,
         email=email,
@@ -380,16 +389,16 @@ def user_delete(id=None, name=None):
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_delete name=nova
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for user in nt.users.list():
+        for user in ks.users.list():
             if user.name == name:
                 id = user.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
-    nt.users.delete(id)
+    ks.users.delete(id)
     ret = 'User ID {0} deleted'.format(id)
     if name:
         ret += ' ({0})'.format(name)
@@ -407,11 +416,11 @@ def user_update(id=None, name=None, email=None, enabled=None):
         salt '*' keystone.user_update id=c965f79c4f864eaaa9c3b41904e67082 name=newname
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if not id:
         return {'Error': 'Unable to resolve user id'}
-    nt.users.update(user=id, name=name, email=email, enabled=enabled)
+    ks.users.update(user=id, name=name, email=email, enabled=enabled)
     ret = 'Info updated for user ID {0}'.format(id)
     return ret
 
@@ -426,16 +435,16 @@ def user_password_update(id=None, name=None, password=None):
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_delete name=nova pasword=12345
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if name:
-        for user in nt.users.list():
+        for user in ks.users.list():
             if user.name == name:
                 id = user.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve user id'}
-    nt.users.update_password(user=id, password=password)
+    ks.users.update_password(user=id, password=password)
     ret = 'Password updated for user ID {0}'.format(id)
     if name:
         ret += ' ({0})'.format(name)
@@ -453,22 +462,22 @@ def user_role_list(user_id=None, tenant_id=None, user_name=None, tenant_name=Non
         salt '*' keystone.user_role_list user_name=admin
         salt '*' keystone.user_role_list tenant_name=admin
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     if user_name:
-        for user in nt.users.list():
+        for user in ks.users.list():
             if user.name == user_name:
                 user_id = user.id
                 continue
     if tenant_name:
-        for tenant in nt.tenants.list():
+        for tenant in ks.tenants.list():
             if tenant.name == tenant_name:
                 tenant_id = tenant.id
                 continue
     if not user_id and not tenant_id:
         return {'Error': 'Unable to resolve user or tenant id'}
     #ret = []
-    for role in nt.roles.roles_for_user(user=user_id, tenant=tenant_id):
+    for role in ks.roles.roles_for_user(user=user_id, tenant=tenant_id):
         #ret.append(role.__dict__)
         ret[role.name] = {
                 'id': role.id,
@@ -488,10 +497,10 @@ def _item_list():
 
         salt '*' keystone.item_list
     '''
-    nt = _auth()
+    ks = auth()
     ret = {}
     ret = []
-    for item in nt.items.list():
+    for item in ks.items.list():
         ret.append(item.__dict__)
         #ret[item.name] = {
         #        'id': item.id,
