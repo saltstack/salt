@@ -125,10 +125,9 @@ __opts__ = {
   'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
   # eg, something like "# --- end of state config --" works by default.
 
-  'stateconf_goal_state': 'goal'
+  'stateconf_goal_state': '.goal'
   # name of the state id for the generated goal state.
 }
-NO_GOAL_STATE = False
 
 
 MOD_BASENAME = ospath.basename(__file__)
@@ -147,8 +146,10 @@ Options:
 
 
 def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
-    renderers = kws['renderers']
+    NO_GOAL_STATE = False
+    IMPLICIT_REQUIRE = False
 
+    renderers = kws['renderers']
     opts, args = getopt.getopt(argline.split(), "Go")
     argline = ' '.join(args)
 
@@ -162,7 +163,6 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
     try:
         name, rd_argline = (args[0]+' ').split(' ', 1)
         render_data = renderers[name] # eg, the yaml renderer
-        IMPLICIT_REQUIRE = False
         if ('-o', '') in opts:
             if name == 'yaml':
                 IMPLICIT_REQUIRE = True
@@ -177,29 +177,34 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
     except IndexError, e:
         raise INVALID_USAGE_ERROR
 
-    def process_sls_data(data, context=None):
-        global NO_GOAL_STATE
-        if not context:
-            match = re.search(__opts__['stateconf_end_marker'], data)
-            if match:
-                data = data[:match.start()]
-        
-        tmplout = render_template(StringIO(data), env, sls,
-                                  context=context, argline=rt_argline.strip())
+    def process_sls_data(data, context=None, extract=False):
+        ctx = dict(sls_dir=ospath.dirname(sls.replace('.', ospath.sep)))
+        if context:
+            ctx.update(context)
+        tmplout = render_template(StringIO(data), env, sls, context=ctx,
+                                  argline=rt_argline.strip()
+                                  )
         data = render_data(tmplout, env, sls, argline=rd_argline.strip())
         try: 
             rewrite_sls_includes_excludes(data, sls)
-            rename_state_ids(data, sls)
-            if not context:
-                extract_state_confs(data)
-            add_implicit_requires(data)
-            if not NO_GOAL_STATE:
+
+            if not extract and IMPLICIT_REQUIRE:
+                add_implicit_requires(data)
+
+            if not extract and not NO_GOAL_STATE:
                 add_goal_state(data)
+
+            rename_state_ids(data, sls)
+
+            if extract:
+                extract_state_confs(data)
+
         except Exception:
             log.exception((
                 "Error found while pre-processing the salt file, %s.\n"
                 "It's likely due to a formatting error in your salt file.\n"
                 "Pre-processing aborted. Stack trace:---------") % sls)
+            #raise
             raise SaltRenderError("sls preprocessing/rendering failed!")
         return data
 
@@ -210,22 +215,26 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
         sls_templ = template_file.read()
 
     # first pass to extract the state configuration
-    data = process_sls_data(sls_templ)
+    match = re.search(__opts__['stateconf_end_marker'], sls_templ)
+    if match:
+        process_sls_data(sls_templ[:match.start()], extract=True)
 
-    # if some config has been extracted then
-    # do a second pass that provides the extracted conf as template context
-    if STATE_CONF:  
-
-        # but first remove the sls-name prefix of the keys in the extracted
-        # state.config context to make them easier to use in the salt file.
+    # if some config has been extracted then remove the sls-name prefix
+    # of the keys in the extracted state.config context to make them easier
+    # to use in the salt file.
+    if STATE_CONF:
         tmplctx = STATE_CONF.copy()
-        prefix = sls + '::'
-        for k in tmplctx.keys():
-            if k.startswith(prefix):
-                tmplctx[k[len(prefix):]] = tmplctx[k]
-                del tmplctx[k]
+        if tmplctx:
+            prefix = sls + '::'
+            for k in tmplctx.keys():
+                if k.startswith(prefix):
+                    tmplctx[k[len(prefix):]] = tmplctx[k]
+                    del tmplctx[k]
+    else:
+        tmplctx = {}
 
-        data = process_sls_data(sls_templ, tmplctx)
+    # do a second pass that provides the extracted conf as template context
+    data = process_sls_data(sls_templ, tmplctx)
 
     if log.isEnabledFor(logging.DEBUG):
         log.debug('Rendered sls: %s' % (data,))
@@ -342,7 +351,7 @@ from itertools import chain
 #   explicit require_in/watch_in can only contain states after it
 def add_implicit_requires(data):
     def T(sid, state):
-        return "%s:%s" % (sid, state.split('.', 1)[0])
+        return "%s:%s" % (sid, state_name(state))
 
     states_before = set()
     states_after = set()
@@ -351,7 +360,7 @@ def add_implicit_requires(data):
         for state in data[sid]:
             states_after.add(T(sid, state))
 
-    prev_state = (None, None) # (sname, sid)
+    prev_state = (None, None) # (state_name, sid)
     for sid, states, sname, args in statelist(data):
         if sid == 'extend':
             for esid, _, _, eargs in statelist(states):
@@ -393,22 +402,24 @@ def add_implicit_requires(data):
                 args.append(dict(require=[dict([prev_state])]))
 
         states_before.add(tag)
-        prev_state = (sname, sid)
+        prev_state = (state_name(sname), sid)
 
 
 def add_goal_state(data):
-    if 'goal' in data:
+    goal_sid = __opts__['stateconf_goal_state']
+    if goal_sid in data:
         return
     else:
         reqlist = []
         for sid, _, state, _ in statelist(data):
-            reqlist.append({state.split('.', 1)[0]: sid})
-        data[__opts__['stateconf_goal_state']] = {
-                'state.config': [
-                    [ dict(require=reqlist) ]
-                ]
-        }
+            reqlist.append({state_name(state): sid})
+        data[goal_sid] = {'state.config': [dict(require=reqlist)]}
 
+def state_name(sname):
+    """Return the name of the state regardless if sname is
+    just the state name or a state.func name.
+    """
+    return sname.split('.', 1)[0]
 
 
 # Quick and dirty way to get attribute access for dictionary keys.
