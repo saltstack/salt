@@ -19,13 +19,4 @@ def returner(ret):
     '''
     Return data to the local syslog
     '''
-    try:
-        syslog.syslog(syslog.LOG_INFO,
-                     "salt-minion: %s" %
-                      json.dumps(ret))
-    except ValueError:
-        syslog.syslog(syslog.LOG_ERR,
-                     "salt-minion: %s" %
-                      ret)
-    except Exception, e:
-        raise e
+    syslog.syslog(syslog.LOG_INFO, "salt-minion: %s" % json.dumps(ret))
