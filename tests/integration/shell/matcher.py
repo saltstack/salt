@@ -150,6 +150,15 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = self.run_salt('-d user.add')
         self.assertIn('user.add:', data)
 
+    def test_salt_documentation_arguments_not_assumed(self):
+        '''
+        Test to see if we're not auto-adding '*' and 'sys.doc' to the call
+        '''
+        data = self.run_salt('\'*\' -d user.add')
+        self.assertIn('user.add:', data)
+        data = self.run_salt('\'*\' sys.doc -d user.add')
+        self.assertIn('user.add:', data)
+
 
 if __name__ == "__main__":
     loader = TestLoader()
