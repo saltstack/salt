@@ -6,6 +6,7 @@ The Salt Minion can initiate its own highstate using the :term:`salt-call`
 command.
 
 .. code-block:: bash
+
     $ salt-call state.highstate
 
 
@@ -19,7 +20,7 @@ Use cron to initiate a highstate
 If you would like the Salt Minion to regularly check in with the master you can
 use the venerable cron to run the :term:`salt-call` command.
 
-.. code-block:: 
+.. code-block:: bash
 
     # PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
