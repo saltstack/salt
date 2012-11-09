@@ -413,7 +413,8 @@ def add_goal_state(data):
         return
     else:
         reqlist = []
-        for sid, _, state, _ in statelist(data):
+        for sid, _, state, _ in \
+                statelist(data, set(['include', 'exclude', 'extend'])):
             reqlist.append({state_name(state): sid})
         data[goal_sid] = {'state.config': [dict(require=reqlist)]}
 
