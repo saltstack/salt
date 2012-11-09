@@ -19,4 +19,12 @@ Use cron to initiate a highstate
 If you would like the Salt Minion to regularly check in with the master you can
 use the venerable cron to run the :term:`salt-call` command.
 
+.. code-block:: 
 
+    # PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+    00 00 * * * salt-call state.highstate
+
+The above cron entry will run a highstate every day at midnight. Be aware that
+you may need to ensure the PATH for cron includes any scripts or commands that
+need to be executed.
