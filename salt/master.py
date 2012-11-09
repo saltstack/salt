@@ -317,23 +317,6 @@ class Publisher(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-                if self.opts['pub_refresh']:
-                    pub_sock.close()
-                    #time.sleep(0.5)
-                    pub_sock = context.socket(zmq.PUB)
-                    try:
-                        pub_sock.setsockopt(zmq.HWM, 1)
-                    except AttributeError:
-                        pub_sock.setsockopt(zmq.SNDHWM, 1)
-                        pub_sock.setsockopt(zmq.RCVHWM, 1)
-                    con = False
-                    while not con:
-                        time.sleep(0.1)
-                        try:
-                            pub_sock.bind(pub_uri)
-                            con = True
-                        except zmq.ZMQError:
-                            pass
 
         except KeyboardInterrupt:
             pub_sock.close()
