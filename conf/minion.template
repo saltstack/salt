@@ -10,6 +10,11 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# Set the number of seconds to wait before attempting to resolve
+# the master hostname if name resolution fails. Defaults to 30 seconds.
+# Set to zero if the minion should shutdown and not retry.
+# retry_dns: 30
+
 # Set the port used by the master reply and authentication server
 #master_port: 4506
 

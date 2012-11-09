@@ -212,6 +212,7 @@ def minion_config(path):
             'default_include': 'minion.d/*.conf',
             'update_url': False,
             'update_restart_services': [],
+            'retry_dns': 30,
             }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -229,7 +230,8 @@ def minion_config(path):
         opts['id'] = _append_domain(opts)
 
     try:
-        opts['master_ip'] = salt.utils.dns_check(opts['master'], True)
+        opts['master_ip'] = salt.utils.dns_check(opts['master'], True,
+                                                            opts['retry_dns'])
     except SaltClientError:
         opts['master_ip'] = '127.0.0.1'
 
