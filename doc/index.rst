@@ -190,6 +190,10 @@ Salt is many splendid things.
 :doc:`Firewall settings and Salt <topics/tutorials/firewall>`
     A tutorial covering how to properly firewall a Salt Master server.
 
+:doc:`Cron and Salt States <topics/tutorials/cron>`
+    A tutorial covering how to properly use cron to schedule when a 
+    minion updates its state.
+
 :doc:`Network topology <ref/topology>`
     At it's core, Salt is a highly scalable communication layer built on
     top of ZeroMQ that enables remote execution and configuration
