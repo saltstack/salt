@@ -10,7 +10,7 @@ The Salt file server is an environment aware file server. This means that
 files can be allocated within many root directories and accessed by
 specifying both the file path and the environment to search. The
 individual environments can span across multiple directory roots
-to crate overlays and to allow for files to be organized in many flexible
+to create overlays and to allow for files to be organized in many flexible
 ways.
 
 Environments
