@@ -24,7 +24,9 @@ import saltapi
 logger = salt.log.logging.getLogger(__name__)
 
 def __virtual__():
-    return 'rest'
+    if 'port' in __opts__.get(__name__.rsplit('.')[-1], {}):
+        return 'rest'
+    return False
 
 class SimpleTool(cherrypy.Tool):
     '''
@@ -230,7 +232,7 @@ class API(object):
 
     def get_conf(self):
         # Grab config opts
-        apiopts = self.opts.get('saltapi', {}).get(__name__.rsplit('.', 1)[-1], {})
+        apiopts = self.opts.get(__name__.rsplit('.', 1)[-1], {})
 
         conf = {
             'global': {

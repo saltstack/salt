@@ -16,9 +16,8 @@ config <configuration-salt-master>` and takes a form similar to the following:
 
 .. code-block:: yaml
 
-    saltapi:
-      flask_rest:
-        - port: 8000
+    flask_rest:
+      - port: 8000
 
 The ``__virtual__`` function
 ============================

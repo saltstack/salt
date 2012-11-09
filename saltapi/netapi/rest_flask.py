@@ -23,13 +23,9 @@ import saltapi
 logger = salt.log.logging.getLogger(__name__)
 
 def __virtual__():
-    '''
-    Verify enough infos to actually start server.
-    '''
-    # if not 'port' in __opts__ or not __opts__['port']:
-    #     return False
-
-    return 'rest'
+    if 'port' in __opts__.get(__name__.rsplit('.')[-1], {}):
+        return 'rest'
+    return False
 
 class SaltAPI(flask.views.MethodView):
     '''
