@@ -18,7 +18,11 @@ import salt.key
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env
-from salt.exceptions import SaltInvocationError, SaltClientError, EauthAuthenticationError
+from salt.exceptions import (
+    SaltInvocationError,
+    SaltClientError,
+    EauthAuthenticationError
+)
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -33,7 +37,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(self.get_config_file_path('master'))
+            local = salt.client.LocalClient(
+                self.get_config_file_path('master')
+            )
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
