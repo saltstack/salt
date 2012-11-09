@@ -41,37 +41,46 @@ def __virtual__():
         else:
             return False
 
-if has_yumdeps:
-    class _YumErrorLogger(yum.rpmtrans.NoOutputCallBack):
+class _YumErrorLogger(object):
+    '''
+    A YUM callback handler that logs failed packages with their associated
+    script output.
+
+    See yum.rpmtrans.NoOutputCallBack in the yum package for base
+    implementation.
+    '''
+    def __init__(self):
+        self.messages = {}
+        self.failed = []
+
+    def event(self, package, action, te_current, te_total, ts_current, ts_total):
+        # This would be used for a progress counter according to Yum docs
+        pass
+
+    def log_accumulated_errors(self):
         '''
-        A YUM callback handler that logs failed packages with their associated
-        script output.
+        Convenience method for logging all messages from failed packages
         '''
-        def __init__(self):
-            self.messages = {}
-            self.failed = []
+        for pkg in self.failed:
+            log.error('{0} {1}'.format(pkg, self.messages[pkg]))
 
-        def log_accumulated_errors(self):
-            '''
-            Convenience method for logging all messages from failed packages
-            '''
-            for pkg in self.failed:
-                log.error('{0} {1}'.format(pkg, self.messages[pkg]))
+    def errorlog(self, msg):
+        # Log any error we receive
+        log.error(msg)
 
-        def errorlog(self, msg):
-            # Log any error we receive
-            log.error(msg)
+    def filelog(self, package, action):
+        # TODO: extend this for more conclusive transaction handling for
+        # installs and removes VS. the pkg list compare method used now.
+        #
+        # See yum.constants and yum.rpmtrans.RPMBaseCallback in the yum
+        # package for more information about the received actions.
+        if action == yum.constants.TS_FAILED:
+            self.failed.append(package)
 
-        def filelog(self, package, action):
-            # TODO: extend this for more conclusive transaction handling for
-            # installs and removes VS. the pkg list compare method used now.
-            if action == yum.constants.TS_FAILED:
-                self.failed.append(package)
-
-        def scriptout(self, package, msgs):
-            # This handler covers ancillary messages coming from the RPM script
-            # Will sometimes contain more detailed error messages.
-            self.messages[package] = msgs
+    def scriptout(self, package, msgs):
+        # This handler covers ancillary messages coming from the RPM script
+        # Will sometimes contain more detailed error messages.
+        self.messages[package] = msgs
 
 
 def _list_removed(old, new):
