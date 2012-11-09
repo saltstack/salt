@@ -242,6 +242,9 @@ def create(vm_):
 
 
 def create_attach_volumes(volumes, location, data):
+    '''
+    Create and attach volumes to created node
+    '''
     conn = get_conn(location=location)
     node_avz = data.__dict__.get('extra').get('availability')
     for avz in conn.list_locations():
@@ -252,4 +255,4 @@ def create_attach_volumes(volumes, location, data):
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
-		print ('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
+            print ('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
