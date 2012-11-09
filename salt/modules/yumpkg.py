@@ -368,7 +368,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
                 a = yb.installLocal(target)
                 # if yum didn't install anything, maybe its a downgrade?
                 log.debug('Added {0} transactions'.format(len(a)))
-                if len(a) == 0 and pkg not in old.keys():
+                if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
                     a = yb.downgradeLocal(target)
             else:
@@ -378,7 +378,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
                 a = yb.install(pattern=target)
                 # if yum didn't install anything, maybe its a downgrade?
                 log.debug('Added {0} transactions'.format(len(a)))
-                if len(a) == 0 and pkg not in old.keys():
+                if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying downgrade')
                     a = yb.downgrade(pattern=target)
         except Exception:
