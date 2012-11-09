@@ -154,10 +154,15 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
+        data = self.run_salt('\'*\' -d')
+        self.assertIn('user.add:', data)
         data = self.run_salt('\'*\' -d user.add')
         self.assertIn('user.add:', data)
         data = self.run_salt('\'*\' sys.doc -d user.add')
         self.assertIn('user.add:', data)
+        data = self.run_salt('\'*\' sys.doc user.add')
+        self.assertIn('user.add:', data)
+
 
 
 if __name__ == "__main__":
