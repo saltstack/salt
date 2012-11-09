@@ -41,6 +41,38 @@ def __virtual__():
             return False
 
 
+class _YumErrorLogger(yum.rpmtrans.NoOutputCallBack):
+    '''
+    A YUM callback handler that logs failed packages with their associated
+    script output.
+    '''
+    def __init__(self):
+        self.messages = {}
+        self.failed = []
+
+    def log_accumulated_errors(self):
+        '''
+        Convenience method for logging all messages from failed packages
+        '''
+        for pkg in self.failed:
+            log.error('{0} {1}'.format(pkg, self.messages[pkg]))
+
+    def errorlog(self, msg):
+        # Log any error we receive
+        log.error(msg)
+
+    def filelog(self, package, action):
+        # TODO: extend this for more conclusive transaction handling for
+        # installs and removes VS. the pkg list compare method used now.
+        if action == yum.constants.TS_FAILED:
+            self.failed.append(package)
+
+    def scriptout(self, package, msgs):
+        # This handler covers ancillary messages coming from the RPM script.
+        # Will sometimes contain more detailed error messages.
+        self.messages[package] = msgs
+
+
 def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
@@ -240,12 +272,13 @@ def clean_metadata():
     '''
     return refresh_db()
 
-def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
+def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
+            **kwargs):
     '''
     Install the passed package(s)
 
-    pkg
-        The name of the package to be installed
+    pkgs
+        The name of the package(s) to be installed
     refresh : False
         Clean out the yum database before executing
     repo : (default)
@@ -253,6 +286,8 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
         (e.g., ``yum --enablerepo=somerepo``)
     skip_verify : False
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
+    sources: None
+        A list of rpm sources to use for installing these packages.
 
     Return a dict containing the new package names and versions::
 
@@ -271,33 +306,31 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     else:
         pkgs = pkgs.split(' ')
 
-    if 'source' in kwargs:
-        if ',' in kwargs['source']:
-            srcsplit = kwargs['source'].split(',')
+    if sources:
+        if ',' in sources:
+            srcsplit = sources.split(',')
         else:
-            srcsplit = kwargs['source'].split(' ')
+            srcsplit = sources.split(' ')
 
         # Ensure that number of sources matches number of packages specified
         if len(srcsplit) != len(pkgs):
             log.error('Number of sources ({0}) does not match '
                       'number of specfiied packages '
-                      '({1})'.format(len(srcsplit),len(pkgs)))
+                      '({1})'.format(len(srcsplit), len(pkgs)))
             return {}
 
-        sources = [__salt__['cp.cache_file'](x) 
+        sources = [__salt__['cp.cache_file'](x)
                         if __salt__['config.valid_fileproto'](x) else x
                         for x in srcsplit]
 
         # Check metadata to make sure the name passed matches the source
-        for i in range(0,len(pkgs)):
-            pname,pversion = _parse_pkg_meta(sources[i])
+        for i in range(0, len(pkgs)):
+            pname, pversion = _parse_pkg_meta(sources[i])
             if pkgs[i] != pname:
-                log.error('Package file {0} (Name: {1}) does not match '
-                          'the specified package name '
-                          '({2})'.format(kwargs['source'],pname,name))
+                log.error('Package file {0} (Name: {1}) does not '
+                          'match the specified package name '
+                          '({2})'.format(sources[i], pname, pkgs[i]))
                 return {}
-    else:
-        sources = None
 
 
     old = list_pkgs(*pkgs)
@@ -307,30 +340,42 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     setattr(yb.conf, 'gpgcheck', not skip_verify)
 
     if repo:
+        log.info("Enabling repo '{0}'".format(repo))
         yb.repos.enableRepo(repo)
     for i in range(0,len(pkgs)):
         try:
             if sources is not None:
                 target = sources[i]
+                log.info("Selecting '{0}' for local installation".format(target))
                 a = yb.installLocal(target)
                 # if yum didn't install anything, maybe its a downgrade?
+                log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0:
-                  a = yb.downgradeLocal(target)
+                    log.info('Upgrade failed, trying local downgrade')
+                    a = yb.downgradeLocal(target)
             else:
                 target = pkgs[i]
+                log.info("Selecting '{0}' for installation".format(target))
                 # Changed to pattern to allow specific package versions
                 a = yb.install(pattern=target)
                 # if yum didn't install anything, maybe its a downgrade?
+                log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0:
-                  a = yb.downgrade(pattern=target)
+                    log.info('Upgrade failed, trying downgrade')
+                    a = yb.downgrade(pattern=target)
         except Exception:
-            log.error('Package {0} failed to install'.format(target))
+            log.exception('Package {0} failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this
     # process.  For now only the version of the package(s) you request be
     # installed is tracked.
+    log.info('Resolving dependencies')
     yb.resolveDeps()
-    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    log.info('Processing transaction')
+    yumlogger = _YumErrorLogger()
+    yb.processTransaction(rpmDisplay=yumlogger)
+    yumlogger.log_accumulated_errors()
+
     yb.closeRpmDB()
 
     new = list_pkgs(*pkgs)
@@ -360,8 +405,12 @@ def upgrade():
     # packages that are going to be upgraded and only look up old/new version
     # info on those packages.
     yb.update()
+    log.info('Resolving dependencies')
     yb.resolveDeps()
-    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yumlogger = _YumErrorLogger()
+    log.info('Processing transaction')
+    yb.processTransaction(rpmDisplay=yumlogger)
+    yumlogger.log_accumulated_errors()
     yb.closeRpmDB()
 
     new = list_pkgs()
@@ -387,8 +436,12 @@ def remove(pkgs):
     for pkg in pkgs:
         yb.remove(name=pkg)
 
+    log.info('Resolving dependencies')
     yb.resolveDeps()
-    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yumlogger = _YumErrorLogger()
+    log.info('Processing transaction')
+    yb.processTransaction(rpmDisplay=yumlogger)
+    yumlogger.log_accumulated_errors()
     yb.closeRpmDB()
 
     new = list_pkgs(*pkgs)
