@@ -22,6 +22,8 @@ import salt.utils
 import salt.payload
 import salt.utils
 import salt.utils.templates
+import salt.utils.gzip_util
+
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
 
@@ -411,9 +413,10 @@ class LocalClient(Client):
                 return fnd
         return fnd
 
-    def get_file(self, path, dest='', makedirs=False, env='base'):
+    def get_file(self, path, dest='', makedirs=False, env='base', gzip_compression=None):
         '''
         Copies a file from the local files directory into :param:`dest`
+        gzip_compression settings are ignored for local files
         '''
         path = self._check_proto(path)
         fnd = self._find_file(path, env)
@@ -552,7 +555,7 @@ class RemoteClient(Client):
         self.auth = salt.crypt.SAuth(opts)
         self.sreq = salt.payload.SREQ(self.opts['master_uri'])
 
-    def get_file(self, path, dest='', makedirs=False, env='base'):
+    def get_file(self, path, dest='', makedirs=False, env='base', gzip_compression=None):
         '''
         Get a single file from the salt-master
         path must be a salt server location, aka, salt://path/to/file, if
@@ -564,6 +567,10 @@ class RemoteClient(Client):
         load = {'path': path,
                 'env': env,
                 'cmd': '_serve_file'}
+        if gzip_compression:
+            gzip_compression = int(gzip_compression)
+            load['gzip_compression'] = gzip_compression
+
         fn_ = None
         if dest:
             destdir = os.path.dirname(dest)
@@ -588,6 +595,7 @@ class RemoteClient(Client):
                         )
             except SaltReqTimeoutError:
                 return ''
+
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master
@@ -601,7 +609,12 @@ class RemoteClient(Client):
                 with self._cache_loc(data['dest'], env) as cache_dest:
                     dest = cache_dest
                     fn_ = open(dest, 'wb+')
-            fn_.write(data['data'])
+            gzip_compression = data.get('gzip_compression', None)
+            if gzip_compression:
+                data = salt.utils.gzip_util.uncompress(data['data'])
+            else:
+                data = data['data']
+            fn_.write(data)
         if fn_:
             fn_.close()
         return dest

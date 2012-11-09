@@ -16,3 +16,5 @@ log_file: master
 key_logfile: key
 pub_refresh: False
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
+
+file_buffer_size: 8192
