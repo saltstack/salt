@@ -977,13 +977,21 @@ def get_managed(
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
                              source_hash)
-                    comps = []
-                    with open(hash_fn, 'r') as hashfile:
-                        comps = hashfile.read().split('=')
+                    for line in open(hash_fn, 'r').read().splitlines():
+                        line = line.strip()
+                        if ' ' not in line:
+                            hashstr = line
+                            break
+                        elif line.startswith('{0} '.format(name)):
+                            hashstr = line.split()[1]
+                            break
+                    else:
+                        hashstr = ''  # NOT FOUND
+                    comps = hashstr.split('=')
                     if len(comps) < 2:
                         return '', {}, ('Source hash file {0} contains an '
-                                  ' invalid hash format, it must be in '
-                                  ' the format <hash type>=<hash>'
+                                  'invalid hash format, it must be in '
+                                  'the format <hash type>=<hash>'
                                   ).format(source_hash)
                     source_sum['hsum'] = comps[1].strip()
                     source_sum['hash_type'] = comps[0].strip()
@@ -992,8 +1000,8 @@ def get_managed(
                     comps = source_hash.split('=')
                     if len(comps) < 2:
                         return '', {}, ('Source hash file {0} contains an '
-                                  ' invalid hash format, it must be in '
-                                  ' the format <hash type>=<hash>'
+                                  'invalid hash format, it must be in '
+                                  'the format <hash type>=<hash>'
                                   ).format(source_hash)
                     source_sum['hsum'] = comps[1].strip()
                     source_sum['hash_type'] = comps[0].strip()
