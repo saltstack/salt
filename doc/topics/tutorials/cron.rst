@@ -2,8 +2,7 @@
 Using cron with Salt
 ===============================================
 
-The Salt Minion can initiate its own highstate using the :term:`salt-call`
-command.
+The Salt Minion can initiate its own highstate using the `salt-call` command.
 
 .. code-block:: bash
 
@@ -18,7 +17,7 @@ Use cron to initiate a highstate
 ================================
 
 If you would like the Salt Minion to regularly check in with the master you can
-use the venerable cron to run the :term:`salt-call` command.
+use the venerable cron to run the `salt-call` command.
 
 .. code-block:: bash
 
@@ -26,6 +25,8 @@ use the venerable cron to run the :term:`salt-call` command.
 
     00 00 * * * salt-call state.highstate
 
-The above cron entry will run a highstate every day at midnight. Be aware that
-you may need to ensure the PATH for cron includes any scripts or commands that
-need to be executed.
+The above cron entry will run a highstate every day at midnight. 
+
+.. note:: 
+    Be aware that you may need to ensure the PATH for cron includes any
+    scripts or commands that need to be executed.
