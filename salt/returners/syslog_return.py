@@ -12,7 +12,7 @@ import json
 
 
 def __virtual__():
-    return 'syslog_return'
+    return 'syslog'
 
 
 def returner(ret):
