@@ -32,6 +32,7 @@ Depends: ${python:Depends},
          python-yaml,
          python-zmq,
          msgpack-python
+Recommends: dmidecode, pciutils
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
