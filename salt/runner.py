@@ -64,8 +64,8 @@ class Runner(RunnerClient):
         '''
         ret = super(Runner, self).get_docs()
 
-        for fun, doc in ret.items():
-            print("{0}:\n{1}\n".format(fun, doc))
+        for fun in sorted(ret):
+            print("{0}:\n{1}\n".format(fun, ret[fun]))
 
     def run(self):
         '''
