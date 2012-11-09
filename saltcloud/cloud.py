@@ -231,15 +231,16 @@ class Map(Cloud):
         dmap = self.read()
         for profile, vmap in dmap.items():
             provider = self.profile_provider(profile)
-            vms = [i.keys() for i in vmap]
+            vms = [i.keys() if type(i) == dict else [i] for i in vmap]
+            vms = [item for sublist in vms for item in sublist]
             for vm in vms:
                 if provider not in full_map:
                     full_map[provider] = {}
     
-                if vm[0] in query_map[provider]:
-                    full_map[provider][vm[0]] = query_map[provider][vm[0]]
+                if vm in query_map[provider]:
+                    full_map[provider][vm] = query_map[provider][vm]
                 else:
-                    full_map[provider][vm[0]] = 'Absent'
+                    full_map[provider][vm] = 'Absent'
         return full_map
 
     def delete_map(self, query=None):
@@ -248,6 +249,7 @@ class Map(Cloud):
         for profile in query_map:
             for vm in query_map[profile]:
                 names.append(vm)
+        print("VMs to delete: {0}\n".format(names))
         return names
 
     def read(self):
