@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from datetime import timedelta
 try:
     import pwd
 except ImportError:
@@ -326,6 +327,33 @@ class TestDaemon(object):
         if os.path.isdir(TMP):
             shutil.rmtree(TMP)
 
+    def wait_for_jid(self, targets, jid, timeout=120):
+        while timeout > 0:
+            running = self.__client_job_running(targets, jid)
+            sys.stdout.write('\r' + ' ' * PNUM + '\r')
+            if not running:
+                return True
+            sys.stdout.write(
+                '    * [Quit in {0}] Waiting for {1}'.format(
+                    timedelta(seconds=timeout), ', '.join(running)
+                )
+            )
+            sys.stdout.flush()
+            timeout -= 1
+            time.sleep(1)
+        else:
+            sys.stdout.write('\n    * ERROR: Failed to get information back\n')
+            sys.stdout.flush()
+        return False
+
+    def __client_job_running(self, targets, jid):
+        running = self.client.cmd(
+            ','.join(targets), 'saltutil.running', expr_form='list'
+        )
+        return [
+            k for (k, v) in running.iteritems() if v and v[0]['jid'] == jid
+        ]
+
     def __wait_for_minions_connections(self, evt, targets):
         print_header(
             'Waiting at most {0} secs for local minions to connect '
@@ -361,6 +389,10 @@ class TestDaemon(object):
             expr_form='list',
             timeout=9999999999999999,
         )
+
+        if self.wait_for_jid(targets, jid_info['jid']) is False:
+            evt.set()
+            return
 
         while syncing:
             rdata = self.client.get_returns(jid_info['jid'], syncing, 1)
