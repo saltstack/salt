@@ -42,7 +42,7 @@ def recv(files, dest):
     return ret
 
 
-def get_file(path, dest, env='base', template=None):
+def get_file(path, dest, env='base', template=None, gzip_compression=None):
     '''
     Used to get a single file from the salt master
 
@@ -100,7 +100,7 @@ def get_file(path, dest, env='base', template=None):
         return ''
     else:
         client = salt.fileclient.get_file_client(__opts__)
-        return client.get_file(path, dest, False, env)
+        return client.get_file(path, dest, False, env, gzip_compression)
 
 
 def get_template(path, dest, template='jinja', env='base', **kwargs):
