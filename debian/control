@@ -9,7 +9,7 @@ Build-Depends: debhelper,
                python-jinja2,
                python-m2crypto,
                python-setuptools,
-               python-sphinx (>= 1.0.1-1~lucid1),
+               python-sphinx,
                python-yaml,
                python-zmq,
                msgpack-python
