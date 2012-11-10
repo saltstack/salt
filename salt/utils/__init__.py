@@ -332,7 +332,7 @@ def dns_check(addr, safe=False):
                     # the master or minion instance calling this hasn't even
                     # started running
                     logging.getLogger(__name__).error(err)
-                raise SaltClientError
+                raise SaltClientError()
             else:
                 err = err.format(addr)
                 sys.stderr.write(err)
