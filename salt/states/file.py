@@ -545,7 +545,7 @@ def managed(name,
         md5=e138491e9d5b97023cea823fe17bac22
 
         The file can contain checksums for several files, in this case every
-        line must consist of full name of the file and checksum splited by
+        line must consist of full name of the file and checksum separated by
         space:
 
         /etc/rc.conf md5=ef6e82e4006dee563d98ada2a2a80a27
