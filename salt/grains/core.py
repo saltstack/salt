@@ -404,7 +404,7 @@ def id_():
     '''
     Return the id
     '''
-    return {'id': __opts__['id']}
+    return {'id': __opts__.get('id', '')}
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
