@@ -7,6 +7,7 @@ import glob
 import os
 import socket
 import logging
+import time
 
 # import third party libs
 import yaml
@@ -230,10 +231,23 @@ def minion_config(path):
         opts['id'] = _append_domain(opts)
 
     try:
-        opts['master_ip'] = salt.utils.dns_check(opts['master'], True,
-                                                            opts['retry_dns'])
+        opts['master_ip'] = salt.utils.dns_check(opts['master'], True)
     except SaltClientError:
-        opts['master_ip'] = '127.0.0.1'
+        if opts['retry_dns']:
+            while True:
+                msg = ('Master hostname: {0} not found. '
+                        'Retrying in {1} seconds').format(opts['master'], 
+                                                            opts['retry_dns'])
+                log.warn(msg)
+                print msg
+                time.sleep(opts['retry_dns'])
+                try:
+                    opts['master_ip'] = salt.utils.dns_check(opts['master'], True)
+                    break
+                except SaltClientError:
+                    pass
+        else:
+            opts['master_ip'] = '127.0.0.1'
 
     opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
                                                     port=opts['master_port'])

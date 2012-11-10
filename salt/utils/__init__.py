@@ -310,7 +310,7 @@ def gen_mac(prefix='52:54:'):
     return mac[:-1]
 
 
-def dns_check(addr, safe=False, retry_dns=30):
+def dns_check(addr, safe=False):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception.
@@ -325,18 +325,6 @@ def dns_check(addr, safe=False, retry_dns=30):
             err = ('This master address: \'{0}\' was previously resolvable '
                    'but now fails to resolve! The previously resolved ip addr '
                    'will continue to be used').format(addr)
-            if retry_dns:
-                msg = ('Hostname: \'{0}\' could not be reached.'
-                        'Waiting \'{1}\' seconds and then will try to'
-                        'resolve the name again.').format(addr, retry_dns)
-                import salt.log
-                if salt.log.is_console_configured():
-                    # If logging is not configured it also means that either
-                    # the master or minion instance calling this hasn't even
-                    # started running
-                    logging.getLogger(__name__).error(msg)
-                time.sleep(retry_dns)
-                self.dns_check(addr, safe, retry_dns)
             if safe:
                 import salt.log
                 if salt.log.is_console_configured():
@@ -344,7 +332,7 @@ def dns_check(addr, safe=False, retry_dns=30):
                     # the master or minion instance calling this hasn't even
                     # started running
                     logging.getLogger(__name__).error(err)
-                raise SaltClientError
+                raise SaltClientError()
             else:
                 err = err.format(addr)
                 sys.stderr.write(err)
