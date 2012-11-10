@@ -86,7 +86,7 @@ def get_fun(fun):
     for minion in serv.smembers('minions'):
         ind_str = '{0}:{1}'.format(minion, fun)
         try:
-            jid = serv.lindex(ind_str, serv.llen(ind_str) - 1)
+            jid = serv.lindex(ind_str, 0)
         except Exception:
             continue
         data = serv.get('{0}:{1}'.format(minion, jid))
