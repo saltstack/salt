@@ -282,7 +282,11 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
     cmd = _psql_cmd('-c', query, host=host, user=user, port=port)
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     log.debug(cmdret.splitlines())
-    val = cmdret.splitlines()[1]
+    try:
+        val = cmdret.splitlines()[1]
+    except IndexError:
+        log.error("Invalid PostgreSQL result: '%s'", cmdret)
+        return False
     return True if val.strip() == 't' else False
 
 
