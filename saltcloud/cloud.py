@@ -338,6 +338,8 @@ class Map(Cloud):
                             tvm['map_grains'] = miniondict[name]['grains']
                         if 'minion' in miniondict[name]:
                             tvm['map_minion'] = miniondict[name]['minion']
+                        if 'volumes' in miniondict[name]:
+                            tvm['map_volumes'] = miniondict[name]['volumes']
             if self.opts['parallel']:
                 multiprocessing.Process(
                         target=lambda: self.create(tvm)

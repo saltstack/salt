@@ -235,3 +235,24 @@ def create(vm_):
         ))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
+    volumes = vm_.get('map_volumes')
+    if volumes != {}:
+        print ('Create and attach volumes to node {0}'.format(data.name))
+        create_attach_volumes(volumes,location, data)
+
+
+def create_attach_volumes(volumes, location, data):
+    '''
+    Create and attach volumes to created node
+    '''
+    conn = get_conn(location=location)
+    node_avz = data.__dict__.get('extra').get('availability')
+    for avz in conn.list_locations():
+        if avz.availability_zone.name == node_avz:
+            break
+    for volume in volumes:
+        volume_name= volume['device'] + " on " +  data.name
+        created_volume = conn.create_volume(volume['size'], volume_name, avz)
+        attach = conn.attach_volume(data, created_volume, volume['device'])
+        if attach:
+            print ('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
