@@ -188,6 +188,7 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
                                   )
         data = render_data(tmplout, env, sls, argline=rd_argline.strip())
         try: 
+            rewrite_names_decl(data)
             rewrite_sls_includes_excludes(data, sls)
 
             if not extract and IMPLICIT_REQUIRE:
@@ -239,10 +240,23 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
     data = process_sls_data(sls_templ, tmplctx)
 
     if log.isEnabledFor(logging.DEBUG):
-        log.debug('Rendered sls: %s' % (data,))
+        import pprint #FIXME: pprint OrderedDict
+        log.debug('Rendered sls: %s' % pprint.pformat(data))
     return data
 
 
+def rewrite_names_decl(data):
+    """Rewrite any state that uses - names: ... into ones without it."""
+    for gsid, states in data.items():
+        for sname, args in states.iteritems():
+            for item, name, value in nvlist(args):
+                if name == 'names':
+                    args.remove(item)
+                    for sid in value:
+                        if sid in data:
+                            raise SaltRenderError("Duplicate state id: " + sid)
+                        data[sid] = {sname: args[:]}
+                    del data[gsid]
 
 
 def _parent_sls(sls):
@@ -337,7 +351,12 @@ def rename_state_ids(data, sls, is_extend=False):
 
     for sid in data.keys():
         if sid.startswith('.'):
-            data[_local_to_abs_sid(sid, sls)] = data[sid]
+            newsid = _local_to_abs_sid(sid, sls)
+            if newsid in data:
+                raise SaltRenderError(
+                        "Can't rename state id(%s) into %s "
+                        "because the later already exists!" % (sid, newsid))
+            data[newsid] = data[sid]
             del data[sid]
 
 
@@ -410,7 +429,9 @@ def add_implicit_requires(data):
 def add_goal_state(data):
     goal_sid = __opts__['stateconf_goal_state']
     if goal_sid in data:
-        return
+        raise SaltRenderError(
+                "Can't generate goal state(%s)! "
+                "The same state id already exists!" % goal_sid)
     else:
         reqlist = []
         for sid, _, state, _ in \
