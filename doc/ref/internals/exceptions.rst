@@ -2,7 +2,7 @@
 Exceptions
 ==========
 
-Salt-specific exceptions should be thrown as must as possible so the various
+Salt-specific exceptions should be thrown as often as possible so the various
 interfaces to Salt (CLI, API, etc) can handle those errors appropriately and
 display error messages appropriately.
 

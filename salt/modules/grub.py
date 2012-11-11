@@ -6,6 +6,9 @@ Support for GRUB
 
 import os
 
+from salt.utils import memoize
+from salt.exceptions import CommandExecutionError
+
 def __virtual__():
     '''
     Only load the module if grub is installed
@@ -15,6 +18,7 @@ def __virtual__():
         return 'grub'
     return False
 
+@memoize
 def _detect_conf():
     '''
     GRUB conf location differs depending on distro
@@ -77,8 +81,8 @@ def conf():
                 pos += 1
                 stanzas.append(stanza)
     except (IOError, OSError) as exc:
-        msg = "Could not read grub config '{0}': {1}"
-        raise CommandExecutionError(msg.format(conf, str(exc)))
+        msg = "Could not read grub config: {0}"
+        raise CommandExecutionError(msg.format(str(exc)))
 
     ret['stanzas'] = []
     for stanza in stanzas:
