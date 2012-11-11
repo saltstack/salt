@@ -1680,7 +1680,7 @@ def accumulated(name, filename, text, require_in):
     }
     if not filter(lambda x: 'file' in x, require_in):
         ret['result'] = False
-        ret['comment'] = ('Orphanned accumulator {0} in '
+        ret['comment'] = ('Orphaned accumulator {0} in '
                           '{1}:{2}'.format(name, kwargs['__sls__'],
                           kwargs['__id__']))
         return ret
