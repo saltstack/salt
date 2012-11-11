@@ -12,22 +12,19 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # Return this for pkg on RHEL/Fedora based distros that do not ship with
-    # python 2.6 or greater.
-    dists = ('CentOS', 'Scientific', 'RedHat', 'CloudLinux')
-    if __grains__['os'] == 'Fedora':
-        if int(__grains__['osrelease'].split('.')[0]) < 11:
-            return 'pkg'
-        else:
-            return False
+    # Work only on RHEL/Fedora based distros with python 2.6 or greater
+    os_grain = __grains__['os']
+    os_family = __grains__['os_family']
+    os_major_version = int(__grains__['osrelease'].split('.')[0])
+
+    # Fedora <= 10 need to use this module
+    if os_grain == 'Fedora' and os_major_version < 11:
+        return 'pkg'
     else:
-        if __grains__['os'] in dists:
-            if int(__grains__['osrelease'].split('.')[0]) <= 5:
-                return 'pkg'
-            else:
-                return False
-        else:
-            return False
+        # RHEL <= 5 and all variants need to use this module
+        if os_family == 'RedHat' and os_major_version <= 5:
+            return 'pkg'
+    return False
 
 
 def _parse_yum(arg):
