@@ -116,4 +116,4 @@ def fact(name):
     ret = __salt__['cmd.run']('facter {0}'.format(name))
     if not ret:
         return ''
-    return ret.rstrip()
+    return ret
