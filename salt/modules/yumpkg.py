@@ -24,22 +24,21 @@ def __virtual__():
     if not has_yumdeps:
         return False
 
-    # Return this for pkg on RHEL/Fedora based distros that ship with python
-    # 2.6 or greater.
-    dists = ('CentOS', 'Scientific', 'RedHat', 'CloudLinux')
-    if __grains__['os'] == 'Fedora':
-        if int(__grains__['osrelease'].split('.')[0]) >= 11:
-            return 'pkg'
-        else:
-            return False
-    elif __grains__['os'] == 'Amazon':
+    # Work only on RHEL/Fedora based distros with python 2.6 or greater
+    os_grain = __grains__['os']
+    os_family = __grains__['os_family']
+    os_major_release = int(__grains__['osrelease'].split('.')[0])
+
+    # Fedora <= 10 used Python 2.5 and below
+    if os_grain == 'Fedora' and os_major_release >= 11:
+        return 'pkg'
+    elif os_grain == 'Amazon':
         return 'pkg'
     else:
-        if __grains__['os'] in dists:
-            if int(__grains__['osrelease'].split('.')[0]) >= 6:
+        if os_family == 'RedHat' and os_grain != 'Fedora':
+            if os_major_release >= 6:
                 return 'pkg'
-        else:
-            return False
+    return False
 
 class _YumErrorLogger(object):
     '''
