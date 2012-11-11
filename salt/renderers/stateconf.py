@@ -207,8 +207,8 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
                 "Error found while pre-processing the salt file, %s.\n"
                 "It's likely due to a formatting error in your salt file.\n"
                 "Pre-processing aborted. Stack trace:---------") % sls)
-            #raise
-            raise SaltRenderError("sls preprocessing/rendering failed!")
+            raise
+            #raise SaltRenderError("sls preprocessing/rendering failed!")
         return data
 
     if isinstance(template_file, basestring):
@@ -248,6 +248,8 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
 def rewrite_names_decl(data):
     """Rewrite any state that uses - names: ... into ones without it."""
     for gsid, states in data.items():
+        if gsid == 'include' or gsid == 'extend':
+            continue
         for sname, args in states.iteritems():
             for item, name, value in nvlist(args):
                 if name == 'names':
