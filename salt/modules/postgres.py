@@ -315,14 +315,14 @@ def user_create(username,
 
     sub_cmd = 'CREATE USER "{0}" WITH'.format(username, )
     if password:
+        if encrypted:
+            sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
         escaped_password = password.replace("'", "''")
         sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, escaped_password)
     if createdb:
         sub_cmd = "{0} CREATEDB".format(sub_cmd, )
     if createuser:
         sub_cmd = "{0} CREATEUSER".format(sub_cmd, )
-    if encrypted:
-        sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
     if superuser:
         sub_cmd = "{0} SUPERUSER".format(sub_cmd, )
 
