@@ -783,39 +783,6 @@ class LocalClient(object):
             yield ret
             time.sleep(0.02)
 
-
-    def find_cmd(self, cmd):
-        '''
-        Hunt through the old salt calls for when cmd was run, return a dict:
-        {'<jid>': <return_obj>}
-        '''
-        job_dir = os.path.join(self.opts['cachedir'], 'jobs')
-        ret = {}
-        for jid in os.listdir(job_dir):
-            jid_dir = salt.utils.jid_dir(
-                    jid,
-                    self.opts['cachedir'],
-                    self.opts['hash_type']
-                    )
-            loadp = os.path.join(jid_dir, '.load.p')
-            if os.path.isfile(loadp):
-                try:
-                    load = self.serial.load(open(loadp, 'r'))
-                    if load['fun'] == cmd:
-                        # We found a match! Add the return values
-                        ret[jid] = {}
-                        for host in os.listdir(jid_dir):
-                            host_dir = os.path.join(jid_dir, host)
-                            retp = os.path.join(host_dir, 'return.p')
-                            if not os.path.isfile(retp):
-                                continue
-                            ret[jid][host] = self.serial.load(open(retp))
-                except Exception:
-                    continue
-            else:
-                continue
-        return ret
-
     def pub(self, 
             tgt, 
             fun, 

@@ -85,6 +85,23 @@ def returner(ret):
     col.insert(sdata)
 
 
+def save_load(jid, load):
+    '''
+    Save the load for a given job id
+    '''
+    conn, db = _get_conn()
+    col = db[jid]
+    col.insert(load)
+
+
+def get_load(jid):
+    '''
+    Returnt he load asociated with a given job id
+    '''
+    conn, db = _get_conn()
+    return db[jid].find_one()
+
+
 def get_jid(jid):
     '''
     Return the return information associated with a jid

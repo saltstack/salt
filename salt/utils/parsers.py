@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.parsers
-    ~~~~~~~~~~~~~~~~~~
+salt.utils.parsers
+~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details.
+:copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+:license: Apache 2.0, see LICENSE for more details.
 '''
 
 import os
@@ -712,14 +712,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'systems, databases or applications.')
         )
         self.add_option(
-            '-Q', '--query',
-            action='store_true',
-            help=('This option is deprecated and will be removed in a future '
-                  'release, please use salt-run jobs instead.\n'
-                  'Execute a salt command query, this can be used to find '
-                  'the results of a previous function call: -Q test.echo')
-        )
-        self.add_option(
             '-d', '--doc', '--documentation',
             dest='doc',
             default=False,
@@ -729,41 +721,36 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
         )
 
     def _mixin_after_parsed(self):
-        if self.options.query:
-            if len(self.args) < 1:
-                self.error(
-                    'Please pass in a command to query the old salt calls for.'
-                )
-            self.config['cmd'] = self.args[0]
-        else:
-            # Catch invalid invocations of salt such as: salt run
-            if len(self.args) <= 1 and not self.options.doc:
-                self.print_help()
-                self.exit(1)
+        # Catch invalid invocations of salt such as: salt run
+        if len(self.args) <= 1 and not self.options.doc:
+            self.print_help()
+            self.exit(1)
 
-            if self.options.doc:
-                # Include the target
+        if self.options.doc:
+            # Include the target
+            if self.args[0] != '*':
                 self.args.insert(0, '*')
+            if len(self.args) < 2 or self.args[1] != 'sys.doc':
                 # Include the function
                 self.args.insert(1, 'sys.doc')
 
-            if self.options.list:
-                self.config['tgt'] = self.args[0].split(',')
-            else:
-                self.config['tgt'] = self.args[0]
+        if self.options.list:
+            self.config['tgt'] = self.args[0].split(',')
+        else:
+            self.config['tgt'] = self.args[0]
 
-            # Detect compound command and set up the data for it
-            if ',' in self.args[1]:
-                self.config['fun'] = self.args[1].split(',')
-                self.config['arg'] = []
-                for comp in ' '.join(self.args[2:]).split(','):
-                    self.config['arg'].append(comp.split())
-                if len(self.config['fun']) != len(self.config['arg']):
-                    self.exit(42, 'Cannot execute compound command without '
-                                  'defining all arguments.')
-            else:
-                self.config['fun'] = self.args[1]
-                self.config['arg'] = self.args[2:]
+        # Detect compound command and set up the data for it
+        if ',' in self.args[1]:
+            self.config['fun'] = self.args[1].split(',')
+            self.config['arg'] = []
+            for comp in ' '.join(self.args[2:]).split(','):
+                self.config['arg'].append(comp.split())
+            if len(self.config['fun']) != len(self.config['arg']):
+                self.exit(42, 'Cannot execute compound command without '
+                              'defining all arguments.')
+        else:
+            self.config['fun'] = self.args[1]
+            self.config['arg'] = self.args[2:]
 
     def setup_config(self):
         return config.client_config(self.get_config_file_path('master'))

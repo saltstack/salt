@@ -18,7 +18,11 @@ import salt.key
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env
-from salt.exceptions import SaltInvocationError, SaltClientError, EauthAuthenticationError
+from salt.exceptions import (
+    SaltInvocationError,
+    SaltClientError,
+    EauthAuthenticationError
+)
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -33,19 +37,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(self.get_config_file_path('master'))
+            local = salt.client.LocalClient(
+                self.get_config_file_path('master')
+            )
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
 
-        if self.options.query:
-            ret = local.find_cmd(self.config['cmd'])
-            for jid in ret:
-                if isinstance(ret, list) or isinstance(ret, dict):
-                    print('Return data for job {0}:'.format(jid))
-                    salt.output.display_output(ret[jid], None, self.config)
-                    print('')
-        elif self.options.batch:
+        if self.options.batch:
             batch = salt.cli.batch.Batch(self.config)
             batch.run()
         else:
