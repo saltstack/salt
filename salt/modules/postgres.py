@@ -87,10 +87,7 @@ def _psql_cmd(*args, **kwargs):
     return cmdstr
 
 
-'''
-Database related actions
-'''
-
+# Database related actions
 
 def db_list(user=None, host=None, port=None, runas=None):
     '''
@@ -233,9 +230,7 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
         log.info("Failed to delete DB '{0}'.".format(name, ))
         return False
 
-'''
-User related actions
-'''
+# User related actions
 
 def user_list(user=None, host=None, port=None, runas=None):
     '''
