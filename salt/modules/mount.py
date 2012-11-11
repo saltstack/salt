@@ -332,6 +332,8 @@ def is_fuse_exec(cmd):
     # No point in running ldd on a command that doesn't exist
     if not cmd_path:
         return False
+    elif not _which('ldd'):
+        raise CommandNotFoundError('ldd')
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path))
     return 'libfuse' in out
