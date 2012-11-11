@@ -182,6 +182,7 @@ class State(object):
         self.opts = opts
         self.opts['pillar'] = self.__gather_pillar()
         self.load_modules()
+        self.active = set()
         self.mod_init = set()
         self.__run_num = 0
 
@@ -915,6 +916,7 @@ class State(object):
                 running = self.call_chunk(low, running, chunks)
                 if self.check_failhard(low, running):
                     return running
+            self.active = set()
         return running
 
     def check_failhard(self, low, running):
@@ -992,6 +994,7 @@ class State(object):
         '''
         self._mod_init(low)
         tag = _gen_tag(low)
+        self.active.add(tag)
         requisites = ('require', 'watch')
         status = self.check_requisite(low, running, chunks)
         if status == 'unmet':
@@ -1031,6 +1034,9 @@ class State(object):
                 # it has not been run already
                 ctag = _gen_tag(chunk)
                 if ctag not in running:
+                    if ctag in self.active:
+                        log.error('Recursive requisite found')
+                        return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
                         running['__FAILHARD__'] = True
