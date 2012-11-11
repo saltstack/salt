@@ -16,4 +16,6 @@ def output(data):
     '''
     Print out via pretty print
     '''
+    if isinstance(data, Exception):
+        data = str(data)
     return pprint.pformat(data)

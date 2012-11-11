@@ -77,7 +77,7 @@ def absent(name):
                 ret['comment'] = 'Module {0} is set to be unloaded'
                 ret['comment'] = ret['comment'].format(name)
                 return ret
-            for mod in __salt__['kmod.load'](name):
+            for mod in __salt__['kmod.remove'](name):
                 ret['changes'][mod] = 'removed'
             for change in ret['changes']:
                 if name in change:
