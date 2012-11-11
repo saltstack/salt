@@ -24,6 +24,49 @@ class CPModuleTest(integration.ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
 
+    def test_get_file_templated_paths(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'cheese')
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://{{grains.test_grain}}',
+                tgt.replace('cheese', '{{grains.test_grain}}')
+            ],
+            template='jinja'
+        )
+        with open(tgt, 'r') as cheese:
+            data = cheese.read()
+            self.assertIn('Gromit', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_file_gzipped(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'file.big')
+        src = os.path.join(integration.FILES, 'file/base/file.big')
+        with open(src, 'r') as fp_:
+            hash = hashlib.md5(fp_.read()).hexdigest()
+
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://file.big',
+                tgt,
+            ],
+            gzip_compression=5
+        )
+        with open(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+            self.assertEqual(hash, hashlib.md5(data).hexdigest())
+
+
+
     def test_get_template(self):
         '''
         cp.get_template

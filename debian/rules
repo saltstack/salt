@@ -1,6 +1,7 @@
 #!/usr/bin/make -f
 %:
 	dh $@
+		make -C doc html
 # overrides require debuilder >= 7.0.50
 # http://pkg-perl.alioth.debian.org/debhelper.html#forcing_special_tests
 dh_override_auto_build:

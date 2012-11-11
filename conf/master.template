@@ -1,6 +1,10 @@
 ##### Primary configuration settings #####
 ##########################################
-
+# This configuration file is used to manage the behavior of the Salt Master
+# Values that are commented out but have no space after the comment are
+# defaults that need not be set in the config. If there is a space after the
+# comment that the value is presented as an example and is not the default.
+#
 # Per default the master will automatically include all config files
 # from master.d/*.conf (master.d is a directory in the same directory
 # as the main master config file)
@@ -84,15 +88,6 @@
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
 
-# Set the acceptance level for serialization of messages. This should only be
-# set if the master is newer than 0.9.5 and the minion are older. This option
-# allows a 0.9.5 and newer master to communicate with minions 0.9.4 and
-# earlier. It is not recommended to keep this setting on if the minions are
-# all 0.9.5 or higher, as leaving pickle as the serialization medium is slow
-# and opens up security risks
-#
-#serial: msgpack
-
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
@@ -102,11 +97,11 @@
 #
 #
 # Include a config file from some other path:
-#include: /etc/salt/extra_config
+# include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-#include:
-# - /etc/salt/extra_config
+# include:
+#   - /etc/salt/extra_config
 
 
 #####        Security settings       #####
@@ -252,9 +247,9 @@
 #  base:
 #    - /srv/pillar
 #
-#ext_pillar:
-#  - hiera: /etc/hiera.yaml
-#  - cmd_yaml: cat /etc/salt/yaml
+# ext_pillar:
+#   - hiera: /etc/hiera.yaml
+#   - cmd_yaml: cat /etc/salt/yaml
 #
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the
@@ -371,4 +366,5 @@
 ##########################################
 # The range server (and optional port) that serves your cluster information
 # https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
-#range_server: range:80
+#
+# range_server: range:80

@@ -76,11 +76,11 @@ def _psql_cmd(*args, **kwargs):
                                               kwargs.get('host'),
                                               kwargs.get('port'))
     cmd = ['psql', '--no-align', '--no-readline', '--no-password']
-    if user is not None:
+    if user:
         cmd += ['--username', user]
-    if host is not None:
+    if host:
         cmd += ['--host', host]
-    if port is not None:
+    if port:
         cmd += ['--port', port]
     cmd += args
     cmdstr = ' '.join(map(pipes.quote, cmd))
@@ -107,7 +107,11 @@ def db_list(user=None, host=None, port=None, runas=None):
     cmd = _psql_cmd('-l', user=user, host=host, port=port)
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 6]
-    header = [x.strip() for x in lines[0].split("|")]
+    try:
+        header = [x.strip() for x in lines[0].split("|")]
+    except IndexError:
+        log.error("Invalid PostgreSQL output: '%s'", cmdret)
+        return []
     for line in lines[1:]:
         line = [x.strip() for x in line.split("|")]
         if not line[0] == "":
@@ -282,7 +286,11 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
     cmd = _psql_cmd('-c', query, host=host, user=user, port=port)
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     log.debug(cmdret.splitlines())
-    val = cmdret.splitlines()[1]
+    try:
+        val = cmdret.splitlines()[1]
+    except IndexError:
+        log.error("Invalid PostgreSQL result: '%s'", cmdret)
+        return False
     return True if val.strip() == 't' else False
 
 

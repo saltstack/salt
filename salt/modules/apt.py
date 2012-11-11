@@ -70,9 +70,14 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
+    # check for :i386 appended to 32bit name installed on 64bit machine
+    name32bit = '{0}:i386'.format(name)
+
     pkgs = list_pkgs(name)
     if name in pkgs:
         return pkgs[name]
+    if name32bit in pkgs:
+        return pkgs[name32bit]
     else:
         return ''
 

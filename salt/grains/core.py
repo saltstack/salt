@@ -404,7 +404,7 @@ def id_():
     '''
     Return the id
     '''
-    return {'id': __opts__['id']}
+    return {'id': __opts__.get('id', '')}
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
@@ -414,6 +414,7 @@ _OS_NAME_MAP = {
     'arch': 'Arch',
     'amazonlinu': 'Amazon',
     'centoslinu': 'CentOS',
+    'scientific': 'Scientific',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -726,4 +727,4 @@ def get_server_id():
     '''
     # Provides:
     #   server_id
-    return {'server_id': abs(hash(__opts__['id']) % (2 ** 31))}
+    return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}

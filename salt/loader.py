@@ -504,9 +504,16 @@ class Loader(object):
                         pass
 
             if virtual_enable:
-                if hasattr(mod, '__virtual__'):
-                    if callable(mod.__virtual__):
-                        virtual = mod.__virtual__()
+                try:
+                    if hasattr(mod, '__virtual__'):
+                        if callable(mod.__virtual__):
+                            virtual = mod.__virtual__()
+                except Exception:
+                    virtual = False
+                    trb = traceback.format_exc()
+                    log.critical(('Failed to read the virtual function for '
+                        'module: {0}\nWith traceback: {1}').format(
+                            mod.__name__[mod.__name__.rindex('.')+1:], trb))
 
             for attr in dir(mod):
                 if attr.startswith('_'):

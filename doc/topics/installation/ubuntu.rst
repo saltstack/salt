@@ -47,17 +47,18 @@ files), such as:
 - enable the file_roots and pillar_roots options in /etc/salt/master
 - configure syndic to relay commands from another master
 
-After making any configuration changes, re-start the affected daemons:
+After making any configuration changes, re-start the affected daemons (or use 'stop' and 'start' as needed). E.g.:
 
 .. code-block:: bash
 
-    sudo restart salt-master
+    sudo /etc/init.d/salt-minion restart
 
 .. code-block:: bash
 
-    sudo restart salt-minion
+    sudo /etc/init.d/salt-master restart
 
 .. code-block:: bash
 
-    sudo restart salt-syndic
+    sudo /etc/init.d/salt-syndic stop
+    sudo /etc/init.d/salt-syndic start
 

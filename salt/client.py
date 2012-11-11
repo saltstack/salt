@@ -41,6 +41,7 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
+from salt.exceptions import EauthAuthenticationError
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -142,9 +143,8 @@ class LocalClient(object):
         '''
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
+                   'commands?')
+            raise EauthAuthenticationError(err)
 
         # Failed to connect to the master and send the pub
         if not 'jid' in pub_data or pub_data['jid'] == '0':
@@ -782,39 +782,6 @@ class LocalClient(object):
                 ret[raw['id']]['out'] = raw['out']
             yield ret
             time.sleep(0.02)
-
-
-    def find_cmd(self, cmd):
-        '''
-        Hunt through the old salt calls for when cmd was run, return a dict:
-        {'<jid>': <return_obj>}
-        '''
-        job_dir = os.path.join(self.opts['cachedir'], 'jobs')
-        ret = {}
-        for jid in os.listdir(job_dir):
-            jid_dir = salt.utils.jid_dir(
-                    jid,
-                    self.opts['cachedir'],
-                    self.opts['hash_type']
-                    )
-            loadp = os.path.join(jid_dir, '.load.p')
-            if os.path.isfile(loadp):
-                try:
-                    load = self.serial.load(open(loadp, 'r'))
-                    if load['fun'] == cmd:
-                        # We found a match! Add the return values
-                        ret[jid] = {}
-                        for host in os.listdir(jid_dir):
-                            host_dir = os.path.join(jid_dir, host)
-                            retp = os.path.join(host_dir, 'return.p')
-                            if not os.path.isfile(retp):
-                                continue
-                            ret[jid][host] = self.serial.load(open(retp))
-                except Exception:
-                    continue
-            else:
-                continue
-        return ret
 
     def pub(self, 
             tgt, 

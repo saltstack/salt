@@ -300,7 +300,7 @@ def gen_mac(prefix='52:54:'):
     Generates a mac addr with the defined prefix
     '''
     src = ['1', '2', '3', '4', '5', '6', '7', '8',
-            '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
+           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
     mac = prefix
     while len(mac) < 18:
         if len(mac) < 3:
@@ -322,9 +322,9 @@ def dns_check(addr, safe=False):
         try:
             addr = socket.gethostbyname(addr)
         except socket.gaierror:
-            err = ('This master address: \'{0}\' was previously resolvable but '
-                  'now fails to resolve! The previously resolved ip addr '
-                  'will continue to be used').format(addr)
+            err = ('This master address: \'{0}\' was previously resolvable '
+                   'but now fails to resolve! The previously resolved ip addr '
+                   'will continue to be used').format(addr)
             if safe:
                 import salt.log
                 if salt.log.is_console_configured():
@@ -332,7 +332,7 @@ def dns_check(addr, safe=False):
                     # the master or minion instance calling this hasn't even
                     # started running
                     logging.getLogger(__name__).error(err)
-                raise SaltClientError
+                raise SaltClientError()
             else:
                 err = err.format(addr)
                 sys.stderr.write(err)
@@ -563,7 +563,7 @@ def build_whitepace_splited_regex(text):
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
-    return regex
+    return r'(?m)^{0}$'.format(regex)
 
 
 def format_call(fun, data):
@@ -607,7 +607,8 @@ def format_call(fun, data):
 
 def arg_lookup(fun):
     '''
-    Return a dict containing the arguments and default arguments to the function
+    Return a dict containing the arguments and default arguments to the
+    function.
     '''
     ret = {'args': [],
            'kwargs': {}}
@@ -690,7 +691,6 @@ def mysql_to_dict(data, key):
                     continue
                 else:
                     row[headers[field]] = str_to_num(comps[field])
-            rowname = headers[0].replace(':', '')
             ret[row[key]] = row
         else:
             headers = comps
@@ -712,12 +712,14 @@ def str_to_num(text):
         except ValueError:
             return text
 
+
 def memoize(func):
     '''
     Memoize aka cache the return output of a function
     given a specific set of arguments
     '''
     cache = {}
+
     def _m(*args):
         if args not in cache:
             cache[args] = func(*args)

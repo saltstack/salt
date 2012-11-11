@@ -75,3 +75,9 @@ class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout
     '''
+    
+class EauthAuthenticationError(SaltException):
+    '''
+    Thrown when eauth authentication fails
+    '''
+
