@@ -96,6 +96,9 @@ logger = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
+accumulators = {}
+
+
 def _check_user(user, group):
     '''
     Checks if the named user and group are present on the minion
@@ -625,6 +628,11 @@ def managed(name,
             return ret
         if not source:
             return touch(name, makedirs=makedirs)
+
+    if name in accumulators:
+        if not context:
+            context = {}
+        context['accumulator'] = accumulators[name]
 
     if __opts__['test']:
         ret['result'], ret['comment'] = __salt__['file.check_managed'](
@@ -1643,4 +1651,48 @@ def rename(name, source, force=False, makedirs=False):
 
     ret['comment'] = 'Moved "{0}" to "{1}"'.format(source, name)
     ret['changes'] = {name: source}
+    return ret
+
+
+def accumulated(name, filename, text, require_in):
+    '''
+    Prepare accumulator which can me used in template in file.managed state.
+    accumulator dictionary becomes available in template.
+
+    name
+        Accumulator name
+
+    filename
+        Filename which would receive this accumulator (see file.managed state
+        documentation about ''name``)
+
+    text
+        String or list for adding in accumulator
+
+    require_in
+        Required, probably the same as filename
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+    if not filter(lambda x: 'file' in x, require_in):
+        ret['result'] = False
+        ret['comment'] = ('Orphanned accumulator {0} in '
+                          '{1}:{2}'.format(name, kwargs['__sls__'],
+                          kwargs['__id__']))
+        return ret
+    if isinstance(text, string_types):
+        text = (text,)
+    if filename not in accumulators:
+        accumulators[filename] = {}
+    if name not in accumulators[filename]:
+        accumulators[filename][name] = []
+    for chunk in text:
+        if chunk not in accumulators[filename][name]:
+            accumulators[filename][name].append(chunk)
+            ret['comment'] = ('Accumulator {0} for file {1} '
+                              'was charged by text').format(name, filename)
     return ret
