@@ -1466,11 +1466,10 @@ class BaseHighState(object):
                         errors.append(err)
                     else:
                         for inc_sls in state.pop('include'):
-                            for sub_sls in fnmatch.filter(
-                                    self.avail[env], inc_sls):
-                                if sub_sls not in mods:
+                            if fnmatch.filter(self.avail[env], inc_sls):
+                                if inc_sls not in mods:
                                     nstate, mods, err = self.render_state(
-                                            sub_sls,
+                                            inc_sls,
                                             env,
                                             mods
                                             )
@@ -1478,6 +1477,13 @@ class BaseHighState(object):
                                     state.update(nstate)
                                 if err:
                                     errors += err
+                            else:
+                                msg = ('Specified SLS {0} in environment {1} '
+                                       'is not available on the salt master'
+                                       ).format(inc_sls, env)
+                                log.error(msg)
+                                if self.opts['failhard']:
+                                    errors.append(msg)
                 if 'extend' in state:
                     ext = state.pop('extend')
                     for name in ext:
