@@ -8,6 +8,7 @@ __grains__ = {}
 # Change the default outputter to make it more readable
 __outputter__ = {
     'item': 'txt',
+    'ls': 'yaml',
     'items': 'yaml',
 }
 
