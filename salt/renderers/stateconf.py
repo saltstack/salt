@@ -79,8 +79,6 @@ list of features provided by this module.
 """
 
 # TODO:
-#   - names declaration is not supported...
-#
 #   - sls meta/info state: Eg, 
 #       sls_info:
 #         author: Jack Kuan
@@ -116,6 +114,7 @@ list of features provided by this module.
 import logging
 import re
 import getopt
+import copy
 from os import path as ospath
 from cStringIO import StringIO
 
@@ -186,7 +185,12 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
         tmplout = render_template(StringIO(data), env, sls, context=ctx,
                                   argline=rt_argline.strip()
                                   )
-        data = render_data(tmplout, env, sls, argline=rd_argline.strip())
+        high = render_data(tmplout, env, sls, argline=rd_argline.strip())
+
+        # make a copy so that the original, un-preprocessed highstate data
+        # structure can be used later for error checking if anything goes
+        # wrong during the preprocessing.
+        data = copy.deepcopy(high)
         try: 
             rewrite_names_decl(data)
             rewrite_sls_includes_excludes(data, sls)
@@ -203,12 +207,14 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
                 extract_state_confs(data)
 
         except Exception:
-            log.exception((
-                "Error found while pre-processing the salt file, %s.\n"
-                "It's likely due to a formatting error in your salt file.\n"
-                "Pre-processing aborted. Stack trace:---------") % sls)
-            raise
-            #raise SaltRenderError("sls preprocessing/rendering failed!")
+            log.exception(
+                "Error found while pre-processing the salt file, %s.\n" % sls)
+            from salt.state import State
+            state = State(__opts__)
+            errors = state.verify_high(high)
+            if errors:
+                raise SaltRenderError("\n".join(errors))
+            raise SaltRenderError("sls preprocessing/rendering failed!")
         return data
 
     if isinstance(template_file, basestring):
@@ -494,4 +500,5 @@ def extract_state_confs(data, is_extend=False):
                 if requisite in extend:
                     extend[requisite] += to_dict[state_id].get(requisite, [])
             to_dict[state_id].update(STATE_CONF_EXT[state_id])
+
 
