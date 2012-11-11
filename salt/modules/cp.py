@@ -72,7 +72,7 @@ def get_file(path, dest, env='base', template=None, gzip_compression=None):
                 fp_.write(contents)
             data = salt.utils.templates.template_registry[template](
                 tmp_path_fn,
-                string=True,
+                to_str=True,
                 **kwargs
             )
             salt.utils.safe_rm(tmp_path_fn)
