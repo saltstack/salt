@@ -11,8 +11,6 @@ import salt.payload
 import salt.utils
 import salt.output
 import salt.minion
-#from salt._compat import string_types
-#from salt.exceptions import SaltException
 
 
 def active():
