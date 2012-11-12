@@ -2,8 +2,9 @@
 Module for gathering and managing network information
 '''
 
-import sys
-from string import ascii_letters, digits
+# Import Salt libs
+import re
+# Import Salt libs
 from salt.utils.socket_util import sanitize_host
 
 __outputter__ = {
@@ -170,7 +171,6 @@ def _interfaces_ipconfig(out):
     Returns a dictionary of interfaces with various information about each
     (up/down state, ip address, netmask, and hwaddr)
     '''
-    import re
     ifaces = dict()
     iface = None
 
