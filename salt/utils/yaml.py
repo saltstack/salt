@@ -21,11 +21,27 @@ class DuplicateKeyWarning(RuntimeWarning):
 
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
+# with code integrated form https://gist.github.com/844388
+class CustomLoader(yaml.SafeLoader):
+    '''
+    Create a custom yaml loader that uses the custom constructor. This allows
+    for the yaml loading defaults to be manipulated based on needs within salt
+    to make things like sls file more intuitive.
+    '''
+    def __init__(self, stream, dictclass=dict):
+        yaml.SafeLoader.__init__(self, stream)
+        if dictclass is not dict:
+            # then assume ordred dict and use it for both !map and !omap
+            self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
+            self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+        self.dictclass = dictclass
 
-class CustomeConstructor(yaml.constructor.SafeConstructor):
-    '''
-    Create a custom constructor for manageging YAML
-    '''
+    def construct_yaml_map(self, node):
+        data = self.dictclass()
+        yield data
+        value = self.construct_mapping(node)
+        data.update(value)
+
     def construct_mapping(self, node, deep=False):
         '''
         Build the mapping for yaml
@@ -37,7 +53,7 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
 
         self.flatten_mapping(node)
 
-        mapping = {}
+        mapping = self.dictclass()
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
             try:
@@ -66,22 +82,3 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
                 node.value = node.value.lstrip('0')
         return yaml.constructor.SafeConstructor.construct_scalar(self, node)
 
-
-class CustomLoader(yaml.reader.Reader,
-        yaml.scanner.Scanner,
-        yaml.parser.Parser,
-        yaml.composer.Composer,
-        CustomeConstructor,
-        yaml.resolver.Resolver):
-    '''
-    Create a custom yaml loader that uses the custom constructor. This allows
-    for the yaml loading defaults to be manipulated based on needs within salt
-    to make things like sls file more intuitive.
-    '''
-    def __init__(self, stream):
-        yaml.reader.Reader.__init__(self, stream)
-        yaml.scanner.Scanner.__init__(self)
-        yaml.parser.Parser.__init__(self)
-        yaml.composer.Composer.__init__(self)
-        CustomeConstructor.__init__(self)
-        yaml.resolver.Resolver.__init__(self)

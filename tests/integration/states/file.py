@@ -170,8 +170,7 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'recurse_template_dir')
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail',
-            # For some strange reason passing defaults as a map does not work
-            template='jinja', defaults={'spam': _ts}, spam=_ts)
+            template='jinja', defaults={'spam': _ts})
         result = self.state_result(ret)
         self.assertTrue(result)
         self.assertIn(_ts, open(os.path.join(name, 'scene33'), 'r').read())

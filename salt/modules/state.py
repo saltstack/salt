@@ -10,6 +10,9 @@ import logging
 # Import Salt libs
 import salt.state
 import salt.payload
+from salt.utils.yaml import load as yaml_load
+from salt.utils.yaml import CustomLoader as YamlCustomLoader
+import json
 from salt._compat import string_types
 
 __outputter__ = {
@@ -215,14 +218,20 @@ def show_masterstate():
     return st_.compile_master()
 
 
-def single(fun, name, test=None, **kwargs):
+def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
 
+    By default, the values of the kwargs will be parsed as YAML. So, you can
+    specify lists values, or lists of single entry key-value maps, as you
+    would in a YAML salt file. Alternatively, JSON format of keyword values
+    is also supported.
+
     CLI Example::
 
         salt '*' state.single pkg.installed name=vim
+
     '''
     comps = fun.split('.')
     if len(comps) < 2:
@@ -238,5 +247,19 @@ def single(fun, name, test=None, **kwargs):
     err = st_.verify_data(kwargs)
     if err:
         return err
+
+    if kwval_as == 'yaml':
+        def parse_kwval(value):
+            return yaml_load(value, YamlCustomLoader)
+    elif kwval_as == 'json':
+        def parse_kwval(value):
+            return json.loads(value)
+    else:
+        return 'Unknown format(%s) for state keyword arguments!' % kwval_as
+
+    for key, value in kwargs.iteritems():
+        if not key.startswith('__pub_'):
+            kwargs[key] = parse_kwval(value)
+
     return {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
