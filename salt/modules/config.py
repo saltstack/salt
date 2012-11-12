@@ -74,7 +74,7 @@ def valid_fileproto(uri):
         return False
 
 
-def option(value):
+def option(value, default=''):
     '''
     Pass in a generic option and recieve the value that will be assigned
     '''
@@ -86,7 +86,7 @@ def option(value):
         return __pillar__[value]
     elif value in defaults:
         return defaults[value]
-    return ''
+    return default
 
 
 def dot_vals(value):
