@@ -76,12 +76,9 @@ something like this:
         - source: salt://code/flask
 '''
 # Import Python libs
-from contextlib import nested  # For < 2.7 compat
 import os
-import errno
 import shutil
 import difflib
-import hashlib
 import logging
 import copy
 import re
@@ -317,7 +314,6 @@ def _symlink_check(name, target, force):
     '''
     Check the symlink function
     '''
-    ret = None
     if not os.path.exists(name):
         comment = 'Symlink {0} to {1} is set for creation'.format(name, target)
         return None, comment
@@ -1654,7 +1650,7 @@ def rename(name, source, force=False, makedirs=False):
     return ret
 
 
-def accumulated(name, filename, text, require_in=[], watch_in=[]):
+def accumulated(name, filename, text, **kwargs):
     '''
     Prepare accumulator which can me used in template in file.managed state.
     accumulator dictionary becomes available in template.
@@ -1680,7 +1676,7 @@ def accumulated(name, filename, text, require_in=[], watch_in=[]):
         'result': True,
         'comment': ''
     }
-    if not filter(lambda x: 'file' in x, require_in + watch_in):
+    if not filter(lambda x: 'file' in x, kwargs['require_in'] + kwargs['watch_in']):
         ret['result'] = False
         ret['comment'] = ('Orphaned accumulator {0} in '
                           '{1}:{2}'.format(name, kwargs['__sls__'],
