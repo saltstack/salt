@@ -41,7 +41,13 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
 
 
 def version():
-    '''return the version of pkgng'''
+    '''
+    Displays the current version of pkg
+    
+    CLI Example::
+        salt '*' pkgng.version
+    '''
+
     cmd = 'pkg -v'
     return __salt__['cmd.run'](cmd)
 
@@ -100,7 +106,7 @@ def restore(file_name):
 
 def add(pkg_path):
     '''
-    Adds files from remote or local package
+    Install a package from either a local source or remote one
 
     CLI Example::
         salt '*' pkgng.add /tmp/package.txz
@@ -111,6 +117,42 @@ def add(pkg_path):
     cmd = 'pkg add {0}'.format(pkg_path)
     res = __salt__['cmd.run'](cmd)
     return res
+
+
+def audit():
+    '''
+    Audits installed packages against known vulnerabilities
+    
+    CLI Example::
+        salt '*' pkgng.audit
+    '''
+
+    cmd = 'pkg audit -F'
+    return __salt__['cmd.run'](cmd)
+
+
+def install(pkg_name):
+    '''
+    Install package from repositories
+    
+    CLI Example::
+        salt '*' pkgng.install bash
+    '''
+
+    cmd = 'pkg install -y {0}'.format(pkg_name)
+    return __salt__['cmd.run'](cm)
+
+
+def delete(pkg_name):
+    '''
+    Delete a package from the database and system
+    
+    CLI Example::
+        salt '*' pkgng.delete bash
+    '''
+
+    cmd = 'pkg delete -y {0}'.format(pkg_name)
+    return __salt__['cmd.run'](cmd)
 
 
 def info(pkg=None):
@@ -135,3 +177,27 @@ def info(pkg=None):
         res = res.splitlines()
 
     return res
+
+
+def update():
+    '''
+    Refresh PACKAGESITE contents
+
+    CLI Example::
+        salt '*' pkgng.update
+    '''
+
+    cmd = 'pkg update'
+    return __salt__['cmd.run'](cmd)
+
+
+def upgrade():
+    '''
+    Upgrade all packages
+    
+    CLI Example::
+        salt '*' pkgng.upgrade
+    '''
+
+    cmd = 'pkg upgrade -y'
+    return __salt__['cmd.run'](cmd)
