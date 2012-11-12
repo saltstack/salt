@@ -171,13 +171,12 @@ class Cloud(object):
         if 'script' in vm_:
             vm_['os'] = vm_['script']
 
+        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
         try:
             ok = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
         except KeyError as exc:
             print('Failed to create vm {0}. Configuration value {1} needs '
                   'to be set'.format(vm_['name'], exc))
-        if ok != False:
-            saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
 
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
