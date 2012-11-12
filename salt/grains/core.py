@@ -406,6 +406,8 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
+_REPLACE_LINUX_RE = re.compile(r'linux', re.IGNORECASE)
+
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
 # Please see _supported_dists defined at the top of the file
@@ -504,7 +506,7 @@ def os_data():
                                          osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
-        distroname = grains['osfullname'].replace(' Linux', '')
+        distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
         # return the first ten characters with no spaces, lowercased
         shortname = distroname.replace(' ', '').lower()[:10]
         # this maps the long names from the /etc/DISTRO-release files to the
