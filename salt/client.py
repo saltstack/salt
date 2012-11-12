@@ -40,6 +40,7 @@ import salt.payload
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
+import salt.utils.minions
 from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
