@@ -412,6 +412,7 @@ _OS_NAME_MAP = {
     'redhatente': 'RedHat',
     'debian': 'Debian',
     'arch': 'Arch',
+    'gentoobase': 'Gentoo',
     'amazonlinu': 'Amazon',
     'centoslinu': 'CentOS',
     'scientific': 'Scientific',
