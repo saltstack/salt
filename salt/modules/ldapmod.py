@@ -154,6 +154,7 @@ class _LDAPConnection:
         self.binddn = binddn
         self.bindpw = bindpw
         try:
+            # TODO: Support ldaps:// and possibly ldapi://
             self.LDAP = ldap.initialize('ldap://%s:%s' %
                                         (self.server, self.port))
             self.LDAP.protocol_version = 3  # ldap.VERSION3
