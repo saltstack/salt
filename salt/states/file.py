@@ -1654,7 +1654,7 @@ def rename(name, source, force=False, makedirs=False):
     return ret
 
 
-def accumulated(name, filename, text, require_in):
+def accumulated(name, filename, text, require_in=[], watch_in=[]):
     '''
     Prepare accumulator which can me used in template in file.managed state.
     accumulator dictionary becomes available in template.
@@ -1670,7 +1670,9 @@ def accumulated(name, filename, text, require_in):
         String or list for adding in accumulator
 
     require_in
-        Required, probably the same as filename
+    watch_in
+        One of them required for sure we fill up accumulator before we manage
+        the file. Probably the same as filename
     '''
     ret = {
         'name': name,
@@ -1678,7 +1680,7 @@ def accumulated(name, filename, text, require_in):
         'result': True,
         'comment': ''
     }
-    if not filter(lambda x: 'file' in x, require_in):
+    if not filter(lambda x: 'file' in x, require_in + watch_in):
         ret['result'] = False
         ret['comment'] = ('Orphaned accumulator {0} in '
                           '{1}:{2}'.format(name, kwargs['__sls__'],
