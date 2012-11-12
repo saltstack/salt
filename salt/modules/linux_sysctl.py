@@ -12,6 +12,8 @@ __outputter__ = {
     'get': 'txt',
 }
 
+# TODO: Add unpersist() to remove either a sysctl or sysctl/value combo from the config
+
 
 def __virtual__():
     '''
@@ -30,13 +32,10 @@ def show():
     '''
     cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
-    for line in out:
-        if not line:
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if not line or ' = ' not in line:
             continue
-        if ' = ' not in line:
-            continue
-        comps = line.split(' = ')
+        comps = line.split(' = ', 1)
         ret[comps[0]] = comps[1]
     return ret
 
@@ -82,7 +81,7 @@ def assign(name, value):
         else:
             error = out
         raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
-    new_name, new_value = out.split(' = ')
+    new_name, new_value = out.split(' = ', 1)
     ret[new_name] = new_value
     return ret
 
@@ -99,10 +98,26 @@ def persist(name, value, config='/etc/sysctl.conf'):
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
-        open(config, 'w+').write('#\n# Kernel sysctl configuration\n#\n')
+        try:
+            with open(config, 'w+') as _fh:
+                _fh.write('#\n# Kernel sysctl configuration\n#\n')
+        except (IOError, OSError) as exc:
+            msg = 'Could not write to file: {0}'
+            raise CommandExecutionError(msg.format(config))
+
     # Read the existing sysctl.conf
     nlines = []
-    for line in open(config, 'r').readlines():
+    try:
+        with open(config, 'r') as _fh:
+            # Use readlines because this should be a small file
+            # and it seems unnecessary to indent the below for
+            # loop since it is a fairly large block of code.
+            config_data = _fh.readlines()
+    except (IOError, OSError) as exc:
+        msg = 'Could not read from file: {0}'
+        raise CommandExecutionError(msg.format(config))
+
+    for line in config_data:
         if line.startswith('#'):
             nlines.append(line)
             continue
@@ -132,7 +147,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
             if str(comps[1]) == str(value):
                 # It is correct in the config, check if it is correct in /proc
                 if name in running:
-                    if not running[name] == str(value):
+                    if not str(running[name]) == str(value):
                         assign(name, value)
                         return 'Updated'
                 return 'Already set'
@@ -143,6 +158,12 @@ def persist(name, value, config='/etc/sysctl.conf'):
             nlines.append(line)
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
-    open(config, 'w+').writelines(nlines)
+    try:
+        with open(config, 'w+') as _fh:
+            _fh.writelines(nlines)
+    except (IOError, OSError) as exc:
+        msg = 'Could not write to file: {0}'
+        raise CommandExecutionError(msg.format(config))
+
     assign(name, value)
     return 'Updated'

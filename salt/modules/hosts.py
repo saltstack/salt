@@ -9,6 +9,7 @@ def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file
     '''
+    # TODO: Investigate using  "%SystemRoot%\system32" for this
     if __grains__['kernel'].startswith('Windows'):
         return 'C:\Windows\System32\drivers\etc\hosts'
     else:

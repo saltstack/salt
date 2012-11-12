@@ -3,8 +3,9 @@ Control the state system on the minion
 '''
 
 # Import Python libs
-import copy
 import os
+import copy
+import logging
 
 # Import Salt libs
 import salt.state
@@ -15,11 +16,13 @@ import json
 from salt._compat import string_types
 
 __outputter__ = {
-                 'highstate': 'highstate',
-                 'sls': 'highstate',
-                 'top': 'highstate',
-                 'single': 'highstate',
-                 }
+    'sls': 'highstate',
+    'top': 'highstate',
+    'single': 'highstate',
+    'highstate': 'highstate',
+}
+
+log = logging.getLogger(__name__)
 
 
 def low(data):
@@ -85,13 +88,24 @@ def highstate(test=None, **kwargs):
     '''
     salt.utils.daemonize_if(__opts__, **kwargs)
     opts = copy.copy(__opts__)
+
     if not test is None:
         opts['test'] = test
+
     st_ = salt.state.HighState(opts)
     ret = st_.call_highstate()
     serial = salt.payload.Serial(__opts__)
-    with open(os.path.join(__opts__['cachedir'], 'highstate.p'), 'w+') as fp_:
-        serial.dump(ret, fp_)
+    cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
+
+    # Not 100% if this should be fatal or not,
+    # but I'm guessing it likely should not be.
+    try:
+        with open(cache_file, 'w+') as fp_:
+            serial.dump(ret, fp_)
+    except (IOError, OSError) as exc:
+        msg = "Unable to write to 'state.highstate' cache file {0}"
+        log.error(msg.format(cache_file))
+
     return ret
 
 
@@ -105,19 +119,30 @@ def sls(mods, env='base', test=None, **kwargs):
         salt '*' state.sls core,edit.vim dev
     '''
     opts = copy.copy(__opts__)
+
     if not test is None:
         opts['test'] = test
+
     salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts)
+
     if isinstance(mods, string_types):
         mods = mods.split(',')
+
     high, errors = st_.render_highstate({env: mods})
+
     if errors:
         return errors
+
     ret = st_.state.call_high(high)
     serial = salt.payload.Serial(__opts__)
-    with open(os.path.join(__opts__['cachedir'], 'sls.p'), 'w+') as fp_:
-        serial.dump(ret, fp_)
+    cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
+    try:
+        with open(cache_file, 'w+') as fp_:
+            serial.dump(ret, fp_)
+    except (IOError, OSError) as exc:
+        msg = "Unable to write to 'state.sls' cache file {0}"
+        log.error(msg.format(cache_file))
     return ret
 
 
