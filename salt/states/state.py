@@ -1,4 +1,4 @@
-"""
+'''
 This module is similar to the built-in cmd state module except that rather
 than always resulting in a changed state, the state of a command or script
 execution is determined by the command or the script itself.
@@ -58,29 +58,33 @@ And an example salt files using this module::
 
 Note that instead of using `cmd.wait` in the example, `state.wait` can be
 used, and in which case it can then be watched by some other states.
+'''
 
-"""
+# Import python libs
 import json
 import shlex
-
-import salt.state
 import copy
-
 import logging
+
+# Import Salt libs
+import salt.state
 log = logging.getLogger(__name__)
 
 
 def run(name, **kws):
-    return _reinterpreted_state(_delegate_to_state("cmd.run", name, **kws))
+    return _reinterpreted_state(_delegate_to_state('cmd.run', name, **kws))
+
 
 def script(name, **kws):
-    return _reinterpreted_state(_delegate_to_state("cmd.script", name, **kws))
+    return _reinterpreted_state(_delegate_to_state('cmd.script', name, **kws))
+
 
 def wait(name, **kws):
-    return _reinterpreted_state(_delegate_to_state("cmd.wait", name, **kws))
+    return _reinterpreted_state(_delegate_to_state('cmd.wait', name, **kws))
+
 
 def wait_script(name, **kws):
-    return _reinterpreted_state(_delegate_to_state("cmd.wait_script", name, **kws))
+    return _reinterpreted_state(_delegate_to_state('cmd.wait_script', name, **kws))
 
 
 # basically just a copy & paste from the salt built-in cmd state module.
@@ -94,9 +98,10 @@ def mod_watch(name, **kwargs):
         return script(name, **kwargs)
 
 
-
 def _delegate_to_state(func, name, **kws):
-    """Delegate execution to a state function with arguments(name+kws)."""
+    '''
+    Delegate execution to a state function with arguments(name+kws).
+    '''
 
     # eg, _delegate_to_state("cmd.run", "echo hello", cwd="/")
 
@@ -110,12 +115,14 @@ def _delegate_to_state(func, name, **kws):
     err = st_.verify_data(kws)
     if err:
         log.error(str(err))
-        raise Exception("Failed verifying state input!")
+        raise Exception('Failed verifying state input!')
     return st_.call(kws)
 
 
 def _reinterpreted_state(state):
-    """Re-interpret the state return by salt.sate.run using our protocol."""
+    '''
+    Re-interpret the state return by salt.sate.run using our protocol.
+    '''
     ret = state['changes']
     state['changes'] = {}
     state['comment'] = ''
@@ -131,7 +138,7 @@ def _reinterpreted_state(state):
         d = json.loads(out)
         if not isinstance(d, dict):
             return _failout(state,
-                       "script JSON output must be a JSON object(ie, {})!")
+                       'script JSON output must be a JSON object(ie, {})!')
         is_json = True
     except Exception:
         idx = out.rstrip().rfind('\n')
@@ -144,8 +151,8 @@ def _reinterpreted_state(state):
                 d[k] = v
         except ValueError:
             return _failout(state,
-                "Failed parsing script output! "
-                "Stdout must be JSON or a line of name=value pairs.")
+                'Failed parsing script output! '
+                'Stdout must be JSON or a line of name=value pairs.')
 
     changed = _is_true(d.get('changed', 'no'))
     
@@ -168,24 +175,24 @@ def _reinterpreted_state(state):
     return state        
 
 
-
-
 def _failout(state, msg):
     state['comment'] = msg
     state['result'] = False
     return state
 
-def _is_true(v):
-    if v and str(v).lower() in ("true", "yes", "1"):
-        return True
-    elif str(v).lower() in ("false", "no", "0"):
-        return False
-    raise ValueError("Failed parsing boolean value: %s" % str(v))
 
+def _is_true(v):
+    if v and str(v).lower() in ('true', 'yes', '1'):
+        return True
+    elif str(v).lower() in ('false', 'no', '0'):
+        return False
+    raise ValueError('Failed parsing boolean value: {0}'.format(v))
 
 
 def _no_op(name, **kws):
-    """No-op state to support state config via the stateconf renderer."""
+    '''
+    No-op state to support state config via the stateconf renderer.
+    '''
     return dict(name=name, result=True, changes={}, comment='')
 
 config = _no_op
