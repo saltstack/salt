@@ -173,6 +173,7 @@ def destroy(name):
         print('Failed to Destroy VM: {0}'.format(name))
         return False
 
+
 def list_nodes():
     '''
     Return a list of the vms that are on the provider
@@ -190,9 +191,10 @@ def list_nodes():
                 'state': node.state}
     return ret
 
+
 def list_nodes_full():
     '''
-    Return a list of the vms that are on the provider
+    Return a list of the vms that are on the provider, with all fields
     '''
     conn = get_conn() 
     nodes = conn.list_nodes()
@@ -201,6 +203,27 @@ def list_nodes_full():
         pairs = {}
         for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
             pairs[key] = value
+        ret[node.name] = pairs
+    return ret
+
+
+def list_nodes_select():
+    '''
+    Return a list of the vms that are on the provider, with select fields
+    '''
+    conn = get_conn() 
+    nodes = conn.list_nodes()
+    ret = {}
+    import sys
+    from pprint import pprint
+    for node in nodes:
+        pairs = {}
+        data = node.__dict__
+        data.update(node.extra)
+        for key in data:
+            if str(key) in __opts__['query.selection']:
+                value = data[key]
+                pairs[key] = value
         ret[node.name] = pairs
     return ret
 
