@@ -504,7 +504,7 @@ def os_data():
                                          osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
-        distroname = grains['osfullname'].replace(' Linux', '')
+        distroname = grains['osfullname'].replace('Linux', '').strip()
         # return the first ten characters with no spaces, lowercased
         shortname = distroname.replace(' ', '').lower()[:10]
         # this maps the long names from the /etc/DISTRO-release files to the
