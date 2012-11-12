@@ -2,12 +2,18 @@
 Package support for openSUSE via the zypper package manager
 '''
 
+import salt.utils
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
-    return 'pkg' if __grains__.get('os_family', '') == 'Suse' else False
+    if __grains__.get('os_family', '') != 'Suse':
+        return False
+    # Not all versions of Suse use zypper, check that it is available
+    if salt.utils.which('zypper'):
+        return False
+    return 'pkg'
 
 
 def _list_removed(old, new):
