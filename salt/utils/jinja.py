@@ -52,7 +52,10 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.env = env
         self.encoding = encoding
-        self.searchpath = path.join(opts['cachedir'], 'files', env)
+        if opts.get('file_client', 'remote') == 'local':
+            self.searchpath = opts['file_roots'][env]
+        else:
+            self.searchpath = path.join(opts['cachedir'], 'files', env)
         log.debug('Jinja search path: \'{0}\''.format(self.searchpath))
         self._file_client = None
         self.cached = []
