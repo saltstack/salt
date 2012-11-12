@@ -168,7 +168,7 @@ def set_fstab(
     present = False
 
     if not os.path.isfile(config):
-        raise CommandExecutionError("Bad config file '{0}'".format(config))
+        raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
         with open(config, 'r') as fh:
@@ -214,8 +214,8 @@ def set_fstab(
                 else:
                     lines.append(line)
     except (IOError, OSError) as exc:
-        msg = "Couldn't write to {0}: {1}"
-        raise CommandExecutionError(msg.format(conf, str(exc)))
+        msg = 'Couldn\'t write to {0}: {1}'
+        raise CommandExecutionError(msg.format(config, str(exc)))
 
     if change:
         try:
@@ -224,7 +224,7 @@ def set_fstab(
                 fh.writelines(lines)
         except (IOError, OSError) as exc:
             msg = 'File not writable {0}'
-            raise CommandExecutionError(msg.format(filename))
+            raise CommandExecutionError(msg.format(config))
 
         return 'change'
 
@@ -244,7 +244,7 @@ def set_fstab(
                 fh.writelines(lines)
         except (IOError, OSError) as exc:
             msg = 'File not writable {0}'
-            raise CommandExecutionError(msg.format(filename))
+            raise CommandExecutionError(msg.format(config))
     if present and not change:
         # The right entry is already here
         return 'present'
