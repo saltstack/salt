@@ -237,7 +237,7 @@ def create(vm_):
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
     volumes = vm_.get('map_volumes')
-    if volumes != {}:
+    if volumes:
         print ('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes,location, data)
 
