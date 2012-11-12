@@ -110,6 +110,14 @@ class SaltCloud(object):
                 help=('Execute a query and return all information about the '
                       'nodes running on configured cloud providers'))
 
+        parser.add_option('-S',
+                '--select-query',
+                dest='select_query',
+                default=False,
+                action='store_true',
+                help=('Execute a query and return select information about '
+                      'the nodes running on configured cloud providers'))
+
         parser.add_option('--list-locations',
                 dest='list_locations',
                 default=False,
@@ -216,10 +224,12 @@ class SaltCloud(object):
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.opts)
 
-        if self.opts['query'] or self.opts['full_query']:
+        if self.opts['query'] or self.opts['full_query'] or self.opts['select_query']:
             query = 'list_nodes'
             if self.opts['full_query']:
                 query = 'list_nodes_full'
+            elif self.opts['select_query']:
+                query = 'list_nodes_select'
 
             query_map = {}
             if self.opts['map']:
