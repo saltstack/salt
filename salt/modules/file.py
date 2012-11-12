@@ -57,6 +57,12 @@ def __clean_tmp(sfn):
             os.remove(sfn)
 
 
+def _error(ret, err_msg):
+    ret['result'] = False
+    ret['comment'] = err_msg
+    return ret
+
+
 def _is_bin(path):
     '''
     Return True if a file is a bin, just checks for NULL char, this should be
