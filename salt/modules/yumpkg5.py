@@ -12,6 +12,10 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
+    # Ignore this module for distros with no osrelease (i.e. rolling release
+    # distros such as Arch and Gentoo).
+    if not __grains__.get('osrelease'): return False
+
     # Work only on RHEL/Fedora based distros with python 2.6 or greater
     os_grain = __grains__['os']
     os_family = __grains__['os_family']
