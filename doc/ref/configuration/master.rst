@@ -466,7 +466,7 @@ Default: ``base: [/srv/pillar]``
 
 .. code-block:: yaml
 
-    file_roots:
+    pillar_roots:
       base:
         - /srv/pillar/
       dev:
