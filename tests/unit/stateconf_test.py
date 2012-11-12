@@ -7,7 +7,11 @@ import salt.config
 
 REQUISITES = ["require", "require_in", "use", "use_in", "watch", "watch_in"]
 
-OPTS = salt.config.minion_config('whatever, just load the defaults!')
+OPTS = salt.config.master_config('whatever, just load the defaults!')
+# we should have used minion_config(), but that would try to resolve
+# the master hostname, and retry for 30 seconds! Lucily for our purpose,
+# master conf or minion conf, it doesn't matter.
+
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/'])
 

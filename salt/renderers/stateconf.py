@@ -258,7 +258,9 @@ def render(template_file, env='', sls='', argline='', **kws):
         raise INVALID_USAGE_ERROR
 
     def process_sls_data(data, context=None, extract=False):
-        ctx = dict(sls_dir=ospath.dirname(sls.replace('.', ospath.sep)))
+        sls_dir=ospath.dirname(sls.replace('.', ospath.sep))
+        ctx = dict(sls_dir=sls_dir if sls_dir else '.')
+        
         if context:
             ctx.update(context)
         tmplout = render_template(StringIO(data), env, sls, context=ctx,
