@@ -30,17 +30,23 @@ class StateConfigRendererTestCase(TestCase):
     - name1: value1
     - name2: value2
 
+.extra:
+  state:
+    - config
+    - name: value
+
 # --- end of state config ---  
 
 test:
   cmd.run:
-    - name: echo name1={{sls_params.name1}} name2={{sls_params.name2}}
+    - name: echo name1={{sls_params.name1}} name2={{sls_params.name2}} {{extra.name}}
     - cwd: /
 """, sls='test')
-        self.assertEqual(len(result), 2)
+        self.assertEqual(len(result), 3)
         self.assertTrue('test::sls_params' in result and 'test' in result)
+        self.assertTrue('test::extra' in result)
         self.assertEqual(result['test']['cmd.run'][0]['name'],
-                         'echo name1=value1 name2=value2')
+                         'echo name1=value1 name2=value2 value')
 
 
     def test_sls_dir(self):

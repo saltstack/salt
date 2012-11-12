@@ -1,81 +1,157 @@
-# Module taken and modified from Salt's built-in yaml_mako.py renderer.
-#
 """
 This module provides a custom renderer that process a salt file with a
 specified templating engine(eg, jinja) and a chosen data renderer(eg, yaml),
-extract arguments for any ``state.config`` and provide the extracted
+extract arguments for any ``state.config`` state and provide the extracted
 arguments (including salt specific args, such as 'require', etc) as template
 context. The goal is to make writing reusable/configurable/ parameterized
-salt files easier and cleaner.
+salt files easier and cleaner, therefore, additionally, it also:
 
-Here's a contrived example using this renderer::
-
-    apache.sls:
-    ------------
-    #!stateconf yaml.mako
-
-    apache:
-      state.config:
-        - port: 80
-        - source_conf: /path/to/httpd.conf
-
-        - require_in:
-          - cmd: apache_configured
-
-    # --- end of state config ---
-
-    apache_configured:
-      cmd.run:
-        - name: echo apached configured with port ${apache.port} using conf from ${apache.source_conf}
-        - cwd: /
+  - Adds support of absolute(eg, ``salt://path/to/salt/file``) and relative(eg,
+    ``path/to/salt/file``) template inclusion or import(ie, with ``<%include/>``
+    or ``<%namespace.../>``) for Mako. Example::
 
 
-    webapp.sls:
-    ------------
-    #!stateconf yaml.mako
+       <%include file="templates/sls-parts.mako"/>
+       <%namespace file="salt://lib/templates/utils.mako" import="helper"/>
 
-    include:
-      - apache
+  - Recognizes the special state function, ``state.config``, that configures a
+    default list of named arguments useable within the template context of
+    the salt file. Example::
 
-    extend:
-      apache:
-        state.config:
-          - port: 8080
-          - source_conf: /another/path/to/httpd.conf
+        sls_params:
+          state.config:
+            - name1: value1
+            - name2: value2
+            - name3:
+              - value1
+              - value2
+              - value3
+            - require_in:
+              - cmd: output
 
-    webapp:
-      state.config:
-        - app_port: 1234 
+        # --- end of state config ---
 
-        - require:
-          - state: apache
+        output:
+          cmd.run:
+            - name: |
+                echo 'name1=${sls_params.name1}
+                      name2=${sls_params.name2}
+                      name3[1]=${sls_params.name3[1]}
+                '
 
-        - require_in:
-          - cmd: webapp_deployed
+    This even works with ``include`` + ``extend`` so that you can override
+    the default configured arguments by including the salt file and then extend
+    the ``state.config`` states that come from the included salt file.
 
-    # --- end of state config ---
+    Notice that the end of configuration marker(``# --- end of state config --``)
+    is needed to separate the use of 'state.config' form the rest of your salt
+    file.
+        
+  - Adds support for relative include and exclude of .sls files. Example::
 
-    webapp_deployed:
-      cmd.run:
-        - name: echo webapp deployed into apache!
-        - cwd: /
+        include:
+          - .apache
+          - .db.mysql
+
+        exclude:
+          - sls: .users
+
+    If the above is written in a salt file at `salt://some/where.sls` then
+    it will include `salt://some/apache.sls` and `salt://some/db/mysql.sls`,
+    and exclude `salt://some/users.ssl`. Actually, it does that by rewriting
+    the above ``include`` and ``exclude`` into::
+
+        include:
+          - some.apache
+          - some.db.mysql
+
+        exclude:
+          - sls: some.users
 
 
-``state.config`` let's you declare and set default values for the parameters
-used by your salt file. These parameters will be available in your template 
-context, so you can generate the rest of your salt file according to their
-values. And your parameterized salt file can be included and then extended
-just like any other salt files! So, with the above two salt files, running
-``state.highstate`` will actually output::
+  - Adds a ``sls_dir`` context variable that expands to the directory containing
+    the rendering salt file. So, you can write ``salt://${sls_dir}/...`` to
+    reference templates files used by your salt file.
 
-  apache configured with port 8080 using conf from /another/path/to/httpd.conf
+  - Prefixes any state id(declaration or reference) that starts with a dot(``.``)
+    to avoid duplicated state ids when the salt file is included by other salt
+    files.
+    
+    For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
+    will be turned into ``some.file::sls_params``.
 
-Notice that the end of configuration marker(``# --- end of state config --``)
-is needed to separate the use of 'state.config' form the rest of your salt
-file, and don't forget to put the ``#!stateconf yaml.mako`` shangbang at the
-beginning of your salt files. Lastly, you need to have Mako already installed,
-of course. See also https://gist.github.com/1f85e4151c4fab675adb for a complete
-list of features provided by this module.
+    Moreover, the leading dot trick can be used with extending state ids as well,
+    so you can include relatively and extend relatively. For example, when
+    extending a state in `salt://some/other_file.sls`, eg,::
+
+        include:
+          - .file
+
+        extend:
+          .file::sls_params:
+            state.config:
+              - name1: something
+     
+    Above will be pre-processed into::
+
+        include:
+          - some.file
+
+        extend:
+          some.file::sls_params:
+            state.config:
+              - name1: something
+
+  - Optionally(disable via the `-G` renderer option), generates a
+    ``state.config`` goal state(state id named as ``.goal`` by default) that
+    requires all other states in the salt file.
+    
+    Such goal state is intended to be required by some state in an including
+    salt file. For example, in your webapp salt file, if you include a
+    sls file that is supposed to setup Tomcat, you might want to make sure that
+    all states in the Tomcat sls file will be executed before some state in
+    the webapp sls file.
+
+  - Optionally(enable via the `-o` renderer option), orders the states in a sls
+    file by adding a `require`` requisite to each state such that every state
+    requires the state defined just before it. The order of the states here is
+    the order they are defined in the sls file.
+
+    By enabling this feature, you are basically agreeing to author your sls
+    files in a way that gives up the explicit(or implicit?) ordering imposed
+    by the use of ``require``, ``watch``, ``require_in`` or ``watch_in``
+    requisites, and instead, you rely on the order of states you define in
+    the sls files. This may or may not be a better way for you. However, if
+    there are many states defined in a sls file, then it tends to be easier
+    to see the order they will be executed with this feature.
+
+    You are still allow to use all the requisites, with a few restricitons.
+    You cannot ``require`` or ``watch`` a state defined *after* the current
+    state. Similarly, in a state, you cannot ``require_in`` or ``watch_in``
+    a state defined *before* it. Breaking any of the two restrictions above
+    will result in a state loop. The renderer will check for such incorrect
+    uses if this feature is enabled.
+
+    Additionally, ``names`` declarations cannot be used with this feature
+    because the way they are compiled into low states make it impossible to
+    guarantee the order in which they will be executed. This is also checked
+    by the renderer.
+
+    Finally, with the use of this feature, it becomes possible to easily make
+    an included sls file execute all its states *after* some state(say, with
+    id ``X``) in the including sls file.  All you have to do is to make state,
+    ``X``, ``require_in`` the first state defined in the included sls file.
+
+
+When writing sls files with this renderer, you should avoid using what can be
+defined in a ``name`` argument of a state as the state's id. Instead, you
+should define the state id and the name argument separately for each state,
+and the id should be something meaningful and easy to reference within a
+requisite, and when referencing a state from a requisite, you should reference
+the state's id rather than its name. The reason is that this renderer might
+re-write or renames state id's and their references.
+
+
 """
 
 # TODO:
@@ -136,7 +212,10 @@ INVALID_USAGE_ERROR = SaltRenderError(
   "Invalid use of %s renderer!\n"
   """Usage: #!%s [-Go] <data_renderer> [options] . <template_renderer> [options]
 
-Options:
+where an example <data_renderer> would be yaml and a <template_renderer> might
+be jinja. Each renderer can be passed its renderer specific options.
+
+Options(for this renderer):
 
   -G   Do not generate the goal state that requires all other states in the sls.
 
@@ -146,13 +225,13 @@ Options:
 )
 
 
-def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
+def render(template_file, env='', sls='', argline='', **kws):
     NO_GOAL_STATE = False
     IMPLICIT_REQUIRE = False
 
     renderers = kws['renderers']
     opts, args = getopt.getopt(argline.split(), "Go")
-    argline = ' '.join(args)
+    argline = ' '.join(args) if args else 'yaml . jinja'
 
     if ('-G', '') in opts:
         NO_GOAL_STATE = True
@@ -192,10 +271,16 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
         # wrong during the preprocessing.
         data = copy.deepcopy(high)
         try: 
-            rewrite_names_decl(data)
             rewrite_sls_includes_excludes(data, sls)
 
             if not extract and IMPLICIT_REQUIRE:
+                sid = has_names_decls(data)
+                if sid:
+                    raise SaltRenderError(
+                            "'names' declaration(found in state id: %s) "
+                            "is not supported with implicitly ordered"
+                            "states! You should generate the states in a "
+                            "template for-loop instead." % sid)
                 add_implicit_requires(data)
 
             if not extract and not NO_GOAL_STATE:
@@ -206,7 +291,9 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
             if extract:
                 extract_state_confs(data)
 
-        except Exception:
+        except Exception, e:
+            if isinstance(e, SaltRenderError):
+                raise
             log.exception(
                 "Error found while pre-processing the salt file, %s.\n" % sls)
             from salt.state import State
@@ -251,20 +338,12 @@ def render(template_file, env='', sls='', argline='yaml . jinja', **kws):
     return data
 
 
-def rewrite_names_decl(data):
-    """Rewrite any state that uses - names: ... into ones without it."""
-    for gsid, states in data.items():
-        if gsid == 'include' or gsid == 'extend':
+def has_names_decls(data):
+    for sid, _, _, args in statelist(data):
+        if sid == 'extend':
             continue
-        for sname, args in states.iteritems():
-            for item, name, value in nvlist(args):
-                if name == 'names':
-                    args.remove(item)
-                    for sid in value:
-                        if sid in data:
-                            raise SaltRenderError("Duplicate state id: " + sid)
-                        data[sid] = {sname: args[:]}
-                    del data[gsid]
+        for _ in nvlist(args, ['names']):
+            return sid
 
 
 def _parent_sls(sls):
