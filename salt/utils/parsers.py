@@ -728,7 +728,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
 
         if self.options.doc:
             # Include the target
-            if self.args[0] != '*':
+            if not self.args or (self.args and self.args[0] != '*'):
                 self.args.insert(0, '*')
             if len(self.args) < 2 or self.args[1] != 'sys.doc':
                 # Include the function
