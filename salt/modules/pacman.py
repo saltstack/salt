@@ -181,11 +181,11 @@ def install(name, refresh=False, source=None, **kwargs):
 
     if source is not None:
         if __salt__['config.valid_fileproto'](source):
-            # Cached RPM from master
+            # Cached package from master
             pkg_file = __salt__['cp.cache_file'](source)
             pkg_type = 'remote'
         else:
-            # RPM file local to the minion
+            # Package file local to the minion
             pkg_file = source
             pkg_type = 'local'
         pname,pversion = _parse_pkg_meta(pkg_file)
