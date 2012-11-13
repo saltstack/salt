@@ -3,8 +3,10 @@ Package support for Solaris
 '''
 
 # Import Python libs
-import tempfile
 import os
+
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -228,7 +230,7 @@ def install(name, refresh=False, **kwargs):
         basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = tempfile.mkstemp(prefix='salt-')
+        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
         # Write to file then close it.
         os.write(fd, 'email={0}\n'.format(email))
@@ -326,7 +328,7 @@ def remove(name, **kwargs):
         basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = tempfile.mkstemp(prefix='salt-')
+        fd, adminfile = salt.utils.mkstemp(prefix="salt-")
 
         # Write to file then close it.
         os.write(fd, 'email={0}\n'.format(email))
