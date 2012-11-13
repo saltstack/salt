@@ -47,9 +47,9 @@ def __virtual__():
         return False
 
     try:
-        nt = __pillar__['cassandra.nodetool']
-        host = __pillar__['cassandra.host']
-        thrift_port = str(__pillar__['cassandra.thrift_port'])
+        nt = __salt__['config.option']('cassandra.nodetool')
+        host = __salt__['config.option']('cassandra.host')
+        thrift_port = str(__salt__['config.option']('cassandra.thrift_port'))
     except ImportError:
         #log.info('Module failed to load: pycassa is not installed')
         return False
