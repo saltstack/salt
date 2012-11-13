@@ -2,8 +2,12 @@
 Service support for Debian systems - uses update-rc.d and service to modify the system
 '''
 
+# Import Salt libs
 import glob
 import re
+
+# Import Python libs
+import salt.utils
 
 
 def __virtual__():
