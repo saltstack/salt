@@ -1,3 +1,4 @@
 conf/minion.template /etc/salt
 scripts/salt-minion /usr/bin
 scripts/salt-call /usr/bin
+debian/salt-master.service /lib/systemd/system
