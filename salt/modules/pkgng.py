@@ -140,7 +140,7 @@ def install(pkg_name):
     '''
 
     cmd = 'pkg install -y {0}'.format(pkg_name)
-    return __salt__['cmd.run'](cm)
+    return __salt__['cmd.run'](cmd)
 
 
 def delete(pkg_name):
