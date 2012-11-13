@@ -117,8 +117,8 @@ def set_password(name, password):
     if not os.path.isfile(s_file):
         return ret
     lines = []
-    with open(s_file, 'rb') as f:
-        for line in f:
+    with open(s_file, 'rb') as fp_:
+        for line in fp_:
             comps = line.strip().split(':')
             if not comps[0] == name:
                 lines.append(line)
@@ -126,7 +126,8 @@ def set_password(name, password):
             comps[1] = password
             line = ':'.join(comps)
             lines.append('{0}\n'.format(line))
-    with open(s_file, 'w+') as f: f.writelines(lines)
+    with open(s_file, 'w+') as fp_:
+        fp_.writelines(lines)
     uinfo = info(name)
     return uinfo['pwd'] == password
 
