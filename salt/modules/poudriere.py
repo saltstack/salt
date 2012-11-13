@@ -111,7 +111,7 @@ def parse_config(config_file=None):
     ret = {}
     if _check_config_exists(config_file):
         with open(config_file) as f:
-            for line in f.readlines():
+            for line in f:
                 k, y = line.split('=')
                 ret[k] = y
         return ret

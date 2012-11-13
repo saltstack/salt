@@ -60,16 +60,17 @@ def _switch(name, on, config='/etc/rc.conf', **kwargs):
         val = "NO"
 
     if os.path.exists(config):
-        for line in open(config, 'r').readlines():
-            if not line.startswith('{0}_enable='.format(name)):
-                nlines.append(line)
-                continue
-            rest = line[len(line.split()[0]):]  # keep comments etc
-            nlines.append('{0}_enable="{1}"{2}'.format(name, val, rest))
-            edited = True
+        with open(config, 'r') as f:
+            for line in f:
+                if not line.startswith('{0}_enable='.format(name)):
+                    nlines.append(line)
+                    continue
+                rest = line[len(line.split()[0]):]  # keep comments etc
+                nlines.append('{0}_enable="{1}"{2}'.format(name, val, rest))
+                edited = True
     if not edited:
         nlines.append("{0}_enable=\"{1}\"\n".format(name, val))
-    open(config, 'w+').writelines(nlines)
+    with open(config, 'w') as f: f.writelines(nlines)
     return True
 
 
