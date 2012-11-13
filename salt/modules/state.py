@@ -102,8 +102,8 @@ def highstate(test=None, **kwargs):
     try:
         with open(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
-    except (IOError, OSError) as exc:
-        msg = "Unable to write to 'state.highstate' cache file {0}"
+    except (IOError, OSError):
+        msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
 
     return ret
@@ -140,8 +140,8 @@ def sls(mods, env='base', test=None, **kwargs):
     try:
         with open(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
-    except (IOError, OSError) as exc:
-        msg = "Unable to write to 'state.sls' cache file {0}"
+    except (IOError, OSError):
+        msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
     return ret
 
@@ -255,7 +255,7 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
         def parse_kwval(value):
             return json.loads(value)
     else:
-        return 'Unknown format(%s) for state keyword arguments!' % kwval_as
+        return 'Unknown format({0}) for state keyword arguments!'.format(kwval_as)
 
     for key, value in kwargs.iteritems():
         if not key.startswith('__pub_'):
