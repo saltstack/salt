@@ -34,31 +34,25 @@ __outputter__ = {
   'ring': 'txt',
 }
 
+nt = ''
+host = ''
+thrift_port = ''
+
 
 def __virtual__():
     '''
     Only load if pycassa is available and the system is configured
     '''
-    global nt
-    global host
-    global thrift_port
-
     if not load:
         return False
 
-    try:
-        nt = __salt__['config.option']('cassandra.nodetool')
-        host = __salt__['config.option']('cassandra.host')
-        thrift_port = str(__salt__['config.option']('cassandra.thrift_port'))
-    except ImportError:
-        #log.info('Module failed to load: pycassa is not installed')
-        return False
-    except KeyError:
-        #log.info('Module failed to load: cassandra.* pillar '
-        #    'values are incomplete')
-        return False
+    nt = __salt__['config.option']('cassandra.nodetool')
+    host = __salt__['config.option']('cassandra.host')
+    thrift_port = str(__salt__['config.option']('cassandra.thrift_port'))
 
-    return 'cassandra'
+    if nt and host and thrift_port:
+        return 'cassandra'
+    return False
 
 
 def _nodetool(cmd):
