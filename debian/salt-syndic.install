@@ -1,2 +1,2 @@
 scripts/salt-syndic /usr/bin
-debian/salt-master.service /lib/systemd/system
+debian/salt-syndic.service /lib/systemd/system
