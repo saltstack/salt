@@ -216,8 +216,10 @@ __opts__ = {
 
 STATE_FUNC = STATE_NAME = ''
 
-STATE_FUNC = __opts__['stateconf_state_func']
-STATE_NAME = STATE_FUNC.split('.')[0]
+def __init__(opts):
+    global STATE_NAME, STATE_FUNC
+    STATE_FUNC = __opts__['stateconf_state_func']
+    STATE_NAME = STATE_FUNC.split('.')[0]
 
 
 MOD_BASENAME = ospath.basename(__file__)
