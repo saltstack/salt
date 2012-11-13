@@ -33,12 +33,12 @@ def get_yaml_loader(argline):
         opts, args = getopt.getopt(argline.split(), 'o')
     except getopt.GetoptError:
         log.error(
-"""Example usage: #!yaml [-o]
+'''Example usage: #!yaml [-o]
 Options:
   -o   Use OrderedDict for YAML map and omap.
        This option is only useful when combined with another renderer that
        takes advantage of the ordering.
-""")
+''')
         raise
     if ('-o', '') in opts:
         if HAS_ORDERED_DICT:
@@ -46,8 +46,8 @@ Options:
                 return CustomLoader(*args, dictclass=OrderedDict)
             return Loader
         else:
-            log.warn("OrderedDict not available! "
-                     "NOT enabling implicit state ordering for YAML!")
+            log.warn('OrderedDict not available! '
+                     'NOT enabling implicit state ordering for YAML!')
     return CustomLoader
 
 
@@ -59,6 +59,6 @@ def render(yaml_data, env='', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
-                    "{warn} found in salt://{sls} environment={env}".format(
+                    '{warn} found in salt://{sls} environment={env}'.format(
                     warn=item.message, sls=sls, env=env))
         return data if data else {}
