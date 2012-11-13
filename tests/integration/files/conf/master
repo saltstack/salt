@@ -1,6 +1,6 @@
 publish_port: 64505
 ret_port: 64506
-worker_threads: 1
+worker_threads: 2
 root_dir: /tmp/salttest
 pidfile: masterpid
 pki_dir: pki
