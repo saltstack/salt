@@ -175,6 +175,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     start = time.time()
     trycount=0
     while trycount < maxtries:
+        tryconnect = None
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -187,8 +188,9 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
             if key_filename:
                 kwargs['key_filename'] = key_filename
             try:
-                ssh.connect(**kwargs)
+                tryconnect = ssh.connect(**kwargs)
             except (paramiko.AuthenticationException, paramiko.SSHException) as authexc:
+                ssh.close()
                 trycount += 1
                 print('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
@@ -199,10 +201,12 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                     return False
             except Exception as exc:
                 print('There was an error in wait_for_passwd: {0}'.format(exc))
-            return True
+            if tryconnect:
+                return True
+            return False
         except Exception:
-            time.sleep(1)
-            if time.time() - start > timeout:
+            time.sleep(trysleep)
+            if trycount >= maxtries:
                 return False
 
 
