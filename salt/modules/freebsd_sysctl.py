@@ -52,7 +52,8 @@ def show():
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if line.split('.')[0] not in roots:
-            ret[comps[0]] += "{0}\n".format(line)
+            comps = line.split('=')
+            ret[comps[0]] += '{0}\n'.format(line)
             continue
         comps = line.split('=')
         ret[comps[0]] = comps[1]
