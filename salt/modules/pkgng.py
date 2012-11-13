@@ -29,7 +29,7 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
         return 'Unable to find {0} on file system'.format(file_name)
 
     with open(file_name) as f:
-        for line in f.readlines():
+        for line in f:
             if line.startswith("#") or line.startswith("\n"):
                 pass
             else:
