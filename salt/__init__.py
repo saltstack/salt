@@ -6,7 +6,6 @@ Make me some salt!
 import os
 import sys
 import logging
-import getpass
 
 # Import salt libs, the try block bypasses an issue at build time so that
 # modules don't cause the build to fail
