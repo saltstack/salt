@@ -17,7 +17,7 @@ import os
 
 # Import Salt libs
 from salt import exceptions
-from salt.states.git import _fail, _neutral_test
+from salt.states.git import _fail
 
 log = logging.getLogger(__name__)
 
@@ -106,5 +106,4 @@ def dirty(target,
     '''
     Determine if the working directory has been changed.
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     return _fail(ret, 'This function is not implemented yet.')
