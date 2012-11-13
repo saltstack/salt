@@ -11,8 +11,6 @@ import logging
 import tempfile
 import traceback
 
-# Import salt libs
-import salt.utils
 
 logger = logging.getLogger(__name__)
 

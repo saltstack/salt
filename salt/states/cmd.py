@@ -37,7 +37,6 @@ import os
 import copy
 import json
 import shlex
-import copy
 import logging
 
 # Import salt libs

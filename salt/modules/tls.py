@@ -650,7 +650,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
                     )
 
 if __name__ == '__main__':
-    create_ca('koji', days=365, **cert_sample_meta)
+    #create_ca('koji', days=365, **cert_sample_meta)
     create_csr(
             'koji',
             CN='test_system',

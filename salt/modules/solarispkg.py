@@ -2,9 +2,9 @@
 Package support for Solaris
 '''
 
+# Import Python libs
 import tempfile
 import os
-import shutil
 
 
 def __virtual__():
@@ -203,7 +203,10 @@ def install(name, refresh=False, **kwargs):
     if not 'source' in kwargs:
         return 'source option required with solaris pkg installs'
     else:
-        if (kwargs['source']).startswith('salt://') or (kwargs['source']).startswith('http://') or (kwargs['source']).startswith('https://') or (kwargs['source']).startswith('ftp://'):
+        if (kwargs['source']).startswith('salt://') \
+                or (kwargs['source']).startswith('http://') \
+                or (kwargs['source']).startswith('https://') \
+                or (kwargs['source']).startswith('ftp://'):
             pkgname = __salt__['cp.cache_file'](kwargs['source'])
         else:
             pkgname = (kwargs['source'])
@@ -225,20 +228,20 @@ def install(name, refresh=False, **kwargs):
         basedir=kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = tempfile.mkstemp(prefix="salt-")
+        fd, adminfile = tempfile.mkstemp(prefix='salt-')
    
         # Write to file then close it.
-        os.write(fd, "email=%s\n" % email)
-        os.write(fd, "instance=%s\n" % instance)
-        os.write(fd, "partial=%s\n" % partial)
-        os.write(fd, "runlevel=%s\n" % runlevel)
-        os.write(fd, "idepend=%s\n" % idepend)
-        os.write(fd, "rdepend=%s\n" % rdepend)
-        os.write(fd, "space=%s\n" % space)
-        os.write(fd, "setuid=%s\n" % setuid)
-        os.write(fd, "conflict=%s\n" % conflict)
-        os.write(fd, "action=%s\n" % action)
-        os.write(fd, "basedir=%s\n" % basedir)
+        os.write(fd, 'email={0}\n'.format(email))
+        os.write(fd, 'email={'instance={0}\n'.format(instance))
+        os.write(fd, 'email={'partial={0}\n'.format(partial))
+        os.write(fd, 'email={'runlevel={0}\n'.format(runlevel))
+        os.write(fd, 'email={'idepend={0}\n'.format(idepend))
+        os.write(fd, 'email={'rdepend={0}\n'.format(rdepend))
+        os.write(fd, 'email={'space={0}\n'.format(space))
+        os.write(fd, 'email={'setuid={0}\n'.format(setuid))
+        os.write(fd, 'email={'conflict={0}\n'.format(conflict))
+        os.write(fd, 'email={'action={0}\n'.format(action))
+        os.write(fd, 'email={'basedir={0}\n'.format(basedir))
         os.close(fd)
 
     # Get a list of the packages before install so we can diff after to see 
@@ -248,7 +251,7 @@ def install(name, refresh=False, **kwargs):
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
     # Global only?
-    if kwargs.get('current_zone_only') == "True":
+    if kwargs.get('current_zone_only') == 'True':
         cmd += '-G '
 
     cmd += '-d {0} \'all\''.format(pkgname)
@@ -323,20 +326,20 @@ def remove(name, **kwargs):
         basedir=kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = tempfile.mkstemp(prefix="salt-")
+        fd, adminfile = tempfile.mkstemp(prefix='salt-')
    
         # Write to file then close it.
-        os.write(fd, "email=%s\n" % email)
-        os.write(fd, "instance=%s\n" % instance)
-        os.write(fd, "partial=%s\n" % partial)
-        os.write(fd, "runlevel=%s\n" % runlevel)
-        os.write(fd, "idepend=%s\n" % idepend)
-        os.write(fd, "rdepend=%s\n" % rdepend)
-        os.write(fd, "space=%s\n" % space)
-        os.write(fd, "setuid=%s\n" % setuid)
-        os.write(fd, "conflict=%s\n" % conflict)
-        os.write(fd, "action=%s\n" % action)
-        os.write(fd, "basedir=%s\n" % basedir)
+        os.write(fd, 'email={0}\n'.format(email))
+        os.write(fd, 'instance={0}\n'.format(instance))
+        os.write(fd, 'partial={0}\n'.format(partial))
+        os.write(fd, 'runlevel={0}\n'.format(runlevel))
+        os.write(fd, 'idepend={0}\n'.format(idepend))
+        os.write(fd, 'rdepend={0}\n'.format(rdepend))
+        os.write(fd, 'space={0}\n'.format(space))
+        os.write(fd, 'setuid={0}\n'.format(setuid))
+        os.write(fd, 'conflict={0}\n'.format(conflict))
+        os.write(fd, 'action={0}\n'.format(action))
+        os.write(fd, 'basedir={0}\n'.format(basedir))
         os.close(fd)
 
     # Get a list of the currently installed pkgs.
