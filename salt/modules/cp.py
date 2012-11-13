@@ -4,11 +4,11 @@ Minion side functions for salt-cp
 # Import python libs
 import os
 import logging
-import tempfile
 
 # Import salt libs
 import salt.minion
 import salt.fileclient
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -66,8 +66,7 @@ def get_file(path, dest, env='base', template=None, gzip_compression=None):
 
         def _render(contents):
             # write out path to temp file
-            fd_, tmp_path_fn = tempfile.mkstemp()
-            os.close(fd_)
+            tmp_path_fn = salt.utils.mkstemp()
             with open(tmp_path_fn, 'w+') as fp_:
                 fp_.write(contents)
             data = salt.utils.templates.template_registry[template](

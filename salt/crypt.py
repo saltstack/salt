@@ -10,7 +10,6 @@ import sys
 import hmac
 import hashlib
 import logging
-import tempfile
 
 # Import Cryptography libs
 from M2Crypto import RSA
@@ -171,8 +170,7 @@ class Auth(object):
         '''
         payload = {}
         key = self.get_keys()
-        fd_, tmp_pub = tempfile.mkstemp()
-        os.close(fd_)
+        tmp_pub = salt.utils.mkstemp()
         key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}

@@ -433,8 +433,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
                 )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
-    fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
-    os.close(fd_)
+    tgt = mkstemp(prefix=bname, dir=dname)
     shutil.copyfile(source, tgt)
     mask = os.umask(0)
     os.umask(mask)
@@ -725,3 +724,19 @@ def memoize(func):
             cache[args] = func(*args)
         return cache[args]
     return _m
+
+
+def mkstemp(*args, **kwargs):
+    '''
+    Helper function which does exactly what `tempfile.mkstemp()` does but
+    accepts another argument, `close_fd`, which, by default, is true and closes
+    the fd before returning the file path. Something commonly done throughout
+    Salt's code.
+    '''
+    close_fd = kwargs.pop('close_fd', True)
+    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
+    if close_fd is True:
+        os.close(fd_)
+        del(fd_)
+        return fpath
+    return (fd_, fpath)
