@@ -105,27 +105,28 @@ def persist(name, value, config='/etc/sysctl.conf'):
     edited = False
     value = str(value)
 
-    for l in open(config, 'r').readlines():
-        if not l.startswith('{0}='.format(name)):
-            nlines.append(l)
-            continue
-        else:
-            k, rest = l.split('=', 1)
-            if rest.startswith('"'):
-                z, v, rest = rest.split('"', 2)
-            elif rest.startswith('\''):
-                z, v, rest = rest.split('\'', 2)
+    with open(config, 'r') as f:
+        for l in f:
+            if not l.startswith('{0}='.format(name)):
+                nlines.append(l)
+                continue
             else:
-                v = rest.split()[0]
-                rest = rest[len(v):]
-            if v == value:
-                return 'Already set'
-            new_line = _formatfor(k, value, config, rest)
-            nlines.append(new_line)
-            edited = True
+                k, rest = l.split('=', 1)
+                if rest.startswith('"'):
+                    z, v, rest = rest.split('"', 2)
+                elif rest.startswith('\''):
+                    z, v, rest = rest.split('\'', 2)
+                else:
+                    v = rest.split()[0]
+                    rest = rest[len(v):]
+                if v == value:
+                    return 'Already set'
+                new_line = _formatfor(k, value, config, rest)
+                nlines.append(new_line)
+                edited = True
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
-    open(config, 'w+').writelines(nlines)
+    with open(config, 'w+') as f: f.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)
     return 'Updated'

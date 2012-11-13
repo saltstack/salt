@@ -78,22 +78,23 @@ def fstab(config='/etc/fstab'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    for line in open(config).readlines():
-        if line.startswith('#'):
-            # Commented
-            continue
-        if not line.strip():
-            # Blank line
-            continue
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            continue
-        ret[comps[1]] = {'device': comps[0],
-                         'fstype': comps[2],
-                         'opts': comps[3].split(','),
-                         'dump': comps[4],
-                         'pass': comps[5]}
+    with open(config) as f:
+        for line in f:
+            if line.startswith('#'):
+                # Commented
+                continue
+            if not line.strip():
+                # Blank line
+                continue
+            comps = line.split()
+            if not len(comps) == 6:
+                # Invalid entry
+                continue
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': comps[3].split(','),
+                             'dump': comps[4],
+                             'pass': comps[5]}
     return ret
 
 

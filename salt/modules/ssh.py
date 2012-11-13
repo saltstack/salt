@@ -66,24 +66,25 @@ def _replace_auth_key(
     lines = []
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
-    for line in open(full, 'r').readlines():
-        if line.startswith('#'):
-            # Commented Line
-            lines.append(line)
-            continue
-        comps = line.split()
-        if len(comps) < 2:
-            # Not a valid line
-            lines.append(line)
-            continue
-        key_ind = 1
-        if comps[0][:4:] not in ['ssh-', 'ecds']:
-            key_ind = 2
-        if comps[key_ind] == key:
-            lines.append(auth_line)
-        else:
-            lines.append(line)
-    open(full, 'w+').writelines(lines)
+    with open(full, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                # Commented Line
+                lines.append(line)
+                continue
+            comps = line.split()
+            if len(comps) < 2:
+                # Not a valid line
+                lines.append(line)
+                continue
+            key_ind = 1
+            if comps[0][:4:] not in ['ssh-', 'ecds']:
+                key_ind = 2
+            if comps[key_ind] == key:
+                lines.append(auth_line)
+            else:
+                lines.append(line)
+    with open(full, 'w+') as f: f.writelines(lines)
 
 
 def _validate_keys(key_file):
@@ -93,41 +94,42 @@ def _validate_keys(key_file):
     ret = {}
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     try:
-        for line in open(key_file, 'r').readlines():
-            if line.startswith('#'):
-                # Commented Line
-                continue
+        with open(key_file, 'r') as f:
+            for line in f:
+                if line.startswith('#'):
+                    # Commented Line
+                    continue
 
-            # get "{options} key"
-            ln = re.search(linere, line)
-            if not ln:
-                # not an auth ssh key, perhaps a blank line
-                continue
+                # get "{options} key"
+                ln = re.search(linere, line)
+                if not ln:
+                    # not an auth ssh key, perhaps a blank line
+                    continue
 
-            opts = ln.group(1)
-            comps = ln.group(2).split()
+                opts = ln.group(1)
+                comps = ln.group(2).split()
 
-            if len(comps) < 2:
-                # Not a valid line
-                continue
+                if len(comps) < 2:
+                    # Not a valid line
+                    continue
 
-            if opts:
-                # It has options, grab them
-                options = opts.split(',')
-            else:
-                options = []
+                if opts:
+                    # It has options, grab them
+                    options = opts.split(',')
+                else:
+                    options = []
 
-            enc = comps[0]
-            key = comps[1]
-            comment = ' '.join(comps[2:])
-            fingerprint = _fingerprint(key)
-            if fingerprint is None:
-                continue
+                enc = comps[0]
+                key = comps[1]
+                comment = ' '.join(comps[2:])
+                fingerprint = _fingerprint(key)
+                if fingerprint is None:
+                    continue
 
-            ret[key] = {'enc': enc,
-                        'comment': comment,
-                        'options': options,
-                        'fingerprint': fingerprint}
+                ret[key] = {'enc': enc,
+                            'comment': comment,
+                            'options': options,
+                            'fingerprint': fingerprint}
     except IOError:
         return {}
 
@@ -257,32 +259,33 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         if not os.path.isfile(full):
             return 'User authorized keys file not present'
         lines = []
-        for line in open(full, 'r').readlines():
-            if line.startswith('#'):
-                # Commented Line
-                lines.append(line)
-                continue
+        with open(full, 'r') as f:
+            for line in f:
+                if line.startswith('#'):
+                    # Commented Line
+                    lines.append(line)
+                    continue
 
-            # get "{options} key"
-            ln = re.search(linere, line)
-            if not ln:
-                # not an auth ssh key, perhaps a blank line
-                continue
+                # get "{options} key"
+                ln = re.search(linere, line)
+                if not ln:
+                    # not an auth ssh key, perhaps a blank line
+                    continue
 
-            comps = ln.group(2).split()
+                comps = ln.group(2).split()
 
-            if len(comps) < 2:
-                # Not a valid line
-                lines.append(line)
-                continue
+                if len(comps) < 2:
+                    # Not a valid line
+                    lines.append(line)
+                    continue
 
-            pkey = comps[1]
+                pkey = comps[1]
 
-            if pkey == key:
-                continue
-            else:
-                lines.append(line)
-        open(full, 'w+').writelines(lines)
+                if pkey == key:
+                    continue
+                else:
+                    lines.append(line)
+        with open(full, 'w+') as f: f.writelines(lines)
         return 'Key removed'
     return 'Key not present'
 
