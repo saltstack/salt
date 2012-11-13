@@ -5,7 +5,6 @@ Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
 # Import Python libs
-import pipes
 import logging
 import os
 import shutil

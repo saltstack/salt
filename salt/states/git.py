@@ -72,7 +72,7 @@ def latest(name,
                         ('Repository {0} update is probably required (current '
                         'revision is {1})').format(target, current_rev))
 
-            pull_out = __salt__['git.pull'](target, user=runas)
+            __salt__['git.pull'](target, user=runas)
 
             if rev:
                 __salt__['git.checkout'](target, rev, user=runas)
@@ -119,7 +119,7 @@ def latest(name,
                         name, target))
         try:
             # make the clone
-            result = __salt__['git.clone'](target, name, user=runas)
+            __salt__['git.clone'](target, name, user=runas)
 
             if rev:
                 __salt__['git.checkout'](target, rev, user=runas)

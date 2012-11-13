@@ -61,7 +61,6 @@ def image_create(**kwargs):
         glance help image-create
     '''
     nt = _auth()
-    ret = {}
     CREATE_PARAMS = glanceclient.v1.images.CREATE_PARAMS
     fields = dict(filter(lambda x: x[0] in CREATE_PARAMS, kwargs.items()))
 

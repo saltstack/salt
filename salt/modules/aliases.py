@@ -41,12 +41,13 @@ def __parse_aliases():
     ret = []
     if not os.path.isfile(afn):
         return ret
-    for line in open(afn).readlines():
-        m = __ALIAS_RE.match(line)
-        if m:
-            ret.append(m.groups())
-        else:
-            ret.append((None, None, line.strip()))
+    with open(afn, 'r') as f:
+        for line in f:
+            m = __ALIAS_RE.match(line)
+            if m:
+                ret.append(m.groups())
+            else:
+                ret.append((None, None, line.strip()))
     return ret
 
 

@@ -8,13 +8,13 @@ getTerminalSize()
 '''
 
 # Import python libs
+import os
 import platform
 import struct
 import ctypes
 import subprocess
 import fcntl
 import termios
-import struct
 
 __all__ = ['getTerminalSize']
 

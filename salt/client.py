@@ -29,7 +29,6 @@ The data structure needs to be:
 # This means that the primary client to build is, the LocalClient
 
 import os
-import sys
 import glob
 import time
 import getpass

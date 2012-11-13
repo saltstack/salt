@@ -19,6 +19,7 @@ import getpass
 import hashlib
 import difflib
 import fnmatch
+import errno
 try:
     import grp
     import pwd
@@ -1526,13 +1527,16 @@ def makedirs_perms(name, user=None, group=None, mode=0755):
     if head and tail and not path.exists(head):
         try:
             makedirs_perms(head, user, group, mode)
-        except OSError, e:
+        except OSError as exc:
             # be happy if someone already created the path
-            if e.errno != errno.EEXIST:
+            if exc.errno != errno.EEXIST:
                 raise
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
     mkdir(name)
-    check_perms(name, None, user, group, int("%o" % mode) if mode else None)
-
-
+    check_perms(
+            name,
+            None,
+            user,
+            group,
+            int('{0}'.format(mode)) if mode else None)

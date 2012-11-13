@@ -1,11 +1,12 @@
-from saltunittest import TestCase, TestLoader, TextTestRunner
-
+# Import Python libs
 from cStringIO import StringIO
 
+# Import Salt libs
+from saltunittest import TestCase
 import salt.loader
 import salt.config
 
-REQUISITES = ["require", "require_in", "use", "use_in", "watch", "watch_in"]
+REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
 OPTS = salt.config.master_config('whatever, just load the defaults!')
 # we should have used minion_config(), but that would try to resolve
@@ -28,7 +29,7 @@ def render_sls(content, sls='', env='base', argline='-G yaml . jinja', **kws):
 class StateConfigRendererTestCase(TestCase):
 
     def test_state_config(self):
-        result = render_sls("""
+        result = render_sls('''
 .sls_params:
   state.config:
     - name1: value1
@@ -45,7 +46,7 @@ test:
   cmd.run:
     - name: echo name1={{sls_params.name1}} name2={{sls_params.name2}} {{extra.name}}
     - cwd: /
-""", sls='test')
+''', sls='test')
         self.assertEqual(len(result), 3)
         self.assertTrue('test::sls_params' in result and 'test' in result)
         self.assertTrue('test::extra' in result)
@@ -54,18 +55,18 @@ test:
 
 
     def test_sls_dir(self):
-        result = render_sls("""
+        result = render_sls('''
 test:
   cmd.run:
     - name: echo sls_dir={{sls_dir}}
     - cwd: /
-""", sls='path.to.sls')
+''', sls='path.to.sls')
         self.assertEqual(result['test']['cmd.run'][0]['name'],
                          'echo sls_dir=path/to')
 
 
     def test_state_prefix(self):
-        result = render_sls("""
+        result = render_sls('''
 .test:
   cmd.run:
     - name: echo renamed
@@ -76,7 +77,7 @@ state_id:
     - run
     - name: echo not renamed
     - cwd: /
-""", sls='test')
+''', sls='test')
         self.assertEqual(len(result), 2)
         self.assertTrue('test::test' in result)
         self.assertTrue('state_id' in result)
@@ -84,7 +85,7 @@ state_id:
 
     def test_dot_state_id_in_requisites(self):
         for req in REQUISITES:
-            result = render_sls("""
+            result = render_sls('''
 .test:
   cmd.run:
     - name: echo renamed
@@ -94,10 +95,10 @@ state_id:
   cmd.run:
     - name: echo not renamed
     - cwd: /
-    - %s:
+    - {0}:
       - cmd: .test
 
-    """ % req, sls='test')
+    '''.format(req), sls='test')
             self.assertEqual(len(result), 2)
             self.assertTrue('test::test' in result)
             self.assertTrue('state_id' in result)
@@ -107,7 +108,7 @@ state_id:
 
     def test_relative_include_with_requisites(self):
         for req in REQUISITES:
-            result = render_sls("""
+            result = render_sls('''
 include:
   - some.helper
   - .utils
@@ -116,16 +117,16 @@ state_id:
   cmd.run:
     - name: echo test
     - cwd: /
-    - %s:
+    - {0}:
       - cmd: .utils::some_state
-""" % req, sls='test.work')
+'''.format(req), sls='test.work')
             self.assertEqual(result['include'][1], 'test.utils')
             self.assertEqual(result['state_id']['cmd.run'][2][req][0]['cmd'],
                          'test.utils::some_state')
 
 
     def test_relative_include_and_extend(self):
-        result = render_sls("""
+        result = render_sls('''
 include:
   - some.helper
   - .utils
@@ -134,12 +135,12 @@ extend:
   .utils::some_state:
     cmd.run:
       - name: echo overriden
-    """, sls="test.work")
+    ''', sls='test.work')
         self.assertTrue('test.utils::some_state' in result['extend'])
 
 
     def test_goal_state_generation(self):
-        result = render_sls("""
+        result = render_sls('''
 {% for sid in "ABCDE": %}
 {{sid}}:
   cmd.run:
@@ -147,15 +148,15 @@ extend:
     - cwd: /
 {% endfor %}
 
-""", sls="test.goalstate", argline="yaml . jinja")
-        self.assertTrue(len(result), len("ABCDE")+1)
+''', sls='test.goalstate', argline='yaml . jinja')
+        self.assertTrue(len(result), len('ABCDE')+1)
 
         reqs = result['test.goalstate::goal']['state.config'][0]['require']
         self.assertEqual(set([i.itervalues().next() for i in reqs]),
-                         set("ABCDE"))
+                         set('ABCDE'))
 
     def test_implicit_require_with_goal_state(self):
-        result = render_sls("""
+        result = render_sls('''
 {% for sid in "ABCDE": %}
 {{sid}}:
   cmd.run:
@@ -178,9 +179,9 @@ G:
     - require:
       - cmd: D
       - cmd: F
-""", sls="test", argline="-o yaml . jinja")
+''', sls='test', argline='-o yaml . jinja')
 
-        sids = "ABCDEFG"[::-1]
+        sids = 'ABCDEFG'[::-1]
         for i, sid in enumerate(sids):
             if i < len(sids)-1:
                 self.assertEqual(
@@ -204,5 +205,5 @@ G:
         self.assertEqual(len(goal_args), 1)
         self.assertEqual(
                 [i.itervalues().next() for i in goal_args[0]['require']],
-                list("ABCDEFG"))
+                list('ABCDEFG'))
 
