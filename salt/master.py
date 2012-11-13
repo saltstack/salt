@@ -135,7 +135,7 @@ class SMaster(object):
                 os.unlink(keyfile)
 
             key = salt.crypt.Crypticle.generate_key_string()
-            with open(keyfile, 'w+') as fp_:
+            with salt.utils.fopen(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
@@ -176,7 +176,7 @@ class Master(SMaster):
                     jid_file = os.path.join(f_path, 'jid')
                     if not os.path.isfile(jid_file):
                         continue
-                    with open(jid_file, 'r') as fn_:
+                    with salt.utils.fopen(jid_file, 'r') as fn_:
                         jid = fn_.read()
                     if len(jid) < 18:
                         # Invalid jid, scrub the dir
@@ -537,11 +537,11 @@ class AESFuncs(object):
         The string needs to verify as 'salt' with the minion public key
         '''
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
-        with open(pub_path, 'r') as fp_:
+        with salt.utils.fopen(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
         fd_, tmp_pub = tempfile.mkstemp()
         os.close(fd_)
-        with open(tmp_pub, 'w+') as fp_:
+        with salt.utils.fopen(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
 
         pub = None
@@ -633,7 +633,7 @@ class AESFuncs(object):
         ret['dest'] = fnd['rel']
         gzip_compression = load.get('gzip_compression', None)
 
-        with open(fnd['path'], 'rb') as fp_:
+        with salt.utils.fopen(fnd['path'], 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
             if gzip_compression and data:
@@ -652,7 +652,7 @@ class AESFuncs(object):
         if not path:
             return {}
         ret = {}
-        with open(path, 'rb') as fp_:
+        with salt.utils.fopen(path, 'rb') as fp_:
             ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
                     fp_.read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
@@ -728,7 +728,7 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with open(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
@@ -839,7 +839,7 @@ class AESFuncs(object):
             return False
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
-            with open(wtag, 'w+') as fp_:
+            with salt.utils.fopen(wtag, 'w+') as fp_:
                 fp_.write('')
         except (IOError, OSError):
             log.error(
@@ -976,7 +976,7 @@ class AESFuncs(object):
                 'id': clear_load['id'],
                }
         self.serial.dump(
-                load, open(
+                load, salt.utils.fopen(
                     os.path.join(
                         salt.utils.jid_dir(
                             jid,
@@ -1140,14 +1140,14 @@ class ClearFuncs(object):
         '''
         minions = {}
         master_pem = ''
-        with open(self.opts['conf_file'], 'r') as fp_:
+        with salt.utils.fopen(self.opts['conf_file'], 'r') as fp_:
             master_conf = fp_.read()
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
-            minions[host] = open(pub, 'r').read()
+            minions[host] = salt.utils.fopen(pub, 'r').read()
         if self.opts['cluster_mode'] == 'full':
-            with open(os.path.join(self.opts['pki_dir'], 'master.pem')) as fp_:
+            with salt.utils.fopen(os.path.join(self.opts['pki_dir'], 'master.pem')) as fp_:
                 master_pem = fp_.read()
         return [minions,
                 master_conf,
@@ -1221,7 +1221,7 @@ class ClearFuncs(object):
             log.warn(message.format(autosign_file))
             return False
 
-        with open(autosign_file, 'r') as fp_:
+        with salt.utils.fopen(autosign_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
 
@@ -1286,7 +1286,7 @@ class ClearFuncs(object):
             return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
-            if not open(pubfn, 'r').read() == load['pub']:
+            if not salt.utils.fopen(pubfn, 'r').read() == load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
@@ -1303,7 +1303,7 @@ class ClearFuncs(object):
                 and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
             log.info('New public key placed in pending for {id}'.format(**load))
-            with open(pubfn_pend, 'w+') as fp_:
+            with salt.utils.fopen(pubfn_pend, 'w+') as fp_:
                 fp_.write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
@@ -1317,7 +1317,7 @@ class ClearFuncs(object):
                 and not self._check_autosign(load['id']):
             # This key is in pending, if it is the same key ret True, else
             # ret False
-            if not open(pubfn_pend, 'r').read() == load['pub']:
+            if not salt.utils.fopen(pubfn_pend, 'r').read() == load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
@@ -1344,7 +1344,7 @@ class ClearFuncs(object):
         elif os.path.isfile(pubfn_pend)\
                 and self._check_autosign(load['id']):
             # This key is in pending, if it is the same key auto accept it
-            if not open(pubfn_pend, 'r').read() == load['pub']:
+            if not salt.utils.fopen(pubfn_pend, 'r').read() == load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
@@ -1373,7 +1373,7 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from {id}'.format(**load))
-        with open(pubfn, 'w+') as fp_:
+        with salt.utils.fopen(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
         pub = None
 
@@ -1571,7 +1571,7 @@ class ClearFuncs(object):
         # Save the invocation information
         self.serial.dump(
                 clear_load,
-                open(os.path.join(jid_dir, '.load.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
                 )
         if self.opts['ext_job_cache']:
             try:

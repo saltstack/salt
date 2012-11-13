@@ -306,7 +306,7 @@ class Minion(object):
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             sdata = {'pid': os.getpid()}
             sdata.update(data)
-            with open(fn_, 'w+') as fp_:
+            with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
@@ -478,7 +478,7 @@ class Minion(object):
             jdir = os.path.dirname(fn_)
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
-            open(fn_, 'w+').write(self.serial.dumps(ret))
+            salt.utils.fopen(fn_, 'w+').write(self.serial.dumps(ret))
         return ret_val
 
     def _state_run(self):
@@ -532,7 +532,7 @@ class Minion(object):
         '''
         fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
         if os.path.isfile(fn_):
-            with open(fn_, 'r+') as f:
+            with salt.utils.fopen(fn_, 'r+') as f:
                 data = f.read()
                 if 'pillar' in data:
                     self.opts['pillar'] = salt.pillar.get_pillar(

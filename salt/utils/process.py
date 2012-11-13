@@ -16,7 +16,7 @@ def set_pidfile(pidfile, user):
     if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
-        with open(pidfile, 'w+') as f:
+        with salt.utils.fopen(pidfile, 'w+') as f:
             f.write(str(os.getpid()))
     except IOError:
         pass
@@ -25,7 +25,7 @@ def set_pidfile(pidfile, user):
         if os.environ['os'].startswith('Windows'):
             return True
     import pwd  # after confirming not running Windows
-    import grp 
+    import grp
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]

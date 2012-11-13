@@ -92,7 +92,7 @@ class LocalClient(object):
         salt.utils.verify.check_parent_dirs(keyfile, key_user)
 
         try:
-            with open(keyfile, 'r') as KEY:
+            with salt.utils.fopen(keyfile, 'r') as KEY:
                 return KEY.read()
         except (OSError, IOError):
             # Fall back to eauth
@@ -400,7 +400,7 @@ class LocalClient(object):
                     while fn_ not in ret:
                         try:
                             check = True
-                            ret_data = self.serial.load(open(retp, 'r'))
+                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
                             if ret_data is None:
                                 # Sometimes the ret data is read at the wrong
                                 # time and returns None, do a quick re-read
@@ -409,7 +409,7 @@ class LocalClient(object):
                                     continue
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
                         except Exception:
                             pass
                     found.add(fn_)
@@ -477,10 +477,10 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = self.serial.load(open(retp, 'r'))
+                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
                         except Exception:
                             pass
                     found.add(fn_)
@@ -535,7 +535,7 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret[fn_] = self.serial.load(open(retp, 'r'))
+                            ret[fn_] = self.serial.load(salt.utils.fopen(retp, 'r'))
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -587,10 +587,10 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = self.serial.load(open(retp, 'r'))
+                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -783,9 +783,9 @@ class LocalClient(object):
             yield ret
             time.sleep(0.02)
 
-    def pub(self, 
-            tgt, 
-            fun, 
+    def pub(self,
+            tgt,
+            fun,
             arg=(),
             expr_form='glob',
             ret='',

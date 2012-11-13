@@ -11,15 +11,21 @@ import logging
 import tempfile
 import traceback
 
+# Import salt libs
+import salt.utils
+import salt.exceptions
+
 
 logger = logging.getLogger(__name__)
 
-class SaltTemplateRenderError(Exception):
+
+class SaltTemplateRenderError(salt.exceptions.SaltException):
     pass
 
-#FIXME: also in salt/template.py
-sls_encoding = 'utf-8' # this one has no BOM.
+# FIXME: also in salt/template.py
+sls_encoding = 'utf-8'  # this one has no BOM.
 sls_encoder = codecs.getencoder(sls_encoding)
+
 
 def wrap_tmpl_func(render_str):
     def render_tmpl(tmplsrc, from_str=False, to_str=False,
@@ -31,11 +37,11 @@ def wrap_tmpl_func(render_str):
         assert 'env' in context
         if isinstance(tmplsrc, basestring):
             if from_str:
-                tmplstr = tmplsrc 
+                tmplstr = tmplsrc
             else:
                 with codecs.open(tmplsrc, 'r', sls_encoding) as tmplsrc:
                     tmplstr = tmplsrc.read()
-        else: # assume tmplsrc is file-like.
+        else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
         try:
             output = render_str(tmplstr, context)
@@ -44,7 +50,7 @@ def wrap_tmpl_func(render_str):
         except Exception:
             return dict(result=False, data=traceback.format_exc())
         else:
-            if to_str: # then render as string
+            if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False) as outf:
                 outf.write(sls_encoder(output)[0])
@@ -55,7 +61,6 @@ def wrap_tmpl_func(render_str):
 
     render_tmpl.render_str = render_str
     return render_tmpl
-
 
 
 def render_jinja_tmpl(tmplstr, context):
@@ -96,7 +101,6 @@ def render_wempy_tmpl(tmplstr, context):
     return Template(tmplstr).render(**context)
 
 
-
 def py(sfn, string=False, **kwargs):
     '''
     Render a template from a python source file
@@ -121,9 +125,8 @@ def py(sfn, string=False, **kwargs):
         if string:
             return {'result': True,
                     'data': data}
-        fd_, tgt = tempfile.mkstemp()
-        os.close(fd_)
-        with open(tgt, 'w+') as target:
+        tgt = salt.utils.mkstemp()
+        with salt.utils.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
                 'data': tgt}
@@ -136,7 +139,6 @@ def py(sfn, string=False, **kwargs):
 jinja = wrap_tmpl_func(render_jinja_tmpl)
 mako = wrap_tmpl_func(render_mako_tmpl)
 wempy = wrap_tmpl_func(render_wempy_tmpl)
-
 
 template_registry = {
     'jinja': jinja,

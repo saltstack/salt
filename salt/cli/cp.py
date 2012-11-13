@@ -30,7 +30,7 @@ class SaltCP(object):
             sys.stderr.write(err + '\n')
             sys.exit(42)
         data = ''
-        with open(fn_, 'r') as fp_:
+        with salt.utils.fopen(fn_, 'r') as fp_:
             data = fp_.read()
         return {fn_: data}
 

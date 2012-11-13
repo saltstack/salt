@@ -2,12 +2,16 @@
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
 
+# Import python libs
 import os
 import sys
 import time
 import signal
 import tempfile
 import traceback
+
+# Import salt libs
+import salt.utils
 
 
 def _makepretty(printout, stack):
@@ -32,7 +36,7 @@ def _handle_sigusr1(sig, stack):
     else:
         filename = 'salt-debug-{0}.log'.format(int(time.time()))
         destfile = os.path.join(tempfile.gettempdir(), filename)
-        with open(destfile, 'w') as output:
+        with salt.utils.fopen(destfile, 'w') as output:
             _makepretty(output, stack)
 
 

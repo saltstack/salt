@@ -252,7 +252,7 @@ class State(object):
             module_refresh_path = os.path.join(
                 self.opts['cachedir'],
                 'module_refresh')
-            with open(module_refresh_path, 'w+') as f:
+            with salt.utils.fopen(module_refresh_path, 'w+') as f:
                 f.write('')
 
         if data['state'] == 'file':

@@ -60,7 +60,7 @@ def _append_domain(opts):
 
 
 def _read_conf_file(path):
-    with open(path, 'r') as conf_file:
+    with salt.utils.fopen(path, 'r') as conf_file:
         conf_opts = yaml.safe_load(conf_file.read()) or {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
@@ -80,8 +80,8 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            with open(path, 'w') as out:
-                with open(template, 'r') as f:
+            with salt.utils.fopen(path, 'w') as out:
+                with salt.utils.fopen(template, 'r') as f:
                     f.readline()  # skip first line
                     out.write(f.read())
 
@@ -236,7 +236,7 @@ def minion_config(path):
         if opts['retry_dns']:
             while True:
                 msg = ('Master hostname: {0} not found. '
-                        'Retrying in {1} seconds').format(opts['master'], 
+                        'Retrying in {1} seconds').format(opts['master'],
                                                             opts['retry_dns'])
                 log.warn(msg)
                 print msg
@@ -258,7 +258,7 @@ def minion_config(path):
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = (
-            opts.get('extension_modules') or 
+            opts.get('extension_modules') or
             os.path.join(opts['cachedir'], 'extmods')
             )
 
@@ -353,7 +353,7 @@ def master_config(path):
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     opts['extension_modules'] = (
-            opts.get('extension_modules') or 
+            opts.get('extension_modules') or
             os.path.join(opts['cachedir'], 'extmods')
             )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
@@ -383,6 +383,6 @@ def client_config(path):
     if 'token_file' in opts:
         opts['token_file'] = os.path.expanduser(opts['token_file'])
     if os.path.isfile(opts['token_file']):
-        with open(opts['token_file']) as fp_:
+        with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
     return opts

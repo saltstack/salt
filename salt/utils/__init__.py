@@ -9,6 +9,7 @@ import re
 import imp
 import random
 import sys
+import fcntl
 import socket
 import logging
 import inspect
@@ -195,7 +196,7 @@ def daemonize_if(opts, **kwargs):
     daemonize()
     sdata = {'pid': os.getpid()}
     sdata.update(data)
-    with open(fn_, 'w+') as f:
+    with salt.utils.fopen(fn_, 'w+') as f:
         f.write(serial.dumps(sdata))
 
 
@@ -385,7 +386,7 @@ def prep_jid(cachedir, sum_type, user='root'):
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
         os.makedirs(jid_dir_)
-        with open(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
     else:
         return prep_jid(cachedir, sum_type)
@@ -509,7 +510,7 @@ def pem_finger(path, sum_type='md5'):
     '''
     if not os.path.isfile(path):
         return ''
-    with open(path, 'rb') as fp_:
+    with salt.utils.fopen(path, 'rb') as fp_:
         key = ''.join(fp_.readlines()[1:-1])
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
@@ -725,3 +726,33 @@ def memoize(func):
             cache[args] = func(*args)
         return cache[args]
     return _m
+
+
+def fopen(*args, **kwargs):
+    '''
+    Wrapper around open() built-in to set CLOEXEC on the fd
+    '''
+    fhandle = open(*args, **kwargs)
+    try:
+        cloexec_flag = fcntl.FD_CLOEXEC
+    except AttributeError:
+        cloexec_flag = 1
+    old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+    fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | cloexec_flag)
+    return fhandle
+
+
+def mkstemp(*args, **kwargs):
+    '''
+    Helper function which does exactly what `tempfile.mkstemp()` does but
+    accepts another argument, `close_fd`, which, by default, is true and closes
+    the fd before returning the file path. Something commonly done throughout
+    Salt's code.
+    '''
+    close_fd = kwargs.pop('close_fd', True)
+    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
+    if close_fd is True:
+        os.close(fd_)
+        del(fd_)
+        return fpath
+    return (fd_, fpath)

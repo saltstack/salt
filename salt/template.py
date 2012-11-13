@@ -12,12 +12,14 @@ from salt._compat import string_types
 #FIXME: we should make the default encoding of a .sls file a configurable
 #       option in the config, and default it to 'utf-8'.
 #
-sls_encoding = 'utf-8' # this one has no BOM.
+sls_encoding = 'utf-8'  # this one has no BOM.
 sls_encoder = codecs.getencoder(sls_encoding)
 
 from cStringIO import StringIO as cStringIO
 from StringIO import StringIO as pyStringIO
-def StringIO(s=None): # cStringIO can't handle unicode
+
+
+def StringIO(s=None):  # cStringIO can't handle unicode
     try:
         return cStringIO(bytes(s))
     except UnicodeEncodeError:
@@ -69,9 +71,8 @@ def compile_template_str(template, renderers, default):
     Take template as a string and return the high data structure
     derived from the template.
     '''
-    fd_, fn_ = tempfile.mkstemp()
-    os.close(fd_)
-    with open(fn_, 'wb') as f:
+    fn_ = salt.utils.mkstemp()
+    with salt.utils.fopen(fn_, 'wb') as f:
         f.write(sls_encoder(template)[0])
     return compile_template(fn_, renderers, default)
 
@@ -97,7 +98,7 @@ def template_shebang(template, renderers, default):
     render_pipe = []
 
     # Open up the first line of the sls template
-    with open(template, 'r') as f:
+    with salt.utils.fopen(template, 'r') as f:
         line = f.readline()
 
         # Check if it starts with a shebang
@@ -110,14 +111,13 @@ def template_shebang(template, renderers, default):
         render_pipe = check_render_pipe_str(default, renderers)
 
     return render_pipe
-    
-
 
 
 # A dict of combined renderer(ie, rend1_rend2_...) to
 # render-pipe(ie, rend1|rend2|...)
 #
 OLD_STYLE_RENDERERS = {}
+
 for comb in """
     yaml_jinja
     yaml_mako
@@ -134,8 +134,8 @@ for comb in """
 def check_render_pipe_str(pipestr, renderers):
     '''
     Check that all renderers specified in the pipe string are available.
-    If so, return the list of render functions in the pipe as (render_func, arg_str)
-    tuples; otherwise return [].
+    If so, return the list of render functions in the pipe as
+    (render_func, arg_str) tuples; otherwise return [].
     '''
     parts = [r.strip() for r in pipestr.split('|')]
     # Note: currently, | is not allowed anywhere in the shebang line except
@@ -146,9 +146,8 @@ def check_render_pipe_str(pipestr, renderers):
         if parts[0] == pipestr and pipestr in OLD_STYLE_RENDERERS:
             parts = OLD_STYLE_RENDERERS[pipestr].split('|')
         for p in parts:
-            name, argline = (p+' ').split(' ', 1)
+            name, argline = (p + ' ').split(' ', 1)
             results.append((renderers[name], argline.strip()))
         return results
     except KeyError:
         return []
-

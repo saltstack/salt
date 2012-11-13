@@ -326,7 +326,7 @@ class Client(object):
                 os.makedirs(destdir)
         try:
             with contextlib.closing(url_open(url)) as srcfp:
-                with open(dest, 'wb') as destfp:
+                with salt.utils.fopen(dest, 'wb') as destfp:
                     shutil.copyfileobj(srcfp, destfp)
             return dest
         except HTTPError as ex:
@@ -485,7 +485,7 @@ class LocalClient(Client):
                 log.warning(err.format(path))
                 return ret
             else:
-                with open(path, 'rb') as f:
+                with salt.utils.fopen(path, 'rb') as f:
                     ret['hsum'] = hashlib.md5(f.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
@@ -493,7 +493,7 @@ class LocalClient(Client):
         if not path:
             return {}
         ret = {}
-        with open(path, 'rb') as f:
+        with salt.utils.fopen(path, 'rb') as f:
             ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
                 f.read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
@@ -579,7 +579,7 @@ class RemoteClient(Client):
                     os.makedirs(destdir)
                 else:
                     return False
-            fn_ = open(dest, 'wb+')
+            fn_ = salt.utils.fopen(dest, 'wb+')
         while True:
             if not fn_:
                 load['loc'] = 0
@@ -602,13 +602,13 @@ class RemoteClient(Client):
                     with self._cache_loc(data['dest'], env) as cache_dest:
                         dest = cache_dest
                         if not os.path.exists(cache_dest):
-                            with open(cache_dest, 'wb+') as f:
+                            with salt.utils.fopen(cache_dest, 'wb+') as f:
                                 f.write(data['data'])
                 break
             if not fn_:
                 with self._cache_loc(data['dest'], env) as cache_dest:
                     dest = cache_dest
-                    fn_ = open(dest, 'wb+')
+                    fn_ = salt.utils.fopen(dest, 'wb+')
             gzip_compression = data.get('gzip_compression', None)
             if gzip_compression:
                 data = salt.utils.gzip_util.uncompress(data['data'])
@@ -685,7 +685,7 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
-                with open(path, 'rb') as f:
+                with salt.utils.fopen(path, 'rb') as f:
                     ret['hsum'] = hashlib.md5(f.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
