@@ -161,7 +161,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     try:
         with open(config, 'w+') as _fh:
             _fh.writelines(nlines)
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))
 
