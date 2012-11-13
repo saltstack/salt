@@ -22,6 +22,7 @@ except:
 
 # Import salt libs
 import salt.crypt
+import salt.client
 
 # Import third party libs
 from jinja2 import Template
@@ -208,7 +209,8 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
-                  name=None, pub_key=None, sock_dir=None, provider=None):
+                  name=None, pub_key=None, sock_dir=None, provider=None,
+                  conf_file=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -248,9 +250,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
             os.remove(tmppath)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
 
-            if sudo:
-                deploy_command = 'sudo ' + deploy_command
-
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = multiprocessing.Queue()
             process = multiprocessing.Process(
@@ -259,28 +258,49 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     )
             process.start()
 
-            if tty:
-                # Tried this with paramiko's invoke_shell(), and got tired of
-                # fighting with it
-                cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"').format(
-                        key_filename,
-                        username,
-                        host,
-                        deploy_command
-                        )
-                subprocess.call(cmd, shell=True)
-            else:
-                stdin, stdout, stderr = ssh.exec_command(deploy_command)
-                for line in stdout:
-                    sys.stdout.write(line)
+            root_cmd(deploy_command, tty, sudo, key_filename, username, host)
             ssh.exec_command('rm /tmp/deploy.sh')
-            queuereturn = queue.get()
+            queuereturn = queue.get(True, timeout)
             process.join()
+            if queuereturn:
+                print('Running state.highstate on minion')
+                #client = salt.client.LocalClient(conf_file)
+                #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
+                #for line in output:
+                #    print(line)
+                root_cmd('salt-call state.highstate', tty, sudo, key_filename, username, host)
             return True
     return False
 
 
+def root_cmd(command, tty, sudo, key_filename, username, host):
+    '''
+    Wrapper for commands to be run as root
+    '''
+    if sudo:
+        command = 'sudo ' + command
+
+    if tty:
+        # Tried this with paramiko's invoke_shell(), and got tired of
+        # fighting with it
+        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"').format(
+                key_filename,
+                username,
+                host,
+                command
+                )
+        subprocess.call(cmd, shell=True)
+    else:
+        stdin, stdout, stderr = ssh.exec_command(command)
+        for line in stdout:
+            sys.stdout.write(line)
+
+
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
+    '''
+    This function is called from a multiprocess instance, to wait for a minion
+    to become available to receive salt commands
+    '''
     event = salt.utils.event.SaltEvent(
         'master',
         sock_dir,
@@ -292,14 +312,16 @@ def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
         ret = event.get_event(full=True)
         if ret is None:
             continue
-        if ret['tag'] == 'auth' and ret['data']['id'] == name:
-            queue.put(True)
+        if ret['tag'] == 'minion_start' and ret['data']['id'] == name:
+            queue.put(name)
             newtimeout = 0
-        else:
-            queue.put(False)
+            print('Minion {0} is ready to receive commands'.format(name))
 
 
 def ip_to_int(ip):
+    '''
+    Converts an IP address to an integer
+    '''
     ret = 0 
     for octet in ip.split('.'):
         ret = ret * 256 + int(octet)
@@ -307,11 +329,17 @@ def ip_to_int(ip):
 
 
 def is_public_ip(ip):
+    '''
+    Determines whether an IP address falls within one of the private IP ranges
+    '''
     addr = ip_to_int(ip)
     if addr > 167772160 and addr < 184549375:
+        # 10.0.0.0/24
         return False
     elif addr > 3232235520 and addr < 3232301055:
+        # 172.16.0.0/12
         return False
     elif addr > 2886729728 and addr < 2887778303:
+        # 192.168.0.0/16
         return False
     return True

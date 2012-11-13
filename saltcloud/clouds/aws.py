@@ -214,7 +214,7 @@ def create(vm_):
                 username = user
                 break
         kwargs['ssh_username'] = username
-    deploy_command='sudo bash /tmp/deploy.sh'
+    deploy_command='bash /tmp/deploy.sh'
     if username == 'root':
         deploy_command='/tmp/deploy.sh'
     deployed = saltcloud.utils.deploy_script(
@@ -225,6 +225,8 @@ def create(vm_):
         tty=True,
         script=deploy_script.script,
         name=vm_['name'],
+        sudo=True,
+        conf_file=__opts__['conf_file'],
         sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
