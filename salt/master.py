@@ -14,7 +14,6 @@ import shutil
 import stat
 import logging
 import hashlib
-import tempfile
 import datetime
 import pwd
 import getpass
@@ -42,6 +41,7 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
+import salt.utils
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -539,8 +539,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with salt.utils.fopen(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
-        fd_, tmp_pub = tempfile.mkstemp()
-        os.close(fd_)
+        tmp_pub = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
 

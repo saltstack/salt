@@ -1,22 +1,24 @@
 '''
 Manage basic template commands
 '''
+
+# Import python libs
 import time
 import os
-import tempfile
 import codecs
+from cStringIO import StringIO as cStringIO
+from StringIO import StringIO as pyStringIO
 
+# Import salt libs
 import salt.utils
 from salt._compat import string_types
+
 
 #FIXME: we should make the default encoding of a .sls file a configurable
 #       option in the config, and default it to 'utf-8'.
 #
 sls_encoding = 'utf-8'  # this one has no BOM.
 sls_encoder = codecs.getencoder(sls_encoding)
-
-from cStringIO import StringIO as cStringIO
-from StringIO import StringIO as pyStringIO
 
 
 def StringIO(s=None):  # cStringIO can't handle unicode

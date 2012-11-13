@@ -8,7 +8,6 @@ import codecs
 import os
 import imp
 import logging
-import tempfile
 import traceback
 
 # Import salt libs

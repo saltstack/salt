@@ -76,7 +76,7 @@ def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
-    fd_, path = tempfile.mkstemp()
+    path = pfile.mkstemp()
     os.close(fd_)
     with open(path, 'w+') as fp_:
         fp_.writelines(lines)
