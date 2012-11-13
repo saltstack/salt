@@ -1082,7 +1082,7 @@ class AESFuncs(object):
                     key)
             try:
                 pub = RSA.load_pub_key(pubfn)
-            except RSA.RSAError, e:
+            except RSA.RSAError:
                 return self.crypticle.dumps({})
 
             pret = {}
