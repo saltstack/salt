@@ -460,15 +460,12 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
-    try:
-        shutil.move(tgt, dest)
-        # If SELINUX is available run a restorecon on the file
-        rcon = which('restorecon')
-        if rcon:
-            cmd = [rcon, dest]
-            subprocess.call(cmd)
-    except Exception:
-        pass
+    shutil.move(tgt, dest)
+    # If SELINUX is available run a restorecon on the file
+    rcon = which('restorecon')
+    if rcon:
+        cmd = [rcon, dest]
+        subprocess.call(cmd)
     if os.path.isfile(tgt):
         # The temp file failed to move
         try:

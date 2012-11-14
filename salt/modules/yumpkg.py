@@ -335,7 +335,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
         pkgs = pkgs.split(' ')
 
     if sources is not None:
-        if ',' in source:
+        if ',' in sources:
             srcsplit = sources.split(',')
         else:
             srcsplit = sources.split(' ')

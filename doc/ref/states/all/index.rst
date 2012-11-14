@@ -30,16 +30,20 @@ Full list of builtin state modules
     network
     pecl
     pip
-    pkg
     pkgng
+    pkg
     postgres_database
     postgres_user
+    rabbitmq_user
+    rabbitmq_vhost
     rvm
     selinux
     service
     ssh_auth
     ssh_known_hosts
+    stateconf
     supervisord
+    svn
     sysctl
     user
     virtualenv

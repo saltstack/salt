@@ -1,7 +1,7 @@
 Source: salt
 Section: admin
 Priority: optional
-Maintainer: Corey Quinn <corey@sequestered.net>
+Maintainer: Sean Channel <pentabular@gmail.com>
 Build-Depends: debhelper,
                cython,
                python | python-all | python-dev | python-all-dev,
@@ -15,8 +15,6 @@ Build-Depends: debhelper,
                msgpack-python
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
-#Vcs-Git: git://git.debian.org/collab-maint/salt.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/salt.git;a=summary
 #X-Python-Version: >= 2.6, <= 2.7
 
 
