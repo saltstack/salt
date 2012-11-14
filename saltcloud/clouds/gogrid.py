@@ -110,10 +110,8 @@ def create(vm_):
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
         log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(
-    log.warn('Created Cloud VM {0} with the following values:'.format(
-        vm_['name']
-        ))
+    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
         log.warn('  {0}: {1}'.format(key, val))
