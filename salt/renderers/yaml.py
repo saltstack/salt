@@ -52,6 +52,12 @@ Options:
 
 
 def render(yaml_data, env='', sls='', argline='', **kws):
+    '''
+    Accepts YAML as a string or as a file object and runs it through the YAML
+    parser.
+
+    :rtype: A Python data structure
+    '''
     if not isinstance(yaml_data, basestring):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:
