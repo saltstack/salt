@@ -31,13 +31,13 @@ class StateConfigRendererTestCase(TestCase):
     def test_state_config(self):
         result = render_sls('''
 .sls_params:
-  state.config:
+  stateconf.set:
     - name1: value1
     - name2: value2
 
 .extra:
-  state:
-    - config
+  stateconf:
+    - set
     - name: value
 
 # --- end of state config ---  
@@ -151,7 +151,7 @@ extend:
 ''', sls='test.goalstate', argline='yaml . jinja')
         self.assertTrue(len(result), len('ABCDE')+1)
 
-        reqs = result['test.goalstate::goal']['state.config'][0]['require']
+        reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
         self.assertEqual(set([i.itervalues().next() for i in reqs]),
                          set('ABCDE'))
 
@@ -201,7 +201,7 @@ G:
         self.assertEqual(G_req[1]['cmd'], 'D')
         self.assertEqual(G_req[2]['cmd'], 'F')
 
-        goal_args = result['test::goal']['state.config']
+        goal_args = result['test::goal']['stateconf.set']
         self.assertEqual(len(goal_args), 1)
         self.assertEqual(
                 [i.itervalues().next() for i in goal_args[0]['require']],

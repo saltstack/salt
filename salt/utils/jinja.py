@@ -18,28 +18,6 @@ import salt.fileclient
 log = logging.getLogger(__name__)
 
 
-def get_template(filename, opts, env):
-    loader = SaltCacheLoader(opts, env)
-    if filename.startswith(loader.searchpath):
-        if opts.get('allow_undefined', False):
-            jinja = Environment(loader=loader)
-        else:
-            jinja = Environment(loader=loader, undefined=StrictUndefined)
-        relpath = path.relpath(filename, loader.searchpath)
-        # the template was already fetched
-        loader.cached.append(relpath)
-        return jinja.get_template(relpath)
-    else:
-        # fallback for templates outside the state tree
-        loader = FileSystemLoader(path.dirname(filename))
-        if opts.get('allow_undefined', False):
-            jinja = Environment(loader=loader)
-        else:
-            jinja = Environment(loader=loader, undefined=StrictUndefined)
-        relpath = path.relpath(filename, path.dirname(filename))
-        return jinja.get_template(relpath)
-
-
 class SaltCacheLoader(BaseLoader):
     '''
     A special jinja Template Loader for salt.
