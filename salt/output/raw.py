@@ -8,4 +8,4 @@ def output(data):
     '''
     Rather basic....
     '''
-    return data
+    return str(data)
