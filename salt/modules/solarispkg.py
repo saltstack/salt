@@ -328,7 +328,7 @@ def remove(name, **kwargs):
         basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = salt.utils.mkstemp(prefix="salt-")
+        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
         # Write to file then close it.
         os.write(fd, 'email={0}\n'.format(email))
