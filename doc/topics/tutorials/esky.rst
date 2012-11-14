@@ -28,7 +28,7 @@ Building and Freezing
 =====================
 
 Once you have your tools installed and the environment configured, you can then
-``python setup.py sdist`` to get the eggs prepared. After that is done, run
+``python setup.py bdist`` to get the eggs prepared. After that is done, run
 ``python setup.py bdist_esky`` to have Esky traverse the module tree and pack
 all the scripts up into a redistributable. There will be an appropriately
 versioned ``salt-VERSION.zip`` in ``dist/`` if everything went smoothly.
