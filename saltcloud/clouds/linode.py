@@ -17,7 +17,7 @@ the cloud configuration file
 # Import python libs
 import os
 import types
-import paramiko
+import logging
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -28,6 +28,9 @@ from libcloud.compute.base import NodeAuthPassword
 
 # Import salt libs
 from saltcloud.libcloudfuncs import *
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Redirect linode functions to this module namespace
 avail_images = types.FunctionType(avail_images.__code__, globals())

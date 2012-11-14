@@ -23,6 +23,7 @@ it requires that the username and password to the joyent accound be configured
 import os
 import subprocess
 import types
+import logging
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -32,6 +33,9 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 # Import generic libcloud functions
 import saltcloud.utils
 from saltcloud.libcloudfuncs import *
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 # Some of the libcloud functions need to be in the same namespace as the

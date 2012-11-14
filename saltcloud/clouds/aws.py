@@ -29,6 +29,7 @@ import types
 import time
 import tempfile
 import subprocess
+import logging
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -39,8 +40,8 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 import saltcloud.utils
 from saltcloud.libcloudfuncs import *
 
-# Import paramiko
-import paramiko
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Init the libcloud functions
 avail_images = types.FunctionType(avail_images.__code__, globals())

@@ -39,6 +39,7 @@ import types
 import tempfile
 import time
 import sys
+import logging
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -47,6 +48,9 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
