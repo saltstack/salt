@@ -13,6 +13,7 @@ import subprocess
 import salt.utils.event
 import multiprocessing
 import time
+import logging
 
 try:
     import paramiko
@@ -35,6 +36,9 @@ NSTATES = {
         2: 'terminated',
         3: 'pending',
         }
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def os_script(os_, vm_=None, opts=None, minion=''):
