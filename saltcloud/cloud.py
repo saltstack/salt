@@ -7,6 +7,7 @@ import sys
 import os
 import copy
 import multiprocessing
+import logging
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -16,6 +17,9 @@ import salt.utils
 
 # Import third party libs
 import yaml
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 class Cloud(object):

@@ -5,6 +5,7 @@ cloud virtual machines
 
 # Import python libs
 import os
+import logging
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -13,6 +14,9 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import salt libs
 import saltcloud.utils
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def get_node(conn, name):
