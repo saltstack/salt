@@ -12,7 +12,6 @@ Primary interfaces for the salt-cloud system
 # Import python libs
 import optparse
 import os
-import pprint
 
 # Import salt libs
 import saltcloud.config
@@ -117,6 +116,15 @@ class SaltCloud(object):
                 action='store_true',
                 help=('Execute a query and return select information about '
                       'the nodes running on configured cloud providers'))
+
+        parser.add_option('-l',
+                '--log-level',
+                dest='log_level',
+                default='warn',
+                help=("Console logging log level. One of 'all', 'garbage',"
+                      "'trace', 'debug', 'info', 'warning', 'error', 'quiet'."
+                      "For the log file setting see the configuration file."
+                      "Default: 'warning'."))
 
         parser.add_option('--list-locations',
                 dest='list_locations',

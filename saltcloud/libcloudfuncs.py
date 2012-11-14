@@ -164,13 +164,17 @@ def destroy(name):
     node = get_node(conn, name)
     if node is None:
         print('Unable to find the VM {0}'.format(name))
+        log.warn('Unable to find the VM {0}'.format(name))
     print('Destroying VM: {0}'.format(name))
+    log.warn('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
     if ret:
         print('Destroyed VM: {0}'.format(name))
+        log.warn('Destroyed VM: {0}'.format(name))
         return True
     else:
         print('Failed to Destroy VM: {0}'.format(name))
+        log.error('Failed to Destroy VM: {0}'.format(name))
         return False
 
 
@@ -214,8 +218,6 @@ def list_nodes_select():
     conn = get_conn() 
     nodes = conn.list_nodes()
     ret = {}
-    import sys
-    from pprint import pprint
     for node in nodes:
         pairs = {}
         data = node.__dict__

@@ -29,6 +29,7 @@ import sys
 import subprocess
 import time
 import types
+import logging
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -38,6 +39,9 @@ from libcloud.compute.base import NodeAuthSSHKey
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -58,6 +62,7 @@ def __virtual__():
     Set up the libcloud funcstions and check for RACKSPACE configs
     '''
     if 'IBMSCE.user' in __opts__ and 'IBMSCE.password' in __opts__:
+        log.debug('Loading IBM SCE cloud module')
         return 'ibmsce'
     return False
 
@@ -78,6 +83,7 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
+    log.warn('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -89,6 +95,7 @@ def create(vm_):
     kwargs['auth'] = NodeAuthSSHKey(__opts__['IBMSCE.ssh_key_name'])
 
     print('Creating instance on {0} at {1}'.format(time.strftime('%Y-%m-%d'), time.strftime('%H:%M:%S')))
+    log.warn('Creating instance on {0} at {1}'.format(time.strftime('%Y-%m-%d'), time.strftime('%H:%M:%S')))
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -99,17 +106,20 @@ def create(vm_):
                        vm_['name'], message
                        )
         sys.stderr.write(err)
+        log.error(err)
         print()
         return False
 
     not_ready = True
     nr_count = 0
     while not_ready:
-        print('Looking for IP addresses for IBM SCE host {0} ({1} {2})'.format(
+        msg=('Looking for IP addresses for IBM SCE host {0} ({1} {2})'.format(
                 vm_['name'],
                 time.strftime('%Y-%m-%d'),
                 time.strftime('%H:%M:%S'),
             ))
+        print(msg)
+        log.warn(msg)
         nodelist = list_nodes()
         private = nodelist[vm_['name']]['private_ips']
         if private:
@@ -124,6 +134,7 @@ def create(vm_):
         time.sleep(15)
 
     print('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
+    log.warn('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
 
     deployed = saltcloud.utils.deploy_script(
         host=data.public_ips[0],
@@ -136,11 +147,13 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
+        log.warn('Salt installed on {0}'.format(vm_['name']))
     else:
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(
-        vm_['name']
-        ))
+    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
+        log.warn('  {0}: {1}'.format(key, val))

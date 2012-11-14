@@ -39,6 +39,7 @@ import types
 import tempfile
 import time
 import sys
+import logging
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -47,6 +48,9 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -66,6 +70,7 @@ def __virtual__():
     Set up the libcloud functions and check for OPENSTACK configs
     '''
     if 'OPENSTACK.user' in __opts__ and 'OPENSTACK.password' in __opts__:
+        log.debug('Loading Openstack cloud module')
         return 'openstack'
     return False
 
@@ -99,6 +104,7 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
+    log.warn('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -112,6 +118,7 @@ def create(vm_):
                        vm_['name'], vm_['image']
                        )
         sys.stderr.write(err)
+        log.error(err)
         return False
 
     try:
@@ -141,18 +148,22 @@ def create(vm_):
     nr_count = 0
     while not_ready:
         print('Looking for IP addresses')
+        log.warn('Looking for IP addresses')
         nodelist = list_nodes()
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
             print('Private IPs returned, but not public... checking for misidentified IPs')
+            log.warn('Private IPs returned, but not public... checking for misidentified IPs')
             for private_ip in private:
                 if saltcloud.utils.is_public_ip(private_ip):
                     print('{0} is a public ip'.format(private_ip))
+                    log.warn('{0} is a public ip'.format(private_ip))
                     data.public_ips.append(private_ip)
                     not_ready = False
                 else:
                     print('{0} is a private ip'.format(private_ip))
+                    log.warn('{0} is a private ip'.format(private_ip))
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
         nr_count += 1
@@ -180,15 +191,16 @@ def create(vm_):
     if 'sudo' in vm_:
         deployargs['sudo'] = vm_['sudo']
 
-    print('Running deploy script')
     deployed = saltcloud.utils.deploy_script(**deployargs)
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
+        log.warn('Salt installed on {0}'.format(vm_['name']))
     else:
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(
-        vm_['name']
-        ))
+    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
+        log.warn('  {0}: {1}'.format(key, val))

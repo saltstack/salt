@@ -29,6 +29,7 @@ import types
 import time
 import tempfile
 import subprocess
+import logging
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -39,8 +40,8 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 import saltcloud.utils
 from saltcloud.libcloudfuncs import *
 
-# Import paramiko
-import paramiko
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Init the libcloud functions
 avail_images = types.FunctionType(avail_images.__code__, globals())
@@ -67,6 +68,7 @@ def __virtual__():
     for conf in confs:
         if conf not in __opts__:
             return False
+    log.debug('Loading AWS cloud module')
     return 'aws'
 
 
@@ -175,6 +177,7 @@ def create(vm_):
     '''
     location = get_location(vm_)
     print('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
+    log.warn('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     conn = get_conn(location=location)
     usernames = ssh_username(vm_)
     kwargs = {'ssh_key': __opts__['AWS.private_key']}
@@ -198,8 +201,10 @@ def create(vm_):
                        vm_['name'], exc
                        )
         sys.stderr.write(err)
+        log.error(err)
         return False
     print('Created node {0}'.format(vm_['name']))
+    log.warn('Created node {0}'.format(vm_['name']))
     while not data.public_ips:
         time.sleep(0.5)
         data = get_node(conn, vm_['name'])
@@ -230,17 +235,20 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
+        log.warn('Salt installed on {0}'.format(vm_['name']))
     else:
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(
-        vm_['name']
-        ))
+    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
+        log.warn('  {0}: {1}'.format(key, val))
     volumes = vm_.get('map_volumes')
     if volumes:
-        print ('Create and attach volumes to node {0}'.format(data.name))
+        print('Create and attach volumes to node {0}'.format(data.name))
+        log.warn('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes,location, data)
 
 
@@ -258,4 +266,5 @@ def create_attach_volumes(volumes, location, data):
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
-            print ('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
+            print('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
+            log.warn('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))

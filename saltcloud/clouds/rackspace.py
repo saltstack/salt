@@ -23,8 +23,8 @@ and requires that two configuration paramaters be set for use:
 # Import python libs
 import os
 import types
-import paramiko
 import tempfile
+import logging
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -33,6 +33,9 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -52,6 +55,7 @@ def __virtual__():
     Set up the libcloud funcstions and check for RACKSPACE configs
     '''
     if 'RACKSPACE.user' in __opts__ and 'RACKSPACE.apikey' in __opts__:
+        log.debug('Loading Rackspace cloud module')
         return 'rackspace'
     return False
 
@@ -72,6 +76,7 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
+    log.warn('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -87,6 +92,7 @@ def create(vm_):
                        vm_['name'], exc
                        )
         sys.stderr.write(err)
+        log.error(err)
         return False
     deployed = saltcloud.utils.deploy_script(
         host=data.public_ips[0],
@@ -97,11 +103,13 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
+        log.warn('Salt installed on {0}'.format(vm_['name']))
     else:
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(
-        vm_['name']
-        ))
+    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
+        log.warn('  {0}: {1}'.format(key, val))
