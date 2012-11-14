@@ -25,6 +25,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 def _sync(form, env=None):
     '''
     Sync the given directory in the given environment
@@ -113,6 +114,7 @@ def _sync(form, env=None):
             f.write('')
     return ret
 
+
 def _listdir_recursively(rootdir):
     fileList = []
     for root, subFolders, files in os.walk(rootdir):
@@ -121,12 +123,14 @@ def _listdir_recursively(rootdir):
             fileList.append(os.path.join(relpath,file))
     return fileList
 
+
 def _list_emptydirs(rootdir):
     emptydirs = []
     for root, subFolders, files in os.walk(rootdir):
         if not files and not subFolders:
             emptydirs.append(root)
     return emptydirs
+
 
 def update(version=None):
     '''
@@ -145,18 +149,18 @@ def update(version=None):
         salt '*' saltutil.update 0.10.3
     '''
     if not has_esky:
-        return "Esky not available as import"
-    if not getattr(sys, "frozen", False):
-        return "Minion is not running an Esky build"
-    if not __opts__['update_url']:
-        return "'update_url' not configured on this minion"
+        return 'Esky not available as import'
+    if not getattr(sys, 'frozen', False):
+        return 'Minion is not running an Esky build'
+    if not __salt__['config.option']('update_url'):
+        return '"update_url" not configured on this minion'
     app = esky.Esky(sys.executable, __opts__['update_url'])
     oldversion = __grains__['saltversion']
     try:
         if not version:
             version = app.find_update()
         if not version:
-            return "No updates available"
+            return 'No updates available'
         app.fetch_version(version)
         app.install_version(version)
         app.cleanup()
@@ -167,6 +171,7 @@ def update(version=None):
         restarted[service] = __salt__['service.restart'](service)
     return {'comment': 'Updated from {0} to {1}'.format(oldversion, version),
             'restarted': restarted}
+
 
 def sync_modules(env=None):
     '''
