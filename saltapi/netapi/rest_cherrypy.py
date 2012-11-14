@@ -77,7 +77,29 @@ def hypermedia_handler(*args, **kwargs):
 
     cherrypy.response.headers['Content-Type'] = best
 
-    ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
+    try:
+        ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
+    except Exception as exc:
+        logger.debug("Error while processing request for: %s",
+                cherrypy.request.path_info,
+                exc_info=True)
+
+        cherrypy.response.status = 500
+        cherrypy.response._tmpl = '''\
+        <html>
+            <head>
+                <title>{status} - {message}</title>
+            </head>
+            <body>
+                <h1>{status}</h1>
+                <p>{message}</p>
+            </body>
+        </html>'''
+
+        ret = {
+            'success': False,
+            'status': cherrypy.response.status,
+            'message': '{0}'.format(cherrypy._cperror.format_exc())}
 
     # FIXME: this sucks!
     if 'html' in best:
@@ -190,6 +212,7 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
         return {
+            'success': False,
             'status': cherrypy.response.status,
             'message': "Please log in",
         }
@@ -200,14 +223,6 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token
         raise cherrypy.HTTPRedirect('/', 302)
-
-@cherrypy.tools.hypermedia_out()
-def error_page_default():
-    cherrypy.response.status = 500
-    ret = {
-            'success': False,
-            'message': '{0}'.format(cherrypy._cperror.format_exc())}
-    cherrypy.response.body = [salt.output.out_format(ret, 'json_out', __opts__)]
 
 class API(object):
     url_map = {
@@ -241,7 +256,6 @@ class API(object):
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
-                'request.error_response': error_page_default,
 
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
