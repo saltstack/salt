@@ -8,6 +8,7 @@ import codecs
 import os
 import imp
 import logging
+import tempfile
 import traceback
 
 # Import salt libs
@@ -28,12 +29,13 @@ sls_encoder = codecs.getencoder(sls_encoding)
 
 def wrap_tmpl_func(render_str):
     def render_tmpl(tmplsrc, from_str=False, to_str=False,
-                             context=None, **kws):
+                    context=None, **kws):
         if context is None:
             context = {}
         context.update(kws)
         assert 'opts' in context
         assert 'env' in context
+
         if isinstance(tmplsrc, basestring):
             if from_str:
                 tmplstr = tmplsrc
