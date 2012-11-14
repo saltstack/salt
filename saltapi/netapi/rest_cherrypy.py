@@ -50,25 +50,6 @@ def fmt_lowdata(data):
 
     return lowdata
 
-class SimpleTool(cherrypy.Tool):
-    '''
-    http://ionrock.org/better-cherrypy-tools.html
-    '''
-    def __init__(self, point=None, callable=None):
-        self._point = point
-        self._name = None
-        self._priority = 50
-        self._setargs()
-
-    def _setup(self):
-        conf = self._merged_args()
-        hooks = cherrypy.request.hooks
-        for hookpoint in cherrypy._cprequest.hookpoints:
-            if hasattr(self, hookpoint):
-                func = getattr(self, hookpoint)
-                p = getattr(func, 'priority', self._priority)
-                hooks.attach(hookpoint, func, priority=p, **conf)
-
 def salt_auth_tool(default=False):
     ignore_urls = ('/login',)
     sid = (cherrypy.session.get('token', None) or
