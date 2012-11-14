@@ -1,3 +1,16 @@
+salt (0.10.4-2) lucid; urgency=low
+
+  * Latest version
+  * use python-zmq with zmq3 support
+  * generate HTML doc package
+  * include support files for systemd, logwatch
+  * update build/pkg dependencies
+  * reduce postrm scripts to 1
+  * update init scripts 
+  * misc & dependencies cleanup
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 14 Nov 2012 10:56:16 -0700
+
 salt (0.10.4-1precise1) precise; urgency=low
 
   * New upstream version
