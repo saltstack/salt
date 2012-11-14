@@ -2,11 +2,14 @@
 Work with cron
 '''
 
-import tempfile
+# Import python libs
 import os
 
-TAG = '# Lines below here are managed by Salt, do not edit\n'
+# Import salt libs
+import salt.utils
 
+
+TAG = '# Lines below here are managed by Salt, do not edit\n'
 
 def _render_tab(lst):
     '''
@@ -60,9 +63,9 @@ def _get_cron_cmdstr(user, path):
     command.
     '''
     if __grains__['os'] == 'Solaris':
-        return 'su - {0} -c "crontab {1}"'.format(user,path)
+        return 'su - {0} -c "crontab {1}"'.format(user, path)
     else:
-        return 'crontab -u {0} {1}'.format(user,path)
+        return 'crontab -u {0} {1}'.format(user, path)
 
 
 def write_cron_file(user, path):
@@ -76,8 +79,7 @@ def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
-    fd_, path = tempfile.mkstemp()
-    os.close(fd_)
+    path = salt.utils.mkstemp()
     with open(path, 'w+') as fp_:
         fp_.writelines(lines)
     if __grains__['os'] == 'Solaris' and user != "root":

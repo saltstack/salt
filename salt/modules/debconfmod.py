@@ -1,10 +1,12 @@
 '''
 Support for Debconf
 '''
-# Import Salt libs
+# Import Python libs
 import os
 import re
-import tempfile
+
+# Import Salt libs
+import salt.utils
 
 
 def _unpack_lines(out):
@@ -94,11 +96,11 @@ def set(package, question, type, value, *extra):
     if extra:
         value = ' '.join((value,) + tuple(extra))
 
-    fd, fname = tempfile.mkstemp(prefix="salt-")
+    fd_, fname = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
     line = "{0} {1} {2} {3}".format(package, question, type, value)
-    os.write(fd, line)
-    os.close(fd)
+    os.write(fd_, line)
+    os.close(fd_)
 
     _set_file(fname)
 
