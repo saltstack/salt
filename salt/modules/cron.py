@@ -4,7 +4,6 @@ Work with cron
 
 # Import python libs
 import os
-import tempfile
 
 # Import salt libs
 import salt.utils
