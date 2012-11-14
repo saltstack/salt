@@ -187,7 +187,7 @@ class Login(LowDataAdapter):
     def GET(self):
         cherrypy.response._tmpl = self.tmpl
         cherrypy.response.status = '401 Unauthorized'
-        cherrypy.response.headers['WWW-Authenticate'] = 'HTML'
+        cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
         return {
             'status': cherrypy.response.status,
