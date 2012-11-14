@@ -28,6 +28,28 @@ def __virtual__():
         return 'rest'
     return False
 
+def fmt_lowdata(data):
+    '''
+    Take CherryPy body data from a POST (et al) request and format it into
+    lowdata. It will accept repeated parameters and pair and format those
+    into multiple lowdata chunks.
+    '''
+    pairs = []
+    for k,v in data.items():
+        # Ensure parameter is a list
+        argl = v if isinstance(v, list) else [v]
+        # Make pairs of (key, value) from {key: [*value]}
+        pairs.append(zip([k] * len(argl), argl))
+
+    lowdata = []
+    for i in itertools.izip_longest(*pairs):
+        if not all(i):
+            msg = "Error pairing parameters: %s"
+            raise Exception(msg % str(i))
+        lowdata.append(dict(i))
+
+    return lowdata
+
 class SimpleTool(cherrypy.Tool):
     '''
     http://ionrock.org/better-cherrypy-tools.html
@@ -112,28 +134,6 @@ class LowDataAdapter(object):
     def __init__(self, opts):
         self.opts = opts
         self.api = saltapi.APIClient(opts)
-
-    def fmt_lowdata(self, data):
-        '''
-        Take CherryPy body data from a POST (et al) request and format it into
-        lowdata. It will accept repeated parameters and pair and format those
-        into multiple lowdata chunks.
-        '''
-        pairs = []
-        for k,v in data.items():
-            # Ensure parameter is a list
-            argl = v if isinstance(v, list) else [v]
-            # Make pairs of (key, value) from {key: [*value]}
-            pairs.append(zip([k] * len(argl), argl))
-
-        lowdata = []
-        for i in itertools.izip_longest(*pairs):
-            if not all(i):
-                msg = "Error pairing parameters: %s"
-                raise Exception(msg % str(i))
-            lowdata.append(dict(i))
-
-        return lowdata
 
     def exec_lowdata(self, lowdata):
         '''
