@@ -4,6 +4,12 @@ import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
 def render(template_file, env='', sls='', context=None, **kws):
+    '''
+    Render the template_file, passing the functions and grains into the
+    Mako rendering system.
+
+    :rtype: string
+    '''
     tmp_data = salt.utils.templates.mako(template_file, to_str=True,
                     salt=__salt__,
                     grains=__grains__,
@@ -16,7 +22,3 @@ def render(template_file, env='', sls='', context=None, **kws):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))
     return tmp_data['data']
-
-
-
-

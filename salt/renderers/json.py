@@ -2,6 +2,12 @@ from __future__ import absolute_import
 import json
 
 def render(json_data, env='', sls='', **kws):
+    '''
+    Accepts JSON as a string or as a file object and runs it through the JSON
+    parser.
+
+    :rtype: A Python data structure
+    '''
     if not isinstance(json_data, basestring):
         json_data = json_data.read()
 
