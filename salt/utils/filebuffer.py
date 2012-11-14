@@ -7,6 +7,8 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import salt libs
+import salt.utils
 from salt.exceptions import SaltException
 
 
