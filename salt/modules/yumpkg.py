@@ -295,7 +295,7 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(pkgs, refresh=False, repo='', skip_verify=False, source=None,
+def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
             **kwargs):
     '''
     Install the passed package(s)
@@ -314,7 +314,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, source=None,
     skip_verify
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
 
-    source
+    sources
         A list of rpm sources to use for installing the package(s).
 
     Return a dict containing the new package names and versions::
@@ -334,11 +334,11 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, source=None,
     else:
         pkgs = pkgs.split(' ')
 
-    if source is not None:
+    if sources is not None:
         if ',' in source:
-            srcsplit = source.split(',')
+            srcsplit = sources.split(',')
         else:
-            srcsplit = source.split(' ')
+            srcsplit = sources.split(' ')
 
         # Ensure that number of sources matches number of packages specified
         if len(srcsplit) != len(pkgs):
@@ -396,19 +396,18 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, source=None,
         yb.repos.enableRepo(repo)
 
     for i in range(0, len(pkgs)):
-        rpm_path, pkg_type = srcinfo[i]
         try:
-            if source is not None:
-                target = rpm_path
+            if sources is not None:
+                rpm_path, pkg_type = srcinfo[i]
                 log.info(
-                    'Selecting \'{0}\' for local installation'.format(target)
+                    'Selecting \'{0}\' for local installation'.format(rpm_path)
                 )
-                a = yb.installLocal(target)
+                a = yb.installLocal(rpm_path)
                 # if yum didn't install anything, maybe its a downgrade?
                 log.debug('Added {0} transactions'.format(len(a)))
-                if len(a) == 0 and target not in old.keys():
+                if len(a) == 0 and rpm_path not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    a = yb.downgradeLocal(target)
+                    a = yb.downgradeLocal(rpm_path)
             else:
                 target = pkgs[i]
                 log.info('Selecting \'{0}\' for installation'.format(target))
