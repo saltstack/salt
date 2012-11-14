@@ -25,6 +25,27 @@ __outputter__ = {
 log = logging.getLogger(__name__)
 
 
+def running():
+    '''
+    Return a dict of state return data if a state function is already running.
+    This function is used to prevent multiple state calls from being run at
+    the same time.
+
+    CLI Example::
+
+        salt '*' state.running
+    '''
+    ret = []
+    active = __salt__['saltutil.is_running']('state.*')
+    for data in active:
+        err = 'The function "{0}" is running and was started at {1}'.format(
+                data['fun'],
+                salt.utils.jid_to_time(data['jid'])
+                )
+        ret.append(err)
+    return ret
+
+
 def low(data):
     '''
     Execute a single low data call
