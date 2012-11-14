@@ -50,12 +50,17 @@ def fmt_lowdata(data):
 
     return lowdata
 
-def salt_auth_tool(default=False):
+def salt_auth_tool():
     ignore_urls = ('/login',)
+
+    # Grab the session via a cookie (for browsers) or via a custom header
     sid = (cherrypy.session.get('token', None) or
             cherrypy.request.headers.get('X-Auth-Token', None))
+
     if not cherrypy.request.path_info in ignore_urls and not sid :
         raise cherrypy.InternalRedirect('/login')
+
+    cherrypy.response.headers['Cache-Control'] = 'private'
 
 cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
 
