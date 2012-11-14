@@ -137,14 +137,6 @@ def _is_true(v):
     raise ValueError('Failed parsing boolean value: {0}'.format(v))
 
 
-def _no_op(name, **kws):
-    '''
-    No-op state to support state config via the stateconf renderer.
-    '''
-    return dict(name=name, result=True, changes={}, comment='')
-config = _no_op
-
-
 def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
     '''
     Execute the onlyif logic and return data if the onlyif fails

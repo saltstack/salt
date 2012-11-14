@@ -1,7 +1,7 @@
 """
 This module provides a custom renderer that process a salt file with a
 specified templating engine(eg, jinja) and a chosen data renderer(eg, yaml),
-extract arguments for any ``state.config`` state and provide the extracted
+extract arguments for any ``stateconf.set`` state and provide the extracted
 arguments (including salt specific args, such as 'require', etc) as template
 context. The goal is to make writing reusable/configurable/ parameterized
 salt files easier and cleaner, therefore, additionally, it also:
@@ -14,12 +14,12 @@ salt files easier and cleaner, therefore, additionally, it also:
        <%include file="templates/sls-parts.mako"/>
        <%namespace file="salt://lib/templates/utils.mako" import="helper"/>
 
-  - Recognizes the special state function, ``state.config``, that configures a
+  - Recognizes the special state function, ``stateconf.set``, that configures a
     default list of named arguments useable within the template context of
     the salt file. Example::
 
         sls_params:
-          state.config:
+          stateconf.set:
             - name1: value1
             - name2: value2
             - name3:
@@ -41,10 +41,10 @@ salt files easier and cleaner, therefore, additionally, it also:
 
     This even works with ``include`` + ``extend`` so that you can override
     the default configured arguments by including the salt file and then extend
-    the ``state.config`` states that come from the included salt file.
+    the ``stateconf.set`` states that come from the included salt file.
 
     Notice that the end of configuration marker(``# --- end of state config --``)
-    is needed to separate the use of 'state.config' form the rest of your salt
+    is needed to separate the use of 'stateconf.set' form the rest of your salt
     file.
         
   - Adds support for relative include and exclude of .sls files. Example::
@@ -89,7 +89,7 @@ salt files easier and cleaner, therefore, additionally, it also:
 
         extend:
           .file::sls_params:
-            state.config:
+            stateconf.set:
               - name1: something
      
     Above will be pre-processed into::
@@ -99,11 +99,11 @@ salt files easier and cleaner, therefore, additionally, it also:
 
         extend:
           some.file::sls_params:
-            state.config:
+            stateconf.set:
               - name1: something
 
   - Optionally(disable via the `-G` renderer option), generates a
-    ``state.config`` goal state(state id named as ``.goal`` by default) that
+    ``stateconf.set`` goal state(state id named as ``.goal`` by default) that
     requires all other states in the salt file.
     
     Such goal state is intended to be required by some state in an including
@@ -168,7 +168,7 @@ re-write or renames state id's and their references.
 #   - support synthetic argument? Eg, 
 #
 #     apache:
-#       state.config:
+#       stateconf.set:
 #         - host: localhost
 #         - port: 1234
 #         - url: 'http://${host}:${port}/'
@@ -176,7 +176,7 @@ re-write or renames state id's and their references.
 #     Currently, this won't work, but can be worked around like so:
 #
 #     apache:
-#       state.config:
+#       stateconf.set:
 #         - host: localhost
 #         - port: 1234
 #     ##  - url: 'http://${host}:${port}/'
@@ -202,9 +202,24 @@ __opts__ = {
   'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
   # eg, something like "# --- end of state config --" works by default.
 
-  'stateconf_goal_state': '.goal'
+  'stateconf_goal_state': '.goal',
   # name of the state id for the generated goal state.
+
+  'stateconf_state_func': 'stateconf.set'
+  # names the state and the state function to be recognized as a special state
+  # from which to gather sls file context variables. It should be specified
+  # in the 'state.func' notation, and both the state module and the function must
+  # actually exist and the function should be a dummy, no-op state function that
+  # simply returns a dict(name=name, result=True, changes={}, comment='')
 }
+
+
+STATE_FUNC = STATE_NAME = ''
+
+def __init__(opts):
+    global STATE_NAME, STATE_FUNC
+    STATE_FUNC = __opts__['stateconf_state_func']
+    STATE_NAME = STATE_FUNC.split('.')[0]
 
 
 MOD_BASENAME = ospath.basename(__file__)
@@ -318,7 +333,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         process_sls_data(sls_templ[:match.start()], extract=True)
 
     # if some config has been extracted then remove the sls-name prefix
-    # of the keys in the extracted state.config context to make them easier
+    # of the keys in the extracted stateconf.set context to make them easier
     # to use in the salt file.
     if STATE_CONF:
         tmplctx = STATE_CONF.copy()
@@ -526,7 +541,7 @@ def add_goal_state(data):
         for sid, _, state, _ in \
                 statelist(data, set(['include', 'exclude', 'extend'])):
             reqlist.append({state_name(state): sid})
-        data[goal_sid] = {'state.config': [dict(require=reqlist)]}
+        data[goal_sid] = {STATE_FUNC: [dict(require=reqlist)]}
 
 def state_name(sname):
     """Return the name of the state regardless if sname is
@@ -545,14 +560,14 @@ class Bunch(dict):
 # With sls:
 #
 #   state_id:
-#     state.config:
+#     stateconf.set:
 #       - name1: value1
 #
 # STATE_CONF is:
 #    { state_id => {name1: value1} }
 #
-STATE_CONF = {}       # state.config
-STATE_CONF_EXT = {}   # state.config under extend: ...
+STATE_CONF = {}       # stateconf.set
+STATE_CONF_EXT = {}   # stateconf.set under extend: ...
 
 def extract_state_confs(data, is_extend=False):
     for state_id, state_dict in data.iteritems():
@@ -560,10 +575,10 @@ def extract_state_confs(data, is_extend=False):
             extract_state_confs(state_dict, True)
             continue
 
-        if 'state' in state_dict:
-            key = 'state'
-        elif 'state.config' in state_dict:
-            key = 'state.config'
+        if STATE_NAME in state_dict:
+            key = STATE_NAME
+        elif STATE_FUNC in state_dict:
+            key = STATE_FUNC
         else:
             continue
 
