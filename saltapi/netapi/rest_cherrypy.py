@@ -6,7 +6,6 @@ import itertools
 import signal
 import os
 import json
-import yaml
 
 # Import third-party libs
 import cherrypy
@@ -17,6 +16,7 @@ import cherrypy.wsgiserver.ssl_builtin
 import salt.auth
 import salt.log
 import salt.output
+from salt.utils import yaml
 
 # Import salt-api libs
 import saltapi
