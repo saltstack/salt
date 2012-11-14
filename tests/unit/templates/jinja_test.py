@@ -110,10 +110,11 @@ class TestGetTemplate(TestCase):
         A Template with a filesystem loader is returned as fallback
         if the file is not contained in the searchpath
         '''
-        filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
-        out = render_jinja_tmpl(
-                open(filename).read(),
-                dict(opts=self.local_opts, env='other'))
+        fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
+        with open(fn_) as fp_:
+            out = render_jinja_tmpl(
+                    fp_.read(),
+                    dict(opts=self.local_opts, env='other'))
         self.assertEqual(out, 'world')
 
     def test_fallback_noloader(self):
