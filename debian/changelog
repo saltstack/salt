@@ -1,13 +1,13 @@
-salt (0.10.4-2) lucid; urgency=low
+salt (0.10.4-2) unstable; urgency=low
 
-  * Latest version
-  * use python-zmq with zmq3 support
-  * generate HTML doc package
-  * include support files for systemd, logwatch
-  * update build/pkg dependencies
-  * reduce postrm scripts to 1
-  * update init scripts 
-  * misc & dependencies cleanup
+  * zmq3 support: b84f593770 86af5f03c3 c933c9e4ff a7e1d58f87 a5cdd8e313 c10bf6702f 2ea8b7e061 75f2a58b4e
+  * HTML doc package: 7f673796e6 422244cd84 d13dbf0fc2 cfc44ee517 8c5675fb88
+  * only run postrm on salt-common purge 5aa00b6bdd, bd2818797c
+  * switch to debian init scripts 6db36a8307
+  * add logrotate support cb9863e264
+  * add systemd support 6f8a728b9d, 502434bccc
+  * add dmidecode+pciutils to recommends 06dab92c56
+  * misc & dependencies cleanup: 8f8d16c07c 7245c80bca bd68bf7a84
 
  -- Sean Channel <pentabular@gmail.com>  Wed, 14 Nov 2012 10:56:16 -0700
 
