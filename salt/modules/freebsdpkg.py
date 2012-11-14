@@ -9,7 +9,7 @@ def _check_pkgng():
     '''
     Looks to see if pkgng is being used by checking if database exists
     '''
-    if os.path.isfile('/var/db/pkg/repo.sqlite'):
+    if os.path.isfile('/var/db/pkg/local.sqlite'):
         return True
     return False
 
@@ -54,7 +54,12 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    pass
+    if _check_pkgng():
+        for line in __salt__['cmd.run']('pkg search -f {0}'.format(name).splitlines()):
+            if line.startswith('Version'):
+                fn, ver = line.split(':', 1)
+                return ver.strip()
+    return ''
 
 
 def version(name):
