@@ -64,53 +64,65 @@ def salt_auth_tool():
 
 cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
 
-class HypermediaTool(SimpleTool):
+# Be conservative in what you send
+ct_out_map = {
+    'application/json': 'json',
+    'application/x-yaml': 'yaml',
+    'text/html': 'raw',
+}
+
+def hypermedia_handler(*args, **kwargs):
+    best = cherrypy.lib.cptools.accept(ct_out_map.keys()) # raises 406
+    out = ct_out_map[best]
+
+    cherrypy.response.headers['Content-Type'] = best
+
+    ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
+
+    # FIXME: this sucks!
+    if 'html' in best:
+        tmpl = cherrypy.response._tmpl
+        ret = tmpl.format(**ret)
+
+    ret = salt.output.out_format(ret, out, __opts__)
+    return ret
+
+def hypermedia_out():
+    request = cherrypy.serving.request
+    request._hypermedia_inner_handler = request.handler
+    request.handler = hypermedia_handler
+
+    # cherrypy.response.headers['Alternates'] = self.ct_out_map.keys()
+    # TODO: add 'negotiate' to Vary header and 'list' to TCN header
+    # Alternates: {"paper.1" 0.9 {type text/html} {language en}},
+    #          {"paper.2" 0.7 {type text/html} {language fr}},
+    #          {"paper.3" 1.0 {type application/postscript} {language en}}
+
+cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler', hypermedia_out)
+
+# Be liberal in what you accept
+ct_in_map = {
+    'application/x-www-form-urlencoded': fmt_lowdata,
+    'application/json': json.loads,
+    'application/x-yaml': yaml.load,
+    'text/yaml': yaml.load,
+}
+
+def hypermedia_in():
     '''
-    A tool to set the in/out handler based on the Accept header
+    Unserialize POST/PUT data of a specified content type, if possible
     '''
-    ct_in_map = {
-        'application/json': json.loads,
-        'application/x-yaml': yaml.loads,
-    }
+    if cherrypy.request.method in ('POST', 'PUT'):
+        ct_type = cherrypy.request.headers['content-type'].lower()
+        ct_in = ct_in_map.get(ct_type, None)
 
-    ct_out_map = {
-        'application/json': 'json_out',
-    }
+        if not ct_in:
+            raise cherrypy.HTTPError(406, 'Content type not supported')
 
-    def before_handler(self, **conf):
-        '''
-        Unserialize POST/PUT data of a specified content type, if possible
-        '''
-        if cherrypy.request.method in ("POST", "PUT"):
-            ct_type = cherrypy.request.headers['content-type'].lower()
-            ct_in = self.ct_in_map.get(ct_type, None)
+        body = cherrypy.request.body.read()
+        cherrypy.request.params['body'] = ct_in(body)
 
-            if not ct_in:
-                raise cherrypy.HTTPError(406, 'Content type not supported')
-
-            body = cherrypy.request.body.read()
-            cherrypy.request.params['body'] = ct_in(body)
-
-    def before_finalize(self, *args, **kwargs):
-        '''
-        Run the return data from the handler through a Salt outputter then
-        return the reponse
-        '''
-        accepts = cherrypy.request.headers.elements('Accept')
-        for content_type in accepts:
-            out = self.ct_out_map.get(content_type, None)
-
-            if not out:
-                raise cherrypy.HTTPError(406, 'Accept format not supported')
-
-        ret = cherrypy.serving.request.handler(*args, **kwargs)
-        cherrypy.response.body = salt.output.out_format(ret, out, __opts__)
-        cherrypy.response.headers['Content-Type'] = content_type
-
-    before_finalize.priority = 70 # late
-    callable = before_finalize
-
-cherrypy.tools.hypermedia_handler = HypermediaTool()
+cherrypy.tools.hypermedia_in = cherrypy.Tool('before_handler', hypermedia_in)
 
 class LowDataAdapter(object):
     '''
@@ -129,7 +141,6 @@ class LowDataAdapter(object):
         logger.debug("SaltAPI is passing low-data: %s", lowdata)
         return [self.api.run(chunk) for chunk in lowdata]
 
-    @cherrypy.tools.json_out()
     def GET(self):
         lowdata = [{'client': 'local', 'tgt': '*',
                 'fun': ['grains.items', 'sys.list_functions'],
@@ -137,7 +148,6 @@ class LowDataAdapter(object):
         }]
         return self.exec_lowdata(lowdata)
 
-    @cherrypy.tools.json_out()
     def POST(self, **kwargs):
         '''
         Run a given function in a given client with the given args
@@ -148,38 +158,41 @@ class Login(LowDataAdapter):
     '''
     '''
     exposed = True
+    tmpl = '''\
+        <html>
+            <head>
+                <title>{status} - {message}</title>
+            </head>
+            <body>
+                <h1>{status}</h1>
+                <p>{message}</p>
+                <form method="post" action="/login">
+                    <p>
+                        <label for="username">Username:</label>
+                        <input type="text" name="username">
+                        <br>
+                        <label for="password">Password:</label>
+                        <input type="password" name="password">
+                        <br>
+                        <label for="eauth">Eauth:</label>
+                        <input type="text" name="eauth" value="pam">
+                    </p>
+                    <p>
+                        <button type="submit">Log in</button>
+                    </p>
+                </form>
+            </body>
+        </html>'''
 
     def GET(self):
+        cherrypy.response._tmpl = self.tmpl
         cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'HTML'
 
-        return '''\
-            <html>
-                <head>
-                    <title>{status} - {message}</title>
-                </head>
-                <body>
-                    <h1>{status}</h1>
-                    <p>{message}</p>
-                    <form method="post" action="/login">
-                        <p>
-                            <label for="username">Username:</label>
-                            <input type="text" name="username">
-                            <br>
-                            <label for="password">Password:</label>
-                            <input type="password" name="password">
-                            <br>
-                            <label for="eauth">Eauth:</label>
-                            <input type="text" name="eauth" value="pam">
-                        </p>
-                        <p>
-                            <button type="submit">Log in</button>
-                        </p>
-                    </form>
-                </body>
-            </html>'''.format(
-                    status=cherrypy.response.status,
-                    message="Please log in")
+        return {
+            'status': cherrypy.response.status,
+            'message': "Please log in",
+        }
 
     def POST(self, **kwargs):
         auth = salt.auth.LoadAuth(self.opts)
@@ -188,7 +201,7 @@ class Login(LowDataAdapter):
         cherrypy.session['token'] = token
         raise cherrypy.HTTPRedirect('/', 302)
 
-@cherrypy.tools.hypermedia_handler()
+@cherrypy.tools.hypermedia_out()
 def error_page_default():
     cherrypy.response.status = 500
     ret = {
@@ -236,7 +249,10 @@ class API(object):
                 'tools.sessions.timeout': 60 * 10, # 10 hours
 
                 'tools.salt_auth.on': True,
-                'tools.hypermedia_handler.on': True,
+
+                # 'tools.autovary.on': True,
+                'tools.hypermedia_out.on': True,
+                'tools.hypermedia_in.on': True,
             },
         }
 
