@@ -276,7 +276,7 @@ def refresh_pillar():
 
 def running():
     '''
-    Return the data on all running processes salt on the minion
+    Return the data on all running salt processes on the minion
 
     CLI Example::
 
