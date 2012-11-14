@@ -1,8 +1,3 @@
-'''
-Process yaml with the Wempy templating engine
-
-'''
-
 # Import Salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
@@ -11,6 +6,8 @@ import salt.utils.templates
 def render(template_file, env='', sls='', context=None, **kws):
     '''
     Render the data passing the functions and grains into the rendering system
+
+    :rtype: string
     '''
     tmp_data = salt.utils.templates.wempy(
             template_file,
