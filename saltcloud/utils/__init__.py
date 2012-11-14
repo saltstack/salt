@@ -18,6 +18,7 @@ try:
     import paramiko
 except:
     print('Cannot import paramiko. Please make sure it is correctly installed.')
+    log.error('Cannot import paramiko. Please make sure it is correctly installed.')
     sys.exit(1)
 
 # Import salt libs
@@ -193,14 +194,17 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 ssh.close()
                 trycount += 1
                 print('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
+                log.warn('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
                     sleep(trysleep)
                     continue
                 else:
                     print('Authencication failed: {0}'.format(authexec))
+                    log.warn('Authencication failed: {0}'.format(authexec))
                     return False
             except Exception as exc:
                 print('There was an error in wait_for_passwd: {0}'.format(exc))
+                log.error('There was an error in wait_for_passwd: {0}'.format(exc))
             if tryconnect:
                 return True
             return False
@@ -237,6 +241,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 ssh.connect(**kwargs)
             except Exception as exc:
                 print('There was an error in deploy_script: {0}'.format(exc))
+                log.error('There was an error in deploy_script: {0}'.format(exc))
             if provider == 'ibmsce':
                 ssh.exec_command('sudo sed -i "s/#Subsystem/Subsystem/" /etc/ssh/sshd_config')
                 stdin, stdout, stderr = ssh.exec_command('sudo service sshd restart')
@@ -268,6 +273,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             process.join()
             if queuereturn:
                 print('Running state.highstate on minion')
+                log.warn('Running state.highstate on minion')
                 #client = salt.client.LocalClient(conf_file)
                 #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
                 #for line in output:
@@ -320,6 +326,7 @@ def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
             queue.put(name)
             newtimeout = 0
             print('Minion {0} is ready to receive commands'.format(name))
+            log.warn('Minion {0} is ready to receive commands'.format(name))
 
 
 def ip_to_int(ip):

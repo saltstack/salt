@@ -12,7 +12,6 @@ Primary interfaces for the salt-cloud system
 # Import python libs
 import optparse
 import os
-import pprint
 
 # Import salt libs
 import saltcloud.config

@@ -58,9 +58,11 @@ class Cloud(object):
         for prov in provs:
             fun = '{0}.{1}'.format(prov, query)
             if not fun in self.clouds:
-                print('Public cloud provider {0} is not available'.format(
+                msg = ('Public cloud provider {0} is not available'.format(
                     self.provider(vm_))
                     )
+                print(msg)
+                log.error(msg)
                 continue
             try:
                 pmap[prov] = self.clouds[fun]()
@@ -157,9 +159,11 @@ class Cloud(object):
         '''
         fun = '{0}.create'.format(self.provider(vm_))
         if not fun in self.clouds:
-            print('Public cloud provider {0} is not available'.format(
+            msg = ('Public cloud provider {0} is not available'.format(
                 self.provider(vm_))
                 )
+            print(msg)
+            log.error(msg)
             return
         priv, pub = saltcloud.utils.gen_keys(
                 saltcloud.utils.get_option('keysize', self.opts, vm_)
@@ -175,8 +179,10 @@ class Cloud(object):
         try:
             ok = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
         except KeyError as exc:
-            print('Failed to create vm {0}. Configuration value {1} needs '
+            msg = ('Failed to create vm {0}. Configuration value {1} needs '
                   'to be set'.format(vm_['name'], exc))
+            print(msg)
+            log.error(msg)
 
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
@@ -204,6 +210,7 @@ class Cloud(object):
                     if name in current_boxen:
                         # The specified vm already exists, don't make it anew
                         print("{0} already exists on {1}".format(name, current_boxen[name]))
+                        log.warn("{0} already exists on {1}".format(name, current_boxen[name]))
                         continue
                     vm_['name'] = name
                     if self.opts['parallel']:
@@ -214,6 +221,7 @@ class Cloud(object):
                         self.create(vm_)
         if not found:
             print('Profile {0} is not defined'.format(self.opts['profile']))
+            log.error('Profile {0} is not defined'.format(self.opts['profile']))
 
 
 class Map(Cloud):
@@ -249,6 +257,7 @@ class Map(Cloud):
             for vm in query_map[profile]:
                 names.append(vm)
         print("VMs to delete: {0}\n".format(names))
+        log.warn("VMs to delete: {0}\n".format(names))
         return names
 
     def read(self):
@@ -316,9 +325,11 @@ class Map(Cloud):
             for name in dmap['destroy']:
                 msg += '  {0}\n'.format(name)
         print(msg)
+        log.warn(msg)
         res = raw_input('Proceed? [N/y]')
         if not res.lower().startswith('y'):
             return
+        log.warn('...proceeding')
         # We are good to go, execute!
         # Generate the fingerprint of the master pubkey in
         #     order to mitigate man-in-the-middle attacks
