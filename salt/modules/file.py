@@ -12,8 +12,8 @@ import os
 import re
 import time
 import shutil
-import tempfile
 import stat
+import tempfile
 import sys
 import getpass
 import hashlib
@@ -27,6 +27,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils
 import salt.utils.find
 from salt.utils.filebuffer import BufferedReader
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -898,8 +899,7 @@ def source_list(source, source_hash, env):
                         source = single_src
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    fd_, dest = tempfile.mkstemp()
-                    os.close(fd_)
+                    dest = salt.utils.mkstemp()
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:

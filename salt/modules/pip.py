@@ -4,9 +4,9 @@ Install Python packages with pip to either the system or a virtualenv
 # Import Python libs
 import os
 import logging
-import tempfile
 import shutil
 # Import Salt libs
+import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -177,8 +177,7 @@ def install(pkgs=None,
     if requirements:
         if requirements.startswith('salt://'):
             req = __salt__['cp.cache_file'](requirements)
-            fd_, treq = tempfile.mkstemp()
-            os.close(fd_)
+            treq = salt.utils.mkstemp()
             shutil.copyfile(req, treq)
         else:
             treq = requirements
@@ -373,8 +372,7 @@ def uninstall(pkgs=None,
     if requirements:
         if requirements.startswith('salt://'):
             req = __salt__['cp.cache_file'](requirements)
-            fd_, treq = tempfile.mkstemp()
-            os.close(fd_)
+            treq = salt.utils.mkstemp()
             shutil.copyfile(req, treq)
         cmd = '{cmd} --requirements "{requirements}" '.format(
             cmd=cmd, requirements=treq or requirements)
