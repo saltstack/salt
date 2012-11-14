@@ -1146,7 +1146,8 @@ class ClearFuncs(object):
             pub = os.path.join(minion_dir, host)
             minions[host] = salt.utils.fopen(pub, 'r').read()
         if self.opts['cluster_mode'] == 'full':
-            with salt.utils.fopen(os.path.join(self.opts['pki_dir'], 'master.pem')) as fp_:
+            master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
+            with salt.utils.fopen(master_pem_path) as fp_:
                 master_pem = fp_.read()
         return [minions,
                 master_conf,
@@ -1301,7 +1302,9 @@ class ClearFuncs(object):
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
-            log.info('New public key placed in pending for {id}'.format(**load))
+            log.info(
+                'New public key placed in pending for {id}'.format(**load)
+            )
             with salt.utils.fopen(pubfn_pend, 'w+') as fp_:
                 fp_.write(load['pub'])
             ret = {'enc': 'clear',
@@ -1331,7 +1334,8 @@ class ClearFuncs(object):
             else:
                 log.info(
                     'Authentication failed from host {id}, the key is in '
-                    'pending and needs to be accepted with salt-key -a {id}'.format(**load)
+                    'pending and needs to be accepted with salt-key'
+                    '-a {id}'.format(**load)
                 )
                 eload = {'result': True,
                          'act': 'pend',

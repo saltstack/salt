@@ -65,8 +65,6 @@ class CPModuleTest(integration.ModuleCase):
             self.assertNotIn('bacon', data)
             self.assertEqual(hash, hashlib.md5(data).hexdigest())
 
-
-
     def test_get_template(self):
         '''
         cp.get_template

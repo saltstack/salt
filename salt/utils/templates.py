@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class SaltTemplateRenderError(salt.exceptions.SaltException):
     pass
 
+
 # FIXME: also in salt/template.py
 sls_encoding = 'utf-8'  # this one has no BOM.
 sls_encoder = codecs.getencoder(sls_encoding)
@@ -28,12 +29,13 @@ sls_encoder = codecs.getencoder(sls_encoding)
 
 def wrap_tmpl_func(render_str):
     def render_tmpl(tmplsrc, from_str=False, to_str=False,
-                             context=None, **kws):
+                    context=None, **kws):
         if context is None:
             context = {}
         context.update(kws)
         assert 'opts' in context
         assert 'env' in context
+
         if isinstance(tmplsrc, basestring):
             if from_str:
                 tmplstr = tmplsrc
