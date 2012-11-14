@@ -244,10 +244,10 @@ class API(object):
                 'request.error_response': error_page_default,
 
                 'tools.trailing_slash.on': True,
+                'tools.gzip.on': True,
 
                 'tools.sessions.on': True,
                 'tools.sessions.timeout': 60 * 10, # 10 hours
-
                 'tools.salt_auth.on': True,
 
                 # 'tools.autovary.on': True,
