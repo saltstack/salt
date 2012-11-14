@@ -291,7 +291,8 @@ def running():
         return []
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
-        data = serial.loads(open(path, 'rb').read())
+        with open(path, 'rb') as fp_:
+            data = serial.loads(fp_.read())
         if not isinstance(data, dict):
             # Invalid serial object
             continue
