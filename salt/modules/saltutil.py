@@ -9,6 +9,7 @@ import hashlib
 import shutil
 import signal
 import logging
+import fnmatch
 import sys
 
 # Import Salt libs
@@ -277,6 +278,23 @@ def refresh_pillar():
         return True
     except IOError:
         return False
+
+
+def is_running(fun):
+    '''
+    If the named function is running return the data associated with it/them.
+    The argument can be a glob
+
+    CLI Example::
+
+        salt '*' saltutil.is_running state.highstate
+    '''
+    run = running()
+    ret = []
+    for data in run:
+        if fnmatch.fnmatch(data.get('fun', ''), fun):
+            ret.append(data)
+    return ret
 
 
 def running():
