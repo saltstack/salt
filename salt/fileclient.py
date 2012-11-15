@@ -96,7 +96,7 @@ class Client(object):
         yield dest
         os.umask(cumask)
 
-    def get_file(self, path, dest='', makedirs=False, env='base'):
+    def get_file(self, path, dest='', makedirs=False, env='base', gzip_compression=None):
         '''
         Copies a file from the local files or master depending on
         implementation
@@ -257,7 +257,7 @@ class Client(object):
                 return dest
         return False
 
-    def get_dir(self, path, dest='', env='base'):
+    def get_dir(self, path, dest='', env='base', gzip_compression=None):
         '''
         Get a directory recursively from the salt-master
         '''
@@ -284,7 +284,7 @@ class Client(object):
                     self.get_file(
                         'salt://{0}'.format(fn_),
                         '{0}/{1}'.format(dest, minion_relpath),
-                        True, env
+                        True, env, gzip_compression
                     )
                 )
         # Replicate empty dirs from master

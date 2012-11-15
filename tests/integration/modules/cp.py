@@ -65,6 +65,24 @@ class CPModuleTest(integration.ModuleCase):
             self.assertNotIn('bacon', data)
             self.assertEqual(hash, hashlib.md5(data).hexdigest())
 
+    def test_get_file_make_dirs(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'make/dirs/scene33')
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://grail/scene33',
+                tgt,
+            ],
+            make_dirs=True
+        )
+        with open(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
     def test_get_template(self):
         '''
         cp.get_template
@@ -93,6 +111,23 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail',
                     tgt
                 ])
+        self.assertIn('grail', os.listdir(tgt))
+        self.assertIn('36', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
+
+    def test_get_dir_templated_paths(self):
+        '''
+        cp.get_dir
+        '''
+        tgt = os.path.join(integration.TMP, 'many')
+        self.run_function(
+            'cp.get_dir',
+            [
+                'salt://{{grains.script}}',
+                tgt.replace('many', '{{grains.alot}}')
+            ]
+        )
         self.assertIn('grail', os.listdir(tgt))
         self.assertIn('36', os.listdir(os.path.join(tgt, 'grail')))
         self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))

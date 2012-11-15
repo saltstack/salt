@@ -62,6 +62,23 @@ on the master (and minion), 9 uses the most.
     # salt '*' cp.get_file salt://vimrc /etc/vimrc gzip_compression=5
 
 
+get_dir
+```````
+
+The cp.get_dir function can be used on the minion to download an entire
+directory from the master.  The syntax is very similar to get_file:
+
+.. code-block:: bash
+
+    # salt '*' cp.get_dir salt://etc/apache2 /etc
+
+get_dir supports template rendering and gzip compression just like get_file:
+
+
+.. code-block:: bash
+
+    # salt '*' cp.get_dir salt://etc/{{pillar.webserver}} /etc gzip_compression=5 template=jinja
+
 
 File Server Client API
 ----------------------
