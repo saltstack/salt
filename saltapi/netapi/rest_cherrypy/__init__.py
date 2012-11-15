@@ -142,6 +142,7 @@ class LowDataAdapter(object):
     '''
     '''
     exposed = True
+    tmpl = 'index.html'
 
     def __init__(self, opts):
         self.opts = opts
@@ -156,6 +157,8 @@ class LowDataAdapter(object):
         return [self.api.run(chunk) for chunk in lowdata]
 
     def GET(self):
+        cherrypy.response._tmpl = self.tmpl
+
         lowdata = [{'client': 'local', 'tgt': '*',
                 'fun': ['grains.items', 'sys.list_functions'],
                 'arg': [[], []],
@@ -172,9 +175,10 @@ class Login(LowDataAdapter):
     '''
     '''
     exposed = True
+    tmpl = 'login.html'
 
     def GET(self):
-        cherrypy.response._tmpl = 'login.html'
+        cherrypy.response._tmpl = self.tmpl
         cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
