@@ -130,6 +130,12 @@ like this:
 
 0.10.4-736-gec74d69
 
+Svn Module Addition
+-------------------
+
+Anthony Cornehl (twinshadow) contributed a module that adds Subversion support
+to Salt.  This great addition helps round out Salt's VCS support.
+
 Noteworthy Changes
 ==================
 
