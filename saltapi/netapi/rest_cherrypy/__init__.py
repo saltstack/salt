@@ -120,6 +120,12 @@ cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body', hypermedia_i
 
 class LowDataAdapter(object):
     '''
+    The primary purpose of this handler is to provide a RESTful API to execute
+    Salt client commands and return the response as a data structure.
+
+    In addition, there is enough functionality to bootstrap the single-page
+    browser app (which will then utilize the REST API via ajax calls) when the
+    request is intiated from a browser (asks for HTML).
     '''
     exposed = True
     tmpl = 'index.html'
@@ -169,6 +175,35 @@ class LowDataAdapter(object):
         return [self.api.run(chunk) for chunk in lowdata]
 
     def GET(self):
+        '''
+        The API entry point
+
+        .. http:get::
+
+            An explanation of the API with links of where to go next.
+
+            **Example request**::
+
+                % curl -i localhost:8000/minions
+
+            .. code-block:: http
+
+                GET / HTTP/1.1
+                Host: localhost:8000
+                Accept: application/json
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Vary: Accept
+                Content-Type: application/json
+
+        :statuscode 200: success
+        :statuscode 401: authentication required
+        :statuscode 406: requested Content-Type not available
+        '''
         cherrypy.response.processors['text/html'] = self.fmt_tmpl
 
         return {
