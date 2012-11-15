@@ -40,6 +40,7 @@ import tempfile
 import time
 import sys
 import logging
+import socket
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -55,6 +56,7 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
+avail_locations = types.FunctionType(avail_locations.__code__, globals())
 avail_images = types.FunctionType(avail_images.__code__, globals())
 avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
 script = types.FunctionType(script.__code__, globals())
@@ -69,7 +71,7 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for OPENSTACK configs
     '''
-    if 'OPENSTACK.user' in __opts__ and 'OPENSTACK.password' in __opts__:
+    if 'OPENSTACK.user' in __opts__:
         log.debug('Loading Openstack cloud module')
         return 'openstack'
     return False
@@ -100,6 +102,22 @@ def get_conn():
             **authinfo
     )
 
+
+def preferred_ip(vm_, ips):
+    '''
+    Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
+    '''
+    proto = vm_.get('protocol', __opts__.get('OPENSTACK.protocol', 'ipv4'))
+    family = socket.AF_INET
+    if proto == 'ipv6':
+        family = socket.AF_INET6
+    for ip in ips:
+        try:
+            socket.inet_pton(family, ip)
+            return ip
+        except:
+            continue
+    return False
 
 def ssh_interface(vm_):
     '''
@@ -139,7 +157,8 @@ def create(vm_):
         sys.stderr.write(err)
         return False
 
-    kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
+    if 'OPENSTACK.ssh_key_name' in __opts__:
+        kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
 
     try:
         data = conn.create_node(**kwargs)
@@ -154,9 +173,9 @@ def create(vm_):
 
     not_ready = True
     nr_count = 0
+    print('Looking for IP addresses')
+    log.debug('Looking for IP addresses')
     while not_ready:
-        print('Looking for IP addresses')
-        log.warn('Looking for IP addresses')
         nodelist = list_nodes()
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
@@ -164,18 +183,21 @@ def create(vm_):
             print('Private IPs returned, but not public... checking for misidentified IPs')
             log.warn('Private IPs returned, but not public... checking for misidentified IPs')
             for private_ip in private:
+                private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
-                    print('{0} is a public ip'.format(private_ip))
                     log.warn('{0} is a public ip'.format(private_ip))
                     data.public_ips.append(private_ip)
                     not_ready = False
                 else:
-                    print('{0} is a private ip'.format(private_ip))
                     log.warn('{0} is a private ip'.format(private_ip))
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
                 break
+
+        if public:
+            data.public_ips = public
+            not_ready = False
 
         nr_count += 1
         if nr_count > 50:
@@ -184,29 +206,37 @@ def create(vm_):
         time.sleep(1)
 
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = data.private_ips[0]
+        ip_address = preferred_ip(vm_, data.private_ips)
     else:
-        ip_address = data.public_ips[0]
+        ip_address = preferred_ip(vm_, data.public_ips)
+    log.debug('Using IP address {0}'.format(ip_address))
+
+    if not ip_address:
+        raise
 
     deployargs = {
         'host': ip_address,
         'script': deploy_script.script,
         'name': vm_['name'],
-	'sock_dir': __opts__['sock_dir']
+        'sock_dir': __opts__['sock_dir']
     }
 
     if 'ssh_username' in vm_:
-	deployargs['username'] = vm_['ssh_username']
+        deployargs['username'] = vm_['ssh_username']
     else:
         deployargs['username'] = 'root'
+    log.debug('Using {0} as SSH username'.format(deployargs['username']))
 
     if 'OPENSTACK.ssh_key_file' in __opts__:
-	deployargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
+        deployargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
+        log.debug('Using {0} as SSH key file'.format(deployargs['key_filename']))
     elif 'password' in data.extra:
-	deployargs['password'] = data.extra['password']
+        deployargs['password'] = data.extra['password']
+        log.debug('Logging into SSH using password')
 
     if 'sudo' in vm_:
         deployargs['sudo'] = vm_['sudo']
+        log.debug('Running root commands using sudo')
 
     deployed = saltcloud.utils.deploy_script(**deployargs)
     if deployed:
@@ -214,7 +244,7 @@ def create(vm_):
         log.warn('Salt installed on {0}'.format(vm_['name']))
     else:
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
-        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
     print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))

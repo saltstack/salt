@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
+avail_locations = types.FunctionType(avail_locations.__code__, globals())
 avail_images = types.FunctionType(avail_images.__code__, globals())
 avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
 script = types.FunctionType(script.__code__, globals())

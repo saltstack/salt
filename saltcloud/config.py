@@ -13,13 +13,17 @@ def cloud_config(path):
     '''
     Read in the salt cloud config and return the dict
     '''
-    opts = {# Provider defaults
+    opts = {  # Provider defaults
             'provider': '',
             'location': '',
             # Global defaults
             'ssh_auth': '',
             'keysize': 4096,
             'os': '',
+            # Logging defaults
+            'log_level': 'info',
+            'log_level_logfile': 'info',
+            'log_file': '/var/log/salt/cloud'
             }
 
     salt.config.load_config(opts, path, 'SALT_CLOUD_CONFIG')
@@ -29,13 +33,14 @@ def cloud_config(path):
 
     return opts
 
+
 def vm_config(path):
     '''
     Read in the salt cloud vm config file
     '''
     # No defaults
     opts = {}
-    
+
     salt.config.load_config(opts, path, 'SALT_CLOUDVM_CONFIG')
 
     if 'include' in opts:
