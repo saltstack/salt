@@ -83,6 +83,6 @@ class SaltCloud(parsers.SaltCloudParser):
             mapper.run_profile()
             self.exit(0)
 
-        if self.options.map and self.selected_query_option is None::
+        if self.options.map and self.selected_query_option is None:
             mapper.run_map()
             self.exit(0)
