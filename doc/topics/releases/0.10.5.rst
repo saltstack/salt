@@ -145,3 +145,13 @@ Arch Linux Defaults to Systemd
 Arch Linux recently changed to use systemd by default and discontinued support
 for init scripts. Salt has followed suit and defaults to systemd now for
 managing services in Arch.
+
+Salt, Salt Cloud and Openstack
+------------------------------
+
+With the releases of Salt 0.10.5 and Salt Cloud 0.8.2, OpenStack becomes the
+first (non-OS) piece of software to include support both on the user level
+(with Salt Cloud) and the admin level (with Salt). We are excited to continue
+to extend support of other platforms at this level.
+
+
