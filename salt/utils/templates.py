@@ -44,6 +44,7 @@ def wrap_tmpl_func(render_str):
                     tmplstr = tmplsrc.read()
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
+            tmplsrc.close()
         try:
             output = render_str(tmplstr, context)
         except SaltTemplateRenderError, exc:
