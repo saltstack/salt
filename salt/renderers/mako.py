@@ -14,9 +14,8 @@ def render(template_file, env='', sls='', argline='', context=None, **kws):
 
     :rtype: string
     '''
-    if argline == '-s':
-        from_str = True
-    elif argline:
+    from_str = argline=='-s'
+    if not from_str and argline:
         raise SaltRenderError(
                   'Unknown renderer option: {opt}'.format(opt=argline)
               )

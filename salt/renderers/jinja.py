@@ -16,9 +16,8 @@ def render(template_file, env='', sls='', argline='', context=None, **kws):
         -s    Interpret renderer input as a string rather than as a file path.
 
     '''
-    if argline == '-s':
-        from_str = True
-    elif argline:
+    from_str = argline=='-s'
+    if not from_str and argline:
         raise SaltRenderError(
                   'Unknown renderer option: {opt}'.format(opt=argline)
               )
