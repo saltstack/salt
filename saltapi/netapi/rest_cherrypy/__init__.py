@@ -72,7 +72,8 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             'status': cherrypy.response.status,
-            'message': '{0}'.format(exc)}
+            'message': '{0}'.format(exc) if cherrypy.config['debug']
+                    else "An unexpected error occurred"}
 
     content_types = cherrypy.response.processors
     best = cherrypy.lib.cptools.accept(content_types.keys()) # raises 406
