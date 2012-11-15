@@ -52,11 +52,11 @@ def installed(name, ruby=None, runas=None, version=None, rdoc=False, ri=False):
         ret['comment'] = 'The gem {0} would have been installed'.format(name)
         return ret
     if __salt__['gem.install'](name,
-                               ruby    = ruby,
-                               runas   = runas,
-                               version = version,
-                               rdoc    = rdoc,
-                               ri      = ri,     ):
+                               ruby=ruby,
+                               runas=runas,
+                               version=version,
+                               rdoc=rdoc,
+                               ri=ri):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'
