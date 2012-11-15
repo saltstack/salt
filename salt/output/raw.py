@@ -4,6 +4,7 @@ in a raw state. This was the original outputter used by Salt before the
 outputter system was developed.
 '''
 
+
 def output(data):
     '''
     Rather basic....
