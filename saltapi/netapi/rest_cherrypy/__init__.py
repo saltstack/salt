@@ -54,7 +54,6 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
 ct_out_map = {
     'application/json': 'json',
     'application/x-yaml': 'yaml',
-    'text/html': 'jinja',
 }
 
 def hypermedia_handler(*args, **kwargs):
@@ -80,6 +79,11 @@ def hypermedia_handler(*args, **kwargs):
     cherrypy.response.headers['Content-Type'] = best
 
     out = content_types[best]
+
+    # Allow handlers to supply the outputter (mostly for the HTML one-offs)
+    if callable(out):
+        return out(ret)
+
     return salt.output.out_format(ret, out, __opts__)
 
 def hypermedia_out():
@@ -124,6 +128,17 @@ class LowDataAdapter(object):
         self.opts = opts
         self.api = saltapi.APIClient(opts)
 
+    def fmt_tmpl(self, data):
+        '''
+        Allow certain methods in the handler to be able accept requests for
+        HTML, then render and return HTML (run through Jinja templates).
+
+        This is intended to allow bootstrapping the web app.
+        '''
+        cherrypy.response.processors['text/html'] = 'raw'
+        tmpl = jenv.get_template(self.tmpl)
+        return tmpl.render(data)
+
     def fmt_lowdata(self, data):
         '''
         Take CherryPy body data from a POST (et al) request and format it into
@@ -154,13 +169,12 @@ class LowDataAdapter(object):
         return [self.api.run(chunk) for chunk in lowdata]
 
     def GET(self):
-        cherrypy.response._tmpl = self.tmpl
+        cherrypy.response.processors['text/html'] = self.fmt_tmpl
 
-        lowdata = [{'client': 'local', 'tgt': '*',
-                'fun': ['grains.items', 'sys.list_functions'],
-                'arg': [[], []],
-        }]
-        return self.exec_lowdata(lowdata)
+        return {
+            'status': cherrypy.response.status,
+            'message': "Welcome",
+        }
 
     def POST(self, **kwargs):
         '''
@@ -175,7 +189,8 @@ class Login(LowDataAdapter):
     tmpl = 'login.html'
 
     def GET(self):
-        cherrypy.response._tmpl = self.tmpl
+        cherrypy.response.processors['text/html'] = self.fmt_tmpl
+
         cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
