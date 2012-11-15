@@ -43,7 +43,7 @@ def salt_auth_tool():
     sid = (cherrypy.session.get('token', None) or
             cherrypy.request.headers.get('X-Auth-Token', None))
 
-    if not cherrypy.request.path_info in ignore_urls and not sid :
+    if not cherrypy.request.path_info.startswith(ignore_urls) and not sid:
         raise cherrypy.InternalRedirect('/login')
 
     cherrypy.response.headers['Cache-Control'] = 'private'
