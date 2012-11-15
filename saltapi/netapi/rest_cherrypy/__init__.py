@@ -73,7 +73,7 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             'status': cherrypy.response.status,
-            'message': '{0}'.format(cherrypy._cperror.format_exc())}
+            'message': '{0}'.format(exc)}
 
     content_types = cherrypy.response.processors
     best = cherrypy.lib.cptools.accept(content_types.keys()) # raises 406
@@ -131,7 +131,7 @@ class LowDataAdapter(object):
         into multiple lowdata chunks.
         '''
         pairs = []
-        for k,v in data.items():
+        for k, v in data.items():
             # Ensure parameter is a list
             argl = v if isinstance(v, list) else [v]
             # Make pairs of (key, value) from {key: [*value]}
