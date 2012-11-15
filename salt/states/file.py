@@ -1652,7 +1652,7 @@ def rename(name, source, force=False, makedirs=False):
 
 def accumulated(name, filename, text, **kwargs):
     '''
-    Prepare accumulator which can me used in template in file.managed state.
+    Prepare accumulator which can be used in template in file.managed state.
     accumulator dictionary becomes available in template.
 
     name
