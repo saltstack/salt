@@ -81,6 +81,6 @@ class SaltCloud(parsers.SaltCloudParser):
             mapper.run_profile()
             self.exit(0)
 
-        if self.options.map and self.options.list_images is not None:
+        if self.options.map:
             mapper.run_map()
             self.exit(0)
