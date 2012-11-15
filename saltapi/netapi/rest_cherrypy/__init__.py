@@ -12,6 +12,8 @@ import cherrypy
 import cherrypy.wsgiserver as wsgiserver
 import cherrypy.wsgiserver.ssl_builtin
 
+import jinja2
+
 # Import Salt libs
 import salt.auth
 import salt.log
@@ -22,6 +24,10 @@ from salt.utils import yaml
 import saltapi
 
 logger = salt.log.logging.getLogger(__name__)
+
+jenv = jinja2.Environment(loader=jinja2.FileSystemLoader([
+    os.path.join(os.path.dirname(__file__), 'tmpl'),
+]))
 
 def __virtual__():
     if 'port' in __opts__.get(__name__.rsplit('.')[-1], {}):
@@ -68,7 +74,7 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
 ct_out_map = {
     'application/json': 'json',
     'application/x-yaml': 'yaml',
-    'text/html': 'raw',
+    'text/html': 'jinja',
 }
 
 def hypermedia_handler(*args, **kwargs):
@@ -85,29 +91,19 @@ def hypermedia_handler(*args, **kwargs):
                 exc_info=True)
 
         cherrypy.response.status = 500
-        cherrypy.response._tmpl = '''\
-        <html>
-            <head>
-                <title>{status} - {message}</title>
-            </head>
-            <body>
-                <h1>{status}</h1>
-                <p>{message}</p>
-            </body>
-        </html>'''
+        cherrypy.response._tmpl = '500.html'
 
         ret = {
             'success': False,
             'status': cherrypy.response.status,
             'message': '{0}'.format(cherrypy._cperror.format_exc())}
 
-    # FIXME: this sucks!
-    if 'html' in best:
-        tmpl = cherrypy.response._tmpl
-        ret = tmpl.format(**ret)
+    # Skip the outputters and use jinja instead
+    if out == 'jinja':
+        tmpl = jenv.get_template(cherrypy.response._tmpl)
+        return tmpl.render(**ret)
 
-    ret = salt.output.out_format(ret, out, __opts__)
-    return ret
+    return salt.output.out_format(ret, out, __opts__)
 
 def hypermedia_out():
     request = cherrypy.serving.request
@@ -180,34 +176,9 @@ class Login(LowDataAdapter):
     '''
     '''
     exposed = True
-    tmpl = '''\
-        <html>
-            <head>
-                <title>{status} - {message}</title>
-            </head>
-            <body>
-                <h1>{status}</h1>
-                <p>{message}</p>
-                <form method="post" action="/login">
-                    <p>
-                        <label for="username">Username:</label>
-                        <input type="text" name="username">
-                        <br>
-                        <label for="password">Password:</label>
-                        <input type="password" name="password">
-                        <br>
-                        <label for="eauth">Eauth:</label>
-                        <input type="text" name="eauth" value="pam">
-                    </p>
-                    <p>
-                        <button type="submit">Log in</button>
-                    </p>
-                </form>
-            </body>
-        </html>'''
 
     def GET(self):
-        cherrypy.response._tmpl = self.tmpl
+        cherrypy.response._tmpl = 'login.html'
         cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
