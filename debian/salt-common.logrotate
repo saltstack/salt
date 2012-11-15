@@ -1,0 +1,11 @@
+/var/log/salt/master
+/var/log/salt/minion
+/var/log/salt/key
+/var/log/salt/*.log
+{
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}

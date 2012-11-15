@@ -76,12 +76,9 @@ something like this:
         - source: salt://code/flask
 '''
 # Import Python libs
-from contextlib import nested  # For < 2.7 compat
 import os
-import errno
 import shutil
 import difflib
-import hashlib
 import logging
 import copy
 import re
@@ -95,6 +92,9 @@ from salt._compat import string_types
 logger = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
+
+accumulators = {}
+
 
 def _check_user(user, group):
     '''
@@ -314,7 +314,6 @@ def _symlink_check(name, target, force):
     '''
     Check the symlink function
     '''
-    ret = None
     if not os.path.exists(name):
         comment = 'Symlink {0} to {1} is set for creation'.format(name, target)
         return None, comment
@@ -625,6 +624,11 @@ def managed(name,
             return ret
         if not source:
             return touch(name, makedirs=makedirs)
+
+    if name in accumulators:
+        if not context:
+            context = {}
+        context['accumulator'] = accumulators[name]
 
     if __opts__['test']:
         ret['result'], ret['comment'] = __salt__['file.check_managed'](
@@ -1643,4 +1647,50 @@ def rename(name, source, force=False, makedirs=False):
 
     ret['comment'] = 'Moved "{0}" to "{1}"'.format(source, name)
     ret['changes'] = {name: source}
+    return ret
+
+
+def accumulated(name, filename, text, **kwargs):
+    '''
+    Prepare accumulator which can me used in template in file.managed state.
+    accumulator dictionary becomes available in template.
+
+    name
+        Accumulator name
+
+    filename
+        Filename which would receive this accumulator (see file.managed state
+        documentation about ''name``)
+
+    text
+        String or list for adding in accumulator
+
+    require_in / watch_in
+        One of them required for sure we fill up accumulator before we manage
+        the file. Probably the same as filename
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+    if not filter(lambda x: 'file' in x,
+                  kwargs.get('require_in', ()) + kwargs.get('watch_in', ())):
+        ret['result'] = False
+        ret['comment'] = ('Orphaned accumulator {0} in '
+                          '{1}:{2}'.format(name, kwargs['__sls__'],
+                          kwargs['__id__']))
+        return ret
+    if isinstance(text, string_types):
+        text = (text,)
+    if filename not in accumulators:
+        accumulators[filename] = {}
+    if name not in accumulators[filename]:
+        accumulators[filename][name] = []
+    for chunk in text:
+        if chunk not in accumulators[filename][name]:
+            accumulators[filename][name].append(chunk)
+            ret['comment'] = ('Accumulator {0} for file {1} '
+                              'was charged by text').format(name, filename)
     return ret

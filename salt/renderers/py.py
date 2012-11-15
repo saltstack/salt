@@ -13,9 +13,11 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 
-def render(template, env='', sls=''):
+def render(template, env='', sls='', **kws):
     '''
     Render the python module's components
+
+    :rtype: string
     '''
     if not os.path.isfile(template):
         return {}

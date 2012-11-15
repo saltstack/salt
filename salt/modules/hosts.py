@@ -30,18 +30,19 @@ def list_hosts():
     ret = {}
     if not os.path.isfile(hfn):
         return ret
-    for line in open(hfn).readlines():
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith('#'):
-            continue
-        comps = line.split()
-        if comps[0] in ret:
-            # maybe log a warning ?
-            ret[comps[0]].extend(comps[1:])
-        else:
-            ret[comps[0]] = comps[1:]
+    with open(hfn) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('#'):
+                continue
+            comps = line.split()
+            if comps[0] in ret:
+                # maybe log a warning ?
+                ret[comps[0]].extend(comps[1:])
+            else:
+                ret[comps[0]] = comps[1:]
     return ret
 
 
@@ -123,7 +124,7 @@ def set_host(ip, alias):
             lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    open(hfn, 'w+').writelines(lines)
+    with open(hfn, 'w+') as f: f.writelines(lines)
     return True
 
 
@@ -158,7 +159,7 @@ def rm_host(ip, alias):
             else:
                 # Only an alias was removed
                 lines[ind] = '{0}\n'.format(newline)
-    open(hfn, 'w+').writelines(lines)
+    with open(hfn, 'w+') as f: f.writelines(lines)
     return True
 
 
@@ -199,5 +200,5 @@ def add_host(ip, alias):
             lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    open(hfn, 'w+').writelines(lines)
+    with open(hfn, 'w+') as f: f.writelines(lines)
     return True

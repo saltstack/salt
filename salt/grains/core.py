@@ -167,12 +167,13 @@ def _memdata(osdata):
         meminfo = '/proc/meminfo'
 
         if os.path.isfile(meminfo):
-            for line in open(meminfo, 'r').readlines():
-                comps = line.split(':')
-                if not len(comps) > 1:
-                    continue
-                if comps[0].strip() == 'MemTotal':
-                    grains['mem_total'] = int(comps[1].split()[0]) / 1024
+            with open(meminfo, 'r') as f:
+                for line in f:
+                    comps = line.rstrip('\n').split(':')
+                    if not len(comps) > 1:
+                        continue
+                    if comps[0].strip() == 'MemTotal':
+                        grains['mem_total'] = int(comps[1].split()[0]) / 1024
     elif osdata['kernel'] in ('FreeBSD', 'OpenBSD'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
@@ -406,15 +407,15 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
+_REPLACE_LINUX_RE = re.compile(r'linux', re.IGNORECASE)
+
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
+# Please see _supported_dists defined at the top of the file
 _OS_NAME_MAP = {
     'redhatente': 'RedHat',
-    'debian': 'Debian',
+    'gentoobase': 'Gentoo',
     'arch': 'Arch',
-    'amazonlinu': 'Amazon',
-    'centoslinu': 'CentOS',
-    'scientific': 'Scientific',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -481,19 +482,20 @@ def os_data():
         except ImportError:
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
-                for line in open('/etc/lsb-release').readlines():
-                    # Matches any possible format:
-                    #     DISTRIB_ID="Ubuntu"
-                    #     DISTRIB_ID='Mageia'
-                    #     DISTRIB_ID=Fedora
-                    #     DISTRIB_RELEASE='10.10'
-                    #     DISTRIB_CODENAME='squeeze'
-                    #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
-                    regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
-                    match = regex.match(line)
-                    if match:
-                        # Adds: lsb_distrib_{id,release,codename,description}
-                        grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+                with open('/etc/lsb-release') as f:
+                    for line in f:
+                        # Matches any possible format:
+                        #     DISTRIB_ID="Ubuntu"
+                        #     DISTRIB_ID='Mageia'
+                        #     DISTRIB_ID=Fedora
+                        #     DISTRIB_RELEASE='10.10'
+                        #     DISTRIB_CODENAME='squeeze'
+                        #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
+                        regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                        match = regex.match(line.rstrip('\n'))
+                        if match:
+                            # Adds: lsb_distrib_{id,release,codename,description}
+                            grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
                                               supported_dists=_supported_dists)
@@ -507,11 +509,12 @@ def os_data():
                                          osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
+        distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
         # return the first ten characters with no spaces, lowercased
-        shortname = grains['osfullname'].replace(' ', '').lower()[:10]
+        shortname = distroname.replace(' ', '').lower()[:10]
         # this maps the long names from the /etc/DISTRO-release files to the
         # traditional short names that Salt has used.
-        grains['os'] = _OS_NAME_MAP.get(shortname, grains['osfullname'])
+        grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'

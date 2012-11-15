@@ -1,7 +1,8 @@
 import os
 import tempfile
 from jinja2 import Environment
-from salt.utils.jinja import SaltCacheLoader, get_template
+from salt.utils.jinja import SaltCacheLoader
+from salt.utils.templates import render_jinja_tmpl
 
 from saltunittest import TestCase
 
@@ -94,14 +95,27 @@ class TestSaltCacheLoader(TestCase):
 
 
 class TestGetTemplate(TestCase):
+    def __init__(self, *args, **kws):
+        TestCase.__init__(self, *args, **kws)
+        self.local_opts = {
+            'cachedir': TEMPLATES_DIR,
+            'file_client': 'local',
+            'file_roots': {
+                'other': os.path.join(TEMPLATES_DIR, 'files', 'test')
+            }
+        }
+
     def test_fallback(self):
         '''
         A Template with a filesystem loader is returned as fallback
         if the file is not contained in the searchpath
         '''
-        filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
-        tmpl = get_template(filename, {'cachedir': TEMPLATES_DIR}, env='other')
-        self.assertEqual(tmpl.render(), 'world')
+        fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
+        with open(fn_) as fp_:
+            out = render_jinja_tmpl(
+                    fp_.read(),
+                    dict(opts=self.local_opts, env='other'))
+        self.assertEqual(out, 'world')
 
     def test_fallback_noloader(self):
         '''
@@ -109,8 +123,10 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        tmpl = get_template(filename, {'cachedir': TEMPLATES_DIR}, env='other')
-        self.assertEqual(tmpl.render(), 'Hey world !a b !')
+        out = render_jinja_tmpl(
+                open(filename).read(),
+                dict(opts=self.local_opts, env='other'))
+        self.assertEqual(out, 'Hey world !a b !')
 
     def test_env(self):
         '''
@@ -124,7 +140,10 @@ class TestGetTemplate(TestCase):
         _fc = SaltCacheLoader.file_client
         SaltCacheLoader.file_client = lambda loader: fc
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        tmpl = get_template(filename, {'cachedir': TEMPLATES_DIR}, env='test')
-        self.assertEqual(tmpl.render(a='Hi', b='Salt'), 'Hey world !Hi Salt !')
+        out = render_jinja_tmpl(
+                open(filename).read(),
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                     a='Hi', b='Salt', env='test'))
+        self.assertEqual(out, 'Hey world !Hi Salt !')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc

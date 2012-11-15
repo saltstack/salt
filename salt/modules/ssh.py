@@ -81,7 +81,6 @@ def _replace_auth_key(
     lines = []
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
-
     try:
         # open the file for both reading AND writing
         with open(full, 'r') as _fh:

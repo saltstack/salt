@@ -25,9 +25,6 @@ import subprocess
 # Import third party libs
 import yaml
 
-# Import Salt libs
-import salt.utils
-
 
 def __virtual__():
     '''

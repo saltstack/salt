@@ -172,7 +172,8 @@ freezer_includes = [
     'ast',
     'difflib',
     'distutils',
-    'distutils.version'
+    'distutils.version',
+    'json',
 ]
 
 if sys.platform.startswith('win'):
@@ -188,7 +189,8 @@ if sys.platform.startswith('win'):
     setup_kwargs['install_requires'] += '\nwmi'
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
-        'yum'
+        'yum',
+        'spwd',
     ])
 
 if 'bdist_esky' in sys.argv:

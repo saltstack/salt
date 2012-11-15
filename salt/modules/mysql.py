@@ -101,7 +101,9 @@ def connect(**kwargs):
         if name in kwargs:
             connargs[key] = kwargs[name]
         else:
-            connargs[key] = __salt__['config.option']('mysql.{0}'.format(name))
+            val = __salt__['config.option']('mysql.{0}'.format(name), None)
+            if val is not None:
+                connargs[key] = val
 
     _connarg('host')
     _connarg('user')

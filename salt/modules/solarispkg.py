@@ -2,9 +2,11 @@
 Package support for Solaris
 '''
 
-import tempfile
+# Import python libs
 import os
-import shutil
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -104,15 +106,15 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    return version(name) 
+    return version(name)
 
 
 def install(name, refresh=False, **kwargs):
     '''
     Install the passed package. Can install packages from the following
     sources::
-        
-        * Locally (package already exists on the minion 
+
+        * Locally (package already exists on the minion
         * HTTP/HTTPS server
         * FTP server
         * Salt master
@@ -144,11 +146,11 @@ def install(name, refresh=False, **kwargs):
     passing '-G' to the pkgadd command.) Solaris default when installing a
     package in the global zone is to install it in all zones. This overrides
     that and installs the package only in the global.
-    
+
     CLI Example, installing a datastream package only in the global zone::
-    
-        salt 'global_zone' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg current_zone_only=True 
-    
+
+        salt 'global_zone' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg current_zone_only=True
+
     By default salt automatically provides an adminfile, to automate package
     installation, with these options set:
 
@@ -191,7 +193,7 @@ def install(name, refresh=False, **kwargs):
     directly::
 
         salt '*' pkg.install <package name once installed> source='salt://srv/salt/pkgs/<package filename>' admin_source='salt://srv/salt/pkgs/<adminfile filename>'
-    
+
     CLI Example - Providing your own adminfile when using states::
 
         <package name once installed>:
@@ -203,7 +205,10 @@ def install(name, refresh=False, **kwargs):
     if not 'source' in kwargs:
         return 'source option required with solaris pkg installs'
     else:
-        if (kwargs['source']).startswith('salt://') or (kwargs['source']).startswith('http://') or (kwargs['source']).startswith('https://') or (kwargs['source']).startswith('ftp://'):
+        if (kwargs['source']).startswith('salt://') \
+                or (kwargs['source']).startswith('http://') \
+                or (kwargs['source']).startswith('https://') \
+                or (kwargs['source']).startswith('ftp://'):
             pkgname = __salt__['cp.cache_file'](kwargs['source'])
         else:
             pkgname = (kwargs['source'])
@@ -212,43 +217,43 @@ def install(name, refresh=False, **kwargs):
         adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
     else:
         # Set the adminfile default variables
-        email=kwargs.get('email', '')
-        instance=kwargs.get('instance', 'quit')
-        partial=kwargs.get('partial', 'nocheck')
-        runlevel=kwargs.get('runlevel', 'nocheck')
-        idepend=kwargs.get('idepend', 'nocheck')
-        rdepend=kwargs.get('rdepend', 'nocheck')
-        space=kwargs.get('space', 'nocheck')
-        setuid=kwargs.get('setuid', 'nocheck')
-        conflict=kwargs.get('conflict', 'nocheck')
-        action=kwargs.get('action', 'nocheck')
-        basedir=kwargs.get('basedir', 'default')
+        email = kwargs.get('email', '')
+        instance = kwargs.get('instance', 'quit')
+        partial = kwargs.get('partial', 'nocheck')
+        runlevel = kwargs.get('runlevel', 'nocheck')
+        idepend = kwargs.get('idepend', 'nocheck')
+        rdepend = kwargs.get('rdepend', 'nocheck')
+        space = kwargs.get('space', 'nocheck')
+        setuid = kwargs.get('setuid', 'nocheck')
+        conflict = kwargs.get('conflict', 'nocheck')
+        action = kwargs.get('action', 'nocheck')
+        basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = tempfile.mkstemp(prefix="salt-")
-   
+        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+
         # Write to file then close it.
-        os.write(fd, "email=%s\n" % email)
-        os.write(fd, "instance=%s\n" % instance)
-        os.write(fd, "partial=%s\n" % partial)
-        os.write(fd, "runlevel=%s\n" % runlevel)
-        os.write(fd, "idepend=%s\n" % idepend)
-        os.write(fd, "rdepend=%s\n" % rdepend)
-        os.write(fd, "space=%s\n" % space)
-        os.write(fd, "setuid=%s\n" % setuid)
-        os.write(fd, "conflict=%s\n" % conflict)
-        os.write(fd, "action=%s\n" % action)
-        os.write(fd, "basedir=%s\n" % basedir)
+        os.write(fd, 'email={0}\n'.format(email))
+        os.write(fd, 'email={instance={0}\n'.format(instance))
+        os.write(fd, 'email={partial={0}\n'.format(partial))
+        os.write(fd, 'email={runlevel={0}\n'.format(runlevel))
+        os.write(fd, 'email={idepend={0}\n'.format(idepend))
+        os.write(fd, 'email={rdepend={0}\n'.format(rdepend))
+        os.write(fd, 'email={space={0}\n'.format(space))
+        os.write(fd, 'email={setuid={0}\n'.format(setuid))
+        os.write(fd, 'email={conflict={0}\n'.format(conflict))
+        os.write(fd, 'email={action={0}\n'.format(action))
+        os.write(fd, 'email={basedir={0}\n'.format(basedir))
         os.close(fd)
 
-    # Get a list of the packages before install so we can diff after to see 
+    # Get a list of the packages before install so we can diff after to see
     # what got installed.
     old = _get_pkgs()
 
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
     # Global only?
-    if kwargs.get('current_zone_only') == "True":
+    if kwargs.get('current_zone_only') == 'True':
         cmd += '-G '
 
     cmd += '-d {0} \'all\''.format(pkgname)
@@ -259,7 +264,7 @@ def install(name, refresh=False, **kwargs):
     # Get a list of the packages again, including newly installed ones.
     new = _get_pkgs()
 
-    # Remove the temp adminfile 
+    # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
 
@@ -304,39 +309,39 @@ def remove(name, **kwargs):
 
     # Check to see if the package is installed before we proceed
     if version(name) == '':
-        return '' 
+        return ''
 
     if 'admin_source' in kwargs:
         adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
     else:
         # Set the adminfile default variables
-        email=kwargs.get('email', '')
-        instance=kwargs.get('instance', 'quit')
-        partial=kwargs.get('partial', 'nocheck')
-        runlevel=kwargs.get('runlevel', 'nocheck')
-        idepend=kwargs.get('idepend', 'nocheck')
-        rdepend=kwargs.get('rdepend', 'nocheck')
-        space=kwargs.get('space', 'nocheck')
-        setuid=kwargs.get('setuid', 'nocheck')
-        conflict=kwargs.get('conflict', 'nocheck')
-        action=kwargs.get('action', 'nocheck')
-        basedir=kwargs.get('basedir', 'default')
+        email = kwargs.get('email', '')
+        instance = kwargs.get('instance', 'quit')
+        partial = kwargs.get('partial', 'nocheck')
+        runlevel = kwargs.get('runlevel', 'nocheck')
+        idepend = kwargs.get('idepend', 'nocheck')
+        rdepend = kwargs.get('rdepend', 'nocheck')
+        space = kwargs.get('space', 'nocheck')
+        setuid = kwargs.get('setuid', 'nocheck')
+        conflict = kwargs.get('conflict', 'nocheck')
+        action = kwargs.get('action', 'nocheck')
+        basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = tempfile.mkstemp(prefix="salt-")
-   
+        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+
         # Write to file then close it.
-        os.write(fd, "email=%s\n" % email)
-        os.write(fd, "instance=%s\n" % instance)
-        os.write(fd, "partial=%s\n" % partial)
-        os.write(fd, "runlevel=%s\n" % runlevel)
-        os.write(fd, "idepend=%s\n" % idepend)
-        os.write(fd, "rdepend=%s\n" % rdepend)
-        os.write(fd, "space=%s\n" % space)
-        os.write(fd, "setuid=%s\n" % setuid)
-        os.write(fd, "conflict=%s\n" % conflict)
-        os.write(fd, "action=%s\n" % action)
-        os.write(fd, "basedir=%s\n" % basedir)
+        os.write(fd, 'email={0}\n'.format(email))
+        os.write(fd, 'instance={0}\n'.format(instance))
+        os.write(fd, 'partial={0}\n'.format(partial))
+        os.write(fd, 'runlevel={0}\n'.format(runlevel))
+        os.write(fd, 'idepend={0}\n'.format(idepend))
+        os.write(fd, 'rdepend={0}\n'.format(rdepend))
+        os.write(fd, 'space={0}\n'.format(space))
+        os.write(fd, 'setuid={0}\n'.format(setuid))
+        os.write(fd, 'conflict={0}\n'.format(conflict))
+        os.write(fd, 'action={0}\n'.format(action))
+        os.write(fd, 'basedir={0}\n'.format(basedir))
         os.close(fd)
 
     # Get a list of the currently installed pkgs.
@@ -346,14 +351,15 @@ def remove(name, **kwargs):
     cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile, name)
     __salt__['cmd.retcode'](cmd)
 
-    # Remove the temp adminfile 
+    # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
 
     # Get a list of the packages after the uninstall
     new = _get_pkgs()
-     
-    # Compare the pre and post remove package objects and report the uninstalled pkgs.
+
+    # Compare the pre and post remove package objects and report the
+    # uninstalled pkgs.
     return _list_removed(old, new)
 
 

@@ -45,18 +45,21 @@ Full list of builtin execution modules
     freebsdkmod
     freebsdpkg
     freebsdservice
+    freebsd_sysctl
     gem
     gentoo_service
     git
+    glance
     grains
     groupadd
     grub
     hg
     hosts
+    keystone
     kmod
     kvm_hyper
     launchctl
-    ldap
+    ldapmod
     linux_sysctl
     mdadm
     mongodb
@@ -66,6 +69,7 @@ Full list of builtin execution modules
     mysql
     network
     nginx
+    nova
     nzbget
     openbsdpkg
     openbsdservice
@@ -85,6 +89,7 @@ Full list of builtin execution modules
     pw_user
     rabbitmq
     reg
+    ret
     rh_ip
     rh_service
     rvm
@@ -103,6 +108,7 @@ Full list of builtin execution modules
     state
     status
     supervisord
+    svn
     systemd
     test
     tls
@@ -119,7 +125,7 @@ Full list of builtin execution modules
     win_service
     win_shadow
     win_useradd
-    yumpkg
     yumpkg5
+    yumpkg
     zpool
     zypper

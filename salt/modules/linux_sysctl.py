@@ -113,7 +113,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
             config_data = _fh.readlines()
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         msg = 'Could not read from file: {0}'
         raise CommandExecutionError(msg.format(config))
 
@@ -161,7 +161,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     try:
         with open(config, 'w+') as _fh:
             _fh.writelines(nlines)
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))
 

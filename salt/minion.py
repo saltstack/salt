@@ -23,7 +23,7 @@ import zmq
 # Import salt libs
 from salt.exceptions import AuthenticationError, \
     CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltClientError, SaltReqTimeoutError
+    SaltReqTimeoutError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -306,7 +306,8 @@ class Minion(object):
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             sdata = {'pid': os.getpid()}
             sdata.update(data)
-            open(fn_, 'w+').write(minion_instance.serial.dumps(sdata))
+            with open(fn_, 'w+') as fp_:
+                fp_.write(minion_instance.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -639,7 +640,6 @@ class Minion(object):
                 if socket in socks and socks[socket] == zmq.POLLIN:
                     payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
-                    last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()

@@ -4,11 +4,11 @@ Minion side functions for salt-cp
 # Import python libs
 import os
 import logging
-import tempfile
 
 # Import salt libs
 import salt.minion
 import salt.fileclient
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -41,8 +41,47 @@ def recv(files, dest):
 
     return ret
 
+def _render_filenames(path, dest, env, template):
+    if not template:
+        return (path, dest)
 
-def get_file(path, dest, env='base', template=None, gzip_compression=None):
+    # render the path as a template using path_template_engine as the engine
+    if template not in salt.utils.templates.template_registry:
+        raise CommandExecutionError('Attempted to render file paths with unavailable engine '
+                  '{0}'.format(template))
+
+    kwargs = {}
+    kwargs['salt'] = __salt__
+    kwargs['pillar'] = __pillar__
+    kwargs['grains'] = __grains__
+    kwargs['opts'] = __opts__
+    kwargs['env'] = env
+
+    def _render(contents):
+        # write out path to temp file
+        tmp_path_fn = salt.utils.mkstemp()
+        with open(tmp_path_fn, 'w+') as fp_:
+            fp_.write(contents)
+        data = salt.utils.templates.template_registry[template](
+            tmp_path_fn,
+            to_str=True,
+            **kwargs
+        )
+        salt.utils.safe_rm(tmp_path_fn)
+        if not data['result']:
+            # Failed to render the template
+            raise CommandExecutionError('Failed to render file path with error: {0}'.format(
+                data['data']
+            ))
+        else:
+            return data['data']
+
+    path = _render(path)
+    dest = _render(dest)
+    return (path, dest)
+
+
+def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     '''
     Used to get a single file from the salt master
 
@@ -50,57 +89,13 @@ def get_file(path, dest, env='base', template=None, gzip_compression=None):
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
     '''
-    if template is not None:
-        # render the path as a template using path_template_engine as the engine
-        if template not in salt.utils.templates.template_registry:
-            log.error('Attempted to render file paths with unavailable engine '
-                      '{0}'.format(template))
-            return ''
-
-        kwargs = {}
-        kwargs['salt'] = __salt__
-        kwargs['pillar'] = __pillar__
-        kwargs['grains'] = __grains__
-        kwargs['opts'] = __opts__
-        kwargs['env'] = env
-
-        def _render(contents):
-            # write out path to temp file
-            fd_, tmp_path_fn = tempfile.mkstemp()
-            os.close(fd_)
-            with open(tmp_path_fn, 'w+') as fp_:
-                fp_.write(contents)
-            data = salt.utils.templates.template_registry[template](
-                tmp_path_fn,
-                string=True,
-                **kwargs
-            )
-            salt.utils.safe_rm(tmp_path_fn)
-            if not data['result']:
-                # Failed to render the template
-                raise CommandExecutionError('Failed to render file path with error: {0}'.format(
-                    data['data']
-                ))
-            else:
-                return data['data']
-
-
-        try:
-            path = _render(path)
-        except CommandExecutionError as exc:
-            log.error(str(exc))
-            return ''
-        try:
-            dest = _render(dest)
-        except CommandExecutionError as exc:
-            log.error(str(exc))
-            return ''
+    (path, dest) = _render_filenames(path, dest, env, template)
 
     if not hash_file(path, env):
         return ''
     else:
         client = salt.fileclient.get_file_client(__opts__)
-        return client.get_file(path, dest, False, env, gzip_compression)
+        return client.get_file(path, dest, makedirs, env, gzip)
 
 
 def get_template(path, dest, template='jinja', env='base', **kwargs):
@@ -123,7 +118,7 @@ def get_template(path, dest, template='jinja', env='base', **kwargs):
     return client.get_template(path, dest, template, False, env, **kwargs)
 
 
-def get_dir(path, dest, env='base'):
+def get_dir(path, dest, env='base', template=None, gzip=None):
     '''
     Used to recursively copy a directory from the salt master
 
@@ -131,8 +126,10 @@ def get_dir(path, dest, env='base'):
 
         salt '*' cp.get_dir salt://path/to/dir/ /minion/dest
     '''
+    (path, dest) = _render_filenames(path, dest, env, template)
+
     client = salt.fileclient.get_file_client(__opts__)
-    return client.get_dir(path, dest, env)
+    return client.get_dir(path, dest, env, gzip)
 
 
 def get_url(path, dest, env='base'):

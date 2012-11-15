@@ -12,13 +12,14 @@ import os
 import re
 import time
 import shutil
-import tempfile
 import stat
+import tempfile
 import sys
 import getpass
 import hashlib
 import difflib
 import fnmatch
+import errno
 try:
     import grp
     import pwd
@@ -26,6 +27,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils
 import salt.utils.find
 from salt.utils.filebuffer import BufferedReader
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -55,6 +57,12 @@ def __clean_tmp(sfn):
         # Only clean up files that exist
         if os.path.exists(sfn):
             os.remove(sfn)
+
+
+def _error(ret, err_msg):
+    ret['result'] = False
+    ret['comment'] = err_msg
+    return ret
 
 
 def _is_bin(path):
@@ -891,8 +899,7 @@ def source_list(source, source_hash, env):
                         source = single_src
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    fd_, dest = tempfile.mkstemp()
-                    os.close(fd_)
+                    dest = salt.utils.mkstemp()
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
@@ -1520,13 +1527,16 @@ def makedirs_perms(name, user=None, group=None, mode=0755):
     if head and tail and not path.exists(head):
         try:
             makedirs_perms(head, user, group, mode)
-        except OSError, e:
+        except OSError as exc:
             # be happy if someone already created the path
-            if e.errno != errno.EEXIST:
+            if exc.errno != errno.EEXIST:
                 raise
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
     mkdir(name)
-    check_perms(name, None, user, group, int("%o" % mode) if mode else None)
-
-
+    check_perms(
+            name,
+            None,
+            user,
+            group,
+            int('{0}'.format(mode)) if mode else None)

@@ -14,7 +14,6 @@ import shutil
 import stat
 import logging
 import hashlib
-import tempfile
 import datetime
 import pwd
 import getpass
@@ -42,6 +41,7 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
+import salt.utils
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -539,8 +539,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
-        fd_, tmp_pub = tempfile.mkstemp()
-        os.close(fd_)
+        tmp_pub = salt.utils.mkstemp()
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
 
@@ -631,14 +630,14 @@ class AESFuncs(object):
         if not fnd['path']:
             return ret
         ret['dest'] = fnd['rel']
-        gzip_compression = load.get('gzip_compression', None)
+        gzip = load.get('gzip', None)
 
         with open(fnd['path'], 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
-            if gzip_compression and data:
-                data = salt.utils.gzip_util.compress(data, gzip_compression)
-                ret['gzip_compression'] = gzip_compression
+            if gzip and data:
+                data = salt.utils.gzip_util.compress(data, gzip)
+                ret['gzip'] = gzip
             ret['data'] = data
         return ret
 
@@ -1082,7 +1081,7 @@ class AESFuncs(object):
                     key)
             try:
                 pub = RSA.load_pub_key(pubfn)
-            except RSA.RSAError, e:
+            except RSA.RSAError:
                 return self.crypticle.dumps({})
 
             pret = {}

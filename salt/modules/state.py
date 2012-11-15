@@ -10,6 +10,9 @@ import logging
 # Import Salt libs
 import salt.state
 import salt.payload
+from salt.utils.yaml import load as yaml_load
+from salt.utils.yaml import CustomLoader as YamlCustomLoader
+import json
 from salt._compat import string_types
 
 __outputter__ = {
@@ -22,6 +25,29 @@ __outputter__ = {
 log = logging.getLogger(__name__)
 
 
+def running():
+    '''
+    Return a dict of state return data if a state function is already running.
+    This function is used to prevent multiple state calls from being run at
+    the same time.
+
+    CLI Example::
+
+        salt '*' state.running
+    '''
+    ret = []
+    active = __salt__['saltutil.is_running']('state.*')
+    for data in active:
+        err = ('The function "{0}" is running as PID {1} and was started at '
+               '{2} ').format(
+                data['fun'],
+                data['pid'],
+                salt.utils.jid_to_time(data['jid']),
+                )
+        ret.append(err)
+    return ret
+
+
 def low(data):
     '''
     Execute a single low data call
@@ -31,6 +57,9 @@ def low(data):
 
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
@@ -47,6 +76,9 @@ def high(data):
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     st_ = salt.state.State(__opts__)
     return st_.call_high(data)
 
@@ -59,6 +91,9 @@ def template(tem):
 
         salt '*' state.template '<Path to template on the minion>'
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     st_ = salt.state.State(__opts__)
     return st_.call_template(tem)
 
@@ -71,6 +106,9 @@ def template_str(tem):
 
         salt '*' state.template_str '<Template String>'
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     st_ = salt.state.State(__opts__)
     return st_.call_template_str(tem)
 
@@ -83,6 +121,9 @@ def highstate(test=None, **kwargs):
 
         salt '*' state.highstate
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     salt.utils.daemonize_if(__opts__, **kwargs)
     opts = copy.copy(__opts__)
 
@@ -99,8 +140,8 @@ def highstate(test=None, **kwargs):
     try:
         with open(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
-    except (IOError, OSError) as exc:
-        msg = "Unable to write to 'state.highstate' cache file {0}"
+    except (IOError, OSError):
+        msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
 
     return ret
@@ -115,6 +156,9 @@ def sls(mods, env='base', test=None, **kwargs):
 
         salt '*' state.sls core,edit.vim dev
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     opts = copy.copy(__opts__)
 
     if not test is None:
@@ -137,8 +181,8 @@ def sls(mods, env='base', test=None, **kwargs):
     try:
         with open(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
-    except (IOError, OSError) as exc:
-        msg = "Unable to write to 'state.sls' cache file {0}"
+    except (IOError, OSError):
+        msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
     return ret
 
@@ -151,6 +195,9 @@ def top(topfn):
 
         salt '*' state.top reverse_top.sls
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     st_ = salt.state.HighState(__opts__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     return st_.call_highstate()
@@ -215,15 +262,24 @@ def show_masterstate():
     return st_.compile_master()
 
 
-def single(fun, name, test=None, **kwargs):
+def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
 
+    By default, the values of the kwargs will be parsed as YAML. So, you can
+    specify lists values, or lists of single entry key-value maps, as you
+    would in a YAML salt file. Alternatively, JSON format of keyword values
+    is also supported.
+
     CLI Example::
 
         salt '*' state.single pkg.installed name=vim
+
     '''
+    conflict = running()
+    if conflict:
+        return conflict
     comps = fun.split('.')
     if len(comps) < 2:
         return 'Invalid function passed'
@@ -238,5 +294,20 @@ def single(fun, name, test=None, **kwargs):
     err = st_.verify_data(kwargs)
     if err:
         return err
+
+    if kwval_as == 'yaml':
+        def parse_kwval(value):
+            return yaml_load(value, YamlCustomLoader)
+    elif kwval_as == 'json':
+        def parse_kwval(value):
+            return json.loads(value)
+    else:
+        return 'Unknown format({0}) for state keyword arguments!'.format(
+                kwval_as)
+
+    for key, value in kwargs.iteritems():
+        if not key.startswith('__pub_'):
+            kwargs[key] = parse_kwval(value)
+
     return {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}

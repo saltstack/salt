@@ -4,6 +4,7 @@ A module to wrap pacman calls, since Arch is the best
 '''
 
 import logging
+import os
 import re
 
 log = logging.getLogger(__name__)
@@ -36,12 +37,12 @@ def _parse_pkg_meta(path):
     if result['retcode'] == 0:
         for line in result['stdout'].splitlines():
             if not name:
-                m = re.match('^Name\s*:\s*(.+)\s*$',line)
+                m = re.match('^Name\s*:\s*(\S+)',line)
                 if m:
                     name = m.group(1)
                     continue
             if not version:
-                m = re.match('^Version\s*:\s*(.+)\s*$',line)
+                m = re.match('^Version\s*:\s*(\S+)',line)
                 if m:
                     version = m.group(1)
                     continue
@@ -154,32 +155,58 @@ def refresh_db():
     return ret
 
 
-def install(name, refresh=False, **kwargs):
+def install(name, refresh=False, source=None, **kwargs):
     '''
     Install the passed package, add refresh=True to install with an -Sy
+
+    name
+        Tha name of the package to be installed.
+
+    refresh
+        Whether or not to refresh the package database before installing.
+        Defaults to False.
+
+    source
+        A package file to install.
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>']}
 
     CLI Example::
 
         salt '*' pkg.install <package name>
     '''
 
-    if 'source' in kwargs:
-        if __salt__['config.valid_fileproto'](kwargs['source']):
-            pkg_file = __salt__['cp.cache_file'](kwargs['source'])
+    if source is not None:
+        if __salt__['config.valid_fileproto'](source):
+            # Cached package from master
+            pkg_file = __salt__['cp.cache_file'](source)
+            pkg_type = 'remote'
         else:
-            pkg_file = kwargs['source']
+            # Package file local to the minion
+            pkg_file = source
+            pkg_type = 'local'
         pname,pversion = _parse_pkg_meta(pkg_file)
-        if name != pname:
+        if not pname:
+            cmd = None
+            if pkg_type == 'remote':
+                log.error('Failed to cache {0}. Are you sure this path is '
+                          'correct?'.format(source))
+            elif pkg_type == 'local':
+                if not os.path.isfile(source):
+                    log.error('Package file {0} not found. Are you sure this '
+                              'path is correct?'.format(source))
+                else:
+                    log.error('Unable to parse package metadata for '
+                              '{0}'.format(source))
+        elif name != pname:
             log.error('Package file {0} (Name: {1}) does not match the '
-                      'specified package name ({2})'.format(kwargs['source'],
+                      'specified package name ({2})'.format(source,
                                                             pname,
                                                             name))
-            cmd = ''
+            cmd = None
         else:
             cmd = 'pacman -U --noprogressbar --noconfirm {0}'.format(pkg_file)
     else:
@@ -194,24 +221,24 @@ def install(name, refresh=False, **kwargs):
         else:
             cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
 
-    old = list_pkgs()
-    if cmd: __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-
     pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
+    if cmd is not None:
+        old = list_pkgs()
+        __salt__['cmd.retcode'](cmd)
+        new = list_pkgs()
+        for npkg in new:
+            if npkg in old:
+                if old[npkg] == new[npkg]:
+                    # no change in the package
+                    continue
+                else:
+                    # the package was here before and the version has changed
+                    pkgs[npkg] = {'old': old[npkg],
+                                  'new': new[npkg]}
             else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
+                # the package is freshly installed
+                pkgs[npkg] = {'old': '',
                               'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
     return pkgs
 
 

@@ -16,6 +16,7 @@ import traceback
 
 # Import Salt libs
 from salt.exceptions import LoaderError
+from salt.template import check_render_pipe_str
 
 log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)
@@ -155,7 +156,7 @@ def render(opts, functions):
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
-    if opts['renderer'] not in rend:
+    if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
         log.critical(err)
@@ -541,6 +542,8 @@ class Loader(object):
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs
+            elif not pack:
+                mod.__salt__.update(funcs)
         return funcs
 
     def _apply_outputter(self, func, mod):

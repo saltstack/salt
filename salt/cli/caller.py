@@ -4,6 +4,7 @@ minion modules.
 '''
 
 # Import python modules
+import os
 import sys
 import logging
 import datetime
@@ -13,6 +14,7 @@ import traceback
 import salt.loader
 import salt.minion
 import salt.output
+import salt.payload
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 
@@ -33,6 +35,7 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
@@ -47,13 +50,23 @@ class Caller(object):
         '''
         ret = {}
         fun = self.opts['fun']
-
+        ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        proc_fn = os.path.join(
+                salt.minion.get_proc_dir(self.opts['cachedir']),
+                ret['jid'])
         if fun not in self.minion.functions:
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(1)
         try:
             args, kw = salt.minion.detect_kwargs(
                 self.minion.functions[fun], self.opts['arg'])
+            sdata = {
+                    'fun': fun,
+                    'pid': os.getpid(),
+                    'jid': ret['jid'],
+                    'tgt': 'salt-call'}
+            with open(proc_fn, 'w+') as fp_:
+                fp_.write(self.serial.dumps(sdata))
             ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
@@ -67,20 +80,22 @@ class Caller(object):
             msg = 'Command required for \'{0}\' not found: {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
+        try:
+            os.remove(proc_fn)
+        except (IOError, OSError):
+            pass
         if hasattr(self.minion.functions[fun], '__outputter__'):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
         if self.opts.get('return', ''):
             ret['id'] = self.opts['id']
-            ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
             ret['fun'] = fun
             for returner in self.opts['return'].split(','):
                 try:
                     self.minion.returners['{0}.returner'.format(returner)](ret)
                 except Exception as exc:
                     pass
-                    
         return ret
 
     def print_docs(self):

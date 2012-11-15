@@ -5,12 +5,10 @@ Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
 # Import Python libs
-import pipes
 import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import sys
 from functools import partial
 
@@ -312,8 +310,7 @@ def script(
         salt '*' cmd.script salt://scripts/runme.sh
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
     '''
-    fd_, path = tempfile.mkstemp()
-    os.close(fd_)
+    path = salt.utils.mkstemp()
     if template:
         __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
@@ -410,8 +407,7 @@ def exec_code(lang, code, cwd=None):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    fd_, codefile = tempfile.mkstemp()
-    os.close(fd_)
+    codefile = salt.utils.mkstemp()
     with open(codefile, 'w+') as fp_:
         fp_.write(code)
 

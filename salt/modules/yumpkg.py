@@ -12,6 +12,7 @@ except (ImportError, AttributeError):
     has_yumdeps = False
 
 import logging
+import os
 import re
 
 log = logging.getLogger(__name__)
@@ -105,17 +106,17 @@ def _parse_pkg_meta(path):
     if result['retcode'] == 0:
         for line in result['stdout'].splitlines():
             if not name:
-                m = re.match('^Name\s*:\s*(.+)\s*$', line)
+                m = re.match('^Name\s*:\s*(\S+)', line)
                 if m:
                     name = m.group(1)
                     continue
             if not version:
-                m = re.match('^Version\s*:\s*(.+)\s*$', line)
+                m = re.match('^Version\s*:\s*(\S+)', line)
                 if m:
                     version = m.group(1)
                     continue
             if not rel:
-                m = re.match('^Release\s*:\s*(.+)\s*$', line)
+                m = re.match('^Release\s*:\s*(\S+)', line)
                 if m:
                     version = m.group(1)
                     continue
@@ -300,21 +301,26 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
     Install the passed package(s)
 
     pkgs
-        The name of the package(s) to be installed
-    refresh : False
-        Clean out the yum database before executing
-    repo : (default)
-        Specify a package repository to install from
+        The name of the package(s) to be installed. Can be comma separated, or
+        space separated if the parameter is encased in quotes.
+
+    refresh
+        Clean out the yum database before executing. Defaults to False.
+
+    repo
+        Specify a package repository to install from.
         (e.g., ``yum --enablerepo=somerepo``)
-    skip_verify : False
-        Skip the GPG verification check (e.g., ``--nogpgcheck``)
-    sources: None
-        A list of rpm sources to use for installing these packages.
+
+    skip_verify
+        Skip the GPG verification check. (e.g., ``--nogpgcheck``)
+
+    sources
+        A list of rpm sources to use for installing the package(s).
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>']}
 
     CLI Example::
 
@@ -328,7 +334,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
     else:
         pkgs = pkgs.split(' ')
 
-    if sources:
+    if sources is not None:
         if ',' in sources:
             srcsplit = sources.split(',')
         else:
@@ -341,20 +347,43 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
                       '({1})'.format(len(srcsplit), len(pkgs)))
             return {}
 
-        sources = [
-            __salt__['cp.cache_file'](x)
-            if __salt__['config.valid_fileproto'](x) else x
-            for x in srcsplit
-        ]
+        srcinfo = []
+        for src in srcsplit:
+            if __salt__['config.valid_fileproto'](src):
+                # Cached RPM from master
+                srcinfo.append((__salt__['cp.cache_file'](src),'remote'))
+            else:
+                # RPM file local to the minion
+                srcinfo.append((src,'local'))
 
         # Check metadata to make sure the name passed matches the source
+        problems = []
         for i in range(0, len(pkgs)):
-            pname, pversion = _parse_pkg_meta(sources[i])
-            if pkgs[i] != pname:
-                log.error('Package file {0} (Name: {1}) does not '
-                          'match the specified package name '
-                          '({2})'.format(sources[i], pname, pkgs[i]))
-                return {}
+            rpm_path, pkg_type = srcinfo[i]
+            pname, pversion = _parse_pkg_meta(rpm_path)
+            if not pname:
+                if pkg_type == 'remote':
+                    problems.append('Failed to cache {0}. Are you sure this '
+                                    'path is correct?'.format(srcsplit[i]))
+                elif pkg_type == 'local':
+                    if not os.path.isfile(rpm_path):
+                        problems.append('Package file {0} not found. Are '
+                                        'you sure this path is '
+                                        'correct?'.format(rpm_path))
+                    else:
+                        problems.append('Unable to parse package metadata for '
+                                        '{0}'.format(rpm_path))
+            elif pkgs[i] != pname:
+                problems.append('Package file {0} (Name: {1}) does not '
+                                'match the specified package name '
+                                '({2})'.format(srcsplit[i], pname, pkgs[i]))
+
+        # If any problems are found in the caching or metadata parsing done in
+        # the above for loop, log each problem and then return an empty dict.
+        # Do not proceed to attempt package installation.
+        if problems:
+            for problem in problems: log.error(problem)
+            return {}
 
     old = list_pkgs(*pkgs)
 
@@ -369,16 +398,16 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, sources=None,
     for i in range(0, len(pkgs)):
         try:
             if sources is not None:
-                target = sources[i]
+                rpm_path, pkg_type = srcinfo[i]
                 log.info(
-                    'Selecting \'{0}\' for local installation'.format(target)
+                    'Selecting \'{0}\' for local installation'.format(rpm_path)
                 )
-                a = yb.installLocal(target)
+                a = yb.installLocal(rpm_path)
                 # if yum didn't install anything, maybe its a downgrade?
                 log.debug('Added {0} transactions'.format(len(a)))
-                if len(a) == 0 and target not in old.keys():
+                if len(a) == 0 and rpm_path not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    a = yb.downgradeLocal(target)
+                    a = yb.downgradeLocal(rpm_path)
             else:
                 target = pkgs[i]
                 log.info('Selecting \'{0}\' for installation'.format(target))

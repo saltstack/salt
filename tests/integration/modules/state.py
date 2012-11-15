@@ -316,7 +316,7 @@ fi
         try:
             ret = self.run_function('state.template_str', [template])
 
-            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertTrue(isinstance(ret, dict))
             self.assertNotEqual(ret, {})
 
             for key in ret.iterkeys():

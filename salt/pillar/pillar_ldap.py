@@ -11,9 +11,13 @@ import os
 import logging
 import traceback
 
+# Import Salt libs
+from salt.exceptions import SaltInvocationError
+
 # Import third party libs
 import yaml
 from jinja2 import Environment, FileSystemLoader
+
 try:
     import ldap
     import ldap.modlist

@@ -5,7 +5,5 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
-respawn limit 10 5
-respawn
 
 exec /usr/bin/salt-syndic >/dev/null 2>&1

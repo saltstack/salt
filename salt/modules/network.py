@@ -2,7 +2,6 @@
 Module for gathering and managing network information
 '''
 # Import Python libs
-import sys
 import logging
 
 # Import Salt libs

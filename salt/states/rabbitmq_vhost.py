@@ -85,7 +85,7 @@ def present(name,
         write = write or '.*'
         read = read or '.*'
         result = __salt__['rabbitmq.set_permissions'](
-            user, name, conf, write, read, runas=runas)
+            name, user, conf, write, read, runas=runas)
 
         if 'Error' in result:
             ret['result'] = False
