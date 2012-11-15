@@ -37,7 +37,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         # Late imports so logging works as expected
         import saltcloud.cloud
-        mapper = saltcloud.cloud.Map(self.opts)
+        mapper = saltcloud.cloud.Map(self.config)
 
         if self.selected_query_option is not None:
             if self.options.map:
@@ -48,7 +48,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 query_map = mapper.map_providers(
                     query=self.selected_query_option
                 )
-            salt.output.display_output(query_map, '', self.opts)
+            salt.output.display_output(query_map, '', self.config)
 
         if self.options.list_locations is not None:
             saltcloud.output.double_layer(
