@@ -22,6 +22,7 @@ def cloud_config(path):
             'os': '',
             # Logging defaults
             'log_level': 'info',
+            'log_level_logfile': 'info',
             'log_file': '/var/log/salt/cloud'
             }
 
