@@ -50,7 +50,7 @@ def salt_auth_tool():
 
 cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
 
-# Be conservative in what you send
+# Be conservative in what you send; maps Content-Type to Salt outputters
 ct_out_map = {
     'application/json': 'json',
     'application/x-yaml': 'yaml',
