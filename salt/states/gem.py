@@ -43,7 +43,11 @@ def installed(name, ruby=None, runas=None, version=None, rdoc=False, ri=False):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     gems = __salt__['gem.list'](name, ruby, runas=runas)
-    if name in gems and version in gems[name]:
+    if name in gems and version and version in gems[name]:
+        ret['result'] = True
+        ret['comment'] = 'Gem is already installed.'
+        return ret
+    elif name in gems:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
