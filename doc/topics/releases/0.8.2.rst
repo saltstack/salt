@@ -1,0 +1,157 @@
+==============================
+Salt Cloud 0.8.2 Release Notes
+==============================
+
+This is a great release for Salt Cloud! New cloud providers have been added,
+and the deploy functionlity has been embiggened! Read on to see the cromulent
+new features.
+
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+http://salt-cloud.readthedocs.org
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi or github:
+
+http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.2.tar.gz
+
+https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.2.tar.gz
+
+Some packages have been made available for salt-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+
+Select Query Option
+===================
+
+The last release of Salt Cloud added the -F/--full query option, to display
+all information available for a particular instance. We now also have the -S
+or --select-query option, which lets you specify which fields to display. Any
+fields not specified will not be displayed, and if you specify a field that
+doesn't exist on a particular provider, it will be ignored for them. Just
+add a query.selection option to /etc/salt/cloud like such:
+
+.. code-block:: yaml
+
+  query.selection:
+    - id
+    - state
+    - public_ips
+    - keyname
+    - TOTALXFER
+
+os vs script
+============
+
+In a cloud profile, you need to specify which deploy script to use to install
+Salt on the newly-provisioned VM. The option for this has always been 'os', 
+which has been confusing to some. As of this release, you may now specify
+'script' instead of 'os'. If you specify both, the value for 'script' will be
+used. See the SmartOS Deploy Script below for an example.
+
+SmartOS Deploy Script
+=====================
+
+Of particular interest to Joyent users may be the new SmartOS deploy script.
+Salt itself is not fully-supported on SmartOS just yet, in part because ZeroMQ
+is also not yet supported. When this script is used for deployment, it will
+automatically install the required libriaries and build ZeroMQ, and then use
+easy_install to install the latest versions of PyZMQ and Salt. To use this,
+just specify SmartOS as the 'os' or 'script' option in your cloud.profiles:
+
+.. code-block:: yaml
+
+  joyent_smartos:
+    provider: joyent
+    size: Extra Small 512 MB
+    image: smartos
+    script: SmartOS
+
+OpenStack and IBM Modules
+=========================
+
+Support has been added for clouds using OpenStack (OPENSTACK) and for IBM's
+SmartCloud Enterprise (IBMSCE) offering. We know that people have already
+started using the OpenStack module, because pull reqs have already been
+merged from the community. This module has been tested against both the HP
+and the Rackspace implementations of OpenStack. This can be a tricky module
+to configure, depending on your provider, so some examples are provided here:
+
+.. code-block:: yaml
+
+  # For HP
+  OPENSTACK.identity_url: 'https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/'
+  OPENSTACK.compute_name: Compute
+  OPENSTACK.compute_region: 'az-1.region-a.geo-1'
+  OPENSTACK.tenant: myuser-tenant1
+  OPENSTACK.user: myuser
+  OPENSTACK.ssh_key_name: mykey
+  OPENSTACK.ssh_key_file: '/etc/salt/hpcloud/mykey.pem'
+  OPENSTACK.password: mypass
+
+  # For Rackspace
+  OPENSTACK.identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
+  OPENSTACK.compute_name: cloudServersOpenStack
+  OPENSTACK.compute_region: DFW
+  OPENSTACK.tenant: 5555555
+  OPENSTACK.user: myuser
+  OPENSTACK.password: mypass
+  OPENSTACK.protocol: ipv4
+
+It is important to note that currently, only password-based authentication is
+provided through the Salt Cloud OpenStack module.
+
+IBM has fewer things that need to be configured, but setting them up can be
+tricky as well. An example might look like:
+
+.. code-block:: yaml
+
+  IBMSCE.user: myuser@mycorp.com
+  IBMSCE.password: mypass
+  IBMSCE.ssh_key_name: mykey
+  IBMSCE.ssh_key_file: '/etc/salt/ibm/mykey.pem'
+  IBMSCE.location: Raleigh
+
+The location currently must be configured in order to create an instance, but
+not to query the IBM cloud. This is important, because you need to use
+salt-cloud --list-locations (with the other options already set) in order to
+find the name of the location that you want to use.
+
+OpenStack with Salt
+===================
+
+This isn't specifically another Salt Cloud feature, but it should be noted that
+with the release of Salt 0.10.5, OpenStack is not only the first Cloud product,
+but in fact the first piece of software explicitly supported by both Salt Cloud
+(from a user perspective) and Salt itself (from an admin perspective).
+
+Salt Cloud Logging
+==================
+
+Those who have tried to hack on Salt Cloud may have discovered a complete lack
+of logging support. With this release, Salt Cloud has started to implement
+the logging features already available in Salt. The default log location is
+/var/log/salt/cloud (with a default level of warn), but it can be changed in
+your cloud config file:
+
+.. code-block:: yaml
+
+  log_file: /var/log/salt/cloud
+  log_level_logfile: debug
+
+If you would like to change the default logging level for the command line, you
+can also configure that in the same place:
+
+.. code-block:: yaml
+
+  log_level: debug
+
+Check salt-cloud --help for a list of logging levels, which can also be
+specified from the command line.
+
