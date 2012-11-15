@@ -12,7 +12,6 @@ import time
 import subprocess
 import salt.utils.event
 import multiprocessing
-import time
 import logging
 
 # Get logging started
@@ -177,7 +176,6 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
-    start = time.time()
     trycount=0
     while trycount < maxtries:
         tryconnect = None
@@ -203,8 +201,8 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                     time.sleep(trysleep)
                     continue
                 else:
-                    print('Authencication failed: {0}'.format(authexec))
-                    log.warn('Authencication failed: {0}'.format(authexec))
+                    print('Authencication failed: {0}'.format(authexc))
+                    log.warn('Authencication failed: {0}'.format(authexc))
                     return False
             except Exception as exc:
                 print('There was an error in wait_for_passwd: {0}'.format(exc))
