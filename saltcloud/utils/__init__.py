@@ -12,8 +12,10 @@ import time
 import subprocess
 import salt.utils.event
 import multiprocessing
-import time
 import logging
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 try:
     import paramiko
@@ -36,9 +38,6 @@ NSTATES = {
         2: 'terminated',
         3: 'pending',
         }
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 
 def os_script(os_, vm_=None, opts=None, minion=''):
@@ -177,7 +176,6 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
-    start = time.time()
     trycount=0
     while trycount < maxtries:
         tryconnect = None
@@ -200,11 +198,11 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 print('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 log.warn('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
-                    sleep(trysleep)
+                    time.sleep(trysleep)
                     continue
                 else:
-                    print('Authencication failed: {0}'.format(authexec))
-                    log.warn('Authencication failed: {0}'.format(authexec))
+                    print('Authentication failed: {0}'.format(authexc))
+                    log.warn('Authentication failed: {0}'.format(authexc))
                     return False
             except Exception as exc:
                 print('There was an error in wait_for_passwd: {0}'.format(exc))
@@ -305,6 +303,7 @@ def root_cmd(command, tty, sudo, key_filename, username, host):
                 )
         subprocess.call(cmd, shell=True)
     else:
+        ssh = paramiko.SSHClient()
         stdin, stdout, stderr = ssh.exec_command(command)
         for line in stdout:
             sys.stdout.write(line)
