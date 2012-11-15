@@ -96,7 +96,6 @@ def hypermedia_handler(*args, **kwargs):
         cherrypy.response._tmpl = '500.html'
 
         ret = {
-            'success': False,
             'status': cherrypy.response.status,
             'message': '{0}'.format(cherrypy._cperror.format_exc())}
 
@@ -185,7 +184,6 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
         return {
-            'success': False,
             'status': cherrypy.response.status,
             'message': "Please log in",
         }
