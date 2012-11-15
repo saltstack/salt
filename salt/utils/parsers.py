@@ -297,12 +297,24 @@ class LogLevelMixIn(object):
 
     def setup_logfile_logger(self):
         lfkey = 'key_logfile' if 'key' in self.get_prog_name() else 'log_file'
+        if self.config.get('log_level_logfile', None) is None:
+            # Remove it from config so it inherits from log_level
+            self.config.pop('log_level_logfile', None)
         loglevel = self.config.get(
             'log_level_logfile', self.config['log_level']
         )
+
+        if self.config.get('log_fmt_logfile', None) is None:
+            # Remove it from config so it inherits from log_fmt_console
+            self.config.pop('log_fmt_logfile', None)
         logfmt = self.config.get(
             'log_fmt_logfile', self.config['log_fmt_console']
         )
+
+        if self.config.get('log_datefmt', None) is None:
+            # Remove it from config so it get's the default value bellow
+            self.config.pop('log_datefmt', None)
+
         datefmt = self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
         log.setup_logfile_logger(
             self.config[lfkey],
