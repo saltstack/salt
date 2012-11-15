@@ -41,14 +41,25 @@ MOCK_MODULES = [
     'flask.views',
     'werkzeug',
     'werkzeug.exceptions',
+    'cheroot.ssllib',
+    'cheroot.ssllib.ssl_builtin',
+
+    'cheroot',
+    'cheroot.wsgi',
+    'cherrypy',
+    'cherrypy.wsgiserver',
+    'cherrypy.wsgiserver.ssl_builtin',
 
     # salt libs
     'salt',
+    'salt.auth',
     'salt.client',
     'salt.exceptions',
     'salt.log',
+    'salt.output',
     'salt.runner',
     'salt.utils',
+    'salt.wheel',
 ]
 
 for mod_name in MOCK_MODULES:
