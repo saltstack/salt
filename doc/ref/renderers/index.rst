@@ -61,7 +61,7 @@ Other renderer combinations are possible, here's a few examples:
       pass the input to the ``mako`` renderer, whose output is then fed into the
       ``yaml`` renderer.
   
-  ``jinja | mako -s | yaml``
+  ``jinja | mako | yaml``
       This one allows you to use both jinja and mako templating syntax in the
       input and then parse the final rendererd output as YAML.
 
