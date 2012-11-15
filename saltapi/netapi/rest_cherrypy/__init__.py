@@ -154,7 +154,6 @@ class LowDataAdapter(object):
         '''
         Pass lowdata to Salt to be executed
         '''
-        # FIXME: change this to yield results from one of Salt's iterative returns
         logger.debug("SaltAPI is passing low-data: %s", lowdata)
         return [self.api.run(chunk) for chunk in lowdata]
 
