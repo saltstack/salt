@@ -76,8 +76,7 @@ def create(vm_):
     '''
     Create a single vm from a data dict
     '''
-    print('Creating Cloud VM {0}'.format(vm_['name']))
-    log.warn('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -92,7 +91,6 @@ def create(vm_):
                'run the initial deployment: \n{1}').format(
                        vm_['name'], exc.message
                        )
-        sys.stderr.write(err)
         log.error(err)
         return False
     if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
@@ -105,11 +103,8 @@ def create(vm_):
                        )
         subprocess.call(cmd, shell=True)
     else:
-        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
-        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
-    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
-        print('  {0}: {1}'.format(key, val))
-        log.warn('  {0}: {1}'.format(key, val))
+        log.info('  {0}: {1}'.format(key, val))
