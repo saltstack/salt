@@ -85,6 +85,13 @@ The outputter system is now loaded in a modular way. This means that output
 systems can be more easily added by dropping a python file down on the master
 that contains the function `output`.
 
+Gzip from Fileserver
+--------------------
+
+Gzip compression has been added as an option to the cp.get_file and cp.get_dir
+commands. This will make file transfers more efficient and faster, especially
+over slower network links.
+
 Unified Module Configuration
 ----------------------------
 
