@@ -16,6 +16,11 @@ class SaltMakoTemplateLookup(TemplateCollection):
     If URL is an absolute path then it's treated as if it has been prefixed
     with salt://.
 
+    Examples::
+
+       <%include file="templates/sls-parts.mako"/>
+       <%namespace file="salt://lib/templates/utils.mako" import="helper"/>
+
     """
 
     def __init__(self, opts, env='base'):

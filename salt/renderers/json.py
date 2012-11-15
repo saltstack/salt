@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import json
 
-def render(json_data, env='', sls='', **kws):
+def render(json_data, env='', sls='', argline='', **kws):
     if not isinstance(json_data, basestring):
         json_data = json_data.read()
 
