@@ -123,6 +123,14 @@ not to query the IBM cloud. This is important, because you need to use
 salt-cloud --list-locations (with the other options already set) in order to
 find the name of the location that you want to use.
 
+OpenStack with Salt
+===================
+
+This isn't specifically another Salt Cloud feature, but it should be noted that
+with the release of Salt 0.10.5, OpenStack is not only the first Cloud product,
+but in fact the first piece of software explicitly supported by both Salt Cloud
+(from a user perspective) and Salt itself (from an admin perspective).
+
 Salt Cloud Logging
 ==================
 
@@ -135,6 +143,13 @@ your cloud config file:
 .. code-block:: yaml
 
   log_file: /var/log/salt/cloud
+  log_level_logfile: debug
+
+If you would like to change the default logging level for the command line, you
+can also configure that in the same place:
+
+.. code-block:: yaml
+
   log_level: debug
 
 Check salt-cloud --help for a list of logging levels, which can also be
