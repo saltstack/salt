@@ -4,7 +4,6 @@ Manage basic template commands
 # Import python libs
 import time
 import os
-import tempfile
 import codecs
 from cStringIO import StringIO as cStringIO
 from StringIO import StringIO as pyStringIO
