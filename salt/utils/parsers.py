@@ -586,7 +586,7 @@ class OutputOptionsMixIn(object):
         )
 
         group.add_option(
-            '--out', '--output'.
+            '--out', '--output',
             dest='output',
             choices=outputters.keys(),
             help=(
