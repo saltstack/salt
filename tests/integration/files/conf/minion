@@ -19,3 +19,5 @@ integration.test: True
 # Grains addons
 grains:
   test_grain: cheese
+  script: grail
+  alot: many

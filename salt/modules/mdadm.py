@@ -62,7 +62,8 @@ def detail(device='/dev/md0'):
 
     # Lets make sure the device exists before running mdadm
     if not os.path.exists(device):
-        raise CommandExecutionError("Device {0} doesn't exist!")
+        msg = "Device {0} doesn't exist!"
+        raise CommandExecutionError(msg.format(device))
 
     cmd = 'mdadm --detail {0}'.format(device)
     for line in __salt__['cmd.run_stdout'](cmd).splitlines():

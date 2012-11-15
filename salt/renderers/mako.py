@@ -5,10 +5,14 @@ from salt.exceptions import SaltRenderError
 
 def render(template_file, env='', sls='', argline='', context=None, **kws):
     '''
+    Render the template_file, passing the functions and grains into the
+    Mako rendering system.
+
     Renderer options:
 
         -s    Interpret renderer input as a string rather than as a file path.
 
+    :rtype: string
     '''
     if argline == '-s':
         from_str = True
@@ -29,7 +33,3 @@ def render(template_file, env='', sls='', argline='', context=None, **kws):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))
     return tmp_data['data']
-
-
-
-

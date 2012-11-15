@@ -1,9 +1,3 @@
-'''
-The default templating engine, process sls file with the jinja2 templating engine.
-
-This renderer will take a sls file authored as a jinja2 template, render it, and
-return the rendered result as a string.
-'''
 from __future__ import absolute_import
 
 # Import Salt libs
@@ -15,7 +9,7 @@ import salt.utils.templates
 def render(template_file, env='', sls='', argline='', context=None, **kws):
     '''
     Render the template_file, passing the functions and grains into the
-    rendering system. Return rendered content as a string.
+    Jinja rendering system.
 
     Renderer options:
 

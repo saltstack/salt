@@ -1665,8 +1665,7 @@ def accumulated(name, filename, text, **kwargs):
     text
         String or list for adding in accumulator
 
-    require_in
-    watch_in
+    require_in / watch_in
         One of them required for sure we fill up accumulator before we manage
         the file. Probably the same as filename
     '''

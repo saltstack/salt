@@ -49,18 +49,43 @@ This example would instruct all Salt minions to download the vimrc from a
 directory with the same name as their os grain and copy it to /etc/vimrc
 
 For larger files, the cp.get_file module also supports gzip compression.
-Because gzip compression is CPU-intensive, this should only be used in
+Because gzip is CPU-intensive, this should only be used in
 scenarios where the compression ratio is very high (e.g. pretty-printed JSON
 or YAML files).
 
-Use the *gzip_compression* named argument to enable it.  Valid values are 1..9,
+Use the *gzip* named argument to enable it.  Valid values are 1..9,
 where 1 is the lightest compression and 9 the heaviest.  1 uses the least CPU
 on the master (and minion), 9 uses the most.
 
 .. code-block:: bash
 
-    # salt '*' cp.get_file salt://vimrc /etc/vimrc gzip_compression=5
+    # salt '*' cp.get_file salt://vimrc /etc/vimrc gzip=5
 
+Finally, note that by default cp.get_file does *not* create new destination
+directories if they do not exist.  To change this, use the *makedirs* argument:
+
+.. code-block:: bash
+
+    # salt '*' cp.get_file salt://vimrc /etc/vim/vimrc makedirs=True
+
+In this example, /etc/vim/ would be created if it didn't already exist.
+
+get_dir
+```````
+
+The cp.get_dir function can be used on the minion to download an entire
+directory from the master.  The syntax is very similar to get_file:
+
+.. code-block:: bash
+
+    # salt '*' cp.get_dir salt://etc/apache2 /etc
+
+cp.get_dir supports *template* rendering and *gzip* compression arguments just
+like get_file:
+
+.. code-block:: bash
+
+    # salt '*' cp.get_dir salt://etc/{{pillar.webserver}} /etc gzip=5 template=jinja
 
 
 File Server Client API

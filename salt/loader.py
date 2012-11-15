@@ -542,6 +542,8 @@ class Loader(object):
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs
+            elif not pack:
+                mod.__salt__.update(funcs)
         return funcs
 
     def _apply_outputter(self, func, mod):

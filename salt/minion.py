@@ -306,7 +306,8 @@ class Minion(object):
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             sdata = {'pid': os.getpid()}
             sdata.update(data)
-            open(fn_, 'w+').write(minion_instance.serial.dumps(sdata))
+            with open(fn_, 'w+') as fp_:
+                fp_.write(minion_instance.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:

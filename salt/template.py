@@ -1,27 +1,29 @@
 '''
 Manage basic template commands
 '''
+# Import python libs
 import time
 import os
-import tempfile
 import codecs
+from cStringIO import StringIO as cStringIO
+from StringIO import StringIO as pyStringIO
 
+# Import salt libs
 import salt.utils
 from salt._compat import string_types
 
-#FIXME: we should make the default encoding of a .sls file a configurable
-#       option in the config, and default it to 'utf-8'.
-#
-sls_encoding = 'utf-8' # this one has no BOM.
-sls_encoder = codecs.getencoder(sls_encoding)
 
-from cStringIO import StringIO as cStringIO
-from StringIO import StringIO as pyStringIO
-def StringIO(s=None): # cStringIO can't handle unicode
+def StringIO(s=None):  # cStringIO can't handle unicode
     try:
         return cStringIO(bytes(s))
     except UnicodeEncodeError:
         return pyStringIO(s)
+
+#FIXME: we should make the default encoding of a .sls file a configurable
+#       option in the config, and default it to 'utf-8'.
+#
+sls_encoding = 'utf-8'  # this one has no BOM.
+sls_encoder = codecs.getencoder(sls_encoding)
 
 
 def compile_template(template, renderers, default, env='', sls=''):
@@ -69,9 +71,8 @@ def compile_template_str(template, renderers, default):
     Take template as a string and return the high data structure
     derived from the template.
     '''
-    fd_, fn_ = tempfile.mkstemp()
-    os.close(fd_)
-    with open(fn_, 'wb') as f:
+    fn_ = salt.utils.mkstemp()
+    with open(fn_, 'w+') as f:
         f.write(sls_encoder(template)[0])
     return compile_template(fn_, renderers, default)
 
@@ -110,7 +111,7 @@ def template_shebang(template, renderers, default):
         render_pipe = check_render_pipe_str(default, renderers)
 
     return render_pipe
-    
+
 
 
 

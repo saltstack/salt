@@ -4,8 +4,9 @@ in a raw state. This was the original outputter used by Salt before the
 outputter system was developed.
 '''
 
-def ouput(data):
+
+def output(data):
     '''
     Rather basic....
     '''
-    return data
+    return str(data)
