@@ -131,17 +131,12 @@ def hypermedia_in():
     '''
     Unserialize POST/PUT data of a specified content type, if possible
     '''
-    if cherrypy.request.method in ('POST', 'PUT'):
-        ct_type = cherrypy.request.headers['content-type'].lower()
-        ct_in = ct_in_map.get(ct_type, None)
+    cherrypy.request.body.processors.clear()
+    cherrypy.request.body.default_proc = cherrypy.HTTPError(
+            406, 'Content type not supported')
+    cherrypy.request.body.processors = ct_in_map
 
-        if not ct_in:
-            raise cherrypy.HTTPError(406, 'Content type not supported')
-
-        body = cherrypy.request.body.read()
-        cherrypy.request.params['body'] = ct_in(body)
-
-cherrypy.tools.hypermedia_in = cherrypy.Tool('before_handler', hypermedia_in)
+cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body', hypermedia_in)
 
 class LowDataAdapter(object):
     '''
