@@ -23,6 +23,7 @@ def installed(name,
               log=None,
               proxy=None,
               timeout=None,
+              repo=None,
               editable=None,
               find_links=None,
               index_url=None,
@@ -80,6 +81,9 @@ def installed(name,
         ret['comment'] = 'Python package {0} is set to be installed'.format(
                 name)
         return ret
+
+    if repo:
+        name = repo
 
     pip_install_call = __salt__['pip.install'](
         pkgs=name,
