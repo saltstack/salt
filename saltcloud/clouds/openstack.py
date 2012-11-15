@@ -101,6 +101,12 @@ def get_conn():
     )
 
 
+def ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default) or 'private_ips'.
+    '''
+    return vm_.get('ssh_interface', __opts__.get('OPENSTACK.ssh_interface', 'public_ips'))
+
 def create(vm_):
     '''
     Create a single vm from a data dict
@@ -168,13 +174,22 @@ def create(vm_):
                     log.warn('{0} is a private ip'.format(private_ip))
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
+            if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+                break
+
         nr_count += 1
         if nr_count > 50:
-            not_ready = False
+            log.warn('Timed out waiting for a public ip, continuing anyway')
+            break
         time.sleep(1)
 
+    if ssh_interface(vm_) == 'private_ips':
+        ip_address = data.private_ips[0]
+    else:
+        ip_address = data.public_ips[0]
+
     deployargs = {
-        'host': data.public_ips[0],
+        'host': ip_address,
         'script': deploy_script.script,
         'name': vm_['name'],
 	'sock_dir': __opts__['sock_dir']
