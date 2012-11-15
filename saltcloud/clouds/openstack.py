@@ -83,8 +83,10 @@ def get_conn():
     authinfo = {
             'ex_force_auth_url': __opts__['OPENSTACK.identity_url'],
             'ex_force_auth_version': '2.0_password',
-            'ex_force_service_name': 'Compute',
     }
+
+    if 'OPENSTACK.compute_name' in __opts__:
+        authinfo['ex_force_service_name'] = __opts__['OPENSTACK.compute_name']
 
     if 'OPENSTACK.compute_region' in __opts__:
         authinfo['ex_force_service_region'] = __opts__['OPENSTACK.compute_region']
