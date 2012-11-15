@@ -16,8 +16,11 @@ config <configuration-salt-master>` and takes a form similar to the following:
 
 .. code-block:: yaml
 
-    flask_rest:
-      - port: 8000
+    rest_cherrypy:
+      port: 8000
+      debug: True
+      ssl_crt: /etc/pki/tls/certs/localhost.crt
+      ssl_key: /etc/pki/tls/certs/localhost.key
 
 The ``__virtual__`` function
 ============================
