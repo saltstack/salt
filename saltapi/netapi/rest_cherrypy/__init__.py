@@ -85,6 +85,8 @@ def hypermedia_handler(*args, **kwargs):
 
     try:
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
+    except cherrypy.CherryPyException:
+        raise
     except Exception as exc:
         logger.debug("Error while processing request for: %s",
                 cherrypy.request.path_info,
