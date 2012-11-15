@@ -305,6 +305,7 @@ def root_cmd(command, tty, sudo, key_filename, username, host):
                 )
         subprocess.call(cmd, shell=True)
     else:
+        ssh = paramiko.SSHClient()
         stdin, stdout, stderr = ssh.exec_command(command)
         for line in stdout:
             sys.stdout.write(line)
