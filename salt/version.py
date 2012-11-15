@@ -3,6 +3,7 @@ import sys
 __version_info__ = (0, 10, 4)
 __version__ = '.'.join(map(str, __version_info__))
 
+
 # If we can get a version from Git use that instead, otherwise carry on
 try:
     import subprocess
@@ -15,9 +16,12 @@ try:
         out, err = p.communicate()
         if out:
             __version__ = '{0}'.format(out.strip().lstrip('v'))
-            __version_info__ = tuple(__version__.split('-', 1)[0].split('.'))
+            __version_info__ = tuple(
+                [int(i) for i in __version__.split('-', 1)[0].split('.')]
+            )
 except Exception:
     pass
+
 
 def versions_report():
     libs = (
