@@ -81,7 +81,7 @@ def _render_filenames(path, dest, env, template):
     return (path, dest)
 
 
-def get_file(path, dest, env='base', make_dirs=False, template=None, gzip_compression=None):
+def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     '''
     Used to get a single file from the salt master
 
@@ -95,7 +95,7 @@ def get_file(path, dest, env='base', make_dirs=False, template=None, gzip_compre
         return ''
     else:
         client = salt.fileclient.get_file_client(__opts__)
-        return client.get_file(path, dest, make_dirs, env, gzip_compression)
+        return client.get_file(path, dest, makedirs, env, gzip)
 
 
 def get_template(path, dest, template='jinja', env='base', **kwargs):
@@ -118,7 +118,7 @@ def get_template(path, dest, template='jinja', env='base', **kwargs):
     return client.get_template(path, dest, template, False, env, **kwargs)
 
 
-def get_dir(path, dest, env='base', template=None, gzip_compression=None):
+def get_dir(path, dest, env='base', template=None, gzip=None):
     '''
     Used to recursively copy a directory from the salt master
 
@@ -129,7 +129,7 @@ def get_dir(path, dest, env='base', template=None, gzip_compression=None):
     (path, dest) = _render_filenames(path, dest, env, template)
 
     client = salt.fileclient.get_file_client(__opts__)
-    return client.get_dir(path, dest, env, gzip_compression)
+    return client.get_dir(path, dest, env, gzip)
 
 
 def get_url(path, dest, env='base'):

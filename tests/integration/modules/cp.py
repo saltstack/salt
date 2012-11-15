@@ -57,7 +57,7 @@ class CPModuleTest(integration.ModuleCase):
                 'salt://file.big',
                 tgt,
             ],
-            gzip_compression=5
+            gzip=5
         )
         with open(tgt, 'r') as scene:
             data = scene.read()
@@ -65,7 +65,7 @@ class CPModuleTest(integration.ModuleCase):
             self.assertNotIn('bacon', data)
             self.assertEqual(hash, hashlib.md5(data).hexdigest())
 
-    def test_get_file_make_dirs(self):
+    def test_get_file_makedirs(self):
         '''
         cp.get_file
         '''
@@ -76,7 +76,7 @@ class CPModuleTest(integration.ModuleCase):
                 'salt://grail/scene33',
                 tgt,
             ],
-            make_dirs=True
+            makedirs=True
         )
         with open(tgt, 'r') as scene:
             data = scene.read()
