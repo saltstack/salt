@@ -28,19 +28,25 @@ def get_printout(out, opts=None, **kwargs):
     '''
     if opts is None:
         opts = {}
-    for outputter in STATIC:
-        if outputter in opts:
-            if opts[outputter]:
-                if outputter == 'text_out':
-                    out = 'txt'
-                else:
-                    out = outputter
+
+    if 'output' in opts:
+        # new --out option
+        out = opts['output']
+    else:
+        # XXX: This should be removed before 0.10.8 comes out
+        for outputter in STATIC:
+            if outputter in opts:
+                if opts[outputter]:
+                    if outputter == 'text_out':
+                        out = 'txt'
+                    else:
+                        out = outputter
+        if out and out.endswith('_out'):
+            out = out[:-4]
+
     if out is None:
         out = 'pprint'
-    if out.endswith('_out'):
-        out = out[:-4]
-    if opts is None:
-        opts = {}
+
     opts.update(kwargs)
     if not 'color' in opts:
         opts['color'] = not bool(opts.get('no_color', False))
@@ -55,4 +61,3 @@ def out_format(data, out, opts=None):
     Return the formatted outputter string for the passed data
     '''
     return get_printout(out, opts)(data).rstrip()
-
