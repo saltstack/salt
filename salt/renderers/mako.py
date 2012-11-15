@@ -3,8 +3,21 @@ from __future__ import absolute_import
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
-def render(template_file, env='', sls='', context=None, **kws):
-    tmp_data = salt.utils.templates.mako(template_file, to_str=True,
+def render(template_file, env='', sls='', argline='', context=None, **kws):
+    '''
+    Renderer options:
+
+        -s    Interpret renderer input as a string rather than as a file path.
+
+    '''
+    if argline == '-s':
+        from_str = True
+    elif argline:
+        raise SaltRenderError(
+                  'Unknown renderer option: {opt}'.format(opt=argline)
+              )
+    tmp_data = salt.utils.templates.mako(
+                    template_file, from_str, to_str=True,
                     salt=__salt__,
                     grains=__grains__,
                     opts=__opts__,
