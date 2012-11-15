@@ -200,7 +200,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 print('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 log.warn('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
-                    sleep(trysleep)
+                    time.sleep(trysleep)
                     continue
                 else:
                     print('Authencication failed: {0}'.format(authexec))
