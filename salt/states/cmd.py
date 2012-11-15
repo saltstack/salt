@@ -29,6 +29,71 @@ syslog if there is no disk space:
     > /var/log/messages:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test
+
+Note that when executing a command or script, the state(ie, changed or not) of
+the command is unknown to Salt's state system. Therefore, by default, the
+``cmd`` state assumes that any command execution results in a changed state. 
+
+This means that if a ``cmd`` state is watched by another state then the
+state that's watching will always be executed due to the `changed` state in
+the ``cmd`` state.
+
+Many state functions in this module now also accept a ``stateful`` argument.
+If ``stateful`` is specified to be true then it is assumed that the command
+or script will determine its own state and communicate it back by following
+a simple protocol described below:
+
+    If there's nothing in the stdout of the command, then assume no changes.
+    Otherwise, the stdout must be either in JSON or its `last` non-empty line
+    must be a string of key=value pairs delimited by spaces(no spaces on the
+    sides of ``=``).
+
+    If it's JSON then it must be a JSON object(ie, {}). 
+    If it's key=value pairs then quoting may be used to include spaces.
+    (Python's shlex module is used to parse the key=value string)
+
+    Two special keys or attributes are recognized in the output::
+
+      changed: bool (ie, 'yes', 'no', 'true', 'false', case-insensitive)
+      comment: str  (ie, any string)
+
+    So, only if 'changed' is true then assume the command execution has changed
+    the state, and any other key values or attributes in the output will be set
+    as part of the changes.
+
+    If there's a comment then it will be used as the comment of the state.
+
+    Here's an example of how one might write a shell script for use with a
+    stateful command::
+
+      #!/bin/bash
+      #
+      echo "Working hard..."
+
+      # writing the state line
+      echo  # an empty line here so the next line will be the last.
+      echo "changed=yes comment=\"something's changed!\" whatever=123"
+
+
+    And an example salt file using this module::
+
+        Run myscript:
+          cmd.run:
+            - name: /path/to/myscript
+            - cwd: /
+            - stateful: true
+        
+        Run only if myscript changed something:
+          cmd.wait:
+            - name: echo hello
+            - cwd: /
+            - watch:
+              - cmd: Run myscript
+
+    Note that if the ``cmd.wait`` state also specfies ``stateful: true``
+    it can then be watched by some other states as well.
+
+
 '''
 
 # Import python libs
@@ -524,65 +589,3 @@ def mod_watch(name, **kwargs):
                            ),
             'result': False}
 
-
-'''
-This module is similar to the built-in cmd state module except that rather
-than always resulting in a changed state, the state of a command or script
-execution is determined by the command or the script itself.
-
-This allows a state to watch for changes in another state that executes
-a command or script.
-
-This is done using a simple protocol similar to the one used by Ansible's
-modules. Here's how it works:
-
-If there's nothing in the stdout of the command, then assume no changes.
-Otherwise, the stdout must be either in JSON or its `last` non-empty line
-must be a string of key=value pairs delimited by spaces(no spaces on the
-sides of '=').
-
-If it's JSON then it must be a JSON object(ie, {}). 
-If it's key=value pairs then quoting may be used to include spaces.
-(Python's shlex module is used to parse the key=value string)
-
-Two special keys or attributes are recognized in the output::
-
-  changed: bool (ie, 'yes', 'no', 'true', 'false', case-insensitive)
-  comment: str  (ie, any string)
-
-So, only if 'changed' is true then assume the command execution has changed
-the state, and any other key values or attributes in the output will be set
-as part of the changes.
-
-If there's a comment then it will be used as the comment of the state.
-
-Here's an example of how one might write a shell script for use by this state
-function::
-
-  #!/bin/bash
-  #
-  echo "Working hard..."
-
-  # writing the state line
-  echo  # an empty line here so the next line will be the last.
-  echo "changed=yes comment=\"something's changed!\" whatever=123"
-
-
-And an example salt files using this module::
-
-    Run myscript:
-      state.run:
-        - name: /path/to/myscript
-        - cwd: /
-    
-    Run only if myscript changed something:
-      cmd.wait:
-        - name: echo hello
-        - cwd: /
-        - watch:
-          - state: Run myscript
-
-
-Note that instead of using `cmd.wait` in the example, `state.wait` can be
-used, and in which case it can then be watched by some other states.
-'''

@@ -47,7 +47,7 @@ The first line is a shebang that references the ``py`` renderer.
 
 Composing Renderers
 -------------------
-A render can be composed from other renderers by connecting them in a series
+A renderer can be composed from other renderers by connecting them in a series
 of pipes(``|``). In fact, the default ``Jinja + YAML`` renderer is implemented
 by combining a yaml renderer and a jinja renderer. Such renderer configuration
 is specified as: ``jinja | yaml``.
@@ -102,8 +102,9 @@ Here is a simple YAML renderer example:
 .. code-block:: python
 
     import yaml
-    def render(yaml_data, env='', sls='', argline='', **kws):
+    def render(yaml_data, env='', sls='', **kws):
         if not isinstance(yaml_data, basestring):
             yaml_data = yaml_data.read()
         data = yaml.load(yaml_data)
         return data if data else {}
+
