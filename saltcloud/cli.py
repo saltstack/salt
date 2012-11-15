@@ -36,6 +36,8 @@ class SaltCloud(parsers.SaltCloudParser):
         self.setup_logfile_logger()
 
         # Late imports so logging works as expected
+        import logging
+        logging.getLogger(__name__).info('salt-cloud starting')
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
@@ -81,6 +83,6 @@ class SaltCloud(parsers.SaltCloudParser):
             mapper.run_profile()
             self.exit(0)
 
-        if self.options.map and self.options.list_images is not None:
+        if self.options.map and self.selected_query_option is None:
             mapper.run_map()
             self.exit(0)
