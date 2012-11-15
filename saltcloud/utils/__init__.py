@@ -15,6 +15,9 @@ import multiprocessing
 import time
 import logging
 
+# Get logging started
+log = logging.getLogger(__name__)
+
 try:
     import paramiko
 except:
@@ -36,9 +39,6 @@ NSTATES = {
         2: 'terminated',
         3: 'pending',
         }
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 
 def os_script(os_, vm_=None, opts=None, minion=''):
