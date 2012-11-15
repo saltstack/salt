@@ -36,6 +36,8 @@ class SaltCloud(parsers.SaltCloudParser):
         self.setup_logfile_logger()
 
         # Late imports so logging works as expected
+        import logging
+        logging.getLogger(__name__).info('salt-cloud starting')
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
