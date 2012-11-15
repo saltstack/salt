@@ -26,7 +26,6 @@ class CloudConfigMixIn(object):
     config = {'log_level': None}
 
     def _mixin_setup(self):
-
         group = self.config_group = optparse.OptionGroup(
             self,
             "Configuration Options",
@@ -123,6 +122,7 @@ class CloudConfigMixIn(object):
 
         # 2nd Override master config with salt-cloud config
         self.config.update(config.cloud_config(self.options.cloud_config))
+
         ## Fix conf_file set on master config so that salt parsers don't fail
         #self.config['conf_file'] = self.options.cloud_config
 
@@ -131,6 +131,11 @@ class CloudConfigMixIn(object):
 
         # 4th - Include vm config
         self.config['vm'] = config.vm_config(self.options.vm_config)
+
+        # Remove log_level_logfile from config if set to None so it can be
+        # equal to console log_level
+        if self.config['log_level_logfile'] is None:
+            self.config.pop('log_level_logfile')
 
 
 class ExecutionOptionsMixIn(object):

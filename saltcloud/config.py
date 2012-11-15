@@ -8,6 +8,10 @@ import os
 # Import salt libs
 import salt.config
 
+__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
+__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
+__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+
 
 def cloud_config(path):
     '''
@@ -21,9 +25,13 @@ def cloud_config(path):
             'keysize': 4096,
             'os': '',
             # Logging defaults
-            'log_level': 'info',
-            'log_level_logfile': 'info',
-            'log_file': '/var/log/salt/cloud'
+            'log_file': '/var/log/salt/cloud',
+            'log_level': None,
+            'log_level_logfile': None,
+            'log_datefmt': __dflt_log_datefmt,
+            'log_fmt_console': __dflt_log_fmt_console,
+            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_granular_levels': {},
             }
 
     salt.config.load_config(opts, path, 'SALT_CLOUD_CONFIG')
