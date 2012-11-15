@@ -23,6 +23,7 @@ def installed(name,
               log=None,
               proxy=None,
               timeout=None,
+              repo=None,
               editable=None,
               find_links=None,
               index_url=None,
@@ -69,7 +70,7 @@ def installed(name,
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if ignore_installed == False and name in pip_list:
+    if ignore_installed == False and name.lower() in (p.lower() for p in pip_list):
         if force_reinstall == False and upgrade == False:
             ret['result'] = True
             ret['comment'] = 'Package already installed'
@@ -80,6 +81,9 @@ def installed(name,
         ret['comment'] = 'Python package {0} is set to be installed'.format(
                 name)
         return ret
+
+    if repo:
+        name = repo
 
     pip_install_call = __salt__['pip.install'](
         pkgs=name,

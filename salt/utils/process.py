@@ -25,7 +25,7 @@ def set_pidfile(pidfile, user):
         if os.environ['os'].startswith('Windows'):
             return True
     import pwd  # after confirming not running Windows
-    import grp 
+    #import grp 
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
