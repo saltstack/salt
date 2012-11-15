@@ -100,10 +100,12 @@ def latest(name,
     ret['comment'] = out
     return ret
 
-def dirty(target,
+def dirty(name,
+          target,
           user=None,
           ignore_unversioned=False):
     '''
     Determine if the working directory has been changed.
     '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     return _fail(ret, 'This function is not implemented yet.')

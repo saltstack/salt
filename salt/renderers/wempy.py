@@ -1,8 +1,3 @@
-'''
-Process a sls file with the Wempy templating engine
-
-'''
-
 # Import Salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
@@ -16,6 +11,7 @@ def render(template_file, env='', sls='', context=None, **kws):
 
         -s    Interpret renderer input as a string rather than as a file path.
 
+    :rtype: string
     '''
     if argline == '-s':
         from_str = True
