@@ -58,12 +58,8 @@ ct_out_map = {
 }
 
 def hypermedia_handler(*args, **kwargs):
-    best = cherrypy.lib.cptools.accept(ct_out_map.keys()) # raises 406
-    out = ct_out_map[best]
-
-    cherrypy.response.headers['Content-Type'] = best
-
     try:
+        cherrypy.response.processors = ct_out_map # handlers may modify this
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
     except cherrypy.CherryPyException:
         raise
@@ -79,11 +75,11 @@ def hypermedia_handler(*args, **kwargs):
             'status': cherrypy.response.status,
             'message': '{0}'.format(cherrypy._cperror.format_exc())}
 
-    # Skip the outputters and use jinja instead
-    if out == 'jinja' and hasattr(cherrypy.response, '_tmpl'):
-        tmpl = jenv.get_template(cherrypy.response._tmpl)
-        return tmpl.render(**ret)
+    content_types = cherrypy.response.processors
+    best = cherrypy.lib.cptools.accept(content_types.keys()) # raises 406
+    cherrypy.response.headers['Content-Type'] = best
 
+    out = content_types[best]
     return salt.output.out_format(ret, out, __opts__)
 
 def hypermedia_out():
