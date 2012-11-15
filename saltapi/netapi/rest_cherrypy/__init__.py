@@ -80,7 +80,7 @@ def hypermedia_handler(*args, **kwargs):
             'message': '{0}'.format(cherrypy._cperror.format_exc())}
 
     # Skip the outputters and use jinja instead
-    if out == 'jinja':
+    if out == 'jinja' and hasattr(cherrypy.response, '_tmpl'):
         tmpl = jenv.get_template(cherrypy.response._tmpl)
         return tmpl.render(**ret)
 
