@@ -180,7 +180,10 @@ class LowDataAdapter(object):
         '''
         Run a given function in a given client with the given args
         '''
-        return self.exec_lowdata(self.fmt_lowdata(kwargs))
+        return {
+            'status': cherrypy.response.status,
+            'message': self.exec_lowdata(self.fmt_lowdata(kwargs)),
+        }
 
 class Login(LowDataAdapter):
     '''
