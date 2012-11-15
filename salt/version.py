@@ -6,13 +6,19 @@ __version__ = '.'.join(map(str, __version_info__))
 
 # If we can get a version from Git use that instead, otherwise carry on
 try:
+    import os
     import subprocess
     from salt.utils import which
 
     git = which('git')
     if git:
-        p = subprocess.Popen([git, 'describe'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        p = subprocess.Popen(
+            [git, 'describe'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=os.path.abspath(os.path.dirname(__file__))
+        )
         out, err = p.communicate()
         if out:
             __version__ = '{0}'.format(out.strip().lstrip('v'))
