@@ -33,7 +33,7 @@ def set_pidfile(pidfile, user):
         #groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
     except IndexError:
         err = ('Failed to set the pid to user: '
-                '{0}. The user is not available.\n').format(user)
+               '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
         sys.exit(2)
     try:
