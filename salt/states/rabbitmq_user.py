@@ -110,7 +110,7 @@ def absent(name,
             ret['comment'] = 'User {0} is not present'.format(name)
     else:
         if user_exists:
-            result = __salt__['rabbitmq.delete_user']
+            result = __salt__['rabbitmq.delete_user'](name, runas=runas)
             if 'Error' in result:
                 ret['result'] = False
                 ret['comment'] = result['Error']
