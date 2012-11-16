@@ -370,13 +370,13 @@ def run(name,
                 _delegate_to_state(
                     'cmd.run',
                     name,
-                    onlyif,
-                    unless,
-                    cwd,
-                    user,
-                    group,
-                    shell,
-                    env,
+                    onlyif=onlyif,
+                    unless=unless,
+                    cwd=cwd,
+                    user=user,
+                    group=group,
+                    shell=shell,
+                    env=env,
                     **kwargs
                     )
                 )
@@ -483,13 +483,13 @@ def script(name,
                 _delegate_to_state(
                     'cmd.script',
                     name,
-                    onlyif,
-                    unless,
-                    cwd,
-                    user,
-                    group,
-                    shell,
-                    env,
+                    onlyif=onlyif,
+                    unless=unless,
+                    cwd=cwd,
+                    user=user,
+                    group=group,
+                    shell=shell,
+                    env=env,
                     **kwargs
                     )
                 )
@@ -567,6 +567,7 @@ def mod_watch(name, **kwargs):
             return _reinterpreted_state(
                     _delegate_to_state(
                         'cmd.run',
+                        name,
                         **kwargs
                         )
                     )
@@ -577,6 +578,7 @@ def mod_watch(name, **kwargs):
             return _reinterpreted_state(
                     _delegate_to_state(
                         'cmd.script',
+                        name
                         **kwargs
                         )
                     )
