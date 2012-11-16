@@ -1,3 +1,9 @@
+salt (0.10.5) unstable; urgency=low
+
+  * new release
+
+ -- Sean Channel <pentabular@gmail.com>  Thu, 15 Nov 2012 23:51:50 -0700
+
 salt (0.10.4-2) unstable; urgency=low
 
   * zmq3 support: b84f593770 86af5f03c3 c933c9e4ff a7e1d58f87 a5cdd8e313 c10bf6702f 2ea8b7e061 75f2a58b4e
