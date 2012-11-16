@@ -179,6 +179,7 @@ re-write or renames state id's and their references.
 #     %>
 #
 
+# Import python libs
 import logging
 import re
 import getopt
@@ -186,27 +187,32 @@ import copy
 from os import path as ospath
 from cStringIO import StringIO
 
+# Import salt libs
 from salt.exceptions import SaltRenderError
+
 
 log = logging.getLogger(__name__)
 
+
 __opts__ = {
-  'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
-  # eg, something like "# --- end of state config --" works by default.
+    'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
+    # eg, something like "# --- end of state config --" works by default.
 
-  'stateconf_goal_state': '.goal',
-  # name of the state id for the generated goal state.
+    'stateconf_goal_state': '.goal',
+    # name of the state id for the generated goal state.
 
-  'stateconf_state_func': 'stateconf.set'
-  # names the state and the state function to be recognized as a special state
-  # from which to gather sls file context variables. It should be specified
-  # in the 'state.func' notation, and both the state module and the function must
-  # actually exist and the function should be a dummy, no-op state function that
-  # simply returns a dict(name=name, result=True, changes={}, comment='')
+    'stateconf_state_func': 'stateconf.set'
+    # names the state and the state function to be recognized as a special
+    # state from which to gather sls file context variables. It should be
+    # specified in the 'state.func' notation, and both the state module and
+    # the function must actually exist and the function should be a dummy,
+    # no-op state function that simply returns a
+    # dict(name=name, result=True, changes={}, comment='')
 }
 
 
 STATE_FUNC = STATE_NAME = ''
+
 
 def __init__(opts):
     global STATE_NAME, STATE_FUNC
@@ -274,9 +280,11 @@ def render(template_file, env='', sls='', argline='', **kws):
 
         if context:
             ctx.update(context)
-        tmplout = render_template(StringIO(data), env, sls, context=ctx,
-                                  argline=rt_argline.strip()
-                                  )
+
+        tmplout = render_template(
+                StringIO(data), env, sls, context=ctx,
+                argline=rt_argline.strip()
+        )
         high = render_data(tmplout, env, sls, argline=rd_argline.strip())
 
         # make a copy so that the original, un-preprocessed highstate data
@@ -323,7 +331,7 @@ def render(template_file, env='', sls='', argline='', **kws):
     if isinstance(template_file, basestring):
         with open(template_file, 'r') as f:
             sls_templ = f.read()
-    else: # assume file-like
+    else:  # assume file-like
         sls_templ = template_file.read()
 
     # first pass to extract the state configuration
