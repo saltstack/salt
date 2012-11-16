@@ -35,14 +35,10 @@ __opts__ = {}
 
 def __virtual__():
     '''
-    Only load this module if the mysql config is set
+    Only load this module if the mysql libraries exist
     '''
-    if any(k.startswith('mysql.') for k in list(__opts__)):
-        if has_mysqldb:
-            return 'mysql'
-    elif any(k.startswith('mysql.') for k in list(__pillar__)):
-        if has_mysqldb:
-            return 'mysql'
+    if has_mysqldb:
+        return 'mysql'
     return False
 
 
