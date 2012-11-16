@@ -13,9 +13,9 @@ to execute the create function can and should be included in the provider
 module.
 
 A good example to follow for writing a cloud provider module is the module
-provided for rackspace:
+provided for Linode:
 
-https://github.com/saltstack/salt-cloud/blob/master/saltcloud/clouds/rackspace.py
+https://github.com/saltstack/salt-cloud/blob/master/saltcloud/clouds/linode.py
 
 If possible it is prefered that libcloud is used to connect to public cloud
 systems, but if libcloud support is not available or another system makes more
