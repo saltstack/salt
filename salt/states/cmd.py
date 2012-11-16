@@ -562,7 +562,7 @@ def mod_watch(name, **kwargs):
     Execute a cmd function based on a watch call
     '''
     if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
-        if kwargs['stateful']:
+        if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(
                     _delegate_to_state(
@@ -572,7 +572,7 @@ def mod_watch(name, **kwargs):
                     )
         return run(name, **kwargs)
     elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
-        if kwargs['stateful']:
+        if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(
                     _delegate_to_state(
