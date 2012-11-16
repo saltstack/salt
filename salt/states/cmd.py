@@ -370,13 +370,13 @@ def run(name,
                 _delegate_to_state(
                     'cmd.run',
                     name,
-                    onlyif,
-                    unless,
-                    cwd,
-                    user,
-                    group,
-                    shell,
-                    env,
+                    onlyif=onlyif,
+                    unless=unless,
+                    cwd=cwd,
+                    user=user,
+                    group=group,
+                    shell=shell,
+                    env=env,
                     **kwargs
                     )
                 )
@@ -483,13 +483,13 @@ def script(name,
                 _delegate_to_state(
                     'cmd.script',
                     name,
-                    onlyif,
-                    unless,
-                    cwd,
-                    user,
-                    group,
-                    shell,
-                    env,
+                    onlyif=onlyif,
+                    unless=unless,
+                    cwd=cwd,
+                    user=user,
+                    group=group,
+                    shell=shell,
+                    env=env,
                     **kwargs
                     )
                 )
@@ -562,21 +562,23 @@ def mod_watch(name, **kwargs):
     Execute a cmd function based on a watch call
     '''
     if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
-        if kwargs['stateful']:
+        if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(
                     _delegate_to_state(
                         'cmd.run',
+                        name,
                         **kwargs
                         )
                     )
         return run(name, **kwargs)
     elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
-        if kwargs['stateful']:
+        if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(
                     _delegate_to_state(
                         'cmd.script',
+                        name
                         **kwargs
                         )
                     )
