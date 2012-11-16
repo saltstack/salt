@@ -310,8 +310,8 @@ def start():
         wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': root})
         server = wsgiserver.CherryPyWSGIServer(
                 ('0.0.0.0', gconf['server.socket_port']),
-                wsgi_app=wsgi_d,
-                ssl_adapter=ssl_a)
+                wsgi_app=wsgi_d)
+        server.ssl_adapter = ssl_a
 
         signal.signal(signal.SIGINT, lambda *args: server.stop())
         server.start()
