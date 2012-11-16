@@ -217,7 +217,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
                   name=None, pub_key=None, sock_dir=None, provider=None,
-                  conf_file=None):
+                  conf_file=None, start_action=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -278,16 +278,16 @@ def deploy_script(host, port=22, timeout=900, username='root',
             log.debug('Executed /tmp/deploy.sh')
             ssh.exec_command('rm /tmp/deploy.sh')
             log.debug('Removed /tmp/deploy.sh')
-            queuereturn = queue.get(True, timeout)
+            queuereturn = queue.get()
             process.join()
-            if queuereturn:
+            if queuereturn and start_action:
                 #client = salt.client.LocalClient(conf_file)
                 #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
                 #for line in output:
                 #    print(line)
-                log.info('Executing state.highstate on the salt-minion')
-                root_cmd('salt-call state.highstate', tty, sudo, key_filename, username, host)
-                log.info('Finished executing state.highstate on the salt-minion')
+                log.info('Executing {0} on the salt-minion'.format(start_action))
+                root_cmd('salt-call {0}'.format(start_action), tty, sudo, **kwargs)
+                log.info('Finished executing {0} on the salt-minion'.format(start_action))
             return True
     return False
 
@@ -320,7 +320,6 @@ def root_cmd(command, tty, sudo, **kwargs):
         stdin, stdout, stderr = ssh.exec_command(command)
         for line in stdout:
             sys.stdout.write(line)
-
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
     '''
