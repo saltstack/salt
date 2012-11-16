@@ -1,18 +1,18 @@
 '''
 Module to provide Postgres compatibility to salt.
 
-In order to connect to Postgres, certain configuration is required
-in /etc/salt/minion on the relevant minions. Some sample configs
-might look like::
+:configuration: In order to connect to Postgres, certain configuration is
+    required in /etc/salt/minion on the relevant minions. Some sample configs
+    might look like::
 
-    postgres.host: 'localhost'
-    postgres.port: '5432'
-    postgres.user: 'postgres'
-    postgres.pass: ''
-    postgres.db: 'postgres'
+        postgres.host: 'localhost'
+        postgres.port: '5432'
+        postgres.user: 'postgres'
+        postgres.pass: ''
+        postgres.db: 'postgres'
 
-This data can also be passed into pillar. Options passed into opts will
-overwrite options passed into pillar
+    This data can also be passed into pillar. Options passed into opts will
+    overwrite options passed into pillar
 '''
 
 # Import Python libs

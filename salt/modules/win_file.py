@@ -2,7 +2,10 @@
 Manage information about files on the minion, set/read user, group
 data
 
-Required python modules: win32api, win32con, win32security, ntsecuritycon
+:depends:   - win32api
+            - win32con
+            - win32security
+            - ntsecuritycon
 '''
 
 import os
