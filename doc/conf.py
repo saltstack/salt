@@ -50,6 +50,7 @@ MOCK_MODULES = [
     'salt',
     'salt.utils',
     'salt.utils.event',
+    'salt.client',
     'salt.crypt',
     'yaml',
     'salt.loader',
