@@ -1,25 +1,20 @@
 '''
 Module to provide MySQL compatibility to salt.
 
-REQUIREMENT 1:
+:depends:   - MySQLdb Python module
+:configuration: In order to connect to MySQL, certain configuration is required
+    in /etc/salt/minion on the relevant minions. Some sample configs might look
+    like::
 
-In order to connect to MySQL, certain configuration is required
-in /etc/salt/minion on the relevant minions. Some sample configs
-might look like::
+        mysql.host: 'localhost'
+        mysql.port: 3306
+        mysql.user: 'root'
+        mysql.pass: ''
+        mysql.db: 'mysql'
 
-    mysql.host: 'localhost'
-    mysql.port: 3306
-    mysql.user: 'root'
-    mysql.pass: ''
-    mysql.db: 'mysql'
+    You can also use a defaults file::
 
-You can also use a defaults file::
-
-    mysql.default_file: '/etc/mysql/debian.cnf'
-
-REQUIREMENT 2:
-
-Required python modules: MySQLdb
+        mysql.default_file: '/etc/mysql/debian.cnf'
 '''
 # Import Python libs
 import time
