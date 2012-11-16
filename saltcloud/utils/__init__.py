@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 try:
     import paramiko
 except:
-    print('Cannot import paramiko. Please make sure it is correctly installed.')
     log.error('Cannot import paramiko. Please make sure it is correctly installed.')
     sys.exit(1)
 
@@ -196,17 +195,14 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 connectfail = True
                 ssh.close()
                 trycount += 1
-                print('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 log.warn('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
                     time.sleep(trysleep)
                     continue
                 else:
-                    print('Authentication failed: {0}'.format(authexc))
-                    log.warn('Authentication failed: {0}'.format(authexc))
+                    log.error('Authentication failed: {0}'.format(authexc))
                     return False
             except Exception as exc:
-                print('There was an error in wait_for_passwd: {0}'.format(exc))
                 log.error('There was an error in wait_for_passwd: {0}'.format(exc))
             if connectfail == False:
                 return True
@@ -226,9 +222,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
     Copy a deploy script to a remote server, execute it, and remove it
     '''
     starttime = time.mktime(time.localtime())
+    log.debug('Deploying {0} at {1}'.format(host, starttime))
     if wait_for_ssh(host=host, port=port, timeout=timeout):
+        log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username, password=password, key_filename=key_filename, timeout=newtimeout):
+            log.debug('Logging into {0}:{1} as {2}'.format(host, port, username))
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -237,13 +236,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
                       'username': username,
                       'timeout': 15}
             if password and not key_filename:
+                log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
             if key_filename:
+                log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
             try:
                 ssh.connect(**kwargs)
+                log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
-                print('There was an error in deploy_script: {0}'.format(exc))
                 log.error('There was an error in deploy_script: {0}'.format(exc))
             if provider == 'ibmsce':
                 ssh.exec_command('sudo sed -i "s/#Subsystem/Subsystem/" /etc/ssh/sshd_config')
@@ -258,6 +259,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             sftp = ssh.get_transport()
             sftp.open_session()
             sftp = paramiko.SFTPClient.from_transport(sftp)
+            log.debug('Uploading /tmp/deploy.sh to {0}'.format(host))
             sftp.put(tmppath, '/tmp/deploy.sh')
             os.remove(tmppath)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
@@ -268,43 +270,53 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     target=lambda: check_auth(name=name, pub_key=pub_key, sock_dir=sock_dir,
                                               timeout=newtimeout, queue=queue),
                     )
+            log.debug('Starting new process to wait for salt-minion')
             process.start()
 
-            root_cmd(deploy_command, tty, sudo, key_filename, username, host)
+            log.debug('Executing /tmp/deploy.sh')
+            root_cmd(deploy_command, tty, sudo, **kwargs)
+            log.debug('Executed /tmp/deploy.sh')
             ssh.exec_command('rm /tmp/deploy.sh')
+            log.debug('Removed /tmp/deploy.sh')
             queuereturn = queue.get(True, timeout)
             process.join()
             if queuereturn:
-                print('Running state.highstate on minion')
-                log.warn('Running state.highstate on minion')
                 #client = salt.client.LocalClient(conf_file)
                 #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
                 #for line in output:
                 #    print(line)
+                log.info('Executing state.highstate on the salt-minion')
                 root_cmd('salt-call state.highstate', tty, sudo, key_filename, username, host)
+                log.info('Finished executing state.highstate on the salt-minion')
             return True
     return False
 
 
-def root_cmd(command, tty, sudo, key_filename, username, host):
+def root_cmd(command, tty, sudo, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
     if sudo:
         command = 'sudo ' + command
+        log.debug('Using sudo to run command')
 
+    log.debug('Executing command: {0}'.format(command))
     if tty:
         # Tried this with paramiko's invoke_shell(), and got tired of
         # fighting with it
+        log.debug('Using ssh command to simulate tty session, to execute command')
         cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"').format(
-                key_filename,
-                username,
-                host,
+                kwargs['key_filename'],
+                kwargs['username'],
+                kwargs['hostname'],
                 command
                 )
         subprocess.call(cmd, shell=True)
     else:
+        log.debug('Using paramiko to execute command')
         ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(**kwargs)
         stdin, stdout, stderr = ssh.exec_command(command)
         for line in stdout:
             sys.stdout.write(line)
@@ -321,6 +333,7 @@ def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
         )
     starttime = time.mktime(time.localtime())
     newtimeout = timeout
+    log.debug('In check_auth, waiting for {0} to become available'.format(name))
     while newtimeout > 0:
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         ret = event.get_event(full=True)
@@ -329,8 +342,7 @@ def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
         if ret['tag'] == 'minion_start' and ret['data']['id'] == name:
             queue.put(name)
             newtimeout = 0
-            print('Minion {0} is ready to receive commands'.format(name))
-            log.warn('Minion {0} is ready to receive commands'.format(name))
+            log.debug('Minion {0} is ready to receive commands'.format(name))
 
 
 def ip_to_int(ip):

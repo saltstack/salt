@@ -25,6 +25,8 @@ import os
 import types
 import tempfile
 import logging
+import socket
+import time
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -72,6 +74,30 @@ def get_conn():
             )
 
 
+def preferred_ip(vm_, ips):
+    '''
+    Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
+    '''
+    proto = vm_.get('protocol', __opts__.get('OPENSTACK.protocol', 'ipv4'))
+    family = socket.AF_INET
+    if proto == 'ipv6':
+        family = socket.AF_INET6
+    for ip in ips:
+        try:
+            socket.inet_pton(family, ip)
+            return ip
+        except:
+            continue
+    return False
+
+
+def ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default) or 'private_ips'.
+    '''
+    return vm_.get('ssh_interface', __opts__.get('OPENSTACK.ssh_interface', 'public_ips'))
+
+
 def create(vm_):
     '''
     Create a single vm from a data dict
@@ -94,8 +120,50 @@ def create(vm_):
         sys.stderr.write(err)
         log.error(err)
         return False
+
+    not_ready = True
+    nr_count = 0
+    log.debug('Looking for IP addresses')
+    while not_ready:
+        nodelist = list_nodes()
+        private = nodelist[vm_['name']]['private_ips']
+        public = nodelist[vm_['name']]['public_ips']
+        if private and not public:
+            log.warn('Private IPs returned, but not public... checking for misidentified IPs')
+            for private_ip in private:
+                private_ip = preferred_ip(vm_, [private_ip])
+                if saltcloud.utils.is_public_ip(private_ip):
+                    log.warn('{0} is a public ip'.format(private_ip))
+                    data.public_ips.append(private_ip)
+                    not_ready = False
+                else:
+                    log.warn('{0} is a private ip'.format(private_ip))
+                    if private_ip not in data.private_ips:
+                        data.private_ips.append(private_ip)
+            if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+                break
+
+        if public:
+            data.public_ips = public
+            not_ready = False
+
+        nr_count += 1
+        if nr_count > 50:
+            log.warn('Timed out waiting for a public ip, continuing anyway')
+            break
+        time.sleep(1)
+
+    if ssh_interface(vm_) == 'private_ips':
+        ip_address = preferred_ip(vm_, data.private_ips)
+    else:
+        ip_address = preferred_ip(vm_, data.public_ips)
+    log.debug('Using IP address {0}'.format(ip_address))
+
+    if not ip_address:
+        raise
+
     deployed = saltcloud.utils.deploy_script(
-        host=data.public_ips[0],
+        host=ip_address,
         username='root',
         password=data.extra['password'],
         script=deploy_script.script,

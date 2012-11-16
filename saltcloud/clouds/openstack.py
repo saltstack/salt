@@ -119,11 +119,13 @@ def preferred_ip(vm_, ips):
             continue
     return False
 
+
 def ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default) or 'private_ips'.
     '''
     return vm_.get('ssh_interface', __opts__.get('OPENSTACK.ssh_interface', 'public_ips'))
+
 
 def create(vm_):
     '''
