@@ -630,14 +630,14 @@ class AESFuncs(object):
         if not fnd['path']:
             return ret
         ret['dest'] = fnd['rel']
-        gzip_compression = load.get('gzip_compression', None)
+        gzip = load.get('gzip', None)
 
         with salt.utils.fopen(fnd['path'], 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
-            if gzip_compression and data:
-                data = salt.utils.gzip_util.compress(data, gzip_compression)
-                ret['gzip_compression'] = gzip_compression
+            if gzip and data:
+                data = salt.utils.gzip_util.compress(data, gzip)
+                ret['gzip'] = gzip
             ret['data'] = data
         return ret
 

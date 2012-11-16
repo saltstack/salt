@@ -1,5 +1,7 @@
 '''
 Manages configuration files via augeas
+
+:depends:   - Augeas Python adapter
 '''
 # Load Augeas libs
 try:

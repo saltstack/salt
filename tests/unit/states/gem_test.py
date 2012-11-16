@@ -19,7 +19,7 @@ gem.__opts__ = {'test': False}
 class TestGemState(TestCase):
 
     def test_installed(self):
-        gems = ['foo', 'bar']
+        gems = {'foo' : ['1.0'], 'bar' : ['2.0']}
         gem_list = MagicMock(return_value=gems)
         gem_install_succeeds = MagicMock(return_value=True)
         gem_install_fails = MagicMock(return_value=False)
@@ -32,14 +32,14 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(True, ret['result'])
                 gem_install_succeeds.assert_called_once_with(
-                    'quux', None, runas=None)
+                    'quux', ruby=None, runas=None, version=None, rdoc=False, ri=False)
 
             with patch.dict(gem.__salt__,
                             {'gem.install': gem_install_fails}):
                 ret = gem.installed('quux')
                 self.assertEqual(False, ret['result'])
                 gem_install_fails.assert_called_once_with(
-                    'quux', None, runas=None)
+                    'quux', ruby=None, runas=None, version=None, rdoc=False, ri=False)
 
     def test_removed(self):
         gems = ['foo', 'bar']

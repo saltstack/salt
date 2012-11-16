@@ -1,5 +1,7 @@
 '''
 Module for gathering disk information on Windows
+
+:depends:   - win32api Python module
 '''
 try:
     import ctypes

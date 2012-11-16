@@ -3,7 +3,7 @@ zfs support.
 
 Assumes FreeBSD
 
-requires: mkfile
+:depends:   - mkfile
 '''
 import os
 

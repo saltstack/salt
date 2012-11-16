@@ -599,9 +599,9 @@ class State(object):
                             else:
                                 chunk.update(arg)
                 if names:
-                    for name in names:
+                    for low_name in names:
                         live = copy.deepcopy(chunk)
-                        live['name'] = name
+                        live['name'] = low_name
                         for fun in funcs:
                             live['fun'] = fun
                             chunks.append(live)

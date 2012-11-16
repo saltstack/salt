@@ -1,6 +1,8 @@
 '''
-The Saltutil module is used to manage the state of the salt minion itself. It is
-used to manage minion modules as well as automate updates to the salt minion
+The Saltutil module is used to manage the state of the salt minion itself. It
+is used to manage minion modules as well as automate updates to the salt minion
+
+:depends:   - esky Python module
 '''
 
 # Import Python libs

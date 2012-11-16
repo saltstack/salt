@@ -747,8 +747,8 @@ def mkstemp(*args, **kwargs):
     '''
     close_fd = kwargs.pop('close_fd', True)
     fd_, fpath = tempfile.mkstemp(*args, **kwargs)
-    if close_fd is True:
-        os.close(fd_)
-        del(fd_)
-        return fpath
-    return (fd_, fpath)
+    if close_fd is False:
+        return (fd_, fpath)
+    os.close(fd_)
+    del(fd_)
+    return fpath

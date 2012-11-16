@@ -6,8 +6,7 @@ from os import path
 import logging
 
 # Import third-party libs
-from jinja2 import (BaseLoader, Environment, StrictUndefined,
-                    FileSystemLoader)
+from jinja2 import BaseLoader
 from jinja2.exceptions import TemplateNotFound
 
 # Import Salt libs

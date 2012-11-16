@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from StringIO import StringIO
 
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
@@ -21,4 +22,4 @@ def render(template_file, env='', sls='', context=None, **kws):
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))
-    return tmp_data['data']
+    return StringIO(tmp_data['data'])

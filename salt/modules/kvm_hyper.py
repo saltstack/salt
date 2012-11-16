@@ -2,7 +2,7 @@
 Provide the hyper module for kvm hypervisors. This is the interface used to
 interact with kvm on behalf of the salt-virt interface
 
-Required python modules: libvirt
+:depends:   - libvirt Python module
 '''
 
 # This is a test interface for the salt-virt system. The api in this file is

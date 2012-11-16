@@ -1,7 +1,7 @@
 '''
 Manage the registry on Windows
 
-Required python modules: _winreg
+:depends:   - winreg Python module
 '''
 
 # TODO: Figure out the exceptions _winreg can raise and properly  catch

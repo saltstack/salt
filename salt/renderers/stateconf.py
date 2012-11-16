@@ -6,14 +6,6 @@ arguments (including salt specific args, such as 'require', etc) as template
 context. The goal is to make writing reusable/configurable/ parameterized
 salt files easier and cleaner, therefore, additionally, it also:
 
-  - Adds support of absolute(eg, ``salt://path/to/salt/file``) and relative(eg,
-    ``path/to/salt/file``) template inclusion or import(ie, with ``<%include/>``
-    or ``<%namespace.../>``) for Mako. Example::
-
-
-       <%include file="templates/sls-parts.mako"/>
-       <%namespace file="salt://lib/templates/utils.mako" import="helper"/>
-
   - Recognizes the special state function, ``stateconf.set``, that configures a
     default list of named arguments useable within the template context of
     the salt file. Example::

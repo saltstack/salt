@@ -1,5 +1,7 @@
 '''
 Module for the management of MacOS systems that use launchd/launchctl
+
+:depends:   - plistlib Python module
 '''
 
 import plistlib
