@@ -78,16 +78,21 @@ def latest(name,
                         ('Repository {0} update is probably required (current '
                          'revision is {1})').format(target, current_rev))
 
-                __salt__['git.fetch'](target, user=runas)
-
+                # check if rev is already present in repo and git-fetch otherwise
                 if rev:
+
+                    cmd = "git rev-parse "+rev
+                    retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
+                    if 0 != retcode: --dif
+                        __salt__['git.fetch'](target, user=runas)
+
                     __salt__['git.checkout'](target, rev, user=runas)
 
                 # check if we are on a branch to merge changes
                 cmd = "git symbolic-ref -q HEAD > /dev/null"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
                 if 0 == retcode:
-                    __salt__['git.merge'](target, 'FETCH_HEAD', user=runas)
+                    __salt__['git.pull'](target, user=runas)
 
                 if submodules:
                     __salt__['git.submodule'](target, user=runas,
