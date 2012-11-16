@@ -167,17 +167,13 @@ def destroy(name):
     conn = get_conn()
     node = get_node(conn, name)
     if node is None:
-        print('Unable to find the VM {0}'.format(name))
-        log.warn('Unable to find the VM {0}'.format(name))
-    print('Destroying VM: {0}'.format(name))
-    log.warn('Destroying VM: {0}'.format(name))
+        log.error('Unable to find the VM {0}'.format(name))
+    log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
     if ret:
-        print('Destroyed VM: {0}'.format(name))
-        log.warn('Destroyed VM: {0}'.format(name))
+        log.info('Destroyed VM: {0}'.format(name))
         return True
     else:
-        print('Failed to Destroy VM: {0}'.format(name))
         log.error('Failed to Destroy VM: {0}'.format(name))
         return False
 
