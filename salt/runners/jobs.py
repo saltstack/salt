@@ -87,7 +87,7 @@ def list_jobs():
             loadpath = os.path.join(t_path, final, '.load.p')
             if not os.path.isfile(loadpath):
                 continue
-            load = serial.load(open(loadpath, 'rb'))
+            load = serial.load(salt.utils.fopen(loadpath, 'rb'))
             jid = load['jid']
             ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
                         'Function': load['fun'],
@@ -111,7 +111,7 @@ def print_job(job_id):
             loadpath = os.path.join(t_path, final, '.load.p')
             if not os.path.isfile(loadpath):
                 continue
-            load = serial.load(open(loadpath, 'rb'))
+            load = serial.load(salt.utils.fopen(loadpath, 'rb'))
             jid = load['jid']
             if job_id == jid:
                 hosts_path = os.path.join(t_path, final)
@@ -122,7 +122,9 @@ def print_job(job_id):
                         returnfile = os.path.join(host_path, 'return.p')
                         if not os.path.isfile(returnfile):
                             continue
-                        return_data = serial.load(open(returnfile, 'rb'))
+                        return_data = serial.load(
+                            salt.utils.fopen(returnfile, 'rb')
+                        )
                         hosts_return[host] = return_data
                         ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
                                     'Function': load['fun'],
