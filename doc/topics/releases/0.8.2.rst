@@ -3,7 +3,7 @@ Salt Cloud 0.8.2 Release Notes
 ==============================
 
 This is a great release for Salt Cloud! New cloud providers have been added,
-and the deploy functionlity has been embiggened! Read on to see the cromulent
+and the deploy functionality has been embiggened! Read on to see the cromulent
 new features.
 
 
@@ -61,7 +61,7 @@ SmartOS Deploy Script
 Of particular interest to Joyent users may be the new SmartOS deploy script.
 Salt itself is not fully-supported on SmartOS just yet, in part because ZeroMQ
 is also not yet supported. When this script is used for deployment, it will
-automatically install the required libriaries and build ZeroMQ, and then use
+automatically install the required libraries and build ZeroMQ, and then use
 easy_install to install the latest versions of PyZMQ and Salt. To use this,
 just specify SmartOS as the 'os' or 'script' option in your cloud.profiles:
 
@@ -78,7 +78,7 @@ OpenStack and IBM Modules
 
 Support has been added for clouds using OpenStack (OPENSTACK) and for IBM's
 SmartCloud Enterprise (IBMSCE) offering. We know that people have already
-started using the OpenStack module, because pull reqs have already been
+started using the OpenStack module, because pull requests have already been
 merged from the community. This module has been tested against both the HP
 and the Rackspace implementations of OpenStack. This can be a tricky module
 to configure, depending on your provider, so some examples are provided here:
@@ -138,7 +138,7 @@ Those who have tried to hack on Salt Cloud may have discovered a complete lack
 of logging support. With this release, Salt Cloud has started to implement
 the logging features already available in Salt. The default log location is
 /var/log/salt/cloud (with a default level of warn), but it can be changed in
-your cloud config file:
+your cloud configuration file:
 
 .. code-block:: yaml
 
