@@ -20,6 +20,8 @@ their web interface:
     OPENSTACK.identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
     # The OpenStack compute region
     OPENSTACK.compute_region: az-1.region-a.geo-1
+    # The OpenStack compute service name
+    OPENSTACK.compute_name: Compute
     # The OpenStack tenant name (not tenant ID)
     OPENSTACK.tenant: myuser-tenant1
     # The OpenStack user name
