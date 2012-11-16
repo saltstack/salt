@@ -11,7 +11,7 @@ yaml configuration. The syntax for declaring profiles is simple:
       provider: rackspace
       image: Fedora 17
       size: 256 server
-      os: Fedora
+      script: Fedora
 
 A few key peices of information need to be declared and can change based on the
 public cloud provider. A number of additional paramaters can also be inserted:
@@ -22,7 +22,7 @@ public cloud provider. A number of additional paramaters can also be inserted:
       provider: rackspace
       image: CentOS 6.2
       size: 1024 server
-      os: RHEL6
+      script: RHEL6
       minion:
         master: salt.example.com
       grains:
@@ -42,7 +42,7 @@ Larger Example
       provider: aws
       image: ami-e565ba8c
       size: Micro Instance
-      os: RHEL6
+      script: RHEL6
       minion:
           cheese: edam
 
@@ -50,7 +50,7 @@ Larger Example
       provider: rackspace
       image: Ubuntu 12.04 LTS
       size: 256 server
-      os: Ubuntu
+      script: Ubuntu
       minion:
           cheese: edam
 
@@ -58,7 +58,7 @@ Larger Example
       provider: rackspace
       image: Fedora 17
       size: 256 server
-      os: Fedora
+      script: Fedora
       minion:
           cheese: edam
 
@@ -66,16 +66,16 @@ Larger Example
       provider: linode
       image: CentOS 6.2 64bit
       size: Linode 512
-      os: RHEL6
+      script: RHEL6
 
     cent_gogrid:
       provider: gogrid
       image: 12834
       size: 512MB
-      os: RHEL6
+      script: RHEL6
 
     cent_joyent:
       provider: joyent
       image: centos-6
-      os: RHEL6
+      script: RHEL6
       size: Small 1GB
