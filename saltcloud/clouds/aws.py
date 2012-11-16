@@ -176,8 +176,7 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     location = get_location(vm_)
-    print('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
-    log.warn('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
+    log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     conn = get_conn(location=location)
     usernames = ssh_username(vm_)
     kwargs = {'ssh_key': __opts__['AWS.private_key']}
@@ -203,8 +202,7 @@ def create(vm_):
         sys.stderr.write(err)
         log.error(err)
         return False
-    print('Created node {0}'.format(vm_['name']))
-    log.warn('Created node {0}'.format(vm_['name']))
+    log.info('Created node {0}'.format(vm_['name']))
     while not data.public_ips:
         time.sleep(0.5)
         data = get_node(conn, vm_['name'])
@@ -232,21 +230,16 @@ def create(vm_):
         conf_file=__opts__['conf_file'],
         sock_dir=__opts__['sock_dir'])
     if deployed:
-        print('Salt installed on {0}'.format(vm_['name']))
-        log.warn('Salt installed on {0}'.format(vm_['name']))
+        log.info('Salt installed on {0}'.format(vm_['name']))
     else:
-        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
-        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
-    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
-        print('  {0}: {1}'.format(key, val))
-        log.warn('  {0}: {1}'.format(key, val))
+        log.info('  {0}: {1}'.format(key, val))
     volumes = vm_.get('map_volumes')
     if volumes:
-        print('Create and attach volumes to node {0}'.format(data.name))
-        log.warn('Create and attach volumes to node {0}'.format(data.name))
+        log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes,location, data)
 
 
@@ -264,5 +257,4 @@ def create_attach_volumes(volumes, location, data):
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
-            print('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
-            log.warn('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
+            log.info('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))

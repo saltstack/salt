@@ -119,18 +119,19 @@ def preferred_ip(vm_, ips):
             continue
     return False
 
+
 def ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default) or 'private_ips'.
     '''
     return vm_.get('ssh_interface', __opts__.get('OPENSTACK.ssh_interface', 'public_ips'))
 
+
 def create(vm_):
     '''
     Create a single vm from a data dict
     '''
-    print('Creating Cloud VM {0}'.format(vm_['name']))
-    log.warn('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -173,14 +174,12 @@ def create(vm_):
 
     not_ready = True
     nr_count = 0
-    print('Looking for IP addresses')
     log.debug('Looking for IP addresses')
     while not_ready:
         nodelist = list_nodes()
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         if private and not public:
-            print('Private IPs returned, but not public... checking for misidentified IPs')
             log.warn('Private IPs returned, but not public... checking for misidentified IPs')
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
@@ -240,14 +239,10 @@ def create(vm_):
 
     deployed = saltcloud.utils.deploy_script(**deployargs)
     if deployed:
-        print('Salt installed on {0}'.format(vm_['name']))
-        log.warn('Salt installed on {0}'.format(vm_['name']))
+        log.info('Salt installed on {0}'.format(vm_['name']))
     else:
-        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
         log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
-    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
-        print('  {0}: {1}'.format(key, val))
-        log.warn('  {0}: {1}'.format(key, val))
+        log.info('  {0}: {1}'.format(key, val))

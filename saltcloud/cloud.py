@@ -65,7 +65,6 @@ class Cloud(object):
                 msg = ('Public cloud provider {0} is not available'.format(
                     self.provider(vm_))
                     )
-                print(msg)
                 log.error(msg)
                 continue
             try:
@@ -166,7 +165,6 @@ class Cloud(object):
             msg = ('Public cloud provider {0} is not available'.format(
                 self.provider(vm_))
                 )
-            print(msg)
             log.error(msg)
             return
         priv, pub = saltcloud.utils.gen_keys(
@@ -185,7 +183,6 @@ class Cloud(object):
         except KeyError as exc:
             msg = ('Failed to create vm {0}. Configuration value {1} needs '
                   'to be set'.format(vm_['name'], exc))
-            print(msg)
             log.error(msg)
 
     def profile_provider(self, profile=None):
@@ -213,7 +210,6 @@ class Cloud(object):
                     found = True
                     if name in current_boxen:
                         # The specified vm already exists, don't make it anew
-                        print("{0} already exists on {1}".format(name, current_boxen[name]))
                         log.warn("{0} already exists on {1}".format(name, current_boxen[name]))
                         continue
                     vm_['name'] = name
@@ -224,7 +220,6 @@ class Cloud(object):
                     else:
                         self.create(vm_)
         if not found:
-            print('Profile {0} is not defined'.format(self.opts['profile']))
             log.error('Profile {0} is not defined'.format(self.opts['profile']))
 
 
@@ -260,8 +255,7 @@ class Map(Cloud):
         for profile in query_map:
             for vm in query_map[profile]:
                 names.append(vm)
-        print("VMs to delete: {0}\n".format(names))
-        log.warn("VMs to delete: {0}\n".format(names))
+        log.info("VMs to delete: {0}\n".format(names))
         return names
 
     def read(self):
@@ -328,8 +322,7 @@ class Map(Cloud):
             msg += 'The following virtual machines are set to be destroyed:\n'
             for name in dmap['destroy']:
                 msg += '  {0}\n'.format(name)
-        print(msg)
-        log.warn(msg)
+        log.info(msg)
         res = raw_input('Proceed? [N/y]')
         if not res.lower().startswith('y'):
             return

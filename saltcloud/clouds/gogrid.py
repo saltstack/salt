@@ -76,8 +76,7 @@ def create(vm_):
     '''
     Create a single vm from a data dict
     '''
-    print('Creating Cloud VM {0}'.format(vm_['name']))
-    log.warn('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -104,14 +103,10 @@ def create(vm_):
         name=vm_['name'],
         sock_dir=__opts__['sock_dir'])
     if deployed:
-        print('Salt installed on {0}'.format(vm_['name']))
-        log.warn('Salt installed on {0}'.format(vm_['name']))
+        log.info('Salt installed on {0}'.format(vm_['name']))
     else:
-        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
-        log.warn('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    print('Created Cloud VM {0} with the following values:'.format(vm_['name']))
-    log.warn('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
-        print('  {0}: {1}'.format(key, val))
-        log.warn('  {0}: {1}'.format(key, val))
+        log.info('  {0}: {1}'.format(key, val))
