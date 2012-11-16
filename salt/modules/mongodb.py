@@ -1,16 +1,16 @@
 '''
 Module to provide MongoDB functionality to Salt
 
-This module uses PyMongo, and accepts configuration details as parameters
-as well as configuration settings:
+:configuration: This module uses PyMongo, and accepts configuration details as
+    parameters as well as configuration settings::
 
-    mongodb.host: 'localhost'
-    mongodb.port: '27017'
-    mongodb.user: ''
-    mongodb.password: ''
+        mongodb.host: 'localhost'
+        mongodb.port: '27017'
+        mongodb.user: ''
+        mongodb.password: ''
 
-This data can also be passed into pillar. Options passed into opts will
-overwrite options passed into pillar.
+    This data can also be passed into pillar. Options passed into opts will
+    overwrite options passed into pillar.
 '''
 
 # Import python libs

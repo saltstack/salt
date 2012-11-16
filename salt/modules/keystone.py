@@ -1,15 +1,16 @@
 '''
 Module for handling openstack keystone calls.
 
-This module is not usable until the following are specified either in a pillar
-or in the minion's config file:
+:optdepends:    - keystoneclient Python adapter
+:configuration: This module is not usable until the following are specified
+    either in a pillar or in the minion's config file::
 
-keystone.user: admin
-keystone.password: verybadpass
-keystone.tenant: admin
-keystone.tenant_id: f80919baedab48ec8931f200c65a50df
-keystone.insecure: False   #(optional)
-keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        keystone.user: admin
+        keystone.password: verybadpass
+        keystone.tenant: admin
+        keystone.tenant_id: f80919baedab48ec8931f200c65a50df
+        keystone.insecure: False   #(optional)
+        keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
 has_keystone = False
 try:
