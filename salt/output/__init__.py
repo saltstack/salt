@@ -32,6 +32,8 @@ def get_printout(out, opts=None, **kwargs):
     if 'output' in opts:
         # new --out option
         out = opts['output']
+        if out == 'text':
+            out = 'txt'
     else:
         # XXX: This should be removed before 0.10.8 comes out
         for outputter in STATIC:
