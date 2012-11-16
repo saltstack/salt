@@ -1,5 +1,44 @@
 '''
 A hypermedia REST API for Salt using the CherryPy framework
+
+:depends:   - CherryPy Python module
+:configuration: The master config may contain the following options:
+
+    port
+        Required
+    debug : ``False``
+        Used during development; does not use SSL
+    ssl_crt
+        Required when ``debug`` is ``False``
+    ssl_key
+        Required when ``debug`` is ``False``
+
+    For example:
+
+    .. code-block:: yaml
+
+        rest_cherrypy:
+          port: 8000
+          ssl_crt: /etc/pki/tls/certs/localhost.crt
+          ssl_key: /etc/pki/tls/certs/localhost.key
+
+    The REST interface requires a secure HTTPS connection. You must provide an
+    SSL certificate to use. If you don't already have a certificate and don't
+    wish to buy one, you can generate a self-signed certificate using the
+    :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
+    the dependencies for this module):
+
+    .. code-block:: bash
+
+        % salt-call tls.create_self_signed_cert
+
+.. admonition:: Content negotiation
+
+    You may request various output formats by sending the appropriate
+    :mailheader:`Accept` header. You may also send various formats in
+    :http:method:`post` and :http:method:`put` requests by specifying the
+    :mailheader:`Content-Type`. JSON and YAML are currently supported, HTML
+    will be soon supported.
 '''
 # pylint: disable=W0212
 
@@ -37,6 +76,10 @@ def __virtual__():
     return False
 
 def salt_auth_tool():
+    '''
+    Redirect all unauthenticated requests to the login page. Authentication is
+    determined by a session cookie or the custom X-Auth-Token header.
+    '''
     ignore_urls = ('/login',)
 
     # Grab the session via a cookie (for browsers) or via a custom header
@@ -55,6 +98,11 @@ ct_out_map = {
 }
 
 def hypermedia_handler(*args, **kwargs):
+    '''
+    Determine the best output format based on the Accept header, execute the
+    regular handler, and transform the output to the request content type (even
+    if it's an error).
+    '''
     try:
         cherrypy.response.processors = ct_out_map # handlers may modify this
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
@@ -86,6 +134,10 @@ def hypermedia_handler(*args, **kwargs):
     return salt.output.out_format(ret, out, __opts__)
 
 def hypermedia_out():
+    '''
+    Wrap the normal handler and transform the output from that handler into the
+    requested content type
+    '''
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
@@ -173,13 +225,13 @@ class LowDataAdapter(object):
         '''
         The API entry point
 
-        .. http:get::
+        .. http:get:: /
 
             An explanation of the API with links of where to go next.
 
             **Example request**::
 
-                % curl -i localhost:8000/minions
+                % curl -i localhost:8000
 
             .. code-block:: http
 
@@ -192,12 +244,11 @@ class LowDataAdapter(object):
             .. code-block:: http
 
                 HTTP/1.1 200 OK
-                Vary: Accept
                 Content-Type: application/json
 
-        :statuscode 200: success
-        :statuscode 401: authentication required
-        :statuscode 406: requested Content-Type not available
+        :status 200: success
+        :status 401: authentication required
+        :status 406: requested Content-Type not available
         '''
         cherrypy.response.processors['text/html'] = self.fmt_tmpl
 
@@ -208,20 +259,109 @@ class LowDataAdapter(object):
 
     def POST(self, **kwargs):
         '''
-        Run a given function in a given client with the given args
+        The primary execution vector for the rest of the API
+
+        .. http:post:: /
+
+            You must pass low-data in the requst body either from an HTML form
+            or as JSON or YAML.
+
+            **Example request**::
+
+                % curl -si https://localhost:8000 \\
+                        -H "Accept: application/x-yaml" \\
+                        -H "X-Auth-Token: d40d1e1e" \\
+                        -d client=local \\
+                        -d tgt='*' \\
+                        -d fun='test.ping' \\
+                        -d arg
+
+            .. code-block:: http
+
+                POST / HTTP/1.1
+                Host: localhost:8000
+                Accept: application/x-yaml
+                X-Auth-Token: d40d1e1e
+                Content-Length: 36
+                Content-Type: application/x-www-form-urlencoded
+
+                fun=test.ping&arg&client=local&tgt=*
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Length: 200
+                Allow: GET, HEAD, POST
+                Content-Type: application/x-yaml
+
+                return:
+                - ms-0: true
+                  ms-1: true
+                  ms-2: true
+                  ms-3: true
+                  ms-4: true
+
+        :form client: the client interface in Salt
+        :form fun: the function to execute on the specified Salt client
+        :form arg: any args to pass to the function; this parameter is required
+            even if blank
+        :status 200: success
+        :status 401: authentication required
+        :status 406: requested Content-Type not available
         '''
         return {
-            'status': cherrypy.response.status,
-            'message': self.exec_lowdata(self.fmt_lowdata(kwargs)),
+            'return': self.exec_lowdata(self.fmt_lowdata(kwargs)),
         }
 
 class Login(LowDataAdapter):
     '''
+    All interactions with this REST API must be authenticated. Authentication
+    is performed through Salt's eauth system. You must set the eauth backend
+    and allowed users by editing the :conf_master:`external_auth` section in
+    your master config.
+
+    Authentication credentials are passed to the REST API via a session id in
+    one of two ways:
+
+    If the request is initiated from a browser it must pass a session id via a
+    cookie and that session must be valid and active.
+
+    If the request is initiated programmatically, the request must contain a
+    :mailheader:`X-Auth-Token` header with valid and active session id.
     '''
     exposed = True
     tmpl = 'login.html'
 
     def GET(self):
+        '''
+        Present the login interface
+
+        .. http:get:: /login
+
+            An explanation of how to log in.
+
+            **Example request**::
+
+                % curl -i localhost:8000/login
+
+            .. code-block:: http
+
+                GET /login HTTP/1.1
+                Host: localhost:8000
+                Accept: text/html
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Type: text/html
+
+        :status 401: authentication required
+        :status 406: requested Content-Type not available
+        '''
         cherrypy.response.processors['text/html'] = self.fmt_tmpl
 
         cherrypy.response.status = '401 Unauthorized'
@@ -233,6 +373,45 @@ class Login(LowDataAdapter):
         }
 
     def POST(self, **kwargs):
+        '''
+        Authenticate against Salt's eauth system. Returns a session id and
+        redirects on success.
+
+        .. http:post:: /login
+
+            **Example request**::
+
+                % curl -si localhost:8000/login \\
+                        -H "Accept: application/json" \\
+                        -d username='saltuser' \\
+                        -d password='saltpass' \\
+                        -d eauth='pam'
+
+            .. code-block:: http
+
+                POST / HTTP/1.1
+                Host: localhost:8000
+                Content-Length: 97
+                Content-Type: application/x-www-form-urlencoded
+
+                username=saltuser&password=saltpass&eauth=pam
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 302 Found
+                Content-Length: 97
+                Location: http://localhost:8000/
+                X-Auth-Token: 6d1b722e
+                Set-Cookie: session_id=6d1b722e; expires=Sat, 17 Nov 2012 03:23:52 GMT; Path=/
+
+        :form eauth: the eauth backend configured in your master config
+        :form username: username
+        :form password: password
+        :status 302: success
+        :status 406: requested Content-Type not available
+        '''
         auth = salt.auth.LoadAuth(self.opts)
         token = auth.mk_token(kwargs).get('token', False)
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
@@ -240,6 +419,9 @@ class Login(LowDataAdapter):
         raise cherrypy.HTTPRedirect('/', 302)
 
 class API(object):
+    '''
+    Collect configuration and URL map for building the CherryPy app
+    '''
     url_map = {
         'index': LowDataAdapter,
         'login': Login,
@@ -251,6 +433,9 @@ class API(object):
             setattr(self, url, cls(self.opts))
 
     def verify_certs(self, *args):
+        '''
+        Sanity checking for the specified SSL certificates
+        '''
         msg = ("Could not find a certificate: {0}\n"
                 "If you want to quickly generate a self-signed certificate, "
                 "use the tls.create_self_signed_cert function in Salt")
@@ -260,7 +445,10 @@ class API(object):
                 raise Exception(msg.format(arg))
 
     def get_conf(self):
-        # Grab config opts
+        '''
+        Combine the CherryPy configuration with config values pulled from the
+        master config
+        '''
         apiopts = self.opts.get(__name__.rsplit('.', 1)[-1], {})
 
         conf = {
