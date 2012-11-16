@@ -180,6 +180,7 @@ re-write or renames state id's and their references.
 #
 
 # Import python libs
+import sys
 import logging
 import re
 import getopt
@@ -259,7 +260,9 @@ def render(template_file, env='', sls='', argline='', **kws):
         name, rd_argline = (args[0] + ' ').split(' ', 1)
         render_data = renderers[name]  # eg, the yaml renderer
         if ('-o', '') in opts:
-            if name == 'yaml':
+            if name == 'yaml' and (sys.version_info > (2, 6) or
+                                   (sys.version_info < (2, 7) and
+                                    'OrderedDict' not in sys.modules)):
                 IMPLICIT_REQUIRE = True
                 rd_argline = '-o ' + rd_argline
             else:
