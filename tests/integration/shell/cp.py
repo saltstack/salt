@@ -28,7 +28,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         test salt-cp
         '''
         minions = []
-        for line in self.run_salt('--yaml-out "*" test.ping'):
+        for line in self.run_salt('--out yaml "*" test.ping'):
             if not line:
                 continue
             data = yaml.load(line)
@@ -46,14 +46,14 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         for idx, minion in enumerate(minions):
             ret = self.run_salt(
-                '--yaml-out {0} file.directory_exists {1}'.format(
+                '--out yaml {0} file.directory_exists {1}'.format(
                     pipes.quote(minion), integration.TMP
                 )
             )
             data = yaml.load('\n'.join(ret))
             if data[minion] is False:
                 ret = self.run_salt(
-                    '--yaml-out {0} file.makedirs {1}'.format(
+                    '--out yaml {0} file.makedirs {1}'.format(
                         pipes.quote(minion),
                         integration.TMP
                     )
@@ -77,7 +77,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 self.assertTrue(part[minion_testfile])
 
             ret = self.run_salt(
-                '--yaml-out {0} file.file_exists {1}'.format(
+                '--out yaml {0} file.file_exists {1}'.format(
                     pipes.quote(minion),
                     pipes.quote(minion_testfile)
                 )
@@ -86,7 +86,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertTrue(data[minion])
 
             ret = self.run_salt(
-                '--yaml-out {0} file.contains {1} {2}'.format(
+                '--out yaml {0} file.contains {1} {2}'.format(
                     pipes.quote(minion),
                     pipes.quote(minion_testfile),
                     pipes.quote(testfile_contents)
@@ -95,7 +95,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             data = yaml.load('\n'.join(ret))
             self.assertTrue(data[minion])
             ret = self.run_salt(
-                '--yaml-out {0} file.remove {1}'.format(
+                '--out yaml {0} file.remove {1}'.format(
                     pipes.quote(minion),
                     pipes.quote(minion_testfile)
                 )
