@@ -286,7 +286,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 #for line in output:
                 #    print(line)
                 log.info('Executing {0} on the salt-minion'.format(start_action))
-                root_cmd('salt-call {0}'.format(start_action), tty, sudo, key_filename, username, host)
+                root_cmd('salt-call {0}'.format(start_action), tty, sudo, **kwargs)
                 log.info('Finished executing {0} on the salt-minion'.format(start_action))
             return True
     return False
