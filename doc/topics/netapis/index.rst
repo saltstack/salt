@@ -1,3 +1,5 @@
+.. _netapi-introduction:
+
 ==============================
 Introduction to netapi modules
 ==============================
