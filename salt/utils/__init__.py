@@ -726,15 +726,21 @@ def memoize(func):
 
 def fopen(*args, **kwargs):
     '''
-    Wrapper around open() built-in to set CLOEXEC on the fd
+    Wrapper around open() built-in to set CLOEXEC on the fd.
+
+    This flag specifies that the file descriptor should be closed when an exec
+    function is invoked;
+    When a file descriptor is allocated (as with open or dup ), this bit is
+    initially cleared on the new file descriptor, meaning that descriptor will
+    survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
     try:
-        cloexec_flag = fcntl.FD_CLOEXEC
+        FD_CLOEXEC = fcntl.FD_CLOEXEC
     except AttributeError:
-        cloexec_flag = 1
+        FD_CLOEXEC = 1
     old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-    fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | cloexec_flag)
+    fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
