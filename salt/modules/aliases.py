@@ -8,7 +8,10 @@ import re
 import stat
 import tempfile
 
+# Import salt libs
+import salt.utils
 from salt.utils import which as _which
+
 
 __outputter__ = {
     'rm_alias': 'txt',
@@ -41,7 +44,7 @@ def __parse_aliases():
     ret = []
     if not os.path.isfile(afn):
         return ret
-    with open(afn, 'r') as f:
+    with salt.utils.fopen(afn, 'r') as f:
         for line in f:
             m = __ALIAS_RE.match(line)
             if m:
