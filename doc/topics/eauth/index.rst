@@ -1,4 +1,4 @@
-.. _euath:
+.. _acl-eauth:
 
 ==============================
 External Authentication System
