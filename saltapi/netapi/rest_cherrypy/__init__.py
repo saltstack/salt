@@ -48,8 +48,6 @@ def salt_auth_tool():
 
     cherrypy.response.headers['Cache-Control'] = 'private'
 
-cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
-
 # Be conservative in what you send; maps Content-Type to Salt outputters
 ct_out_map = {
     'application/json': 'json',
@@ -98,26 +96,22 @@ def hypermedia_out():
     #          {"paper.2" 0.7 {type text/html} {language fr}},
     #          {"paper.3" 1.0 {type application/postscript} {language en}}
 
-cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler', hypermedia_out)
-
-# Be liberal in what you accept
-ct_in_map = {
-    'application/x-www-form-urlencoded': cherrypy._cpreqbody.process_urlencoded,
-    'application/json': json.loads,
-    'application/x-yaml': yaml.load,
-    'text/yaml': yaml.load,
-}
-
 def hypermedia_in():
     '''
     Unserialize POST/PUT data of a specified content type, if possible
     '''
+    # Be liberal in what you accept
+    ct_in_map = {
+        'application/x-www-form-urlencoded': cherrypy._cpreqbody.process_urlencoded,
+        'application/json': json.loads,
+        'application/x-yaml': yaml.load,
+        'text/yaml': yaml.load,
+    }
+
     cherrypy.request.body.processors.clear()
     cherrypy.request.body.default_proc = cherrypy.HTTPError(
             406, 'Content type not supported')
     cherrypy.request.body.processors = ct_in_map
-
-cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body', hypermedia_in)
 
 class LowDataAdapter(object):
     '''
@@ -302,7 +296,11 @@ def start():
     conf = root.get_conf()
     gconf = conf.get('global', {})
 
-    if gconf.get('debug', False):
+    cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
+    cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler', hypermedia_out)
+    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body', hypermedia_in)
+
+    if gconf['debug']:
         cherrypy.quickstart(root, '/', conf)
     else:
         root.verify_certs(gconf['ssl_crt'], gconf['ssl_key'])
