@@ -13,7 +13,7 @@ from salt.exceptions import SaltException
 
 class APIClient(object):
     '''
-    Provide a uniform method of accessing the various *Client interfaces in
+    Provide a uniform method of accessing the various \*Client interfaces in
     Salt in the form of LowData data structures.
 
     >>> client = APIClient(__opts__)

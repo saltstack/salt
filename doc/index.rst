@@ -19,6 +19,7 @@ service.
 .. toctree::
     :maxdepth: 1
 
+    topics/netapis/index
     topics/netapis/writing
 
 Full list of netapi modules
