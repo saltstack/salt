@@ -10,6 +10,7 @@
 import sys
 
 # Import salt libs
+from salt import version
 from saltunittest import TestLoader, TextTestRunner, skipIf
 import integration
 from integration import TestDaemon
@@ -30,9 +31,19 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     def test_text_output(self):
         out = self.run_call('--text-out test.fib 3')
-        self.assertEqual(
-            'local: ([0, 1, 1, 2]', ''.join(out).rsplit(",", 1)[0]
-        )
+        if version.__version_info__ < (0, 10, 8):
+            expect = [
+                "WARNING: The option --text-out is deprecated. Please "
+                "consider using '--out text' instead."
+            ]
+        else:
+            expect = []
+
+        expect += [
+            'local: ([0, 1, 1, 2]'
+        ]
+
+        self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
