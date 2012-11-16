@@ -78,6 +78,12 @@ Options
     Can be used in conjunction with -m to display only information about the
     specified map.
 
+.. option:: -S, --select-query
+
+    Execute a query and print out selected information about all cloud VMs.
+    Can be used in conjunction with -m to display only information about the
+    specified map.
+
 .. option:: --list-images
 
     Display a list of images available in configured cloud providers.
