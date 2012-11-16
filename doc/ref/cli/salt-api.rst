@@ -11,8 +11,6 @@ Synopsis
 
     salt-api 
 
-    salt-api -d
-
 Description
 ===========
 
@@ -26,10 +24,6 @@ Options
 .. option:: -h, --help
 
     Print a usage message briefly summarizing these command-line options.
-
-.. option:: -d, --daemon
-
-    Daemonize before starting the api subsystem(s)
 
 .. option:: -C CONFIG, --config=CONFIG
 
