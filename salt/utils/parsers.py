@@ -12,7 +12,7 @@ import sys
 import logging
 import optparse
 from functools import partial
-from salt import config, log, version
+from salt import config, loader, log, version
 
 
 def _sorted(mixins_or_funcs):
@@ -578,6 +578,25 @@ class OutputOptionsMixIn(object):
                 help=('Print the output from the \'{0}\' command in the same '
                       'form the shell would.'.format(self.get_prog_name()))
             )
+
+        outputters = loader.outputters(
+            config.minion_config(
+                '/etc/salt/minion', check_dns=False
+            )
+        )
+
+        group.add_option(
+            '--out', '--output',
+            dest='output',
+            choices=outputters.keys(),
+            help=(
+                'Print the output from the \'{0}\' command using the '
+                'specified outputter. One of {1}.'.format(
+                    self.get_prog_name(),
+                    ', '.join([repr(k) for k in outputters])
+                )
+            )
+        )
         group.add_option(
             '--no-color',
             default=False,
@@ -585,19 +604,50 @@ class OutputOptionsMixIn(object):
             help='Disable all colored output'
         )
 
-        for option in group.option_list:
+        for option in self.output_options_group.option_list:
             def process(opt):
-                if getattr(self.options, opt.dest):
-                    self.selected_output_option = opt.dest
+                default = self.defaults.get(opt.dest)
+                if getattr(self.options, opt.dest, default) is False:
+                    return
+
+                # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
+                if version.__version_info__ >= (0, 10, 7):
+                    self.error(
+                        'The option {0} is deprecated. You must now use '
+                        '\'--out {1}\' instead.'.format(
+                            opt.get_opt_string(),
+                            opt.dest.split('_', 1)[0]
+                        )
+                    )
+
+                if opt.dest != 'out':
+                    msg = (
+                        'The option {0} is deprecated. Please consider using '
+                        '\'--out {1}\' instead.'.format(
+                            opt.get_opt_string(),
+                            opt.dest.split('_', 1)[0]
+                        )
+                    )
+                    if log.is_console_configured():
+                        logging.getLogger(__name__).warning(msg)
+                    else:
+                        sys.stdout.write('WARNING: {0}\n'.format(msg))
+
+                self.selected_output_option = opt.dest
 
             funcname = 'process_{0}'.format(option.dest)
             if not hasattr(self, funcname):
                 setattr(self, funcname, partial(process, option))
 
+    def process_output(self):
+        self.selected_output_option = self.options.output
+
     def _mixin_after_parsed(self):
         group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) and
-                           option.dest.endswith('_out'),
+            lambda option: (
+                getattr(self.options, option.dest) and
+                (option.dest.endswith('_out') or option.dest=='output')
+            ),
             self.output_options_group.option_list
         )
         if len(group_options_selected) > 1:
