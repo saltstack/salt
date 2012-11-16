@@ -13,8 +13,8 @@ from salt.exceptions import SaltException
 
 class APIClient(object):
     '''
-    Provide a uniform method of accessing the various \*Client interfaces in
-    Salt in the form of LowData data structures.
+    Provide a uniform method of accessing the various client interfaces in Salt
+    in the form of low-data data structures. For example:
 
     >>> client = APIClient(__opts__)
     >>> lowdata = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
@@ -42,21 +42,21 @@ class APIClient(object):
 
     def local(self, *args, **kwargs):
         '''
-        Wrap the LocalClient for running execution modules
+        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.cmd(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
-        Wrap the RunnerClient for executing runner modules
+        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
         runner = salt.runner.RunnerClient(self.opts)
         return runner.low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
-        Wrap the Wheel object to enable sending commands via the wheel system
+        Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
