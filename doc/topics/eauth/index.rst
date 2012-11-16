@@ -1,3 +1,5 @@
+.. _acl-eauth:
+
 ==============================
 External Authentication System
 ==============================
