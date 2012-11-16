@@ -305,9 +305,11 @@ def start():
     else:
         root.verify_certs(gconf['ssl_crt'], gconf['ssl_key'])
 
+        app = cherrypy.tree.mount(root, '/', config=conf)
+
         ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
                 gconf['ssl_crt'], gconf['ssl_key'])
-        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': root})
+        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': app})
         server = wsgiserver.CherryPyWSGIServer(
                 ('0.0.0.0', gconf['server.socket_port']),
                 wsgi_app=wsgi_d)
