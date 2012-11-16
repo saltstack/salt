@@ -608,7 +608,7 @@ class RemoteClient(Client):
             if not fn_:
                 with self._cache_loc(data['dest'], env) as cache_dest:
                     dest = cache_dest
-                    fn_ = open(dest, 'wb+')
+                    fn_ = salt.utils.fopen(dest, 'wb+')
             if data.get('gzip', None):
                 data = salt.utils.gzip_util.uncompress(data['data'])
             else:

@@ -23,6 +23,10 @@ try:
 except ImportError:
     pass
 
+# Import Salt libs
+import salt.utils
+
+
 log = logging.getLogger(__name__)
 
 
@@ -67,10 +71,11 @@ def _new_serial(ca_name, CN):
     cachedir = __opts__['cachedir']
     log.debug('cachedir: {0}'.format(cachedir))
     serial_file = '{0}/{1}.serial'.format(cachedir, ca_name)
-    with open(serial_file, 'a+') as f:
+    with salt.utils.fopen(serial_file, 'a+') as f:
         f.write(str(hashnum))
 
     return hashnum
+
 
 def _write_cert_to_database(ca_name, cert):
     '''
@@ -93,8 +98,8 @@ def _write_cert_to_database(ca_name, cert):
     # then we can add the rest of the subject
     subject += '/'.join(
             ['{0}={1}'.format(
-                x,y
-                ) for x,y in cert.get_subject().get_components()]
+                x, y
+                ) for x, y in cert.get_subject().get_components()]
             )
     subject += '\n'
 
@@ -104,7 +109,7 @@ def _write_cert_to_database(ca_name, cert):
             subject
             )
 
-    with open(index_file, 'a+') as f:
+    with salt.utils.fopen(index_file, 'a+') as f:
         f.write(index_data)
 
 
@@ -218,8 +223,7 @@ def create_ca(
       ])
     ca.sign(key, 'sha1')
 
-
-    ca_key = open(
+    ca_key = salt.utils.fopen(
             '{0}/{1}/{2}_ca_cert.key'.format(
                 _cert_base_path(),
                 ca_name,
@@ -232,7 +236,7 @@ def create_ca(
             )
     ca_key.close()
 
-    ca_crt = open(
+    ca_crt = salt.utils.fopen(
             '{0}/{1}/{2}_ca_cert.crt'.format(
                 _cert_base_path(),
                 ca_name,
@@ -254,6 +258,7 @@ def create_ca(
                     ca_name,
                     ca_name
                     )
+
 
 def create_csr(
         ca_name,
@@ -336,7 +341,7 @@ def create_csr(
     req.sign(key, 'sha1')
 
     # Write private key and request
-    priv_key = open(
+    priv_key = salt.utils.fopen(
             '{0}/{1}/certs/{2}.key'.format(_cert_base_path(), ca_name, CN),
             'w+'
             )
@@ -345,7 +350,7 @@ def create_csr(
             )
     priv_key.close()
 
-    csr = open(
+    csr = salt.utils.fopen(
             '{0}/{1}/certs/{2}.csr'.format(_cert_base_path(), ca_name, CN),
             'w+'
             )
@@ -364,6 +369,7 @@ def create_csr(
                     ca_name,
                     CN
                     )
+
 
 def create_self_signed_cert(
         tls_dir='tls',
@@ -449,7 +455,7 @@ def create_self_signed_cert(
     cert.sign(key, 'sha1')
 
     # Write private key and cert
-    priv_key = open(
+    priv_key = salt.utils.fopen(
             '{0}/{1}/certs/{2}.key'.format(_cert_base_path(), tls_dir, CN),
             'w+'
             )
@@ -458,8 +464,7 @@ def create_self_signed_cert(
             )
     priv_key.close()
 
-
-    crt = open('{0}/{1}/certs/{2}.crt'.format(
+    crt = salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
         _cert_base_path(),
         tls_dir,
         CN
@@ -484,6 +489,7 @@ def create_self_signed_cert(
         CN)
 
     return ret
+
 
 def create_ca_signed_cert(ca_name, CN, days=365):
     '''
@@ -511,14 +517,14 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     try:
         ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
-                open('{0}/{1}/{2}_ca_cert.crt'.format(
+                salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(
                     _cert_base_path(),
                     ca_name, ca_name
                     )).read()
                 )
         ca_key = OpenSSL.crypto.load_privatekey(
                 OpenSSL.crypto.FILETYPE_PEM,
-                open('{0}/{1}/{2}_ca_cert.key'.format(
+                salt.utils.fopen('{0}/{1}/{2}_ca_cert.key'.format(
                     _cert_base_path(),
                     ca_name,
                     ca_name
@@ -530,7 +536,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     try:
         req = OpenSSL.crypto.load_certificate_request(
                 OpenSSL.crypto.FILETYPE_PEM,
-                open('{0}/{1}/certs/{2}.csr'.format(
+                salt.utils.fopen('{0}/{1}/certs/{2}.csr'.format(
                     _cert_base_path(),
                     ca_name,
                     CN
@@ -548,7 +554,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     cert.set_pubkey(req.get_pubkey())
     cert.sign(ca_key, 'sha1')
 
-    crt = open('{0}/{1}/certs/{2}.crt'.format(
+    crt = salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
         _cert_base_path(),
         ca_name,
         CN
@@ -594,7 +600,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     try:
         ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
-                open('{0}/{1}/{2}_ca_cert.crt'.format(
+                salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(
                     _cert_base_path(),
                     ca_name,
                     ca_name
@@ -606,7 +612,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     try:
         cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
-                open('{0}/{1}/certs/{2}.crt'.format(
+                salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
                     _cert_base_path(),
                     ca_name,
                     CN
@@ -614,7 +620,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
                 )
         key = OpenSSL.crypto.load_privatekey(
                 OpenSSL.crypto.FILETYPE_PEM,
-                open('{0}/{1}/certs/{2}.key'.format(
+                salt.utils.fopen('{0}/{1}/certs/{2}.key'.format(
                     _cert_base_path(),
                     ca_name,
                     CN
@@ -629,7 +635,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     pkcs12.set_ca_certificates([ca_cert])
     pkcs12.set_privatekey(key)
 
-    with open('{0}/{1}/certs/{2}.p12'.format(
+    with salt.utils.fopen('{0}/{1}/certs/{2}.p12'.format(
         _cert_base_path(),
         ca_name,
         CN

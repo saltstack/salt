@@ -81,7 +81,9 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
@@ -92,7 +94,9 @@ class CkMinions(object):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                grains = self.serial.load(open(datap)).get('grains')
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
                 comps = expr.split(':')
                 if len(comps) < 2:
                     continue
@@ -134,7 +138,9 @@ class CkMinions(object):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                grains = self.serial.load(open(datap)).get('grains')
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
                 comps = expr.split(':')
                 if len(comps) < 2:
                     continue

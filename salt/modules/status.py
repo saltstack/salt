@@ -3,9 +3,14 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
+# Import python libs
 import os
 import re
 import fnmatch
+
+# Import salt libs
+import salt.utils
+
 
 __opts__ = {}
 
@@ -122,7 +127,7 @@ def loadavg():
     procf = '/proc/loadavg'
     if not os.path.isfile(procf):
         return {}
-    comps = open(procf, 'r').read().strip()
+    comps = salt.utils.fopen(procf, 'r').read().strip()
     load_avg = comps.split()
     return {'1-min':  _number(load_avg[0]),
             '5-min':  _number(load_avg[1]),
@@ -140,7 +145,7 @@ def cpustats():
     procf = '/proc/stat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -177,7 +182,7 @@ def meminfo():
     procf = '/proc/meminfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -203,7 +208,7 @@ def cpuinfo():
     procf = '/proc/cpuinfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -228,7 +233,7 @@ def diskstats():
     procf = '/proc/diskstats'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -287,7 +292,7 @@ def diskusage(*args):
         # determine which mount points host the specified fstypes
         p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
                             for fstype in fstypes))
-        with open(procf, 'r') as fp:
+        with salt.utils.fopen(procf, 'r') as fp:
             for line in fp:
                 comps = line.split()
                 if len(comps) >= 3:
@@ -318,7 +323,7 @@ def vmstats():
     procf = '/proc/vmstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -339,7 +344,7 @@ def netstats():
     procf = '/proc/net/netstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     headers = ['']
     for line in stats:
@@ -372,7 +377,7 @@ def netdev():
     procf = '/proc/net/dev'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().splitlines()
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -383,7 +388,7 @@ def netdev():
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
         #Support lines both like eth0:999 and eth0: 9999
-        comps.insert(1,line.split(':')[1].strip().split()[0])
+        comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
                          'rx_compressed': _number(comps[7]),
@@ -462,5 +467,3 @@ def pid(sig):
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')
-
-

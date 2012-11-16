@@ -1,19 +1,23 @@
 '''
 Manage client ssh components
 '''
+# Import python libs
 import os
 import re
 import hashlib
 import binascii
 import logging
 
+# Import salt libs
 import salt.utils
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
 
+
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     # TODO: This could work on windows with some love
@@ -25,8 +29,9 @@ def __virtual__():
 def _refine_enc(enc):
     '''
     Return the properly formatted ssh value for the authorized encryption key
-    type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string if
-    using higher enc. If the type is not found, return ssh-rsa, the ssh default.
+    type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string
+    if using higher enc. If the type is not found, return ssh-rsa, the ssh
+    default.
     '''
     rsa   = ['r', 'rsa', 'ssh-rsa']
     dss   = ['d', 'dsa', 'dss', 'ssh-dss']
@@ -83,7 +88,7 @@ def _replace_auth_key(
     full = os.path.join(uinfo['home'], config)
     try:
         # open the file for both reading AND writing
-        with open(full, 'r') as _fh:
+        with salt.utils.fopen(full, 'r') as _fh:
             for line in _fh:
                 if line.startswith('#'):
                     # Commented Line
@@ -103,7 +108,7 @@ def _replace_auth_key(
                     lines.append(line)
             _fh.close()
             # Re-open the file writable after properly closing it
-            with open(full, 'w') as _fh:
+            with salt.utils.fopen(full, 'w') as _fh:
                 # Write out any changes
                 _fh.writelines(lines)
     except (IOError, OSError) as exc:
@@ -119,7 +124,7 @@ def _validate_keys(key_file):
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
 
     try:
-        with open(key_file, 'r') as _fh:
+        with salt.utils.fopen(key_file, 'r') as _fh:
             for line in _fh:
                 if line.startswith('#'):
                     # Commented Line
@@ -205,7 +210,7 @@ def host_keys(keydir=None):
             if len(top) > 1:
                 kname += '.{0}'.format(top[1])
             try:
-                with open(os.path.join(keydir, fn_), 'r') as _fh:
+                with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     keys[kname] = _fh.readline().strip()
             except (IOError, OSError):
                 keys[kname] = ''
@@ -295,7 +300,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         try:
             # Read every line in the file to find the right ssh key
             # and then write out the correct one. Open the file once
-            with open(full, 'r') as _fh:
+            with salt.utils.fopen(full, 'r') as _fh:
                 for line in _fh:
                     if line.startswith('#'):
                         # Commented Line
@@ -326,7 +331,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
-            with open(full, 'w') as _fh:
+            with salt.utils.fopen(full, 'w') as _fh:
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
             log.warn('Could not read/write key file: {0}'.format(str(exc)))
@@ -334,6 +339,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         return 'Key removed'
     # TODO: Should this function return a simple boolean?
     return 'Key not present'
+
 
 def set_auth_key_from_file(
         user,
@@ -378,6 +384,7 @@ def set_auth_key_from_file(
         return 'new'
     else:
         return 'no change'
+
 
 def set_auth_key(
         user,
@@ -435,7 +442,7 @@ def set_auth_key(
             new_file = False
 
         try:
-            with open(fconfig, 'a+') as _fh:
+            with salt.utils.fopen(fconfig, 'a+') as _fh:
                 _fh.write('{0}'.format(auth_line))
         except (IOError, OSError) as exc:
             msg = 'Could not write to key file: {0}'
@@ -604,7 +611,7 @@ def set_known_host(user, hostname,
     line = '{hostname} {enc} {key}\n'.format(**remote_host)
 
     try:
-        with open(full, 'a') as fd:
+        with salt.utils.fopen(full, 'a') as fd:
             fd.write(line)
     except (IOError, OSError) as exc:
         raise CommandExecutionError("Couldn't append to known hosts file")

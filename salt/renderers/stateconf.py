@@ -38,7 +38,7 @@ salt files easier and cleaner, therefore, additionally, it also:
     Notice that the end of configuration marker(``# --- end of state config --``)
     is needed to separate the use of 'stateconf.set' form the rest of your salt
     file.
-        
+
   - Adds support for relative include and exclude of .sls files. Example::
 
         include:
@@ -68,7 +68,7 @@ salt files easier and cleaner, therefore, additionally, it also:
   - Prefixes any state id(declaration or reference) that starts with a dot(``.``)
     to avoid duplicated state ids when the salt file is included by other salt
     files.
-    
+
     For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
     will be turned into ``some.file::sls_params``.
 
@@ -83,7 +83,7 @@ salt files easier and cleaner, therefore, additionally, it also:
           .file::sls_params:
             stateconf.set:
               - name1: something
-     
+
     Above will be pre-processed into::
 
         include:
@@ -97,7 +97,7 @@ salt files easier and cleaner, therefore, additionally, it also:
   - Optionally(disable via the `-G` renderer option), generates a
     ``stateconf.set`` goal state(state id named as ``.goal`` by default) that
     requires all other states in the salt file.
-    
+
     Such goal state is intended to be required by some state in an including
     salt file. For example, in your webapp salt file, if you include a
     sls file that is supposed to setup Tomcat, you might want to make sure that
@@ -147,7 +147,7 @@ re-write or renames state id's and their references.
 """
 
 # TODO:
-#   - sls meta/info state: Eg, 
+#   - sls meta/info state: Eg,
 #       sls_info:
 #         author: Jack Kuan
 #         description: what the salt file does...
@@ -157,7 +157,7 @@ re-write or renames state id's and their references.
 #       include:
 #         - apache: >= 0.1.0
 #
-#   - support synthetic argument? Eg, 
+#   - support synthetic argument? Eg,
 #
 #     apache:
 #       stateconf.set:
@@ -174,11 +174,12 @@ re-write or renames state id's and their references.
 #     ##  - url: 'http://${host}:${port}/'
 #
 #     # --- end of state config ---
-#     <% 
+#     <%
 #     apache.setdefault('url', "http://%(host)s:%(port)s/" % apache)
 #     %>
 #
 
+# Import python libs
 import logging
 import re
 import getopt
@@ -186,27 +187,32 @@ import copy
 from os import path as ospath
 from cStringIO import StringIO
 
+
+# Import salt libs
+import salt.utils
 from salt.exceptions import SaltRenderError
+
 
 log = logging.getLogger(__name__)
 
 __opts__ = {
-  'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
-  # eg, something like "# --- end of state config --" works by default.
+    'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
+    # eg, something like "# --- end of state config --" works by default.
 
-  'stateconf_goal_state': '.goal',
-  # name of the state id for the generated goal state.
+    'stateconf_goal_state': '.goal',
+    # name of the state id for the generated goal state.
 
-  'stateconf_state_func': 'stateconf.set'
-  # names the state and the state function to be recognized as a special state
-  # from which to gather sls file context variables. It should be specified
-  # in the 'state.func' notation, and both the state module and the function must
-  # actually exist and the function should be a dummy, no-op state function that
-  # simply returns a dict(name=name, result=True, changes={}, comment='')
+    'stateconf_state_func': 'stateconf.set'
+    # names the state and the state function to be recognized as a special
+    # state from which to gather sls file context variables. It should be
+    # specified in the 'state.func' notation, and both the state module and the
+    # function must actually exist and the function should be a dummy, no-op
+    # state function that simply returns a
+    # dict(name=name, result=True, changes={}, comment='')
 }
 
-
 STATE_FUNC = STATE_NAME = ''
+
 
 def __init__(opts):
     global STATE_NAME, STATE_FUNC
@@ -226,7 +232,7 @@ Options(for this renderer):
 
   -G   Do not generate the goal state that requires all other states in the sls.
 
-  -o   Indirectly order the states by adding requires such that they will be 
+  -o   Indirectly order the states by adding requires such that they will be
        executed in the order they are defined in the sls. Implies using yaml -o.
   """ % (MOD_BASENAME, MOD_BASENAME)
 )
@@ -258,7 +264,7 @@ def render(template_file, env='', sls='', argline='', **kws):
                 raise SaltRenderError("Implicit ordering is only supported "
                                       "if the yaml renderer is used!")
         name, rt_argline = (args[1]+' ').split(' ', 1)
-        render_template = renderers[name] # eg, the mako renderer
+        render_template = renderers[name]  # eg, the mako renderer
     except KeyError, e:
         raise SaltRenderError("Renderer: %s is not available!" % e)
     except IndexError, e:
@@ -267,7 +273,7 @@ def render(template_file, env='', sls='', argline='', **kws):
     def process_sls_data(data, context=None, extract=False):
         sls_dir=ospath.dirname(sls.replace('.', ospath.sep))
         ctx = dict(sls_dir=sls_dir if sls_dir else '.')
-        
+
         if context:
             ctx.update(context)
         tmplout = render_template(StringIO(data), env, sls, context=ctx,
@@ -279,7 +285,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         # structure can be used later for error checking if anything goes
         # wrong during the preprocessing.
         data = copy.deepcopy(high)
-        try: 
+        try:
             rewrite_sls_includes_excludes(data, sls)
 
             if not extract and IMPLICIT_REQUIRE:
@@ -314,9 +320,9 @@ def render(template_file, env='', sls='', argline='', **kws):
         return data
 
     if isinstance(template_file, basestring):
-        with open(template_file, 'r') as f:
+        with salt.utils.fopen(template_file, 'r') as f:
             sls_templ = f.read()
-    else: # assume file-like
+    else:  # assume file-like
         sls_templ = template_file.read()
 
     # first pass to extract the state configuration
@@ -359,11 +365,12 @@ def _parent_sls(sls):
     i = sls.rfind('.')
     return sls[:i]+'.' if i != -1 else ''
 
+
 def rewrite_sls_includes_excludes(data, sls):
-    # if the path of the included/excluded sls starts with a leading dot(.) then
-    # it's taken to be relative to the including/excluding sls.
+    # if the path of the included/excluded sls starts with a leading dot(.)
+    # then it's taken to be relative to the including/excluding sls.
     sls = _parent_sls(sls)
-    for sid in data: 
+    for sid in data:
         if sid == 'include':
             includes = data[sid]
             for i, each in enumerate(includes):
@@ -375,10 +382,9 @@ def rewrite_sls_includes_excludes(data, sls):
                     d['sls'] = sls + d['sls'][1:]
 
 
+def _local_to_abs_sid(sid, sls):  # id must starts with '.'
+    return _parent_sls(sls)+sid[1:] if '::' in sid else sls+'::'+sid[1:]
 
-
-def _local_to_abs_sid(sid, sls): # id must starts with '.'
-    return _parent_sls(sls)+sid[1:] if '::' in sid else sls+'::'+sid[1:] 
 
 def nvlist(thelist, names=None):
     """Given a list of items::
@@ -390,7 +396,7 @@ def nvlist(thelist, names=None):
           - key: value
 
     return a generator that yields each (item, key, value) tuple, skipping
-    items that are not name-value's(dictionaries) or those not in the 
+    items that are not name-value's(dictionaries) or those not in the
     list of matching names. The item in the returned tuple is the single-key
     dictionary.
     """
@@ -402,6 +408,7 @@ def nvlist(thelist, names=None):
             name, value = nvitem.iteritems().next()
             if names is None or name in names:
                 yield nvitem, name, value
+
 
 def nvlist2(thelist, names=None):
     """Like nvlist but applied one more time to each returned value.
@@ -415,11 +422,12 @@ def nvlist2(thelist, names=None):
     nvlist2(args, ['require']) would yield the tuple,
     (dict_item, 'file', 'test.sh') where dict_item is the single-key
     dictionary of {'file': 'test.sh'}.
-    
+
     """
     for _, _, value in nvlist(thelist, names):
         for each in nvlist(value):
             yield each
+
 
 def statelist(states_dict, sid_excludes=set(['include', 'exclude'])):
     for sid, states in states_dict.iteritems():
@@ -429,7 +437,11 @@ def statelist(states_dict, sid_excludes=set(['include', 'exclude'])):
             yield sid, states, sname, args
 
 
-REQUISITES = set(['require', 'require_in', 'watch', 'watch_in', 'use', 'use_in'])
+REQUISITES = set([
+    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in'
+])
+
+
 def rename_state_ids(data, sls, is_extend=False):
     # if the .sls file is salt://my/salt/file.sls
     # then rename all state ids defined in it that start with a dot(.) with
@@ -463,6 +475,7 @@ EXTENDED_REQUIRE_IN = {}
 
 from itertools import chain
 
+
 # To avoid cycles among states when each state requires the one before it:
 #   explicit require/watch can only contain states before it
 #   explicit require_in/watch_in can only contain states after it
@@ -477,7 +490,7 @@ def add_implicit_requires(data):
         for state in data[sid]:
             states_after.add(T(sid, state))
 
-    prev_state = (None, None) # (state_name, sid)
+    prev_state = (None, None)  # (state_name, sid)
     for sid, states, sname, args in statelist(data):
         if sid == 'extend':
             for esid, _, _, eargs in statelist(states):
@@ -535,6 +548,7 @@ def add_goal_state(data):
             reqlist.append({state_name(state): sid})
         data[goal_sid] = {STATE_FUNC: [dict(require=reqlist)]}
 
+
 def state_name(sname):
     """Return the name of the state regardless if sname is
     just the state name or a state.func name.
@@ -560,6 +574,7 @@ class Bunch(dict):
 #
 STATE_CONF = {}       # stateconf.set
 STATE_CONF_EXT = {}   # stateconf.set under extend: ...
+
 
 def extract_state_confs(data, is_extend=False):
     for state_id, state_dict in data.iteritems():
@@ -588,5 +603,3 @@ def extract_state_confs(data, is_extend=False):
                 if requisite in extend:
                     extend[requisite] += to_dict[state_id].get(requisite, [])
             to_dict[state_id].update(STATE_CONF_EXT[state_id])
-
-

@@ -83,18 +83,18 @@ def make_pkgng_aware(jname):
 
     # Added args to file
     cmd = 'echo "WITH_PKGNG=yes" > {0}-make.conf'.format(
-            os.path.join(cdir,jname))
+            os.path.join(cdir, jname))
 
     __salt__['cmd.run'](cmd)
 
-    if os.path.isfile(os.path.join(cdir,jname) + '-make.conf'):
+    if os.path.isfile(os.path.join(cdir, jname) + '-make.conf'):
         ret['changes'] = 'Created {0}'.format(
                 os.path.join(cdir, '{0}-make.conf'.format(jname))
                 )
         return ret
     else:
         return 'Looks like file {0} could not be created'.format(
-                os.path.join(cdir,jname + '-make.conf')
+                os.path.join(cdir, jname + '-make.conf')
                 )
 
 
@@ -110,7 +110,7 @@ def parse_config(config_file=None):
         config_file = _config_file()
     ret = {}
     if _check_config_exists(config_file):
-        with open(config_file) as f:
+        with salt.utils.fopen(config_file) as f:
             for line in f:
                 k, y = line.split('=')
                 ret[k] = y
@@ -175,7 +175,7 @@ def create_jail(name, arch, version="9.0-RELEASE"):
     if is_jail(name):
         return '{0} already exists'.format(name)
 
-    cmd = 'poudriere jails -c -j {0} -v {1} -a {2}'.format(name,version,arch)
+    cmd = 'poudriere jails -c -j {0} -v {1} -a {2}'.format(name, version, arch)
     __salt__['cmd.run'](cmd)
 
     # Make jail pkgng aware
@@ -227,7 +227,7 @@ def create_ports_tree():
     Not working need to run portfetch non interactive
     '''
     _check_config_exists()
-    cmd =  'poudriere ports -c'
+    cmd = 'poudriere ports -c'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
@@ -263,4 +263,3 @@ def bulk_build(jail, pkg_file, keep=False):
             return line
     return ('There may have been an issue building packages dumping output: '
             '{0}').format(res)
-
