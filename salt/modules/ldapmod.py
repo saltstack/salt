@@ -1,37 +1,33 @@
 '''
 Module to provide LDAP commands via salt.
 
-REQUIREMENT 1:
+:depends:   - ldap Python module
+:configuration: In order to connect to LDAP, certain configuration is required
+    in the minion config on the LDAP server. The minimum configuration items
+    that must be set are::
 
-In order to connect to LDAP, certain configuration is required
-in the minion config on the LDAP server.
-The minimum configuration items that must be set are::
+        ldap.basedn: dc=acme,dc=com (example values, adjust to suit)
 
-    ldap.basedn: dc=acme,dc=com (example values, adjust to suit)
+    If your LDAP server requires authentication then you must also set::
 
-If your LDAP server requires authentication then you must also set::
+        ldap.binddn: admin
+        ldap.bindpw: password
 
-    ldap.binddn: admin
-    ldap.bindpw: password
+    In addition, the following optional values may be set::
 
-In addition, the following optional values may be set::
+        ldap.server: localhost (default=localhost, see warning below)
+        ldap.port: 389 (default=389, standard port)
+        ldap.tls: False (default=False, no TLS)
+        ldap.scope: 2 (default=2, ldap.SCOPE_SUBTREE)
+        ldap.attrs: [saltAttr] (default=None, return all attributes)
 
-    ldap.server: localhost (default=localhost, see warning below)
-    ldap.port: 389 (default=389, standard port)
-    ldap.tls: False (default=False, no TLS)
-    ldap.scope: 2 (default=2, ldap.SCOPE_SUBTREE)
-    ldap.attrs: [saltAttr] (default=None, return all attributes)
+.. warning::
 
-WARNING:
-At the moment this module only recommends connection to LDAP services
-listening on 'localhost'.  This is deliberate to avoid the potentially
-dangerous situation of multiple minions sending identical update commands to
-the same LDAP server.  It's easy enough to override this behaviour,
-but badness may ensue - you have been warned.
-
-REQUIREMENT 2:
-
-Required python modules: ldap
+    At the moment this module only recommends connection to LDAP services
+    listening on 'localhost'.  This is deliberate to avoid the potentially
+    dangerous situation of multiple minions sending identical update commands
+    to the same LDAP server.  It's easy enough to override this behaviour, but
+    badness may ensue - you have been warned.
 '''
 # Import Python libs
 import time
