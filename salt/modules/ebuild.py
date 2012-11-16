@@ -1,5 +1,7 @@
 '''
 Support for Portage
+
+:optdepends:    - portage Python adapter
 '''
 
 try:

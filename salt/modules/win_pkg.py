@@ -1,5 +1,10 @@
 '''
 A module to manage software on Windows
+
+:depends:   - pythoncom
+            - win32com
+            - win32con
+            - win32api
 '''
 try:
     import pythoncom

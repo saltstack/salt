@@ -1,7 +1,9 @@
 '''
 Support for YUM
 
-Required python modules: yum, rpm, rpmUtils
+:depends:   - yum Python module
+            - rpm Python module
+            - rpmUtils Python module
 '''
 try:
     import yum

@@ -2,7 +2,7 @@
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 
-Required python modules: psutil
+:depends:   - psutil Python module
 '''
 
 import sys

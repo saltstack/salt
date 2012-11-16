@@ -1,7 +1,7 @@
 '''
 Work with virtual machines managed by libvirt
 
-Required python modules: libvirt
+:depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used

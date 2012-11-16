@@ -3,16 +3,11 @@ A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
 
-REQUIREMENT 1:
+:depends:   - PyOpenSSL Python module
+:configuration: Add the following values in /etc/salt/minion for the CA module
+    to function properly::
 
-Required python modules: PyOpenSSL
-
-REQUIREMENT 2:
-
-Add the following values in /etc/salt/minion for the
-CA module to function properly::
-
-    ca.cert_base_path: '/etc/pki'
+        ca.cert_base_path: '/etc/pki'
 '''
 
 # Import Python libs

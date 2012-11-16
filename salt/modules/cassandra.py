@@ -1,19 +1,14 @@
 '''
 Cassandra NoSQL Database Module
 
-REQUIREMENT 1:
+:depends:   - pycassa Cassandra Python adapter
+:configuration:
+    The location of the 'nodetool' command, host, and thrift port needs to be
+    specified via pillar::
 
-The location of the 'nodetool' command, host, and thrift port
-needs to be specified via pillar.
-
-    cassandra.nodetool: /usr/local/bin/nodetool
-    cassandra.host: localhost
-    cassandra.thrift_port: 9160
-
-REQUIREMENT 2:
-
-The python module, 'pycassa', also needs to be installed on the
-minion.
+        cassandra.nodetool: /usr/local/bin/nodetool
+        cassandra.host: localhost
+        cassandra.thrift_port: 9160
 '''
 # Import Python libs
 import logging

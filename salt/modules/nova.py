@@ -1,13 +1,15 @@
 '''
 Module for handling openstack nova calls.
 
-This module is not usable until the user, password, tenant and auth url are
-specified either in a pillar or in the minion's config file. For example:
+:depends:   - novaclient Python module
+:configuration: This module is not usable until the user, password, tenant and
+    auth url are specified either in a pillar or in the minion's config file.
+    For example::
 
-keystone.user: admin
-keystone.password: verybadpass
-keystone.tenant: admin
-keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        keystone.user: admin
+        keystone.password: verybadpass
+        keystone.tenant: admin
+        keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
 has_nova = False
 try:
