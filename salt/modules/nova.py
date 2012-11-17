@@ -11,12 +11,18 @@ Module for handling openstack nova calls.
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
+
+# Import 3rd party libs
 has_nova = False
 try:
     from novaclient.v1_1 import client
     has_nova = True
 except ImportError:
     pass
+
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -26,6 +32,7 @@ def __virtual__():
     if has_nova:
         return 'nova'
     return False
+
 
 __opts__ = {}
 
@@ -38,7 +45,9 @@ def _auth():
     password = __salt__['config.option']('keystone.password')
     tenant = __salt__['config.option']('keystone.tenant')
     auth_url = __salt__['config.option']('keystone.auth_url')
-    nt = client.Client(user, password, tenant, auth_url, service_type="compute")
+    nt = client.Client(
+        user, password, tenant, auth_url, service_type="compute"
+    )
     return nt
 
 
@@ -136,12 +145,12 @@ def keypair_add(name, pubfile=None, pubkey=None):
     '''
     nt = _auth()
     if pubfile:
-        f = open(pubfile, 'r')
+        f = salt.utils.fopen(pubfile, 'r')
         pubkey = f.read()
     if not pubkey:
         return False
     nt.keypairs.create(name, public_key=pubkey)
-    ret = { 'name': name, 'pubkey': pubkey }
+    ret = {'name': name, 'pubkey': pubkey}
     return ret
 
 

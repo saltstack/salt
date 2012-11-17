@@ -2,6 +2,7 @@
 Support for Bluetooth (using Bluez in Linux)
 '''
 
+# Import salt libs
 import salt.utils
 import salt.modules.service
 
@@ -42,7 +43,7 @@ def address():
     path = __salt__['cmd.run'](cmd).splitlines()
     devname = path[0].split('/')
     syspath = '/sys/class/bluetooth/{0}/address'.format(devname[-1])
-    sysfile = open(syspath, 'r')
+    sysfile = salt.utils.fopen(syspath, 'r')
     address = sysfile.read().strip()
     sysfile.close()
     return {

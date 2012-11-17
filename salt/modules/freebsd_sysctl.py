@@ -2,7 +2,10 @@
 Module for viewing and modifying sysctl parameters
 '''
 
+# Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
+
 
 __outputter__ = {
     'assign': 'txt',
@@ -106,7 +109,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     edited = False
     value = str(value)
 
-    with open(config, 'r') as f:
+    with salt.utils.fopen(config, 'r') as f:
         for l in f:
             if not l.startswith('{0}='.format(name)):
                 nlines.append(l)
@@ -127,7 +130,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
-    with open(config, 'w+') as f: f.writelines(nlines)
+    with salt.utils.fopen(config, 'w+') as f:
+        f.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)
     return 'Updated'

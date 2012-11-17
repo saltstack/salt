@@ -22,7 +22,7 @@ def find(path, env='base'):
         full = os.path.join(root, path)
         if os.path.isfile(full):
             # Add it to the dict
-            with open(full, 'rb') as fp_:
+            with salt.utils.fopen(full, 'rb') as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append({full: 'txt'})
                 else:
@@ -73,7 +73,7 @@ def list_roots():
 
 def read(path, env='base'):
     '''
-    Read the contents of a text file, if the file is binary then 
+    Read the contents of a text file, if the file is binary then
     '''
     # Return a dict of paths + content
     ret = []
@@ -82,7 +82,7 @@ def read(path, env='base'):
         full = fn_.keys()[0]
         form = fn_[full]
         if form == 'txt':
-            with open(full, 'rb') as fp_:
+            with salt.utils.fopen(full, 'rb') as fp_:
                 ret.append({full: fp_.read()})
     return ret
 
@@ -104,7 +104,7 @@ def write(data, path, env='base', index=0):
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
-    with open(dest, 'w+') as fp_:
+    with salt.utils.fopen(dest, 'w+') as fp_:
         fp_.write(data)
     return 'Wrote data to file {0}'.format(dest)
 

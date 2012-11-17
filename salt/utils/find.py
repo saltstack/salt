@@ -79,6 +79,7 @@ the following:
     user:  user name
 '''
 
+# Import python libs
 import hashlib
 import logging
 import os
@@ -92,7 +93,8 @@ try:
 except ImportError:
     pass
 
-
+# Import salt libs
+import salt.utils
 from salt._compat import MAX_SIZE
 from salt.utils.filebuffer import BufferedReader
 
@@ -483,7 +485,7 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    with open(fullpath, 'rb') as f:
+                    with salt.utils.fopen(fullpath, 'rb') as f:
                         buf = f.read(8192)
                         h = hashlib.md5()
                         while buf:

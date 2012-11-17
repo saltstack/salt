@@ -4,6 +4,9 @@ Manage the information in the hosts file
 # Import python libs
 import os
 
+# Import Salt libs
+import salt.utils
+
 
 def __get_hosts_filename():
     '''
@@ -30,7 +33,7 @@ def list_hosts():
     ret = {}
     if not os.path.isfile(hfn):
         return ret
-    with open(hfn) as f:
+    with salt.utils.fopen(hfn) as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -104,7 +107,7 @@ def set_host(ip, alias):
     ovr = False
     if not os.path.isfile(hfn):
         return False
-    lines = open(hfn).readlines()
+    lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -116,7 +119,7 @@ def set_host(ip, alias):
             if not ovr:
                 lines[ind] = ip + '\t\t' + alias + '\n'
                 ovr = True
-            else: # remove other entries
+            else:  # remove other entries
                 lines[ind] = ''
     if not ovr:
         # make sure there is a newline
@@ -124,7 +127,8 @@ def set_host(ip, alias):
             lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    with open(hfn, 'w+') as f: f.writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as f:
+        f.writelines(lines)
     return True
 
 
@@ -139,7 +143,7 @@ def rm_host(ip, alias):
     if not has_pair(ip, alias):
         return True
     hfn = __get_hosts_filename()
-    lines = open(hfn).readlines()
+    lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -159,7 +163,8 @@ def rm_host(ip, alias):
             else:
                 # Only an alias was removed
                 lines[ind] = '{0}\n'.format(newline)
-    with open(hfn, 'w+') as f: f.writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as f:
+        f.writelines(lines)
     return True
 
 
@@ -176,7 +181,7 @@ def add_host(ip, alias):
     ovr = False
     if not os.path.isfile(hfn):
         return False
-    lines = open(hfn).readlines()
+    lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -200,5 +205,6 @@ def add_host(ip, alias):
             lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    with open(hfn, 'w+') as f: f.writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as f:
+        f.writelines(lines)
     return True

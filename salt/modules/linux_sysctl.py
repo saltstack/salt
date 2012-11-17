@@ -2,17 +2,23 @@
 Module for viewing and modifying sysctl parameters
 '''
 
+# Import python libs
 import re
 import os
+
+# Import salt libs
+import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
+
 
 __outputter__ = {
     'assign': 'txt',
     'get': 'txt',
 }
 
-# TODO: Add unpersist() to remove either a sysctl or sysctl/value combo from the config
+# TODO: Add unpersist() to remove either a sysctl or sysctl/value combo from
+# the config
 
 
 def __virtual__():
@@ -99,7 +105,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
         try:
-            with open(config, 'w+') as _fh:
+            with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
         except (IOError, OSError) as exc:
             msg = 'Could not write to file: {0}'
@@ -108,7 +114,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # Read the existing sysctl.conf
     nlines = []
     try:
-        with open(config, 'r') as _fh:
+        with salt.utils.fopen(config, 'r') as _fh:
             # Use readlines because this should be a small file
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
@@ -159,7 +165,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
     try:
-        with open(config, 'w+') as _fh:
+        with salt.utils.fopen(config, 'w+') as _fh:
             _fh.writelines(nlines)
     except (IOError, OSError):
         msg = 'Could not write to file: {0}'

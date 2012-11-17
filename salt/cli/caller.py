@@ -65,7 +65,7 @@ class Caller(object):
                     'pid': os.getpid(),
                     'jid': ret['jid'],
                     'tgt': 'salt-call'}
-            with open(proc_fn, 'w+') as fp_:
+            with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(self.serial.dumps(sdata))
             ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:

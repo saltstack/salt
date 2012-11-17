@@ -2,9 +2,12 @@
 Salt module to manage unix mounts and the fstab file
 '''
 
+# Import python libs
 import os
 import logging
 
+# Import salt libs
+import salt.utils
 from salt._compat import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
@@ -20,7 +23,7 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    with open(filename) as fh:
+    with salt.utils.fopen(filename) as fh:
         for line in fh:
             comps = line.split()
             device = comps[2].split(':')
@@ -42,7 +45,7 @@ def _active_mounts(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    with open(filename) as fh:
+    with salt.utils.fopen(filename) as fh:
         for line in fh:
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
@@ -78,7 +81,7 @@ def fstab(config='/etc/fstab'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    with open(config) as f:
+    with salt.utils.fopen(config) as f:
         for line in f:
             if line.startswith('#'):
                 # Commented
@@ -112,7 +115,7 @@ def rm_fstab(name, config='/etc/fstab'):
     # The entry is present, get rid of it
     lines = []
     try:
-        with open(config, 'r') as fh:
+        with salt.utils.fopen(config, 'r') as fh:
             for line in fh:
                 if line.startswith('#'):
                     # Commented
@@ -136,7 +139,7 @@ def rm_fstab(name, config='/etc/fstab'):
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     try:
-        with open(config, 'w+') as fh:
+        with salt.utils.fopen(config, 'w+') as fh:
             fh.writelines(lines)
     except (IOError, OSError) as exc:
         msg = "Couldn't write to {0}: {1}"
@@ -172,7 +175,7 @@ def set_fstab(
         raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
-        with open(config, 'r') as fh:
+        with salt.utils.fopen(config, 'r') as fh:
             for line in fh:
                 if line.startswith('#'):
                     # Commented
@@ -207,10 +210,15 @@ def set_fstab(
                         change = True
                         comps[5] = str(pass_num)
                     if change:
-                        log.debug('fstab entry for mount point {0} is being updated'
-                                  .format(name))
-                        newline = ('{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'
-                                   .format(device, name, fstype, opts, dump, pass_num))
+                        log.debug(
+                            'fstab entry for mount point {0} is being '
+                            'updated'.format(name)
+                        )
+                        newline = (
+                            '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
+                                device, name, fstype, opts, dump, pass_num
+                            )
+                        )
                         lines.append(newline)
                 else:
                     lines.append(line)
@@ -220,7 +228,7 @@ def set_fstab(
 
     if change:
         try:
-            with open(config, 'w+') as fh:
+            with salt.utils.fopen(config, 'w+') as fh:
                 # The line was changed, commit it!
                 fh.writelines(lines)
         except (IOError, OSError) as exc:
@@ -240,7 +248,7 @@ def set_fstab(
                 pass_num)
         lines.append(newline)
         try:
-            with open(config, 'w+') as fh:
+            with salt.utils.fopen(config, 'w+') as fh:
                 # The line was changed, commit it!
                 fh.writelines(lines)
         except (IOError, OSError) as exc:
@@ -319,6 +327,7 @@ def umount(name):
     if out['retcode']:
         return out['stderr']
     return True
+
 
 def is_fuse_exec(cmd):
     '''

@@ -189,6 +189,7 @@ from os import path as ospath
 from cStringIO import StringIO
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import SaltRenderError
 
 
@@ -210,7 +211,6 @@ __opts__ = {
     # no-op state function that simply returns a
     # dict(name=name, result=True, changes={}, comment='')
 }
-
 
 STATE_FUNC = STATE_NAME = ''
 
@@ -332,7 +332,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         return data
 
     if isinstance(template_file, basestring):
-        with open(template_file, 'r') as f:
+        with salt.utils.fopen(template_file, 'r') as f:
             sls_templ = f.read()
     else:  # assume file-like
         sls_templ = template_file.read()
@@ -450,9 +450,9 @@ def statelist(states_dict, sid_excludes=set(['include', 'exclude'])):
             yield sid, states, sname, args
 
 
-REQUISITES = set(
-    ['require', 'require_in', 'watch', 'watch_in', 'use', 'use_in']
-)
+REQUISITES = set([
+    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in'
+])
 
 
 def rename_state_ids(data, sls, is_extend=False):

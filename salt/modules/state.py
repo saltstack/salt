@@ -8,12 +8,14 @@ import copy
 import logging
 
 # Import Salt libs
+import salt.utils
 import salt.state
 import salt.payload
 from salt.utils.yaml import load as yaml_load
 from salt.utils.yaml import CustomLoader as YamlCustomLoader
 import json
 from salt._compat import string_types
+
 
 __outputter__ = {
     'sls': 'highstate',
@@ -138,7 +140,7 @@ def highstate(test=None, **kwargs):
     # Not 100% if this should be fatal or not,
     # but I'm guessing it likely should not be.
     try:
-        with open(cache_file, 'w+') as fp_:
+        with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.highstate" cache file {0}'
@@ -179,7 +181,7 @@ def sls(mods, env='base', test=None, **kwargs):
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     try:
-        with open(cache_file, 'w+') as fp_:
+        with salt.utils.fopen(cache_file, 'w+') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to "state.sls" cache file {0}'
