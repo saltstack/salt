@@ -16,6 +16,8 @@ import logging
 import os
 from distutils.version import LooseVersion
 
+import salt
+
 logger = logging.getLogger(__name__)
 
 
