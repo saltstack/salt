@@ -334,10 +334,11 @@ class TestDaemon(object):
             running = self.__client_job_running(targets, jid)
             sys.stdout.write('\r' + ' ' * PNUM + '\r')
             if not running:
+                print
                 return True
             sys.stdout.write(
                 '    * [Quit in {0}] Waiting for {1}'.format(
-                    '{0}'.format(expire-now).rsplit('.', 1)[0],
+                    '{0}'.format(expire - now).rsplit('.', 1)[0],
                     ', '.join(running)
                 )
             )
