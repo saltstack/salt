@@ -83,7 +83,7 @@ def latest(name,
 
                     cmd = "git rev-parse "+rev
                     retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
-                    if 0 != retcode: --dif
+                    if 0 != retcode:
                         __salt__['git.fetch'](target, user=runas)
 
                     __salt__['git.checkout'](target, rev, user=runas)
