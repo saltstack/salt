@@ -11,6 +11,7 @@ Module to provide MySQL compatibility to salt.
         mysql.user: 'root'
         mysql.pass: ''
         mysql.db: 'mysql'
+        mysql.unix_socket: '/tmp/mysql.sock'
 
     You can also use a defaults file::
 
@@ -101,6 +102,7 @@ def connect(**kwargs):
     _connarg('pass', 'passwd')
     _connarg('port')
     _connarg('db')
+    _connarg('unix_socket')
     _connarg('default_file', 'read_default_file')
 
     db = MySQLdb.connect(**connargs)
@@ -773,3 +775,42 @@ def grant_revoke(grant,
         'revoked'.format(grant, database, user)
     )
     return False
+
+def processlist():
+    '''
+    Retrieves the processlist from the MySQL server via  
+    "SHOW FULL PROCESSLIST". 
+
+    Returns: a list of dicts, with each dict representing a process:
+        {'Command': 'Query',
+                          'Host': 'localhost',
+                          'Id': 39,
+                          'Info': 'SHOW FULL PROCESSLIST',
+                          'Rows_examined': 0,
+                          'Rows_read': 1,
+                          'Rows_sent': 0,
+                          'State': None,
+                          'Time': 0,
+                          'User': 'root',
+                          'db': 'mysql'}
+
+    CLI Example:
+        salt '*' mysql.processlist
+    
+    '''
+    ret = [] 
+    hdr=("Id", "User", "Host", "db", "Command","Time", "State", 
+         "Info", "Rows_sent", "Rows_examined", "Rows_read")
+    db = connect()
+    cur = db.cursor()
+    cur.execute("SHOW FULL PROCESSLIST")
+    for i in range(cur.rowcount):
+        row = cur.fetchone()        
+        r = {}
+        for j in range(len(hdr)):
+            r[hdr[j]] = row[j]
+
+        ret.append(r)
+            
+    cur.close()
+    return ret
