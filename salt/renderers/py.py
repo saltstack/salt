@@ -19,6 +19,7 @@ def render(template, env='', sls='', **kws):
 
     :rtype: string
     '''
+    template = kws['slspath']
     if not os.path.isfile(template):
         return {}
 
