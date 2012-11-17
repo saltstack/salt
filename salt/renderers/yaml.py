@@ -27,7 +27,6 @@ except ImportError:
         HAS_ORDERED_DICT = False
 
 
-
 def get_yaml_loader(argline):
     try:
         opts, args = getopt.getopt(argline.split(), 'o')

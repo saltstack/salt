@@ -1,4 +1,5 @@
 # Import Python libs
+import sys
 from cStringIO import StringIO
 
 # Import Salt libs
@@ -22,7 +23,7 @@ def render_sls(content, sls='', env='base', argline='-G yaml . jinja', **kws):
     return RENDERERS['stateconf'](
                 StringIO(content), env=env, sls=sls,
                 argline=argline,
-                renderers=RENDERERS, 
+                renderers=RENDERERS,
                 **kws)
 
 
@@ -40,7 +41,7 @@ class StateConfigRendererTestCase(TestCase):
     - set
     - name: value
 
-# --- end of state config ---  
+# --- end of state config ---
 
 test:
   cmd.run:
@@ -104,7 +105,7 @@ state_id:
             self.assertTrue('state_id' in result)
             self.assertEqual(result['state_id']['cmd.run'][2][req][0]['cmd'],
                          'test::test')
-                  
+
 
     def test_relative_include_with_requisites(self):
         for req in REQUISITES:
@@ -156,6 +157,9 @@ extend:
                          set('ABCDE'))
 
     def test_implicit_require_with_goal_state(self):
+        if sys.version_info < (2, 7) and 'OrderedDict' not in sys.modules:
+            self.skipTest('OrderedDict is not available')
+
         result = render_sls('''
 {% for sid in "ABCDE": %}
 {{sid}}:
@@ -206,4 +210,3 @@ G:
         self.assertEqual(
                 [i.itervalues().next() for i in goal_args[0]['require']],
                 list('ABCDEFG'))
-
