@@ -2,7 +2,11 @@
 The jail module for FreeBSD
 '''
 
+# Import python libs
 import os
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -64,7 +68,7 @@ def get_enabled():
     ret = []
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
         if os.access(rconf, os.R_OK):
-            with open(rconf, 'r') as _fp:
+            with salt.utils.fopen(rconf, 'r') as _fp:
                 for line in _fp:
                     if not line.strip():
                         continue
@@ -87,7 +91,7 @@ def show_config(jail):
     ret = {}
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
         if os.access(rconf, os.R_OK):
-            with open(rconf, 'r') as _fp:
+            with salt.utils.fopen(rconf, 'r') as _fp:
                 for line in _fp:
                     if not line.strip():
                         continue
@@ -112,7 +116,7 @@ def fstab(jail):
     if 'fstab' in config:
         fstab = config['fstab']
         if os.access(fstab, os.R_OK):
-            with open(fstab, 'r') as _fp:
+            with salt.utils.fopen(fstab, 'r') as _fp:
                 for line in _fp:
                     line = line.strip()
                     if not line:
