@@ -5,7 +5,7 @@ import signal
 import time
 import sys
 
-import salt
+import salt.utils
 
 log = logging.getLogger(__name__)
 
