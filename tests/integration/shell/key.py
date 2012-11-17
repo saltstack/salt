@@ -39,14 +39,15 @@ class KeyTest(integration.ShellCase,
         '''
         data = self.run_key('-L --json-out')
         if version.__version_info__ < (0, 10, 8):
-            expect = [
+            self.assertEqual(
                 "WARNING: The option --json-out is deprecated. Please "
-                "consider using '--out json' instead."
-            ]
-        else:
-            expect = []
+                "consider using '--out json' instead.",
+                data[0]
+            )
 
-        expect += [
+        data = self.run_key('-L --out json')
+
+        expect = [
             '{',
             '    "minions_rejected": [], ',
             '    "minions_pre": [], ',
@@ -64,14 +65,15 @@ class KeyTest(integration.ShellCase,
         '''
         data = self.run_key('-L --yaml-out')
         if version.__version_info__ < (0, 10, 8):
-            expect = [
+            self.assertEqual(
                 "WARNING: The option --yaml-out is deprecated. Please "
-                "consider using '--out yaml' instead."
-            ]
-        else:
-            expect = []
+                "consider using '--out yaml' instead.",
+                data[0]
+            )
 
-        expect += [
+        data = self.run_key('-L --out yaml')
+
+        expect = [
             'minions:',
             '- minion',
             '- sub_minion',
@@ -86,14 +88,15 @@ class KeyTest(integration.ShellCase,
         '''
         data = self.run_key('-L --raw-out')
         if version.__version_info__ < (0, 10, 8):
-            expect = [
+            self.assertEqual(
                 "WARNING: The option --raw-out is deprecated. Please "
-                "consider using '--out raw' instead."
-            ]
-        else:
-            expect = []
+                "consider using '--out raw' instead.",
+                data[0]
+            )
 
-        expect += [
+        data = self.run_key('-L --out raw')
+
+        expect = [
             "{'minions_rejected': [], 'minions_pre': [], "
             "'minions': ['minion', 'sub_minion']}"
         ]
