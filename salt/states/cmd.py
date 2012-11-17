@@ -269,6 +269,10 @@ def wait(name,
 
     shell
         The shell to use for execution, defaults to /bin/sh
+    
+    stateful
+        The command being executed is expected to return data about executing
+        a state
     '''
     return {'name': name,
             'changes': {},
@@ -291,7 +295,18 @@ def wait_script(name,
     '''
     Download a script from a remote source and execute it only if a watch
     statement calls it.
-
+    
+    source
+        The source script being downloaded to the minion, this source script is
+        hosted on the salt master server.  If the file is located on the master 
+        in the directory named spam, and is called eggs, the source string is 
+        salt://spam/eggs
+    
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
+    
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -316,6 +331,14 @@ def wait_script(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
+    
+    env
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+    
+    stateful
+        The command being executed is expected to return data about executing
+        a state
     '''
     return {'name': name,
             'changes': {},
@@ -360,6 +383,10 @@ def run(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
+    
+    env
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
 
     stateful
         The command being executed is expected to return data about executing
@@ -448,7 +475,17 @@ def script(name,
     '''
     Download a script from a remote source and execute it. The name can be the
     source or the source value can be defined.
-
+    source
+        The source script being downloaded to the minion, this source script is
+        hosted on the salt master server.  If the file is located on the master 
+        in the directory named spam, and is called eggs, the source string is 
+        salt://spam/eggs
+    
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
+    
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -473,7 +510,11 @@ def script(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
-
+    
+    env
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+    
     stateful
         The command being executed is expected to return data about executing
         a state
