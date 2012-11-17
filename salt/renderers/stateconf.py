@@ -190,6 +190,7 @@ from cStringIO import StringIO
 
 # Import salt libs
 import salt.utils
+from salt.renderers.yaml import HAS_ORDERED_DICT
 from salt.exceptions import SaltRenderError
 
 
@@ -262,7 +263,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         if ('-o', '') in opts:
             if name == 'yaml' and (sys.version_info > (2, 6) or
                                    (sys.version_info < (2, 7) and
-                                    'OrderedDict' not in sys.modules)):
+                                    HAS_ORDERED_DICT)):
                 IMPLICIT_REQUIRE = True
                 rd_argline = '-o ' + rd_argline
             else:
