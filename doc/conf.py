@@ -131,7 +131,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-    ('contents', 'salt-api.tex', 'salt-api Documentation', 'Thomas Hatch', 'manual'),
+    ('index', 'salt-api.tex', 'salt-api Documentation', 'Thomas Hatch', 'manual'),
 ]
 
 latex_logo = '_static/salt-vert.png'
@@ -145,7 +145,8 @@ authors = [
 ]
 
 man_pages = [
-    ('contents', 'salt-api', 'salt-api Documentation', authors, 1),
+    ('ref/cli/salt-api', 'salt-api', 'salt-api', authors, 1),
+    ('index', 'salt-api', 'salt-api Documentation', authors, 7),
 ]
 
 
