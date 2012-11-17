@@ -4,10 +4,13 @@ Support for GRUB
 
 # TODO: Support grub2
 
+# Import python libs
 import os
 
-from salt.utils import memoize
+# Import salt libs
+from salt.utils import fopen, memoize
 from salt.exceptions import CommandExecutionError
+
 
 def __virtual__():
     '''
@@ -18,6 +21,7 @@ def __virtual__():
         return 'grub'
     return False
 
+
 @memoize
 def _detect_conf():
     '''
@@ -27,6 +31,7 @@ def _detect_conf():
         return '/boot/grub/grub.conf'
     # Defaults for Ubuntu, Debian, Arch, and others
     return '/boot/grub/menu.lst'
+
 
 def version():
     '''
@@ -39,6 +44,7 @@ def version():
     cmd = '/sbin/grub --version'
     out = __salt__['cmd.run'](cmd)
     return out
+
 
 def conf():
     '''
@@ -54,7 +60,7 @@ def conf():
     ret = {}
     pos = 0
     try:
-        with open(_detect_conf(), 'r') as _fp:
+        with fopen(_detect_conf(), 'r') as _fp:
             for line in _fp:
                 if line.startswith('#'):
                     continue
@@ -93,6 +99,7 @@ def conf():
         ret['stanzas'].append(mydict)
     return ret
 
+
 def _parse_line(line=''):
     '''
     Used by conf() to break config lines into
@@ -102,4 +109,3 @@ def _parse_line(line=''):
     key = parts.pop(0)
     value = ' '.join(parts)
     return key, value
-

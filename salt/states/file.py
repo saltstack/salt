@@ -1172,11 +1172,11 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
 
     # check the result
@@ -1247,12 +1247,12 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
     # Perform the edit
     __salt__['file.comment'](name, regex, char, backup)
 
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
 
     # Check the result
@@ -1321,13 +1321,13 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['result'] = None
         return ret
 
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
 
     # Perform the edit
     __salt__['file.uncomment'](name, regex, char, backup)
 
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
 
     # Check the result
@@ -1408,12 +1408,12 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
                 "state file.append is loading text contents from cached source "
                 "{0}({1})".format(source, cached_source_path)
             )
-            text = open(cached_source_path, 'r').read()
+            text = salt.utils.fopen(cached_source_path, 'r').read()
 
     if isinstance(text, string_types):
         text = (text,)
 
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
 
     count = 0
@@ -1442,7 +1442,7 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
             __salt__['file.append'](name, line)
             count += 1
 
-    with open(name, 'rb') as fp_:
+    with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
 
     if slines != nlines:

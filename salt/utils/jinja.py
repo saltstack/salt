@@ -70,7 +70,7 @@ class SaltCacheLoader(BaseLoader):
             raise TemplateNotFound(template)
         self.check_cache(template)
         filepath = path.join(self.searchpath, template)
-        with open(filepath, 'rb') as f:
+        with salt.utils.fopen(filepath, 'rb') as f:
             try:
                 contents = f.read().decode(self.encoding)
             except IOError:

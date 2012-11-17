@@ -83,7 +83,7 @@ def _linux_cpudata():
     cpuinfo = '/proc/cpuinfo'
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
-        with open(cpuinfo, 'r') as _fp:
+        with salt.utils.fopen(cpuinfo, 'r') as _fp:
             for line in _fp:
                 comps = line.split(':')
                 if not len(comps) > 1:
@@ -167,7 +167,7 @@ def _memdata(osdata):
         meminfo = '/proc/meminfo'
 
         if os.path.isfile(meminfo):
-            with open(meminfo, 'r') as f:
+            with salt.utils.fopen(meminfo, 'r') as f:
                 for line in f:
                     comps = line.rstrip('\n').split(':')
                     if not len(comps) > 1:
@@ -287,7 +287,7 @@ def _virtual(osdata):
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and os.access('/proc/xen/capabilities', os.R_OK):
-                    caps = open('/proc/xen/capabilities')
+                    caps = salt.utils.fopen('/proc/xen/capabilities')
                     if 'control_d' not in caps.read():
                         # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
                         grains['virtual_subtype'] = 'Xen PV DomU'
@@ -308,7 +308,7 @@ def _virtual(osdata):
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
         if os.path.isfile('/proc/cpuinfo'):
-            if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
+            if 'QEMU Virtual CPU' in salt.utils.fopen('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         sysctl = salt.utils.which('sysctl')
@@ -482,7 +482,7 @@ def os_data():
         except ImportError:
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
-                with open('/etc/lsb-release') as f:
+                with salt.utils.fopen('/etc/lsb-release') as f:
                     for line in f:
                         # Matches any possible format:
                         #     DISTRIB_ID="Ubuntu"
@@ -519,7 +519,7 @@ def os_data():
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
         if os.path.isfile('/etc/release'):
-            with open('/etc/release', 'r') as fp_:
+            with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
                 if 'SmartOS' in rel_data:
                     grains['os'] = 'SmartOS'

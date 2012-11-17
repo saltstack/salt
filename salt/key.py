@@ -298,7 +298,7 @@ class Key(object):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
-                with open(path, 'r') as fp_:
+                with salt.utils.fopen(path, 'r') as fp_:
                     ret[status][key] = fp_.read()
         return ret
 
@@ -311,7 +311,7 @@ class Key(object):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
-                with open(path, 'r') as fp_:
+                with salt.utils.fopen(path, 'r') as fp_:
                     ret[status][key] = fp_.read()
         return ret
 

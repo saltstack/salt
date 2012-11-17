@@ -34,12 +34,13 @@ def recv(files, dest):
             return 'Destination unavailable'
 
         try:
-            open(final, 'w+').write(data)
+            salt.utils.fopen(final, 'w+').write(data)
             ret[final] = True
         except IOError:
             ret[final] = False
 
     return ret
+
 
 def _render_filenames(path, dest, env, template):
     if not template:
@@ -47,8 +48,10 @@ def _render_filenames(path, dest, env, template):
 
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.template_registry:
-        raise CommandExecutionError('Attempted to render file paths with unavailable engine '
-                  '{0}'.format(template))
+        raise CommandExecutionError(
+            'Attempted to render file paths with unavailable engine '
+            '{0}'.format(template)
+        )
 
     kwargs = {}
     kwargs['salt'] = __salt__
@@ -60,7 +63,7 @@ def _render_filenames(path, dest, env, template):
     def _render(contents):
         # write out path to temp file
         tmp_path_fn = salt.utils.mkstemp()
-        with open(tmp_path_fn, 'w+') as fp_:
+        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.template_registry[template](
             tmp_path_fn,
@@ -70,9 +73,11 @@ def _render_filenames(path, dest, env, template):
         salt.utils.safe_rm(tmp_path_fn)
         if not data['result']:
             # Failed to render the template
-            raise CommandExecutionError('Failed to render file path with error: {0}'.format(
-                data['data']
-            ))
+            raise CommandExecutionError(
+                'Failed to render file path with error: {0}'.format(
+                    data['data']
+                )
+            )
         else:
             return data['data']
 

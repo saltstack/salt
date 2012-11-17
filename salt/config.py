@@ -60,7 +60,7 @@ def _append_domain(opts):
 
 
 def _read_conf_file(path):
-    with open(path, 'r') as conf_file:
+    with salt.utils.fopen(path, 'r') as conf_file:
         conf_opts = yaml.safe_load(conf_file.read()) or {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
@@ -80,8 +80,8 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            with open(path, 'w') as out:
-                with open(template, 'r') as f:
+            with salt.utils.fopen(path, 'w') as out:
+                with salt.utils.fopen(template, 'r') as f:
                     f.readline()  # skip first line
                     out.write(f.read())
 
@@ -392,6 +392,6 @@ def client_config(path):
     if 'token_file' in opts:
         opts['token_file'] = os.path.expanduser(opts['token_file'])
     if os.path.isfile(opts['token_file']):
-        with open(opts['token_file']) as fp_:
+        with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
     return opts

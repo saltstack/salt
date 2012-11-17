@@ -15,6 +15,7 @@ import traceback
 import salt.utils
 import salt.exceptions
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -128,7 +129,7 @@ def py(sfn, string=False, **kwargs):
             return {'result': True,
                     'data': data}
         tgt = salt.utils.mkstemp()
-        with open(tgt, 'w+') as target:
+        with salt.utils.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
                 'data': tgt}

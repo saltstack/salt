@@ -80,7 +80,7 @@ def _write_cron_lines(user, lines):
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
     path = salt.utils.mkstemp()
-    with open(path, 'w+') as fp_:
+    with salt.utils.fopen(path, 'w+') as fp_:
         fp_.writelines(lines)
     if __grains__['os'] == 'Solaris' and user != "root":
         __salt__['cmd.run']('chown {0} {1}'.format(user, path))
