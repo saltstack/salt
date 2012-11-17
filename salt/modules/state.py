@@ -102,7 +102,7 @@ def template(tem):
 
 def template_str(tem):
     '''
-    Execute the information stored in a template file on the minion
+    Execute the information stored in a string from an sls template
 
     CLI Example::
 
