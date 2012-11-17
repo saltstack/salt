@@ -159,7 +159,7 @@ def get_file_str(path, env='base'):
         salt '*' cp.get_file_str salt://my/file
     '''
     fn_ = cache_file(path, env)
-    with open(fn_, 'r') as fp_:
+    with salt.utils.fopen(fn_, 'r') as fp_:
         data = fp_.read()
     return data
 
