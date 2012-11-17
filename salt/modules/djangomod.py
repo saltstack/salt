@@ -5,7 +5,7 @@ Manage Django sites
 import os
 
 def __virtual__():
-    return 'django'
+    return 'djangomod'
 
 def _get_django_admin(bin_env):
     '''
