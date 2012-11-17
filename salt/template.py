@@ -54,10 +54,9 @@ def compile_template(template, renderers, default, env='', sls=''):
 
     input_data = StringIO(input_data)
     for render, argline in render_pipe:
+        render_kwargs = dict(renderers=renderers, slspath=template)
         if argline:
-            render_kwargs = dict(renderers=renderers, argline=argline)
-        else:
-            render_kwargs = dict(renderers=renderers)
+            render_kwargs['argline'] = argline
         ret = render(input_data, env, sls, **render_kwargs)
         if ret is None:
             # The file is empty or is being written elsewhere
