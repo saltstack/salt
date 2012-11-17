@@ -261,9 +261,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         name, rd_argline = (args[0] + ' ').split(' ', 1)
         render_data = renderers[name]  # eg, the yaml renderer
         if ('-o', '') in opts:
-            if name == 'yaml' and (sys.version_info > (2, 6) or
-                                   (sys.version_info < (2, 7) and
-                                    HAS_ORDERED_DICT)):
+            if name == 'yaml':
                 IMPLICIT_REQUIRE = True
                 rd_argline = '-o ' + rd_argline
             else:
