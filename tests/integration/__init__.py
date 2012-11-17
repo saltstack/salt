@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import tempfile
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 try:
     import pwd
 except ImportError:
@@ -328,19 +328,24 @@ class TestDaemon(object):
             shutil.rmtree(TMP)
 
     def wait_for_jid(self, targets, jid, timeout=120):
-        while timeout > 0:
+        now = datetime.now()
+        expire = now + timedelta(seconds=timeout)
+        while now <= expire:
             running = self.__client_job_running(targets, jid)
             sys.stdout.write('\r' + ' ' * PNUM + '\r')
             if not running:
+                print
                 return True
             sys.stdout.write(
                 '    * [Quit in {0}] Waiting for {1}'.format(
-                    timedelta(seconds=timeout), ', '.join(running)
+                    '{0}'.format(expire - now).rsplit('.', 1)[0],
+                    ', '.join(running)
                 )
             )
             sys.stdout.flush()
             timeout -= 1
             time.sleep(1)
+            now = datetime.now()
         else:
             sys.stdout.write('\n    * ERROR: Failed to get information back\n')
             sys.stdout.flush()
