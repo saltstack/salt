@@ -36,36 +36,6 @@ def _list_removed(old, new):
     return pkgs
 
 
-def _parse_pkg_meta(path):
-    '''
-    Retrieve package name and version number from package metadata
-    '''
-    name = ''
-    version = ''
-    rel = ''
-    result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
-    if result['retcode'] == 0:
-        for line in result['stdout'].splitlines():
-            if not name:
-                m = re.match('^Name\s*:\s*(\S+)', line)
-                if m:
-                    name = m.group(1)
-                    continue
-            if not version:
-                m = re.match('^Version\s*:\s*(\S+)', line)
-                if m:
-                    version = m.group(1)
-                    continue
-            if not rel:
-                m = re.match('^Release\s*:\s*(\S+)', line)
-                if m:
-                    version = m.group(1)
-                    continue
-    if rel:
-        version += '-{0}'.format(rel)
-    return name, version
-
-
 def _available_versions():
     '''
     The available versions of packages
@@ -206,95 +176,17 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     if refresh is True or refresh == 'True':
         refresh_db()
 
-    if pkgs and sources:
-        log.error('Only one of "pkgs" and "sources" can be used.')
-        return {}
-    elif pkgs:
-        if name:
-            log.warning('"name" parameter will be ignored in favor of "pkgs"')
-        pkgs = __salt__['config.pack_pkgs'](pkgs)
-        if not pkgs:
-            return pkgs
-        pkg_param = ' '.join(pkgs)
-    elif sources:
-        if name:
-            log.warning('"name" parameter will be ignored in favor of '
-                        '"sources"')
-        sources = __salt__['config.pack_sources'](sources)
-        if not sources:
-            return sources
-
-        srcinfo = []
-        for pkg_name,pkg_src in sources.iteritems():
-            if __salt__['config.valid_fileproto'](pkg_src):
-                # Cached RPM from master
-                srcinfo.append((pkg_name,
-                                pkg_src,
-                               __salt__['cp.cache_file'](pkg_src),
-                               'remote'))
-            else:
-                # RPM file local to the minion
-                srcinfo.append((pkg_name,pkg_src,pkg_src,'local'))
-
-        # Check metadata to make sure the name passed matches the source
-        problems = []
-        for pkg_name,pkg_uri,pkg_path,pkg_type in srcinfo:
-            pkgmeta_name,pkgmeta_version = _parse_pkg_meta(pkg_path)
-            if not pkgmeta_name:
-                if pkg_type == 'remote':
-                    problems.append('Failed to cache {0}. Are you sure this '
-                                    'path is correct?'.format(pkg_uri))
-                elif pkg_type == 'local':
-                    if not os.path.isfile(pkg_path):
-                        problems.append('Package file {0} not found. Are '
-                                        'you sure this path is '
-                                        'correct?'.format(pkg_path))
-                    else:
-                        problems.append('Unable to parse package metadata for '
-                                        '{0}'.format(pkg_path))
-            elif pkg_name != pkgmeta_name:
-                problems.append('Package file {0} (Name: {1}) does not '
-                                'match the specified package name '
-                                '({2})'.format(pkg_uri,pkgmeta_name,pkg_name))
-
-        # If any problems are found in the caching or metadata parsing done in
-        # the above for loop, log each problem and then return an empty dict.
-        # Do not proceed to attempt package installation.
-        if problems:
-            for problem in problems: log.error(problem)
-            return {}
-
-        # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
-        # the path (3rd element of tuple).
-        pkg_param = ' '.join([x[2] for x in srcinfo])
-
-    elif name:
-        pkg_param = name
-    else:
-        log.error('No package sources passed.')
+    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                 pkgs,
+                                                                 sources)
+    if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-
-    pkgs = {}
-    if pkg_param is not None:
-        old = list_pkgs()
-        cmd = 'zypper -n install -l {0}'.format(pkg_param)
-        __salt__['cmd.retcode'](cmd)
-        new = list_pkgs()
-        for npkg in new:
-            if npkg in old:
-                if old[npkg] == new[npkg]:
-                    # no change in the package
-                    continue
-                else:
-                    # the package was here before and the version has changed
-                    pkgs[npkg] = {'old': old[npkg],
-                                  'new': new[npkg]}
-            else:
-                # the package is freshly installed
-                pkgs[npkg] = {'old': '',
-                              'new': new[npkg]}
-    return pkgs
+    cmd = 'zypper -n install -l {0}'.format(' '.join(pkg_params))
+    old = list_pkgs()
+    __salt__['cmd.retcode'](cmd)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def upgrade():
