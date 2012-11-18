@@ -3,6 +3,7 @@ import os
 import shutil
 
 # Import salt libs
+import salt.utils
 import integration
 
 
