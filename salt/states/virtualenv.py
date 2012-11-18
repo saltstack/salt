@@ -56,7 +56,7 @@ def managed(name,
     # Bail out early if the specified requirements file can't be found
     if requirements:
         orig_path = requirements
-        requirements = __salt__['cp.cache_file'](requirements)
+        requirements = __salt__['cp.cache_file'](requirements, __env__)
 
         if not requirements:
             ret.update({
