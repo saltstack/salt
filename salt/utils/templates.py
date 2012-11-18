@@ -15,6 +15,9 @@ import traceback
 import salt.utils
 import salt.exceptions
 
+import jinja2
+from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ sls_encoder = codecs.getencoder(sls_encoding)
 
 def wrap_tmpl_func(render_str):
     def render_tmpl(tmplsrc, from_str=False, to_str=False,
-                    context=None, **kws):
+                    context=None, tmplpath=None, **kws):
         if context is None:
             context = {}
         context.update(kws)
@@ -47,7 +50,7 @@ def wrap_tmpl_func(render_str):
             tmplstr = tmplsrc.read()
             tmplsrc.close()
         try:
-            output = render_str(tmplstr, context)
+            output = render_str(tmplstr, context, tmplpath)
         except SaltTemplateRenderError, exc:
             return dict(result=False, data=str(exc))
         except Exception:
@@ -66,40 +69,54 @@ def wrap_tmpl_func(render_str):
     return render_tmpl
 
 
-def render_jinja_tmpl(tmplstr, context):
-    from jinja2 import Environment, StrictUndefined
-    from jinja2.exceptions import TemplateSyntaxError
-    from salt.utils.jinja import SaltCacheLoader
-
+def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     opts = context['opts']
-    loader = SaltCacheLoader(opts, context['env'])
-    if opts.get('allow_undefined', False):
-        env = Environment(loader=loader)
+    env = context['env']
+    loader = None
+    if not env:
+        if tmplpath:
+            # ie, the template is from a file outside the state tree
+            loader = jinja2.FileSystemLoader(context, os.path.dirname(tmplpath))
     else:
-        env = Environment(loader=loader, undefined=StrictUndefined)
+        loader = JinjaSaltCacheLoader(opts, context['env'])
+    if opts.get('allow_undefined', False):
+        jinja_env = jinja2.Environment(loader=loader)
+    else:
+        jinja_env = jinja2.Environment(
+                        loader=loader, undefined=jinja2.StrictUndefined)
     try:
-        return env.from_string(tmplstr).render(**context)
-    except TemplateSyntaxError, exc:
+        return jinja_env.from_string(tmplstr).render(**context)
+    except jinja2.exceptions.TemplateSyntaxError, exc:
         raise SaltTemplateRenderError(str(exc))
 
 
-def render_mako_tmpl(tmplstr, context):
+def render_mako_tmpl(tmplstr, context, tmplpath=None):
     import mako.exceptions
     from mako.template import Template
     from salt.utils.mako import SaltMakoTemplateLookup
+
+    env = context['env']
+    lookup = None
+    if not env:
+        if tmplpath:
+            # ie, the template is from a file outside the state tree
+            from mako.lookup import TemplateLookup
+            lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
+    else:
+        lookup = SaltMakoTemplateLookup(context['opts'], context['env'])
     try:
         return Template(
             tmplstr,
             strict_undefined=True,
             uri=context['sls'].replace('.', '/') if 'sls' in context else None,
-            lookup=SaltMakoTemplateLookup(context['opts'], context['env'])
+            lookup=lookup
         ).render(**context)
     except:
         raise SaltTemplateRenderError(
                     mako.exceptions.text_error_template().render())
 
 
-def render_wempy_tmpl(tmplstr, context):
+def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     from wemplate.wemplate import TemplateParser as Template
     return Template(tmplstr).render(**context)
 
