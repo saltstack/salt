@@ -61,8 +61,22 @@ def _parse_pkg_meta(path):
         return name,version
 
     def parse_deb(path):
-        # Need to add support for this once apt gets some multi-source love
-        pass
+        name = ''
+        version = ''
+        result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
+        if result['retcode'] == 0:
+            for line in result['stdout'].splitlines():
+                if not name:
+                    m = re.match('^\s*Package\s*:\s*(\S+)',line)
+                    if m:
+                        name = m.group(1)
+                        continue
+                if not version:
+                    m = re.match('^\s*Version\s*:\s*(\S+)',line)
+                    if m:
+                        version = m.group(1)
+                        continue
+        return name,version
 
     if __grains__['os_family'] in ('Suse','RedHat','Mandriva'):
         metaparser = parse_rpm
