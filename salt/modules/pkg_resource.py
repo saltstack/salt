@@ -1,5 +1,5 @@
 '''
-Description goes here
+Resources needed by pkg providers
 '''
 
 import logging
@@ -143,7 +143,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
     elif sources:
         if name:
             log.warning('"name" parameter will be ignored in favor of '
-                        '"sources"')
+                        '"sources".')
         sources = _pack_sources(sources)
         if not sources:
             return None,None
@@ -175,11 +175,11 @@ def parse_targets(name=None, pkgs=None, sources=None):
                                         'correct?'.format(pkg_path))
                     else:
                         problems.append('Unable to parse package metadata for '
-                                        '{0}'.format(pkg_path))
+                                        '{0}.'.format(pkg_path))
             elif pkg_name != pkgmeta_name:
                 problems.append('Package file {0} (Name: {1}) does not '
                                 'match the specified package name '
-                                '({2})'.format(pkg_uri,pkgmeta_name,pkg_name))
+                                '({2}).'.format(pkg_uri,pkgmeta_name,pkg_name))
 
         # If any problems are found in the caching or metadata parsing done in
         # the above for loop, log each problem and then return an empty dict.
