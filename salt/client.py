@@ -447,18 +447,23 @@ class LocalClient(object):
 
     def get_iter_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for
-        a specified jid, it returns all of the information for the jid
+        Watch the event system and return job data as it comes in
         '''
+        if not isinstance(minions, set):
+            if isinstance(minions, basestring):
+                minions = set([minions])
+            elif isinstance(minions, (list, tuple)):
+                minions = set(list(minions))
+
         if timeout is None:
             timeout = self.opts['timeout']
+        inc_timeout = timeout
         jid_dir = salt.utils.jid_dir(
                 jid,
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        start = 999999999999
-        gstart = int(time.time())
+        start = int(time.time())
         found = set()
         wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
@@ -466,41 +471,41 @@ class LocalClient(object):
             yield {}
         # Wait for the hosts to check in
         while True:
-            for fn_ in os.listdir(jid_dir):
-                ret = {}
-                if fn_.startswith('.'):
+            raw = self.event.get_event(timeout, jid)
+            if not raw is None:
+                if 'syndic' in raw:
+                    minions.update(raw['syndic'])
                     continue
-                if fn_ not in found:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    outp = os.path.join(jid_dir, fn_, 'out.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
-                            ret[fn_] = {'ret': ret_data}
-                            if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
-                        except Exception:
-                            pass
-                    found.add(fn_)
-                    yield ret
-            if ret and start == 999999999999:
-                start = int(time.time())
+                found.add(raw['id'])
+                ret = {raw['id']: {'ret': raw['return']}}
+                if 'out' in raw:
+                    ret[raw['id']]['out'] = raw['out']
+                yield ret
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
+                continue
+            # Then event system timeout was reached and nothing was returned
+            if len(found.intersection(minions)) >= len(minions):
+                # All minions have returned, break out of the loop
+                break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(found.intersection(minions)) >= len(minions):
-                break
             if int(time.time()) > start + timeout:
+                # The timeout has been reached, check the jid to see if the
+                # timeout needs to be increased
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
+                more_time = False
+                for id_ in jinfo:
+                    if jinfo[id_]:
+                        more_time = True
+                if more_time:
+                    timeout += inc_timeout
+                    continue
                 break
-            if int(time.time()) > gstart + timeout and not ret:
-                # No minions have replied within the specified global timeout,
-                # return an empty dict
-                break
-            yield None
-            time.sleep(0.02)
+            time.sleep(0.01)
 
     def get_returns(self, jid, minions, timeout=None):
         '''
