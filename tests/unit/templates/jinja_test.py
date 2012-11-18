@@ -1,9 +1,14 @@
+# Import python libs
 import os
 import tempfile
+
+# Import 3rd party libs
 from jinja2 import Environment
+
+# Import salt libs
+import salt.utils
 from salt.utils.jinja import SaltCacheLoader
 from salt.utils.templates import render_jinja_tmpl
-
 from saltunittest import TestCase
 
 TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -111,7 +116,7 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
-        with open(fn_) as fp_:
+        with salt.utils.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts=self.local_opts, env='other'))
@@ -124,7 +129,7 @@ class TestGetTemplate(TestCase):
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
-                open(filename).read(),
+                salt.utils.fopen(filename).read(),
                 dict(opts=self.local_opts, env='other'))
         self.assertEqual(out, 'Hey world !a b !')
 
@@ -141,7 +146,7 @@ class TestGetTemplate(TestCase):
         SaltCacheLoader.file_client = lambda loader: fc
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
-                open(filename).read(),
+                salt.utils.fopen(filename).read(),
                 dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
                      a='Hi', b='Salt', env='test'))
         self.assertEqual(out, 'Hey world !Hi Salt !')

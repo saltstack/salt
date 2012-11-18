@@ -14,9 +14,9 @@ import yaml
 import pipes
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
+import salt.utils
 import integration
-from integration import TestDaemon
+from saltunittest import TestLoader, TextTestRunner
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -42,7 +42,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 'files', 'file', 'base', 'testfile'
             )
         )
-        testfile_contents = open(testfile, 'r').read()
+        testfile_contents = salt.utils.fopen(testfile, 'r').read()
 
         for idx, minion in enumerate(minions):
             ret = self.run_salt(
@@ -107,6 +107,6 @@ if __name__ == "__main__":
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(CopyTest)
     print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
+    with integration.TestDaemon():
         runner = TextTestRunner(verbosity=1).run(tests)
         sys.exit(runner.wasSuccessful())

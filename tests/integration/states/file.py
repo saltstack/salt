@@ -8,6 +8,7 @@ import shutil
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class FileTest(integration.ModuleCase):
@@ -40,7 +41,7 @@ class FileTest(integration.ModuleCase):
         file.absent
         '''
         name = os.path.join(integration.TMP, 'file_to_kill')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
         result = self.state_result(ret)
@@ -79,7 +80,7 @@ class FileTest(integration.ModuleCase):
         file.absent test interface
         '''
         name = os.path.join(integration.TMP, 'file_to_kill')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
         result = self.state_result(ret)
@@ -98,9 +99,9 @@ class FileTest(integration.ModuleCase):
         src = os.path.join(
             integration.FILES, 'file', 'base', 'grail', 'scene33'
         )
-        with open(src, 'r') as fp_:
+        with salt.utils.fopen(src, 'r') as fp_:
             master_data = fp_.read()
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             minion_data = fp_.read()
         self.assertEqual(master_data, minion_data)
         result = self.state_result(ret)
@@ -173,7 +174,9 @@ class FileTest(integration.ModuleCase):
             template='jinja', defaults={'spam': _ts})
         result = self.state_result(ret)
         self.assertTrue(result)
-        self.assertIn(_ts, open(os.path.join(name, 'scene33'), 'r').read())
+        self.assertIn(
+            _ts, salt.utils.fopen(os.path.join(name, 'scene33'), 'r').read()
+        )
         shutil.rmtree(name, ignore_errors=True)
 
     def test_recurse_clean(self):
@@ -183,9 +186,9 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'recurse_clean_dir')
         os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
-        open(strayfile, 'w').close()
+        salt.utils.fopen(strayfile, 'w').close()
         # Corner cases: replacing file with a directory and vice versa
-        open(os.path.join(name, '36'), 'w').close()
+        salt.utils.fopen(os.path.join(name, '36'), 'w').close()
         os.makedirs(os.path.join(name, 'scene33'))
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail', clean=True)
@@ -201,12 +204,12 @@ class FileTest(integration.ModuleCase):
         file.sed
         '''
         name = os.path.join(integration.TMP, 'sed_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('change_me')
         ret = self.run_state(
             'file.sed', name=name, before='change', after='salt'
         )
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertIn('salt', fp_.read())
         result = self.state_result(ret)
         self.assertTrue(result)
@@ -217,12 +220,12 @@ class FileTest(integration.ModuleCase):
         file.sed test integration
         '''
         name = os.path.join(integration.TMP, 'sed_test_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('change_me')
         ret = self.run_state(
             'file.sed', test=True, name=name, before='change', after='salt'
         )
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertIn('change', fp_.read())
         result = self.state_result(ret)
         self.assertIsNone(result)
@@ -234,12 +237,12 @@ class FileTest(integration.ModuleCase):
         '''
         name = os.path.join(integration.TMP, 'comment_test')
         # write a line to file
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('comment_me')
         # comment once
         _ret = self.run_state('file.comment', name=name, regex='^comment')
         # line is commented
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertTrue(fp_.read().startswith('#comment'))
         # result is positive
         ret = list(_ret.values())[0]
@@ -247,7 +250,7 @@ class FileTest(integration.ModuleCase):
         # comment twice
         _ret = self.run_state('file.comment', name=name, regex='^comment')
         # line is still commented
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertTrue(fp_.read().startswith('#comment'))
         # result is still positive
         ret = list(_ret.values())[0]
@@ -259,12 +262,12 @@ class FileTest(integration.ModuleCase):
         file.comment test interface
         '''
         name = os.path.join(integration.TMP, 'comment_test_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('comment_me')
         ret = self.run_state(
             'file.comment', test=True, name=name, regex='.*comment.*',
         )
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertNotIn('#comment', fp_.read())
         result = self.state_result(ret)
         self.assertIsNone(result)
@@ -275,10 +278,10 @@ class FileTest(integration.ModuleCase):
         file.uncomment
         '''
         name = os.path.join(integration.TMP, 'uncomment_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('#comment_me')
         ret = self.run_state('file.uncomment', name=name, regex='^comment')
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertNotIn('#comment', fp_.read())
         result = self.state_result(ret)
         self.assertTrue(result)
@@ -289,12 +292,12 @@ class FileTest(integration.ModuleCase):
         file.comment test interface
         '''
         name = os.path.join(integration.TMP, 'uncomment_test_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('#comment_me')
         ret = self.run_state(
             'file.uncomment', test=True, name=name, regex='^comment.*'
         )
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertIn('#comment', fp_.read())
         result = self.state_result(ret)
         self.assertIsNone(result)
@@ -305,10 +308,10 @@ class FileTest(integration.ModuleCase):
         file.append
         '''
         name = os.path.join(integration.TMP, 'append_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('#salty!')
         ret = self.run_state('file.append', name=name, text='cheese')
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertIn('cheese', fp_.read())
         result = self.state_result(ret)
         self.assertTrue(result)
@@ -319,10 +322,10 @@ class FileTest(integration.ModuleCase):
         file.append test interface
         '''
         name = os.path.join(integration.TMP, 'append_test_test')
-        with open(name, 'w+') as fp_:
+        with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('#salty!')
         ret = self.run_state('file.append', test=True, name=name, text='cheese')
-        with open(name, 'r') as fp_:
+        with salt.utils.fopen(name, 'r') as fp_:
             self.assertNotIn('cheese', fp_.read())
         result = self.state_result(ret)
         self.assertIsNone(result)
@@ -429,7 +432,7 @@ class FileTest(integration.ModuleCase):
             for change in ret.values():
                 self.assertTrue(isinstance(change, dict))
                 self.assertTrue(change['result'])
-            contents = open(tmp_file_append, 'r').read()
+            contents = salt.utils.fopen(tmp_file_append, 'r').read()
 
             # It should not append text again
             ret = self.run_function(
@@ -439,7 +442,9 @@ class FileTest(integration.ModuleCase):
                 self.assertTrue(isinstance(change, dict))
                 self.assertTrue(change['result'])
 
-            self.assertEqual(contents, open(tmp_file_append, 'r').read())
+            self.assertEqual(
+                contents, salt.utils.fopen(tmp_file_append, 'r').read()
+            )
 
         except AssertionError:
             shutil.copy(tmp_file_append, tmp_file_append + '.bak')
@@ -452,7 +457,7 @@ class FileTest(integration.ModuleCase):
         if not self.run_function('cmd.has_exec', ['patch']):
             self.skipTest('patch is not installed')
         src_file = os.path.join(integration.TMP, 'src.txt')
-        with open(src_file, 'w+') as fp:
+        with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write(src)
         ret = self.run_state('file.patch',
             name=src_file,
@@ -464,7 +469,7 @@ class FileTest(integration.ModuleCase):
     def test_patch(self):
         src_file, ret = self.do_patch()
         self.assert_success(ret)
-        with open(src_file) as fp:
+        with salt.utils.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_patch_hash_mismatch(self):
@@ -484,7 +489,7 @@ class FileTest(integration.ModuleCase):
         # Get a path to the temporary file
         tmp_file = os.path.join(integration.TMP, 'issue-2041-comment.txt')
         # Write some data to it
-        open(tmp_file, 'w').write('hello\nworld\n')
+        salt.utils.fopen(tmp_file, 'w').write('hello\nworld\n')
         # create the sls template
         template_lines = [
             "{0}:".format(tmp_file),
@@ -529,7 +534,7 @@ class FileTest(integration.ModuleCase):
         # Get a path to the temporary file
         tmp_file = os.path.join(integration.TMP, 'issue-2379-file-append.txt')
         # Write some data to it
-        open(tmp_file, 'w').write(
+        salt.utils.fopen(tmp_file, 'w').write(
             'hello\nworld\n' +          # Some junk
             '#PermitRootLogin yes\n' +  # Commented text
             '# PermitRootLogin yes\n'   # Commented text with space

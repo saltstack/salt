@@ -1,11 +1,14 @@
+# Import python libs
 import os
 import sys
 import shutil
 import tempfile
 import stat
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
+# Import salt libs
+import salt.utils
 import salt.utils.find
+from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 
 class TestFind(TestCase):
@@ -276,7 +279,7 @@ class TestGrepOption(TestCase):
 
     def test_grep_option_match_regular_file(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        fd = open(hello_file, 'w')
+        fd = salt.utils.fopen(hello_file, 'w')
         fd.write("foo")
         fd.close()
         option = salt.utils.find.GrepOption('grep', 'foo')
@@ -336,7 +339,7 @@ class TestPrintOption(TestCase):
 
     def test_print_option_execute(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        fd = open(hello_file, 'w')
+        fd = salt.utils.fopen(hello_file, 'w')
         fd.write("foo")
         fd.close()
 
@@ -526,7 +529,7 @@ class TestFinder(TestCase):
 
     def test_find(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        fd = open(hello_file, 'w')
+        fd = salt.utils.fopen(hello_file, 'w')
         fd.write("foo")
         fd.close()
 

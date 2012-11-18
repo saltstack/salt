@@ -6,8 +6,9 @@ import shutil
 import sys
 
 # Import salt libs
-from saltunittest import skipIf
+import salt.utils
 import integration
+from saltunittest import skipIf
 
 
 class FileModuleTest(integration.ModuleCase):
@@ -16,7 +17,7 @@ class FileModuleTest(integration.ModuleCase):
     '''
     def setUp(self):
         self.myfile = os.path.join(integration.TMP, 'myfile')
-        with open(self.myfile, 'w+') as fp:
+        with salt.utils.fopen(self.myfile, 'w+') as fp:
             fp.write("Hello\n")
         self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
@@ -41,7 +42,6 @@ class FileModuleTest(integration.ModuleCase):
         fstat = os.stat(self.myfile)
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
-
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_user(self):
@@ -79,7 +79,6 @@ class FileModuleTest(integration.ModuleCase):
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, os.getgid())
 
-
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chgrp(self):
         if sys.platform == 'darwin':
@@ -104,18 +103,18 @@ class FileModuleTest(integration.ModuleCase):
         src_patch = os.path.join(
             integration.FILES, 'file', 'base', 'hello.patch')
         src_file = os.path.join(integration.TMP, 'src.txt')
-        with open(src_file, 'w+') as fp:
+        with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write("Hello\n")
 
         # dry-run should not modify src_file
         ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
         assert ret['retcode'] == 0, repr(ret)
-        with open(src_file) as fp:
+        with salt.utils.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello\n')
 
         ret = self.minion_run('file.patch', src_file, src_patch)
         assert ret['retcode'] == 0, repr(ret)
-        with open(src_file) as fp:
+        with salt.utils.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_remove_file(self):

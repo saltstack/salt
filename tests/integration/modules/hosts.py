@@ -1,10 +1,12 @@
 '''
 Test the hosts module
 '''
+# Import python libs
 import os
 import shutil
 
 # Import Salt libs
+import salt.utils
 import integration
 
 HFN = os.path.join(integration.TMP, 'hosts')
@@ -143,7 +145,7 @@ class HostsModuleTest(integration.ModuleCase):
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
-        f = open(HFN, 'w')
+        f = salt.utils.fopen(HFN, 'w')
         f.close()
 
         assert self.run_function(
@@ -166,7 +168,7 @@ class HostsModuleTest(integration.ModuleCase):
         )
 
         # now read the lines and ensure they're formatted correctly
-        lines = open(HFN, 'r').readlines()
+        lines = salt.utils.fopen(HFN, 'r').readlines()
         self.assertEqual(lines, [
             "192.168.1.3\t\thost3.fqdn.com\n",
             "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\thost2-reorder\n",

@@ -14,6 +14,7 @@ import sys
 
 # Import Salt libs
 import salt.client
+import salt.utils
 
 # Import third party libs
 import yaml
@@ -43,7 +44,7 @@ class OverState(object):
                     )
             if not os.path.isfile(fn_):
                 continue
-            with open(fn_) as fp_:
+            with salt.utils.fopen(fn_) as fp_:
                 try:
                     # TODO Use render system
                     return self.__sort_stages(yaml.load(fp_))
