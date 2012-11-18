@@ -113,31 +113,59 @@ def refresh_db():
 def install(name=None, refresh=False, repo='', skip_verify=False,
             debconf=None, pkgs=None, sources=None, **kwargs):
     '''
-    Install the passed package
+    Install the passed package, add refresh=True to update the dpkg database.
 
-    pkg
-        The name of the package to be installed
-    refresh : False
-        Update apt before continuing
-    repo : (default)
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if either "pkgs" or "sources" is passed. Additionally, please
+        note that this option can only be used to install packages from a
+        software repository. To install a package file manually, use the
+        "sources" option.
+
+        CLI Example::
+            salt '*' pkg.install <package name>
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+    repo
         Specify a package repository to install from
         (e.g., ``apt-get -t unstable install somepackage``)
-    skip_verify : False
-        Skip the GPG verification check (e.g., ``--allow-unauthenticated``)
-    debconf : None
+
+    skip_verify
+        Skip the GPG verification check (e.g., ``--allow-unauthenticated``, or
+        ``--force-bad-verify`` for install from package file).
+
+    debconf
         Provide the path to a debconf answers file, processed before
         installation.
-    version : None
-        Install a specific version of the package, e.g. 1.0.9~ubuntu
 
-    Return a dict containing the new package names and versions::
+    version
+        Install a specific version of the package, e.g. 1.0.9~ubuntu. Ignored
+        if "pkgs" or "sources" is passed.
+
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of RPM sources to use for installing the package(s) defined in
+        pkgs. Must be passed as a list of dicts.
+
+        CLI Example::
+            salt '*' pkg.install sources='[{"foo": "salt://foo.pkg.tar.xz"},{"bar": "salt://bar.pkg.tar.xz"}]'
+
+
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                'new': '<new-version>']}
-
-    CLI Example::
-
-        salt '*' pkg.install <package name>
+                       'new': '<new-version>']}
     '''
     # Note that this function will daemonize the subprocess
     # preventing a restart resulting from a salt-minion upgrade
