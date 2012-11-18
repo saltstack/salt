@@ -13,15 +13,15 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 
-def render(template, env='', sls='', **kws):
+def render(template, env='', sls='', tmplpath=None, **kws):
     '''
     Render the python module's components
 
     :rtype: string
     '''
-    template = kws['slspath']
+    template = tmplpath
     if not os.path.isfile(template):
-        return {}
+        raise SaltRenderError('Template {0} is not a file!'.format(template))
 
     tmp_data = salt.utils.templates.py(
             template,
