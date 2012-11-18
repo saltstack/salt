@@ -7,7 +7,8 @@ import salt.utils.templates
 
 
 
-def render(template_file, env='', sls='', argline='', context=None, **kws):
+def render(template_file, env='', sls='', argline='',
+                          context=None, tmplpath=None, **kws):
     '''
     Render the template_file, passing the functions and grains into the
     Jinja rendering system.
@@ -26,7 +27,8 @@ def render(template_file, env='', sls='', argline='', context=None, **kws):
                     pillar=__pillar__,
                     env=env,
                     sls=sls,
-                    context=context)
+                    context=context,
+                    tmplpath=tmplpath)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in jinja renderer'))
