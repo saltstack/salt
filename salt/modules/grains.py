@@ -20,14 +20,20 @@ def _serial_sanitizer(instr):
     index = int(floor(length * .75))
     return "{0}{1}".format(instr[:index], 'X' * (length - index))
 
+_fqdn_sanitizer = lambda x: 'MINION.DOMAINNAME'
+_hostname_sanitizer = lambda x: 'MINION'
+_domainname_sanitizer = lambda x: 'DOMAINNAME'
+
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _sanitizers = {
     'serialnumber': _serial_sanitizer,
-    'domain': lambda x: 'domain',
-    'fqdn': lambda x: 'minion.domain',
-    'host': lambda x: 'minion',
-    'id': lambda x: 'minion.domain',
+    'domain': _domainname_sanitizer,
+    'fqdn': _fqdn_sanitizer,
+    'id': _fqdn_sanitizer,
+    'host': _hostname_sanitizer,
+    'localhost': _hostname_sanitizer,
+    'nodename': _hostname_sanitizer,
 }
 
 
