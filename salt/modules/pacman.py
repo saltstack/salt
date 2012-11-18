@@ -196,7 +196,9 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
             cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
 
     old = list_pkgs()
-    __salt__['cmd.retcode'](cmd)
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    if stderr:
+        log.error(stderr)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old,new)
 
