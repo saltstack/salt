@@ -3,6 +3,7 @@ Return config information
 '''
 
 import logging
+import os
 import re
 from pprint import pformat
 from types import StringTypes
@@ -106,50 +107,4 @@ def dot_vals(value):
     for key, val in __opts__.items():
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
-    return ret
-
-
-def pack_pkgs(sources):
-    '''
-    Accepts list (or a string representing a list) and returns back either the
-    list passed, or the list represenation of the string passed.
-
-    Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
-    '''
-    if type(sources) in StringTypes:
-        try:
-            # Safely eval the string data into a list
-            sources = eval(sources,{'__builtins__': None},{})
-        except Exception as e:
-            log.error(e)
-            return []
-    if not isinstance(sources,list) \
-    or [x for x in sources if type(x) not in StringTypes]:
-        log.error('Invalid input: {0}'.format(pformat(source)))
-        return []
-    return sources
-
-
-def pack_sources(sources):
-    '''
-    Accepts list of dicts (or a string representing a list of dicts) and packs
-    the key/value pairs into a single dict.
-
-    Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
-    become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
-    '''
-    if type(sources) in StringTypes:
-        try:
-            # Safely eval the string data into a list of dicts
-            sources = eval(sources,{'__builtins__': None},{})
-        except Exception as e:
-            log.error(e)
-            return {}
-    ret = {}
-    for source in sources:
-        if (not isinstance(source,dict)) or len(source) != 1:
-            log.error('Invalid input: {0}'.format(pformat(sources)))
-            return {}
-        else:
-            ret.update(source)
     return ret
