@@ -20,7 +20,7 @@ def __virtual__():
     if __grains__.get('os_family', '') != 'Suse':
         return False
     # Not all versions of Suse use zypper, check that it is available
-    if salt.utils.which('zypper'):
+    if not salt.utils.which('zypper'):
         return False
     return 'pkg'
 
@@ -160,69 +160,125 @@ def refresh_db():
     return ret
 
 
-def install(name, refresh=False, source=None, **kwargs):
+def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     '''
-    Install the passed package, add refresh=True to run 'zypper refresh' before
-    package is installed.
+    Install the passed package(s), add refresh=True to run 'zypper refresh'
+    before package is installed.
 
     name
-        The name of the package to be installed.
+        The name of the package to be installed. Note that this parameter is
+        ignored if either "pkgs" or "sources" is passed. Additionally, please
+        note that this option can only be used to install packages from a
+        software repository. To install a package file manually, use the
+        "sources" option.
+
+        CLI Example::
+            salt '*' pkg.install <package name>
 
     refresh
         Whether or not to refresh the package database before installing.
-        Defaults to False.
 
-    source
-        An RPM package to install.
 
-    Return a dict containing the new package names and versions::
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of RPM sources to use for installing the package(s) defined in
+        pkgs. Must be passed as a list of dicts.
+
+        CLI Example::
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+
+
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>']}
 
-    CLI Example::
-
-        salt '*' pkg.install <package name>
     '''
-    if source is not None:
-        if __salt__['config.valid_fileproto'](source):
-            # Cached RPM from master
-            pkg_file = __salt__['cp.cache_file'](source)
-            pkg_type = 'remote'
-        else:
-            # RPM file local to the minion
-            pkg_file = source
-            pkg_type = 'local'
-        pname,pversion = _parse_pkg_meta(pkg_file)
-        if not pname:
-            zypper_param = None
-            if pkg_type == 'remote':
-                log.error('Failed to cache {0}. Are you sure this path is '
-                          'correct?'.format(source))
-            elif pkg_type == 'local':
-                if not os.path.isfile(source):
-                    log.error('RPM resource {0} not found. Are you sure this '
-                              'path is correct?'.format(source))
-                else:
-                    log.error('Unable to parse RPM metadata for '
-                              '{0}.'.format(source))
-        elif name == pname:
-            zypper_param = pkg_file
-        else:
-            log.error('Package file {0} (Name: {1}) does not match the '
-                      'specified package name ({2})'.format(source,
-                                                            pname,
-                                                            name))
-            zypper_param = None
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
+        refresh_db()
+
+    if pkgs and sources:
+        log.error('Only one of "pkgs" and "sources" can be used.')
+        return {}
+    elif pkgs:
+        if name:
+            log.warning('"name" parameter will be ignored in favor of "pkgs"')
+        pkgs = __salt__['config.pack_pkgs'](pkgs)
+        if not pkgs:
+            return pkgs
+        pkg_param = ' '.join(pkgs)
+    elif sources:
+        if name:
+            log.warning('"name" parameter will be ignored in favor of '
+                        '"sources"')
+        sources = __salt__['config.pack_sources'](sources)
+        if not sources:
+            return sources
+
+        srcinfo = []
+        for pkg_name,pkg_src in sources.iteritems():
+            if __salt__['config.valid_fileproto'](pkg_src):
+                # Cached RPM from master
+                srcinfo.append((pkg_name,
+                                pkg_src,
+                               __salt__['cp.cache_file'](pkg_src),
+                               'remote'))
+            else:
+                # RPM file local to the minion
+                srcinfo.append((pkg_name,pkg_src,pkg_src,'local'))
+
+        # Check metadata to make sure the name passed matches the source
+        problems = []
+        for pkg_name,pkg_uri,pkg_path,pkg_type in srcinfo:
+            pkgmeta_name,pkgmeta_version = _parse_pkg_meta(pkg_path)
+            if not pkgmeta_name:
+                if pkg_type == 'remote':
+                    problems.append('Failed to cache {0}. Are you sure this '
+                                    'path is correct?'.format(pkg_uri))
+                elif pkg_type == 'local':
+                    if not os.path.isfile(pkg_path):
+                        problems.append('Package file {0} not found. Are '
+                                        'you sure this path is '
+                                        'correct?'.format(pkg_path))
+                    else:
+                        problems.append('Unable to parse package metadata for '
+                                        '{0}'.format(pkg_path))
+            elif pkg_name != pkgmeta_name:
+                problems.append('Package file {0} (Name: {1}) does not '
+                                'match the specified package name '
+                                '({2})'.format(pkg_uri,pkgmeta_name,pkg_name))
+
+        # If any problems are found in the caching or metadata parsing done in
+        # the above for loop, log each problem and then return an empty dict.
+        # Do not proceed to attempt package installation.
+        if problems:
+            for problem in problems: log.error(problem)
+            return {}
+
+        # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
+        # the path (3rd element of tuple).
+        pkg_param = ' '.join([x[2] for x in srcinfo])
+
+    elif name:
+        pkg_param = name
     else:
-        zypper_param = name
+        log.error('No package sources passed.')
+        return {}
+
 
     pkgs = {}
-    if zypper_param is not None:
+    if pkg_param is not None:
         old = list_pkgs()
-        if refresh:
-            refresh_db()
-        cmd = 'zypper -n install -l {0}'.format(zypper_param)
+        cmd = 'zypper -n install -l {0}'.format(pkg_param)
         __salt__['cmd.retcode'](cmd)
         new = list_pkgs()
         for npkg in new:
