@@ -45,9 +45,18 @@ def compile_template(template, renderers, default, env='', sls=''):
     # Get the list of render funcs in the render pipe line.
     render_pipe = template_shebang(template, renderers, default)
 
-    with codecs.open(template, encoding=sls_encoding) as f:
-        # data input to the first render function in the pipe
-        input_data = f.read()
+    with open(template, 'r') as fp_:
+        if template.find("-gpg")>-1 or template.find("-asc")>-1:
+            import gnupg
+            gpg = gnupg.GPG()
+            res = gpg.decrypt_file(fp_)
+            if not res.ok:
+                err = 'GPG Decryption Error '+res.stderr
+                log.critical(err)
+                return False
+            fp_ = StringIO(str(res))
+
+        input_data=codecs.getreader(encoding=sls_encoding)(fp_).read()
         if not input_data.strip():
             # Template is nothing but whitespace
             return {}
