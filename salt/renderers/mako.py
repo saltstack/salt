@@ -4,7 +4,7 @@ from StringIO import StringIO
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
-def render(template_file, env='', sls='', context=None, **kws):
+def render(template_file, env='', sls='', context=None, tmplpath=None, **kws):
     '''
     Render the template_file, passing the functions and grains into the
     Mako rendering system.
@@ -18,7 +18,8 @@ def render(template_file, env='', sls='', context=None, **kws):
                     pillar=__pillar__,
                     env=env,
                     sls=sls,
-                    context=context)
+                    context=context,
+                    tmplpath=tmplpath)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))
