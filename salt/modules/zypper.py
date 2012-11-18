@@ -170,7 +170,6 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>']}
-
     '''
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
