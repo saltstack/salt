@@ -285,7 +285,7 @@ def render(template_file, env='', sls='', argline='', **kws):
 
         tmplout = render_template(
                 StringIO(data), env, sls, context=ctx,
-                argline=rt_argline.strip()
+                argline=rt_argline.strip(), **kws
         )
         high = render_data(tmplout, env, sls, argline=rd_argline.strip())
 
