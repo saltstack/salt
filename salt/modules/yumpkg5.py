@@ -94,9 +94,9 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
+    out = _parse_yum('list installed {0}'.format(name))
+    if out:
+        return out[0].version
     else:
         return ''
 
