@@ -12,9 +12,9 @@ def over(env='base', os_fn=None):
     over a group of systems
     '''
     overstate = salt.overstate.OverState(__opts__, env, os_fn)
-    over_run = overstate.stages()
-    salt.output.display_output(over_run, 'pprint', opts=__opts__)
-    return over_run
+    overstate.stages()
+    salt.output.display_output(overstate.over_run, 'pprint', opts=__opts__)
+    return overstate.over_run
 
 def show_stages(env='base', os_fn=None):
     '''
