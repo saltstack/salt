@@ -13,6 +13,7 @@ from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import salt libs
+import salt.utils.event
 import saltcloud.utils
 
 # Get logging started
@@ -172,6 +173,12 @@ def destroy(name):
     ret = conn.destroy_node(node)
     if ret:
         log.info('Destroyed VM: {0}'.format(name))
+        # Fire destroy action
+        event = salt.utils.event.SaltEvent(
+            'master',
+            __opts__['sock_dir']
+            )
+        event.fire_event('{0} has been destroyed'.format(name), 'salt-cloud')
         return True
     else:
         log.error('Failed to Destroy VM: {0}'.format(name))
