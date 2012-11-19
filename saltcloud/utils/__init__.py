@@ -145,10 +145,10 @@ def minion_conf_string(opts, vm_):
     minion.update(vm_.get('map_minion', {}))
     optsgrains = opts.get('map_grains', {})
     if optsgrains:
-        minion['grains'].update(optsgrains)
+        minion.setdefault('grains', {}).update(optsgrains)
     vmgrains = vm_.get('map_grains', {})
     if vmgrains:
-        minion['grains'].update(vmgrains)
+        minion.setdefault('grains', {}).update(vmgrains)
     return yaml.safe_dump(minion, default_flow_style=False)
 
 
