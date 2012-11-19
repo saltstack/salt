@@ -32,15 +32,17 @@ try:
 except:
     PNUM = 70
 
-if sys.version_info > (2, 6):
+if sys.version_info >= (2, 7):
     REGULAR_SUBPROCESS = True
     import subprocess
+    print('Using regular subprocess')
 else:
     # Don't do import py27_subprocess as subprocess so within the remaining of
     # salt's source, whenever subprocess is imported, the proper one is used,
     # even in under python 2.6
     REGULAR_SUBPROCESS = False
     import py27_subprocess
+    print('Using copied 2.7 subprocess')
 
 
 INTEGRATION_TEST_DIR = os.path.dirname(
