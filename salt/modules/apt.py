@@ -4,9 +4,12 @@ Support for APT (Advanced Packaging Tool)
 # Import python libs
 import os
 import re
+import logging
 
 # Import Salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 __outputter__ = {
     'upgrade_available': 'txt',
@@ -71,7 +74,8 @@ def version(name):
         salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs(name)
-    # check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit machine is ':i386')
+    # check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit
+    # machine is ':i386')
     if name.find(':') >= 0:
         name = name.split(':')[0]
     if name in pkgs:
@@ -178,9 +182,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False,
     if debconf:
         __salt__['debconf.set_file'](debconf)
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                 pkgs,
-                                                                 sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -206,11 +210,11 @@ def install(name=None, refresh=False, repo='', skip_verify=False,
         )
 
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(pkg):
@@ -322,27 +326,38 @@ def list_pkgs(regex_string=''):
         salt '*' pkg.list_pkgs httpd
     '''
     ret = {}
-    cmd = 'dpkg-query --showformat=\'${{Status}} ${{Package}} ${{Version}}\n\' -W {0}'.format(regex_string)
+    cmd = (
+        'dpkg-query --showformat=\'${{Status}} ${{Package}} ${{Version}}\n\' '
+        '-W {0}'.format(
+            regex_string
+        )
+    )
 
     out = __salt__['cmd.run_stdout'](cmd)
 
     for line in out.splitlines():
         cols = line.split()
-        if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and 'installed' in cols[2]:
+        if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and \
+                                                        'installed' in cols[2]:
             ret[cols[3]] = cols[4]
 
     # If ret is empty at this point, check to see if the package is virtual.
     # We also need aptitude past this point.
     if not ret and __salt__['cmd.has_exec']('aptitude'):
-        cmd = ('aptitude search "?name(^{0}$) ?virtual ?reverse-provides(?installed)"'
-                .format(regex_string))
+        cmd = (
+            'aptitude search "?name(^{0}$) ?virtual '
+            '?reverse-provides(?installed)"'.format(
+                regex_string
+            )
+        )
 
         out = __salt__['cmd.run_stdout'](cmd)
         if out:
-            ret[regex_string] = '1' # Setting all 'installed' virtual package
-                                    # versions to '1'
+            ret[regex_string] = '1'  # Setting all 'installed' virtual package
+                                     # versions to '1'
 
     return ret
+
 
 def _get_upgradable():
     '''
@@ -358,10 +373,10 @@ def _get_upgradable():
     # rexp parses lines that look like the following:
     ## Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
     rexp = re.compile('(?m)^Conf '
-                      '([^ ]+) ' # Package name
-                      '\(([^ ]+) ' # Version
-                      '([^ ]+)' # Release
-                      '(?: \[([^\]]+)\])?\)$') # Arch
+                      '([^ ]+) '                # Package name
+                      '\(([^ ]+) '              # Version
+                      '([^ ]+)'                 # Release
+                      '(?: \[([^\]]+)\])?\)$')  # Arch
     keys = ['name', 'version', 'release', 'arch']
     _get = lambda l, k: l[keys.index(k)]
 
@@ -375,6 +390,7 @@ def _get_upgradable():
 
     return r
 
+
 def list_upgrades():
     '''
     List all available package upgrades.
@@ -385,6 +401,7 @@ def list_upgrades():
     '''
     r = _get_upgradable()
     return r
+
 
 def upgrade_available(name):
     '''
