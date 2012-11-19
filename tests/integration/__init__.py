@@ -33,15 +33,13 @@ except:
     PNUM = 70
 
 if sys.version_info >= (2, 7):
-    REGULAR_SUBPROCESS = True
-    import subprocess
+    from subprocess import PIPE, Popen
     print('Using regular subprocess')
 else:
     # Don't do import py27_subprocess as subprocess so within the remaining of
     # salt's source, whenever subprocess is imported, the proper one is used,
     # even in under python 2.6
-    REGULAR_SUBPROCESS = False
-    import py27_subprocess
+    from py27_subprocess import PIPE, Popen
     print('Using copied 2.7 subprocess')
 
 
@@ -575,19 +573,16 @@ class ShellCase(TestCase):
 
         popen_kwargs = {
             'shell': True,
-            'stdout': subprocess.PIPE
+            'stdout': PIPE
         }
 
         if catch_stderr:
-            popen_kwargs['stderr'] = subprocess.PIPE
+            popen_kwargs['stderr'] = PIPE
 
         if not sys.platform.lower().startswith('win'):
             popen_kwargs['close_fds'] = True
 
-        if REGULAR_SUBPROCESS:
-            process = subprocess.Popen(cmd, **popen_kwargs)
-        else:
-            process = py27_subprocess.Popen(cmd, **popen_kwargs)
+        process = Popen(cmd, **popen_kwargs)
 
         if catch_stderr:
             out, err = process.communicate()
