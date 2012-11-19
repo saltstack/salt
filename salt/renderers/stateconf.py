@@ -70,9 +70,22 @@ salt files easier and cleaner, therefore, additionally, it also:
     files.
 
     For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
-    will be turned into ``some.file::sls_params``.
+    will be turned into ``some.file::sls_params``. Example::
 
-    Moreover, the leading dot trick can be used with extending state ids as well,
+        .vim:
+          package.installed
+
+    Above will be translated into::
+
+        some.file::vim:
+          package.installed:
+            - name: vim
+    
+    Notice how that if a state under a dot-prefixed state id has no 'name'
+    argument then one will be added automatically by using the state id with
+    the leading dot stripped off.
+
+    The leading dot trick can be used with extending state ids as well,
     so you can include relatively and extend relatively. For example, when
     extending a state in `salt://some/other_file.sls`, eg,::
 
@@ -294,6 +307,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         # wrong during the preprocessing.
         data = copy.deepcopy(high)
         try:
+            rewrite_single_shorthand_state_decl(data)
             rewrite_sls_includes_excludes(data, sls)
 
             if not extract and IMPLICIT_REQUIRE:
@@ -370,6 +384,22 @@ def has_names_decls(data):
             continue
         for _ in nvlist(args, ['names']):
             return sid
+
+def rewrite_single_shorthand_state_decl(data):
+    '''
+    Rewrite all state declarations that look like this::
+
+      state_id_decl:
+        state.func
+
+    into::
+
+      state_id_decl:
+        state.func: []
+    '''
+    for sid, states in data.items():
+        if isinstance(states, basestring):
+            data[sid] = {states: []}
 
 
 def _parent_sls(sls):
@@ -477,6 +507,14 @@ def rename_state_ids(data, sls, is_extend=False):
                     'Can\'t rename state id({0}) into {1} because the later '
                     'already exists!'.format(sid, newsid)
                 )
+            # add a '- name: sid' to those states without '- name'.
+            for args in data[sid].itervalues():
+                for arg in args:
+                    if isinstance(arg, dict) and iter(arg).next() == 'name':
+                        break
+                else: # then no '- name: ...' is defined in the state args
+                    # add the sid without the leading dot as the name.
+                    args.insert(0, dict(name=sid[1:]))
             data[newsid] = data[sid]
             del data[sid]
 
