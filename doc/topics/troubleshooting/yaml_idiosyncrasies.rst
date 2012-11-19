@@ -16,7 +16,11 @@ Spaces vs Tabs
 
 `YAML uses spaces`_, period. Do not use tabs in your SLS files! If strange
 errors are coming up in rendering SLS files, make sure to check that
-no tabs have crept in! In vi / vim, you can check with ``:se spell``.
+no tabs have crept in! In Vim, after enabling search highlighting
+with: ``:set hlsearch``,  you can check with the following key sequence in
+normal mode(you can hit `ESC` twice to be sure): ``/``, `Ctrl-v`, `Tab`, then
+hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
+``:set tabstop=2 expandtab`` and then ``:retab``.
 
 .. _`YAML uses spaces`: http://yaml.org/spec/1.1/#id871998
 
@@ -149,14 +153,33 @@ ALSO DOES NOT WORK:
 
     fred:
       user.present
-      ssh.present:
+      ssh_auth.present:
         - name: AAAAB3NzaC...
-        - enc: dsa
+        - user: fred
+        - enc: ssh-dss
+        - require:
+          - user: fred
 
-So, to make these work they would need to be defined the "old way", or with
-multiple "full decs"
+The correct way is to define them like this:
 
-WORKS:
+.. code-block:: yaml
+
+    vim:
+      pkg.installed: []
+      user.present: []
+
+    fred:
+      user.present: []
+      ssh_auth.present:
+        - name: AAAAB3NzaC...
+        - user: fred
+        - enc: ssh-dss
+        - require:
+          - user: fred
+
+
+Alternatively,  they can be defined the "old way",  or with multiple
+"full decs":
 
 .. code-block:: yaml
 
@@ -169,9 +192,13 @@ WORKS:
     fred:
       user:
         - present
-      ssh.present:
+      ssh_auth:
+        - present
         - name: AAAAB3NzaC...
-        - enc: dsa
+        - user: fred
+        - enc: ssh-dss
+        - require:
+          - user: fred
 
 YAML support only plain ASCII
 =============================
@@ -206,6 +233,7 @@ Python can also be used to discover the Unicode number for a character:
 
 This shell command can find wrong characters in your SLS files:
 
-.. code-block: shell
+.. code-block:: bash
+
     find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
 

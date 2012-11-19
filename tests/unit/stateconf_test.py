@@ -67,6 +67,40 @@ test:
                          'echo sls_dir=path/to')
 
 
+    def test_states_declared_with_shorthand_no_args(self):
+        result = render_sls('''
+test:
+  cmd.run:
+    - name: echo testing
+    - cwd: /
+test1:
+  pkg.installed
+test2:
+  user.present
+'''     )
+        self.assertTrue(len(result), 3)
+        for args in (result['test1']['pkg.installed'],
+                     result['test2']['user.present']  ):
+            self.assertTrue(isinstance(args, list))
+            self.assertEqual(len(args), 0)
+        self.assertEqual(result['test']['cmd.run'][0]['name'], 'echo testing')
+
+
+    def test_adding_state_name_arg_for_dot_state_id(self):
+        result = render_sls('''
+.test:
+  pkg.installed:
+    - cwd: /
+.test2:
+  pkg.installed:
+    - name: vim
+''', sls='test')
+        self.assertEqual(
+                result['test::test']['pkg.installed'][0]['name'], 'test')
+        self.assertEqual(
+                result['test::test2']['pkg.installed'][0]['name'], 'vim')
+
+
     def test_state_prefix(self):
         result = render_sls('''
 .test:
@@ -153,7 +187,9 @@ extend:
 ''', sls='test.goalstate', argline='yaml . jinja')
         self.assertTrue(len(result), len('ABCDE')+1)
 
-        reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
+        reqs = result['test.goalstate::goal']['stateconf.set'][1]['require']
+        # note: arg 0 is the name arg.
+
         self.assertEqual(set([i.itervalues().next() for i in reqs]),
                          set('ABCDE'))
 
@@ -207,7 +243,9 @@ G:
         self.assertEqual(G_req[2]['cmd'], 'F')
 
         goal_args = result['test::goal']['stateconf.set']
-        self.assertEqual(len(goal_args), 1)
+        # Note: arg 0 is the auto-added name arg.
+
+        self.assertEqual(len(goal_args), 2)
         self.assertEqual(
-                [i.itervalues().next() for i in goal_args[0]['require']],
+                [i.itervalues().next() for i in goal_args[1]['require']],
                 list('ABCDEFG'))
