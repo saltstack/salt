@@ -24,19 +24,26 @@ class OverState(object):
     '''
     Manage sls file calls over multiple systems
     '''
-    def __init__(self, opts, env='base'):
+    def __init__(self, opts, env='base', overstate=None):
         self.opts = opts
         self.env = env
-        self.over = self.__read_over()
+        self.over = self.__read_over(overstate)
         self.local = salt.client.LocalClient(self.opts)
         self.over_run = {}
 
-    def __read_over(self):
+    def __read_over(self, overstate):
         '''
         Read in the overstate file
         '''
         if self.env not in self.opts['file_roots']:
             return {}
+        if overstate:
+            with salt.utils.fopen(overstate) as fp_:
+                try:
+                    # TODO Use render system
+                    return self.__sort_stages(yaml.load(fp_))
+                except Exception:
+                    return {}
         for root in self.opts['file_roots'][self.env]:
             fn_ = os.path.join(
                     root,
