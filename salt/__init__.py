@@ -10,6 +10,7 @@ import logging
 # Import salt libs, the try block bypasses an issue at build time so that
 # modules don't cause the build to fail
 from salt.version import __version__
+from salt.utils.migrations import migrate_paths
 
 try:
     from salt.utils import parsers
@@ -29,6 +30,7 @@ class Master(parsers.MasterOptionParser):
         Run the sequence to start a salt master server
         '''
         self.parse_args()
+        migrate_paths()
 
         try:
             if self.config['verify_env']:
