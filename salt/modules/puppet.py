@@ -8,7 +8,7 @@ __outputter__ = {
     'run':  'txt',
     'noop': 'txt',
     'fact': 'txt',
-    'facts':None,
+    'facts': None,
 }
 
 def _check_puppet():
@@ -117,3 +117,55 @@ def fact(name):
     if not ret:
         return ''
     return ret
+
+def run_masterless(manifest, modulepath=None, vardir='/var/lib/puppet', confdir='/etc/puppet', tags=None):
+    '''
+    Execute a puppet run without a master server and return a dict
+    with the stderr, stdout, return code etc. The first unnamed
+    argument is the manifest to use for the run. The second is the
+    path to the directory holding modules to be used in the run.
+
+    Tags must be provided as a keyword argument.
+
+    CLI Examples::
+
+        salt '*' puppet.run_masterless /a/b/manifests/site.pp modulepath=/a/b/modules
+
+        salt '*' puppet.run_masterless /a/b/manifests/site.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
+    '''
+    _check_puppet()
+
+    cmd = 'puppet apply --modulepath={0} --vardir={1} --confdir={2} {3}'.format(modulepath,
+                                                                                vardir,
+                                                                                confdir,
+                                                                                manifest)
+    if tags:
+        cmd = '{0} --tags "{1}"'.format(cmd, tags)
+
+    return __salt__['cmd.run_all'](cmd)
+
+def noop_masterless(manifest, modulepath=None, vardir='/var/lib/puppet', confdir='/etc/puppet', tags=None):
+    '''
+    Execute a puppet noop run without a master server and return a dict
+    with the stderr, stdout, return code etc. The first unnamed
+    argument is the manifest to use for the run. The second is the
+    path to the directory holding modules to be used in the run.
+
+    Tags must be provided as a keyword argument.
+
+    CLI Examples::
+
+        salt '*' puppet.noop_masterless /a/b/manifests/site.pp modulepath=/a/b/modules
+
+        salt '*' puppet.noop_masterless /a/b/manifests/site.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
+    '''
+    _check_puppet()
+
+    cmd = 'puppet apply --noop --modulepath={0} --vardir={1} --confdir={2} {3}'.format(modulepath,
+                                                                                vardir,
+                                                                                confdir,
+                                                                                manifest)
+    if tags:
+        cmd = '{0} --tags "{1}"'.format(cmd, tags)
+
+    return __salt__['cmd.run_all'](cmd)
