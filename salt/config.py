@@ -216,6 +216,8 @@ def minion_config(path, check_dns=True):
             'retry_dns': 30,
             }
 
+    salt.utils.migrations.migrate_paths(opts)
+
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
@@ -376,6 +378,7 @@ def master_config(path):
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    salt.utils.migrations.migrate_paths(opts)
     return opts
 
 
