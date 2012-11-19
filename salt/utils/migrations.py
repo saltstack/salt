@@ -4,7 +4,7 @@ Migration tools
 # import
 import os.path
 
-def paths(master_or_minion = 'minion'):
+def migrate_paths(master_or_minion = 'minion'):
     '''
     Migrate old minion and master file paths to new ones.
     '''
