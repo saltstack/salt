@@ -13,7 +13,13 @@ def over(env='base', os_fn=None):
     '''
     overstate = salt.overstate.OverState(__opts__, env, os_fn)
     for stage in overstate.stages_iter():
-        salt.output.display_output(stage, 'pprint', opts=__opts__)
+        if isinstance(stage, dict):
+            # This is highstate data
+            for key, val in stage.items():
+                salt.output.display_output({key: val}, 'highstate', opts=__opts__)
+        elif isinstance(stage, list):
+            # This is a stage
+            salt.output.display_output(stage, 'pprint', opts=__opts__)
     return overstate.over_run
 
 def show_stages(env='base', os_fn=None):
