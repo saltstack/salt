@@ -36,8 +36,6 @@ class OverState(object):
         '''
         Read in the overstate file
         '''
-        if self.env not in self.opts['file_roots']:
-            return {}
         if overstate:
             with salt.utils.fopen(overstate) as fp_:
                 try:
@@ -45,6 +43,8 @@ class OverState(object):
                     return self.__sort_stages(yaml.load(fp_))
                 except Exception:
                     return {}
+        if self.env not in self.opts['file_roots']:
+            return {}
         for root in self.opts['file_roots'][self.env]:
             fn_ = os.path.join(
                     root,
@@ -131,6 +131,7 @@ class OverState(object):
                 expr_form='list'):
             ret.update(minion)
         self.over_run[name] = ret
+        return ret
 
     def stages(self):
         '''
@@ -142,3 +143,15 @@ class OverState(object):
             stage = comp[name]
             if not name in self.over_run:
                 self.call_stage(name, stage)
+
+    def stages_iter(self):
+        '''
+        Return an iterator that yields the state call data as it is processed
+        '''
+        self.over_run = {}
+        for comp in self.over:
+            name = comp.keys()[0]
+            stage = comp[name]
+            if not name in self.over_run:
+                yield comp
+                yield self.call_stage(name, stage)
