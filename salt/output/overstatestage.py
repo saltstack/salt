@@ -21,9 +21,12 @@ def output(data):
     ostr = ''
     for comp in data:
         for name, stage in comp.items():
-            ostr += '{0}{1}:{2}\n'.format(colors['LIGHT_BLUE'], name, colors['ENDC'])
+            ostr += '{0}{1}: {2}\n'.format(
+                    colors['LIGHT_BLUE'],
+                    name,
+                    colors['ENDC'])
             for key in sorted(stage):
-                ostr += '    {0}{1}:{2}{3}\n'.format(
+                ostr += '    {0}{1}: {2}{3}\n'.format(
                         colors['LIGHT_BLUE'],
                         key,
                         stage[key],
