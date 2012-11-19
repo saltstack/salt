@@ -74,7 +74,7 @@ class OverState(object):
         Return a list of ids cleared for a given stage
         '''
         if isinstance(match, list):
-            match = ' and '.join(match)
+            match = ' or '.join(match)
         raw = self.local.cmd(match, 'test.ping', expr_form='compound')
         return raw.keys()
 
@@ -129,7 +129,7 @@ class OverState(object):
                 fun,
                 arg,
                 expr_form='list'):
-            ret.update(minion)
+            ret.update({minion.keys()[0]: minion[minion.keys()[0]]['ret']})
         self.over_run[name] = ret
         return ret
 
@@ -153,5 +153,5 @@ class OverState(object):
             name = comp.keys()[0]
             stage = comp[name]
             if not name in self.over_run:
-                yield comp
+                yield [comp]
                 yield self.call_stage(name, stage)
