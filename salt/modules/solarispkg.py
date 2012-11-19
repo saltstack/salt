@@ -29,43 +29,42 @@ def _list_removed(old, new):
     return pkgs
 
 
-def _compare_versions(old, new):
+def _write_adminfile(kwargs):
     '''
-    Returns a dict that that displays old and new versions for a package after
-    install/upgrade of package.
+    Create a temporary adminfile based on the keyword arguments passed to
+    pkg.install.
     '''
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    # Set the adminfile default variables
+    email = kwargs.get('email', '')
+    instance = kwargs.get('instance', 'quit')
+    partial = kwargs.get('partial', 'nocheck')
+    runlevel = kwargs.get('runlevel', 'nocheck')
+    idepend = kwargs.get('idepend', 'nocheck')
+    rdepend = kwargs.get('rdepend', 'nocheck')
+    space = kwargs.get('space', 'nocheck')
+    setuid = kwargs.get('setuid', 'nocheck')
+    conflict = kwargs.get('conflict', 'nocheck')
+    action = kwargs.get('action', 'nocheck')
+    basedir = kwargs.get('basedir', 'default')
 
+    # Make tempfile to hold the adminfile contents.
+    fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
-def _get_pkgs():
-    '''
-    Get a full list of the package installed on the machine
-    '''
-    pkg = {}
-    cmd = '/usr/bin/pkginfo -x'
+    # Write to file then close it.
+    os.write(fd, 'email={0}\n'.format(email))
+    os.write(fd, 'email={instance={0}\n'.format(instance))
+    os.write(fd, 'email={partial={0}\n'.format(partial))
+    os.write(fd, 'email={runlevel={0}\n'.format(runlevel))
+    os.write(fd, 'email={idepend={0}\n'.format(idepend))
+    os.write(fd, 'email={rdepend={0}\n'.format(rdepend))
+    os.write(fd, 'email={space={0}\n'.format(space))
+    os.write(fd, 'email={setuid={0}\n'.format(setuid))
+    os.write(fd, 'email={conflict={0}\n'.format(conflict))
+    os.write(fd, 'email={action={0}\n'.format(action))
+    os.write(fd, 'email={basedir={0}\n'.format(basedir))
+    os.close(fd)
 
-    line_count = 0
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        if line_count % 2 == 0:
-            namever = line.split()[0].strip()
-        if line_count % 2 == 1:
-            pkg[namever] = line.split()[1].strip()
-        line_count = line_count + 1
-    return pkg
+    return adminfile
 
 
 def list_pkgs():
@@ -78,7 +77,17 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    return _get_pkgs()
+    pkg = {}
+    cmd = '/usr/bin/pkginfo -x'
+
+    line_count = 0
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if line_count % 2 == 0:
+            namever = line.split()[0].strip()
+        if line_count % 2 == 1:
+            pkg[namever] = line.split()[1].strip()
+        line_count = line_count + 1
+    return pkg
 
 
 def version(name):
@@ -109,7 +118,7 @@ def available_version(name):
     return version(name)
 
 
-def install(name, refresh=False, **kwargs):
+def install(name=None, refresh=False, sources=None **kwargs):
     '''
     Install the passed package. Can install packages from the following
     sources::
@@ -122,23 +131,23 @@ def install(name, refresh=False, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>']}
 
     CLI Example, installing a datastream pkg that already exists on the
     minion::
 
-        salt '*' pkg.install <package name once installed> source=/dir/on/minion/<package filename>
-        salt '*' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg
+        salt '*' pkg.install sources='[{"<pkg name>": "/dir/on/minion/<pkg filename>"}]'
+        salt '*' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
     CLI Example, installing a datastream pkg that exists on the salt master::
 
-        salt '*' pkg.install <package name once installed> source='salt://srv/salt/pkgs/<package filename>'
-        salt '*' pkg.install SMClgcc346 source='salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg'
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://srv/salt/pkgs/<pkg filename>"}]'
+        salt '*' pkg.install sources='[{"SMClgcc346": "salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
     CLI Example, installing a datastream pkg that exists on a HTTP server::
 
-        salt '*' pkg.install <package name once installed> source='http://packages.server.com/<package filename>'
-        salt '*' pkg.install SMClgcc346 source='http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg'
+        salt '*' pkg.install sources='[{"<pkg name>": "http://packages.server.com/<pkg filename>"}]'
+        salt '*' pkg.install sources='[{"SMClgcc346": "http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
     If working with solaris zones and you want to install a package only in the
     global zone you can pass 'current_zone_only=True' to salt to have the
@@ -149,7 +158,7 @@ def install(name, refresh=False, **kwargs):
 
     CLI Example, installing a datastream package only in the global zone::
 
-        salt 'global_zone' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg current_zone_only=True
+        salt 'global_zone' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]' current_zone_only=True
 
     By default salt automatically provides an adminfile, to automate package
     installation, with these options set:
@@ -179,76 +188,50 @@ def install(name, refresh=False, **kwargs):
     CLI Example - Overriding the 'instance' adminfile option when calling the
     module directly::
 
-        salt '*' pkg.install <package name once installed> source='salt://srv/salt/pkgs/<package filename>' instance="overwrite"
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://srv/salt/pkgs/<pkg filename>"}]' instance="overwrite"
 
     CLI Example - Overriding the 'instance' adminfile option when used in a
     state::
 
         SMClgcc346:
           pkg.installed:
-            - source: salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg
+            - sources:
+              - SMClgcc346: salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg
             - instance: overwrite
+
+    Note: the ID declaration is ignored, as the package name is read from the
+    "sources" parameter.
 
     CLI Example - Providing your own adminfile when calling the module
     directly::
 
-        salt '*' pkg.install <package name once installed> source='salt://srv/salt/pkgs/<package filename>' admin_source='salt://srv/salt/pkgs/<adminfile filename>'
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://srv/salt/pkgs/<pkg filename>"}]' admin_source='salt://srv/salt/pkgs/<adminfile filename>'
 
     CLI Example - Providing your own adminfile when using states::
 
-        <package name once installed>:
+        <pkg name>:
           pkg.installed:
-            - source: salt://srv/salt/pkgs/<package filename>
+            - sources:
+              - <pkg name>: salt://srv/salt/pkgs/<pkg filename>
             - admin_source: salt://srv/salt/pkgs/<adminfile filename>
+
+    Note: the ID declaration is ignored, as the package name is read from the
+    "sources" parameter.
     '''
 
-    if not 'source' in kwargs:
-        return 'source option required with solaris pkg installs'
-    else:
-        if (kwargs['source']).startswith('salt://') \
-                or (kwargs['source']).startswith('http://') \
-                or (kwargs['source']).startswith('https://') \
-                or (kwargs['source']).startswith('ftp://'):
-            pkgname = __salt__['cp.cache_file'](kwargs['source'])
-        else:
-            pkgname = (kwargs['source'])
+    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](
+            name,kwargs.get('pkgs'),sources)
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
 
     if 'admin_source' in kwargs:
         adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
     else:
-        # Set the adminfile default variables
-        email = kwargs.get('email', '')
-        instance = kwargs.get('instance', 'quit')
-        partial = kwargs.get('partial', 'nocheck')
-        runlevel = kwargs.get('runlevel', 'nocheck')
-        idepend = kwargs.get('idepend', 'nocheck')
-        rdepend = kwargs.get('rdepend', 'nocheck')
-        space = kwargs.get('space', 'nocheck')
-        setuid = kwargs.get('setuid', 'nocheck')
-        conflict = kwargs.get('conflict', 'nocheck')
-        action = kwargs.get('action', 'nocheck')
-        basedir = kwargs.get('basedir', 'default')
-
-        # Make tempfile to hold the adminfile contents.
-        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
-
-        # Write to file then close it.
-        os.write(fd, 'email={0}\n'.format(email))
-        os.write(fd, 'email={instance={0}\n'.format(instance))
-        os.write(fd, 'email={partial={0}\n'.format(partial))
-        os.write(fd, 'email={runlevel={0}\n'.format(runlevel))
-        os.write(fd, 'email={idepend={0}\n'.format(idepend))
-        os.write(fd, 'email={rdepend={0}\n'.format(rdepend))
-        os.write(fd, 'email={space={0}\n'.format(space))
-        os.write(fd, 'email={setuid={0}\n'.format(setuid))
-        os.write(fd, 'email={conflict={0}\n'.format(conflict))
-        os.write(fd, 'email={action={0}\n'.format(action))
-        os.write(fd, 'email={basedir={0}\n'.format(basedir))
-        os.close(fd)
+        adminfile = _write_adminfile(kwargs)
 
     # Get a list of the packages before install so we can diff after to see
     # what got installed.
-    old = _get_pkgs()
+    old = list_pkgs()
 
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
@@ -256,20 +239,19 @@ def install(name, refresh=False, **kwargs):
     if kwargs.get('current_zone_only') == 'True':
         cmd += '-G '
 
-    cmd += '-d {0} \'all\''.format(pkgname)
+    cmd += '-d {0} "all"'.format(pkgname)
 
     # Install the package
-    __salt__['cmd.retcode'](cmd)
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
 
     # Get a list of the packages again, including newly installed ones.
-    new = _get_pkgs()
+    new = list_pkgs()
 
     # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
 
-    # Return a list of the new package installed.
-    return _compare_versions(old, new)
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def remove(name, **kwargs):
@@ -345,7 +327,7 @@ def remove(name, **kwargs):
         os.close(fd)
 
     # Get a list of the currently installed pkgs.
-    old = _get_pkgs()
+    old = list_pkgs()
 
     # Remove the package
     cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile, name)
@@ -356,7 +338,7 @@ def remove(name, **kwargs):
         os.unlink(adminfile)
 
     # Get a list of the packages after the uninstall
-    new = _get_pkgs()
+    new = list_pkgs()
 
     # Compare the pre and post remove package objects and report the
     # uninstalled pkgs.
