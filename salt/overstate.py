@@ -78,6 +78,25 @@ class OverState(object):
         raw = self.local.cmd(match, 'test.ping', expr_form='compound')
         return raw.keys()
 
+    def _check_result(self, running):
+        '''
+        Check the total return value of the run and determine if the running
+        dict has any issues
+        '''
+        if not isinstance(running, dict):
+            return False
+        if not running:
+            return False
+        for host in running:
+            if not 'ret' in running[host]:
+                return False
+            for tag, ret in running[host]['ret'].items():
+                if not 'result' in ret:
+                    return False
+                if ret['result'] is False:
+                    return False
+        return True
+
     def call_stage(self, name, stage):
         '''
         Check if a stage has any requisites and run them first
@@ -109,7 +128,7 @@ class OverState(object):
                 tgt,
                 fun,
                 arg,
-                expr_form='compound'):
+                expr_form='list'):
             ret.update(minion)
         self.over_run[name] = ret
 
