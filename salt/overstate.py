@@ -88,9 +88,7 @@ class OverState(object):
         if not running:
             return False
         for host in running:
-            if not 'ret' in running[host]:
-                return False
-            for tag, ret in running[host]['ret'].items():
+            for tag, ret in running[host].items():
                 if not 'result' in ret:
                     return False
                 if ret['result'] is False:
@@ -111,17 +109,40 @@ class OverState(object):
         if 'sls' in stage:
             fun = 'state.sls'
             arg = (','.join(stage['sls']), self.env)
+        req_fail = {name: {}}
         if 'require' in stage:
             for req in stage['require']:
                 if req in self.over_run:
                     if self._check_result(self.over_run[req]):
                         continue
                     else:
-                        self.over_run[name] = False
+                        tag_name = 'req_|-fail_|-fail_|-None'
+                        failure = {tag_name: {
+                                'result': False,
+                                'comment': 'Requisite {0} failed for stage'.format(req),
+                                'name': 'Requisite Failure',
+                                'changes': {},
+                                '__run_num__': 0,
+                                    }
+                                }
+                        self.over_run[name] = failure
+                        req_fail[name].update(failure)
                 elif req not in self.over:
-                    self.over_run[name] = False
+                    tag_name = 'No_|-Req_|-fail_|-None'
+                    failure = {tag_name: {
+                            'result': False,
+                            'comment': 'Requisite {0} was not found'.format(req),
+                            'name': 'Requisite Failure',
+                            'changes': {},
+                            '__run_num__': 0,
+                                }
+                            }
+                    self.over_run[name] = failure
+                    req_fail[name].update(failure)
                 else:
                     self.call_stage(self.over[req])
+        if req_fail[name]:
+            return req_fail
         ret = {}
         tgt = self._stage_list(stage['match'])
         for minion in self.local.cmd_iter(
