@@ -4,7 +4,7 @@ Salt 0.10.3 Release Notes
 
 The latest taste of Salt has come, this release has many fixes and feature
 additions. Modifications have been made to make ZeroMQ connections more
-reliable, the begining of the ACL system is in place, a new command line
+reliable, the beginning of the ACL system is in place, a new command line
 parsing system has been added, dynamic module distribution has become more
 environment aware, the new `master_finger` option and many more!
 
@@ -162,7 +162,7 @@ a non-existing file on a non-existing directory:
             makedirs: True
 
 
-The second, `source`, allows to append the contents of a file instead of 
+The second, `source`, allows one to append the contents of a file instead of
 specifying the text.
 
 .. code-block:: yaml
