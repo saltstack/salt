@@ -16,9 +16,9 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
 
     CLI Example::
 
-        salt-run '/path/to/maclist'
-        salt-run '/path/to/maclist' 255.255.255.255 7
-        salt-run '/path/to/maclist' 255.255.255.255 7
+        salt-run network.wollist '/path/to/maclist'
+        salt-run network.wollist '/path/to/maclist' 255.255.255.255 7
+        salt-run network.wollist '/path/to/maclist' 255.255.255.255 7
     '''
     ret = []
     try:
