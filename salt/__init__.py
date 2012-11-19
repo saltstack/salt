@@ -30,7 +30,7 @@ class Master(parsers.MasterOptionParser):
         Run the sequence to start a salt master server
         '''
         self.parse_args()
-        migrate_paths()
+        migrate_paths('master')
 
         try:
             if self.config['verify_env']:
