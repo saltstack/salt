@@ -75,12 +75,15 @@ class OverState(object):
         Check if a stage has any requisites and run them first
         '''
         errors = []
+        fun = 'state.highstate'
+        arg = ()
         if not 'match' in stage:
             errors.append('No "match" argument in stage.')
-        if not 'sls' in stage:
-            errors.append('No "sls" argument in stage')
         if errors:
             return errors
+        if 'sls' in stage:
+            fun = 'state.sls'
+            arg = (','.join(stage['sls']), self.env)
         if 'require' in stage:
             for req in stage['require']:
                 if req in self.over_run:
@@ -94,10 +97,9 @@ class OverState(object):
                     self.call_stage(self.over[req])
         ret = {}
         tgt = self._statge_list(stage['match'])
-        arg = (','.join(stage['sls']), self.env)
         for minion in self.local.cmd_iter(
                 tgt,
-                'state.sls',
+                fun,
                 arg,
                 expr_form='compound'):
             ret.update(minion)
