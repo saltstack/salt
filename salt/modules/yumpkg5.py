@@ -206,7 +206,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
         pkg=' '.join(pkg_params),
     )
     old = list_pkgs()
-    __salt__['cmd.retcode'](cmd)
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    if stderr:
+        log.error(stderr)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old,new)
 

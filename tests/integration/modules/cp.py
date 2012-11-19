@@ -1,6 +1,9 @@
 # Import python libs
 import os
 import hashlib
+
+# Import salt libs
+import salt.utils
 import integration
 
 
@@ -19,7 +22,7 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                     tgt,
                 ])
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -37,7 +40,7 @@ class CPModuleTest(integration.ModuleCase):
             ],
             template='jinja'
         )
-        with open(tgt, 'r') as cheese:
+        with salt.utils.fopen(tgt, 'r') as cheese:
             data = cheese.read()
             self.assertIn('Gromit', data)
             self.assertNotIn('bacon', data)
@@ -48,7 +51,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         tgt = os.path.join(integration.TMP, 'file.big')
         src = os.path.join(integration.FILES, 'file/base/file.big')
-        with open(src, 'r') as fp_:
+        with salt.utils.fopen(src, 'r') as fp_:
             hash = hashlib.md5(fp_.read()).hexdigest()
 
         self.run_function(
@@ -59,7 +62,7 @@ class CPModuleTest(integration.ModuleCase):
             ],
             gzip=5
         )
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -78,7 +81,7 @@ class CPModuleTest(integration.ModuleCase):
             ],
             makedirs=True
         )
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -95,7 +98,7 @@ class CPModuleTest(integration.ModuleCase):
                     tgt,
                     'spam=bacon',
                 ])
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('bacon', data)
             self.assertNotIn('spam', data)
@@ -145,7 +148,7 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                     tgt,
                 ])
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -159,7 +162,7 @@ class CPModuleTest(integration.ModuleCase):
                 [
                     'salt://grail/scene33',
                 ])
-        with open(ret, 'r') as scene:
+        with salt.utils.fopen(ret, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -174,7 +177,7 @@ class CPModuleTest(integration.ModuleCase):
                     ['salt://grail/scene33', 'salt://grail/36/scene'],
                 ])
         for path in ret:
-            with open(path, 'r') as scene:
+            with salt.utils.fopen(path, 'r') as scene:
                 data = scene.read()
                 self.assertIn('ARTHUR:', data)
                 self.assertNotIn('bacon', data)
@@ -194,12 +197,12 @@ class CPModuleTest(integration.ModuleCase):
         cp.cache_local_file
         '''
         src = os.path.join(integration.TMP, 'random')
-        with open(src, 'w+') as fn_:
+        with salt.utils.fopen(src, 'w+') as fn_:
             fn_.write('foo')
         ret = self.run_function(
                 'cp.cache_local_file',
                 [src])
-        with open(ret, 'r') as cp_:
+        with salt.utils.fopen(ret, 'r') as cp_:
             self.assertEqual(cp_.read(), 'foo')
 
     def test_list_states(self):
@@ -264,7 +267,7 @@ class CPModuleTest(integration.ModuleCase):
                 [
                     'salt://grail/scene33',
                 ])
-        with open(path, 'r') as fn_:
+        with salt.utils.fopen(path, 'r') as fn_:
             self.assertEqual(
                     md5_hash['hsum'],
                     hashlib.md5(fn_.read()).hexdigest()

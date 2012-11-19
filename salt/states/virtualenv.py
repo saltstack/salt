@@ -55,13 +55,14 @@ def managed(name,
 
     # Bail out early if the specified requirements file can't be found
     if requirements:
-        reqs_hash = __salt__['cp.hash_file'](requirements, __env__)
+        orig_path = requirements
+        requirements = __salt__['cp.cache_file'](requirements, __env__)
 
-        if not reqs_hash:
+        if not requirements:
             ret.update({
                 'result': False,
                 'comment': "pip requirements file '{0}' not found".format(
-                    requirements)})
+                    orig_path)})
 
             return ret
 
@@ -110,6 +111,10 @@ def managed(name,
             requirements=requirements, bin_env=name, runas=runas, cwd=cwd
         )
         ret['result'] &= _ret['retcode']==0
+        if _ret['retcode'] > 0:
+            ret['comment'] = '{0}\n{1}\n{2}'.format(ret['comment'],
+                                                    _ret['stdout'],
+                                                    _ret['stderr'])
 
         after = set(__salt__['pip.freeze'](bin_env=name))
 

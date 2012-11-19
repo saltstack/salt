@@ -1,6 +1,9 @@
 # Import python libs
 import os
 import shutil
+
+# Import salt libs
+import salt.utils
 import integration
 
 
@@ -100,7 +103,7 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-''', open(testfile, 'r').read())
+''', salt.utils.fopen(testfile, 'r').read())
 
         # Re-append switching order
         ret = self.run_function('state.sls', mods='testappend.step-2')
@@ -135,7 +138,7 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
-''', open(testfile, 'r').read())
+''', salt.utils.fopen(testfile, 'r').read())
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -215,7 +218,7 @@ fi
         try:
             self.assertMultiLineEqual(
                 contents,
-                open(testfile, 'r').read()
+                salt.utils.fopen(testfile, 'r').read()
             )
             # Make sure we don't re-append existing text
             ret = self.run_function('state.sls', mods='issue-1879.step-1')
@@ -238,7 +241,7 @@ fi
                 raise
             self.assertMultiLineEqual(
                 contents,
-                open(testfile, 'r').read()
+                salt.utils.fopen(testfile, 'r').read()
             )
         except Exception:
             if os.path.exists(testfile):
@@ -312,7 +315,7 @@ fi
             'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
         )
 
-        template = open(template_path, 'r').read()
+        template = salt.utils.fopen(template_path, 'r').read()
         try:
             ret = self.run_function('state.template_str', [template])
 
@@ -360,7 +363,7 @@ fi
             'files', 'file', 'base', 'issue-2068-template-str.sls'
         )
 
-        template = open(template_path, 'r').read()
+        template = salt.utils.fopen(template_path, 'r').read()
         try:
             ret = self.run_function('state.template_str', [template])
 
