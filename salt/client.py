@@ -28,12 +28,13 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
+# Import python libs
 import os
 import glob
 import time
 import getpass
 
-# Import salt modules
+# Import salt libs
 import salt.config
 import salt.payload
 import salt.utils
