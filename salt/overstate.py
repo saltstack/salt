@@ -11,6 +11,7 @@ the deployment of states over groups of servers.
 #
 # Import Python libs
 import sys
+import os
 
 # Import Salt libs
 import salt.client
@@ -28,7 +29,7 @@ class OverState(object):
         self.opts = opts
         self.env = env
         self.over = self.__read_over(overstate)
-        self.local = salt.client.LocalClient(self.opts)
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
         self.over_run = {}
 
     def __read_over(self, overstate):
@@ -103,7 +104,7 @@ class OverState(object):
                 else:
                     self.call_stage(self.over[req])
         ret = {}
-        tgt = self._statge_list(stage['match'])
+        tgt = self._stage_list(stage['match'])
         for minion in self.local.cmd_iter(
                 tgt,
                 fun,
