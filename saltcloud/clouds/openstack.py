@@ -219,7 +219,8 @@ def create(vm_):
         'host': ip_address,
         'script': deploy_script.script,
         'name': vm_['name'],
-        'sock_dir': __opts__['sock_dir']
+        'sock_dir': __opts__['sock_dir'],
+        'start_action': __opts__['start_action']
     }
 
     if 'ssh_username' in vm_:

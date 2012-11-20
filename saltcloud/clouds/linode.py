@@ -125,6 +125,7 @@ def create(vm_):
             password=__opts__['LINODE.password'],
             script=deploy_script.script,
             name=vm_['name'],
+            start_action=__opts__['start_action'],
             sock_dir=__opts__['sock_dir'])
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
