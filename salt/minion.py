@@ -129,10 +129,20 @@ class MasterMinion(object):
     master. What makes this class different is that the pillar is
     omitted, otherwise everything else is loaded cleanly.
     '''
-    def __init__(self, opts):
+    def __init__(
+            self,
+            opts,
+            returners=True,
+            states=True,
+            rend=True,
+            matcher=True):
         self.opts = opts
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
+        self.mk_returners = returners
+        self.mk_states = states
+        self.mk_rend = rend
+        self.mk_matcher = matcher
         self.gen_modules()
 
     def gen_modules(self):
@@ -140,10 +150,14 @@ class MasterMinion(object):
         Load all of the modules for the minion
         '''
         self.functions = salt.loader.minion_mods(self.opts)
-        self.returners = salt.loader.returners(self.opts, self.functions)
-        self.states = salt.loader.states(self.opts, self.functions)
-        self.rend = salt.loader.render(self.opts, self.functions)
-        self.matcher = Matcher(self.opts, self.functions)
+        if self.mk_returners:
+            self.returners = salt.loader.returners(self.opts, self.functions)
+        if self.mk_states:
+            self.states = salt.loader.states(self.opts, self.functions)
+        if self.mk_rend:
+            self.rend = salt.loader.render(self.opts, self.functions)
+        if self.mk_matcher:
+            self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
 
 
