@@ -19,4 +19,4 @@ def returner(ret):
     '''
     Return data to the local syslog
     '''
-    syslog.syslog(syslog.LOG_INFO, "salt-minion: %s" % json.dumps(ret))
+    syslog.syslog(syslog.LOG_INFO, 'salt-minion: {0}'.format(json.dumps(ret)))
