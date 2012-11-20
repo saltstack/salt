@@ -50,3 +50,23 @@ will execute state.sls with the named sls files.
 
 Finally the all stage will execute state.highstate on all systems only if the
 mysql and webservers stages complete without issue.
+
+Executing the Over State
+========================
+
+The over state can be executed from the salt-run command, calling the
+state.over runner function. The function will by default look in the base
+environment for the overstate.sls file:
+
+.. code-block:: bash
+
+    salt-run state.over
+
+To specify the location of the overstate file and the environment to pull from
+pass the arguments to the salt-run command:
+
+.. code-block:: bash
+
+    salt-run state.over base /root/overstate.sls
+
+Remember, that these calls are made on the master.
