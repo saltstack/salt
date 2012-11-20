@@ -30,5 +30,8 @@ def show_stages(env='base', os_fn=None):
     Display the stage data to be executed
     '''
     overstate = salt.overstate.OverState(__opts__, env, os_fn)
-    salt.output.display_output(overstate.over, 'pprint', opts=__opts__)
+    salt.output.display_output(
+            overstate.over,
+            'overstatestage',
+            opts=__opts__)
     return overstate.over
