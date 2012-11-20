@@ -10,6 +10,7 @@ def migrate_paths(opts):
     Migrate old minion and master pki file paths to new ones.
     '''
     oldpki_dir = '/etc/salt/pki'
+    newpki_dir = opts['pki_dir']
     
     if opts['default_include'].startswith('master'):
         keepers = ['master.pem',
@@ -19,22 +20,24 @@ def migrate_paths(opts):
                     'minions_pre',
                     'minions_rejected',
                     ]
-        newpki_dir = opts['pki_dir']
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
-            if os.path.exists('{0}/{1}'.format(oldpki_dir, item) and not os.path.exists('{0}/{1}'.format(newpki_dir, item)):
-                shutil.move('{0}/{1}'.format(oldpki_dir, item), '{0}/{1}'.format(newpki_dir, item))
+            if (os.path.exists(os.path.join(oldpki_dir, item)) == True and 
+                    os.path.exists(os.path.join(newpki_dir, item)) == False):
+                shutil.move('{0}/{1}'.format(oldpki_dir, item),
+                            '{0}/{1}'.format(newpki_dir, item))
                     
-    elif opts['default_include'].startswith('minion'):
+    if opts['default_include'].startswith('minion'):
         keepers = ['minion_master.pub',
                     'minion.pem',
                     'minion.pub',
                     ]
-        newpki_dir = opts['pki_dir']
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
-            if os.path.exists('{0}/{1}'.format(oldpki_dir, item) and not os.path.exists('{0}/{1}'.format(newpki_dir, item)):
-                shutil.move('{0}/{1}'.format(oldpki_dir, item), '{0}/{1}'.format(newpki_dir, item))
+            if (os.path.exists(os.path.join(oldpki_dir, item)) == True and 
+                    os.path.exists(os.path.join(newpki_dir, item)) == False):
+                shutil.move('{0}/{1}'.format(oldpki_dir, item),
+                            '{0}/{1}'.format(newpki_dir, item))
 

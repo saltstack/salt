@@ -21,6 +21,7 @@ except Exception:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.utils.migrations
 import salt.pillar
 from salt.exceptions import SaltClientError
 
@@ -216,7 +217,6 @@ def minion_config(path, check_dns=True):
             'retry_dns': 30,
             }
 
-    salt.utils.migrations.migrate_paths(opts)
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
@@ -276,6 +276,8 @@ def minion_config(path, check_dns=True):
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
                             'key_logfile', 'extension_modules'])
+    import salt.utils.migrations
+    salt.utils.migrations.migrate_paths(opts)
     return opts
 
 

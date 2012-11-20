@@ -10,7 +10,6 @@ import logging
 # Import salt libs, the try block bypasses an issue at build time so that
 # modules don't cause the build to fail
 from salt.version import __version__
-from salt.utils.migrations import migrate_paths
 
 try:
     from salt.utils import parsers
@@ -29,7 +28,6 @@ class Master(parsers.MasterOptionParser):
         '''
         Run the sequence to start a salt master server
         '''
-        migrate_paths('master')
         self.parse_args()
 
         try:
@@ -103,9 +101,7 @@ class Minion(parsers.MinionOptionParser):
         self.setup_logfile_logger()
         log = logging.getLogger(__name__)
         log.warn(
-            'Setting up the Salt Minion "{0}"'.format(
-                self.config['id']
-            )
+            'Setting up the Salt Minion "{0}"'.format( self.config['id'])
         )
 
         # Late import so logging works correctly
