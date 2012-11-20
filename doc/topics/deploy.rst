@@ -4,7 +4,7 @@ OS Support for Cloud VMS
 
 Salt cloud works primarily by executing a script on the virtual machines as
 soon as they become available. The script that is executed is referenced in
-the cloud profile as the ``os``.
+the cloud profile as the ``script``.
 
 The script should be written in bash and is a Jinja template. Deploy scripts
 need to execute a number of functions to do a complete salt setup. These
@@ -42,4 +42,31 @@ https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh
     systemctl enable salt-minion.service
     # Start the minion!
     systemctl start salt-minion.service
+
+
+Post-Deploy Commands
+====================
+
+Once a minion has been deployed, it has the option to run a salt command. Normally, this would be the state.highstate command, which would finish provisioning the VM. Another common option is state.sls, or for just testing, test.ping. This is configured in the main cloud config file:
+
+.. clode-block:: yaml
+
+    start_action: state.highstate
+
+Skipping the Deploy Script
+==========================
+
+For whatever reason, you may want to skip the deploy script altogether. This results in a VM being spun up much faster, with absolutely no configuration. This can be set from the command line:
+
+.. code-block:: bash
+
+    salt-cloud --no-deploy -p micro_aws my_instance
+
+Or it can be set from the main cloud config file:
+
+.. clode-block:: yaml
+
+    deploy: False
+
+The default for deploy is True.
 
