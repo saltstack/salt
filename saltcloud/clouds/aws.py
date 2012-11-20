@@ -215,7 +215,7 @@ def create(vm_):
             if saltcloud.utils.wait_for_passwd(host=ip_address, username=user, timeout=60, key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
-    if __opts__['deploy'] == True:
+    if __opts__['deploy'] is True:
         deploy_command='bash /tmp/deploy.sh'
         if username == 'root':
             deploy_command='/tmp/deploy.sh'

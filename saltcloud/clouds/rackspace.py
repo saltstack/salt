@@ -162,7 +162,7 @@ def create(vm_):
     if not ip_address:
         raise
 
-    if __opts__['deploy'] == True:
+    if __opts__['deploy'] is True:
         deployed = saltcloud.utils.deploy_script(
             host=ip_address,
             username='root',

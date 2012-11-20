@@ -239,7 +239,7 @@ def create(vm_):
         deployargs['sudo'] = vm_['sudo']
         log.debug('Running root commands using sudo')
 
-    if __opts__['deploy'] == True:
+    if __opts__['deploy'] is True:
         deployed = saltcloud.utils.deploy_script(**deployargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))

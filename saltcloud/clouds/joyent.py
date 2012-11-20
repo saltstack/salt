@@ -93,7 +93,7 @@ def create(vm_):
                        )
         log.error(err)
         return False
-    if __opts__['deploy'] == True:
+    if __opts__['deploy'] is True:
         if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
             cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
                    '"{3}"').format(
