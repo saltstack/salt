@@ -26,7 +26,7 @@ class UserTest(integration.ModuleCase):
 
     def test_user_if_present_with_gid(self):
         # TODO:dc fix failing test. Exception in ret
-        ret = self.run_state('user.present', name='nobody', gid="users")
+        ret = self.run_state('user.present', name='nobody', gid="nobody")
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
