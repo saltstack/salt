@@ -231,7 +231,12 @@ class LowDataAdapter(object):
         Pass lowdata to Salt to be executed
         '''
         logger.debug("SaltAPI is passing low-data: %s", lowdata)
-        return [self.api.run(chunk) for chunk in lowdata]
+
+        token = {'token': cherrypy.session.get('token')}
+
+        for chunk in lowdata:
+            chunk.update(token)
+            yield self.api.run(chunk)
 
     def GET(self):
         '''
@@ -324,7 +329,7 @@ class LowDataAdapter(object):
         :status 406: requested Content-Type not available
         '''
         return {
-            'return': self.exec_lowdata(self.fmt_lowdata(kwargs)),
+            'return': list(self.exec_lowdata(self.fmt_lowdata(kwargs))),
         }
 
 class Login(LowDataAdapter):
