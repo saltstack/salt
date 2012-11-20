@@ -19,7 +19,7 @@ def migrate_paths(opts):
                     'minions_pre',
                     'minions_rejected',
                     ]
-        newpki_dir = opts['pki_dir']:
+        newpki_dir = opts['pki_dir']
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
@@ -31,7 +31,7 @@ def migrate_paths(opts):
                     'minion.pem',
                     'minion.pub',
                     ]
-        newpki_dir = opts['pki_dir']:
+        newpki_dir = opts['pki_dir']
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
