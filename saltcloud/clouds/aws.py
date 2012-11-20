@@ -228,6 +228,7 @@ def create(vm_):
             script=deploy_script.script,
             name=vm_['name'],
             sudo=True,
+            start_action=__opts__['start_action'],
             conf_file=__opts__['conf_file'],
             sock_dir=__opts__['sock_dir'])
         if deployed:

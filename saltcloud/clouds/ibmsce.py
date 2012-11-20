@@ -138,6 +138,7 @@ def create(vm_):
             name=vm_['name'],
             provider='ibmsce',
             sudo=True,
+            start_action=__opts__['start_action'],
             sock_dir=__opts__['sock_dir'])
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
