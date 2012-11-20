@@ -75,20 +75,32 @@ def __virtual__():
         return 'rest'
     return False
 
+def salt_token_tool():
+    '''
+    If the custom authentication header is supplied, put it in the cookie dict
+    so the rest of the session-based auth works as intended
+    '''
+    x_auth = cherrypy.request.headers.get('X-Auth-Token', None)
+
+    # X-Auth-Token header trumps session cookie
+    if x_auth:
+        cherrypy.request.cookie['session_id'] = x_auth
+
 def salt_auth_tool():
     '''
-    Redirect all unauthenticated requests to the login page. Authentication is
-    determined by a session cookie or the custom X-Auth-Token header.
+    Redirect all unauthenticated requests to the login page
     '''
+    # Short-circuit for the login page
     ignore_urls = ('/login',)
 
-    # Grab the session via a cookie (for browsers) or via a custom header
-    sid = (cherrypy.session.get('token', None) or
-            cherrypy.request.headers.get('X-Auth-Token', None))
+    if cherrypy.request.path_info.startswith(ignore_urls):
+        return
 
-    if not cherrypy.request.path_info.startswith(ignore_urls) and not sid:
+    # Otherwise redirect to the login page if the session hasn't been authed
+    if not cherrypy.session.get('token', None):
         raise cherrypy.InternalRedirect('/login')
 
+    # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
 
 # Be conservative in what you send; maps Content-Type to Salt outputters
@@ -465,6 +477,7 @@ class API(object):
 
                 'tools.sessions.on': True,
                 'tools.sessions.timeout': 60 * 10, # 10 hours
+                'tools.salt_token.on': True,
                 'tools.salt_auth.on': True,
 
                 # 'tools.autovary.on': True,
@@ -484,9 +497,14 @@ def start():
     conf = root.get_conf()
     gconf = conf.get('global', {})
 
-    cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body', salt_auth_tool)
-    cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler', hypermedia_out)
-    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body', hypermedia_in)
+    cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
+            salt_token_tool, priority=55)
+    cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
+            salt_auth_tool, priority=60)
+    cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
+            hypermedia_out)
+    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
+            hypermedia_in)
 
     if gconf['debug']:
         cherrypy.quickstart(root, '/', conf)
