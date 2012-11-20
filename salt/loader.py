@@ -146,6 +146,16 @@ def states(opts, functions):
     return load.gen_functions(pack)
 
 
+def states(opts, returners):
+    '''
+    Returns the state modules
+    '''
+    load = _create_loader(opts, 'search', 'search')
+    pack = {'name': '__ret__',
+            'value': returners}
+    return load.gen_functions(pack)
+
+
 def render(opts, functions):
     '''
     Returns the render modules
