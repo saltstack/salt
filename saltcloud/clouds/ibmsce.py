@@ -128,7 +128,7 @@ def create(vm_):
             not_ready = False
         time.sleep(15)
 
-    if __opts__['deploy'] == True:
+    if __opts__['deploy'] is True:
         log.debug('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
         deployed = saltcloud.utils.deploy_script(
             host=data.public_ips[0],

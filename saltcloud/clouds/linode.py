@@ -118,7 +118,7 @@ def create(vm_):
         log.error(err)
         return False
 
-    if __opts__['deploy'] == True:
+    if __opts__['deploy'] is True:
         deployed = saltcloud.utils.deploy_script(
             host=data.public_ips[0],
             username='root',
