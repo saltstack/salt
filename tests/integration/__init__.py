@@ -8,7 +8,6 @@ import multiprocessing
 import os
 import sys
 import shutil
-import subprocess
 import tempfile
 import time
 from datetime import datetime, timedelta
@@ -32,6 +31,16 @@ try:
     PNUM = width
 except:
     PNUM = 70
+
+if sys.version_info >= (2, 7):
+    from subprocess import PIPE, Popen
+    print('Using regular subprocess')
+else:
+    # Don't do import py27_subprocess as subprocess so within the remaining of
+    # salt's source, whenever subprocess is imported, the proper one is used,
+    # even in under python 2.6
+    from py27_subprocess import PIPE, Popen
+    print('Using copied 2.7 subprocess')
 
 
 INTEGRATION_TEST_DIR = os.path.dirname(
@@ -562,28 +571,21 @@ class ShellCase(TestCase):
         ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
 
+        popen_kwargs = {
+            'shell': True,
+            'stdout': PIPE
+        }
+
         if catch_stderr:
-            process = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-            if sys.version_info[0:2] < (2, 7):
-                # On python 2.6, the subprocess'es communicate() method uses
-                # select which, is limited by the OS to 1024 file descriptors
-                # We need more available descriptors to run the tests which
-                # need the stderr output.
-                # So instead of .communicate() we wait for the process to
-                # finish, but, as the python docs state "This will deadlock
-                # when using stdout=PIPE and/or stderr=PIPE and the child
-                # process generates enough output to a pipe such that it
-                # blocks waiting for the OS pipe buffer to accept more data.
-                # Use communicate() to avoid that." <- a catch, catch situation
-                #
-                # Use this work around were it's needed only, python 2.6
-                process.wait()
-                out = process.stdout.read()
-                err = process.stderr.read()
-            else:
-                out, err = process.communicate()
+            popen_kwargs['stderr'] = PIPE
+
+        if not sys.platform.lower().startswith('win'):
+            popen_kwargs['close_fds'] = True
+
+        process = Popen(cmd, **popen_kwargs)
+
+        if catch_stderr:
+            out, err = process.communicate()
             # Force closing stderr/stdout to release file descriptors
             process.stdout.close()
             process.stderr.close()
@@ -596,9 +598,6 @@ class ShellCase(TestCase):
                     # process already terminated
                     pass
 
-        process = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE
-        )
         data = process.communicate()
         process.stdout.close()
 
