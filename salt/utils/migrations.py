@@ -23,8 +23,8 @@ def migrate_paths(opts):
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
-            if os.path.exists('{0}/{1}'.format(oldpki_dir, item) and not os.path.exists('{0}/{1}'.format(newpki_dir, item):
-                shutil.move('{0}/{1}'.format(oldpki_dir, item), '{0}/{1}'.format(newpki_dir, item)
+            if os.path.exists('{0}/{1}'.format(oldpki_dir, item) and not os.path.exists('{0}/{1}'.format(newpki_dir, item)):
+                shutil.move('{0}/{1}'.format(oldpki_dir, item), '{0}/{1}'.format(newpki_dir, item))
                     
     elif opts['default_include'].startswith('minion'):
         keepers = ['minion_master.pub',
@@ -35,6 +35,6 @@ def migrate_paths(opts):
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
-            if os.path.exists('{0}/{1}'.format(oldpki_dir, item) and not os.path.exists('{0}/{1}'.format(newpki_dir, item):
-                shutil.move('{0}/{1}'.format(oldpki_dir, item), '{0}/{1}'.format(newpki_dir, item)
+            if os.path.exists('{0}/{1}'.format(oldpki_dir, item) and not os.path.exists('{0}/{1}'.format(newpki_dir, item)):
+                shutil.move('{0}/{1}'.format(oldpki_dir, item), '{0}/{1}'.format(newpki_dir, item))
 
