@@ -3,8 +3,8 @@ Description=The Salt Minion
 After=syslog.target network.target
 
 [Service]
-Type=forking
-ExecStart=/usr/bin/salt-minion -d
+Type=simple
+ExecStart=/usr/bin/salt-minion
 
 [Install]
 WantedBy=multi-user.target

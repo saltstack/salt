@@ -3,8 +3,8 @@ Description=The Salt Master Server
 After=syslog.target network.target
 
 [Service]
-Type=forking
-ExecStart=/usr/bin/salt-master -d
+Type=simple
+ExecStart=/usr/bin/salt-master
 
 [Install]
 WantedBy=multi-user.target
