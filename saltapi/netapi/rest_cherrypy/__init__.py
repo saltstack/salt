@@ -221,7 +221,7 @@ class LowDataAdapter(object):
         lowdata = data
 
         # Make the 'arg' param a list if not already
-        if not isinstance(lowdata.get('arg', None), list):
+        if 'arg' in lowdata and not isinstance(lowdata['arg'], list):
             lowdata['arg'] = [lowdata['arg']]
 
         return [lowdata]
