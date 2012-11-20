@@ -28,7 +28,7 @@
 #root_dir: /
 
 # The directory to store the pki information in
-#pki_dir: /etc/salt/pki
+#pki_dir: /etc/salt/pki/minion
 
 # Explicitly declare the id for this minion to use, if left commented the id
 # will be the hostname as returned by the python call: socket.getfqdn()
@@ -60,7 +60,7 @@
 #sub_timeout: 60
 
 # Where cache data goes
-#cachedir: /var/cache/salt
+#cachedir: /var/cache/salt/minion
 
 # Verify and set permissions on configuration directories at startup
 #verify_env: True
@@ -72,7 +72,7 @@
 #cache_jobs: False
 
 # set the directory used to hold unix sockets
-#sock_dir: /var/run/salt
+#sock_dir: /var/run/salt/minion
 
 # Backup files that are replaced by file.managed and file.recurse under
 # 'cachedir'/file_backups relative to their original location and appended

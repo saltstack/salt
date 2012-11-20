@@ -101,9 +101,7 @@ class Minion(parsers.MinionOptionParser):
         self.setup_logfile_logger()
         log = logging.getLogger(__name__)
         log.warn(
-            'Setting up the Salt Minion "{0}"'.format(
-                self.config['id']
-            )
+            'Setting up the Salt Minion "{0}"'.format( self.config['id'])
         )
 
         # Late import so logging works correctly
