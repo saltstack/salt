@@ -194,25 +194,25 @@ class LowDataAdapter(object):
 
     def fmt_lowdata(self, data):
         '''
-        Take CherryPy body data from a POST (et al) request and format it into
-        lowdata. It will accept repeated parameters and pair and format those
-        into multiple lowdata chunks.
+        Accept x-www-form-urlencoded data (run through CherryPy's formatter)
+        and reformat it into a low-data chunk.
+
+        Since we can't easily represent complicated data structures with
+        key-value pairs, any more complicated requirements (e.g. compound
+        commands) must instead be delivered via JSON or YAML.
+
+        For example::
+
+            curl -si localhost:8000 -d client=local -d tgt='*' \\
+                    -d fun='test.kwarg' -d arg='one=1' -d arg='two=2'
         '''
-        pairs = []
-        for k, v in data.items():
-            # Ensure parameter is a list
-            argl = v if isinstance(v, list) else [v]
-            # Make pairs of (key, value) from {key: [*value]}
-            pairs.append(zip([k] * len(argl), argl))
+        lowdata = data
 
-        lowdata = []
-        for i in itertools.izip_longest(*pairs):
-            if not all(i):
-                msg = "Error pairing parameters: %s"
-                raise Exception(msg % str(i))
-            lowdata.append(dict(i))
+        # Make the 'arg' param a list if not already
+        if not isinstance(lowdata.get('arg', None), list):
+            lowdata['arg'] = [lowdata['arg']]
 
-        return lowdata
+        return [lowdata]
 
     def exec_lowdata(self, lowdata):
         '''
