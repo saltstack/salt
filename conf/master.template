@@ -60,10 +60,10 @@
 #root_dir: /
 
 # Directory used to store public key data
-#pki_dir: /etc/salt/pki
+#pki_dir: /etc/salt/pki/master
 
 # Directory to store job and cache data
-#cachedir: /var/cache/salt
+#cachedir: /var/cache/salt/master
 
 # Verify and set permissions on configuration directories at startup
 #verify_env: True
@@ -76,7 +76,7 @@
 #timeout: 5
 
 # Set the directory used to hold unix sockets
-#sock_dir: /var/run/salt
+#sock_dir: /var/run/salt/master
 
 # The master maintains a job cache, while this is a great addition it can be
 # a burden on the master for larger deployments (over 5000 minions).
