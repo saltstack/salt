@@ -114,6 +114,9 @@ def hypermedia_handler(*args, **kwargs):
     Determine the best output format based on the Accept header, execute the
     regular handler, and transform the output to the request content type (even
     if it's an error).
+
+    :param args: Pass args through to the main handler
+    :param kwargs: Pass kwargs through to the main handler
     '''
     try:
         cherrypy.response.processors = ct_out_map # handlers may modify this
@@ -185,6 +188,9 @@ class LowDataAdapter(object):
     In addition, there is enough functionality to bootstrap the single-page
     browser app (which will then utilize the REST API via ajax calls) when the
     request is intiated from a browser (asks for HTML).
+
+    :param opts: A dictionary of options from Salt's master config (e.g.
+        Salt's, ``__opts__``)
     '''
     exposed = True
     tmpl = 'index.html'
@@ -217,6 +223,8 @@ class LowDataAdapter(object):
 
             curl -si localhost:8000 -d client=local -d tgt='*' \\
                     -d fun='test.kwarg' -d arg='one=1' -d arg='two=2'
+
+        :param data: POST data as formatted by CherryPy
         '''
         lowdata = data
 
