@@ -128,21 +128,21 @@ def create(vm_):
             not_ready = False
         time.sleep(15)
 
-    log.debug('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
-
-    deployed = saltcloud.utils.deploy_script(
-        host=data.public_ips[0],
-        username='idcuser',
-        key_filename=__opts__['IBMSCE.ssh_key_file'],
-        script=deploy_script.script,
-        name=vm_['name'],
-        provider='ibmsce',
-        sudo=True,
-        sock_dir=__opts__['sock_dir'])
-    if deployed:
-        log.info('Salt installed on {0}'.format(vm_['name']))
-    else:
-        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+    if __opts__['deploy'] == True:
+        log.debug('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
+        deployed = saltcloud.utils.deploy_script(
+            host=data.public_ips[0],
+            username='idcuser',
+            key_filename=__opts__['IBMSCE.ssh_key_file'],
+            script=deploy_script.script,
+            name=vm_['name'],
+            provider='ibmsce',
+            sudo=True,
+            sock_dir=__opts__['sock_dir'])
+        if deployed:
+            log.info('Salt installed on {0}'.format(vm_['name']))
+        else:
+            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():

@@ -172,6 +172,11 @@ class ExecutionOptionsMixIn(object):
             help='Specify a vm to destroy'
         )
         group.add_option(
+            '--deploy',
+            default=True,
+            help='Whether or not to run a deploy script after VM creation'
+        )
+        group.add_option(
             '-P', '--parallel',
             default=False,
             action='store_true',

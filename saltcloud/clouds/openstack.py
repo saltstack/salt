@@ -239,11 +239,12 @@ def create(vm_):
         deployargs['sudo'] = vm_['sudo']
         log.debug('Running root commands using sudo')
 
-    deployed = saltcloud.utils.deploy_script(**deployargs)
-    if deployed:
-        log.info('Salt installed on {0}'.format(vm_['name']))
-    else:
-        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+    if __opts__['deploy'] == True:
+        deployed = saltcloud.utils.deploy_script(**deployargs)
+        if deployed:
+            log.info('Salt installed on {0}'.format(vm_['name']))
+        else:
+            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
