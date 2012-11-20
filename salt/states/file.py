@@ -370,7 +370,14 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
     return ret
 
 
-def symlink(name, target, force=False, makedirs=False):
+def symlink(
+        name,
+        target,
+        force=False,
+        makedirs=False,
+        user=None,
+        group=None,
+        mode=None):
     '''
     Create a symlink
 
@@ -404,7 +411,11 @@ def symlink(name, target, force=False, makedirs=False):
 
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
-            __salt__['file.makedirs'](name)
+            __salt__['file.makedirs'](
+                    name,
+                    user=user,
+                    group=group,
+                    mode=mode)
         else:
             return _error(ret,
                           ('Directory {0} for symlink is not present'
