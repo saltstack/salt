@@ -93,17 +93,18 @@ def create(vm_):
                        )
         log.error(err)
         return False
-    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
-        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
-               '"{3}"').format(
-                       __opts__['JOYENT.private_key'],
-                       'root',
-                       data.public_ips[0],
-                       deploy_script.script,
-                       )
-        subprocess.call(cmd, shell=True)
-    else:
-        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+    if __opts__['deploy'] == True:
+        if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
+            cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+                   '"{3}"').format(
+                           __opts__['JOYENT.private_key'],
+                           'root',
+                           data.public_ips[0],
+                           deploy_script.script,
+                           )
+            subprocess.call(cmd, shell=True)
+        else:
+            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():

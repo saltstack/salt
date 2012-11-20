@@ -215,24 +215,25 @@ def create(vm_):
             if saltcloud.utils.wait_for_passwd(host=ip_address, username=user, timeout=60, key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
-    deploy_command='bash /tmp/deploy.sh'
-    if username == 'root':
-        deploy_command='/tmp/deploy.sh'
-    deployed = saltcloud.utils.deploy_script(
-        host=ip_address,
-        username=username,
-        key_filename=__opts__['AWS.private_key'],
-        deploy_command=deploy_command,
-        tty=True,
-        script=deploy_script.script,
-        name=vm_['name'],
-        sudo=True,
-        conf_file=__opts__['conf_file'],
-        sock_dir=__opts__['sock_dir'])
-    if deployed:
-        log.info('Salt installed on {0}'.format(vm_['name']))
-    else:
-        log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+    if __opts__['deploy'] == True:
+        deploy_command='bash /tmp/deploy.sh'
+        if username == 'root':
+            deploy_command='/tmp/deploy.sh'
+        deployed = saltcloud.utils.deploy_script(
+            host=ip_address,
+            username=username,
+            key_filename=__opts__['AWS.private_key'],
+            deploy_command=deploy_command,
+            tty=True,
+            script=deploy_script.script,
+            name=vm_['name'],
+            sudo=True,
+            conf_file=__opts__['conf_file'],
+            sock_dir=__opts__['sock_dir'])
+        if deployed:
+            log.info('Salt installed on {0}'.format(vm_['name']))
+        else:
+            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
