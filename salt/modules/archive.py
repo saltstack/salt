@@ -6,12 +6,14 @@ from salt.utils import which as _which
 # TODO: Add wrapping to each function to check for existance of the binary
 # TODO: Check that the passed arguments are correct
 
+
 def __virtual__():
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
     if not any(_which(cmd) for cmd in commands):
         return False
     return 'archive'
+
 
 def tar(options, tarfile, cwd=None, *sources):
     '''
@@ -26,6 +28,7 @@ def tar(options, tarfile, cwd=None, *sources):
     out = __salt__['cmd.run'](cmd, cwd).splitlines()
     return out
 
+
 def gzip(sourcefile):
     '''
     Uses the gzip command to create gzip files
@@ -37,6 +40,7 @@ def gzip(sourcefile):
     cmd = 'gzip {0}'.format(sourcefile)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
+
 
 def gunzip(gzipfile):
     '''
@@ -50,6 +54,7 @@ def gunzip(gzipfile):
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
+
 def zip(zipfile, *sources):
     '''
     Uses the zip command to create zip files
@@ -62,6 +67,7 @@ def zip(zipfile, *sources):
     cmd = 'zip {0} {1}'.format(zipfile, sourcefiles)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
+
 
 def unzip(zipfile, dest, *xfiles):
     '''
@@ -78,6 +84,7 @@ def unzip(zipfile, dest, *xfiles):
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
+
 def rar(rarfile, *sources):
     '''
     Uses the rar command to create rar files
@@ -92,6 +99,7 @@ def rar(rarfile, *sources):
     cmd = 'rar a -idp {0} {1}'.format(rarfile, sourcefiles)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
+
 
 def unrar(rarfile, dest, *xfiles):
     '''
