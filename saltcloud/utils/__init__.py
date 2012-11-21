@@ -141,6 +141,8 @@ def minion_conf_string(opts, vm_):
         minion['master_finger'] = vm_['master_finger']
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
+    if 'master' not in minion:
+        raise ValueError("A master was not defined.")
     minion.update(opts.get('map_minion', {}))
     minion.update(vm_.get('map_minion', {}))
     optsgrains = opts.get('map_grains', {})
