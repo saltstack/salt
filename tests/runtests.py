@@ -228,6 +228,10 @@ def parse_opts():
             action='store_true',
             help='Print some system information.'
     )
+    parser.add_option('--no-colors',
+            default=False,
+            action='store_true',
+            help='Disable colour printing.')
 
     options, _ = parser.parse_args()
 
