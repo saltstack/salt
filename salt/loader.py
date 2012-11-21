@@ -146,7 +146,7 @@ def states(opts, functions):
     return load.gen_functions(pack)
 
 
-def states(opts, returners):
+def search(opts, returners):
     '''
     Returns the state modules
     '''
