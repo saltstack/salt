@@ -1,5 +1,4 @@
-/var/log/salt/key
-/var/log/salt/*.log
+/var/log/salt/master
 {
 	weekly
 	missingok
