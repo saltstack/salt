@@ -39,6 +39,7 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 # Import salt libs
 import saltcloud.utils
 from saltcloud.libcloudfuncs import *
+from salt.exceptions import SaltException
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -91,9 +92,7 @@ def get_conn(**kwargs):
     if 'location' in kwargs:
         location = kwargs['location']
         if location not in EC2_LOCATIONS:
-            sys.stderr.write('The specified location does not seem to be valid: {0}\n'.format(location))
-            sys.exit(1)
-            return None     #TODO raise exception
+            raise SaltException('The specified location does not seem to be valid: {0}\n'.format(location))
     else:
         location = DEFAULT_LOCATION
 

@@ -267,8 +267,7 @@ class Map(Cloud):
         if not self.opts['map']:
             return {}
         if not os.path.isfile(self.opts['map']):
-            sys.stderr.write('The specified map file does not exist: {0}\n'.format(self.opts['map']))
-            sys.exit(1)
+            raise ValueError('The specified map file does not exist: {0}\n'.format(self.opts['map']))
         try:
             with open(self.opts['map'], 'rb') as fp_:
                 map_ = yaml.load(fp_.read())

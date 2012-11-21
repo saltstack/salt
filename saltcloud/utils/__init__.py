@@ -20,8 +20,7 @@ log = logging.getLogger(__name__)
 try:
     import paramiko
 except:
-    log.error('Cannot import paramiko. Please make sure it is correctly installed.')
-    sys.exit(1)
+    raise ImportError('Cannot import paramiko. Please make sure it is correctly installed.')
 
 # Import salt libs
 import salt.crypt
