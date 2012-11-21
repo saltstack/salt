@@ -78,7 +78,7 @@ def save_load(jid, load):
                (`jid`, `load`)
                 VALUES (%s, %s)'''
 
-        cur.execute(sql, (jid, load))
+        cur.execute(sql, (jid, json.dumps(load)))
 
 
 def get_load(jid):
