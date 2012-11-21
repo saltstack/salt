@@ -195,6 +195,19 @@ class LowDataAdapter(object):
     exposed = True
     tmpl = 'index.html'
 
+    _cp_config = {
+        'tools.sessions.on': True,
+        'tools.sessions.timeout': 60 * 10, # 10 hours
+
+        # 'tools.autovary.on': True,
+
+        'tools.salt_token.on': True,
+        'tools.salt_auth.on': True,
+
+        'tools.hypermedia_out.on': True,
+        'tools.hypermedia_in.on': True,
+    }
+
     def __init__(self, opts):
         self.opts = opts
         self.api = saltapi.APIClient(opts)
@@ -487,15 +500,6 @@ class API(object):
 
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
-
-                'tools.sessions.on': True,
-                'tools.sessions.timeout': 60 * 10, # 10 hours
-                'tools.salt_token.on': True,
-                'tools.salt_auth.on': True,
-
-                # 'tools.autovary.on': True,
-                'tools.hypermedia_out.on': True,
-                'tools.hypermedia_in.on': True,
 
                 'tools.staticdir.on': True,
                 'tools.staticdir.dir': apiopts.pop('static', None),
