@@ -15,7 +15,7 @@ def __virtual__():
     return 'archive'
 
 
-def tar(options, tarfile, *sources):
+def tar(options, tarfile, cwd=None, *sources):
     '''
     Uses the tar command to pack, unpack, etc tar files
 
@@ -25,7 +25,7 @@ def tar(options, tarfile, *sources):
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'tar -{0} {1} {2}'.format(options, tarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, cwd).splitlines()
     return out
 
 
