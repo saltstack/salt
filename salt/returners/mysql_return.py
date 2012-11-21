@@ -128,9 +128,9 @@ def get_fun(fun):
 
         cur = serv.cursor()
         sql = '''SELECT s.id, s.fun, s.jid
-                FROM `salt_returns` s
+                FROM `salt`.`salt_returns` s
                 JOIN ( SELECT MAX(`jid`) as jid 
-                    from `salt_returns` GROUP BY fun, id) max
+                    from `salt`.`salt_returns` GROUP BY fun, id) max
                 ON s.jid = max.jid
                 WHERE `fun` = '%s'
                 GROUP BY id
