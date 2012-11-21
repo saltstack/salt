@@ -42,8 +42,7 @@ A hypermedia REST API for Salt using the CherryPy framework
     You may request various output formats by sending the appropriate
     :mailheader:`Accept` header. You may also send various formats in
     :http:method:`post` and :http:method:`put` requests by specifying the
-    :mailheader:`Content-Type`. JSON and YAML are currently supported, HTML
-    will be soon supported.
+    :mailheader:`Content-Type`.
 '''
 # pylint: disable=W0212
 
