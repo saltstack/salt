@@ -54,8 +54,11 @@ def managed(name,
     venv_exists = os.path.exists(venv_py)
 
     # Bail out early if the specified requirements file can't be found
-    if requirements:
-        cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
+    if requirements and requirements.startswith('salt://'):
+        cached_requirements = __salt__['cp.is_cached'](requirements)
+        if not cached_requirements:
+            # It's not cached, let's cache it.
+            cached_requirements = __salt__['cp.cache_file'](requirements)
 
         if not cached_requirements:
             ret.update({
