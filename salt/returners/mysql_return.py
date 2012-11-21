@@ -49,11 +49,11 @@ def returner(ret):
 
         cur = serv.cursor()
         sql = '''INSERT INTO `salt`.`salt_returns`
-                (`fun`, `jid`, `return`, `id`, `success` )
+                (`fun`, `jid`, `return`, `id`, `success`, `full_ret' )
                 VALUES (%s, %s, %s, %s, %s)''' #json.dumps(ret))
 
         cur.execute(sql, (ret['fun'], ret['jid'], ret['return'], ret['id'], 
-                            ret['success']))
+                            ret['success'], json.dumps(ret)))
         #serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
 
         sql2 = '''INSERT IGNORE INTO `salt`.`minions`
