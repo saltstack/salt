@@ -22,6 +22,7 @@ import salt.config
 import salt.master
 import salt.minion
 import salt.runner
+from salt.utils import get_colors
 from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
@@ -130,7 +131,7 @@ class TestDaemon(object):
 
     def __init__(self, opts=None):
         self.opts = opts
-        self.clean = opts.clean
+        self.colors = get_colors(opts.no_colors is False)
 
     def __enter__(self):
         '''
@@ -325,7 +326,7 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
-        if not self.clean:
+        if not self.opts.clean:
             return
         if os.path.isdir(self.sub_minion_opts['root_dir']):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
@@ -346,9 +347,10 @@ class TestDaemon(object):
                 print
                 return True
             sys.stdout.write(
-                '    * [Quit in {0}] Waiting for {1}'.format(
+                '    * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
-                    ', '.join(running)
+                    ', '.join(running),
+                    **self.colors
                 )
             )
             sys.stdout.flush()
@@ -694,3 +696,47 @@ class ShellCaseCommonTestsMixIn(object):
         out = '\n'.join(self.run_script(self._call_binary_, "--version"))
         self.assertIn(self._call_binary_, out)
         self.assertIn(salt.__version__, out)
+
+
+class SaltReturnAssertsMixIn(object):
+
+    def __assertReturn(self, ret, which_case):
+        try:
+            self.assertTrue(isinstance(ret, dict))
+        except AssertionError:
+            raise AssertionError(
+                '{0} is not dict. Salt returned: {1}'.format(
+                    type(ret), ret
+                )
+            )
+
+        try:
+            self.assertNotEqual(ret, {})
+        except AssertionError:
+            raise AssertionError(
+                '{} is equal to {}. Salt returned an empty dictionary.'
+            )
+
+        for part in ret.itervalues():
+            try:
+                if which_case is True:
+                    self.assertTrue(part['result'])
+                elif which_case is False:
+                    self.assertFalse(part['result'])
+                elif which_case is None:
+                    self.assertIsNone(part['result'])
+            except AssertionError:
+                raise AssertionError(
+                    '{result} is not {0}. Salt Comment:\n{comment}'.format(
+                        which_case, **part
+                    )
+                )
+
+    def assertSaltTrueReturn(self, ret):
+        self.__assertReturn(ret, True)
+
+    def assertSaltFalseReturn(self, ret):
+        self.__assertReturn(ret, False)
+
+    def assertSaltNoneReturn(self, ret):
+        self.__assertReturn(ret, None)

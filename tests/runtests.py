@@ -228,6 +228,10 @@ def parse_opts():
             action='store_true',
             help='Print some system information.'
     )
+    parser.add_option('--no-colors',
+            default=False,
+            action='store_true',
+            help='Disable colour printing.')
 
     options, _ = parser.parse_args()
 
@@ -285,7 +289,7 @@ def parse_opts():
 
     # With greater verbosity we can also log to the console
     if options.verbosity > 2:
-        consolehandler = logging.StreamHandler(stream=sys.stderr)
+        consolehandler = logging.StreamHandler(sys.stderr)
         consolehandler.setLevel(logging.INFO)       # -vv
         consolehandler.setFormatter(formatter)
         if options.verbosity > 3:
