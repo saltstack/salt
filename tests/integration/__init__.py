@@ -694,3 +694,25 @@ class ShellCaseCommonTestsMixIn(object):
         out = '\n'.join(self.run_script(self._call_binary_, "--version"))
         self.assertIn(self._call_binary_, out)
         self.assertIn(salt.__version__, out)
+
+
+class SaltReturnAssertsMixIn(object):
+
+    def __assertReturn(self, ret, which_case):
+        try:
+            if which_case is True:
+                self.assertTrue(ret['result'])
+            else:
+                self.assertFalse(ret['result'])
+        except AssertionError:
+            raise AssertionError(
+                '{result} is not {0}. Salt Comment:\n{comment}'.format(
+                    which_case, **ret
+                )
+            )
+
+    def assertSaltTrueReturn(self, ret):
+        self.__assertReturn(ret, True)
+
+    def assertSaltFalseReturn(self, ret):
+        self.__assertReturn(ret, False)

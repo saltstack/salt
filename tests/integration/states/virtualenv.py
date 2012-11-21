@@ -13,14 +13,18 @@ import integration
 from saltunittest import skipIf, destructiveTest
 
 
-class VirtualenvTest(integration.ModuleCase):
+class VirtualenvTest(integration.ModuleCase,
+                     integration.SaltReturnAssertsMixIn):
 
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
         if not self.run_function('user.add', [user]):
-            self.skipTest('Failed to create the \'{0}\' user'.format(user))
+            # Left behind on a canceled test run?
+            self.run_function('user.delete', [user, True, True])
+            if not self.run_function('user.add', [user]):
+                self.skipTest('Failed to create the \'{0}\' user'.format(user))
 
         uinfo = self.run_function('user.info', [user])
 
@@ -34,7 +38,7 @@ class VirtualenvTest(integration.ModuleCase):
             self.assertTrue(isinstance(ret, dict))
             self.assertNotEqual(ret, {})
             for part in ret.itervalues():
-                self.assertTrue(part['result'])
+                self.assertSaltTrueReturn(part)
 
             # Lets check proper ownership
             statinfo = self.run_function('file.stats', [venv_dir])
