@@ -37,7 +37,7 @@ def _run_svn(cmd, cwd, user, username, opts, **kwargs):
     kwargs
         Additional options to pass to the run-cmd
     '''
-    cmd = 'svn --non-interactive {0} '.foramt(cmd)
+    cmd = 'svn --non-interactive {0} '.format(cmd)
     if username:
         opts += ("--username", username)
     if opts:
