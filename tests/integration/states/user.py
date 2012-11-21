@@ -17,13 +17,11 @@ class UserTest(integration.ModuleCase,
     '''
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
-        result = ret[next(iter(ret))]['result']
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
 
     def test_user_if_present(self):
         ret = self.run_state('user.present', name='nobody')
-        result = ret[next(iter(ret))]['result']
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
 
     def test_user_if_present_with_gid(self):
         # TODO:dc fix failing test. Exception in ret
@@ -39,9 +37,9 @@ class UserTest(integration.ModuleCase,
         Assume that it will break any system you run it on.
         """
         ret = self.run_state('user.present', name='salt_test')
-        result = ret[next(iter(ret))]['result']
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
@@ -51,10 +49,10 @@ class UserTest(integration.ModuleCase,
         """
         ret = self.run_state('user.present', name='salt_test',
                              home='/var/lib/salt_test')
-        result = ret[next(iter(ret))]['result']
-        self.assertTrue(result)
-        self.assertTrue(os.stat('/var/lib/salt_test'))
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir('/var/lib/salt_test'))
         ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
@@ -69,12 +67,12 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.present', name='salt_test',
                              gid_from_name=True, home='/var/lib/salt_test')
         gid = self.run_function('user.info', ['salt_test'])['gid']
-        result = ret[next(iter(ret))]['result']
         group_name = grp.getgrgid(gid).gr_name
-        self.assertTrue(result)
-        self.assertTrue(os.stat('/var/lib/salt_test'))
-        self.assertTrue(group_name == 'salt_test')
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.isdir('/var/lib/salt_test'))
+        self.assertEqual(group_name, 'salt_test')
         ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
@@ -85,16 +83,19 @@ class UserTest(integration.ModuleCase,
         same name as the user beforehand, so it should all run smoothly.
         """
         ret = self.run_state('group.present', name='salt_test')
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('user.present', name='salt_test',
                              gid_from_name=True, home='/var/lib/salt_test')
+        self.assertSaltTrueReturn(ret)
+
         gid = self.run_function('user.info', ['salt_test'])['gid']
-        result = ret[next(iter(ret))]['result']
         group_name = grp.getgrgid(gid).gr_name
-        self.assertTrue(result)
-        self.assertTrue(os.stat('/var/lib/salt_test'))
-        self.assertTrue(group_name == 'salt_test')
+        self.assertTrue(os.path.isdir('/var/lib/salt_test'))
+        self.assertEqual(group_name, 'salt_test')
         ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
         ret = self.run_state('group.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
 
 
 if __name__ == '__main__':
