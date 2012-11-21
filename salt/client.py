@@ -69,8 +69,11 @@ class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
     '''
-    def __init__(self, c_path='/etc/salt'):
-        self.opts = salt.config.client_config(c_path)
+    def __init__(self, c_path='/etc/salt', mopts=None):
+        if mopts:
+            self.opts - mopts
+        else:
+            self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
