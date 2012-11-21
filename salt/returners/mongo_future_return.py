@@ -135,7 +135,7 @@ def get_minions():
     conn, db = _get_conn()
     ret = []
     for name in db.collection_names():
-        if len(name) = 20:
+        if len(name) == 20:
             try:
                 int(name)
                 continue
@@ -152,7 +152,7 @@ def get_jids():
     conn, db = _get_conn()
     ret = []
     for name in db.collection_names():
-        if len(name) = 20:
+        if len(name) == 20:
             try:
                 int(name)
                 ret.append(name)
