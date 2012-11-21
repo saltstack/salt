@@ -1,7 +1,20 @@
-<html>
+<!doctype html>
+<html lang="en" class="no-js" ng-app="salt-ui">
     <head>
+        <meta charset="utf-8">
         <title>{{ status }} - {{ message }}</title>
+
+        <link rel="stylesheet/less" href="/less/salt-ui.less">
+        <script src="/js/lib/less.js"></script>
+        <script src="/js/lib/underscore.js"></script>
+        <script src="/js/lib/angular.min.js"></script>
+        <script src="/js/salt-ui.js"></script>
+        <script src="/js/filters.js"></script>
+        <script src="/js/controllers.js"></script>
+
+        <link rel="shortcut icon" href="/img/favicon.ico">
     </head>
+
     <body>
         {% block content %}{% endblock %}
     </body>

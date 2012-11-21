@@ -12,6 +12,9 @@ A hypermedia REST API for Salt using the CherryPy framework
         Required when ``debug`` is ``False``
     ssl_key
         Required when ``debug`` is ``False``
+    static
+        A filesystem path to where the static JavaScript/CSS/image assets are
+        stored. These assets are currently in the `salt-ui`_ sister project.
 
     For example:
 
@@ -31,6 +34,8 @@ A hypermedia REST API for Salt using the CherryPy framework
     .. code-block:: bash
 
         % salt-call tls.create_self_signed_cert
+
+.. _`sait-ui`: https://github.com/saltstack/salt-ui
 
 .. admonition:: Content negotiation
 
