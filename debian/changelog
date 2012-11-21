@@ -1,6 +1,7 @@
 salt (0.10.5) unstable; urgency=low
 
   * new release
+  * update for new run-time paths
 
  -- Sean Channel <pentabular@gmail.com>  Thu, 15 Nov 2012 23:51:50 -0700
 
