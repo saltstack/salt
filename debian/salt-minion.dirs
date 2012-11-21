@@ -1,0 +1,4 @@
+/etc/salt/minion.d
+/etc/salt/pki/minion
+/var/cache/salt/minion
+/var/run/salt/minion
