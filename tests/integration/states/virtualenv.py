@@ -35,10 +35,7 @@ class VirtualenvTest(integration.ModuleCase,
             ret = self.run_function(
                 'state.sls', mods='issue-1959-virtualenv-runas'
             )
-            self.assertTrue(isinstance(ret, dict))
-            self.assertNotEqual(ret, {})
-            for part in ret.itervalues():
-                self.assertSaltTrueReturn(part)
+            self.assertSaltTrueReturn(ret)
 
             # Lets check proper ownership
             statinfo = self.run_function('file.stats', [venv_dir])
