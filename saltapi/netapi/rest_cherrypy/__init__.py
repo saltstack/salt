@@ -48,7 +48,6 @@ A hypermedia REST API for Salt using the CherryPy framework
 # pylint: disable=W0212
 
 # Import Python libs
-import itertools
 import signal
 import os
 import json
