@@ -1,6 +1,10 @@
 '''
 Routines to manage interactions with the whoosh search system
 '''
+
+# Import python libs
+import os
+
 # Import salt libs
 import salt.search
 
@@ -51,13 +55,11 @@ def index():
 
     for data in salt.search.iter_roots(__opts__['file_roots']):
         for chunk in data:
-            writer.add_document(fn_type='file', **data)
-            writer.commit()
+            writer.add_document(fn_type=u'file', **chunk)
 
     for data in salt.search.iter_roots(__opts__['pillar_roots']):
         for chunk in data:
-            writer.add_document(fn_type='pillar', **data)
-            writer.commit()
+            writer.add_document(fn_type=u'pillar', **chunk)
 
     for data in salt.search.iter_ret(__opts__, __ret__):
         writer.add_document(jid=data['jid'], load=data['load'])
@@ -66,7 +68,7 @@ def index():
                     jid=data['jid'],
                     minion=minion,
                     content=data['ret'][minion])
-            writer.commit()
+    writer.commit()
 
 
 def query(qstr, limit=10):
