@@ -167,16 +167,73 @@ def hypermedia_out():
     #          {"paper.2" 0.7 {type text/html} {language fr}},
     #          {"paper.3" 1.0 {type application/postscript} {language en}}
 
+def urlencoded_processor(entity):
+    '''
+    Accept x-www-form-urlencoded data (run through CherryPy's formatter)
+    and reformat it into a Low State datastructure.
+
+    Since we can't easily represent complicated data structures with
+    key-value pairs, any more complicated requirements (e.g. compound
+    commands) must instead be delivered via JSON or YAML.
+
+    For example::
+
+        curl -si localhost:8000 -d client=local -d tgt='*' \\
+                -d fun='test.kwarg' -d arg='one=1' -d arg='two=2'
+
+    :param entity: raw POST data
+    '''
+    # First call out to CherryPy's default processor
+    cherrypy._cpreqbody.process_urlencoded(entity)
+    lowdata = entity.params
+
+    # Make the 'arg' param a list if not already
+    if 'arg' in lowdata and not isinstance(lowdata['arg'], list):
+        lowdata['arg'] = [lowdata['arg']]
+
+    # Finally, make a Low State and put it in request
+    cherrypy.request.lowstate = [lowdata]
+
+def json_processor(entity):
+    '''
+    Unserialize raw POST data in JSON format to a Python datastructure.
+
+    :param entity: raw POST data
+    '''
+    body = entity.fp.read()
+    try:
+        cherrypy.serving.request.lowstate = json.loads(body)
+    except ValueError:
+        raise cherrypy.HTTPError(400, 'Invalid JSON document')
+
+def yaml_processor(entity):
+    '''
+    Unserialize raw POST data in YAML format to a Python datastructure.
+
+    :param entity: raw POST data
+    '''
+    body = entity.fp.read()
+    try:
+        cherrypy.serving.request.lowstate = yaml.load(body)
+    except ValueError:
+        raise cherrypy.HTTPError(400, 'Invalid YAML document')
+
 def hypermedia_in():
     '''
-    Unserialize POST/PUT data of a specified content type, if possible
+    Unserialize POST/PUT data of a specified Content-Type.
+
+    The following custom processors all are intended to format Low State data
+    and will place that datastructure into the request object.
+
+    :raises HTTPError: if the request contains a Content-Type that we do not
+        have a processor for
     '''
     # Be liberal in what you accept
     ct_in_map = {
-        'application/x-www-form-urlencoded': cherrypy._cpreqbody.process_urlencoded,
-        'application/json': json.loads,
-        'application/x-yaml': yaml.load,
-        'text/yaml': yaml.load,
+        'application/x-www-form-urlencoded': urlencoded_processor,
+        'application/json': json_processor,
+        'application/x-yaml': yaml_processor,
+        'text/yaml': yaml_processor,
     }
 
     cherrypy.request.body.processors.clear()
@@ -227,34 +284,13 @@ class LowDataAdapter(object):
         tmpl = jenv.get_template(self.tmpl)
         return tmpl.render(data)
 
-    def fmt_lowdata(self, data):
+    def exec_lowstate(self):
         '''
-        Accept x-www-form-urlencoded data (run through CherryPy's formatter)
-        and reformat it into a low-data chunk.
-
-        Since we can't easily represent complicated data structures with
-        key-value pairs, any more complicated requirements (e.g. compound
-        commands) must instead be delivered via JSON or YAML.
-
-        For example::
-
-            curl -si localhost:8000 -d client=local -d tgt='*' \\
-                    -d fun='test.kwarg' -d arg='one=1' -d arg='two=2'
-
-        :param data: POST data as formatted by CherryPy
+        Pull a Low State datastructure from request and execute the low-data
+        chunks through Salt. The low-data chunks will be updated to include the
+        authorization token for the current session.
         '''
-        lowdata = data
-
-        # Make the 'arg' param a list if not already
-        if 'arg' in lowdata and not isinstance(lowdata['arg'], list):
-            lowdata['arg'] = [lowdata['arg']]
-
-        return [lowdata]
-
-    def exec_lowdata(self, lowdata):
-        '''
-        Pass lowdata to Salt to be executed
-        '''
+        lowdata = cherrypy.request.lowdata
         logger.debug("SaltAPI is passing low-data: %s", lowdata)
 
         token = {'token': cherrypy.session.get('token')}
@@ -354,7 +390,7 @@ class LowDataAdapter(object):
         :status 406: requested Content-Type not available
         '''
         return {
-            'return': list(self.exec_lowdata(self.fmt_lowdata(kwargs))),
+            'return': list(self.exec_lowstate()),
         }
 
 class Login(LowDataAdapter):
