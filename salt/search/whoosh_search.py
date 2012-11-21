@@ -67,3 +67,18 @@ def index():
                     minion=minion,
                     content=data['ret'][minion])
             writer.commit()
+
+
+def query(qstr, limit=10):
+    '''
+    Execute a query
+    '''
+    index_dir = os.path.join(__opts__['cachedir'], 'whoosh')
+    if whoosh.index.exists_in(index_dir):
+        ix_ = whoosh.index.open_dir(index_dir)
+    else:
+        return {}
+    qp_ = QueryParser(u'content', schema=ix_.schema)
+    qobj = qp_.parse(unicode(qstr), limit)
+    with ix_.searcher() as searcher:
+        return searcher.search(qobj)
