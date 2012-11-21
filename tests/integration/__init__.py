@@ -721,8 +721,10 @@ class SaltReturnAssertsMixIn(object):
             try:
                 if which_case is True:
                     self.assertTrue(part['result'])
-                else:
+                elif which_case is False:
                     self.assertFalse(part['result'])
+                elif which_case is None:
+                    self.assertIsNone(part['result'])
             except AssertionError:
                 raise AssertionError(
                     '{result} is not {0}. Salt Comment:\n{comment}'.format(
@@ -735,3 +737,6 @@ class SaltReturnAssertsMixIn(object):
 
     def assertSaltFalseReturn(self, ret):
         self.__assertReturn(ret, False)
+
+    def assertSaltNoneReturn(self, ret):
+        self.__assertReturn(ret, None)
