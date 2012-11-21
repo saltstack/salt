@@ -44,14 +44,16 @@ def returner(ret):
     serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
     serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
     serv.sadd('minions', ret['id'])
+    serv.sadd('jids', jid)
 
 
 def save_load(jid, load):
     '''
-    Save the load to the speified jib id
+    Save the load to the specified jid
     '''
     serv = _get_serv()
     serv.set(jid, json.dumps(load))
+    serv.sadd('jids', jid)
 
 
 def get_load(jid):
@@ -77,6 +79,7 @@ def get_jid(jid):
             ret[minion] = json.loads(data)
     return ret
 
+
 def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
@@ -93,3 +96,19 @@ def get_fun(fun):
         if data:
             ret[minion] = json.loads(data)
     return ret
+
+
+def get_jids():
+    '''
+    Return a list of all job ids
+    '''
+    serv = _get_serv()
+    return serv.smembers('jids')
+
+
+def get_minions():
+    '''
+    Return a list of minions
+    '''
+    serv = _get_serv()
+    return serv.smembers('minions')
