@@ -345,6 +345,7 @@ def master_config(path):
             'state_verbose': True,
             'state_output': 'full',
             'search': '',
+            'search_index_interval': 3600,
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',

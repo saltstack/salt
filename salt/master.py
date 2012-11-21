@@ -187,7 +187,7 @@ class Master(SMaster):
                             shutil.rmtree(f_path)
             if self.opts.get('search'):
                 now = time.time()
-                if now - last > self.opts.get('searh_index_interval', 3600):
+                if now - last > self.opts['search_index_interval']:
                     search.index()
             try:
                 time.sleep(60)
