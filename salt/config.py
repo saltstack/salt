@@ -21,6 +21,7 @@ except Exception:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.utils.migrations
 import salt.pillar
 from salt.exceptions import SaltClientError
 
@@ -156,12 +157,12 @@ def minion_config(path, check_dns=True):
             'master_finger': '',
             'user': 'root',
             'root_dir': '/',
-            'pki_dir': '/etc/salt/pki',
+            'pki_dir': '/etc/salt/pki/minion',
             'id': socket.getfqdn(),
-            'cachedir': '/var/cache/salt',
+            'cachedir': '/var/cache/salt/minion',
             'cache_jobs': False,
             'conf_file': path,
-            'sock_dir': '/var/run/salt',
+            'sock_dir': '/var/run/salt/minion',
             'backup_mode': '',
             'renderer': 'yaml_jinja',
             'failhard': False,
@@ -215,6 +216,7 @@ def minion_config(path, check_dns=True):
             'update_restart_services': [],
             'retry_dns': 30,
             }
+
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
@@ -274,6 +276,8 @@ def minion_config(path, check_dns=True):
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
                             'key_logfile', 'extension_modules'])
+    import salt.utils.migrations
+    salt.utils.migrations.migrate_paths(opts)
     return opts
 
 
@@ -285,13 +289,13 @@ def master_config(path):
             'publish_port': '4505',
             'user': 'root',
             'worker_threads': 5,
-            'sock_dir': '/var/run/salt',
+            'sock_dir': '/var/run/salt/master',
             'ret_port': '4506',
             'timeout': 5,
             'keep_jobs': 24,
             'root_dir': '/',
-            'pki_dir': '/etc/salt/pki',
-            'cachedir': '/var/cache/salt',
+            'pki_dir': '/etc/salt/pki/master',
+            'cachedir': '/var/cache/salt/master',
             'file_roots': {
                 'base': ['/srv/salt'],
                 },
@@ -340,6 +344,8 @@ def master_config(path):
             'serial': 'msgpack',
             'state_verbose': True,
             'state_output': 'full',
+            'search': '',
+            'search_index_interval': 3600,
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',
@@ -376,6 +382,7 @@ def master_config(path):
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    salt.utils.migrations.migrate_paths(opts)
     return opts
 
 

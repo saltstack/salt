@@ -41,6 +41,7 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
+import salt.search
 import salt.utils
 import salt.utils.atomicfile
 import salt.utils.event
@@ -163,26 +164,31 @@ class Master(SMaster):
         '''
         Clean out the old jobs
         '''
-        if self.opts['keep_jobs'] == 0:
-            return
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
+        search = salt.search.Search(self.opts)
+        last = time.time()
         while True:
-            cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
+            if self.opts['keep_jobs'] != 0:
+                cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
-            for top in os.listdir(jid_root):
-                t_path = os.path.join(jid_root, top)
-                for final in os.listdir(t_path):
-                    f_path = os.path.join(t_path, final)
-                    jid_file = os.path.join(f_path, 'jid')
-                    if not os.path.isfile(jid_file):
-                        continue
-                    with salt.utils.fopen(jid_file, 'r') as fn_:
-                        jid = fn_.read()
-                    if len(jid) < 18:
-                        # Invalid jid, scrub the dir
-                        shutil.rmtree(f_path)
-                    elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
-                        shutil.rmtree(f_path)
+                for top in os.listdir(jid_root):
+                    t_path = os.path.join(jid_root, top)
+                    for final in os.listdir(t_path):
+                        f_path = os.path.join(t_path, final)
+                        jid_file = os.path.join(f_path, 'jid')
+                        if not os.path.isfile(jid_file):
+                            continue
+                        with salt.utils.fopen(jid_file, 'r') as fn_:
+                            jid = fn_.read()
+                        if len(jid) < 18:
+                            # Invalid jid, scrub the dir
+                            shutil.rmtree(f_path)
+                        elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                            shutil.rmtree(f_path)
+            if self.opts.get('search'):
+                now = time.time()
+                if now - last > self.opts['search_index_interval']:
+                    search.index()
             try:
                 time.sleep(60)
             except KeyboardInterrupt:
