@@ -50,15 +50,15 @@ def _iter_dir(dir_, env):
             with open(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
-                        {'path': path,
-                         'env': env,
-                         'content': fp_.read()}
+                        {'path': unicode(path),
+                         'env': unicode(env),
+                         'content': unicode(fp_.read())}
                         )
                 else:
                     ret.append(
-                        {'path': path,
-                         'env': env,
-                         'content': 'bin'}
+                        {'path': unicode(path),
+                         'env': unicode(env),
+                         'content': u'bin'}
                         )
     yield ret
                     
@@ -72,6 +72,8 @@ def iter_roots(roots):
     '''
     for env, dirs in roots.items():
         for dir_ in dirs:
+            if not os.path.isdir(dir_):
+                continue
             for ret in _iter_dir(dir_, env):
                 yield ret
 
