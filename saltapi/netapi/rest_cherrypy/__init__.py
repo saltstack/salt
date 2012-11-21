@@ -496,6 +496,9 @@ class API(object):
                 # 'tools.autovary.on': True,
                 'tools.hypermedia_out.on': True,
                 'tools.hypermedia_in.on': True,
+
+                'tools.staticdir.on': True,
+                'tools.staticdir.dir': apiopts.pop('static', None),
             },
         }
 
