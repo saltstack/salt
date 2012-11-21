@@ -344,6 +344,7 @@ def master_config(path):
             'serial': 'msgpack',
             'state_verbose': True,
             'state_output': 'full',
+            'search': '',
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',
