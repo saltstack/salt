@@ -129,7 +129,7 @@ def get_fun(fun):
         cur = serv.cursor()
         sql = '''SELECT id, fun, jid
                 FROM `salt_returns`
-                WHERE `fun` = '%s'
+                WHERE `fun` = %s
                 AND `jid` IN (SELECT MAX(`jid`) 
                 FROM `salt_returns` GROUP BY `id`, `fun`)'''
         
