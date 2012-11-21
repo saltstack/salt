@@ -175,8 +175,13 @@ def install(pkgs=None,
 
     treq = None
     if requirements:
-        if requirements.startswith('salt://'):
-            req = __salt__['cp.cache_file'](requirements)
+        if requirements.startswith('salt://') or runas:
+            # If being called from state.virtualenv, the requirements file
+            # should already be cached, let's try to use that one
+            req = __salt__['cp.is_cached'](requirements)
+            if not req:
+                # It's not cached, let's cache it.
+                req = __salt__['cp.cache_file'](requirements)
             treq = salt.utils.mkstemp()
             shutil.copyfile(req, treq)
         else:
@@ -301,7 +306,7 @@ def install(pkgs=None,
     try:
         result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
     finally:
-        if treq and requirements.startswith('salt://'):
+        if treq and (requirements.startswith('salt://') or runas):
             try:
                 os.remove(treq)
             except Exception:

@@ -47,5 +47,4 @@ class VirtualenvTest(integration.ModuleCase,
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
-
-        self.run_function('user.delete', [user, True, True])
+            self.run_function('user.delete', [user, True, True])
