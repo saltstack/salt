@@ -54,16 +54,19 @@ def managed(name,
     venv_exists = os.path.exists(venv_py)
 
     # Bail out early if the specified requirements file can't be found
-    if requirements:
-        orig_path = requirements
-        requirements = __salt__['cp.cache_file'](requirements, __env__)
+    if requirements and requirements.startswith('salt://'):
+        cached_requirements = __salt__['cp.is_cached'](requirements)
+        if not cached_requirements:
+            # It's not cached, let's cache it.
+            cached_requirements = __salt__['cp.cache_file'](requirements)
 
-        if not requirements:
+        if not cached_requirements:
             ret.update({
                 'result': False,
                 'comment': "pip requirements file '{0}' not found".format(
-                    orig_path)})
-
+                    requirements
+                )
+            })
             return ret
 
     # If it already exists, grab the version for posterity
@@ -92,7 +95,7 @@ def managed(name,
                 prompt=prompt,
                 runas=runas)
 
-        ret['result'] = _ret['retcode']==0
+        ret['result'] = _ret['retcode'] == 0
         ret['changes']['new'] = __salt__['cmd.run_stderr'](
                 '{0} -V'.format(venv_py)).strip('\n')
 
@@ -110,7 +113,7 @@ def managed(name,
         _ret = __salt__['pip.install'](
             requirements=requirements, bin_env=name, runas=runas, cwd=cwd
         )
-        ret['result'] &= _ret['retcode']==0
+        ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
             ret['comment'] = '{0}\n{1}\n{2}'.format(ret['comment'],
                                                     _ret['stdout'],
