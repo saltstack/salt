@@ -52,16 +52,16 @@ def _write_adminfile(kwargs):
 
     # Write to file then close it.
     os.write(fd, 'email={0}\n'.format(email))
-    os.write(fd, 'email={instance={0}\n'.format(instance))
-    os.write(fd, 'email={partial={0}\n'.format(partial))
-    os.write(fd, 'email={runlevel={0}\n'.format(runlevel))
-    os.write(fd, 'email={idepend={0}\n'.format(idepend))
-    os.write(fd, 'email={rdepend={0}\n'.format(rdepend))
-    os.write(fd, 'email={space={0}\n'.format(space))
-    os.write(fd, 'email={setuid={0}\n'.format(setuid))
-    os.write(fd, 'email={conflict={0}\n'.format(conflict))
-    os.write(fd, 'email={action={0}\n'.format(action))
-    os.write(fd, 'email={basedir={0}\n'.format(basedir))
+    os.write(fd, 'instance={0}\n'.format(instance))
+    os.write(fd, 'partial={0}\n'.format(partial))
+    os.write(fd, 'runlevel={0}\n'.format(runlevel))
+    os.write(fd, 'idepend={0}\n'.format(idepend))
+    os.write(fd, 'rdepend={0}\n'.format(rdepend))
+    os.write(fd, 'space={0}\n'.format(space))
+    os.write(fd, 'setuid={0}\n'.format(setuid))
+    os.write(fd, 'conflict={0}\n'.format(conflict))
+    os.write(fd, 'action={0}\n'.format(action))
+    os.write(fd, 'basedir={0}\n'.format(basedir))
     os.close(fd)
 
     return adminfile
@@ -118,7 +118,7 @@ def available_version(name):
     return version(name)
 
 
-def install(name=None, refresh=False, sources=None **kwargs):
+def install(name=None, refresh=False, sources=None, **kwargs):
     '''
     Install the passed package. Can install packages from the following
     sources::

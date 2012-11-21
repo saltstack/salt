@@ -232,7 +232,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         # the package path (3rd element of tuple).
         return [x[2] for x in srcinfo],'file'
 
-    elif name and __grains__['os_family'] != 'Solaris'::
+    elif name and __grains__['os_family'] != 'Solaris':
         return [name],'repository'
 
     else:
