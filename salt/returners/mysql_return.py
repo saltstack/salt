@@ -127,13 +127,12 @@ def get_fun(fun):
     with serv:
 
         cur = serv.cursor()
-        sql = '''SELECT s.id, s.full_ret
+        sql = '''SELECT s.id,s.jid, s.full_ret
                 FROM `salt`.`salt_returns` s
                 JOIN ( SELECT MAX(`jid`) as jid 
                     from `salt`.`salt_returns` GROUP BY fun, id) max
                 ON s.jid = max.jid
-                WHERE `fun` = %s
-                GROUP BY s.id
+                WHERE s.fun = %s
                 '''
         
         cur.execute(sql, (fun,))
@@ -141,7 +140,7 @@ def get_fun(fun):
 
         ret = {}
         if data:
-            for minion, full_ret in data:
+            for minion, jid, full_ret in data:
                 ret[minion] = json.loads(full_ret)
         return ret
 
