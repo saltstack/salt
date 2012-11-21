@@ -626,7 +626,7 @@ def mod_watch(name, **kwargs):
         return script(name, **kwargs)
     return {'name': name,
             'changes': {},
-            'comment': ('cmd.{0} does nto work with the watch requisite, '
+            'comment': ('cmd.{0} does not work with the watch requisite, '
                        'please use cmd.wait of cmd.wait_script').format(
                            kwargs['sfun']
                            ),
