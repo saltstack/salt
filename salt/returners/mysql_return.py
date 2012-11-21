@@ -127,11 +127,14 @@ def get_fun(fun):
     with serv:
 
         cur = serv.cursor()
-        sql = '''SELECT id, fun, jid
-                FROM `salt_returns`
-                WHERE `fun` = %s
-                AND `jid` IN (SELECT MAX(`jid`) 
-                FROM `salt_returns` GROUP BY `id`, `fun`)'''
+        sql = '''SELECT s.id, s.fun, s.jid
+                FROM `salt_returns` s
+                JOIN ( SELECT MAX(`jid`) as jid 
+                    from `salt_returns` GROUP BY fun, id) max
+                ON s.jid = max.jid
+                WHERE `fun` = '%s'
+                GROUP BY id
+                '''
         
         cur.execute(sql, (fun,))
         data = cur.fetchall()
