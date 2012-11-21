@@ -49,27 +49,36 @@ def returner(ret):
 
         cur = serv.cursor()
         sql = '''INSERT INTO `salt`.`salt_returns`
-                (`fun`, `jid`, `return`, `id`, `success`, `full_ret' )
-                VALUES (%s, %s, %s, %s, %s)''' #json.dumps(ret))
-
-        cur.execute(sql, (ret['fun'], ret['jid'], ret['return'], ret['id'], 
+                (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
+                VALUES (%s, %s, %s, %s, %s, %s)'''
+        cur.execute(sql, (ret['fun'], ret['jid'], 
+                            str(ret['return']), ret['id'], 
                             ret['success'], json.dumps(ret)))
-        #serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
+        
+        # Add minion to minion list
+        #sql2 = '''INSERT IGNORE INTO `salt`.`minions`
+                #(`id`) VALUES (%s)'''
+        #cur.execute(sql2, (ret['id'],))
 
-        sql2 = '''INSERT IGNORE INTO `salt`.`minions`
-                (`id`) VALUES (%s)'''
-
-        cur.execute(sql2, (ret['id'],))
-
-        #serv.sadd('minions', ret['id'])
+        # Add jid to jid list
+        #sql3 = '''INSERT IGNORE INTO `salt`.`jids`
+                #(`jid`) VALUES (%s)'''
+        #cur.execute(sql3, (ret['jid'],))
 
 
 def save_load(jid, load):
     '''
-    Save the load to the speified jib id
+    Save the load to the specified jid id
     '''
     serv = _get_serv()
-    serv.set(jid, json.dumps(load))
+    with serv:
+        
+        cur = serv.cursor()
+        sql = '''INSERT INTO `salt`.`jids`
+               (`jid`, `load`)
+                VALUES (%s, %s)'''
+
+        cur.execute(sql, (jid, load))
 
 
 def get_load(jid):
@@ -77,10 +86,17 @@ def get_load(jid):
     Return the load data that marks a specified jid
     '''
     serv = _get_serv()
-    data = serv.get(jid)
-    if data:
-        return json.loads(data)
-    return {}
+    with serv:
+
+        cur = serv.cursor()
+        sql = '''SELECT load FROM `salt`.`jids`
+                WHERE `jid` = '%s';'''
+
+        cur.execute(sql, (jid,))
+        data = cur.fetchall()
+        if data:
+            return json.loads(data)
+        return {}
 
 
 def get_jid(jid):
@@ -88,26 +104,69 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     '''
     serv = _get_serv()
-    ret = {}
-    for minion in serv.smembers('minions'):
-        data = serv.get('{0}:{1}'.format(minion, jid))
+    with serv:
+
+        cur = serv.cursor()
+        sql = '''SELECT id, full_ret FROM `salt`.`salt_returns`
+                WHERE `jid` = '%s';'''
+        
+        cur.execute(sql, (jid,))
+        data = cur.fetchall()
+        ret = {}
         if data:
-            ret[minion] = json.loads(data)
-    return ret
+            for minion, full_ret in data:
+                ret[minion] = json.loads(full_ret)
+        return ret
+
 
 def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
     serv = _get_serv()
-    ret = {}
-    for minion in serv.smembers('minions'):
-        ind_str = '{0}:{1}'.format(minion, fun)
-        try:
-            jid = serv.lindex(ind_str, 0)
-        except Exception:
-            continue
-        data = serv.get('{0}:{1}'.format(minion, jid))
+    with serv:
+
+        cur = serv.cursor()
+        sql = '''SELECT id, fun, jid
+                FROM `salt_returns`
+                WHERE `fun` = '%s'
+                AND `jid` IN (SELECT MAX(`jid`) 
+                FROM `salt_returns` GROUP BY `id`, `fun`)'''
+        
+        cur.execute(sql, (fun,))
+        data = cur.fetchall()
+
+        ret = {}
         if data:
-            ret[minion] = json.loads(data)
-    return ret
+            for minion, full_ret in data:
+                ret[minion] = json.loads(full_ret)
+        return ret
+
+def get_jids():
+    '''
+    Return a list of all job ids
+    '''
+    serv = _get_serv()
+    with serv:
+
+        cur = serv.cursor()
+        sql = '''SELECT DISTINCT jid
+                FROM `salt`.`jids`'''
+
+        cur.execute(sql)
+        return cur.fetchall()
+
+
+def get_minions():
+    '''
+    Return a list of minions
+    '''
+    serv = _get_serv()
+    with serv:
+
+        cur = serv.cursor()
+        sql = '''SELECT DISTINCT id 
+                FROM `salt`.`salt_returns`'''
+
+        cur.execute(sql)
+        return cur.fetchall()
