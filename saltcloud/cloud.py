@@ -160,6 +160,8 @@ class Cloud(object):
         '''
         Create a single vm
         '''
+        if 'minion' in vm_ and vm_['minion'] is None:
+            vm_['minion'] = {}
         fun = '{0}.create'.format(self.provider(vm_))
         if not fun in self.clouds:
             msg = ('Public cloud provider {0} is not available'.format(
