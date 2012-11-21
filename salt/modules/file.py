@@ -84,6 +84,16 @@ def gid_to_group(gid):
         salt '*' file.gid_to_group 0
     '''
     try:
+        gid = int(gid)
+    except ValueError:
+        # This is not an integer, maybe it's already the group name?
+        gid = group_to_gid(gid)
+
+    if not gid:
+        # Don't even bother to feed it to grp
+        return ''
+
+    try:
         return grp.getgrgid(gid).gr_name
     except KeyError:
         return ''
