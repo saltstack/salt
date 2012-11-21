@@ -106,4 +106,4 @@ class Search(object):
         qfun = '{0}.query'.format(self.opts.get('search', ''))
         if not qfun in self.search:
             return
-        return self.search[qfun]()
+        return self.search[qfun](term)
