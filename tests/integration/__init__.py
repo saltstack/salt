@@ -22,6 +22,7 @@ import salt.config
 import salt.master
 import salt.minion
 import salt.runner
+from salt.utils import get_colors
 from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
@@ -130,7 +131,7 @@ class TestDaemon(object):
 
     def __init__(self, opts=None):
         self.opts = opts
-        self.clean = opts.clean
+        self.colors = get_colors(opts.no_colors is False)
 
     def __enter__(self):
         '''
@@ -325,7 +326,7 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
-        if not self.clean:
+        if not self.opts.clean:
             return
         if os.path.isdir(self.sub_minion_opts['root_dir']):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
@@ -346,9 +347,10 @@ class TestDaemon(object):
                 print
                 return True
             sys.stdout.write(
-                '    * [Quit in {0}] Waiting for {1}'.format(
+                '    * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
-                    ', '.join(running)
+                    ', '.join(running),
+                    **self.colors
                 )
             )
             sys.stdout.flush()
