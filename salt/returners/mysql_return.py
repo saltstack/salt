@@ -93,7 +93,7 @@ def get_load(jid):
                 WHERE `jid` = '%s';'''
 
         cur.execute(sql, (jid,))
-        data = cur.fetchall()
+        data = cur.fetchone()
         if data:
             return json.loads(data)
         return {}
@@ -111,7 +111,7 @@ def get_jid(jid):
                 WHERE `jid` = '%s';'''
         
         cur.execute(sql, (jid,))
-        data = cur.fetchall()
+        data = cur.fetchone()
         ret = {}
         if data:
             for minion, full_ret in data:
