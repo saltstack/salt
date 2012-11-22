@@ -41,6 +41,8 @@ setup(
         'saltapi/netapi',
         'saltapi/netapi/rest_cherrypy',
         ],
+    package_data={
+        'saltapi.netapi.rest_cherrypy': ['tmpl/*']},
     data_files=[('share/man/man1',
         ['doc/man/salt-api.1']),
         ('share/man/man7',
