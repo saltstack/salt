@@ -38,8 +38,8 @@ setup(
         'Operating System :: POSIX :: Linux',
         'Topic :: System :: Distributed Computing'],
     packages=['saltapi',
-        'saltapi/netapi',
-        'saltapi/netapi/rest_cherrypy',
+        'saltapi.netapi',
+        'saltapi.netapi.rest_cherrypy',
         ],
     package_data={
         'saltapi.netapi.rest_cherrypy': ['tmpl/*']},
