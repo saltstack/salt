@@ -22,6 +22,7 @@ import salt.output
 
 # Import saltcloud libs
 from saltcloud.utils import parsers
+from saltcloud.libcloudfuncs import libcloud_version
 
 
 class SaltCloud(parsers.SaltCloudParser):
@@ -29,6 +30,8 @@ class SaltCloud(parsers.SaltCloudParser):
         '''
         Execute the salt-cloud command line
         '''
+        libcloud_version()
+
         # Parse shell arguments
         self.parse_args()
 
