@@ -19,6 +19,21 @@ import saltcloud.utils
 # Get logging started
 log = logging.getLogger(__name__)
 
+def libcloud_version():
+    '''
+    Require the minimal libcloud version
+    '''
+    import libcloud
+    ver = libcloud.__version__
+    ver = ver.replace('-','.')
+    comps = ver.split('.')
+    version = []
+    for number in comps[:3]:
+        version.append(int(number))
+    if version < [0, 11, 4]:
+        raise ImportError("salt-cloud requires >= libcloud 0.11.4")
+    return libcloud.__version__
+
 
 def get_node(conn, name):
     '''
