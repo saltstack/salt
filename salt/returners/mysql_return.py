@@ -54,16 +54,6 @@ def returner(ret):
         cur.execute(sql, (ret['fun'], ret['jid'], 
                             str(ret['return']), ret['id'], 
                             ret['success'], json.dumps(ret)))
-        
-        # Add minion to minion list
-        #sql2 = '''INSERT IGNORE INTO `salt`.`minions`
-                #(`id`) VALUES (%s)'''
-        #cur.execute(sql2, (ret['id'],))
-
-        # Add jid to jid list
-        #sql3 = '''INSERT IGNORE INTO `salt`.`jids`
-                #(`jid`) VALUES (%s)'''
-        #cur.execute(sql3, (ret['jid'],))
 
 
 def save_load(jid, load):
