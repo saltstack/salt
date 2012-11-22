@@ -1,5 +1,5 @@
 '''
-Module for gathering disk information
+Module for managing ext2/3/4 file systems
 '''
 
 import logging
