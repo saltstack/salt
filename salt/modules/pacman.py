@@ -4,8 +4,6 @@ A module to wrap pacman calls, since Arch is the best
 '''
 
 import logging
-import os
-import re
 
 log = logging.getLogger(__name__)
 
@@ -161,8 +159,9 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
             salt '*' pkg.install pkgs='["foo","bar"]'
 
     sources
-        A list of RPM sources to use for installing the package(s) defined in
-        pkgs. Must be passed as a list of dicts.
+        A list of packages to install. Must be passed as a list of dicts, 
+        with the keys being package names, and the values being the source URI
+        or local path to the package.
 
         CLI Example::
             salt '*' pkg.install sources='[{"foo": "salt://foo.pkg.tar.xz"},{"bar": "salt://bar.pkg.tar.xz"}]'

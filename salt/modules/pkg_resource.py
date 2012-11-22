@@ -137,16 +137,58 @@ def _pack_sources(sources):
     return ret
 
 
+def _verify_binary_pkg(srcinfo):
+    '''
+    Compares package files (s) against the metadata to confirm that they match
+    what is expected.
+    '''
+    problems = []
+    for pkg_name,pkg_uri,pkg_path,pkg_type in srcinfo:
+        pkgmeta_name,pkgmeta_version = _parse_pkg_meta(pkg_path)
+        if not pkgmeta_name:
+            if pkg_type == 'remote':
+                problems.append('Failed to cache {0}. Are you sure this '
+                                'path is correct?'.format(pkg_uri))
+            elif pkg_type == 'local':
+                if not os.path.isfile(pkg_path):
+                    problems.append('Package file {0} not found. Are '
+                                    'you sure this path is '
+                                    'correct?'.format(pkg_path))
+                else:
+                    problems.append('Unable to parse package metadata for '
+                                    '{0}.'.format(pkg_path))
+        elif pkg_name != pkgmeta_name:
+            problems.append('Package file {0} (Name: {1}) does not '
+                            'match the specified package name '
+                            '({2}).'.format(pkg_uri,pkgmeta_name,pkg_name))
+    return problems
+
+
 def parse_targets(name=None, pkgs=None, sources=None):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
     installed. Returns a list of packages, as well as a string noting whether
     the packages are to come from a repository or a binary package.
     '''
-    if pkgs and sources:
+
+    # For Solaris, there is no repository, and only the "sources" param can be
+    # used. Warn if "name" or "pkgs" is provided, and require that "sources" is
+    # present.
+    if __grains__['os_family'] == 'Solaris':
+        if name:
+            log.warning('Parameter "name" ignored on Solaris hosts.')
+        if pkgs:
+            log.warning('Parameter "pkgs" ignored on Solaris hosts.')
+        if not sources:
+            log.error('"sources" option required with Solaris pkg installs')
+            return None,None
+
+    # "pkgs" is always ignored on Solaris.
+    if pkgs and sources and __grains__['os_family'] != 'Solaris':
         log.error('Only one of "pkgs" and "sources" can be used.')
         return None,None
-    elif pkgs:
+
+    elif pkgs and __grains__['os_family'] != 'Solaris':
         if name:
             log.warning('"name" parameter will be ignored in favor of "pkgs"')
         pkgs = _pack_pkgs(pkgs)
@@ -154,8 +196,10 @@ def parse_targets(name=None, pkgs=None, sources=None):
             return None,None
         else:
             return pkgs,'repository'
+
     elif sources:
-        if name:
+        # No need to warn for Solaris, warning taken care of above.
+        if name and __grains__['os_family'] != 'Solaris':
             log.warning('"name" parameter will be ignored in favor of '
                         '"sources".')
         sources = _pack_sources(sources)
@@ -165,49 +209,33 @@ def parse_targets(name=None, pkgs=None, sources=None):
         srcinfo = []
         for pkg_name,pkg_src in sources.iteritems():
             if __salt__['config.valid_fileproto'](pkg_src):
-                # Cached RPM from master
+                # Cache package from remote source (salt master, http, ftp)
                 srcinfo.append((pkg_name,
                                 pkg_src,
                                __salt__['cp.cache_file'](pkg_src),
                                'remote'))
             else:
-                # RPM file local to the minion
+                # Package file local to the minion
                 srcinfo.append((pkg_name,pkg_src,pkg_src,'local'))
 
         # Check metadata to make sure the name passed matches the source
-        problems = []
-        for pkg_name,pkg_uri,pkg_path,pkg_type in srcinfo:
-            pkgmeta_name,pkgmeta_version = _parse_pkg_meta(pkg_path)
-            if not pkgmeta_name:
-                if pkg_type == 'remote':
-                    problems.append('Failed to cache {0}. Are you sure this '
-                                    'path is correct?'.format(pkg_uri))
-                elif pkg_type == 'local':
-                    if not os.path.isfile(pkg_path):
-                        problems.append('Package file {0} not found. Are '
-                                        'you sure this path is '
-                                        'correct?'.format(pkg_path))
-                    else:
-                        problems.append('Unable to parse package metadata for '
-                                        '{0}.'.format(pkg_path))
-            elif pkg_name != pkgmeta_name:
-                problems.append('Package file {0} (Name: {1}) does not '
-                                'match the specified package name '
-                                '({2}).'.format(pkg_uri,pkgmeta_name,pkg_name))
-
-        # If any problems are found in the caching or metadata parsing done in
-        # the above for loop, log each problem and then return an empty dict.
-        # Do not proceed to attempt package installation.
-        if problems:
-            for problem in problems: log.error(problem)
-            return None,None
+        if __grains__['os_family'] not in ('Solaris',) \
+        or __grains__['os'] not in ('Gentoo',):
+            problems = _verify_binary_pkg(srcinfo)
+            # If any problems are found in the caching or metadata parsing done
+            # in the above for loop, log each problem and return None,None,
+            # which will keep package installation from proceeding.
+            if problems:
+                for problem in problems: log.error(problem)
+                return None,None
 
         # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
-        # the path (3rd element of tuple).
+        # the package path (3rd element of tuple).
         return [x[2] for x in srcinfo],'file'
 
-    elif name:
+    elif name and __grains__['os_family'] != 'Solaris':
         return [name],'repository'
+
     else:
         log.error('No package sources passed to pkg.install.')
         return None,None
