@@ -799,16 +799,15 @@ def remove(path):
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
-    if os.path.exists(path):
-        try:
-            if os.path.isfile(path) or os.path.islink(path):
-                os.remove(path)
-                return True
-            elif os.path.isdir(path):
-                shutil.rmtree(path)
-                return True
-        except (OSError, IOError):
-            raise CommandExecutionError('Could not remove "{0}"'.format(path))
+    try:
+        if os.path.isfile(path) or os.path.islink(path):
+            os.remove(path)
+            return True
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
+            return True
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not remove "{0}"'.format(path))
     return False
 
 

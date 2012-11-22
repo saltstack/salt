@@ -23,10 +23,22 @@ class FileModuleTest(integration.ModuleCase):
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
+        self.mysymlink = os.path.join(integration.TMP, 'mysymlink')
+        if os.path.islink(self.mysymlink):
+            os.remove(self.mysymlink)
+        os.symlink(self.myfile, self.mysymlink)
+        self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
+        if os.path.islink(self.mybadsymlink):
+            os.remove(self.mybadsymlink)
+        os.symlink('/nonexistantpath', self.mybadsymlink)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
         os.remove(self.myfile)
+        if os.path.islink(self.mysymlink):
+            os.remove(self.mysymlink)
+        if os.path.islink(self.mybadsymlink):
+            os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
 
@@ -123,6 +135,14 @@ class FileModuleTest(integration.ModuleCase):
 
     def test_remove_dir(self):
         ret = self.run_function('file.remove', args=[self.mydir])
+        self.assertTrue(ret)
+
+    def test_remove_symlink(self):
+        ret = self.run_function('file.remove', args=[self.mysymlink])
+        self.assertTrue(ret)
+
+    def test_remove_broken_symlink(self):
+        ret = self.run_function('file.remove', args=[self.mybadsymlink])
         self.assertTrue(ret)
 
     def test_cannot_remove(self):
