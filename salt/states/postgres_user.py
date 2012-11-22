@@ -15,6 +15,7 @@ def present(name,
             createuser=False,
             encrypted=False,
             superuser=False,
+            replication=False,
             password=None,
             runas=None):
     '''
@@ -30,10 +31,13 @@ def present(name,
         Is the user allowed to create other users?
 
     encrypted
-        Shold the password be encrypted in the system catalog?
+        Should the password be encrypted in the system catalog?
 
     superuser
-        Shold the new user be a "superuser"
+        Should the new user be a "superuser"
+
+    replication
+        Should the new user be allowed to initiate streaming replication
 
     password
         The user's pasword
@@ -60,6 +64,7 @@ def present(name,
                                         createuser=createuser,
                                         encrypted=encrypted,
                                         superuser=superuser,
+                                        replication=replication,
                                         password=password,
                                         runas=runas):
         ret['comment'] = 'The user {0} has been created'.format(name)
