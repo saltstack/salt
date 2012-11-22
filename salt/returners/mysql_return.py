@@ -156,7 +156,12 @@ def get_jids():
                 FROM `salt`.`jids`'''
 
         cur.execute(sql)
-        return cur.fetchall()
+        data = cur.fetchall()
+        ret = []
+        for jid in data:
+            ret.append(jid[0])
+        return ret
+
 
 
 def get_minions():
@@ -171,4 +176,8 @@ def get_minions():
                 FROM `salt`.`salt_returns`'''
 
         cur.execute(sql)
-        return cur.fetchall()
+        data = cur.fetchall()
+        ret = []
+        for minion in data:
+            ret.append(minion[0])
+        return ret
