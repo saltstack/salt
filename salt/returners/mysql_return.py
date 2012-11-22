@@ -108,10 +108,10 @@ def get_jid(jid):
 
         cur = serv.cursor()
         sql = '''SELECT id, full_ret FROM `salt`.`salt_returns`
-                WHERE `jid` = '%s';'''
+                WHERE `jid` = %s'''
         
         cur.execute(sql, (jid,))
-        data = cur.fetchone()
+        data = cur.fetchall()
         ret = {}
         if data:
             for minion, full_ret in data:
