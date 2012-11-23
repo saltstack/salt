@@ -13,9 +13,6 @@ import sys
 import logging
 from functools import wraps
 
-# Import salt libs
-from salt.utils import fopen
-
 # support python < 2.7 via unittest2
 if sys.version_info[0:2] < (2, 7):
     try:
@@ -67,9 +64,9 @@ class RedirectStdStreams(object):
 
     def __init__(self, stdout=None, stderr=None):
         if stdout is None:
-            stdout = fopen(os.devnull, 'w')
+            stdout = open(os.devnull, 'w')
         if stderr is None:
-            stderr = fopen(os.devnull, 'w')
+            stderr = open(os.devnull, 'w')
 
         self.__stdout = stdout
         self.__stderr = stderr
@@ -95,7 +92,9 @@ class RedirectStdStreams(object):
             return
 
         self.__stdout.flush()
+        self.__stdout.close()
         self.__stderr.flush()
+        self.__stderr.close()
         sys.stdout = self.old_stdout
         sys.stderr = self.old_stderr
 
