@@ -24,6 +24,8 @@ import zmq
 
 # Import Salt libs
 import salt.payload
+import salt.loader
+from salt.template import compile_template
 
 log = logging.getLogger(__name__)
 
@@ -213,3 +215,56 @@ class EventPublisher(multiprocessing.Process):
         except KeyboardInterrupt:
             epub_sock.close()
             epull_sock.close()
+
+
+class Reactor(object):
+    '''
+    Read in the reactor configuration variable and compare it to events
+    processed on the master.
+    The reactor has the capability to execute pre-programmed executions
+    as reactions to events
+    '''
+    def __init__(self. opts):
+        self.opts = opts
+        self.rend = salt.loader.render(self.opts, {})
+
+    def render_reaction(self, fn_, tag, data):
+        '''
+        Execute the render system against a single reaction file and return
+        the data structure
+        '''
+        return compile_template(
+                fn_,
+                self.rend,
+                self.opts['renderer'],
+                tag=tag,
+                data=data)
+
+    def list_reactors(self, tag):
+        '''
+        Take in the tag and the data from an event and return a list of the
+        reactors to process
+        '''
+        reactors = []
+        for ropt in opts['reactors']:
+            if not isinstance(ropt, dict):
+                continue
+            if not len(ropt) == 1:
+                continue
+            key = ropt.keys()[0]
+            val = ropt[key]
+            if key == tag:
+                if isinstance(val, str):
+                    reactors.append(val)
+                eli isinstance(val, list):
+                    reactors.extend(val)
+        return reactors
+
+    def reactions(self, tag, data, reactors):
+        '''
+        Render a list of reactor files and returns a reaction struct
+        '''
+        react = {}
+        for fn_ in reactors:
+            react.update(self.render_reaction(fn_, tag, data))
+        return react
