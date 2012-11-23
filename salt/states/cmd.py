@@ -498,7 +498,7 @@ def script(name,
     pgid = os.getegid()
 
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({'cwd': cwd,
+    cmd_kwargs.update({
                   'runas': user,
                   'shell': shell or __grains__['shell'],
                   'env': env,
