@@ -510,27 +510,25 @@ def _item_list():
     return ret
 
 
-    '''
-    The following is a list of functions that need to be incorporated in the
-    keystone module. This list should be updated as functions are added.
-
-    ec2-credentials-create
-                        Create EC2-compatibile credentials for user per tenant
-    ec2-credentials-delete
-                        Delete EC2-compatibile credentials
-    endpoint-create     Create a new endpoint associated with a service
-    endpoint-delete     Delete a service endpoint
-    role-create         Create new role
-    role-delete         Delete role
-    service-create      Add service to Service Catalog
-    service-delete      Delete service from Service Catalog
-    tenant-create       Create new tenant
-    tenant-delete       Delete tenant
-    tenant-update       Update tenant name, description, enabled status
-    user-role-add       Add role to user
-    user-role-remove    Remove role from user
-    discover            Discover Keystone servers and show authentication
-                        protocols and
-    bootstrap           Grants a new role to a new user on a new tenant, after
-                        creating each.
-    '''
+    #The following is a list of functions that need to be incorporated in the
+    #keystone module. This list should be updated as functions are added.
+    #
+    #ec2-credentials-create
+    #                    Create EC2-compatibile credentials for user per tenant
+    #ec2-credentials-delete
+    #                    Delete EC2-compatibile credentials
+    #endpoint-create     Create a new endpoint associated with a service
+    #endpoint-delete     Delete a service endpoint
+    #role-create         Create new role
+    #role-delete         Delete role
+    #service-create      Add service to Service Catalog
+    #service-delete      Delete service from Service Catalog
+    #tenant-create       Create new tenant
+    #tenant-delete       Delete tenant
+    #tenant-update       Update tenant name, description, enabled status
+    #user-role-add       Add role to user
+    #user-role-remove    Remove role from user
+    #discover            Discover Keystone servers and show authentication
+    #                    protocols and
+    #bootstrap           Grants a new role to a new user on a new tenant, after
+    #                    creating each.

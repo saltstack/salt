@@ -58,10 +58,8 @@ def list():
     pecls = {}
     lines = _pecl('list').splitlines()
     lines.pop(0)
-    '''
-    Only one line if no package installed:
-    (no packages installed from channel pecl.php.net)
-    '''
+    # Only one line if no package installed:
+    # (no packages installed from channel pecl.php.net)
     if not lines:
         return pecls
 
