@@ -256,7 +256,7 @@ class Reactor(object):
             if key == tag:
                 if isinstance(val, str):
                     reactors.append(val)
-                eli isinstance(val, list):
+                elif isinstance(val, list):
                     reactors.extend(val)
         return reactors
 
