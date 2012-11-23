@@ -176,7 +176,6 @@ def _item_list():
         salt '*' nova.item_list
     '''
     nt = _auth()
-    ret = {}
     ret = []
     for item in nt.items.list():
         ret.append(item.__dict__)

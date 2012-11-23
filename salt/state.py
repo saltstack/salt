@@ -219,11 +219,12 @@ class State(object):
         self.functions = salt.loader.minion_mods(self.opts)
         if isinstance(data, dict):
             if data.get('provider', False):
-                provider = {}
                 if isinstance(data['provider'], str):
                     providers = [{data['state']: data['provider']}]
                 elif isinstance(data['provider'], list):
                     providers = data['provider']
+                else:
+                    providers = {}
                 for provider in providers:
                     for mod in provider:
                         funcs = salt.loader.raw_mod(self.opts,

@@ -365,10 +365,9 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
     elif include_pat and exclude_pat:
         ret = retchk_include and retchk_exclude
     else:
-	ret = True
+        ret = True
 
     return ret
-
 
 def symlink(
         name,

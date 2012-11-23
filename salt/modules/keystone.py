@@ -391,7 +391,6 @@ def user_delete(id=None, name=None):
         salt '*' keystone.user_delete name=nova
     '''
     ks = auth()
-    ret = {}
     if name:
         for user in ks.users.list():
             if user.name == name:
@@ -418,7 +417,6 @@ def user_update(id=None, name=None, email=None, enabled=None):
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
     '''
     ks = auth()
-    ret = {}
     if not id:
         return {'Error': 'Unable to resolve user id'}
     ks.users.update(user=id, name=name, email=email, enabled=enabled)
@@ -437,7 +435,6 @@ def user_password_update(id=None, name=None, password=None):
         salt '*' keystone.user_delete name=nova pasword=12345
     '''
     ks = auth()
-    ret = {}
     if name:
         for user in ks.users.list():
             if user.name == name:
@@ -499,7 +496,6 @@ def _item_list():
         salt '*' keystone.item_list
     '''
     ks = auth()
-    ret = {}
     ret = []
     for item in ks.items.list():
         ret.append(item.__dict__)

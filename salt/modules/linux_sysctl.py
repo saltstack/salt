@@ -107,7 +107,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
-        except (IOError, OSError) as exc:
+        except (IOError, OSError):
             msg = 'Could not write to file: {0}'
             raise CommandExecutionError(msg.format(config))
 

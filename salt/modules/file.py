@@ -291,9 +291,9 @@ def get_sum(path, form='md5'):
             return getattr(hashlib, form)(f.read()).hexdigest()
     except (IOError, OSError) as e:
         return 'File Error: {0}'.format(e)
-    except AttributeError as e:
+    except AttributeError:
         return 'Hash {0} not supported'.format(form)
-    except NameError as e:
+    except NameError:
         return 'Hashlib unavailable - please fix your python install'
     except Exception as e:
         return str(e)
@@ -742,7 +742,7 @@ def touch(name, atime=None, mtime=None):
             times = (atime, mtime)
         os.utime(name, times)
 
-    except TypeError as exc:
+    except TypeError:
         raise SaltInvocationError('atime and mtime must be integers')
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
@@ -975,7 +975,6 @@ def get_managed(
 
         if data['result']:
             sfn = data['data']
-            hsum = ''
             with salt.utils.fopen(sfn, 'r') as source:
                 hsum = hashlib.md5(source.read()).hexdigest()
             source_sum = {'hash_type': 'md5',
@@ -1129,7 +1128,6 @@ def check_managed(
     '''
     Check to see what changes need to be made for a file
     '''
-    changes = {}
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 

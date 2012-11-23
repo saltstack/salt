@@ -89,7 +89,6 @@ class MasterKeys(dict):
         '''
         Returns a key objects for the master
         '''
-        key = None
         if os.path.exists(self.rsa_path):
             try:
                 key = RSA.load_key(self.rsa_path)
@@ -143,7 +142,6 @@ class Auth(object):
         '''
         Returns a key objects for the minion
         '''
-        key = None
         # Make sure all key parent directories are accessible
         user = self.opts.get('user', 'root')
         salt.utils.verify.check_parent_dirs(self.rsa_path, user)

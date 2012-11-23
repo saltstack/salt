@@ -160,7 +160,7 @@ def _validate_keys(key_file):
                             'comment': comment,
                             'options': options,
                             'fingerprint': fingerprint}
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         msg = 'Problem reading ssh key file {0}'
         raise CommandExecutionError(msg.format(key_file))
 
@@ -360,7 +360,6 @@ def set_auth_key_from_file(
         msg = 'Failed to pull key file from salt file server'
         raise CommandExecutionError(msg)
 
-    newkey = {}
     rval = ''
     newkey = _validate_keys(lfile)
     for k in newkey:
@@ -613,7 +612,7 @@ def set_known_host(user, hostname,
     try:
         with salt.utils.fopen(full, 'a') as fd:
             fd.write(line)
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         raise CommandExecutionError("Couldn't append to known hosts file")
 
     if os.geteuid() == 0:

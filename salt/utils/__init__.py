@@ -227,7 +227,6 @@ def which(exe=None):
     Python clone of POSIX's /usr/bin/which
     '''
     if exe:
-        (path, name) = os.path.split(exe)
         if os.access(exe, os.X_OK):
             return exe
 

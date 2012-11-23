@@ -232,12 +232,6 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
 
         salt '*' cron.rm_job root \* \* \* \* 1 /usr/local/weekly
     '''
-    # Scrub the types
-    minute = str(minute)
-    hour = str(hour)
-    dom = str(dom)
-    month = str(month)
-    dow = str(dow)
     lst = list_tab(user)
     ret = 'absent'
     rm_ = None
