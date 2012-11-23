@@ -81,6 +81,7 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
+            import salt.utils  # Need to re-import, need to find out why
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as f:
                     f.readline()  # skip first line
