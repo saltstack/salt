@@ -1483,11 +1483,12 @@ class BaseHighState(object):
                             ]
 
                             # An include must only be one available in one environment
-                            if my_env and len(my_env) == 1:
+                            # Or the include must exist in the current environment
+                            if len(my_env) == 1 or env in my_env:
                                 if inc_sls not in mods:
                                     nstate, mods, err = self.render_state(
                                         inc_sls,
-                                        my_env[0],
+                                        my_env[0] if len(my_env) == 1 else env,
                                         mods
                                     )
                                 if nstate:
