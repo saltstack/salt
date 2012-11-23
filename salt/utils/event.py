@@ -14,6 +14,8 @@ Manage events
 #
 # Import Python libs
 import os
+import fnmatch
+import glob
 import hashlib
 import errno
 import logging
@@ -228,17 +230,20 @@ class Reactor(object):
         self.opts = opts
         self.rend = salt.loader.render(self.opts, {})
 
-    def render_reaction(self, fn_, tag, data):
+    def render_reaction(self, glob_ref, tag, data):
         '''
         Execute the render system against a single reaction file and return
         the data structure
         '''
-        return compile_template(
-                fn_,
-                self.rend,
-                self.opts['renderer'],
-                tag=tag,
-                data=data)
+        react = {}
+        for fn_ in glob.glob(glob_ref):
+            react.update(compile_template(
+                    fn_,
+                    self.rend,
+                    self.opts['renderer'],
+                    tag=tag,
+                    data=data))
+        return react
 
     def list_reactors(self, tag):
         '''
@@ -253,7 +258,7 @@ class Reactor(object):
                 continue
             key = ropt.keys()[0]
             val = ropt[key]
-            if key == tag:
+            if fnmatch.fnmatch(tag, key):
                 if isinstance(val, str):
                     reactors.append(val)
                 elif isinstance(val, list):
