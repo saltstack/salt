@@ -227,9 +227,6 @@ class Auth(object):
         else:
             salt.utils.fopen(m_pub_fn, 'w+').write(master_pub)
             return True
-        log.error('The salt master has failed verification for an unknown '
-                  'reason, verify your salt keys')
-        return False
 
     def sign_in(self):
         '''

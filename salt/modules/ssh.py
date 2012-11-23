@@ -620,7 +620,7 @@ def set_known_host(user, hostname,
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 
     # TODO: The lines below this are dead code, fix the above return and make these work
-    status = check_known_host(user, hostname, fingerprint=fingerprint,
-                                               config=config)
-    if status == 'exists':
-        return None
+    #status = check_known_host(user, hostname, fingerprint=fingerprint,
+    #                                           config=config)
+    #if status == 'exists':
+    #    return None

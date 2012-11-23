@@ -146,7 +146,6 @@ class SREQ(object):
                 raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
             else:
                 break
-            tried += 1
         ret = self.serial.loads(self.socket.recv())
         poller.unregister(self.socket)
         return ret
