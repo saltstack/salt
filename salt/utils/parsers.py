@@ -11,6 +11,7 @@ import os
 import sys
 import logging
 import optparse
+import traceback
 from functools import partial
 from salt import config, loader, log, version
 
@@ -116,7 +117,7 @@ class OptionParser(optparse.OptionParser):
                 process_option_func()
             except Exception, err:
                 self.error('Error while processing {0}: {1}'.format(
-                    process_option_func, err
+                    process_option_func, traceback.format_exc(err)
                 ))
 
         # Run the functions on self._mixin_after_parsed_funcs
@@ -1099,7 +1100,10 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path('minion'))
+        return config.minion_config(
+            self.get_config_file_path('minion'),
+            check_dns=not self.options.local
+        )
 
     def process_module_dirs(self):
         if self.options.module_dirs:
