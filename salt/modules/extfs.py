@@ -156,7 +156,6 @@ def tune(device, **kwargs):
                  'journal': 'j',
                  'journal_opts': 'J',
                  'label': 'L',
-                 'reserved': 'm',
                  'last_dir': 'M',
                  'opts': 'o',
                  'feature': 'O',
