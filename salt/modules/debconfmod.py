@@ -68,9 +68,6 @@ def show(name):
 
         salt '*' debconf.show <package name>
     '''
-
-    result = None
-
     selections = get_selections()
 
     result = selections.get(name)

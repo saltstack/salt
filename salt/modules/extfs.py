@@ -215,7 +215,6 @@ def dump(device, args=None):
     ret = {'attributes': {}, 'blocks': {}}
     out = __salt__['cmd.run'](cmd).splitlines()
     mode = 'opts'
-    blkgrp = None
     group = None
     for line in out:
         if not line:
