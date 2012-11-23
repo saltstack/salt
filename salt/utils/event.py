@@ -224,7 +224,7 @@ class Reactor(object):
     The reactor has the capability to execute pre-programmed executions
     as reactions to events
     '''
-    def __init__(self. opts):
+    def __init__(self, opts):
         self.opts = opts
         self.rend = salt.loader.render(self.opts, {})
 
