@@ -245,7 +245,7 @@ def user_list(user=None, host=None, port=None, runas=None):
     ret = []
     query = (
         '''SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
-        rolcatupdate, rolcanlogin, rolconnlimit, rolvaliduntil, rolconfig, oid
+        rolcatupdate, rolcanlogin, rolreplication, rolconnlimit, rolvaliduntil, rolconfig, oid
         FROM pg_roles'''
     )
     cmd = _psql_cmd('-c', query,
@@ -297,6 +297,7 @@ def user_create(username,
                 createuser=False,
                 encrypted=False,
                 superuser=False,
+                replication=False,
                 password=None,
                 runas=None):
     '''
@@ -325,6 +326,8 @@ def user_create(username,
         sub_cmd = "{0} CREATEUSER".format(sub_cmd, )
     if superuser:
         sub_cmd = "{0} SUPERUSER".format(sub_cmd, )
+    if replication:
+        sub_cmd = "{0} REPLICATION".format(sub_cmd, )
 
     if sub_cmd.endswith("WITH"):
         sub_cmd = sub_cmd.replace(" WITH", "")
@@ -339,6 +342,7 @@ def user_update(username,
                 createdb=False,
                 createuser=False,
                 encrypted=False,
+                replication=False,
                 password=None,
                 runas=None):
     '''
@@ -364,6 +368,8 @@ def user_update(username,
         sub_cmd = "{0} CREATEUSER".format(sub_cmd, )
     if encrypted:
         sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
+    if encrypted:
+        sub_cmd = "{0} REPLICATION".format(sub_cmd, )
 
     if sub_cmd.endswith("WITH"):
         sub_cmd = sub_cmd.replace(" WITH", "")

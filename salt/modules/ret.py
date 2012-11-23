@@ -13,7 +13,7 @@ def get_jid(returner, jid):
 
     CLI Example::
 
-        salt '*' returner.get_jid redis 20421104181954700505
+        salt '*' ret.get_jid redis 20421104181954700505
     '''
     returners = salt.loader.returners(__opts__, __salt__)
     return returners['{0}.get_jid'.format(returner)](jid)
@@ -21,11 +21,35 @@ def get_jid(returner, jid):
 
 def get_fun(returner, fun):
     '''
-    Return the information for a specified job id
+    Return info about last time fun was called on each minion
 
     CLI Example::
 
-        salt '*' returner.get_fun network.interfaces
+        salt '*' ret.get_fun mysql network.interfaces
     '''
     returners = salt.loader.returners(__opts__, __salt__)
     return returners['{0}.get_fun'.format(returner)](fun)
+
+
+def get_jids(returner):
+    '''
+    Return a list of all job ids
+
+    CLI Example::
+
+        salt '*' ret.get_jids mysql
+    '''
+    returners = salt.loader.returners(__opts__, __salt__)
+    return returners['{0}.get_jids'.format(returner)]()
+
+
+def get_minions(returner):
+    '''
+    Return a list of all minions
+
+    CLI Example::
+
+        salt '*' ret.get_minions mysql
+    '''
+    returners = salt.loader.returners(__opts__, __salt__)
+    return returners['{0}.get_minions'.format(returner)]()

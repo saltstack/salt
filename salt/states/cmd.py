@@ -111,27 +111,6 @@ import salt.state
 log = logging.getLogger(__name__)
 
 
-def _delegate_to_state(func, name, **kws):
-    '''
-    Delegate execution to a state function with arguments(name+kws).
-    '''
-
-    # eg, _delegate_to_state("cmd.run", "echo hello", cwd="/")
-
-    state_name, state_func = func.split('.', 1)
-
-    # the following code fragment is copied and modified from salt's
-    # modules.state.single()
-    kws.update(dict(state=state_name, fun=state_func, name=name))
-    opts = copy.copy(__opts__)
-    st_ = salt.state.State(opts)
-    err = st_.verify_data(kws)
-    if err:
-        log.error(str(err))
-        raise Exception('Failed verifying state input!')
-    return st_.call(kws)
-
-
 def _reinterpreted_state(state):
     '''
     Re-interpret the state return by salt.sate.run using our protocol.
@@ -392,21 +371,6 @@ def run(name,
         The command being executed is expected to return data about executing
         a state
     '''
-    if stateful:
-        return _reinterpreted_state(
-                _delegate_to_state(
-                    'cmd.run',
-                    name,
-                    onlyif=onlyif,
-                    unless=unless,
-                    cwd=cwd,
-                    user=user,
-                    group=group,
-                    shell=shell,
-                    env=env,
-                    **kwargs
-                    )
-                )
     ret = {'name': name,
            'changes': {},
            'result': False,
@@ -451,10 +415,10 @@ def run(name,
             ret['changes'] = cmd_all
             ret['result'] = not bool(cmd_all['retcode'])
             ret['comment'] = 'Command "{0}" run'.format(name)
-            return ret
+            return _reinterpreted_state(ret) if stateful else ret
         ret['result'] = None
         ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-        return ret
+        return _reinterpreted_state(ret) if stateful else ret
 
     finally:
         os.setegid(pgid)
@@ -519,21 +483,6 @@ def script(name,
         The command being executed is expected to return data about executing
         a state
     '''
-    if stateful:
-        return _reinterpreted_state(
-                _delegate_to_state(
-                    'cmd.script',
-                    name,
-                    onlyif=onlyif,
-                    unless=unless,
-                    cwd=cwd,
-                    user=user,
-                    group=group,
-                    shell=shell,
-                    env=env,
-                    **kwargs
-                    )
-                )
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -578,7 +527,7 @@ def script(name,
             ret['result'] = None
             ret['comment'] = 'Command "{0}" would have been executed'
             ret['comment'] = ret['comment'].format(name)
-            return ret
+            return _reinterpreted_state(ret) if stateful else ret
 
         # Wow, we passed the test, run this sucker!
         try:
@@ -593,7 +542,7 @@ def script(name,
         else:
             ret['result'] = not bool(cmd_all['retcode'])
         ret['comment'] = 'Command "{0}" run'.format(name)
-        return ret
+        return _reinterpreted_state(ret) if stateful else ret
 
     finally:
         os.setegid(pgid)
@@ -605,28 +554,18 @@ def mod_watch(name, **kwargs):
     if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
         if kwargs.get('stateful'):
             kwargs.pop('stateful')
-            return _reinterpreted_state(
-                    _delegate_to_state(
-                        'cmd.run',
-                        name,
-                        **kwargs
-                        )
-                    )
+            return _reinterpreted_state(run(name, **kwargs))
         return run(name, **kwargs)
+
     elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
         if kwargs.get('stateful'):
             kwargs.pop('stateful')
-            return _reinterpreted_state(
-                    _delegate_to_state(
-                        'cmd.script',
-                        name
-                        **kwargs
-                        )
-                    )
+            return _reinterpreted_state(script(name, **kwargs))
         return script(name, **kwargs)
+
     return {'name': name,
             'changes': {},
-            'comment': ('cmd.{0} does nto work with the watch requisite, '
+            'comment': ('cmd.{0} does not work with the watch requisite, '
                        'please use cmd.wait of cmd.wait_script').format(
                            kwargs['sfun']
                            ),
