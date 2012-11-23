@@ -342,6 +342,7 @@ def master_config(path):
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
             'range_server': 'range:80',
+            'reactors': [],
             'serial': 'msgpack',
             'state_verbose': True,
             'state_output': 'full',
