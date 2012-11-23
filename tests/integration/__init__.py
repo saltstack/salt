@@ -24,7 +24,7 @@ import salt.minion
 import salt.runner
 from salt.utils import get_colors
 from salt.utils.verify import verify_env
-from saltunittest import TestCase
+from saltunittest import TestCase, RedirectStdStreams
 
 try:
     import console
@@ -641,8 +641,9 @@ class ShellCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
-        runner = salt.runner.Runner(opts)
-        ret['fun'] = runner.run()
+        with RedirectStdStreams():
+            runner = salt.runner.Runner(opts)
+            ret['fun'] = runner.run()
         return ret
 
     def run_key(self, arg_str, catch_stderr=False):
