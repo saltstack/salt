@@ -1674,8 +1674,8 @@ class BaseHighState(object):
         high, errors = self.render_highstate(matches)
         err += errors
 
-        if errors:
-            return errors
+        if err:
+            return err
 
         return high
 
