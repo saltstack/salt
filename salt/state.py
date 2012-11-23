@@ -1472,22 +1472,38 @@ class BaseHighState(object):
                                'as a list'.format(sls))
                         errors.append(err)
                     else:
+                        # Available environments to which this minion belongs
+                        my_avail = self.top_matches(self.get_top()).keys()
+
                         for inc_sls in state.pop('include'):
-                            if fnmatch.filter(self.avail[env], inc_sls):
+                            # Subset of my_avail containing the include sls
+                            my_env = [
+                                aenv for aenv in my_avail
+                                if fnmatch.filter(self.avail[aenv], inc_sls)
+                            ]
+
+                            # An include must only be one available in one environment
+                            if my_env and len(my_env) == 1:
                                 if inc_sls not in mods:
                                     nstate, mods, err = self.render_state(
-                                            inc_sls,
-                                            env,
-                                            mods
-                                            )
+                                        inc_sls,
+                                        my_env[0],
+                                        mods
+                                    )
                                 if nstate:
                                     state.update(nstate)
                                 if err:
                                     errors += err
                             else:
-                                msg = ('Specified SLS {0} in environment {1} '
-                                       'is not available on the salt master'
-                                       ).format(inc_sls, env)
+                                msg = ''
+                                if not my_env:
+                                    msg = ('Unknown include: Specified SLS {0} is not available on the salt master '
+                                           'in any available environments {1} '
+                                           ).format(inc_sls, ', '.join(my_avail))
+                                elif len(my_env) > 1:
+                                    msg = ('Ambiguous include: Specified SLS {0} is available on the salt master '
+                                           'in available environments {1}'
+                                        ).format(inc_sls, ', '.join(my_env))
                                 log.error(msg)
                                 if self.opts['failhard']:
                                     errors.append(msg)
