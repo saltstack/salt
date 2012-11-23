@@ -13,6 +13,9 @@ import sys
 import logging
 from functools import wraps
 
+# Import salt libs
+from salt.utils import fopen
+
 # support python < 2.7 via unittest2
 if sys.version_info[0:2] < (2, 7):
     try:
@@ -53,6 +56,48 @@ def destructiveTest(func):
             cls.skipTest('Destructive tests are disabled')
         return func(cls)
     return wrap
+
+
+class RedirectStdStreams(object):
+    """
+    Temporarily redirect system output to file like objects.
+    Default is to redirect to `os.devnull`, which just mutes output, `stdout`
+    and `stderr`.
+    """
+
+    def __init__(self, stdout=None, stderr=None):
+        if stdout is None:
+            stdout = fopen(os.devnull, 'w')
+        if stderr is None:
+            stderr = fopen(os.devnull, 'w')
+
+        self.__stdout = stdout
+        self.__stderr = stderr
+        self.__redirected = False
+
+    def __enter__(self):
+        self.redirect()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.unredirect()
+
+    def redirect(self):
+        self.old_stdout = sys.stdout
+        self.old_stdout.flush()
+        self.old_stderr = sys.stderr
+        self.old_stderr.flush()
+        sys.stdout = self.__stdout
+        sys.stderr = self.__stderr
+        self.__redirected = True
+
+    def unredirect(self):
+        if not self.__redirected:
+            return
+
+        self.__stdout.flush()
+        self.__stderr.flush()
+        sys.stdout = self.old_stdout
+        sys.stderr = self.old_stderr
 
 
 class TestsLoggingHandler(object):
