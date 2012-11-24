@@ -4,7 +4,16 @@ specified templating engine(eg, jinja) and a chosen data renderer(eg, yaml),
 extract arguments for any ``stateconf.set`` state and provide the extracted
 arguments (including salt specific args, such as 'require', etc) as template
 context. The goal is to make writing reusable/configurable/ parameterized
-salt files easier and cleaner, therefore, additionally, it also:
+salt files easier and cleaner.
+
+To use this renderer, either set it as the default renderer via the
+``renderer`` option in master/minion's config, or use the shebang line in each
+individual sls file, like so: ``#!stateconf``. Note, due to the way this
+renderer works, it must be specified as the first renderer in a render
+pipeline. That is, you cannot specify ``#!mako|yaml|stateconf``, for example.
+Instead, you specify them as renderer arguments: ``#!stateconf mako . yaml``.
+
+Here's a list of features enabled by this renderer:
 
   - Recognizes the special state function, ``stateconf.set``, that configures a
     default list of named arguments useable within the template context of
@@ -32,12 +41,14 @@ salt files easier and cleaner, therefore, additionally, it also:
                 '
 
     This even works with ``include`` + ``extend`` so that you can override
-    the default configured arguments by including the salt file and then extend
-    the ``stateconf.set`` states that come from the included salt file.
+    the default configured arguments by including the salt file and then
+    ``extend`` the ``stateconf.set`` states that come from the included salt
+    file.
 
     Notice that the end of configuration marker(``# --- end of state config --``)
     is needed to separate the use of 'stateconf.set' form the rest of your salt
-    file.
+    file. The regex that matches such marker can be configured via the
+    ``stateconf_end_marker`` option in your master or minion config file.
 
   - Adds support for relative include and exclude of .sls files. Example::
 
@@ -81,7 +92,7 @@ salt files easier and cleaner, therefore, additionally, it also:
           package.installed:
             - name: vim
     
-    Notice how that if a state under a dot-prefixed state id has no 'name'
+    Notice how that if a state under a dot-prefixed state id has no ``name``
     argument then one will be added automatically by using the state id with
     the leading dot stripped off.
 
@@ -107,9 +118,11 @@ salt files easier and cleaner, therefore, additionally, it also:
             stateconf.set:
               - name1: something
 
-  - Optionally(disable via the `-G` renderer option), generates a
-    ``stateconf.set`` goal state(state id named as ``.goal`` by default) that
-    requires all other states in the salt file.
+  - Optionally(enabled by default, *disable* via the `-G` renderer option,
+    eg, in the shebang line: ``#!stateconf -G``), generates a
+    ``stateconf.set`` goal state(state id named as ``.goal`` by default)
+    that requires all other states in the salt file. Note, the ``.goal``
+    state id is subject to dot-prefix rename rule mentioned earlier.
 
     Such goal state is intended to be required by some state in an including
     salt file. For example, in your webapp salt file, if you include a
@@ -117,10 +130,13 @@ salt files easier and cleaner, therefore, additionally, it also:
     all states in the Tomcat sls file will be executed before some state in
     the webapp sls file.
 
-  - Optionally(enable via the `-o` renderer option), orders the states in a sls
-    file by adding a `require`` requisite to each state such that every state
-    requires the state defined just before it. The order of the states here is
-    the order they are defined in the sls file.
+  - Optionally(enable via the `-o` renderer option, eg, in the shebang line:
+    ``#!stateconf -o``), orders the states in a sls file by adding a
+    ``require`` requisite to each state such that every state requires the
+    state defined just before it. The order of the states here is the order
+    they are defined in the sls file.(Note: this feature is only available
+    if your minions are using Python >= 2.7. For Python2.6, it should also
+    work if you install the `ordereddict` module from PyPI)
 
     By enabling this feature, you are basically agreeing to author your sls
     files in a way that gives up the explicit(or implicit?) ordering imposed
@@ -140,7 +156,9 @@ salt files easier and cleaner, therefore, additionally, it also:
     Additionally, ``names`` declarations cannot be used with this feature
     because the way they are compiled into low states make it impossible to
     guarantee the order in which they will be executed. This is also checked
-    by the renderer.
+    by the renderer. As a workaround for not being able to use ``names``,
+    you can achieve the same effect, by generate your states with the
+    template engine available within your sls file.
 
     Finally, with the use of this feature, it becomes possible to easily make
     an included sls file execute all its states *after* some state(say, with
@@ -149,13 +167,44 @@ salt files easier and cleaner, therefore, additionally, it also:
 
 
 When writing sls files with this renderer, you should avoid using what can be
-defined in a ``name`` argument of a state as the state's id. Instead, you
-should define the state id and the name argument separately for each state,
-and the id should be something meaningful and easy to reference within a
-requisite, and when referencing a state from a requisite, you should reference
-the state's id rather than its name. The reason is that this renderer might
-re-write or renames state id's and their references.
+defined in a ``name`` argument of a state as the state's id. That is, avoid
+writing your states like this::
 
+    /path/to/some/file:
+      file.managed:
+        - source: salt://some/file
+
+    cp /path/to/some/file file2:
+      cmd.run:
+        - cwd: /
+        - require:
+          - file: /path/to/some/file
+
+Instead, you should define the state id and the ``name`` argument separately
+for each state, and the id should be something meaningful and easy to reference
+within a requisite(which I think is a good habit anyway, and such extra
+indirection would also makes your sls file easier to modify later). Thus, the
+above examples should be written like this::
+
+    add-some-file:
+      file.managed:
+        - name: /path/to/some/file
+        - source: salt://some/file
+
+    copy-files:
+      cmd.run:
+        - name: cp /path/to/some/file file2
+        - cwd: /
+        - require:
+          - file: add-some-file
+
+Moreover, when referencing a state from a requisite, you should reference the
+state's id plus the state name rather than the state name plus its ``name``
+argument. (Yes, in the above example, you can actually ``require`` the
+``file: /path/to/some/file``, instead of the ``file: add-some-file``). The
+reason is that this renderer will re-write or rename state id's and their
+references for state id's prefixed with ``.``. So, if you reference ``name``
+then there's no way to reliably rewrite such reference.
 
 '''
 
