@@ -35,9 +35,9 @@ Here's a list of features enabled by this renderer:
         output:
           cmd.run:
             - name: |
-                echo 'name1=${sls_params.name1}
-                      name2=${sls_params.name2}
-                      name3[1]=${sls_params.name3[1]}
+                echo 'name1={{sls_params.name1}}
+                      name2={{sls_params.name2}}
+                      name3[1]={{sls_params.name3[1]}}
                 '
 
     This even works with ``include`` + ``extend`` so that you can override
@@ -49,6 +49,39 @@ Here's a list of features enabled by this renderer:
     is needed to separate the use of 'stateconf.set' form the rest of your salt
     file. The regex that matches such marker can be configured via the
     ``stateconf_end_marker`` option in your master or minion config file.
+
+    Sometimes, you'd like to set a default argument value that's based on
+    earlier arguments in the same ``stateconf.set``. For example, you may be
+    tempted to do something like this::
+
+        apache:
+          stateconf.set:
+            - host: localhost
+            - port: 1234
+            - url: 'http://{{host}}:{{port}}/'
+
+        # --- end of state config ---
+
+        test:
+          cmd.run:
+            - name: echo '{{apache.url}}'
+            - cwd: /
+
+    However, this won't work, but can be worked around like so::
+
+        apache:
+          stateconf.set:
+            - host: localhost
+            - port: 1234
+        {#  - url: 'http://{{host}}:{{port}}/' #}
+
+        # --- end of state config ---
+        # {{ apache.setdefault('url', "http://%(host)s:%(port)s/" % apache) }}
+
+        test:
+          cmd.run:
+            - name: echo '{{apache.url}}'
+            - cwd: /
 
   - Adds support for relative include and exclude of .sls files. Example::
 
@@ -120,7 +153,8 @@ Here's a list of features enabled by this renderer:
 
   - Optionally(enabled by default, *disable* via the `-G` renderer option,
     eg, in the shebang line: ``#!stateconf -G``), generates a
-    ``stateconf.set`` goal state(state id named as ``.goal`` by default)
+    ``stateconf.set`` goal state(state id named as ``.goal`` by default,
+    configurable via the master/minion config option, ``stateconf_goal_state``)
     that requires all other states in the salt file. Note, the ``.goal``
     state id is subject to dot-prefix rename rule mentioned earlier.
 
@@ -146,7 +180,7 @@ Here's a list of features enabled by this renderer:
     there are many states defined in a sls file, then it tends to be easier
     to see the order they will be executed with this feature.
 
-    You are still allow to use all the requisites, with a few restricitons.
+    You are still allowed to use all the requisites, with a few restricitons.
     You cannot ``require`` or ``watch`` a state defined *after* the current
     state. Similarly, in a state, you cannot ``require_in`` or ``watch_in``
     a state defined *before* it. Breaking any of the two restrictions above
@@ -184,7 +218,7 @@ Instead, you should define the state id and the ``name`` argument separately
 for each state, and the id should be something meaningful and easy to reference
 within a requisite(which I think is a good habit anyway, and such extra
 indirection would also makes your sls file easier to modify later). Thus, the
-above examples should be written like this::
+above states should be written like this::
 
     add-some-file:
       file.managed:
@@ -210,35 +244,17 @@ then there's no way to reliably rewrite such reference.
 
 # TODO:
 #   - sls meta/info state: Eg,
+#
 #       sls_info:
-#         author: Jack Kuan
-#         description: what the salt file does...
-#         version: 0.1.0
+#         stateconf.set:
+#           - author: Jack Kuan
+#           - description: what the salt file does...
+#           - version: 0.1.0
 #
 #   - version constraint for 'include'. Eg,
+#
 #       include:
 #         - apache: >= 0.1.0
-#
-#   - support synthetic argument? Eg,
-#
-#     apache:
-#       stateconf.set:
-#         - host: localhost
-#         - port: 1234
-#         - url: 'http://${host}:${port}/'
-#
-#     Currently, this won't work, but can be worked around like so:
-#
-#     apache:
-#       stateconf.set:
-#         - host: localhost
-#         - port: 1234
-#     ##  - url: 'http://${host}:${port}/'
-#
-#     # --- end of state config ---
-#     <%
-#     apache.setdefault('url', "http://%(host)s:%(port)s/" % apache)
-#     %>
 #
 
 # Import python libs
