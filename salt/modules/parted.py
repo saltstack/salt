@@ -45,31 +45,35 @@ def partlist(device, unit=None):
         salt '*' partition.partlist /dev/sda unit=kB
     '''
     if unit:
-        cmd = 'parted -s {0} unit {1} print'.format(device, unit)
+        cmd = 'parted -m -s {0} unit {1} print'.format(device, unit)
     else:
-        cmd = 'parted -s {0} print'.format(device)
+        cmd = 'parted -m -s {0} print'.format(device)
     out = __salt__['cmd.run'](cmd).splitlines()
-    ret = {'info': [], 'partitions': {}}
+    ret = {'info': {}, 'partitions': {}}
     mode = 'info'
     for line in out:
-        if not line:
+        if line.startswith('BYT'):
             continue
+        comps = line.replace(';', '').split(':')
         if mode == 'info':
-            if line.startswith('Number'):
+            if len(comps) == 8:
+                ret['info'] = {
+                    'disk': comps[0],
+                    'size': comps[1],
+                    'interface': comps[2],
+                    'logical sector': comps[3],
+                    'physical sector': comps[4],
+                    'partition table': comps[5],
+                    'model': comps[6],
+                    'disk flags': comps[7]}
                 mode = 'partitions'
-            else:
-                ret['info'].append(line)
         else:
-            comps = line.strip().split()
             ret['partitions'][comps[0]] = {
                 'number': comps[0],
                 'start': comps[1],
                 'end': comps[2],
                 'size': comps[3],
-                'type': comps[4]}
-            if len(comps) > 5:
-                ret['partitions'][comps[0]]['file system'] = comps[5]
-            if len(comps) > 6:
-                ret['partitions'][comps[0]]['flags'] = comps[6:]
+                'type': comps[4],
+                'file system': comps[5],
+                'flags': comps[6]}
     return ret
-
