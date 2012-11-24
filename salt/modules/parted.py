@@ -3,7 +3,9 @@ Module for managing partitions on posix-like systems.
 
 Some functions may not be available, depending on your version of parted.
 
-Check man 8 parted for more information.
+Check man 8 parted for more information, or the online docs at:
+
+http://www.gnu.org/software/parted/manual/html_chapter/parted_2.html
 '''
 
 import logging
