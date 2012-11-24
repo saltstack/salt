@@ -1442,7 +1442,7 @@ class BaseHighState(object):
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 
-    def render_state(self, sls, env, mods):
+    def render_state(self, sls, env, mods, matches):
         '''
         Render a state file and retrieve all of the include states
         '''
@@ -1472,13 +1472,10 @@ class BaseHighState(object):
                                'as a list'.format(sls))
                         errors.append(err)
                     else:
-                        # Available environments to which this minion belongs
-                        my_avail = self.top_matches(self.get_top()).keys()
-
                         for inc_sls in state.pop('include'):
                             # Subset of my_avail containing the include sls
                             my_env = [
-                                aenv for aenv in my_avail
+                                aenv for aenv in matches
                                 if fnmatch.filter(self.avail[aenv], inc_sls)
                             ]
 
@@ -1489,7 +1486,8 @@ class BaseHighState(object):
                                     nstate, mods, err = self.render_state(
                                         inc_sls,
                                         my_env[0] if len(my_env) == 1 else env,
-                                        mods
+                                        mods,
+                                        matches
                                     )
                                 if nstate:
                                     state.update(nstate)
@@ -1500,7 +1498,7 @@ class BaseHighState(object):
                                 if not my_env:
                                     msg = ('Unknown include: Specified SLS {0} is not available on the salt master '
                                            'in any available environments {1} '
-                                           ).format(inc_sls, ', '.join(my_avail))
+                                           ).format(inc_sls, ', '.join(matches))
                                 elif len(my_env) > 1:
                                     msg = ('Ambiguous include: Specified SLS {0} is available on the salt master '
                                            'in available environments {1}'
@@ -1610,7 +1608,7 @@ class BaseHighState(object):
             mods = set()
             for sls_match in states:
                 for sls in fnmatch.filter(self.avail[env], sls_match):
-                    state, mods, err = self.render_state(sls, env, mods)
+                    state, mods, err = self.render_state(sls, env, mods, matches)
                     # The extend members can not be treated as globally unique:
                     if '__extend__' in state and '__extend__' in highstate:
                         highstate['__extend__'].extend(state.pop('__extend__'))
