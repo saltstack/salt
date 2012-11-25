@@ -243,6 +243,8 @@ def install(name=None, refresh=False, sources=None, **kwargs):
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
         stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr','')
+        if stderr:
+            log.error(stderr)
 
     # Get a list of the packages again, including newly installed ones.
     new = list_pkgs()
