@@ -23,6 +23,12 @@ import time
 import platform
 from calendar import month_abbr as months
 
+try:
+    import fcntl
+except ImportError:
+    # fcntl is not available on windows
+    fcntl = None
+
 # Import Salt libs
 import salt.minion
 import salt.payload
@@ -735,6 +741,9 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
+    if fcntl is None:
+        # fcntl is not available on windows
+        return fhandle
     try:
         FD_CLOEXEC = fcntl.FD_CLOEXEC
     except AttributeError:
