@@ -720,6 +720,14 @@ class SaltReturnAssertsMixIn(object):
 
         for part in ret.itervalues():
             try:
+                self.assertTrue(isinstance(part, dict))
+            except AssertionError:
+                raise AssertionError(
+                    '{0} is not dict. Salt returned: {1}'.format(
+                        type(part), part
+                    )
+                )
+            try:
                 if which_case is True:
                     self.assertTrue(part['result'])
                 elif which_case is False:
