@@ -145,14 +145,23 @@ Watch and the mod_watch Function
 
 The watch requisite is based on the ``mod_watch`` function. Python state
 modules can include a function called ``mod_watch`` which is then called
-if the watch call is invoked. In the case of the service module the underlying
-service is restarted. In the case of the cmd state the command is executed.
+if the watch call is invoked. When ``mod_watch`` is called depends on the
+execution of the watched state, which:
+
+  - If no changes then just run the watching state itself as usual.
+    ``mod_watch`` is not called. This behavior is same as using a ``require``.
+
+  - If changes then run the watching state *AND* if that changes nothing then
+    react by calling ``mod_watch``.
+
+When reacting, in the case of the service module the underlying service is
+restarted. In the case of the cmd state the command is executed.
 
 The ``mod_watch`` function for the service state looks like this:
 
 .. code-block:: python
 
-    def mod_watch(name, sig=None):
+    def mod_watch(name, sig=None, reload=False, full_restart=False):
         '''
         The service watcher, called to invoke the watch command.
 
@@ -163,21 +172,47 @@ The ``mod_watch`` function for the service state looks like this:
             The string to search for when looking for the service process with ps
         '''
         if __salt__['service.status'](name, sig):
-            changes = {name: __salt__['service.restart'](name)}
-            return {'name': name,
-                    'changes': changes,
-                    'result': True,
-                    'comment': 'Service restarted'}
+            if 'service.reload' in __salt__ and reload:
+                restart_func = __salt__['service.reload']
+            elif 'service.full_restart' in __salt__ and full_restart:
+                restart_func = __salt__['service.full_restart']
+            else:
+                restart_func = __salt__['service.restart']
+        else:
+            restart_func = __salt__['service.start']
 
+        result = restart_func(name)
         return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'Service {0} started'.format(name)}
+                'changes': {name: result},
+                'result': result,
+                'comment': 'Service restarted' if result else \
+                           'Failed to restart the service'
+               }
 
 The watch requisite only works if the state that is watching has a
 ``mod_watch`` function written. If watch is set on a state that does not have
 a ``mod_watch`` function (like pkg), then the listed states will behave only
 as if they were under a ``require`` statement.
+
+Also notice that a ``mod_watch`` may accept additional keyword arguments,
+which, in the sls file, will be taken from the same set of arguments specified
+for the state that includes the ``watch`` requisite. This means, for the
+earlier ``service.running`` example above,  you can tell the service to
+``reload`` instead of restart like this:
+
+.. code-block:: yaml
+
+  redis:
+
+    # ... other state declarations omitted ...
+
+      service.running:
+        - enable: True
+        - reload: True
+        - watch:
+          - file: /etc/redis.conf
+          - pkg: redis
+
 
 The Order Option
 ================

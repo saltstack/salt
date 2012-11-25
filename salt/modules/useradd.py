@@ -81,9 +81,9 @@ def add(name,
     cmd = 'useradd '
     if shell:
         cmd += '-s {0} '.format(shell)
-    if uid is not None:
+    if uid not in (None, ''):
         cmd += '-u {0} '.format(uid)
-    if gid is not None:
+    if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
     if groups:
         cmd += '-G {0} '.format(','.join(groups))

@@ -14,3 +14,4 @@ Full list of builtin returner modules
     cassandra_return
     mongo_return
     redis_return
+    mysql
