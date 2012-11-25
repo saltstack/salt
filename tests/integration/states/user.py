@@ -69,7 +69,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('user.info', ['salt_test'])
-        self.assertSaltTrueReturn(ret)
+        self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
@@ -93,7 +93,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('user.info', ['salt_test'])
-        self.assertSaltTrueReturn(ret)
+        self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
