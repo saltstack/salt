@@ -141,8 +141,8 @@ def install(name=None, refresh=False, sources=None, **kwargs):
 
     CLI Example, installing a datastream pkg that exists on the salt master::
 
-        salt '*' pkg.install sources='[{"<pkg name>": "salt://srv/salt/pkgs/<pkg filename>"}]'
-        salt '*' pkg.install sources='[{"SMClgcc346": "salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg"}]'
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
+        salt '*' pkg.install sources='[{"SMClgcc346": "salt://pkgs/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
     CLI Example, installing a datastream pkg that exists on a HTTP server::
 
@@ -188,7 +188,7 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     CLI Example - Overriding the 'instance' adminfile option when calling the
     module directly::
 
-        salt '*' pkg.install sources='[{"<pkg name>": "salt://srv/salt/pkgs/<pkg filename>"}]' instance="overwrite"
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' instance="overwrite"
 
     CLI Example - Overriding the 'instance' adminfile option when used in a
     state::
@@ -205,15 +205,15 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     CLI Example - Providing your own adminfile when calling the module
     directly::
 
-        salt '*' pkg.install sources='[{"<pkg name>": "salt://srv/salt/pkgs/<pkg filename>"}]' admin_source='salt://srv/salt/pkgs/<adminfile filename>'
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' admin_source='salt://pkgs/<adminfile filename>'
 
     CLI Example - Providing your own adminfile when using states::
 
         <pkg name>:
           pkg.installed:
             - sources:
-              - <pkg name>: salt://srv/salt/pkgs/<pkg filename>
-            - admin_source: salt://srv/salt/pkgs/<adminfile filename>
+              - <pkg name>: salt://pkgs/<pkg filename>
+            - admin_source: salt://pkgs/<adminfile filename>
 
     Note: the ID declaration is ignored, as the package name is read from the
     "sources" parameter.
@@ -235,14 +235,14 @@ def install(name=None, refresh=False, sources=None, **kwargs):
 
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
-    # Global only?
+    # Only makes sense in a global zone but works fine in non-globals. 
     if kwargs.get('current_zone_only') == 'True':
         cmd += '-G '
 
-    cmd += '-d {0} "all"'.format(pkgname)
-
-    # Install the package
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    for pkg in pkg_params:
+        temp_cmd = cmd + '-d {0} "all"'.format(pkg)
+        # Install the package{s}
+        stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr','')
 
     # Get a list of the packages again, including newly installed ones.
     new = list_pkgs()
