@@ -31,7 +31,8 @@ def render(template, env='', sls='', tmplpath=None, **kws):
             opts=__opts__,
             pillar=__pillar__,
             env=env,
-            sls=sls)
+            sls=sls,
+            **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in py renderer'))

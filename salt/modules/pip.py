@@ -16,6 +16,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 logger = logging.getLogger(__name__)
 
+
 def _get_pip_bin(bin_env):
     '''
     Return the pip command to call, either from a virtualenv, an argument
@@ -458,7 +459,9 @@ def freeze(bin_env=None,
             "Could not find the path to the virtualenv's 'activate' binary"
         )
 
-    cmd = 'source {0}; {1} freeze'.format(activate, pip_bin)
+    # We use dot(.) instead of source because it's apparently the better and/or
+    # more supported way to source files on the various "major" linux shells.
+    cmd = '. {0}; {1} freeze'.format(activate, pip_bin)
 
     result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
 
