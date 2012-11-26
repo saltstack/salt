@@ -259,3 +259,34 @@ def create_attach_volumes(volumes, location, data):
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
             log.info('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
+
+
+def stop(name):
+    '''
+    Stop a node
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    try:
+        data = conn.ex_stop_node(node=node)
+        log.debug(data)
+        log.info('Stopped node {0}'.format(name))
+    except Exception as exc:
+        log.error('Failed to stop node {0}'.format(name))
+        log.error(exc)
+
+
+def start(name):
+    '''
+    Start a node
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    try:
+        data = conn.ex_start_node(node=node)
+        log.debug(data)
+        log.info('Started node {0}'.format(name))
+    except Exception as exc:
+        log.error('Failed to start node {0}'.format(name))
+        log.error(exc)
+

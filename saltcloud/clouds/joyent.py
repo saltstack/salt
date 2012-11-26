@@ -118,7 +118,7 @@ def create(vm_):
 
 def stop(name):
     '''
-    Stop a node on Joyent
+    Stop a node
     '''
     conn = get_conn()
     node = get_node(conn, name)
