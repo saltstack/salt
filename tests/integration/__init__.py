@@ -24,7 +24,7 @@ import salt.minion
 import salt.runner
 from salt.utils import get_colors
 from salt.utils.verify import verify_env
-from saltunittest import TestCase
+from saltunittest import TestCase, RedirectStdStreams
 
 try:
     import console
@@ -641,8 +641,9 @@ class ShellCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
-        runner = salt.runner.Runner(opts)
-        ret['fun'] = runner.run()
+        with RedirectStdStreams():
+            runner = salt.runner.Runner(opts)
+            ret['fun'] = runner.run()
         return ret
 
     def run_key(self, arg_str, catch_stderr=False):
@@ -700,16 +701,18 @@ class ShellCaseCommonTestsMixIn(object):
 
 class SaltReturnAssertsMixIn(object):
 
-    def __assertReturn(self, ret, which_case):
+    def assertReturnSaltType(self, ret):
         try:
             self.assertTrue(isinstance(ret, dict))
         except AssertionError:
             raise AssertionError(
                 '{0} is not dict. Salt returned: {1}'.format(
-                    type(ret), ret
+                    type(ret).__name__, ret
                 )
             )
 
+    def assertReturnNonEmptySaltType(self, ret):
+        self.assertReturnSaltType(ret)
         try:
             self.assertNotEqual(ret, {})
         except AssertionError:
@@ -717,7 +720,19 @@ class SaltReturnAssertsMixIn(object):
                 '{} is equal to {}. Salt returned an empty dictionary.'
             )
 
+    def __assertReturn(self, ret, which_case):
+        self.assertReturnNonEmptySaltType(ret)
+
         for part in ret.itervalues():
+            self.assertReturnNonEmptySaltType(part)
+            try:
+                self.assertTrue(isinstance(part, dict))
+            except AssertionError:
+                raise AssertionError(
+                    '{0} is not dict. Salt returned: {1}'.format(
+                        type(part), part
+                    )
+                )
             try:
                 if which_case is True:
                     self.assertTrue(part['result'])

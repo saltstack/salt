@@ -11,6 +11,7 @@ import os
 import sys
 import logging
 import optparse
+import traceback
 from functools import partial
 from salt import config, loader, log, version
 
@@ -116,7 +117,7 @@ class OptionParser(optparse.OptionParser):
                 process_option_func()
             except Exception, err:
                 self.error('Error while processing {0}: {1}'.format(
-                    process_option_func, err
+                    process_option_func, traceback.format_exc(err)
                 ))
 
         # Run the functions on self._mixin_after_parsed_funcs
@@ -548,9 +549,9 @@ class OutputOptionsMixIn(object):
             '--raw-out',
             default=False,
             action='store_true',
-            help=('Print the output from the \'{0}\' command in raw python '
-                  'form, this is suitable for re-reading the output into an '
-                  'executing python script with eval.'.format(
+            help=('DEPRECATED. Print the output from the \'{0}\' command in '
+                  'raw python form, this is suitable for re-reading the '
+                  'output into an executing python script with eval.'.format(
                       self.get_prog_name()
                   ))
         )
@@ -558,25 +559,26 @@ class OutputOptionsMixIn(object):
             '--yaml-out',
             default=False,
             action='store_true',
-            help='Print the output from the \'{0}\' command in yaml.'.format(
-                self.get_prog_name()
-            )
+            help=('DEPRECATED. Print the output from the \'{0}\' command in '
+                  'yaml.'.format(self.get_prog_name()))
         )
         group.add_option(
             '--json-out',
             default=False,
             action='store_true',
-            help='Print the output from the \'{0}\' command in json.'.format(
-                self.get_prog_name()
-            )
+            help=('DEPRECATED. Print the output from the \'{0}\' command in '
+                  'json.'.format(self.get_prog_name()))
         )
+
         if self._include_text_out_:
             group.add_option(
                 '--text-out',
                 default=False,
                 action='store_true',
-                help=('Print the output from the \'{0}\' command in the same '
-                      'form the shell would.'.format(self.get_prog_name()))
+                help=('DEPRECATED. Print the output from the \'{0}\' command '
+                      'in the same form the shell would.'.format(
+                          self.get_prog_name()
+                      ))
             )
 
         outputters = loader.outputters(
@@ -1099,7 +1101,10 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path('minion'))
+        return config.minion_config(
+            self.get_config_file_path('minion'),
+            check_dns=not self.options.local
+        )
 
     def process_module_dirs(self):
         if self.options.module_dirs:

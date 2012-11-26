@@ -8,8 +8,8 @@ Full Table of Contents
 
     topics/index
     topics/installation/index
-    topics/hacking
     topics/configuration
+    topics/hacking
     topics/targeting/index
     topics/tutorials/modules
     topics/tutorials/starting_states

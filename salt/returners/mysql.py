@@ -3,7 +3,7 @@ Return data to a mysql server
 
 To enable this returner the minion will need the python client for mysql
 installed and the following values configured in the minion or master
-config, these are the defaults:
+config, these are the defaults::
 
     mysql.host: 'salt'
     mysql.user: 'salt'
@@ -11,42 +11,43 @@ config, these are the defaults:
     mysql.db: 'salt'
     mysql.port: 3306
 
-Use the following mysql database schema:
+Use the following mysql database schema::
 
-CREATE DATABASE  `salt`
-  DEFAULT CHARACTER SET utf8
-  DEFAULT COLLATE utf8_general_ci;
+    CREATE DATABASE  `salt`
+      DEFAULT CHARACTER SET utf8
+      DEFAULT COLLATE utf8_general_ci;
 
-USE `salt`;
+    USE `salt`;
 
---
--- Table structure for table `jids`
---
+    --
+    -- Table structure for table `jids`
+    --
 
-DROP TABLE IF EXISTS `jids`;
-CREATE TABLE `jids` (
-  `jid` varchar(255) NOT NULL,
-  `load` varchar(65000) NOT NULL,
-  UNIQUE KEY `jid` (`jid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    DROP TABLE IF EXISTS `jids`;
+    CREATE TABLE `jids` (
+      `jid` varchar(255) NOT NULL,
+      `load` varchar(65000) NOT NULL,
+      UNIQUE KEY `jid` (`jid`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `salt_returns`
---
+    --
+    -- Table structure for table `salt_returns`
+    --
 
-DROP TABLE IF EXISTS `salt_returns`;
-CREATE TABLE `salt_returns` (
-  `fun` varchar(50) NOT NULL,
-  `jid` varchar(200) NOT NULL,
-  `return` mediumtext NOT NULL,
-  `id` varchar(255) NOT NULL,
-  `success` varchar(10) NOT NULL,
-  `full_ret` mediumtext NOT NULL,
-  KEY `id` (`id`),
-  KEY `jid` (`jid`),
-  KEY `fun` (`fun`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    DROP TABLE IF EXISTS `salt_returns`;
+    CREATE TABLE `salt_returns` (
+      `fun` varchar(50) NOT NULL,
+      `jid` varchar(200) NOT NULL,
+      `return` mediumtext NOT NULL,
+      `id` varchar(255) NOT NULL,
+      `success` varchar(10) NOT NULL,
+      `full_ret` mediumtext NOT NULL,
+      KEY `id` (`id`),
+      KEY `jid` (`jid`),
+      KEY `fun` (`fun`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+Required python modules: MySQLdb
 '''
 
 # Import python libs
