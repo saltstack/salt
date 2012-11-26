@@ -617,6 +617,8 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             dry_run_opt = '-C'
         else:
             dry_run_opt = '--dry-run'
+    else:
+        dry_run_opt = ''
     cmd = 'patch {0} {1} {2} {3}'.format(
         options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd)
