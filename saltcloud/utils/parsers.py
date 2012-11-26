@@ -152,6 +152,12 @@ class ExecutionOptionsMixIn(object):
             # Include description here as a string
         )
         group.add_option(
+            '-a', '--action',
+            default='',
+            help=('Perform an action that may be specific to this cloud'
+                  'provider')
+        )
+        group.add_option(
             '-p', '--profile',
             default='',
             help='Specify a profile to use for the vms'

@@ -45,6 +45,7 @@ avail_images = types.FunctionType(avail_images.__code__, globals())
 avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
 script = types.FunctionType(script.__code__, globals())
 destroy = types.FunctionType(destroy.__code__, globals())
+reboot = types.FunctionType(reboot.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
 list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
 list_nodes_select = types.FunctionType(list_nodes_select.__code__, globals())
@@ -113,3 +114,19 @@ def create(vm_):
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         log.info('  {0}: {1}'.format(key, val))
+
+
+def stop(name):
+    '''
+    Stop a node
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    try:
+        data = conn.ex_stop_node(node=node)
+        log.debug(data)
+        log.info('Stopped node {0}'.format(name))
+    except Exception as exc:
+        log.error('Failed to stop node {0}'.format(name))
+        log.error(exc)
+

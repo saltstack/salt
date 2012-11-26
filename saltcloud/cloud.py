@@ -156,6 +156,22 @@ class Cloud(object):
                 if self.clouds[fun](name):
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
+    def reboot(self, names):
+        '''
+        Reboot the named vms
+        '''
+        pmap = self.map_providers()
+        acts = {}
+        for prov, nodes in pmap.items():
+            acts[prov] = []
+            for node in nodes:
+                if node in names:
+                    acts[prov].append(node)
+        for prov, names_ in acts.items():
+            fun = '{0}.reboot'.format(prov)
+            for name in names_:
+                self.clouds[fun](name)
+
     def create(self, vm_):
         '''
         Create a single vm
@@ -223,6 +239,22 @@ class Cloud(object):
                         self.create(vm_)
         if not found:
             log.error('Profile {0} is not defined'.format(self.opts['profile']))
+
+    def do_action(self, names):
+        '''
+        Perform an action which may be specific to this cloud provider
+        '''
+        pmap = self.map_providers()
+        acts = {}
+        for prov, nodes in pmap.items():
+            acts[prov] = []
+            for node in nodes:
+                if node in names:
+                    acts[prov].append(node)
+        for prov, names_ in acts.items():
+            fun = '{0}.{1}'.format(prov, self.opts['action'])
+            for name in names_:
+                self.clouds[fun](name)
 
 
 class Map(Cloud):
