@@ -23,8 +23,6 @@ class CloudConfigMixIn(object):
     __metaclass__ = parsers.MixInMeta
     _mixin_prio_ = -1000    # First options seen
 
-    config = {'log_level': None}
-
     def _mixin_setup(self):
         group = self.config_group = optparse.OptionGroup(
             self,
@@ -116,15 +114,10 @@ class CloudConfigMixIn(object):
 
         # Grab data from the 4 sources
         # 1st - Master config
-        self.config.update(
-            salt.config.master_config(self.options.master_config)
-        )
+        # Done in CloudConfigMixIn.process_master_config()
 
         # 2nd Override master config with salt-cloud config
-        self.config.update(config.cloud_config(self.options.cloud_config))
-
-        ## Fix conf_file set on master config so that salt parsers don't fail
-        #self.config['conf_file'] = self.options.cloud_config
+        # Done in CloudConfigMixIn.process_cloud_config()
 
         # 3rd - Override config with cli options
         self.__merge_config_with_cli()
@@ -136,6 +129,16 @@ class CloudConfigMixIn(object):
         # equal to console log_level
         if self.config['log_level_logfile'] is None:
             self.config.pop('log_level_logfile')
+
+    def process_master_config(self):
+        self.config = salt.config.master_config(
+            self.options.master_config
+        )
+
+    def process_cloud_config(self):
+        self.config.update(config.cloud_config(self.options.cloud_config))
+    # Force process_cloud_config to run AFTER process_master_config
+    process_cloud_config._mixin_prio_ = -999
 
 
 class ExecutionOptionsMixIn(object):
