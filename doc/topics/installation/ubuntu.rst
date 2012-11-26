@@ -5,8 +5,8 @@ Ubuntu Installation
 Add repository
 --------------
 
-The latest packages for Ubuntu are published in the saltstack PPA. Add the repository 
-to your system, import the PPA key, and refresh the package data with the following 
+The latest packages for Ubuntu are published in the saltstack PPA. Add the
+repository, import the PPA key, and refresh the package data with the following
 commands:
 
 .. code-block:: bash
@@ -36,29 +36,8 @@ may be given at a time:
 
 .. _ubuntu-config:
 
-Configuration
--------------
+Post-installation tasks
+=======================
 
-Debian based systems will launch the daemons right after package install, but you 
-may need to make changes to the configuration files in /etc/salt (see the configuration
-files), such as:
-
-- set the minion id and salt master name in /etc/salt/minion
-- enable the file_roots and pillar_roots options in /etc/salt/master
-- configure syndic to relay commands from another master
-
-After making any configuration changes, re-start the affected daemons (or use 'stop' and 'start' as needed). E.g.:
-
-.. code-block:: bash
-
-    sudo /etc/init.d/salt-minion restart
-
-.. code-block:: bash
-
-    sudo /etc/init.d/salt-master restart
-
-.. code-block:: bash
-
-    sudo /etc/init.d/salt-syndic stop
-    sudo /etc/init.d/salt-syndic start
+Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 

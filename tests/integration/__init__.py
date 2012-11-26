@@ -701,16 +701,18 @@ class ShellCaseCommonTestsMixIn(object):
 
 class SaltReturnAssertsMixIn(object):
 
-    def __assertReturn(self, ret, which_case):
+    def assertReturnSaltType(self, ret):
         try:
             self.assertTrue(isinstance(ret, dict))
         except AssertionError:
             raise AssertionError(
                 '{0} is not dict. Salt returned: {1}'.format(
-                    type(ret), ret
+                    type(ret).__name__, ret
                 )
             )
 
+    def assertReturnNonEmptySaltType(self, ret):
+        self.assertReturnSaltType(ret)
         try:
             self.assertNotEqual(ret, {})
         except AssertionError:
@@ -718,7 +720,19 @@ class SaltReturnAssertsMixIn(object):
                 '{} is equal to {}. Salt returned an empty dictionary.'
             )
 
+    def __assertReturn(self, ret, which_case):
+        self.assertReturnNonEmptySaltType(ret)
+
         for part in ret.itervalues():
+            self.assertReturnNonEmptySaltType(part)
+            try:
+                self.assertTrue(isinstance(part, dict))
+            except AssertionError:
+                raise AssertionError(
+                    '{0} is not dict. Salt returned: {1}'.format(
+                        type(part), part
+                    )
+                )
             try:
                 if which_case is True:
                     self.assertTrue(part['result'])

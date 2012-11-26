@@ -58,7 +58,7 @@ class UserTest(integration.ModuleCase,
     @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_user_present_gid_from_name_default(self):
         """
-        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+        This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
         This is an integration test. Not all systems will automatically create
         a group of the same name as the user, but I don't have access to any.
         If you run the test and it fails, please fix the code it's testing to
@@ -66,11 +66,15 @@ class UserTest(integration.ModuleCase,
         """
         ret = self.run_state('user.present', name='salt_test',
                              gid_from_name=True, home='/var/lib/salt_test')
-        gid = self.run_function('user.info', ['salt_test'])['gid']
-        group_name = grp.getgrgid(gid).gr_name
         self.assertSaltTrueReturn(ret)
+
+        ret = self.run_function('user.info', ['salt_test'])
+        self.assertReturnNonEmptySaltType(ret)
+        group_name = grp.getgrgid(ret['gid']).gr_name
+
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
         self.assertEqual(group_name, 'salt_test')
+
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
@@ -88,8 +92,10 @@ class UserTest(integration.ModuleCase,
                              gid_from_name=True, home='/var/lib/salt_test')
         self.assertSaltTrueReturn(ret)
 
-        gid = self.run_function('user.info', ['salt_test'])['gid']
-        group_name = grp.getgrgid(gid).gr_name
+        ret = self.run_function('user.info', ['salt_test'])
+        self.assertReturnNonEmptySaltType(ret)
+        group_name = grp.getgrgid(ret['gid']).gr_name
+
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
         self.assertEqual(group_name, 'salt_test')
         ret = self.run_state('user.absent', name='salt_test')
