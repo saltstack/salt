@@ -1,5 +1,4 @@
-/etc/salt
-/etc/salt/pki
-/var/cache/salt
-/var/log/salt
-/var/run/salt
+/etc/salt/
+/etc/salt/pki/
+/var/cache/salt/
+/var/log/salt/

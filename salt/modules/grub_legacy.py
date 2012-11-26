@@ -1,8 +1,6 @@
 '''
-Support for GRUB
+Support for GRUB Legacy
 '''
-
-# TODO: Support grub2
 
 # Import python libs
 import os
