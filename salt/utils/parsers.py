@@ -549,9 +549,9 @@ class OutputOptionsMixIn(object):
             '--raw-out',
             default=False,
             action='store_true',
-            help=('Print the output from the \'{0}\' command in raw python '
-                  'form, this is suitable for re-reading the output into an '
-                  'executing python script with eval.'.format(
+            help=('DEPRECATED. Print the output from the \'{0}\' command in '
+                  'raw python form, this is suitable for re-reading the '
+                  'output into an executing python script with eval.'.format(
                       self.get_prog_name()
                   ))
         )
@@ -559,25 +559,26 @@ class OutputOptionsMixIn(object):
             '--yaml-out',
             default=False,
             action='store_true',
-            help='Print the output from the \'{0}\' command in yaml.'.format(
-                self.get_prog_name()
-            )
+            help=('DEPRECATED. Print the output from the \'{0}\' command in '
+                  'yaml.'.format(self.get_prog_name()))
         )
         group.add_option(
             '--json-out',
             default=False,
             action='store_true',
-            help='Print the output from the \'{0}\' command in json.'.format(
-                self.get_prog_name()
-            )
+            help=('DEPRECATED. Print the output from the \'{0}\' command in '
+                  'json.'.format(self.get_prog_name()))
         )
+
         if self._include_text_out_:
             group.add_option(
                 '--text-out',
                 default=False,
                 action='store_true',
-                help=('Print the output from the \'{0}\' command in the same '
-                      'form the shell would.'.format(self.get_prog_name()))
+                help=('DEPRECATED. Print the output from the \'{0}\' command '
+                      'in the same form the shell would.'.format(
+                          self.get_prog_name()
+                      ))
             )
 
         outputters = loader.outputters(
