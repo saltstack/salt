@@ -13,6 +13,7 @@ import subprocess
 import salt.utils.event
 import multiprocessing
 import logging
+import re
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ except:
 # Import salt libs
 import salt.crypt
 import salt.client
+from salt.exceptions import SaltException
 
 # Import third party libs
 from jinja2 import Template
@@ -376,3 +378,14 @@ def is_public_ip(ip):
         # 192.168.0.0/16
         return False
     return True
+
+def check_name(name, pattern):
+    '''
+    Check whether the specified name contains invalid characters
+    '''
+    regexp = re.compile(pattern)
+    if not regexp.match(name):
+        raise SaltException('{0} contains characters not supported by this'
+                            'cloud provider. Valid characters are: {1}'.format(
+                            name, pattern))
+
