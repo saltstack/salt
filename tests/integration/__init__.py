@@ -380,6 +380,7 @@ class TestDaemon(object):
         )
         targets = set(['minion', 'sub_minion'])
         expected_connections = set(targets)
+
         while True:
             # If enough time passes, a timeout will be triggered by
             # multiprocessing.Event, so, we can have this while True here
@@ -389,7 +390,11 @@ class TestDaemon(object):
                     # Someone(minion) else "listening"?
                     continue
                 expected_connections.remove(target)
-                print('  * {0} minion connected'.format(target))
+                print(
+                    ' {LIGHT_GREEN}*{ENDC} {0} connected.\n'.format(
+                        target, **self.colors
+                    )
+                )
             if not expected_connections:
                 # All expected connections have connected
                 break
