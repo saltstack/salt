@@ -119,8 +119,12 @@ both.
   OPENSTACK.password: mypass
   OPENSTACK.protocol: ipv4
 
-It is important to note that currently, only password-based authentication is
-provided through the Salt Cloud OpenStack module.
+If you have an API key for your provider, it may be specified instead of a
+password:
+
+.. code-block:: yaml
+
+  OPENSTACK.apikey: 901d3f579h23c8v73q9
 
 IBM SmartCloud Enterprise
 -------------------------
