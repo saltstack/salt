@@ -9,10 +9,9 @@ OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
 methods of authentication provided by OpenStack in the future.
 
-This module has been tested to work with HP Cloud. Testing for Rackspace's
-implementation is still under way. With the HP Cloud, the following parameters
-are required, and can be found under the API Keys section of the Account tab in
-their web interface:
+This module has been tested to work with HP Cloud and Rackspace. See the
+documentation for specific options for either of these providers. Some examples
+are provided below:
 
 .. code-block:: yaml
 
@@ -26,10 +25,17 @@ their web interface:
     OPENSTACK.tenant: myuser-tenant1
     # The OpenStack user name
     OPENSTACK.user: myuser
-    # The OpenStack password
-    OPENSTACK.password: letmein
     # The OpenStack keypair name
     OPENSTACK.ssh_key_name
+    
+Either a password or an API key must also be specified:
+
+.. code-block:: yaml
+
+    # The OpenStack password
+    OPENSTACK.password: letmein
+    # The OpenStack API key
+    OPENSTACK.apikey: 901d3f579h23c8v73q9
 
 '''
 
@@ -86,8 +92,7 @@ def get_conn():
     driver = get_driver(Provider.OPENSTACK)
     authinfo = {
             'ex_force_auth_url': __opts__['OPENSTACK.identity_url'],
-            'ex_force_auth_version': '2.0_password',
-    }
+            }
 
     if 'OPENSTACK.compute_name' in __opts__:
         authinfo['ex_force_service_name'] = __opts__['OPENSTACK.compute_name']
@@ -98,11 +103,22 @@ def get_conn():
     if 'OPENSTACK.tenant' in __opts__:
         authinfo['ex_tenant_name'] = __opts__['OPENSTACK.tenant']
 
-    return driver(
+    if 'OPENSTACK.password' in __opts__:
+        authinfo['ex_force_auth_version'] = '2.0_password'
+        log.debug('Authenticating using password')
+        return driver(
             __opts__['OPENSTACK.user'],
             __opts__['OPENSTACK.password'],
             **authinfo
-    )
+            )
+    elif 'OPENSTACK.apikey' in __opts__:
+        authinfo['ex_force_auth_version'] = '2.0_apikey'
+        log.debug('Authenticating using apikey')
+        return driver(
+            __opts__['OPENSTACK.user'],
+            __opts__['OPENSTACK.apikey'],
+            **authinfo
+            )
 
 
 def preferred_ip(vm_, ips):
@@ -250,3 +266,4 @@ def create(vm_):
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         log.info('  {0}: {1}'.format(key, val))
+
