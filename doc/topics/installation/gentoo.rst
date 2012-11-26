@@ -21,4 +21,9 @@ Then download and install from source:
     cd salt-<version>
     python setup.py install
 
+Post-installation tasks
+=======================
+
+Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+
 .. _GitHub downloads: https://github.com/saltstack/salt/downloads
