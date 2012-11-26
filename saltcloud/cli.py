@@ -82,6 +82,15 @@ class SaltCloud(parsers.SaltCloudParser):
             mapper.destroy(names)
             self.exit(0)
 
+        if self.options.action and (self.config.get('names', None) or
+                                     self.options.map):
+            if self.options.map:
+                names = mapper.delete_map(query='list_nodes')
+            else:
+                names = self.config.get('names', None)
+            mapper.do_action(names)
+            self.exit(0)
+
         if self.options.profile and self.config.get('names', False):
             mapper.run_profile()
             self.exit(0)

@@ -10,8 +10,8 @@ Salt into cloud providers in a clean way so that minions on public cloud
 systems can be quickly and easily modeled and provisioned.
 
 Salt cloud allows for cloud based minions to be managed via virtual machine
-maps and profiles. This means that individual cloud vms can be created, or
-large groups of cloud vms can be created at once or managed.
+maps and profiles. This means that individual cloud VMs can be created, or
+large groups of cloud VMs can be created at once or managed.
 
 Virtual machines created with Salt cloud install salt on the target virtual
 machine and assign it to the specified master. This means that virtual
@@ -39,12 +39,17 @@ cloud providers.
 Using Salt Cloud
 ================
 
-Salt cloud works via profiles and maps. Simple profiles for cloud vms are
+Salt cloud works via profiles and maps. Simple profiles for cloud VMs are
 defined and can be used directly, or a map can be defined specifying
 a large group of virtual machines to create.
 
 * :doc:`Profiles <topics/profiles>`
 * :doc:`Maps <topics/map>`
+
+Once a VM has been deployed, a number of actions may be available to perform
+on it, depending on the specific cloud provider.
+
+* :doc:`Actions <topics/action>`
 
 Extending Salt Cloud
 ====================

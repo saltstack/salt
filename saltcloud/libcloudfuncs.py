@@ -212,6 +212,30 @@ def destroy(name):
         return False
 
 
+def reboot(name):
+    '''
+    Reboot a single vm
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    if node is None:
+        log.error('Unable to find the VM {0}'.format(name))
+    log.info('Rebooting VM: {0}'.format(name))
+    ret = conn.reboot_node(node)
+    if ret:
+        log.info('Rebooted VM: {0}'.format(name))
+        # Fire reboot action
+        event = salt.utils.event.SaltEvent(
+            'master',
+            __opts__['sock_dir']
+            )
+        event.fire_event('{0} has been rebooted'.format(name), 'salt-cloud')
+        return True
+    else:
+        log.error('Failed to reboot VM: {0}'.format(name))
+        return False
+
+
 def list_nodes():
     '''
     Return a list of the vms that are on the provider
