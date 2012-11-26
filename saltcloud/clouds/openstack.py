@@ -57,6 +57,7 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
+from salt.exceptions import SaltException
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -150,6 +151,7 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    saltcloud.utils.check_name(vm_['name'], '[a-z0-9_-]')
     conn = get_conn()
     deploy_script = script(vm_)
     kwargs = {}
@@ -229,7 +231,7 @@ def create(vm_):
     log.debug('Using IP address {0}'.format(ip_address))
 
     if not ip_address:
-        raise
+        raise SaltException('A valid IP address was not found')
 
     deployargs = {
         'host': ip_address,

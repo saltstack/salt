@@ -199,7 +199,7 @@ class Cloud(object):
         try:
             ok = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
         except KeyError as exc:
-            msg = ('Failed to create vm {0}. Configuration value {1} needs '
+            msg = ('Failed to create VM {0}. Configuration value {1} needs '
                   'to be set'.format(vm_['name'], exc))
             log.error(msg)
 
