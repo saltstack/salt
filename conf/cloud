@@ -46,12 +46,12 @@
 #
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
-# Default: 'warning'
-#log_level: warning
+# Default: 'info'
+#log_level: info
 #
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
-# Default: 'warning'
+# Default: 'info'
 #log_level_logfile:
 
 #
