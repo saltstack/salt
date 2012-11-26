@@ -10,7 +10,11 @@ import logging
 # Import libcloud
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
+from libcloud.compute.deployment import (
+    MultiStepDeployment,
+    ScriptDeployment,
+    SSHKeyDeployment
+)
 
 # Import salt libs
 import salt.utils.event
@@ -19,19 +23,27 @@ import saltcloud.utils
 # Get logging started
 log = logging.getLogger(__name__)
 
+
 def libcloud_version():
     '''
     Require the minimal libcloud version
     '''
-    import libcloud
+    try:
+        import libcloud
+    except ImportError:
+        raise ImportError("salt-cloud requires >= libcloud 0.11.4")
+
     ver = libcloud.__version__
-    ver = ver.replace('-','.')
+    ver = ver.replace('-', '.')
     comps = ver.split('.')
     version = []
     for number in comps[:3]:
         version.append(int(number))
     if version < [0, 11, 4]:
-        raise ImportError("salt-cloud requires >= libcloud 0.11.4")
+        raise ImportError(
+            "Your version of libcloud is {0}. salt-cloud requires >= "
+            "libcloud 0.11.4. Please upgrade.".format(libcloud.__version__)
+        )
     return libcloud.__version__
 
 
@@ -204,7 +216,7 @@ def list_nodes():
     '''
     Return a list of the vms that are on the provider
     '''
-    conn = get_conn() 
+    conn = get_conn()
     nodes = conn.list_nodes()
     ret = {}
     for node in nodes:
@@ -222,7 +234,7 @@ def list_nodes_full():
     '''
     Return a list of the vms that are on the provider, with all fields
     '''
-    conn = get_conn() 
+    conn = get_conn()
     nodes = conn.list_nodes()
     ret = {}
     for node in nodes:
@@ -237,7 +249,7 @@ def list_nodes_select():
     '''
     Return a list of the vms that are on the provider, with select fields
     '''
-    conn = get_conn() 
+    conn = get_conn()
     nodes = conn.list_nodes()
     ret = {}
     for node in nodes:
@@ -250,4 +262,3 @@ def list_nodes_select():
                 pairs[key] = value
         ret[node.name] = pairs
     return ret
-
