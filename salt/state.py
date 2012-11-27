@@ -1473,19 +1473,37 @@ class BaseHighState(object):
                         errors.append(err)
                     else:
                         for inc_sls in state.pop('include'):
-                            # Subset of my_avail containing the include sls
-                            my_env = [
-                                aenv for aenv in matches
-                                if fnmatch.filter(self.avail[aenv], inc_sls)
-                            ]
+                            # inc_sls may take the form of:
+                            #   'sls.to.include' <- same as {<env>: 'sls.to.include'}
+                            #   {<env_key>: 'sls.to.include'}
+                            #   {'_xenv': 'sls.to.resolve'}
+                            XENV_KEY = '_xenv'
 
-                            # An include must only be one available in one environment
-                            # Or the include must exist in the current environment
-                            if len(my_env) == 1 or env in my_env:
+                            if isinstance(inc_sls, dict):
+                                env_key, inc_sls = inc_sls.popitem()
+                            else:
+                                env_key = env
+
+                            if env_key != XENV_KEY:
+                                # Resolve inc_sls in the specified environment
+                                if env_key in matches and fnmatch.filter(self.avail[env_key], inc_sls):
+                                    resolved_envs = [env_key]
+                                else:
+                                    resolved_envs = []
+                            else:
+                                # Resolve inc_sls in the subset of environment matches
+                                resolved_envs = [
+                                    aenv for aenv in matches
+                                    if fnmatch.filter(self.avail[aenv], inc_sls)
+                                ]
+
+                            # An include must be resolved to a single environment, or
+                            # the include must exist in the current environment
+                            if len(resolved_envs) == 1 or env in resolved_envs:
                                 if inc_sls not in mods:
                                     nstate, mods, err = self.render_state(
                                         inc_sls,
-                                        my_env[0] if len(my_env) == 1 else env,
+                                        resolved_envs[0] if len(resolved_envs) == 1 else env,
                                         mods,
                                         matches
                                     )
@@ -1495,14 +1513,18 @@ class BaseHighState(object):
                                     errors += err
                             else:
                                 msg = ''
-                                if not my_env:
-                                    msg = ('Unknown include: Specified SLS {0} is not available on the salt master '
-                                           'in any available environments {1} '
-                                           ).format(inc_sls, ', '.join(matches))
-                                elif len(my_env) > 1:
-                                    msg = ('Ambiguous include: Specified SLS {0} is available on the salt master '
-                                           'in available environments {1}'
-                                        ).format(inc_sls, ', '.join(my_env))
+                                if not resolved_envs:
+                                    msg = ('Unknown include: Specified SLS {0}: {1} is not available on the salt '
+                                           'master in environment(s): {2} '
+                                           ).format(env_key,
+                                                    inc_sls,
+                                                    ', '.join(matches) if env_key == XENV_KEY else env_key)
+                                elif len(resolved_envs) > 1:
+                                    msg = ('Ambiguous include: Specified SLS {0}: {1} is available on the salt master '
+                                           'in multiple available environments: {2}'
+                                           ).format(env_key,
+                                                    inc_sls,
+                                                    ', '.join(resolved_envs))
                                 log.error(msg)
                                 if self.opts['failhard']:
                                     errors.append(msg)
