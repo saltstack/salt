@@ -114,7 +114,7 @@ def installed(name,
         cwd=cwd
     )
 
-    if pip_install_call and pip_install_call['retcode']==0:
+    if pip_install_call and (pip_install_call['retcode'] == 0):
         ret['result'] = True
 
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
@@ -132,8 +132,10 @@ def installed(name,
         ret['comment'] = 'Package was successfully installed'
     elif pip_install_call:
         ret['result'] = False
-        ret['comment'] = 'Failed to install package {0}. Error: {1}'.format(
-            name, pip_install_call['stderr']
+        ret['comment'] = ('Failed to install package {0}. '
+            'Error: {1} {2}').format(name,
+                                     pip_install_call['stdout'],
+                                     pip_install_call['stderr'])
         )
     else:
         ret['result'] = False
