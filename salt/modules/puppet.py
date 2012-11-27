@@ -8,7 +8,7 @@ __outputter__ = {
     'run':  'txt',
     'noop': 'txt',
     'fact': 'txt',
-    'facts':None,
+    'facts': None,
 }
 
 def _check_puppet():
@@ -35,49 +35,111 @@ def _format_fact(output):
         value = None
     return (fact, value)
 
+class _Puppet(object):
+    '''
+    Puppet helper class. Used to format command for execution.
+    '''
+    def __init__(self):
+        '''
+        Setup a puppet instance, based on the premis that default usage is to
+        run 'puppet agent --test'. Configuration and run states are stored in
+        the default locations.
+        '''
+        self.subcmd = 'agent'
+        self.subcmd_args = []  # eg. /a/b/manifest.pp
 
-def run(tags=None):
+        self.kwargs = {}       # eg. --tags=apache::server
+        self.args = []         # eg. --noop
+
+        self.vardir = '/var/lib/puppet'
+        self.confdir = '/etc/puppet'
+
+    def __repr__(self):
+        '''
+        Format the command string to executed using cmd.run_all.
+        '''
+
+        cmd = 'puppet {subcmd} --vardir {vardir} --confdir {confdir}'.format(**self.__dict__)
+
+        args = ' '.join(self.subcmd_args)
+        args += ''.join([' --{0}'.format(k) for k in self.args])  # single spaces
+        args += ''.join([' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()])
+
+        return '{0} {1}'.format(cmd, args)
+
+    def arguments(self, args=[]):
+        '''
+        Read in arguments for the current subcommand. These are added to the cmd
+        line without '--' appended. Any others are redirected as standard options
+        with the double hyphen prefixed.
+        '''
+        # permits deleting elements rather than using slices
+        args = list(args)
+
+        # match against all known/supported subcmds
+        if self.subcmd == 'apply':
+            self.subcmd_args = [args[0]]
+            del args[0]
+        if self.subcmd == 'agent':
+            args.append('test')
+
+        # finally do this after subcmd has been matched for all remaining args
+        self.args = args
+
+def run(*args, **kwargs):
     '''
     Execute a puppet run and return a dict with the stderr, stdout,
-    return code, etc. If an argument is specified, it is treated as
-    a comma separated list of tags passed to puppet --test --tags:
+    return code, etc. The first positional argument given is checked as a
+    subcommand. Following positional arguments should be ordered with arguments
+    required by the subcommand first, followed by non-keyvalue pair options.
+    Tags are specified by a tag keyword and comma separated list of values. --
     http://projects.puppetlabs.com/projects/1/wiki/Using_Tags
 
     CLI Examples::
 
         salt '*' puppet.run
 
-        salt '*' puppet.run basefiles::edit,apache::server
+        salt '*' puppet.run tags=basefiles::edit,apache::server
+
+        salt '*' puppet.run debug
+
+        salt '*' puppet.run apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''
     _check_puppet()
 
-    if not tags:
-        cmd = 'puppet agent --test'
-    else:
-        cmd = 'puppet agent --test --tags "{0}"'.format(tags)
+    puppet = _Puppet()
 
-    return __salt__['cmd.run_all'](cmd)
+    if args:
+        # based on puppet documentation action must come first. making the same
+        # assertion. need to ensure the list of supported cmds here matches those
+        # defined in _Puppet.arguments()
+        if args[0] in ['agent', 'apply']:
+            puppet.subcmd = args[0]
+            puppet.arguments(args[1:])
+        else:
+            puppet.arguments(args)
 
-def noop(tags=None):
+    puppet.kwargs = kwargs
+
+    return __salt__['cmd.run_all'](repr(puppet))
+
+def noop(*args, **kwargs):
     '''
     Execute a puppet noop run and return a dict with the stderr, stdout,
-    return code, etc. If an argument is specified, it is  treated  as  a
-    comma separated list of tags passed to puppet --test --noop   --tags
+    return code, etc. Usage is the same as for puppet.run.
 
     CLI Example::
 
         salt '*' puppet.noop
 
-        salt '*' puppet.noop web::server,django::base
+        salt '*' puppet.noop tags=basefiles::edit,apache::server
+
+        salt '*' puppet.noop debug
+
+        salt '*' puppet.noop apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''
-    _check_puppet()
-
-    if not tags:
-        cmd = 'puppet agent --test --noop'
-    else:
-        cmd = 'puppet agent --test --tags "{0}" --noop'.format(tags)
-
-    return __salt__['cmd.run_all'](cmd)
+    args += ('noop',)
+    return run(*args, **kwargs)
 
 def facts():
     '''
