@@ -125,10 +125,7 @@ def run(*args, **kwargs):
         # args will exist as an empty list even if none have been provided
         puppet.arguments(args)
 
-    # handling kwargs added by the salt master.
-    for k, v in kwargs.items():
-        if not re.match('^__pub_.*', k):
-            puppet.kwargs[k] = v
+    puppet.kwargs.update(utils.clean_kwargs(kwargs))
 
     return __salt__['cmd.run_all'](repr(puppet))
 
