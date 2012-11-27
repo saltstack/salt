@@ -1,6 +1,13 @@
 #!/usr/bin/make -f
+
+ifeq ($(shell dpkg-vendor --is Ubuntu && echo yes),yes) 
+        UPSTART := pkg/*.upstart
+endif
+PKGFILES := pkg/*.service $(UPSTART)
+
 %:
 	dh $@
+		cp $(PKGFILES) debian
 		make -C doc html
 # overrides require debuilder >= 7.0.50
 # http://pkg-perl.alioth.debian.org/debhelper.html#forcing_special_tests
