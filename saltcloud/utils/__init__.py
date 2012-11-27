@@ -372,10 +372,10 @@ def is_public_ip(ip):
         # 10.0.0.0/24
         return False
     elif addr > 3232235520 and addr < 3232301055:
-        # 172.16.0.0/12
+        # 192.168.0.0/16
         return False
     elif addr > 2886729728 and addr < 2887778303:
-        # 192.168.0.0/16
+        # 172.16.0.0/12
         return False
     return True
 
