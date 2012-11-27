@@ -1154,9 +1154,11 @@ def check_managed(
             **kwargs
             )
     if comment:
+        __clean_tmp(sfn)
         return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, env)
+    __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
         for key, val in changes.items():
