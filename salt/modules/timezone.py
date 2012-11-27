@@ -137,9 +137,9 @@ def set_hwclock(clock):
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
-        if clock == 'UTC'
+        if clock == 'UTC':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
-        elif clock == 'localtime'
+        elif clock == 'localtime':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
 
     return True
