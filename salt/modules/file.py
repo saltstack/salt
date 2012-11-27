@@ -89,7 +89,7 @@ def gid_to_group(gid):
         # This is not an integer, maybe it's already the group name?
         gid = group_to_gid(gid)
 
-    if not gid:
+    if gid == '':
         # Don't even bother to feed it to grp
         return ''
 
