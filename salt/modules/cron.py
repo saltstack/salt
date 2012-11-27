@@ -11,6 +11,7 @@ import salt.utils
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 
+
 def _render_tab(lst):
     '''
     Takes a tab list structure and renders it to a list for applying it to
@@ -24,36 +25,20 @@ def _render_tab(lst):
             ret.append(TAG)
     for env in lst['env']:
         if (env['value'] is None) or (env['value'] == ""):
-            ret.append(
-                '{0}=""\n'.format(
-                    env['name']
-                    )
-                )
+            ret.append('{0}=""\n'.format(env['name']))
         else:
-            ret.append(
-                '{0}={1}\n'.format(
-                    env['name'],
-                    env['value']
-                    )
-                )
+            ret.append('{0}={1}\n'.format(env['name'], env['value']))
     for cron in lst['crons']:
-        ret.append(
-            '{0} {1} {2} {3} {4} {5}\n'.format(
-                cron['min'],
-                cron['hour'],
-                cron['daymonth'],
-                cron['month'],
-                cron['dayweek'],
-                cron['cmd']
-                )
-            )
+        ret.append('{0} {1} {2} {3} {4} {5}\n'.format(cron['min'],
+                                                      cron['hour'],
+                                                      cron['daymonth'],
+                                                      cron['month'],
+                                                      cron['dayweek'],
+                                                      cron['cmd']
+                                                      )
+                   )
     for spec in lst['special']:
-        ret.append(
-            '{0} {1}\n'.format(
-                spec['spec'],
-                spec['cmd']
-                )
-            )
+        ret.append('{0} {1}\n'.format(spec['spec'], spec['cmd']))
     return ret
 
 
