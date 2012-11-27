@@ -498,7 +498,7 @@ class State(object):
             if 'order' in chunk:
                 if not isinstance(chunk['order'], int):
                     continue
-                if chunk['order'] > cap - 1:
+                if chunk['order'] > cap - 1 and chunk['order'] > 0:
                     cap = chunk['order'] + 100
         for chunk in chunks:
             if not 'order' in chunk:
@@ -506,9 +506,11 @@ class State(object):
             else:
                 if not isinstance(chunk['order'], int):
                     if chunk['order'] == 'last':
-                        chunk['order'] = cap + 100
+                        chunk['order'] = cap + 1000000
                     else:
                         chunk['order'] = cap
+                elif isinstance(chunk['order'], int) and chunk['order'] < 0:
+                    chunk['order'] = cap + 1000000 + chunk['order']
         chunks = sorted(
                 chunks,
                 key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
