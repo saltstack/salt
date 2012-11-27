@@ -2,6 +2,8 @@
 Execute puppet routines
 '''
 
+import re
+
 from salt import utils
 
 __outputter__ = {
@@ -78,10 +80,13 @@ class _Puppet(object):
 
         # match against all known/supported subcmds
         if self.subcmd == 'apply':
+            # apply subcommand requires a manifest file to execute
             self.subcmd_args = [args[0]]
             del args[0]
+
         if self.subcmd == 'agent':
-            args.append('test')
+            # no arguments are required
+            args.extend(['onetime', 'verbose', 'ignorecache', 'no-daemonize', 'no-usecacheonfailure', 'no-splay', 'show_diff'])
 
         # finally do this after subcmd has been matched for all remaining args
         self.args = args
@@ -116,10 +121,14 @@ def run(*args, **kwargs):
         if args[0] in ['agent', 'apply']:
             puppet.subcmd = args[0]
             puppet.arguments(args[1:])
-        else:
-            puppet.arguments(args)
+    else:
+        # args will exist as an empty list even if none have been provided
+        puppet.arguments(args)
 
-    puppet.kwargs = kwargs
+    # handling kwargs added by the salt master.
+    for k, v in kwargs.items():
+        if not re.match('^__pub_.*', k):
+            puppet.kwargs[k] = v
 
     return __salt__['cmd.run_all'](repr(puppet))
 
@@ -158,7 +167,8 @@ def facts():
     # parse it into a nice dictionary for using
     # elsewhere
     for line in output.splitlines():
-        if not line: continue
+        if not line:
+            continue
         fact, value = _format_fact(line)
         if not fact:
             continue
