@@ -202,10 +202,10 @@ if 'bdist_esky' in sys.argv:
     import bbfreeze
     options = setup_kwargs.get('options', {})
     options['bdist_esky'] = {
-         "freezer_module": "bbfreeze",
-         "freezer_options": {
-             "includes": freezer_includes
-         }
+        "freezer_module": "bbfreeze",
+        "freezer_options": {
+            "includes": freezer_includes
+        }
     }
     setup_kwargs['options'] = options
 
@@ -230,6 +230,10 @@ else:
                                'scripts/salt-call',
                                'scripts/salt-run',
                                'scripts/salt']
+    # Distutils does not know what these are and throws warnings.
+    # Stop the warning.
+    setup_kwargs.pop('install_requires')
+    setup_kwargs.pop('zip_safe')
 
 if __name__ == '__main__':
     setup(**setup_kwargs)
