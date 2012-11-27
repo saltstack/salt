@@ -37,6 +37,7 @@ defaults = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
+            'gnupg.home': None,
             }
 
 
