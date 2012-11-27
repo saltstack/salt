@@ -48,7 +48,7 @@ class _Puppet(object):
         self.subcmd = 'agent'
         self.subcmd_args = []  # eg. /a/b/manifest.pp
 
-        self.kwargs = {}       # eg. --tags=apache::server
+        self.kwargs = {'color': 'false'}       # eg. --tags=apache::server
         self.args = []         # eg. --noop
 
         self.vardir = '/var/lib/puppet'
