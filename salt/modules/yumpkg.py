@@ -5,6 +5,8 @@ Support for YUM
             - rpm Python module
             - rpmUtils Python module
 '''
+import re
+
 try:
     import yum
     import rpm
