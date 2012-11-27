@@ -174,6 +174,7 @@ class Minion(object):
         # module
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.authenticate()
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
@@ -185,7 +186,6 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        self.authenticate()
 
     def __prep_mod_opts(self):
         '''
@@ -630,6 +630,7 @@ class Minion(object):
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
         socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        socket.setsockopt(zmq.RECONNECT_IVL_MAX, self.opts['recon_max'])
         socket.connect(self.master_pub)
         poller.register(socket, zmq.POLLIN)
         epoller.register(epull_sock, zmq.POLLIN)
