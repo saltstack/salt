@@ -557,7 +557,7 @@ class Loader(object):
                             'Exception' in func.__name__]):
                             continue
                     funcs[attr_name] = func
-                    log.debug('Added {0} to {2}'.format(attr_name,
+                    log.debug('Added {0} to {1}'.format(attr_name,
                                                         self.tag))
                     self._apply_outputter(func, mod)
 
