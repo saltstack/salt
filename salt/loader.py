@@ -526,24 +526,28 @@ class Loader(object):
                     except TypeError:
                         pass
 
+            module_name = mod.__name__.split('.')[-1:][0]
             if virtual_enable:
                 try:
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
                             log.debug(('Loaded {0} as virtual '
-                                       '{1}').format(mod, virtual))
+                                       '{1}').format(module_name, virtual))
+                            module_name = virtual
                 except Exception:
                     virtual = False
                     trb = traceback.format_exc()
                     log.critical(('Failed to read the virtual function for '
                         'module: {0}\nWith traceback: {1}').format(
-                            mod.__name__[mod.__name__.rindex('.')+1:], trb))
+                            module_name, trb))
+                    continue
 
             for attr in dir(mod):
+                attr_name = '{0}.{1}'.format(module_name, attr)
                 if attr.startswith('_'):
-                    log.debug(('Skipping {0}.{1}, it starts with an '
-                               'underscore').format(mod, attr))
+                    log.debug(('Skipping {0}, it starts with an '
+                               'underscore').format(attr_name))
                     continue
                 if callable(getattr(mod, attr)):
                     func = getattr(mod, attr)
@@ -552,25 +556,11 @@ class Loader(object):
                             'Error' in func.__name__,
                             'Exception' in func.__name__]):
                             continue
-                    if virtual:
-                        funcs['{0}.{1}'.format(virtual, attr)] = func
-                        log.debug('Added {0}.{1} to {2}'.format(virtual,
-                                                                attr,
-                                                                self.tag))
-                        self._apply_outputter(func, mod)
-                    elif virtual is False:
-                        pass
-                    else:
-                        funcs[
-                            '{0}.{1}'.format(
-                                mod.__name__[mod.__name__.rindex('.')+1:],
-                                attr
-                            )
-                        ] = func
-                        log.debug('Added {0}.{1} to {2}'.format(mod,
-                                                                attr,
-                                                                self.tag))
-                        self._apply_outputter(func, mod)
+                    funcs[attr_name] = func
+                    log.debug('Added {0} to {2}'.format(attr_name,
+                                                        self.tag))
+                    self._apply_outputter(func, mod)
+
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs
