@@ -435,8 +435,7 @@ class Loader(object):
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
-                    log.debug(('Skipping {0}, it starts with an '
-                               'underscore').format(fn_))
+                    # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
                     log.debug(('Skipping {0}, it is disabled by '
@@ -546,8 +545,7 @@ class Loader(object):
             for attr in dir(mod):
                 attr_name = '{0}.{1}'.format(module_name, attr)
                 if attr.startswith('_'):
-                    log.debug(('Skipping {0}, it starts with an '
-                               'underscore').format(attr_name))
+                    # log messages omitted for obviousness
                     continue
                 if callable(getattr(mod, attr)):
                     func = getattr(mod, attr)
