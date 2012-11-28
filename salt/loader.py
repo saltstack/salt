@@ -452,7 +452,6 @@ class Loader(object):
                     else:
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
-                    log.debug('Added \'{0}\' to {1}'.format(_name, self.tag))
                 else:
                     log.debug(('Skipping {0}, it does not end with an '
                                'expected extension').format(fn_))
@@ -532,6 +531,8 @@ class Loader(object):
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
+                            log.debug(('Loaded {0} as virtual '
+                                       '{1}').format(mod, virtual))
                 except Exception:
                     virtual = False
                     trb = traceback.format_exc()
@@ -541,6 +542,8 @@ class Loader(object):
 
             for attr in dir(mod):
                 if attr.startswith('_'):
+                    log.debug(('Skipping {0}.{1}, it starts with an '
+                               'underscore').format(mod, attr))
                     continue
                 if callable(getattr(mod, attr)):
                     func = getattr(mod, attr)
@@ -551,6 +554,9 @@ class Loader(object):
                             continue
                     if virtual:
                         funcs['{0}.{1}'.format(virtual, attr)] = func
+                        log.debug('Added {0}.{1} to {2}'.format(virtual,
+                                                                attr,
+                                                                self.tag))
                         self._apply_outputter(func, mod)
                     elif virtual is False:
                         pass
@@ -561,6 +567,9 @@ class Loader(object):
                                 attr
                             )
                         ] = func
+                        log.debug('Added {0}.{1} to {2}'.format(mod,
+                                                                attr,
+                                                                self.tag))
                         self._apply_outputter(func, mod)
         for mod in modules:
             if not hasattr(mod, '__salt__'):
