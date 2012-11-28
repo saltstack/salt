@@ -11,7 +11,7 @@ import integration
 import salt.utils
 
 
-class FileTest(integration.ModuleCase):
+class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate the file state
     '''
@@ -563,6 +563,52 @@ class FileTest(integration.ModuleCase):
         finally:
             if os.path.isfile(tmp_file):
                 os.remove(tmp_file)
+
+    def test_issue_2726_mode_kwarg(self):
+        testcase_temp_dir = os.path.join(integration.TMP, 'issue_2726')
+        # Let's test for the wrong usage approach
+        bad_mode_kwarg_testfile = os.path.join(
+            testcase_temp_dir, 'bad_mode_kwarg', 'testfile'
+        )
+        bad_template = [
+            '{0}:'.format(bad_mode_kwarg_testfile),
+            '  file.recurse:',
+            '    - source: salt://testfile',
+            '    - mode: 644'
+        ]
+        try:
+            ret = self.run_function(
+                'state.template_str', ['\n'.join(bad_template)]
+            )
+            self.assertSaltFalseReturn(ret)
+            self.assertInSaltComment(
+                ret,
+                'TypeError: managed() got multiple values for keyword '
+                'argument \'mode\''
+            )
+        finally:
+            if os.path.isdir(testcase_temp_dir):
+                shutil.rmtree(testcase_temp_dir)
+
+        # Now, the correct usage approach
+        good_mode_kwargs_testfile = os.path.join(
+            testcase_temp_dir, 'good_mode_kwargs', 'testappend'
+        )
+        good_template = [
+            '{0}:'.format(good_mode_kwargs_testfile),
+            '  file.recurse:',
+            '    - source: salt://testappend',
+            '    - dir_mode: 744',
+            '    - file_mode: 644',
+        ]
+        try:
+            ret = self.run_function(
+                'state.template_str', ['\n'.join(good_template)]
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isdir(testcase_temp_dir):
+                shutil.rmtree(testcase_temp_dir)
 
 
 if __name__ == '__main__':

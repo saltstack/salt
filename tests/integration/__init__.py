@@ -827,3 +827,13 @@ class SaltReturnAssertsMixIn(object):
 
     def assertSaltNoneReturn(self, ret):
         self.__assertReturn(ret, None)
+
+    def assertInSaltComment(self, ret, in_comment):
+        self.assertReturnSaltType(ret)
+        for part in ret.itervalues():
+            if 'comment' in part:
+                return self.assertIn(in_comment, part['comment'])
+        else:
+            raise AssertionError(
+                'There\'s no comment key in any of salt\'s return parts'
+            )
