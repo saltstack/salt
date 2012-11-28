@@ -531,9 +531,10 @@ class Loader(object):
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            log.debug(('Loaded {0} as virtual '
-                                       '{1}').format(module_name, virtual))
-                            module_name = virtual
+                            if virtual:
+                                log.debug(('Loaded {0} as virtual '
+                                           '{1}').format(module_name, virtual))
+                                module_name = virtual
                 except Exception:
                     virtual = False
                     trb = traceback.format_exc()
