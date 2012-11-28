@@ -86,7 +86,7 @@ def add(name,
     if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
     if groups:
-        cmd += '-G {0} '.format(','.join(groups))
+        cmd += '-G "{0}" '.format(','.join(groups))
     if home:
         if home is not True:
             if system:
@@ -255,7 +255,7 @@ def chgroups(name, groups, append=False):
     cmd = 'usermod '
     if append:
         cmd += '-a '
-    cmd += '-G {0} {1}'.format(','.join(groups), name)
+    cmd += '-G "{0}" {1}'.format(','.join(groups), name)
     return not __salt__['cmd.retcode'](cmd)
 
 
