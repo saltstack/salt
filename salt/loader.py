@@ -525,6 +525,7 @@ class Loader(object):
                     except TypeError:
                         pass
 
+            # Trim the full pathname to just the module
             module_name = mod.__name__.rsplit('.', 1)[-1]
             if virtual_enable:
                 try:
@@ -534,8 +535,11 @@ class Loader(object):
                             if virtual:
                                 log.debug(('Loaded {0} as virtual '
                                            '{1}').format(module_name, virtual))
+                                # update the module name with the new name
                                 module_name = virtual
                             else:
+                                # if __virtual__() returns false then the
+                                # module wasn't meant for this platform.
                                 continue
                 except Exception:
                     virtual = False
@@ -546,6 +550,7 @@ class Loader(object):
                     continue
 
             for attr in dir(mod):
+                # functions are namespaced with their module name
                 attr_name = '{0}.{1}'.format(module_name, attr)
                 if attr.startswith('_'):
                     # log messages omitted for obviousness
