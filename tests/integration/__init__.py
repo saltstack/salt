@@ -827,3 +827,30 @@ class SaltReturnAssertsMixIn(object):
 
     def assertSaltNoneReturn(self, ret):
         self.__assertReturn(ret, None)
+
+    def assertInSaltComment(self, ret, in_comment):
+        self.assertReturnSaltType(ret)
+        for part in ret.itervalues():
+            if 'comment' in part:
+                return self.assertIn(in_comment, part['comment'])
+        else:
+            raise AssertionError(
+                'There\'s no comment key in any of salt\'s return parts'
+            )
+
+    def assertNotInSaltComment(self, ret, not_in_comment):
+        self.assertReturnSaltType(ret)
+        no_comment = True
+        for part in ret.itervalues():
+            if 'comment' in part:
+                if no_comment is True:
+                    no_comment = False
+                if not_in_comment in part['comment']:
+                    raise AssertionError(
+                        '{0} is in {part}'.format(not_in_comment, **part)
+                    )
+        if no_comment is True:
+            raise AssertionError(
+                'There\'s no comment key in any of salt\'s return parts'
+            )
+        return True
