@@ -409,6 +409,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
+        log.debug('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -425,13 +426,20 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
+                log.debug(('Skipping {0}, it is not an abosolute '
+                           'path').format(mod_dir))
                 continue
             if not os.path.isdir(mod_dir):
+                log.debug(('Skipping {0}, it is not a '
+                           'directory').format(mod_dir))
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
+                    # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
+                    log.debug(('Skipping {0}, it is disabled by '
+                               'configuration').format(fn_))
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))
@@ -443,6 +451,9 @@ class Loader(object):
                     else:
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
+                else:
+                    log.debug(('Skipping {0}, it does not end with an '
+                               'expected extension').format(fn_))
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
@@ -514,20 +525,35 @@ class Loader(object):
                     except TypeError:
                         pass
 
+            # Trim the full pathname to just the module
+            module_name = mod.__name__.rsplit('.', 1)[-1]
             if virtual_enable:
                 try:
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
+                            if virtual:
+                                log.debug(('Loaded {0} as virtual '
+                                           '{1}').format(module_name, virtual))
+                                # update the module name with the new name
+                                module_name = virtual
+                            else:
+                                # if __virtual__() returns false then the
+                                # module wasn't meant for this platform.
+                                continue
                 except Exception:
                     virtual = False
                     trb = traceback.format_exc()
                     log.critical(('Failed to read the virtual function for '
                         'module: {0}\nWith traceback: {1}').format(
-                            mod.__name__[mod.__name__.rindex('.')+1:], trb))
+                            module_name, trb))
+                    continue
 
             for attr in dir(mod):
+                # functions are namespaced with their module name
+                attr_name = '{0}.{1}'.format(module_name, attr)
                 if attr.startswith('_'):
+                    # log messages omitted for obviousness
                     continue
                 if callable(getattr(mod, attr)):
                     func = getattr(mod, attr)
@@ -536,19 +562,11 @@ class Loader(object):
                             'Error' in func.__name__,
                             'Exception' in func.__name__]):
                             continue
-                    if virtual:
-                        funcs['{0}.{1}'.format(virtual, attr)] = func
-                        self._apply_outputter(func, mod)
-                    elif virtual is False:
-                        pass
-                    else:
-                        funcs[
-                            '{0}.{1}'.format(
-                                mod.__name__[mod.__name__.rindex('.')+1:],
-                                attr
-                            )
-                        ] = func
-                        self._apply_outputter(func, mod)
+                    funcs[attr_name] = func
+                    log.debug('Added {0} to {1}'.format(attr_name,
+                                                        self.tag))
+                    self._apply_outputter(func, mod)
+
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs
