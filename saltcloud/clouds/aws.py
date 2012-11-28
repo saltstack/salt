@@ -76,6 +76,7 @@ def __virtual__():
 EC2_LOCATIONS = {
     'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
     'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
+    'ap-southeast-2': Provider.EC2_AP_SOUTHEAST2,
     'eu-west-1': Provider.EC2_EU_WEST,
     'sa-east-1': Provider.EC2_SA_EAST,
     'us-east-1': Provider.EC2_US_EAST,
