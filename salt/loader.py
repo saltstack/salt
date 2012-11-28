@@ -452,7 +452,7 @@ class Loader(object):
                     else:
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
-                    log.debug('Added '{0}' to {1}'.format(_name, self.tag))
+                    log.debug('Added \'{0}\' to {1}'.format(_name, self.tag))
                 else:
                     log.debug(('Skipping {0}, it does not end with an '
                                'expected extension').format(fn_))
