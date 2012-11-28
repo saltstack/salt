@@ -133,10 +133,9 @@ def installed(name,
     elif pip_install_call:
         ret['result'] = False
         ret['comment'] = ('Failed to install package {0}. '
-            'Error: {1} {2}').format(name,
-                                     pip_install_call['stdout'],
-                                     pip_install_call['stderr'])
-        )
+                          'Error: {1} {2}').format(name,
+                                                   pip_install_call['stdout'],
+                                                   pip_install_call['stderr'])
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'
