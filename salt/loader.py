@@ -409,8 +409,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
-        log.debug('looking for {0}(er)s in {1}'.format(self.tag,
-                                                       self.module_dirs))
+        log.debug('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -453,8 +452,7 @@ class Loader(object):
                     else:
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
-                    log.debug('Added {0} to the list of {1}s'.format(_name,
-                                                                     self.tag))
+                    log.debug('Added '{0}' to {1}'.format(_name, self.tag))
                 else:
                     log.debug(('Skipping {0}, it does not end with an '
                                'expected extension').format(fn_))
