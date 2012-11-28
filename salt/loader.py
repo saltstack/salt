@@ -525,7 +525,7 @@ class Loader(object):
                     except TypeError:
                         pass
 
-            module_name = mod.__name__.split('.')[-1:][0]
+            module_name = mod.__name__.rsplit('.', 1)[-1]
             if virtual_enable:
                 try:
                     if hasattr(mod, '__virtual__'):
