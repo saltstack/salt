@@ -36,7 +36,7 @@ def latest(name,
            rev=None,
            user=None,
            username=None,
-           force=None,
+           force=False,
            externals=True):
     '''
     Checkout or update the working directory to the latest revision from the
@@ -76,7 +76,9 @@ def latest(name,
 
     if os.path.exists(target) and not os.path.isdir(target):
         return _fail(ret,
-                'The path "{0}" exists and is not a directory.'.format(target))
+                     'The path "{0}" exists and is not '
+                     'a directory.'.format(target)
+                     )
 
     try:
         __salt__['svn.info']('.', target, user=user)
@@ -99,6 +101,7 @@ def latest(name,
         out = __salt__[svn_cmd](cwd, name, basename, user, username, *opts)
     ret['comment'] = out
     return ret
+
 
 def dirty(name,
           target,
