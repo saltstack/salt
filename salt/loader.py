@@ -535,6 +535,8 @@ class Loader(object):
                                 log.debug(('Loaded {0} as virtual '
                                            '{1}').format(module_name, virtual))
                                 module_name = virtual
+                            else:
+                                continue
                 except Exception:
                     virtual = False
                     trb = traceback.format_exc()
