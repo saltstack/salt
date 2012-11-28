@@ -409,6 +409,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
+        log.debug('looking for {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -425,13 +426,20 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
+                log.debug(('{0} is not an abosolute path, '
+                           'skipping').format(mod_dir))
                 continue
             if not os.path.isdir(mod_dir):
+                log.debug('{0} is not a directory, skipping'.format(mod_dir))
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
+                    log.debug(('{0} starts with an underscore, '
+                               'skipping').format(fn_))
                     continue
                 if fn_.split('.')[0] in disable:
+                    log.debug(('{0} is disabled by configuration, '
+                               'skipping').format(fn_))
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))
@@ -443,6 +451,11 @@ class Loader(object):
                     else:
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
+                    log.debug('Added {0} to the list of {0}'.format(_name,
+                                                                    self.tag))
+                else:
+                    log.debug(('{0} does not end with an expected extension, '
+                               'skipping').format(fn_))
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
