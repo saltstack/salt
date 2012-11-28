@@ -51,6 +51,7 @@ import logging
 import socket
 
 # Import libcloud 
+from libcloud.compute.base import NodeState
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
@@ -193,13 +194,14 @@ def create(vm_):
         return False
 
     not_ready = True
-    nr_count = 0
+    nr_count = 50
     log.debug('Looking for IP addresses')
     while not_ready:
         nodelist = list_nodes()
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
-        if private and not public:
+        running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
+        if running and private and not public:
             log.warn('Private IPs returned, but not public... checking for misidentified IPs')
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
@@ -214,15 +216,15 @@ def create(vm_):
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
                 break
 
-        if public:
+        if running and public:
             data.public_ips = public
             not_ready = False
 
-        nr_count += 1
-        if nr_count > 50:
+        nr_count -= 1
+        if nr_count == 0:
             log.warn('Timed out waiting for a public ip, continuing anyway')
             break
-        time.sleep(1)
+        time.sleep(nr_count)
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
