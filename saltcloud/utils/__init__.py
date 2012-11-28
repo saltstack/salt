@@ -220,7 +220,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
                   name=None, pub_key=None, sock_dir=None, provider=None,
-                  conf_file=None, start_action=None):
+                  conf_file=None, start_action=None, minion_pub=None,
+                  minion_pem=None, minion_conf=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -255,16 +256,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 for line in stdout:
                     sys.stdout.write(line)
                 ssh.connect(**kwargs)
-            tmpfh, tmppath = tempfile.mkstemp()
-            tmpfile = open(tmppath, 'w')
-            tmpfile.write(script)
-            tmpfile.close()
             sftp = ssh.get_transport()
             sftp.open_session()
             sftp = paramiko.SFTPClient.from_transport(sftp)
-            log.debug('Uploading /tmp/deploy.sh to {0}'.format(host))
-            sftp.put(tmppath, '/tmp/deploy.sh')
-            os.remove(tmppath)
+            if minion_pem:
+                sftp_file(sftp, host, '/tmp/minion.pem', minion_pem)
+                ssh.exec_command('chmod 600 /tmp/minion.pem')
+            if minion_pub:
+                sftp_file(sftp, host, '/tmp/minion.pub', minion_pub)
+            if minion_conf:
+                sftp_file(sftp, host, '/tmp/minion', minion_conf)
+            sftp_file(sftp, host, '/tmp/deploy.sh', script)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
@@ -281,6 +283,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
             log.debug('Executed /tmp/deploy.sh')
             ssh.exec_command('rm /tmp/deploy.sh')
             log.debug('Removed /tmp/deploy.sh')
+            if minion_pub:
+                ssh.exec_command('rm /tmp/minion.pub')
+                log.debug('Removed /tmp/minion.pub')
+            if minion_pem:
+                ssh.exec_command('rm /tmp/minion.pem')
+                log.debug('Removed /tmp/minion.pem')
+            if minion_conf:
+                ssh.exec_command('rm /tmp/minion')
+                log.debug('Removed /tmp/minion')
             queuereturn = queue.get()
             process.join()
             if queuereturn and start_action:
@@ -299,6 +310,20 @@ def deploy_script(host, port=22, timeout=900, username='root',
             event.fire_event('{0} has been created at {1}'.format(name, host), 'salt-cloud')
             return True
     return False
+
+
+def sftp_file(transport, host, dest_path, contents):
+    '''
+    Given an established sftp session, this function will copy a file to a
+    server using said sftp transport
+    '''
+    tmpfh, tmppath = tempfile.mkstemp()
+    tmpfile = open(tmppath, 'w')
+    tmpfile.write(contents)
+    tmpfile.close()
+    log.debug('Uploading /tmp/deploy.sh to {0}'.format(host))
+    transport.put(tmppath, dest_path)
+    os.remove(tmppath)
 
 
 def root_cmd(command, tty, sudo, **kwargs):
@@ -372,10 +397,10 @@ def is_public_ip(ip):
         # 10.0.0.0/24
         return False
     elif addr > 3232235520 and addr < 3232301055:
-        # 172.16.0.0/12
+        # 192.168.0.0/16
         return False
     elif addr > 2886729728 and addr < 2887778303:
-        # 192.168.0.0/16
+        # 172.16.0.0/12
         return False
     return True
 
