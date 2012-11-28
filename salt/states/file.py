@@ -365,7 +365,7 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
     elif include_pat and exclude_pat:
         ret = retchk_include and retchk_exclude
     else:
-	ret = True
+        ret = True
 
     return ret
 
@@ -977,6 +977,15 @@ def recurse(name,
            'result': True,
            'comment': {}  # { path: [comment, ...] }
            }
+
+    if 'mode' in kwargs:
+        ret['result'] = False
+        ret['comment'] = (
+            '\'mode\' is not allowed in \'file.recurse\'. Please use '
+            '\'file_mode\' and \'dir_mode\'.'
+        )
+        return ret
+
     u_check = _check_user(user, group)
     if u_check:
         # The specified user or group do not exist

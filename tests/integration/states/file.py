@@ -583,6 +583,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltFalseReturn(ret)
             self.assertInSaltComment(
                 ret,
+                '\'mode\' is not allowed in \'file.recurse\'. Please use '
+                '\'file_mode\' and \'dir_mode\'.'
+            )
+            self.assertNotInSaltComment(
+                ret,
                 'TypeError: managed() got multiple values for keyword '
                 'argument \'mode\''
             )
