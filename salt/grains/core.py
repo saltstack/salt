@@ -416,6 +416,7 @@ _OS_NAME_MAP = {
     'redhatente': 'RedHat',
     'gentoobase': 'Gentoo',
     'arch': 'Arch',
+    'debian': 'Debian',
 }
 
 # Map the 'os' grain to the 'os_family' grain
