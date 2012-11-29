@@ -20,6 +20,7 @@ import hashlib
 import errno
 import logging
 import multiprocessing
+from multiprocessing import Process
 
 # Import Third Party libs
 import zmq
@@ -159,8 +160,7 @@ class MinionEvent(SaltEvent):
     def __init__(self, **kwargs):
         super(MinionEvent, self).__init__('minion', **kwargs)
 
-
-class EventPublisher(multiprocessing.Process):
+class EventPublisher(Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -219,7 +219,7 @@ class EventPublisher(multiprocessing.Process):
             epull_sock.close()
 
 
-class Reactor(multiprocesing.Process):
+class Reactor(Process):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
