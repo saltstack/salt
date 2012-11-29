@@ -409,6 +409,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
+        log.debug('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -425,13 +426,21 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
+                log.debug(('Skipping {0}, it is not an abosolute '
+                           'path').format(mod_dir))
                 continue
             if not os.path.isdir(mod_dir):
+                log.debug(('Skipping {0}, it is not a '
+                           'directory').format(mod_dir))
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
+                    # skip private modules
+                    # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
+                    log.debug(('Skipping {0}, it is disabled by '
+                               'configuration').format(fn_))
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))
@@ -443,6 +452,9 @@ class Loader(object):
                     else:
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
+                else:
+                    log.debug(('Skipping {0}, it does not end with an '
+                               'expected extension').format(fn_))
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
@@ -514,41 +526,69 @@ class Loader(object):
                     except TypeError:
                         pass
 
+            # Trim the full pathname to just the module
+            # this will be the short name that other salt modules and state
+            # will refer to it as.
+            module_name = mod.__name__.rsplit('.', 1)[-1]
+
             if virtual_enable:
+                # if virtual modules are enabled, we need to look for the
+                # __virtual__() function inside that module and run it.
+                # This function will return either a new name for the module
+                # or False. This allows us to have things like the pkg module
+                # working on all platforms under the name 'pkg'. It also allows
+                # for modules like augeas_cfg to be referred to as 'augeas',
+                # which would otherwise have namespace collisions. And finally
+                # it allows modules to return False if they are not intended
+                # to run on the given platform or are missing dependencies.
                 try:
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
+                            if virtual:
+                                log.debug(('Loaded {0} as virtual '
+                                           '{1}').format(module_name, virtual))
+                                # update the module name with the new name
+                                module_name = virtual
+                            else:
+                                # if __virtual__() returns false then the
+                                # module wasn't meant for this platform.
+                                continue
                 except Exception:
-                    virtual = False
-                    trb = traceback.format_exc()
-                    log.critical(('Failed to read the virtual function for '
-                        'module: {0}\nWith traceback: {1}').format(
-                            mod.__name__[mod.__name__.rindex('.')+1:], trb))
+                    # If the module throws an exception during __virtual__()
+                    # then log the information and continue to the next.
+                    log.exception(('Failed to read the virtual function for '
+                                   'module: {0}').format(module_name))
+                    continue
 
             for attr in dir(mod):
+                # functions are namespaced with their module name
+                attr_name = '{0}.{1}'.format(module_name, attr)
+
                 if attr.startswith('_'):
+                    # skip private attributes
+                    # log messages omitted for obviousness
                     continue
+
                 if callable(getattr(mod, attr)):
+                    # check to make sure this is callable
                     func = getattr(mod, attr)
                     if isinstance(func, type):
+                        # skip callables that might be exceptions
                         if any([
                             'Error' in func.__name__,
                             'Exception' in func.__name__]):
                             continue
-                    if virtual:
-                        funcs['{0}.{1}'.format(virtual, attr)] = func
-                        self._apply_outputter(func, mod)
-                    elif virtual is False:
-                        pass
-                    else:
-                        funcs[
-                            '{0}.{1}'.format(
-                                mod.__name__[mod.__name__.rindex('.')+1:],
-                                attr
-                            )
-                        ] = func
-                        self._apply_outputter(func, mod)
+                    # now that callable passes all the checks, add it to the
+                    # library of available functions of this type
+                    funcs[attr_name] = func
+                    log.debug('Added {0} to {1}'.format(attr_name,
+                                                        self.tag))
+                    self._apply_outputter(func, mod)
+
+        # now that all the functions have been collected, iterate back over
+        # the available modules and inject the special __salt__ namespace that
+        # contains these functions.
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs

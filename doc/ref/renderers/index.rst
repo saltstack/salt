@@ -65,6 +65,22 @@ Other renderer combinations are possible, here's a few examples:
       This one allows you to use both jinja and mako templating syntax in the
       input and then parse the final rendererd output as YAML.
 
+And here's a contrived example sls file using the ``jinja | mako | yaml`` renderer:
+
+.. code-block:: python
+
+    #!jinja|mako|yaml
+
+    An_Example:
+      cmd.run:
+        - name: |
+            echo "Using Salt ${grains['saltversion']}" \
+                 "from path {{grains['saltpath']}}."
+        - cwd: /
+
+    <%doc> ${...} is Mako's notation, and so is this comment. </%doc>
+    {#     Similarly, {{...}} is Jinja's notation, and so is this comment. #}
+
 For backward compatibility, ``jinja | yaml``  can also be written as
 ``yaml_jinja``, and similarly, the ``yaml_mako``, ``yaml_wempy``,
 ``json_jinja``, ``json_mako``, and ``json_wempy`` renderers are all supported

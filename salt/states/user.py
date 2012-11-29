@@ -71,7 +71,7 @@ def _changes(
             # comparison purposes
             if __salt__['file.gid_to_group'](gid or lusr['gid']) in lusr['groups']:
                 lusr['groups'].remove(__salt__['file.gid_to_group'](gid or lusr['gid']))
-            if wanted_groups:
+            if groups is not None or wanted_groups:
                 if lusr['groups'] != wanted_groups:
                     change['groups'] = wanted_groups
             if home:
@@ -139,6 +139,8 @@ def present(
     groups
         A list of groups to assign the user to, pass a list object. If a group
         specified here does not exist on the minion, the state will fail.
+        If set to the empty list, the user will be removed from all groups
+        except the default group.
 
     optional_groups
         A list of groups to assign the user to, pass a list object. If a group
