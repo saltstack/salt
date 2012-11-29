@@ -34,6 +34,7 @@ then a new cron job will be added to the user's crontab.
 '''
 # Import python libs
 import os
+from salt.utils import mkstemp
 
 
 def _check_cron(cmd, user, minute, hour, dom, month, dow):
@@ -70,17 +71,17 @@ def _get_cron_info():
     else:
         group = 'root'
         crontab_dir = '/var/spool/cron'
-    return owner,group,crontab_dir
+    return owner, group, crontab_dir
 
 
 def present(name,
-        user='root',
-        minute='*',
-        hour='*',
-        daymonth='*',
-        month='*',
-        dayweek='*',
-        ):
+            user='root',
+            minute='*',
+            hour='*',
+            daymonth='*',
+            month='*',
+            dayweek='*',
+            ):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -119,14 +120,13 @@ def present(name,
            'name': name,
            'result': True}
     if __opts__['test']:
-        status = _check_cron(
-                name,
-                user,
-                minute,
-                hour,
-                daymonth,
-                month,
-                dayweek)
+        status = _check_cron(name,
+                             user,
+                             minute,
+                             hour,
+                             daymonth,
+                             month,
+                             dayweek)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -137,15 +137,14 @@ def present(name,
             ret['comment'] = 'Cron {0} is set to be updated'.format(name)
         return ret
 
-    data = __salt__['cron.set_job'](
-            dom=daymonth,
-            dow=dayweek,
-            hour=hour,
-            minute=minute,
-            month=month,
-            cmd=name,
-            user=user
-            )
+    data = __salt__['cron.set_job'](dom=daymonth,
+                                    dow=dayweek,
+                                    hour=hour,
+                                    minute=minute,
+                                    month=month,
+                                    cmd=name,
+                                    user=user
+                                    )
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -166,13 +165,12 @@ def present(name,
 
 
 def absent(name,
-        user='root',
-        minute='*',
-        hour='*',
-        daymonth='*',
-        month='*',
-        dayweek='*',
-        ):
+           user='root',
+           minute='*',
+           hour='*',
+           daymonth='*',
+           month='*',
+           dayweek='*'):
     '''
     Verifies that the specified cron job is absent for the specified user, only
     the name is matched when removing a cron job.
@@ -209,14 +207,13 @@ def absent(name,
            'comment': ''}
 
     if __opts__['test']:
-        status = _check_cron(
-                name,
-                user,
-                minute,
-                hour,
-                daymonth,
-                month,
-                dayweek)
+        status = _check_cron(name,
+                             user,
+                             minute,
+                             hour,
+                             daymonth,
+                             month,
+                             dayweek)
         ret['result'] = None
         if status == 'absent':
             ret['result'] = True
@@ -225,15 +222,14 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](
-            user,
-            minute,
-            hour,
-            daymonth,
-            month,
-            dayweek,
-            name,
-            )
+    data = __salt__['cron.rm_job'](user,
+                                   minute,
+                                   hour,
+                                   daymonth,
+                                   month,
+                                   dayweek,
+                                   name,
+                                   )
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
@@ -249,15 +245,15 @@ def absent(name,
 
 
 def file(name,
-        source_hash='',
-        user='root',
-        template=None,
-        context=None,
-        replace=True,
-        defaults=None,
-        env=None,
-        backup='',
-        **kwargs):
+         source_hash='',
+         user='root',
+         template=None,
+         context=None,
+         replace=True,
+         defaults=None,
+         env=None,
+         backup='',
+         **kwargs):
     '''
     Provides file.managed-like functionality (templating, etc.) for a pre-made
     crontab file, to be assigned to a given user.
@@ -302,11 +298,15 @@ def file(name,
     '''
     # Initial set up
     mode = __salt__['config.manage_mode'](600)
-    owner,group,crontab_dir = _get_cron_info()
-    cron_path = os.path.join(crontab_dir,user)
+    owner, group, crontab_dir = _get_cron_info()
+
+    cron_path = mkstemp()
+    with open(cron_path, 'w+') as fp_:
+        fp_.write(__salt__['cron.raw_cron'](user))
+
     ret = {'changes': {},
            'comment': '',
-           'name': cron_path,
+           'name': name,
            'result': True}
 
     # Avoid variable naming confusion in below module calls, since ID
@@ -316,27 +316,28 @@ def file(name,
     if env is None:
         env = kwargs.get('__env__', 'base')
 
-    if not replace:
-        if os.path.isfile(os.path.join(crontab_dir,user)):
-            ret['comment'] = 'User {0} already has a crontab. No changes ' \
-                             'made'.format(user)
-            return ret
+    if not replace and os.stat(cron_path).st_size > 0:
+        ret['comment'] = 'User {0} already has a crontab. No changes ' \
+                         'made'.format(user)
+        os.unlink(cron_path)
+        return ret
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = __salt__['file.check_managed'](
-                cron_path,
-                source,
-                source_hash,
-                owner,
-                group,
-                mode,
-                template,
-                False, # makedirs = False
-                context,
-                defaults,
-                env,
-                **kwargs
-                )
+        r = __salt__['file.check_managed'](cron_path,
+                                           source,
+                                           source_hash,
+                                           owner,
+                                           group,
+                                           mode,
+                                           template,
+                                           False,  # makedirs = False
+                                           context,
+                                           defaults,
+                                           env,
+                                           **kwargs
+                                           )
+        ret['result'], ret['comment'] = r
+        os.unlink(cron_path)
         return ret
 
     # If the source is a list then find which file exists
@@ -345,36 +346,37 @@ def file(name,
                                                        env)
 
     # Gather the source file from the server
-    sfn, source_sum, comment = __salt__['file.get_managed'](
-            cron_path,
-            template,
-            source,
-            source_hash,
-            owner,
-            group,
-            mode,
-            env,
-            context,
-            defaults,
-            **kwargs
-            )
+    sfn, source_sum, comment = __salt__['file.get_managed'](cron_path,
+                                                            template,
+                                                            source,
+                                                            source_hash,
+                                                            owner,
+                                                            group,
+                                                            mode,
+                                                            env,
+                                                            context,
+                                                            defaults,
+                                                            **kwargs
+                                                            )
     if comment:
         ret['comment'] = comment
         ret['result'] = False
+        os.unlink(cron_path)
         return ret
-    else:
-        ret = __salt__['file.manage_file'](cron_path,
-                                           sfn,
-                                           ret,
-                                           source,
-                                           source_sum,
-                                           owner,
-                                           group,
-                                           mode,
-                                           env,
-                                           backup)
-        if not __salt__['cron.write_cron_file'](user, cron_path):
-            ret['comment'] = 'Crontab file updated, but was unable to ' \
-                             'update cron daemon'
-            ret['result'] = False
-        return ret
+
+    ret = __salt__['file.manage_file'](cron_path,
+                                       sfn,
+                                       ret,
+                                       source,
+                                       source_sum,
+                                       owner,
+                                       group,
+                                       mode,
+                                       env,
+                                       backup)
+    if not __salt__['cron.write_cron_file'](user, cron_path):
+        ret['comment'] = 'Crontab file updated, but was unable to ' \
+                         'update cron daemon'
+        ret['result'] = False
+    os.unlink(cron_path)
+    return ret

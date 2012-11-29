@@ -30,7 +30,6 @@ Depends: ${python:Depends},
          python-yaml,
          python-zmq,
          msgpack-python
-Recommends: dmidecode, pciutils
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -79,6 +78,7 @@ Depends: ${misc:Depends},
          python,
          python-pkg-resources,
          salt-common (= ${source:Version})
+Recommends: dmidecode, pciutils
 Description: This package represents the client package for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -125,6 +125,7 @@ Package: salt-doc
 Architecture: all
 Section: doc
 Depends: ${misc:Depends}
+Recommends: libjs-sphinxdoc
 Description: additional documentation for salt, the distributed remote execution system
  salt is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.

@@ -5,6 +5,8 @@ Support for YUM
             - rpm Python module
             - rpmUtils Python module
 '''
+import re
+
 try:
     import yum
     import rpm
@@ -444,3 +446,54 @@ def purge(pkgs):
         salt '*' pkg.purge <package name>
     '''
     return remove(pkgs)
+
+
+def verify(*package):
+    '''
+    Runs an rpm -Va on a system, and returns the results in a dict
+
+    CLI Example::
+
+        salt '*' pkg.verify
+    '''
+    ftypes = {'c': 'config',
+              'd': 'doc',
+              'g': 'ghost',
+              'l': 'license',
+              'r': 'readme'}
+    ret = {}
+    if package:
+        packages = ' '.join(package)
+        cmd = 'rpm -V {0}'.format(packages)
+    else:
+        cmd = 'rpm -Va'
+    for line in __salt__['cmd.run'](cmd).split('\n'):
+        fdict = {'mismatch': []}
+        if 'missing' in line:
+            line = ' ' + line
+            fdict['missing'] = True
+            del(fdict['mismatch'])
+        fname = line[13:]
+        if line[11:12] in ftypes:
+            fdict['type'] = ftypes[line[11:12]]
+        if line[0:1] == 'S':
+            fdict['mismatch'].append('size')
+        if line[1:2] == 'M':
+            fdict['mismatch'].append('mode')
+        if line[2:3] == '5':
+            fdict['mismatch'].append('md5sum')
+        if line[3:4] == 'D':
+            fdict['mismatch'].append('device major/minor number')
+        if line[4:5] == 'L':
+            fdict['mismatch'].append('readlink path')
+        if line[5:6] == 'U':
+            fdict['mismatch'].append('user')
+        if line[6:7] == 'G':
+            fdict['mismatch'].append('group')
+        if line[7:8] == 'T':
+            fdict['mismatch'].append('mtime')
+        if line[8:9] == 'P':
+            fdict['mismatch'].append('capabilities')
+        ret[fname] = fdict
+    return ret
+

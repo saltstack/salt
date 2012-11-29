@@ -89,7 +89,7 @@ def gid_to_group(gid):
         # This is not an integer, maybe it's already the group name?
         gid = group_to_gid(gid)
 
-    if not gid:
+    if gid == '':
         # Don't even bother to feed it to grp
         return ''
 
@@ -1154,9 +1154,11 @@ def check_managed(
             **kwargs
             )
     if comment:
+        __clean_tmp(sfn)
         return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, env)
+    __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
         for key, val in changes.items():

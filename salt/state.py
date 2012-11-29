@@ -172,6 +172,247 @@ class StateError(Exception):
     pass
 
 
+class Compiler(object):
+    '''
+    Class used to compile and manage the High Data structure
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+
+    def verify_high(self, high):
+        '''
+        Verify that the high data is viable and follows the data structure
+        '''
+        errors = []
+        if not isinstance(high, dict):
+            errors.append('High data is not a dictionary and is invalid')
+        reqs = {}
+        for name, body in high.items():
+            if name.startswith('__'):
+                continue
+            if not isinstance(name, string_types):
+                err = ('The name {0} in sls {1} is not formed as a '
+                       'string but is a {2}').format(
+                               name, body['__sls__'], type(name))
+                errors.append(err)
+            if not isinstance(body, dict):
+                err = ('The type {0} in {1} is not formated as a dictionary'
+                       .format(name, body))
+                errors.append(err)
+                continue
+            for state in body:
+                if state.startswith('__'):
+                    continue
+                if not isinstance(body[state], list):
+                    err = ('The state "{0}" in sls {1} is not formed as a list'
+                           .format(name, body['__sls__']))
+                    errors.append(err)
+                else:
+                    fun = 0
+                    if '.' in state:
+                        fun += 1
+                    for arg in body[state]:
+                        if isinstance(arg, string_types):
+                            fun += 1
+                            if ' ' in arg.strip():
+                                errors.append(('The function "{0}" in state '
+                                '"{1}" in SLS "{2}" has '
+                                'whitespace, a function with whitespace is '
+                                'not supported, perhaps this is an argument '
+                                'that is missing a ":"').format(
+                                    arg,
+                                    name,
+                                    body['__sls__']))
+                        elif isinstance(arg, dict):
+                            # The arg is a dict, if the arg is require or
+                            # watch, it must be a list.
+                            #
+                            # Add the requires to the reqs dict and check them
+                            # all for recursive requisites.
+                            argfirst = next(iter(arg))
+                            if argfirst == 'require' or argfirst == 'watch':
+                                if not isinstance(arg[argfirst], list):
+                                    errors.append(('The require or watch'
+                                    ' statement in state "{0}" in sls "{1}" '
+                                    'needs to be formed as a list').format(
+                                        name,
+                                        body['__sls__']
+                                        ))
+                                # It is a list, verify that the members of the
+                                # list are all single key dicts.
+                                else:
+                                    reqs[name] = {'state': state}
+                                    for req in arg[argfirst]:
+                                        if not isinstance(req, dict):
+                                            err = ('Requisite declaration {0}'
+                                            ' in SLS {1} is not formed as a'
+                                            ' single key dictionary').format(
+                                                req,
+                                                body['__sls__'])
+                                            errors.append(err)
+                                            continue
+                                        req_key = next(iter(req))
+                                        req_val = req[req_key]
+                                        if not ishashable(req_val):
+                                            errors.append((
+                                                'Illegal requisite "{0}", '
+                                                'please check your syntax.\n'
+                                                ).format(str(req_val)))
+
+                                        # Check for global recursive requisites
+                                        reqs[name][req_val] = req_key
+                                        # I am going beyond 80 chars on
+                                        # purpose, this is just too much
+                                        # of a pain to deal with otherwise
+                                        if req_val in reqs:
+                                            if name in reqs[req_val]:
+                                                if reqs[req_val][name] == state:
+                                                    if reqs[req_val]['state'] == reqs[name][req_val]:
+                                                        err = ('A recursive '
+                                                        'requisite was found, SLS '
+                                                        '"{0}" ID "{1}" ID "{2}"'
+                                                        ).format(
+                                                                body['__sls__'],
+                                                                name,
+                                                                req_val
+                                                                )
+                                                        errors.append(err)
+                                # Make sure that there is only one key in the
+                                # dict
+                                if len(list(arg)) != 1:
+                                    errors.append(('Multiple dictionaries '
+                                    'defined in argument of state "{0}" in sls'
+                                    ' {1}').format(
+                                        name,
+                                        body['__sls__']))
+                    if not fun:
+                        if state == 'require' or state == 'watch':
+                            continue
+                        errors.append(('No function declared in state "{0}" in'
+                            ' sls {1}').format(state, body['__sls__']))
+                    elif fun > 1:
+                        errors.append(('Too many functions declared in state'
+                            ' "{0}" in sls {1}').format(
+                                state, body['__sls__']))
+        return errors
+
+    def order_chunks(self, chunks):
+        '''
+        Sort the chunk list verifying that the chunks follow the order
+        specified in the order options.
+        '''
+        cap = 1
+        for chunk in chunks:
+            if 'order' in chunk:
+                if not isinstance(chunk['order'], int):
+                    continue
+                if chunk['order'] > cap - 1 and chunk['order'] > 0:
+                    cap = chunk['order'] + 100
+        for chunk in chunks:
+            if not 'order' in chunk:
+                chunk['order'] = cap
+            else:
+                if not isinstance(chunk['order'], int):
+                    if chunk['order'] == 'last':
+                        chunk['order'] = cap + 1000000
+                    else:
+                        chunk['order'] = cap
+                elif isinstance(chunk['order'], int) and chunk['order'] < 0:
+                    chunk['order'] = cap + 1000000 + chunk['order']
+        chunks = sorted(
+                chunks,
+                key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
+                )
+        chunks = sorted(
+                chunks,
+                key=lambda k: k['order']
+                )
+        return chunks
+
+    def compile_high_data(self, high):
+        '''
+        "Compile" the high data as it is retrieved from the cli or yaml into
+        the individual state executor structures
+        '''
+        chunks = []
+        for name, body in high.items():
+            if name.startswith('__'):
+                continue
+            for state, run in body.items():
+                funcs = set()
+                names = set()
+                if state.startswith('__'):
+                    continue
+                chunk = {'state': state,
+                         'name': name}
+                if '__sls__' in body:
+                    chunk['__sls__'] = body['__sls__']
+                if '__env__' in body:
+                    chunk['__env__'] = body['__env__']
+                chunk['__id__'] = name
+                for arg in run:
+                    if isinstance(arg, string_types):
+                        funcs.add(arg)
+                        continue
+                    if isinstance(arg, dict):
+                        for key, val in arg.items():
+                            if key == 'names':
+                                names.update(val)
+                                continue
+                            else:
+                                chunk.update(arg)
+                if names:
+                    for low_name in names:
+                        live = copy.deepcopy(chunk)
+                        live['name'] = low_name
+                        for fun in funcs:
+                            live['fun'] = fun
+                            chunks.append(live)
+                else:
+                    live = copy.deepcopy(chunk)
+                    for fun in funcs:
+                        live['fun'] = fun
+                        chunks.append(live)
+        chunks = self.order_chunks(chunks)
+        return chunks
+
+    def apply_exclude(self, high):
+        '''
+        Read in the __exclude__ list and remove all excluded objects from the
+        high data
+        '''
+        if '__exclude__' not in high:
+            return high
+        ex_sls = set()
+        ex_id = set()
+        exclude = high.pop('__exclude__')
+        for exc in exclude:
+            if isinstance(exc, str):
+                # The exclude statement is a string, assume it is an sls
+                ex_sls.add(exc)
+            if isinstance(exc, dict):
+                # Explicitly declared exclude
+                if len(exc) != 1:
+                    continue
+                key = exc.keys()[0]
+                if key == 'sls':
+                    ex_sls.add(exc['sls'])
+                elif key == 'id':
+                    ex_id.add(exc['id'])
+        # Now the excludes have been simplified, use them
+        if ex_sls:
+            # There are sls excludes, find the associtaed ids
+            for name, body in high.items():
+                if name.startswith('__'):
+                    continue
+                if body.get('__sls__', '') in ex_sls:
+                    ex_id.add(name)
+        for id_ in ex_id:
+            if id_ in high:
+                high.pop(id_)
+        return high
+
+
 class State(object):
     '''
     Class used to execute salt states

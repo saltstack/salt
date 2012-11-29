@@ -630,7 +630,8 @@ class Minion(object):
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
         socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        socket.setsockopt(zmq.RECONNECT_IVL_MAX, self.opts['recon_max'])
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            socket.setsockopt(zmq.RECONNECT_IVL_MAX, self.opts['recon_max'])
         socket.connect(self.master_pub)
         poller.register(socket, zmq.POLLIN)
         epoller.register(epull_sock, zmq.POLLIN)
