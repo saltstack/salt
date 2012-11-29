@@ -106,7 +106,7 @@ def get_conn():
 
     if 'OPENSTACK.password' in __opts__:
         authinfo['ex_force_auth_version'] = '2.0_password'
-        log.debug('Authenticating using password')
+        log.debug('OpenStack authenticating using password')
         return driver(
             __opts__['OPENSTACK.user'],
             __opts__['OPENSTACK.password'],
@@ -114,7 +114,7 @@ def get_conn():
             )
     elif 'OPENSTACK.apikey' in __opts__:
         authinfo['ex_force_auth_version'] = '2.0_apikey'
-        log.debug('Authenticating using apikey')
+        log.debug('OpenStack authenticating using apikey')
         return driver(
             __opts__['OPENSTACK.user'],
             __opts__['OPENSTACK.apikey'],
