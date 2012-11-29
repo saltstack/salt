@@ -21,7 +21,6 @@ except Exception:
 import salt.crypt
 import salt.loader
 import salt.utils
-import salt.utils.migrations
 import salt.pillar
 from salt.exceptions import SaltClientError
 
@@ -278,8 +277,6 @@ def minion_config(path, check_dns=True):
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
                             'key_logfile', 'extension_modules'])
-    #import salt.utils.migrations
-    #salt.utils.migrations.migrate_paths(opts)
     return opts
 
 
@@ -385,7 +382,6 @@ def master_config(path):
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
-    #salt.utils.migrations.migrate_paths(opts)
     return opts
 
 
