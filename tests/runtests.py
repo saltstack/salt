@@ -6,6 +6,7 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 import sys
 import os
+import re
 import logging
 import optparse
 import resource
