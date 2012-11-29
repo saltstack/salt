@@ -144,8 +144,9 @@ def query(database, query):
         {{ salt['mysql.query']("mydb","SELECT info from mytable limit 1")['results'][0][0] }}
 
     '''
-    #Doesn't do anything about sql warnings, e.g. empty values on an insert.
-    #I don't think it handles multiple queries at once, so adding "commit" might not work.
+    # Doesn't do anything about sql warnings, e.g. empty values on an insert.
+    # I don't think it handles multiple queries at once, so adding "commit"
+    # might not work.
     ret = {}
     db = connect(**{'db': database})
     cur = db.cursor()
@@ -813,7 +814,7 @@ def processlist():
         for j in range(len(hdr)):
             try:
                 r[hdr[j]] = row[j]
-            except:
+            except KeyError:
                 pass
 
         ret.append(r)
@@ -835,7 +836,7 @@ def __do_query_into_hash(conn, sqlStr):
 
     try:
         cursor = conn.cursor()
-    except:
+    except Exception:
         self.__log.error("%s: Can't get cursor for SQL->%s" % (mod, sqlStr))
         cursor.close()
         log.debug(('%s-->' % mod))        
@@ -843,7 +844,7 @@ def __do_query_into_hash(conn, sqlStr):
 
     try:
         rs = cursor.execute(sqlStr)
-    except:
+    except Exception:
         log.error("%s: try to execute : SQL->%s" % (mod, sqlStr))
         cursor.close()
         log.debug(('%s-->' % mod))        
