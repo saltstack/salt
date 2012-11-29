@@ -7,7 +7,7 @@ config, these are the defaults::
 
     mysql.host: 'salt'
     mysql.user: 'salt'
-    mysql.passwd: 'salt'
+    mysql.pass: 'salt'
     mysql.db: 'salt'
     mysql.port: 3306
     mysql.unix_socket: '/var/lib/mysql/mysql.sock'
@@ -75,7 +75,7 @@ def _get_serv(commit=False):
     conn =  MySQLdb.connect(
             host=__salt__['config.option']('mysql.host'),
             user=__salt__['config.option']('mysql.user'),
-            passwd=__salt__['config.option']('mysql.passwd'),
+            passwd=__salt__['config.option']('mysql.pass'),
             db=__salt__['config.option']('mysql.db'),
             port=__salt__['config.option']('mysql.port'),
             unix_socket=__salt__['config.option']('mysql.unix_socket'))
