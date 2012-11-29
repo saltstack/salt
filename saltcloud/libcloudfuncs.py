@@ -24,6 +24,15 @@ import saltcloud.utils
 log = logging.getLogger(__name__)
 
 
+def node_state(id):
+    states = {0: 'RUNNING',
+              1: 'REBOOTING',
+              2: 'TERMINATED',
+              3: 'PENDING',
+              4: 'UNKNOWN'}
+    return states[id]
+
+
 def libcloud_version():
     '''
     Require the minimal libcloud version
@@ -250,7 +259,7 @@ def list_nodes():
                 'private_ips': node.private_ips,
                 'public_ips': node.public_ips,
                 'size': node.size,
-                'state': node.state}
+                'state': node_state(node.state)}
     return ret
 
 
