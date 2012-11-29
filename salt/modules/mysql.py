@@ -21,6 +21,7 @@ Module to provide MySQL compatibility to salt.
 import time
 import logging
 import re
+import sys
 
 # Import third party libs
 try:
@@ -801,6 +802,8 @@ def processlist():
     ret = [] 
     hdr=("Id", "User", "Host", "db", "Command","Time", "State", 
          "Info", "Rows_sent", "Rows_examined", "Rows_read")
+
+    log.debug('processlist')
     db = connect()
     cur = db.cursor()
     cur.execute("SHOW FULL PROCESSLIST")
@@ -808,9 +811,148 @@ def processlist():
         row = cur.fetchone()        
         r = {}
         for j in range(len(hdr)):
-            r[hdr[j]] = row[j]
+            try:
+                r[hdr[j]] = row[j]
+            except:
+                pass
 
         ret.append(r)
             
     cur.close()
     return ret
+def __do_query_into_hash(conn, sqlStr):
+    '''
+    Perform the query that is passed to it (sqlStr).
+    
+    Returns:
+       results in a dict.
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug("%s<--(%s)" % (mod, sqlStr))
+
+    rtnResults = []
+
+    try:
+        cursor = conn.cursor()
+    except:
+        self.__log.error("%s: Can't get cursor for SQL->%s" % (mod, sqlStr))
+        cursor.close()
+        log.debug(('%s-->' % mod))        
+        return rtnResults
+
+    try:
+        rs = cursor.execute(sqlStr)
+    except:
+        log.error("%s: try to execute : SQL->%s" % (mod, sqlStr))
+        cursor.close()
+        log.debug(('%s-->' % mod))        
+        return rtnResults
+
+    rs = cursor.fetchall()
+
+    for rowData in rs:
+        colCnt = 0
+        row = {}                
+        for colData in cursor.description:
+            colName = colData[0]
+            row[colName] = rowData[colCnt]
+            colCnt += 1
+
+        rtnResults.append(row)
+
+    cursor.close()
+    log.debug(('%s-->' % mod))        
+    return rtnResults
+
+def get_master_status():
+    '''
+    Retrieves the master status from the mimion.
+
+    Returns:
+        {'host.domain.com': {'Binlog_Do_DB': '',
+                         'Binlog_Ignore_DB': '',
+                         'File': 'mysql-bin.000021',
+                         'Position': 107}}
+
+    CLI Example:
+        salt '*' mysql.get_master_status
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug("%s<--" % (mod))
+
+    conn = connect()
+    rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
+    conn.close()
+
+    # check for if this minion is not a master
+    if (len(rtnv) == 0):
+        rtnv.append([])
+        
+    log.debug("%s-->%d" % (mod, len(rtnv[0])))        
+    return rtnv[0]
+ 
+def get_slave_status():
+    '''
+    Retrieves the slave status from the minion.
+
+    Returns:
+    {'host.domain.com': {'Connect_Retry': 60,
+                       'Exec_Master_Log_Pos': 107,
+                       'Last_Errno': 0,
+                       'Last_Error': '',
+                       'Last_IO_Errno': 0,
+                       'Last_IO_Error': '',
+                       'Last_SQL_Errno': 0,
+                       'Last_SQL_Error': '',
+                       'Master_Host': 'comet.scion-eng.com',
+                       'Master_Log_File': 'mysql-bin.000021',
+                       'Master_Port': 3306,
+                       'Master_SSL_Allowed': 'No',
+                       'Master_SSL_CA_File': '',
+                       'Master_SSL_CA_Path': '',
+                       'Master_SSL_Cert': '',
+                       'Master_SSL_Cipher': '',
+                       'Master_SSL_Key': '',
+                       'Master_SSL_Verify_Server_Cert': 'No',
+                       'Master_Server_Id': 1,
+                       'Master_User': 'replu',
+                       'Read_Master_Log_Pos': 107,
+                       'Relay_Log_File': 'klo-relay-bin.000071',
+                       'Relay_Log_Pos': 253,
+                       'Relay_Log_Space': 553,
+                       'Relay_Master_Log_File': 'mysql-bin.000021',
+                       'Replicate_Do_DB': '',
+                       'Replicate_Do_Table': '',
+                       'Replicate_Ignore_DB': '',
+                       'Replicate_Ignore_Server_Ids': '',
+                       'Replicate_Ignore_Table': '',
+                       'Replicate_Wild_Do_Table': '',
+                       'Replicate_Wild_Ignore_Table': '',
+                       'Seconds_Behind_Master': 0,
+                       'Skip_Counter': 0,
+                       'Slave_IO_Running': 'Yes',
+                       'Slave_IO_State': 'Waiting for master to send event',
+                       'Slave_SQL_Running': 'Yes',
+                       'Until_Condition': 'None',
+                       'Until_Log_File': '',
+                       'Until_Log_Pos': 0}}
+
+    CLI Example:
+        salt '*' mysql.get_slave_status
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug("%s<--" % (mod))
+
+    conn = connect()
+    rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
+    conn.close()
+
+    # check for if this minion is not a slave
+    if (len(rtnv) == 0):
+        rtnv.append([])
+        
+    log.debug("%s-->%d" % (mod, len(rtnv[0])))        
+    return rtnv[0]
