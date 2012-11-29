@@ -219,7 +219,7 @@ class EventPublisher(multiprocessing.Process):
             epull_sock.close()
 
 
-class Reactor(object):
+class Reactor(multiprocesing.Process):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
@@ -227,6 +227,7 @@ class Reactor(object):
     as reactions to events
     '''
     def __init__(self, opts):
+        super(Reactor, self).__init__()
         self.opts = opts
         self.rend = salt.loader.render(self.opts, {})
 
@@ -247,11 +248,11 @@ class Reactor(object):
 
     def list_reactors(self, tag):
         '''
-        Take in the tag and the data from an event and return a list of the
-        reactors to process
+        Take in the tag from an event and return a list of the reactors to
+        process
         '''
         reactors = []
-        for ropt in opts['reactors']:
+        for ropt in self.opts['reactors']:
             if not isinstance(ropt, dict):
                 continue
             if not len(ropt) == 1:
