@@ -446,7 +446,7 @@ def purge(pkgs):
     return remove(pkgs)
 
 
-def verify(package=None):
+def verify(*package):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
 
@@ -461,7 +461,8 @@ def verify(package=None):
               'r': 'readme'}
     ret = {}
     if package:
-        cmd = 'rpm -V {0}'.format(package)
+        packages = ' '.join(package)
+        cmd = 'rpm -V {0}'.format(packages)
     else:
         cmd = 'rpm -Va'
     for line in __salt__['cmd.run'](cmd).split('\n'):
