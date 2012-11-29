@@ -246,7 +246,8 @@ def parse_opts():
         )
     elif options.coverage:
         coverage_version = tuple(
-            [int(part) for part in coverage.__version__.split('.')]
+            [int(part) for part in
+             re.search(r'([0-9.]+)', coverage.__version__).group(0).split('.')]
         )
         if coverage_version < (3, 5, 3):
             # Should we just print the error instead of exiting?
