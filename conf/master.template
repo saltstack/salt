@@ -16,10 +16,6 @@
 # The tcp port used by the publisher
 #publish_port: 4505
 
-# Refresh the publisher connections when sending out commands, this is a fix
-# for zeromq losing some minion connections. Default: False
-#pub_refresh: False
-
 # The user to run the salt-master as. Salt will update all permissions to
 # allow the specified user to run the master. If the modified files cause
 # conflicts set verify_env to False.

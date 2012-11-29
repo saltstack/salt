@@ -317,7 +317,6 @@ def master_config(path):
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
-            'pub_refresh': False,
             'open_mode': False,
             'auto_accept': False,
             'renderer': 'yaml_jinja',
