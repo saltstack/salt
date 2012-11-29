@@ -40,6 +40,30 @@ def cloud_config(path):
     if 'include' in opts:
         opts = salt.config.include_config(opts, path)
 
+    opts = old_to_new(opts)
+
+    return opts
+
+
+def old_to_new(opts):
+    import pprint
+    import sys
+    optskeys = opts.keys()
+    providers = ('AWS',
+                 'GOGRID',
+                 'IBMSCE',
+                 'JOYENT',
+                 'LINODE',
+                 'OPENSTACK',
+                 'RACKSPACE')
+    for opt in optskeys:
+        for provider in providers:
+            if opt.startswith(provider):
+                if provider.lower() not in opts:
+                    opts[provider.lower()] = {}
+                comps = opt.split('.')
+                opts[provider.lower()][comps[1]] = opts[opt]
+                pprint.pprint(opts)
     return opts
 
 
