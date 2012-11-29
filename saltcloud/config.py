@@ -46,8 +46,6 @@ def cloud_config(path):
 
 
 def old_to_new(opts):
-    import pprint
-    import sys
     optskeys = opts.keys()
     providers = ('AWS',
                  'GOGRID',
@@ -63,7 +61,6 @@ def old_to_new(opts):
                     opts[provider.lower()] = {}
                 comps = opt.split('.')
                 opts[provider.lower()][comps[1]] = opts[opt]
-                pprint.pprint(opts)
     return opts
 
 
