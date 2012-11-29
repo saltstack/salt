@@ -10,6 +10,7 @@ config, these are the defaults::
     mysql.passwd: 'salt'
     mysql.db: 'salt'
     mysql.port: 3306
+    mysql.unix_socket: '/var/lib/mysql/mysql.sock'
 
 Use the following mysql database schema::
 
@@ -26,7 +27,7 @@ Use the following mysql database schema::
     DROP TABLE IF EXISTS `jids`;
     CREATE TABLE `jids` (
       `jid` varchar(255) NOT NULL,
-      `load` varchar(65000) NOT NULL,
+      `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -37,7 +38,7 @@ Use the following mysql database schema::
     DROP TABLE IF EXISTS `salt_returns`;
     CREATE TABLE `salt_returns` (
       `fun` varchar(50) NOT NULL,
-      `jid` varchar(200) NOT NULL,
+      `jid` varchar(255) NOT NULL,
       `return` mediumtext NOT NULL,
       `id` varchar(255) NOT NULL,
       `success` varchar(10) NOT NULL,
@@ -51,7 +52,8 @@ Required python modules: MySQLdb
 '''
 
 # Import python libs
-import json
+from contextlib import contextmanager
+import json, sys
 
 try:
     import MySQLdb 
@@ -65,27 +67,41 @@ def __virtual__():
         return False
     return 'mysql'
 
-
-def _get_serv():
+@contextmanager
+def _get_serv(commit=False):
     '''
     Return a mysql cursor
     '''
-    return MySQLdb.connect(
+    conn =  MySQLdb.connect(
             host=__salt__['config.option']('mysql.host'),
             user=__salt__['config.option']('mysql.user'),
             passwd=__salt__['config.option']('mysql.passwd'),
             db=__salt__['config.option']('mysql.db'),
-            port=__salt__['config.option']('mysql.port'))
+            port=__salt__['config.option']('mysql.port'),
+            unix_socket=__salt__['config.option']('mysql.unix_socket'))
+    cursor = conn.cursor()
+    try:
+        yield cursor
+    except MySQLdb.DatabaseError as err:
+        error, = err.args
+        sys.stderr.write(error.message)
+        cursor.execute("ROLLBACK")
+        raise err
+    else:
+        if commit:
+            cursor.execute("COMMIT")
+        else:
+            cursor.execute("ROLLBACK")
+    finally:
+        conn.close()
 
 
 def returner(ret):
     '''
     Return data to a mysql server
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
 
-        cur = serv.cursor()
         sql = '''INSERT INTO `salt`.`salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
@@ -98,10 +114,8 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid id
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
         
-        cur = serv.cursor()
         sql = '''INSERT INTO `salt`.`jids`
                (`jid`, `load`)
                 VALUES (%s, %s)'''
@@ -113,10 +127,8 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
 
-        cur = serv.cursor()
         sql = '''SELECT load FROM `salt`.`jids`
                 WHERE `jid` = '%s';'''
 
@@ -131,10 +143,8 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
 
-        cur = serv.cursor()
         sql = '''SELECT id, full_ret FROM `salt`.`salt_returns`
                 WHERE `jid` = %s'''
         
@@ -151,10 +161,8 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
 
-        cur = serv.cursor()
         sql = '''SELECT s.id,s.jid, s.full_ret
                 FROM `salt`.`salt_returns` s
                 JOIN ( SELECT MAX(`jid`) as jid 
@@ -176,10 +184,8 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
 
-        cur = serv.cursor()
         sql = '''SELECT DISTINCT jid
                 FROM `salt`.`jids`'''
 
@@ -196,10 +202,8 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    serv = _get_serv()
-    with serv:
+    with _get_serv(commit=True) as cur:
 
-        cur = serv.cursor()
         sql = '''SELECT DISTINCT id 
                 FROM `salt`.`salt_returns`'''
 
