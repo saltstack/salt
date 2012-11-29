@@ -1384,16 +1384,12 @@ class State(object):
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
-                    # file.managed:
-                    # - source: salt://redis/redis.conf
-                    # - user: redis
-                    # - group: redis
-                    # - mode: 644
-                    # file.comment:
-                    # - regex: ^requirepass
-                    #
-                    # XXX: Bad example here since no features requiring a
-                    # master should be here.
+                    #   file.managed:
+                    #     - user: redis
+                    #     - group: redis
+                    #     - mode: 644
+                    #   file.comment:
+                    #     - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
                             'Name \'{0}\' in template \'{1}\' contains '
@@ -1407,11 +1403,6 @@ class State(object):
                     skeys.add(comps[0])
                     continue
                 skeys.add(key)
-
-                #if '__sls__' not in high[name]:
-                #    high[name]['__sls__'] = template
-                #if '__env__' not in high[name]:
-                #    high[name]['__env__'] = None
 
         return high, errors
 
