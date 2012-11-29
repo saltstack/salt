@@ -10,7 +10,6 @@ config, these are the defaults::
     mysql.pass: 'salt'
     mysql.db: 'salt'
     mysql.port: 3306
-    mysql.unix_socket: '/var/lib/mysql/mysql.sock'
 
 Use the following mysql database schema::
 
@@ -78,7 +77,7 @@ def _get_serv(commit=False):
             passwd=__salt__['config.option']('mysql.pass'),
             db=__salt__['config.option']('mysql.db'),
             port=__salt__['config.option']('mysql.port'),
-            unix_socket=__salt__['config.option']('mysql.unix_socket'))
+            )
     cursor = conn.cursor()
     try:
         yield cursor
