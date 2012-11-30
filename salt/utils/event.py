@@ -294,7 +294,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         Execute the reaction state
         '''
         for chunk in chunks:
-            self.wrap.run(low)
+            self.wrap.run(chunk)
 
     def run(self):
         '''
