@@ -237,6 +237,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         multiprocessing.Process.__init__(self)
         salt.state.Compiler.__init__(self, opts)
         self.event = SaltEvent('master', self.opts['sock_dir'])
+        self.wrap = ReactWrap(self.opts)
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -292,7 +293,8 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Execute the reaction state
         '''
-        print chunks
+        for chunk in chunks:
+            self.wrap.run(low)
 
     def run(self):
         '''
@@ -305,3 +307,45 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
             chunks = self.reactions(data['tag'], data['data'], reactors)
             if chunks:
                 self.call_reactions(chunks)
+
+
+class ReactWrap(object):
+    '''
+    Create a wrapper that executes low data for the reaction system
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+
+    def run(self, low):
+        '''
+        Execute the specified function in the specified state by passing the
+        LowData
+        '''
+        l_fun = getattr(self, low['state'])
+        f_call = salt.utils.format_call(l_fun, low)
+
+        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        return ret
+
+    def cmd(self, *args, **kwargs):
+        '''
+        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
+        '''
+        local = salt.client.LocalClient(self.opts['conf_file'])
+        return local.cmd(*args, **kwargs)
+
+    def runner(self, fun, **kwargs):
+        '''
+        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        '''
+        runner = salt.runner.RunnerClient(self.opts)
+        return runner.low(fun, kwargs)
+
+    def wheel(self, fun, **kwargs):
+        '''
+        Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
+        '''
+        kwargs['fun'] = fun
+        wheel = salt.wheel.Wheel(self.opts)
+        return wheel.master_call(**kwargs)
+
