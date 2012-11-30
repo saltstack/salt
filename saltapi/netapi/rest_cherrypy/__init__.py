@@ -387,7 +387,7 @@ class LowDataAdapter(object):
 
             Lowstate may be supplied in any supported format by specifying the
             :mailheader:`Content-Type` header in the request. Supported formats
-            are listed in the :mailheader:`Accept` response header.
+            are listed in the :mailheader:`Alternates` response header.
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
@@ -485,7 +485,7 @@ class Minions(LowDataAdapter):
 
             Lowstate may be supplied in any supported format by specifying the
             :mailheader:`Content-Type` header in the request. Supported formats
-            are listed in the :mailheader:`Accept` response header.
+            are listed in the :mailheader:`Alternates` response header.
         :status 302: success
         :status 401: authentication required
         :status 406: requested :mailheader:`Content-Type` not available
