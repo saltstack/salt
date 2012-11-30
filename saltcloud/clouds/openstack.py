@@ -194,7 +194,8 @@ def create(vm_):
         return False
 
     not_ready = True
-    nr_count = 50
+    nr_total = 50
+    nr_count = nr_total
     log.debug('Looking for IP addresses')
     while not_ready:
         nodelist = list_nodes()
@@ -224,7 +225,7 @@ def create(vm_):
         if nr_count == 0:
             log.warn('Timed out waiting for a public ip, continuing anyway')
             break
-        time.sleep(nr_count)
+        time.sleep(nr_total - nr_count + 5)
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
