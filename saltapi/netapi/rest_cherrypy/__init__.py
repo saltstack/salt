@@ -69,8 +69,10 @@ import saltapi
 
 logger = salt.log.logging.getLogger(__name__)
 
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), 'tmpl')
+
 jenv = jinja2.Environment(loader=jinja2.FileSystemLoader([
-    os.path.join(os.path.dirname(__file__), 'tmpl'),
+    TEMPLATES_DIR,
 ]))
 
 def __virtual__():
@@ -541,7 +543,7 @@ class API(object):
                 'tools.gzip.on': True,
 
                 'tools.staticdir.on': True,
-                'tools.staticdir.dir': apiopts.pop('static', None),
+                'tools.staticdir.dir': apiopts.pop('static', TEMPLATES_DIR),
             },
         }
 
