@@ -202,7 +202,7 @@ class Compiler(object):
                         comps = high[name].split('.')
                         if len(comps) > 2:
                             # Merge the comps
-                            comps[1] == '.'.join(l[1:len(l)])
+                            comps[1] == '.'.join(comps[1:len(comps)])
                         high[name] = {
                             #'__sls__': template,
                             #'__env__': None,
@@ -226,7 +226,7 @@ class Compiler(object):
                     comps = key.split('.')
                     if len(comps) > 2:
                         # Merge the comps
-                        comps[1] == '.'.join(l[1:len(l)])
+                        comps[1] == '.'.join(comps[1:len(comps)])
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
