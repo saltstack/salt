@@ -83,12 +83,14 @@ def ssh_pub(vm_):
     return SSHKeyDeployment(open(os.path.expanduser(ssh)).read())
 
 
-def avail_locations():
+def avail_locations(conn=None):
     '''
     Return a dict of all available vm locations on the cloud provider with
     relevant data
     '''
-    conn = get_conn()
+    if not conn:
+	    conn = get_conn()
+
     locations = conn.list_locations()
     ret = {}
     for img in locations:
@@ -100,12 +102,14 @@ def avail_locations():
     return ret
 
 
-def avail_images():
+def avail_images(conn=None):
     '''
     Return a dict of all available vm images on the cloud provider with
     relevant data
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     images = conn.list_images()
     ret = {}
     for img in images:
@@ -117,12 +121,14 @@ def avail_images():
     return ret
 
 
-def avail_sizes():
+def avail_sizes(conn=None):
     '''
     Return a dict of all available vm images on the cloud provider with
     relevant data
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
@@ -197,11 +203,13 @@ def script(vm_):
             )
 
 
-def destroy(name):
+def destroy(name, conn=None):
     '''
     Delete a single vm
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     node = get_node(conn, name)
     if node is None:
         log.error('Unable to find the VM {0}'.format(name))
@@ -221,11 +229,13 @@ def destroy(name):
         return False
 
 
-def reboot(name):
+def reboot(name, conn=None):
     '''
     Reboot a single vm
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     node = get_node(conn, name)
     if node is None:
         log.error('Unable to find the VM {0}'.format(name))
@@ -245,11 +255,13 @@ def reboot(name):
         return False
 
 
-def list_nodes():
+def list_nodes(conn=None):
     '''
     Return a list of the vms that are on the provider
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     nodes = conn.list_nodes()
     ret = {}
     for node in nodes:
@@ -263,11 +275,13 @@ def list_nodes():
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(conn=None):
     '''
     Return a list of the vms that are on the provider, with all fields
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     nodes = conn.list_nodes()
     ret = {}
     for node in nodes:
@@ -278,11 +292,13 @@ def list_nodes_full():
     return ret
 
 
-def list_nodes_select():
+def list_nodes_select(conn=None):
     '''
     Return a list of the vms that are on the provider, with select fields
     '''
-    conn = get_conn()
+    if not conn:
+        conn = get_conn()
+
     nodes = conn.list_nodes()
     ret = {}
     for node in nodes:

@@ -196,9 +196,9 @@ def create(vm_):
     not_ready = True
     nr_total = 50
     nr_count = nr_total
-    log.debug('Looking for IP addresses')
     while not_ready:
-        nodelist = list_nodes()
+        log.debug('Looking for IP addresses')
+        nodelist = list_nodes(conn)
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
