@@ -201,7 +201,7 @@ def create(vm_):
         nodelist = list_nodes(conn)
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
-        running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
+        running = nodelist[vm_['name']]['state'] == node_state(NodeState.RUNNING)
         if running and private and not public:
             log.warn('Private IPs returned, but not public... checking for misidentified IPs')
             for private_ip in private:
