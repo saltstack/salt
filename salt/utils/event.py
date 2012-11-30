@@ -20,6 +20,7 @@ import hashlib
 import errno
 import logging
 import multiprocessing
+from multiprocessing import Process
 
 # Import Third Party libs
 import zmq
@@ -27,7 +28,8 @@ import zmq
 # Import Salt libs
 import salt.payload
 import salt.loader
-from salt.template import compile_template
+import salt.state
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -159,8 +161,7 @@ class MinionEvent(SaltEvent):
     def __init__(self, **kwargs):
         super(MinionEvent, self).__init__('minion', **kwargs)
 
-
-class EventPublisher(multiprocessing.Process):
+class EventPublisher(Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -219,7 +220,7 @@ class EventPublisher(multiprocessing.Process):
             epull_sock.close()
 
 
-class Reactor(object):
+class Reactor(multiprocessing.Process, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
@@ -227,8 +228,9 @@ class Reactor(object):
     as reactions to events
     '''
     def __init__(self, opts):
-        self.opts = opts
-        self.rend = salt.loader.render(self.opts, {})
+        multiprocessing.Process.__init__(self)
+        salt.state.Compiler.__init__(self, opts)
+        self.event = SaltEvent('master', self.opts['sock_dir'])
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -237,7 +239,7 @@ class Reactor(object):
         '''
         react = {}
         for fn_ in glob.glob(glob_ref):
-            react.update(compile_template(
+            react.update(self.render_template(
                     fn_,
                     self.rend,
                     self.opts['renderer'],
@@ -247,11 +249,11 @@ class Reactor(object):
 
     def list_reactors(self, tag):
         '''
-        Take in the tag and the data from an event and return a list of the
-        reactors to process
+        Take in the tag from an event and return a list of the reactors to
+        process
         '''
         reactors = []
-        for ropt in opts['reactors']:
+        for ropt in self.opts['reactors']:
             if not isinstance(ropt, dict):
                 continue
             if not len(ropt) == 1:
@@ -259,7 +261,7 @@ class Reactor(object):
             key = ropt.keys()[0]
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
-                if isinstance(val, str):
+                if isinstance(val, string_types):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
@@ -269,7 +271,30 @@ class Reactor(object):
         '''
         Render a list of reactor files and returns a reaction struct
         '''
-        react = {}
+        high = {}
         for fn_ in reactors:
-            react.update(self.render_reaction(fn_, tag, data))
-        return react
+            high.update(self.render_reaction(fn_, tag, data))
+        if high:
+            errors = self.verify_high(high)
+            if errors:
+                return errors
+            chunks = self.order_chunks(self.compile_high_data(high))
+        return chunks
+
+    def call_reactions(self, chunks):
+        '''
+        Execute the reaction state
+        '''
+        print chunks
+
+    def start(self):
+        '''
+        Enter into the server loop
+        '''
+        for event in self.iter_events():
+            reactors = self.list_reactors(data['tag'])
+            if not reactors:
+                continue
+            chunks = self.reactions(data['tag'], data['data'], reactors)
+            if chunks:
+                self.call_reactions(chunks)

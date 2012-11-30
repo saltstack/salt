@@ -125,7 +125,7 @@ def run(*args, **kwargs):
         # args will exist as an empty list even if none have been provided
         puppet.arguments(args)
 
-    puppet.kwargs.update(utils.clean_kwargs(kwargs))
+    puppet.kwargs.update(utils.clean_kwargs(**kwargs))
 
     return __salt__['cmd.run_all'](repr(puppet))
 
