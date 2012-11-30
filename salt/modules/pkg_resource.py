@@ -108,6 +108,7 @@ def _pack_pkgs(sources):
     if not isinstance(sources,list) \
     or [x for x in sources if type(x) not in StringTypes]:
         log.error('Invalid input: {0}'.format(pformat(source)))
+        log.error('Input must be a list of strings')
         return []
     return sources
 
@@ -130,6 +131,7 @@ def _pack_sources(sources):
     for source in sources:
         if (not isinstance(source,dict)) or len(source) != 1:
             log.error('Invalid input: {0}'.format(pformat(sources)))
+            log.error('Input must be a list of 1-element dicts')
             return {}
         else:
             ret.update(source)
