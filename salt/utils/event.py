@@ -127,11 +127,17 @@ class SaltEvent(object):
         '''
         Creates a generator that continuously listens for events
         '''
-        while True:
-            data = self.get_event(tag=tag, full=full)
-            if data is None:
-                continue
-            yield data
+        try:
+            while True:
+                data = self.get_event(tag=tag, full=full)
+                if data is None:
+                    continue
+                yield data
+        except KeyboardInterrupt:
+            if self.cpub:
+                self.sub.close()
+            if self.cpush:
+                self.push.close()
 
     def fire_event(self, data, tag=''):
         '''
