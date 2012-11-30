@@ -258,8 +258,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         Take in the tag from an event and return a list of the reactors to
         process
         '''
+        log.debug('Gathering rections for tag {0}'.format(tag))
         reactors = []
-        for ropt in self.opts['reactors']:
+        for ropt in self.opts['reactor']:
             if not isinstance(ropt, dict):
                 continue
             if not len(ropt) == 1:
@@ -277,7 +278,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Render a list of reactor files and returns a reaction struct
         '''
+        log.debug('Compiling reactions for tag {0}'.format(tag))
         high = {}
+        chunks = []
         for fn_ in reactors:
             high.update(self.render_reaction(fn_, tag, data))
         if high:
