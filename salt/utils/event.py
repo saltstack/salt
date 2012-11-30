@@ -247,8 +247,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         for fn_ in glob.glob(glob_ref):
             react.update(self.render_template(
                     fn_,
-                    self.rend,
-                    self.opts['renderer'],
                     tag=tag,
                     data=data))
         return react
