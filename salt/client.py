@@ -69,7 +69,7 @@ class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
     '''
-    def __init__(self, c_path='/etc/salt', mopts=None):
+    def __init__(self, c_path='/etc/salt/master', mopts=None):
         if mopts:
             self.opts - mopts
         else:
