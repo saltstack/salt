@@ -291,7 +291,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
-        for event in self.iter_events():
+        for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
