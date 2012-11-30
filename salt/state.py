@@ -180,12 +180,12 @@ class Compiler(object):
         self.opts = opts
         self.rend = salt.loader.render(self.opts, {})
 
-    def render_template(self, template):
+    def render_template(self, template, **kwargs):
         '''
         Enforce the states in a template
         '''
         high = compile_template(
-            template, self.rend, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'], **kwargs)
         if not high:
             return high
         return self.pad_funcs(high)
