@@ -287,7 +287,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         print chunks
 
-    def start(self):
+    def run(self):
         '''
         Enter into the server loop
         '''
