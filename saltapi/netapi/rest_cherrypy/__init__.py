@@ -394,6 +394,182 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate()),
         }
 
+class Minions(LowDataAdapter):
+    def GET(self, mid=None):
+        '''
+        A convenience URL for getting lists of minions or getting minion
+        details
+
+        .. http:get:: /minions/(mid)
+
+            Get grains, modules, functions, and inline function documentation
+            for all minions or a single minion
+
+            **Example request**::
+
+                % curl -i localhost:8000/minions/ms-3
+
+            .. code-block:: http
+
+                GET /minions/ms-3 HTTP/1.1
+                Host: localhost:8000
+                Accept: application/x-yaml
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Length: 129005
+                Content-Type: application/x-yaml
+
+                return:
+                - ms-3:
+                    grains.items:
+                      ...
+                    sys.doc:
+                      ...
+
+        :param mid: (optional) a minion id
+        :status 200: success
+        :status 401: authentication required
+        :status 406: requested Content-Type not available
+        '''
+        cherrypy.request.lowstate = [{
+            'client': 'local', 'tgt': mid or '*',
+            'fun': ['grains.items', 'sys.doc'], 'arg': [[], []],
+        }]
+        return {
+            'return': list(self.exec_lowstate()),
+        }
+
+    def POST(self, **kwargs):
+        '''
+        Run an execution command and immediately return the job id
+
+        .. http:post:: /minions
+
+            You must pass low-data in the requst body either from an HTML form
+            or as JSON or YAML. The ``client`` option is pre-set to
+            ``local_async``.
+
+            **Example request**::
+
+                % curl -sSi localhost:8000/minions \\
+                    -H "Accept: application/json" \\
+                    -d tgt="ms-3" \\
+                    -d fun="test.fib" \\
+                    -d arg="3"
+
+            .. code-block:: http
+
+                POST /minions HTTP/1.1
+                Host: localhost:8000
+                Content-Length: 27
+                Content-Type: application/x-www-form-urlencoded
+
+                tgt=ms-3&fun=test.fib&arg=3
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 302 Found
+                Location: http://localhost:8000/jobs/20121129120137435069
+
+        :form lowstate: lowstate data for the
+            :py:mod:`~salt.client.LocalClient`; the ``client`` parameter will
+            be set to ``local_async``
+
+            Lowstate may be supplied in any supported format by specifying the
+            :mailheader:`Content-Type` header in the request. Supported formats
+            are listed in the :mailheader:`Accept` response header.
+        :status 302: success
+        :status 401: authentication required
+        :status 406: requested :mailheader:`Content-Type` not available
+        '''
+        cherrypy.request.lowstate[0]['client'] = 'local_async'
+        job_data = next(self.exec_lowstate(), {})
+        raise cherrypy.HTTPRedirect('/jobs/{jid}'.format(**job_data), 302)
+
+class Jobs(LowDataAdapter):
+    def GET(self, jid=None):
+        '''
+        A convenience URL for getting lists of previously run jobs or getting
+        the return from a single job
+
+        .. http:get:: /jobs/(jid)
+
+            Get grains, modules, functions, and inline function documentation
+            for all minions or a single minion
+
+            **Example request**::
+
+                % curl -i localhost:8000/jobs
+
+            .. code-block:: http
+
+                GET /jobs HTTP/1.1
+                Host: localhost:8000
+                Accept: application/x-yaml
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Length: 165
+                Content-Type: application/x-yaml
+
+                return:
+                - '20121130104633606931':
+                    Arguments:
+                    - '3'
+                    Function: test.fib
+                    Start Time: 2012, Nov 30 10:46:33.606931
+                    Target: ms-3
+                    Target-type: glob
+
+            **Example request**::
+
+                % curl -i localhost:8000/jobs/20121130104633606931
+
+            .. code-block:: http
+
+                GET /jobs/20121130104633606931 HTTP/1.1
+                Host: localhost:8000
+                Accept: application/x-yaml
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Length: 73
+                Content-Type: application/x-yaml
+                
+                return:
+                - ms-3:
+                  - - 0
+                    - 1
+                    - 1
+                    - 2
+                  - 9.059906005859375e-06
+
+        :param mid: (optional) a minion id
+        :status 200: success
+        :status 401: authentication required
+        :status 406: requested Content-Type not available
+        '''
+        cherrypy.request.lowstate = [{
+            'client': 'runner',
+            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'jid': jid,
+        }]
+        return {
+            'return': list(self.exec_lowstate()),
+        }
+
 class Login(LowDataAdapter):
     '''
     All interactions with this REST API must be authenticated. Authentication
@@ -504,6 +680,8 @@ class API(object):
     url_map = {
         'index': LowDataAdapter,
         'login': Login,
+        'minions': Minions,
+        'jobs': Jobs,
     }
 
     def __init__(self, opts):

@@ -28,9 +28,6 @@ class APIClient(object):
         Execute the specified function in the specified client by passing the
         LowData
         '''
-        # FIXME: the called *Client functions must be consistently
-        # asynchronous. this will need to be addressed across the board
-
         if not 'client' in low:
             raise SaltException('No client specified')
 
@@ -39,6 +36,15 @@ class APIClient(object):
 
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
+
+    def local_async(self, *args, **kwargs):
+        '''
+        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
+        and immediately return the job ID. The results of the job can then be
+        retrieved at a later time.
+        '''
+        local = salt.client.LocalClient(self.opts['conf_file'])
+        return local.run_job(*args, **kwargs)
 
     def local(self, *args, **kwargs):
         '''
