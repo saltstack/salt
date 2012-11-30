@@ -5,6 +5,7 @@ Resources needed by pkg providers
 import logging
 import os
 import re
+import yaml
 from pprint import pformat
 from types import StringTypes
 
@@ -100,9 +101,8 @@ def _pack_pkgs(sources):
     '''
     if type(sources) in StringTypes:
         try:
-            # Safely eval the string data into a list
-            sources = eval(sources,{'__builtins__': None},{})
-        except Exception as e:
+            sources = yaml.load(sources)
+        except yaml.parser.ParserError as e:
             log.error(e)
             return []
     if not isinstance(sources,list) \
@@ -122,9 +122,8 @@ def _pack_sources(sources):
     '''
     if type(sources) in StringTypes:
         try:
-            # Safely eval the string data into a list of dicts
-            sources = eval(sources,{'__builtins__': None},{})
-        except Exception as e:
+            sources = yaml.load(sources)
+        except yaml.parser.ParserError as e:
             log.error(e)
             return {}
     ret = {}
