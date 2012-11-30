@@ -56,12 +56,13 @@ def __virtual__():
     Set up the libcloud functions and check for GOGRID configs
     '''
     confs = [
-            'GOGRID.apikey',
-            'GOGRID.sharedsecret',
+            'apikey',
+            'sharedsecret',
             ]
     for conf in confs:
-        if conf not in __opts__:
-            return False
+        for provider in __opts__['providers']['gogrid']:
+            if conf not in __opts__['providers']['gogrid'][provider]:
+                return False
     log.debug('Loading GoGrid cloud module')
     return 'gogrid'
 
