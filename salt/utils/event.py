@@ -28,6 +28,7 @@ import zmq
 # Import Salt libs
 import salt.payload
 import salt.loader
+import salt.state
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
