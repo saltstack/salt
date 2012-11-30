@@ -122,7 +122,7 @@ class DjangoModuleTest(integration.ModuleCase):
             )
             mock.assert_called_once_with(
                 'django-admin.py collectstatic --settings=settings.py '
-                ' --noinput --no-post-process --dry-run --clear --link '
+                '--noinput --no-post-process --dry-run --clear --link '
                 '--no-default-ignore --ignore=something'
             )
 
