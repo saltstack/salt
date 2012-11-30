@@ -382,10 +382,12 @@ class LowDataAdapter(object):
                   ms-3: true
                   ms-4: true
 
-        :form client: the client interface in Salt
-        :form fun: the function to execute on the specified Salt client
-        :form arg: any args to pass to the function; this parameter is required
-            even if blank
+        :form lowstate: lowstate data appropriate for the :ref:`client
+            <client-apis>` interface you are calling.
+
+            Lowstate may be supplied in any supported format by specifying the
+            :mailheader:`Content-Type` header in the request. Supported formats
+            are listed in the :mailheader:`Accept` response header.
         :status 200: success
         :status 401: authentication required
         :status 406: requested Content-Type not available
