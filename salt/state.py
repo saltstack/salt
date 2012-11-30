@@ -249,6 +249,7 @@ class Compiler(object):
                     skeys.add(comps[0])
                     continue
                 skeys.add(key)
+        return high
 
 
     def verify_high(self, high):
