@@ -332,7 +332,7 @@ class ReactWrap(object):
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
-        return local.cmd(*args, **kwargs)
+        return local.cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
