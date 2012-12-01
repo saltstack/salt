@@ -200,9 +200,9 @@ class Compiler(object):
                     # Is this is a short state? It needs to be padded!
                     if '.' in high[name]:
                         comps = high[name].split('.')
-                        if len(comps) > 2:
+                        if len(comps) >= 2:
                             # Merge the comps
-                            comps[1] == '.'.join(comps[1:len(comps)])
+                            comps[1] = '.'.join(comps[1:len(comps)])
                         high[name] = {
                             #'__sls__': template,
                             #'__env__': None,
@@ -224,9 +224,9 @@ class Compiler(object):
                     continue
                 if '.' in key:
                     comps = key.split('.')
-                    if len(comps) > 2:
+                    if len(comps) >= 2:
                         # Merge the comps
-                        comps[1] == '.'.join(comps[1:len(comps)])
+                        comps[1] = '.'.join(comps[1:len(comps)])
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
