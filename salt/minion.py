@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Routines to set up a minion
 '''
