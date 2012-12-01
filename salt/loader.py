@@ -64,12 +64,11 @@ def minion_mods(opts, context=None):
     Returns the minion modules
     '''
     load = _create_loader(opts, 'modules', 'module')
-    if context:
-        pack = {'name': __context__,
-                'value': __context__}
-        functions = load.apply_introspection(load.gen_functions(pack))
-    else:
-        functions = load.apply_introspection(load.gen_functions())
+    if context is None:
+        context = {}
+    pack = {'name': '__context__',
+            'value': context}
+    functions = load.apply_introspection(load.gen_functions(pack))
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
