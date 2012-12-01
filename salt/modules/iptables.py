@@ -56,13 +56,13 @@ def get_saved_rules(conf_file=None):
     return _parse_conf(conf_file)
 
 
-def get_current_rules():
+def get_rules():
     '''
     Return a data structure of the current, in-memory rules
 
     CLI Example::
 
-        salt '*' iptables.get_current_rules
+        salt '*' iptables.get_rules
     '''
     return _parse_conf(in_mem=True)
 
@@ -83,13 +83,13 @@ def get_saved_policy(table='filter', chain=None, conf_file=None):
     return rules[table][chain]['policy']
 
 
-def get_current_policy(table='filter', chain=None):
+def get_policy(table='filter', chain=None):
     '''
     Return the current policy for the specified table/chain
 
     CLI Example::
 
-        salt '*' iptables.get_current_policy filter INPUT
+        salt '*' iptables.get_policy filter INPUT
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
