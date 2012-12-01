@@ -497,3 +497,45 @@ def verify(*package):
         ret[fname] = fdict
     return ret
 
+
+def grouplist():
+    '''
+    Lists all groups known by yum on this system
+
+    CLI Example::
+
+        salt '*' pkg.grouplist
+    '''
+    ret = {'installed': [], 'available': [], 'available languages': {}}
+    yb = yum.YumBase()
+    (installed, available) = yb.doGroupLists()
+    for group in installed:
+        ret['installed'].append(group.name)
+    for group in available:
+        if group.langonly:
+            ret['available languages'][group.name] = {
+                'name': group.name,
+                'language': group.langonly}
+        else:
+            ret['available'].append(group.name)
+    return ret
+
+
+def groupinfo(groupname):
+    '''
+    Lists packages belonging to a certain group
+
+    CLI Example::
+
+        salt '*' pkg.groupinfo 'Perl Support'
+    '''
+    yb = yum.YumBase()
+    (installed, available) = yb.doGroupLists()
+    for group in installed + available:
+        if group.name == groupname:
+            return {'manditory packages': group.mandatory_packages,
+                   'optional packages': group.optional_packages,
+                   'default packages': group.default_packages,
+                   'conditional packages': group.conditional_packages,
+                   'description': group.description}
+
