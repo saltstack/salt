@@ -53,17 +53,23 @@ list_nodes_select = types.FunctionType(list_nodes_select.__code__, globals())
 # Only load in this module is the GOGRID configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for RACKSPACE configs
+    Set up the libcloud functions and check for GOGRID configs
     '''
-    if 'GOGRID.apikey' in __opts__ and 'GOGRID.sharedsecret' in __opts__:
-        log.debug('Loading GoGrid cloud module')
-        return 'gogrid'
-    return False
+    confs = [
+            'apikey',
+            'sharedsecret',
+            ]
+    for conf in confs:
+        for provider in __opts__['providers']['gogrid']:
+            if conf not in __opts__['providers']['gogrid'][provider]:
+                return False
+    log.debug('Loading GoGrid cloud module')
+    return 'gogrid'
 
 
 def get_conn():
     '''
-    Return a conn object for the passed vm data
+    Return a conn object for the passed VM data
     '''
     driver = get_driver(Provider.GOGRID)
     return driver(
@@ -74,7 +80,7 @@ def get_conn():
 
 def create(vm_):
     '''
-    Create a single vm from a data dict
+    Create a single VM from a data dict
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
