@@ -10,6 +10,7 @@ import sys
 import shutil
 import tempfile
 import time
+import signal
 from hashlib import md5
 from datetime import datetime, timedelta
 try:
@@ -670,7 +671,7 @@ class ShellCase(TestCase):
     '''
     Execute a test for a shell command
     '''
-    def run_script(self, script, arg_str, catch_stderr=False):
+    def run_script(self, script, arg_str, catch_stderr=False, timeout=None):
         '''
         Execute a script with the given argument string
         '''
@@ -685,13 +686,39 @@ class ShellCase(TestCase):
             'stdout': PIPE
         }
 
-        if catch_stderr:
+        if catch_stderr is True:
             popen_kwargs['stderr'] = PIPE
 
         if not sys.platform.lower().startswith('win'):
             popen_kwargs['close_fds'] = True
 
         process = Popen(cmd, **popen_kwargs)
+
+        if timeout is not None:
+            stop_at = datetime.now() + timedelta(seconds=timeout)
+            term_sent = False
+            while True:
+                process.poll()
+                if process.returncode is not None:
+                    break
+
+                if datetime.now() > stop_at:
+                    if term_sent is False:
+                        process.send_signal(signal.SIGINT)
+                        term_sent = True
+                        continue
+
+                    process.kill()
+
+                    out = [
+                        'Process took more than {0} seconds to complete. '
+                        'Process Killed!'.format(timeout)
+                    ]
+                    if catch_stderr:
+                        return out, [
+                            'Process killed, unable to catch stderr output'
+                        ]
+                    return out
 
         if catch_stderr:
             out, err = process.communicate()
