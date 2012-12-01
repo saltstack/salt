@@ -215,7 +215,7 @@ def minion_config(path, check_dns=True):
             'update_url': False,
             'update_restart_services': [],
             'retry_dns': 30,
-            'recon_max': 30000,
+            'recon_max': 5000,
             }
 
 
