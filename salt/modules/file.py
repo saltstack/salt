@@ -1575,7 +1575,7 @@ def makedirs(path, user=None, group=None, mode=None):
         # turn on the executable bits for user, group and others.
         # Note: the special bits are set to 0.
         if mode:
-            mode = int(mode[-3:], 8) | 0111
+            mode = int(str(mode)[-3:], 8) | 0111
 
         makedirs_perms(directory, user, group, mode)
         # If a caller such as managed() is invoked  with
