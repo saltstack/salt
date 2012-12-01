@@ -45,7 +45,7 @@ def version():
     return out[1]
 
 
-def get_saved_rules():
+def get_saved_rules(conf_file=None):
     '''
     Return a data structure of the rules in the conf file
 
@@ -53,7 +53,7 @@ def get_saved_rules():
 
         salt '*' iptables.get_saved_rules
     '''
-    return _parse_conf()
+    return _parse_conf(conf_file)
 
 
 def get_current_rules():
@@ -67,18 +67,19 @@ def get_current_rules():
     return _parse_conf(in_mem=True)
 
 
-def get_saved_policy(table='filter', chain=None):
+def get_saved_policy(table='filter', chain=None, conf_file=None):
     '''
     Return the current policy for the specified table/chain
 
-    CLI Example::
+    CLI Examples::
 
         salt '*' iptables.get_saved_policy filter INPUT
+        salt '*' iptables.get_saved_policy filter INPUT conf_file=/etc/iptables.saved
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    rules = _parse_conf()
+    rules = _parse_conf(conf_file)
     return rules[table][chain]['policy']
 
 
