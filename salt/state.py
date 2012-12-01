@@ -180,12 +180,12 @@ class Compiler(object):
         self.opts = opts
         self.rend = salt.loader.render(self.opts, {})
 
-    def render_template(self, template):
+    def render_template(self, template, **kwargs):
         '''
         Enforce the states in a template
         '''
         high = compile_template(
-            template, self.rend, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'], **kwargs)
         if not high:
             return high
         return self.pad_funcs(high)
@@ -202,7 +202,7 @@ class Compiler(object):
                         comps = high[name].split('.')
                         if len(comps) > 2:
                             # Merge the comps
-                            comps[1] == '.'.join(l[1:len(l)])
+                            comps[1] == '.'.join(comps[1:len(comps)])
                         high[name] = {
                             #'__sls__': template,
                             #'__env__': None,
@@ -226,7 +226,7 @@ class Compiler(object):
                     comps = key.split('.')
                     if len(comps) > 2:
                         # Merge the comps
-                        comps[1] == '.'.join(l[1:len(l)])
+                        comps[1] == '.'.join(comps[1:len(comps)])
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
@@ -249,6 +249,7 @@ class Compiler(object):
                     skeys.add(comps[0])
                     continue
                 skeys.add(key)
+        return high
 
 
     def verify_high(self, high):

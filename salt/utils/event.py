@@ -127,11 +127,17 @@ class SaltEvent(object):
         '''
         Creates a generator that continuously listens for events
         '''
-        while True:
-            data = self.get_event(tag=tag, full=full)
-            if data is None:
-                continue
-            yield data
+        try:
+            while True:
+                data = self.get_event(tag=tag, full=full)
+                if data is None:
+                    continue
+                yield data
+        except KeyboardInterrupt:
+            if self.cpub:
+                self.sub.close()
+            if self.cpush:
+                self.push.close()
 
     def fire_event(self, data, tag=''):
         '''
@@ -231,6 +237,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         multiprocessing.Process.__init__(self)
         salt.state.Compiler.__init__(self, opts)
         self.event = SaltEvent('master', self.opts['sock_dir'])
+        self.wrap = ReactWrap(self.opts)
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -241,8 +248,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         for fn_ in glob.glob(glob_ref):
             react.update(self.render_template(
                     fn_,
-                    self.rend,
-                    self.opts['renderer'],
                     tag=tag,
                     data=data))
         return react
@@ -252,8 +257,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         Take in the tag from an event and return a list of the reactors to
         process
         '''
+        log.debug('Gathering rections for tag {0}'.format(tag))
         reactors = []
-        for ropt in self.opts['reactors']:
+        for ropt in self.opts['reactor']:
             if not isinstance(ropt, dict):
                 continue
             if not len(ropt) == 1:
@@ -271,7 +277,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Render a list of reactor files and returns a reaction struct
         '''
+        log.debug('Compiling reactions for tag {0}'.format(tag))
         high = {}
+        chunks = []
         for fn_ in reactors:
             high.update(self.render_reaction(fn_, tag, data))
         if high:
@@ -285,16 +293,59 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Execute the reaction state
         '''
-        print chunks
+        for chunk in chunks:
+            self.wrap.run(chunk)
 
-    def start(self):
+    def run(self):
         '''
         Enter into the server loop
         '''
-        for event in self.iter_events():
+        for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
             chunks = self.reactions(data['tag'], data['data'], reactors)
             if chunks:
                 self.call_reactions(chunks)
+
+
+class ReactWrap(object):
+    '''
+    Create a wrapper that executes low data for the reaction system
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+
+    def run(self, low):
+        '''
+        Execute the specified function in the specified state by passing the
+        LowData
+        '''
+        l_fun = getattr(self, low['state'])
+        f_call = salt.utils.format_call(l_fun, low)
+
+        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        return ret
+
+    def cmd(self, *args, **kwargs):
+        '''
+        Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
+        '''
+        local = salt.client.LocalClient(self.opts['conf_file'])
+        return local.cmd(*args, **kwargs)
+
+    def runner(self, fun, **kwargs):
+        '''
+        Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
+        '''
+        runner = salt.runner.RunnerClient(self.opts)
+        return runner.low(fun, kwargs)
+
+    def wheel(self, fun, **kwargs):
+        '''
+        Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
+        '''
+        kwargs['fun'] = fun
+        wheel = salt.wheel.Wheel(self.opts)
+        return wheel.master_call(**kwargs)
+

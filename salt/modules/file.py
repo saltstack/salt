@@ -1211,6 +1211,46 @@ def check_file_meta(
         changes['mode'] = mode
     return changes
 
+def get_diff(
+        minionfile,
+        masterfile,
+        env='base'):
+    '''
+    Return unified diff of file compared to file on master
+
+    Example:
+
+        salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
+    '''
+    ret = {'name': minionfile,
+           'changes': {},
+           'comment': '',
+           'result': True}
+
+    if not os.path.exists(minionfile):
+        ret['result'] = False
+        ret['comment'] = 'File {0} does not exist on the minion'.format(minionfile)
+        return ret
+
+    sfn = __salt__['cp.cache_file'](masterfile, env)
+    if sfn:
+        with nested(salt.utils.fopen(sfn, 'r'),
+                    salt.utils.fopen(minionfile, 'r')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
+        if diff:
+            for line in diff:
+                ret['comment'] = ret['comment'] + line
+        else:
+            ret['comment'] = 'Files are identical'
+            ret['result'] = True
+
+    else:
+        ret['comment'] = 'Failed to copy file from master'
+        ret['result'] = False
+
+    return ret
 
 def manage_file(name,
         sfn,
