@@ -224,7 +224,6 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout,
             **kwargs)
         try:
             return pub_data['jid']
