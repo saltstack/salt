@@ -233,6 +233,9 @@ def minion_config(path, check_dns=True):
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
 
+    if opts.get('file_client', 'remove') == 'local':
+        check_dns = False
+
     if check_dns:
         # Because I import salt.log bellow I need to re-import salt.utils here
         import salt.utils
