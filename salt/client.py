@@ -129,6 +129,22 @@ class LocalClient(object):
             print(("Range server exception: {0}".format(e)))
             return []
 
+    def _get_timeout(self, timeout):
+        '''
+        Return the timeout to use
+        '''
+        if timeout is None:
+            return self.opts['timeout']
+        if isinstance(timeout, int):
+            return timeout
+        if isinstance(timeout, str):
+            try:
+                return int(timeout)
+            except ValueError:
+                return self.opts['timeout']
+        # Looks like the timeout is invalid, use config
+        return self.opts['timeout']
+
     def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
         '''
         Return the information about a given job
@@ -184,7 +200,7 @@ class LocalClient(object):
             expr_form,
             ret,
             jid=jid,
-            timeout=timeout or self.opts['timeout'],
+            timeout=self._get_timeout(timeout),
             **kwargs)
 
         return self._check_pub_data(pub_data)
@@ -215,8 +231,10 @@ class LocalClient(object):
         if not pub_data:
             return pub_data
 
-        return self.get_returns(pub_data['jid'], pub_data['minions'],
-                timeout or self.opts['timeout'])
+        return self.get_returns(
+                pub_data['jid'],
+                pub_data['minions'],
+                self._get_timeout(timeout))
 
     def cmd_cli(
         self,
@@ -248,7 +266,7 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
-                    timeout or self.opts['timeout'],
+                    self.get_timeout(timeout),
                     tgt,
                     expr_form,
                     verbose,
@@ -288,7 +306,7 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
-                    timeout or self.opts['timeout'],
+                    self._get_timeout(timeout),
                     tgt,
                     expr_form,
                     **kwargs):
