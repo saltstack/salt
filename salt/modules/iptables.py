@@ -98,6 +98,24 @@ def get_policy(table='filter', chain=None):
     return rules[table][chain]['policy']
 
 
+def set_policy(table='filter', chain=None, policy=None):
+    '''
+    Set the current policy for the specified table/chain
+
+    CLI Example::
+
+        salt '*' iptables.set_policy filter INPUT ACCEPT
+    '''
+    if not chain:
+        return 'Error: Chain needs to be specified'
+    if not policy:
+        return 'Error: Policy needs to be specified'
+
+    cmd = 'iptables -t {0} -P {1} {2}'.format(table, chain, policy)
+    out = __salt__['cmd.run'](cmd)
+    return out
+
+
 def _parse_conf(conf_file=None, in_mem=False):
     '''
     If a file is not passed in, and the correct one for this OS is not
