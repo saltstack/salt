@@ -1211,6 +1211,32 @@ def check_file_meta(
         changes['mode'] = mode
     return changes
 
+def get_diff(
+        minionfile,
+        masterfile,
+        env='base'):
+    '''
+    Return unified diff of file compared to file on master
+    '''
+    ret = {'name': minionfile,
+           'changes': {},
+           'comment': '',
+           'result': True}
+
+    sfn = __salt__['cp.cache_file'](masterfile, env)
+    if sfn:
+        with nested(salt.utils.fopen(sfn, 'rb'),
+                    salt.utils.fopen(minionfile, 'rb')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        ret['comment'] = (
+                ''.join(difflib.unified_diff(nlines, slines, minionfile, masterfile))
+                )
+    else:
+        ret['comment'] = 'Failed to create diff'
+        ret['result'] = False
+
+    return ret
 
 def manage_file(name,
         sfn,
