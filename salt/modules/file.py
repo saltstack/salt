@@ -1217,21 +1217,29 @@ def get_diff(
         env='base'):
     '''
     Return unified diff of file compared to file on master
+
+    Example:
+
+        salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
     ret = {'name': minionfile,
            'changes': {},
            'comment': '',
            'result': True}
 
+    if not os.path.exists(minionfile):
+        ret['result'] = False
+        ret['comment'] = 'File {0} does not exist on the minion'.format(minionfile)
+        return ret
+
     sfn = __salt__['cp.cache_file'](masterfile, env)
     if sfn:
-        with nested(salt.utils.fopen(sfn, 'rb'),
-                    salt.utils.fopen(minionfile, 'rb')) as (src, name_):
+        with nested(salt.utils.fopen(sfn, 'r'),
+                    salt.utils.fopen(minionfile, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
-        ret['comment'] = (
-                ''.join(difflib.unified_diff(nlines, slines, minionfile, masterfile))
-                )
+        for line in difflib.unified_diff(nlines, slines, minionfile, masterfile):
+            ret['comment'] = ret['comment'] + line
     else:
         ret['comment'] = 'Failed to create diff'
         ret['result'] = False
