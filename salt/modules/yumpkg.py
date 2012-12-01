@@ -506,15 +506,16 @@ def grouplist():
 
         salt '*' pkg.grouplist
     '''
-    ret = {'installed': [], 'available': [], 'available languages': []}
+    ret = {'installed': [], 'available': [], 'available languages': {}}
     yb = yum.YumBase()
     (installed, available) = yb.doGroupLists()
     for group in installed:
         ret['installed'].append(group.name)
     for group in available:
         if group.langonly:
-            ret['available languages'].append('{0} [{1}]'.format(
-                group.name, group.langonly))
+            ret['available languages'][group.name] = {
+                'name': group.name,
+                'language': group.langonly}
         else:
             ret['available'].append(group.name)
     return ret
