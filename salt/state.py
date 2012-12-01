@@ -495,6 +495,7 @@ class State(object):
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.opts['pillar'] = self.__gather_pillar()
+        self.state_con = {}
         self.load_modules()
         self.active = set()
         self.mod_init = set()
@@ -530,7 +531,7 @@ class State(object):
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
-        self.functions = salt.loader.minion_mods(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts, self.state_con)
         if isinstance(data, dict):
             if data.get('provider', False):
                 provider = {}
