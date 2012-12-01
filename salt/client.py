@@ -205,6 +205,32 @@ class LocalClient(object):
 
         return self._check_pub_data(pub_data)
 
+    def cmd_async(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        expr_form='glob',
+        ret='',
+        kwarg=None,
+        **kwargs):
+        '''
+        Execute a command and get back the jid, don't wait for anything
+        '''
+        arg = condition_kwarg(arg, kwarg)
+        pub_data = self.run_job(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            timeout,
+            **kwargs)
+        try:
+            return pub_data['jid']
+        except KeyError:
+            return 0
+
     def cmd(
         self,
         tgt,
