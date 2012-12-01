@@ -1238,10 +1238,16 @@ def get_diff(
                     salt.utils.fopen(minionfile, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
-        for line in difflib.unified_diff(nlines, slines, minionfile, masterfile):
-            ret['comment'] = ret['comment'] + line
+        diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
+        if diff:
+            for line in diff:
+                ret['comment'] = ret['comment'] + line
+        else:
+            ret['comment'] = 'Files are identical'
+            ret['result'] = True
+
     else:
-        ret['comment'] = 'Failed to create diff'
+        ret['comment'] = 'Failed to copy file from master'
         ret['result'] = False
 
     return ret
