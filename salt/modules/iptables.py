@@ -186,6 +186,20 @@ def delete(table, position=None, rule=None):
     return out
 
 
+def flush(table='filter'):
+    '''
+    Flush all chains in the specified table.
+
+    CLI Example::
+
+        salt '*' iptables.flush filter
+    '''
+
+    cmd = 'iptables -t {0} -F'.format(table)
+    out = __salt__['cmd.run'](cmd)
+    return out
+
+
 def _parse_conf(conf_file=None, in_mem=False):
     '''
     If a file is not passed in, and the correct one for this OS is not
