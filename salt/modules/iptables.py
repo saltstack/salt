@@ -116,6 +116,53 @@ def set_policy(table='filter', chain=None, policy=None):
     return out
 
 
+def append(table, rule):
+    '''
+    Append a rule to the specified table/chain.
+
+    This function accepts a rule in a standard iptables command format,
+        starting with the chain. Trying to force users to adapt to a new
+        method of creating rules would be irritating at best, and we
+        already have a parser that can handle it.
+
+    CLI Example::
+
+        salt '*' iptables.append filter 'INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
+    '''
+
+
+def insert(table, position, rule):
+    '''
+    Insert a rule into the specified table/chain, at the specified position.
+
+    This function accepts a rule in a standard iptables command format,
+        starting with the chain. Trying to force users to adapt to a new
+        method of creating rules would be irritating at best, and we
+        already have a parser that can handle it.
+
+    CLI Example::
+
+        salt '*' iptables.insert filter 3 'INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
+    '''
+
+
+def delete(table, position=None, rule=None):
+    '''
+    Delete a rule from the specified table/chain, specifying either the rule
+        in its entirety, or the rule's position in the chain.
+
+    This function accepts a rule in a standard iptables command format,
+        starting with the chain. Trying to force users to adapt to a new
+        method of creating rules would be irritating at best, and we
+        already have a parser that can handle it.
+
+    CLI Examples::
+
+        salt '*' iptables.delete filter 3
+        salt '*' iptables.delete filter rule='INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
+    '''
+
+
 def _parse_conf(conf_file=None, in_mem=False):
     '''
     If a file is not passed in, and the correct one for this OS is not
