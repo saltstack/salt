@@ -116,7 +116,7 @@ def set_policy(table='filter', chain=None, policy=None):
     return out
 
 
-def append(table, rule):
+def append(table='filter', rule=None):
     '''
     Append a rule to the specified table/chain.
 
@@ -129,9 +129,15 @@ def append(table, rule):
 
         salt '*' iptables.append filter 'INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
+    if not rule:
+        return 'Error: Rule needs to be specified'
+
+    cmd = 'iptables -t {0} -A {1}'.format(table, rule)
+    out = __salt__['cmd.run'](cmd)
+    return out
 
 
-def insert(table, position, rule):
+def insert(table='filter', rule=None):
     '''
     Insert a rule into the specified table/chain, at the specified position.
 
@@ -140,10 +146,17 @@ def insert(table, position, rule):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
-    CLI Example::
+    CLI Examples::
 
-        salt '*' iptables.insert filter 3 'INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.insert filter 'INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.insert filter 'INPUT 3 -m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
+    if not rule:
+        return 'Error: Rule needs to be specified'
+
+    cmd = 'iptables -t {0} -I {1}'.format(table, rule)
+    out = __salt__['cmd.run'](cmd)
+    return out
 
 
 def delete(table, position=None, rule=None):
@@ -159,8 +172,18 @@ def delete(table, position=None, rule=None):
     CLI Examples::
 
         salt '*' iptables.delete filter 3
-        salt '*' iptables.delete filter rule='INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.delete filter rule='INPUT 3 -m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
+
+    cmd = ''
+    if position:
+        cmd = 'iptables -t {0} -D {1}'.format(table, rule)
+    elif rule:
+        cmd = 'iptables -t {0} -D {1}'.format(table, position)
+    else:
+        return 'Error: Either rule or position needs to be specified'
+    out = __salt__['cmd.run'](cmd)
+    return out
 
 
 def _parse_conf(conf_file=None, in_mem=False):
