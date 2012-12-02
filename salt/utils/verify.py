@@ -241,6 +241,31 @@ def check_user(user):
     return True
 
 
+def list_path_traversal(path):
+    """
+    Returns a full list of directories leading up to, and including, a path.
+
+    So list_path_traversal('/path/to/salt') would return:
+        ['/', '/path', '/path/to', '/path/to/salt']
+    in that order.
+
+    This routine has been tested on Windows systems as well.
+    list_path_traversal('c:\\path\\to\\salt') on Windows would return:
+        ['c:\\', 'c:\\path', 'c:\\path\\to', 'c:\\path\\to\\salt']
+    """
+    out = [path]
+    (head, tail) = os.path.split(path)
+    if tail == '':
+        # paths with trailing separators will return an empty string
+        out = [head]
+        (head, tail) = os.path.split(head)
+    while head != out[0]:
+        # loop until head is the same two consecutive times
+        out.insert(0, head)
+        (head, tail) = os.path.split(head)
+    return out
+
+
 def check_parent_dirs(fname, user='root'):
     '''
     Walk from the root up to a directory and verify that the current
@@ -248,22 +273,17 @@ def check_parent_dirs(fname, user='root'):
     sure a user can read all parent directories of the minion's  key
     before trying to go and generate a new key and raising an IOError
     '''
-    # TODO: Test the below line on Windows
-    dir_comps = fname.split(os.path.sep)[1:-1]
-    # Loop over all parent directories of the minion key
-    # to properly test if salt has read access to  them.
-    for i, dirname in enumerate(dir_comps):
-        # Create the full path to the directory using a list slice
-        d = os.path.join(os.path.sep, *dir_comps[:i + 1])
-        msg = 'Could not access directory {0}.'.format(d)
-        current_user = getpass.getuser()
-        # Make the error message more intelligent based on how
-        # the user invokes salt-call or whatever other script.
-        if user != current_user:
-            msg += ' Try running as user {0}.'.format(user)
-        else:
-            msg += ' Please give {0} read permissions.'.format(user, d)
-        if not os.access(d, os.R_OK):
+    for dirname in list_path_traversal(fname):
+        if not os.access(dirname, os.R_OK):
+            msg = 'Could not access directory {0}.'.format(dirname)
+            current_user = getpass.getuser()
+            # Make the error message more intelligent based on how
+            # the user invokes salt-call or whatever other script.
+            if user != current_user:
+                msg += ' Try running as user {0}.'.format(user)
+            else:
+                msg += ' Please give {0} read permissions.'.format(user,
+                                                                   dirname)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
