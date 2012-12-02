@@ -226,6 +226,9 @@ class SaltCall(parsers.SaltCallOptionParser):
         if self.options.local:
             self.config['file_client'] = 'local'
 
+        # Setup file logging!
+        self.setup_logfile_logger()
+
         caller = salt.cli.caller.Caller(self.config)
 
         if self.options.doc:
