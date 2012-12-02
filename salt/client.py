@@ -240,7 +240,7 @@ class LocalClient(object):
         expr_form='glob',
         ret='',
         kwarg=None,
-        batch='10%'
+        batch='10%',
         **kwargs):
         '''
         Execute a batch command
