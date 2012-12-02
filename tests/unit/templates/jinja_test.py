@@ -120,7 +120,7 @@ class TestGetTemplate(TestCase):
             out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts=self.local_opts, env='other'))
-        self.assertEqual(out, 'world')
+        self.assertEqual(out, 'world\n')
 
     def test_fallback_noloader(self):
         '''
@@ -131,7 +131,7 @@ class TestGetTemplate(TestCase):
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
                 dict(opts=self.local_opts, env='other'))
-        self.assertEqual(out, 'Hey world !a b !')
+        self.assertEqual(out, 'Hey world !a b !\n')
 
     def test_env(self):
         '''
@@ -149,6 +149,6 @@ class TestGetTemplate(TestCase):
                 salt.utils.fopen(filename).read(),
                 dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
                      a='Hi', b='Salt', env='test'))
-        self.assertEqual(out, 'Hey world !Hi Salt !')
+        self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
         SaltCacheLoader.file_client = _fc
