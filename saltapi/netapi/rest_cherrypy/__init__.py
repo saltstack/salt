@@ -549,7 +549,7 @@ class Jobs(LowDataAdapter):
                 HTTP/1.1 200 OK
                 Content-Length: 73
                 Content-Type: application/x-yaml
-                
+
                 return:
                 - ms-3:
                   - - 0
