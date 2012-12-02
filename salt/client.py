@@ -41,6 +41,7 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 import salt.utils.minions
+import salt.cli.batch
 from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
@@ -229,6 +230,35 @@ class LocalClient(object):
             return pub_data['jid']
         except KeyError:
             return 0
+
+
+    def cmd_batch(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        expr_form='glob',
+        ret='',
+        kwarg=None,
+        batch='10%'
+        **kwargs):
+        '''
+        Execute a batch command
+        '''
+        arg = condition_kwarg(arg, kwarg)
+        opts = {'tgt': tgt,
+                'fun': fun,
+                'arg': arg,
+                'expr_form': expr_form,
+                'ret': ret,
+                'batch': batch}
+        for key, val in self.opts.items():
+            if key not in opts:
+                opts[key] = val
+        batch = salt.cli.batch.Batch(opts, True)
+        for ret in batch.run():
+            yield ret
+
 
     def cmd(
         self,
@@ -480,7 +510,10 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'.format(id_))
+                            print(
+                                'Execution is still running on {0}'.format(
+                                    id_)
+                                )
                         more_time = True
                 if more_time:
                     timeout += inc_timeout
@@ -597,7 +630,9 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret[fn_] = self.serial.load(salt.utils.fopen(retp, 'r'))
+                            ret[fn_] = self.serial.load(
+                                    salt.utils.fopen(retp, 'r')
+                                    )
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -649,10 +684,12 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
+                            ret_data = self.serial.load(
+                                    salt.utils.fopen(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                        salt.utils.fopen(outp, 'r'))
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -801,7 +838,10 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'.format(id_))
+                            print(
+                                'Execution is still running on {0}'.format(
+                                    id_)
+                                )
                         more_time = True
                 if more_time:
                     timeout += inc_timeout
