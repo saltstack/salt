@@ -9,7 +9,6 @@ import re
 import imp
 import random
 import sys
-import fcntl
 import socket
 import logging
 import inspect
@@ -25,9 +24,10 @@ from calendar import month_abbr as months
 
 try:
     import fcntl
+    has_fcntl = True
 except ImportError:
     # fcntl is not available on windows
-    fcntl = None
+    has_fcntl = False
 
 # Import Salt libs
 import salt.minion
@@ -741,15 +741,15 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
-    if fcntl is None:
-        # fcntl is not available on windows
-        return fhandle
-    try:
-        FD_CLOEXEC = fcntl.FD_CLOEXEC
-    except AttributeError:
-        FD_CLOEXEC = 1
-    old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-    fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+    if has_fcntl:
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC
+        except AttributeError:
+            FD_CLOEXEC = 1
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
