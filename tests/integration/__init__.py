@@ -10,6 +10,8 @@ import sys
 import shutil
 import tempfile
 import time
+import signal
+from hashlib import md5
 from datetime import datetime, timedelta
 try:
     import pwd
@@ -22,7 +24,7 @@ import salt.config
 import salt.master
 import salt.minion
 import salt.runner
-from salt.utils import get_colors
+from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from saltunittest import TestCase, RedirectStdStreams
 
@@ -304,17 +306,51 @@ class TestDaemon(object):
 
         del(wait_minion_connections)
 
-        # Wait for minions to "sync_all"
-        sync_minions = multiprocessing.Process(
-            target=self.sync_minions,
-            args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
-        )
-        sync_minions.start()
-        sync_minions.join()
-        if sync_minions.exitcode > 0:
-            return False
-        sync_minions.terminate()
-        del(sync_minions)
+        sync_needed = False
+        if not self.opts.clean:
+            def sumfile(fpath):
+                # Since we will be doin this for small files, it should be ok
+                fobj = fopen(fpath)
+                m = md5()
+                while True:
+                    d = fobj.read(8096)
+                    if not d:
+                        break
+                    m.update(d)
+                return m.hexdigest()
+            # Since we're not cleaning up, let's see if modules are already up
+            # to date so we don't need to re-sync them
+            # /tmp/salttest/cachedir/extmods/modules/
+            modules_dir = os.path.join(FILES, 'file', 'base', '_modules')
+            for fname in os.listdir(modules_dir):
+                if not fname.endswith('.py'):
+                    continue
+                dfile = os.path.join(
+                    '/tmp/salttest/cachedir/extmods/modules/', fname
+                )
+
+                if not os.path.exists(dfile):
+                    sync_needed = True
+                    break
+
+                sfile = os.path.join(modules_dir, fname)
+                if sumfile(sfile) != sumfile(dfile):
+                    sync_needed = True
+                    break
+
+        if sync_needed:
+            # Wait for minions to "sync_all"
+            sync_minions = multiprocessing.Process(
+                target=self.sync_minions,
+                args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
+            )
+            sync_minions.start()
+            sync_minions.join()
+            if sync_minions.exitcode > 0:
+                return False
+            sync_minions.terminate()
+            del(sync_minions)
+
         return True
 
     def post_setup_minions(self):
@@ -635,7 +671,7 @@ class ShellCase(TestCase):
     '''
     Execute a test for a shell command
     '''
-    def run_script(self, script, arg_str, catch_stderr=False):
+    def run_script(self, script, arg_str, catch_stderr=False, timeout=None):
         '''
         Execute a script with the given argument string
         '''
@@ -650,13 +686,39 @@ class ShellCase(TestCase):
             'stdout': PIPE
         }
 
-        if catch_stderr:
+        if catch_stderr is True:
             popen_kwargs['stderr'] = PIPE
 
         if not sys.platform.lower().startswith('win'):
             popen_kwargs['close_fds'] = True
 
         process = Popen(cmd, **popen_kwargs)
+
+        if timeout is not None:
+            stop_at = datetime.now() + timedelta(seconds=timeout)
+            term_sent = False
+            while True:
+                process.poll()
+                if process.returncode is not None:
+                    break
+
+                if datetime.now() > stop_at:
+                    if term_sent is False:
+                        process.send_signal(signal.SIGINT)
+                        term_sent = True
+                        continue
+
+                    process.kill()
+
+                    out = [
+                        'Process took more than {0} seconds to complete. '
+                        'Process Killed!'.format(timeout)
+                    ]
+                    if catch_stderr:
+                        return out, [
+                            'Process killed, unable to catch stderr output'
+                        ]
+                    return out
 
         if catch_stderr:
             out, err = process.communicate()
