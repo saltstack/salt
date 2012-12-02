@@ -73,6 +73,11 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     opts = context['opts']
     env = context['env']
     loader = None
+    newline = False
+
+    if tmplstr.endswith('\n'):
+        newline = True
+
     if not env:
         if tmplpath:
             # ie, the template is from a file outside the state tree
@@ -85,9 +90,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(
                         loader=loader, undefined=jinja2.StrictUndefined)
     try:
-        return jinja_env.from_string(tmplstr).render(**context)
+        output = jinja_env.from_string(tmplstr).render(**context)
     except jinja2.exceptions.TemplateSyntaxError, exc:
         raise SaltTemplateRenderError(str(exc))
+
+    # Workaround a bug in Jinja that removes the final newline
+    # (https://github.com/mitsuhiko/jinja2/issues/75)
+    if newline:
+        output += '\n'
+
+    return output
 
 
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
