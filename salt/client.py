@@ -93,7 +93,7 @@ class LocalClient(object):
                 self.opts['cachedir'], '.{0}_key'.format(key_user)
                 )
         # Make sure all key parent directories are accessible
-        salt.utils.verify.check_parent_dirs(keyfile, key_user)
+        salt.utils.verify.check_path_traversal(self.opts['cachedir'], key_user)
 
         try:
             with salt.utils.fopen(keyfile, 'r') as KEY:
@@ -321,7 +321,7 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
-                    self.get_timeout(timeout),
+                    self._get_timeout(timeout),
                     tgt,
                     expr_form,
                     verbose,
