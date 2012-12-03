@@ -23,7 +23,7 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1,2,3])) is None:
+    if msgpack.loads(msgpack.dumps([1, 2, 3])) is None:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
@@ -118,7 +118,7 @@ class Serial(object):
 
 class SREQ(object):
     '''
-    Create a generic interface to wrap salt zeromq req calls. 
+    Create a generic interface to wrap salt zeromq req calls.
     '''
     def __init__(self, master, id_='', serial='msgpack', linger=0):
         self.master = master
@@ -129,6 +129,7 @@ class SREQ(object):
         if id_:
             self.socket.setsockopt(zmq.IDENTITY, id_)
         self.socket.connect(master)
+        self.poller = zmq.Poller()
 
     def send(self, enc, load, tries=1, timeout=60):
         '''
@@ -138,17 +139,16 @@ class SREQ(object):
         payload['load'] = load
         package = self.serial.dumps(payload)
         self.socket.send(package)
-        poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN)
+        self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
         while True:
-            if not poller.poll(timeout*1000) and tried >= tries:
+            if not self.poller.poll(timeout * 1000) and tried >= tries:
                 raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
             else:
                 break
             tried += 1
         ret = self.serial.loads(self.socket.recv())
-        poller.unregister(self.socket)
+        self.poller.unregister(self.socket)
         return ret
 
     def send_auto(self, payload):
