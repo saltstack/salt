@@ -321,7 +321,7 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
-                    self.get_timeout(timeout),
+                    self._get_timeout(timeout),
                     tgt,
                     expr_form,
                     verbose,
