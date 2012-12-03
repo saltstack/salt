@@ -127,7 +127,7 @@ def remove_key(pki_dir, id_):
 def get_option(option, opts, vm_):
     '''
     Convenience function to return the dominant option to be used. Always
-    default to options set in the vm structure, but if the option is not
+    default to options set in the VM structure, but if the option is not
     present there look for it in the main config file
     '''
     if option in vm_:

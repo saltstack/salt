@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 class Cloud(object):
     '''
-    An object for the creation of new vms
+    An object for the creation of new VMs
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -32,7 +32,7 @@ class Cloud(object):
 
     def provider(self, vm_):
         '''
-        Return the top level module that will be used for the given vm data
+        Return the top level module that will be used for the given VM data
         set
         '''
         if 'provider' in vm_:
@@ -43,7 +43,7 @@ class Cloud(object):
 
     def get_providers(self):
         '''
-        Return the providers configured within the vm settings
+        Return the providers configured within the VM settings
         '''
         provs = set()
         for fun in self.clouds:
@@ -54,8 +54,8 @@ class Cloud(object):
 
     def map_providers(self, query='list_nodes'):
         '''
-        Return a mapping of what named vms are running on what vm providers
-        based on what providers are defined in the configs and vms
+        Return a mapping of what named VMs are running on what VM providers
+        based on what providers are defined in the configs and VMs
         '''
         provs = self.get_providers()
         pmap = {}
@@ -134,14 +134,14 @@ class Cloud(object):
 
     def create_all(self):
         '''
-        Create/Verify the vms in the vm data
+        Create/Verify the VMs in the VM data
         '''
         for vm_ in self.opts['vm']:
             self.create(vm_)
 
     def destroy(self, names):
         '''
-        Destroy the named vms
+        Destroy the named VMs
         '''
         pmap = self.map_providers()
         dels = {}
@@ -158,7 +158,7 @@ class Cloud(object):
 
     def reboot(self, names):
         '''
-        Reboot the named vms
+        Reboot the named VMs
         '''
         pmap = self.map_providers()
         acts = {}
@@ -174,7 +174,7 @@ class Cloud(object):
 
     def create(self, vm_):
         '''
-        Create a single vm
+        Create a single VM
         '''
         if 'minion' in vm_ and vm_['minion'] is None:
             vm_['minion'] = {}
@@ -224,10 +224,10 @@ class Cloud(object):
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
                 if vm_['profile'] == self.opts['profile']:
-                    # It all checks out, make the vm
+                    # It all checks out, make the VM
                     found = True
                     if name in current_boxen:
-                        # The specified vm already exists, don't make it anew
+                        # The specified VM already exists, don't make it anew
                         log.warn("{0} already exists on {1}".format(name, current_boxen[name]))
                         continue
                     vm_['name'] = name
@@ -259,7 +259,7 @@ class Cloud(object):
 
 class Map(Cloud):
     '''
-    Create a vm stateful map execution object
+    Create a VM stateful map execution object
     '''
     def __init__(self, opts):
         Cloud.__init__(self, opts)
@@ -345,7 +345,7 @@ class Map(Cloud):
 
     def run_map(self):
         '''
-        Execute the contents of the vm map
+        Execute the contents of the VM map
         '''
         dmap = self.map_data()
         msg = 'The following virtual machines are set to be created:\n'
