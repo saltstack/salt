@@ -1,6 +1,11 @@
 '''
 Return data to a mysql server
 
+:maintainer:    Dave Boucha <dave@saltstack.com>, Seth House <shouse@saltstack.com>
+:maturity:      new
+:depends:       python-mysqldb
+:platform:      all
+
 To enable this returner the minion will need the python client for mysql
 installed and the following values configured in the minion or master
 config, these are the defaults::
