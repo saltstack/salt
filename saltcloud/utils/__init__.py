@@ -13,6 +13,7 @@ import subprocess
 import salt.utils.event
 import multiprocessing
 import logging
+import types
 import re
 
 # Get logging started
@@ -21,7 +22,9 @@ log = logging.getLogger(__name__)
 try:
     import paramiko
 except:
-    raise ImportError('Cannot import paramiko. Please make sure it is correctly installed.')
+    raise ImportError(
+        'Cannot import paramiko. Please make sure it is correctly installed.'
+    )
 
 # Import salt libs
 import salt.crypt
@@ -107,7 +110,7 @@ def accept_key(pki_dir, pub, id_):
         with open(oldkey) as fp_:
             if fp_.read() == pub:
                 os.remove(oldkey)
-    
+
 
 def remove_key(pki_dir, id_):
     '''
@@ -119,6 +122,7 @@ def remove_key(pki_dir, id_):
             )
     if os.path.isfile(key):
         os.remove(key)
+
 
 def get_option(option, opts, vm_):
     '''
@@ -207,7 +211,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                     return False
             except Exception as exc:
                 log.error('There was an error in wait_for_passwd: {0}'.format(exc))
-            if connectfail == False:
+            if connectfail is False:
                 return True
             return False
         except Exception:
@@ -355,6 +359,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         for line in stdout:
             sys.stdout.write(line)
 
+
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
     '''
     This function is called from a multiprocess instance, to wait for a minion
@@ -382,10 +387,10 @@ def ip_to_int(ip):
     '''
     Converts an IP address to an integer
     '''
-    ret = 0 
+    ret = 0
     for octet in ip.split('.'):
         ret = ret * 256 + int(octet)
-    return ret 
+    return ret
 
 
 def is_public_ip(ip):
@@ -404,6 +409,7 @@ def is_public_ip(ip):
         return False
     return True
 
+
 def check_name(name, pattern):
     '''
     Check whether the specified name contains invalid characters
@@ -414,3 +420,16 @@ def check_name(name, pattern):
                             'cloud provider. Valid characters are: {1}'.format(
                             name, pattern))
 
+
+def namespaced_function(function, global_dict):
+    """
+    Redefine(clone) a function under a different globals() namespace scope
+    """
+    namespaced_function = types.FunctionType(
+        function.__code__,
+        global_dict,
+        name=function.__name__,
+        argdefs=function.__defaults__
+    )
+    namespaced_function.__dict__.update(function.__dict__)
+    return namespaced_function
