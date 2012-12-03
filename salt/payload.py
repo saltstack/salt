@@ -123,8 +123,8 @@ class SREQ(object):
     def __init__(self, master, id_='', serial='msgpack', linger=0):
         self.master = master
         self.serial = Serial(serial)
-        context = zmq.Context()
-        self.socket = context.socket(zmq.REQ)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REQ)
         self.socket.linger = linger
         if id_:
             self.socket.setsockopt(zmq.IDENTITY, id_)
@@ -147,9 +147,10 @@ class SREQ(object):
             else:
                 break
             tried += 1
-        ret = self.serial.loads(self.socket.recv())
-        self.poller.unregister(self.socket)
-        return ret
+        try:
+            return self.serial.loads(self.socket.recv())
+        finally:
+            self.poller.unregister(self.socket)
 
     def send_auto(self, payload):
         '''
@@ -158,3 +159,7 @@ class SREQ(object):
         enc = payload.get('enc', 'clear')
         load = payload.get('load', {})
         return self.send(enc, load)
+
+    def __del__(self):
+        self.socket.close()
+        self.context.term()

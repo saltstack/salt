@@ -926,9 +926,14 @@ class LocalClient(object):
 
         if expr_form == 'nodegroup':
             if tgt not in self.opts['nodegroups']:
-                conf_file = self.opts.get('conf_file', 'the master config file')
-                err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
-                raise SaltInvocationError(err)
+                conf_file = self.opts.get(
+                    'conf_file', 'the master config file'
+                )
+                raise SaltInvocationError(
+                    'Node group {0} unavailable in {1}'.format(
+                        tgt, conf_file
+                    )
+                )
             tgt = salt.utils.minions.nodegroup_comp(
                     tgt,
                     self.opts['nodegroups']
@@ -978,9 +983,13 @@ class LocalClient(object):
             payload_kwargs['to'] = timeout
 
         sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
+            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+        )
         payload = sreq.send('clear', payload_kwargs)
+
+        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
+        del(sreq)
+
         if not payload:
             return payload
         return {'jid': payload['load']['jid'],
@@ -1034,6 +1043,7 @@ class FunctionWrapper(dict):
             for _key, _val in kwargs:
                 args.append('{0}={1}'.format(_key, _val))
             return self.local.cmd(self.minion, key, args)
+
 
 class Caller(object):
     '''
