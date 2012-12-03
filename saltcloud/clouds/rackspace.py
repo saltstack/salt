@@ -28,7 +28,7 @@ import logging
 import socket
 import time
 
-# Import libcloud 
+# Import libcloud
 from libcloud.compute.base import NodeState
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -43,14 +43,28 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
-avail_locations = types.FunctionType(avail_locations.__code__, globals())
-avail_images = types.FunctionType(avail_images.__code__, globals())
-avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
-script = types.FunctionType(script.__code__, globals())
-destroy = types.FunctionType(destroy.__code__, globals())
-list_nodes = types.FunctionType(list_nodes.__code__, globals())
-list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
-list_nodes_select = types.FunctionType(list_nodes_select.__code__, globals())
+avail_images = types.FunctionType(
+    avail_images.__code__, globals(), argdefs=avail_images.__defaults__
+)
+avail_sizes = types.FunctionType(
+    avail_sizes.__code__, globals(), argdefs=avail_sizes.__defaults__
+)
+script = types.FunctionType(
+    script.__code__, globals(), argdefs=script.__defaults__
+)
+destroy = types.FunctionType(
+    destroy.__code__, globals(), argdefs=destroy.__defaults__
+)
+list_nodes = types.FunctionType(
+    list_nodes.__code__, globals(), argdefs=avail_sizes.__defaults__
+)
+list_nodes_full = types.FunctionType(
+    list_nodes_full.__code__, globals(), argdefs=list_nodes_full.__defaults__
+)
+list_nodes_select = types.FunctionType(
+    list_nodes_select.__code__, globals(),
+    argdefs=list_nodes_select.__defaults__
+)
 
 
 # Only load in this module is the RACKSPACE configurations are in place
