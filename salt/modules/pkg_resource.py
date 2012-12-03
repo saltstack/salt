@@ -221,7 +221,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
-        or __grains__['os'] not in ('Gentoo',):
+        and __grains__['os'] not in ('Gentoo', 'OpenBSD',):
             problems = _verify_binary_pkg(srcinfo)
             # If any problems are found in the caching or metadata parsing done
             # in the above for loop, log each problem and return None,None,
