@@ -41,7 +41,6 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 import salt.utils.minions
-import salt.cli.batch
 from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
@@ -245,6 +244,7 @@ class LocalClient(object):
         '''
         Execute a batch command
         '''
+        import salt.cli.batch
         arg = condition_kwarg(arg, kwarg)
         opts = {'tgt': tgt,
                 'fun': fun,
