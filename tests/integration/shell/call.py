@@ -111,12 +111,11 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         open(minion_config_file, 'w').write(
             yaml.dump(minion_config, default_flow_style=False)
         )
-        outfile = os.path.join(integration.TMP, 'issue-2731-stderr')
 
         out = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir, outfile
+                config_dir
             ),
             timeout=timeout,
         )
