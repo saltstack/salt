@@ -266,24 +266,23 @@ def list_path_traversal(path):
     return out
 
 
-def check_parent_dirs(fname, user='root'):
+def check_path_traversal(path, user='root'):
     '''
     Walk from the root up to a directory and verify that the current
     user has access to read each directory. This is used for  making
     sure a user can read all parent directories of the minion's  key
     before trying to go and generate a new key and raising an IOError
     '''
-    for dirname in list_path_traversal(fname):
-        if not os.access(dirname, os.R_OK):
-            msg = 'Could not access directory {0}.'.format(dirname)
+    for p in list_path_traversal(path):
+        if not os.access(p, os.R_OK):
+            msg = 'Could not access {0}.'.format(p)
             current_user = getpass.getuser()
             # Make the error message more intelligent based on how
             # the user invokes salt-call or whatever other script.
             if user != current_user:
                 msg += ' Try running as user {0}.'.format(user)
             else:
-                msg += ' Please give {0} read permissions.'.format(user,
-                                                                   dirname)
+                msg += ' Please give {0} read permissions.'.format(user, p)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
