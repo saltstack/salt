@@ -145,13 +145,13 @@ class TestDaemon(object):
         self.minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
-        if sys.version_info < (2, 7):
-            self.minion_opts['multiprocessing'] = False
+        #if sys.version_info < (2, 7):
+        #    self.minion_opts['multiprocessing'] = False
         self.sub_minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
         )
-        if sys.version_info < (2, 7):
-            self.sub_minion_opts['multiprocessing'] = False
+        #if sys.version_info < (2, 7):
+        #    self.sub_minion_opts['multiprocessing'] = False
         self.smaster_opts = salt.config.master_config(
             os.path.join(
                 INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
