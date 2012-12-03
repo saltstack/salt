@@ -36,10 +36,12 @@ from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
-# Import salt libs
+# Import saltcloud libs
 import saltcloud.utils
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
+
+# Import salt libs
 from salt.exceptions import SaltException
 
 # Get logging started
