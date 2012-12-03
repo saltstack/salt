@@ -40,34 +40,22 @@ from libcloud.compute.base import NodeAuthSSHKey
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
 
+# Import saltcloud libs
+from saltcloud.utils import namespaced_function
+
 # Get logging started
 log = logging.getLogger(__name__)
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
-avail_images = types.FunctionType(
-    avail_images.__code__, globals(), argdefs=avail_images.__defaults__
-)
-avail_sizes = types.FunctionType(
-    avail_sizes.__code__, globals(), argdefs=avail_sizes.__defaults__
-)
-script = types.FunctionType(
-    script.__code__, globals(), argdefs=script.__defaults__
-)
-destroy = types.FunctionType(
-    destroy.__code__, globals(), argdefs=destroy.__defaults__
-)
-list_nodes = types.FunctionType(
-    list_nodes.__code__, globals(), argdefs=avail_sizes.__defaults__
-)
-list_nodes_full = types.FunctionType(
-    list_nodes_full.__code__, globals(), argdefs=list_nodes_full.__defaults__
-)
-list_nodes_select = types.FunctionType(
-    list_nodes_select.__code__, globals(),
-    argdefs=list_nodes_select.__defaults__
-)
+avail_images = namespaced_function(avail_images, globals())
+avail_sizes = namespaced_function(avail_sizes, globals())
+script = namespaced_function(script, globals())
+destroy = namespaced_function(destroy, globals())
+list_nodes = namespaced_function(list_nodes, globals())
+list_nodes_full = namespaced_function(list_nodes_full, globals())
+list_nodes_select = namespaced_function(list_nodes_select, globals())
 
 
 # Only load in this module is the IBMSCE configurations are in place
