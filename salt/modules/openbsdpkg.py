@@ -1,12 +1,16 @@
 '''
 Package support for OpenBSD
 '''
-
+import os
 import re
+import logging
 
+# Import Salt libs
+import salt.utils
+
+log = logging.getLogger(__name__)
 
 # XXX need a way of setting PKG_PATH instead of inheriting from the environment
-
 
 def __virtual__():
     '''
@@ -32,29 +36,6 @@ def _list_removed(old, new):
     for pkg in old:
         if pkg not in new:
             pkgs.append(pkg)
-
-    return pkgs
-
-
-def _compare_versions(old, new):
-    '''
-    Returns a dict that that displays old and new versions for a package after
-    install/upgrade of package.
-    '''
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
     return pkgs
 
 
@@ -122,7 +103,7 @@ def version(name):
     return ''
 
 
-def install(name, *args, **kwargs):
+def install(name=None, pkgs=None, sources=None, **kwargs):
     '''
     Install the passed package
 
@@ -131,21 +112,49 @@ def install(name, *args, **kwargs):
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example::
+    CLI Example, Install one package::
 
         salt '*' pkg.install <package name>
+
+    CLI Example, Install more than one package::
+
+        salt '*' pkg.install pkgs='["<package name>", "<package name>"]'
+
+    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, http, ftp, local filesystem)::
+
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' 
     '''
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
+
+    # Get a list of the currently installed packages
     old = _get_pkgs()
-    stem, flavor = (name.split('--') + [''])[:2]
-    name = '--'.join((stem, flavor))
-    # XXX it would be nice to be able to replace one flavor with another here
-    if stem in old:
-        cmd = 'pkg_add -u {0}'.format(name)
-    else:
-        cmd = 'pkg_add {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
+
+    for pkg in pkg_params:
+        if pkg_type == 'repository':
+            stem, flavor = (pkg.split('--') + [''])[:2]
+            pkg = '--'.join((stem, flavor))
+
+            if stem in old:
+                cmd = 'pkg_add -xu {0}'.format(pkg)
+            else:
+                cmd = 'pkg_add -x {0}'.format(pkg)
+        else:
+            cmd = 'pkg_add -x {0}'.format(pkg)
+
+        stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
+        if stderr:
+            log.error(stderr)
+
+    # Get a list of all the packages that are now installed.
     new = _format_pkgs(_get_pkgs())
-    return _compare_versions(_format_pkgs(old), new)
+
+    # New way
+    return __salt__['pkg_resource.find_changes'](_format_pkgs(old), new)
+
 
 
 def remove(name):
@@ -161,7 +170,7 @@ def remove(name):
     old = _get_pkgs()
     stem, flavor = (name.split('--') + [''])[:2]
     if stem in old:
-        cmd = 'pkg_delete -D dependencies {0}'.format(stem)
+        cmd = 'pkg_delete -xD dependencies {0}'.format(stem)
         __salt__['cmd.retcode'](cmd)
     new = _format_pkgs(_get_pkgs())
     return _list_removed(_format_pkgs(old), new)
