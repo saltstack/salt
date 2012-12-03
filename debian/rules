@@ -1,12 +1,15 @@
 #!/usr/bin/make -f
 
+#export DH_VERBOSE=1
+
+include /usr/share/python/python.mk
+
 PKGFILES := pkg/*.service pkg/*.upstart pkg/*.logrotate
 
 %:
-	dh $@
-		cp $(PKGFILES) debian
-		make -C doc html
-# overrides require debuilder >= 7.0.50
-# http://pkg-perl.alioth.debian.org/debhelper.html#forcing_special_tests
-dh_override_auto_build:
-	python setup.py build
+	dh $@ --with python2
+
+override_dh_auto_build:
+	cp $(PKGFILES) debian
+	dh_auto_build
+	make -C doc html
