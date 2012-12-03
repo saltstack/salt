@@ -1,9 +1,6 @@
 #!/usr/bin/make -f
 
-ifeq ($(shell dpkg-vendor --is Ubuntu && echo yes),yes) 
-        UPSTART := pkg/*.upstart
-endif
-PKGFILES := pkg/*.service $(UPSTART)
+PKGFILES := pkg/*.service pkg/*.upstart pkg/*.logrotate
 
 %:
 	dh $@
