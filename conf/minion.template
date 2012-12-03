@@ -53,12 +53,6 @@
 #  cabinet: 13
 #  cab_u: 14-15
 
-# If the connection to the server is interrupted, the minion will
-# attempt to reconnect. sub_timeout allows you to control the rate
-# of reconnection attempts (in seconds). To disable reconnects, set
-# this value to 0.
-#sub_timeout: 60
-
 # Where cache data goes
 #cachedir: /var/cache/salt/minion
 
