@@ -174,6 +174,9 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         file:///dev/log/LOG_SYSLOG
         file:///dev/log/LOG_DAEMON
 
+    The above examples are self explanatory, but:
+        <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+
     '''
 
     if is_logfile_configured():

@@ -286,8 +286,24 @@
 
 ######         Logging settings       #####
 ###########################################
-# The location of the minion log file
+# The location of the minion log file.
+# This can be a path for the log file, or, this can be, since 0.10.6, a system
+# logger address, for example:
+#	tcp://localhost:514/LOG_USER
+#	tcp://localhost/LOG_DAEMON
+#	udp://localhost:5145/LOG_KERN
+#	udp://localhost
+#	file:///dev/log
+#	file:///dev/log/LOG_SYSLOG
+#	file:///dev/log/LOG_DAEMON
+#
+# The above examples are self explanatory, but:
+#	<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+#
+# Make sure you have a properly configured syslog or you won't get any warnings
+#
 #log_file: /var/log/salt/minion
+#
 #
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
