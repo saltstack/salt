@@ -696,6 +696,11 @@ class ShellCase(TestCase):
         if not sys.platform.lower().startswith('win'):
             popen_kwargs['close_fds'] = True
 
+            def detach_signals_to_parent():
+                os.setsid()
+
+            popen_kwargs['preexec_fn'] = detach_signals_to_parent
+
         process = Popen(cmd, **popen_kwargs)
 
         if timeout is not None:
@@ -708,11 +713,15 @@ class ShellCase(TestCase):
 
                 if datetime.now() > stop_at:
                     if term_sent is False:
-                        process.send_signal(signal.SIGINT)
+                        # Kill the process group since sending the term signal
+                        # would only terminate the shell, not the command
+                        # executed in the shell
+                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
                         term_sent = True
                         continue
 
-                    process.kill()
+                    # As a last resort, kill the process group
+                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
 
                     out = [
                         'Process took more than {0} seconds to complete. '
