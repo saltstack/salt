@@ -317,8 +317,8 @@ def master_config(path):
                 'base': ['/srv/pillar'],
                 },
             'ext_pillar': [],
-            # TODO - Set this to 2 by default in 0.10.5
-            'pillar_version': 1,
+            # NOTE: pillar version changed to 2 by default in 0.10.5
+            'pillar_version': 2,
             'pillar_opts': True,
             'syndic_master': '',
             'runner_dirs': [],
