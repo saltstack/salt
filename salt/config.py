@@ -8,6 +8,7 @@ import os
 import socket
 import logging
 import time
+import urlparse
 
 # import third party libs
 import yaml
@@ -233,10 +234,10 @@ def minion_config(path, check_dns=True):
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
 
-    if opts.get('file_client', 'remote') == 'local':
+    if opts.get('file_client', 'remote') == 'local' and check_dns:
         check_dns = False
 
-    if check_dns:
+    if check_dns is True:
         # Because I import salt.log bellow I need to re-import salt.utils here
         import salt.utils
         try:
@@ -278,8 +279,16 @@ def minion_config(path, check_dns=True):
             )
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
-                            'key_logfile', 'extension_modules'])
+    prepend_root_dirs = [
+        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules'
+    ]
+
+    # These can be set to syslog, so, not actual paths on the system
+    for config_key in ('log_file', 'key_logfile'):
+        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+            prepend_root_dirs.append(config_key)
+
+    prepend_root_dir(opts, prepend_root_dirs)
     return opts
 
 
