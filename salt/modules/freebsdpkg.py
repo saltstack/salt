@@ -119,7 +119,7 @@ def list_pkgs():
         salt '*' pkg.list_pkgs
     '''
     if _check_pkgng():
-        pkg_command = '{0} info'.format(_cmd(pkg))
+        pkg_command = '{0} info'.format(_cmd('pkg'))
     else:
         pkg_command = '{0}'.format(_cmd('pkg_info'))
     ret = {}
