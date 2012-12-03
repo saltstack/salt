@@ -1222,14 +1222,10 @@ def get_diff(
 
         salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
-    ret = {'name': minionfile,
-           'changes': {},
-           'comment': '',
-           'result': True}
+    ret = ''
 
     if not os.path.exists(minionfile):
-        ret['result'] = False
-        ret['comment'] = 'File {0} does not exist on the minion'.format(minionfile)
+        ret = 'File {0} does not exist on the minion'.format(minionfile)
         return ret
 
     sfn = __salt__['cp.cache_file'](masterfile, env)
@@ -1241,14 +1237,9 @@ def get_diff(
         diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
         if diff:
             for line in diff:
-                ret['comment'] = ret['comment'] + line
-        else:
-            ret['comment'] = 'Files are identical'
-            ret['result'] = True
-
+                ret = ret + line
     else:
-        ret['comment'] = 'Failed to copy file from master'
-        ret['result'] = False
+        ret = 'Failed to copy file from master'
 
     return ret
 
