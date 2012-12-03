@@ -692,10 +692,11 @@ class ShellCase(TestCase):
         if not sys.platform.lower().startswith('win'):
             popen_kwargs['close_fds'] = True
 
-            def detach_signals_to_parent():
-                os.setsid()
+            def detach_from_parent_group():
+                # dettach from parent group (no more inherited signals!)
+                os.setpgrp()
 
-            popen_kwargs['preexec_fn'] = detach_signals_to_parent
+            popen_kwargs['preexec_fn'] = detach_from_parent_group
 
         process = Popen(cmd, **popen_kwargs)
 
