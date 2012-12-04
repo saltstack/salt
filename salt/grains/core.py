@@ -502,6 +502,7 @@ _OS_NAME_MAP = {
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
+    'fedoraremi': 'RedHat',
 }
 
 # Map the 'os' grain to the 'os_family' grain
