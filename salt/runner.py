@@ -78,5 +78,6 @@ class Runner(RunnerClient):
                 return super(Runner, self).cmd(
                         self.opts['fun'], self.opts['arg'])
             except salt.exceptions.SaltException as exc:
-                sys.stderr.write('{0}\n'.format(exc))
-                sys.exit(1)
+                ret = str(exc)
+                print ret
+                return ret
