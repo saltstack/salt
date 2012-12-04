@@ -306,14 +306,19 @@ class TestDaemon(object):
         wait_minion_connections.join()
         wait_minion_connections.terminate()
         if wait_minion_connections.exitcode > 0:
+            print(
+                '\n {RED_BOLD}*{ENDC} ERROR: Failed to sync minions'.format(
+                **self.colors
+                )
+            )
             return False
 
         del(wait_minion_connections)
 
-        sync_needed = False
-        if not self.opts.clean:
+        sync_needed = self.opts.clean
+        if self.opts.clean is False:
             def sumfile(fpath):
-                # Since we will be doin this for small files, it should be ok
+                # Since we will be do'in this for small files, it should be ok
                 fobj = fopen(fpath)
                 m = md5()
                 while True:
