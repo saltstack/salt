@@ -578,7 +578,7 @@ class Minion(object):
             if process.is_alive():
                 continue
             process.join(0.025)
-            if isinstance(multiprocessing.Process):
+            if isinstance(process, multiprocessing.Process):
                 process.terminate()
             self.__processing.pop(self.__processing.index(process))
             del(process)
