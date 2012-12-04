@@ -1001,7 +1001,8 @@ class LocalClient(object):
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
-        self.event.destroy()
+        if hasattr(self, 'event'):
+            self.event.destroy()
 
 
 class FunctionWrapper(dict):
