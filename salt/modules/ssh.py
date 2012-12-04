@@ -593,7 +593,7 @@ def set_known_host(user, hostname,
         return {'status': 'exists', 'key': stored_host}
 
     remote_host = recv_known_host(user, hostname, enc=enc, port=port,
-                                  hash_hostname=True)
+                                  hash_hostname=hash_hostname)
     if not remote_host:
         return {'status': 'error',
                 'error': 'Unable to receive remote host key'}
