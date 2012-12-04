@@ -178,6 +178,79 @@ class Compiler(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.rend = salt.loader.render(self.opts, {})
+
+    def render_template(self, template, **kwargs):
+        '''
+        Enforce the states in a template
+        '''
+        high = compile_template(
+            template, self.rend, self.opts['renderer'], **kwargs)
+        if not high:
+            return high
+        return self.pad_funcs(high)
+
+    def pad_funcs(self, high):
+        '''
+        Turns dot delimited function refs into function strings
+        '''
+        for name in high:
+            if not isinstance(high[name], dict):
+                if isinstance(high[name], string_types):
+                    # Is this is a short state? It needs to be padded!
+                    if '.' in high[name]:
+                        comps = high[name].split('.')
+                        if len(comps) >= 2:
+                            # Merge the comps
+                            comps[1] = '.'.join(comps[1:len(comps)])
+                        high[name] = {
+                            #'__sls__': template,
+                            #'__env__': None,
+                            comps[0]: [comps[1]]
+                        }
+                        continue
+
+                    errors.append(
+                        'Name {0} in template {1} is not a dictionary'.format(
+                            name, template
+                        )
+                    )
+                    continue
+            skeys = set()
+            for key in sorted(high[name]):
+                if key.startswith('_'):
+                    continue
+                if not isinstance(high[name][key], list):
+                    continue
+                if '.' in key:
+                    comps = key.split('.')
+                    if len(comps) >= 2:
+                        # Merge the comps
+                        comps[1] = '.'.join(comps[1:len(comps)])
+                    # Salt doesn't support state files such as:
+                    #
+                    # /etc/redis/redis.conf:
+                    #   file.managed:
+                    #     - user: redis
+                    #     - group: redis
+                    #     - mode: 644
+                    #   file.comment:
+                    #     - regex: ^requirepass
+                    if comps[0] in skeys:
+                        errors.append(
+                            'Name \'{0}\' in template \'{1}\' contains '
+                            'multiple state decs of the same type'.format(
+                                name, template
+                            )
+                        )
+                        continue
+                    high[name][comps[0]] = high[name].pop(key)
+                    high[name][comps[0]].append(comps[1])
+                    skeys.add(comps[0])
+                    continue
+                skeys.add(key)
+        return high
+
 
     def verify_high(self, high):
         '''
@@ -422,6 +495,7 @@ class State(object):
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.opts['pillar'] = self.__gather_pillar()
+        self.state_con = {}
         self.load_modules()
         self.active = set()
         self.mod_init = set()
@@ -457,7 +531,7 @@ class State(object):
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
-        self.functions = salt.loader.minion_mods(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts, self.state_con)
         if isinstance(data, dict):
             if data.get('provider', False):
                 provider = {}

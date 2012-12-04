@@ -1211,6 +1211,37 @@ def check_file_meta(
         changes['mode'] = mode
     return changes
 
+def get_diff(
+        minionfile,
+        masterfile,
+        env='base'):
+    '''
+    Return unified diff of file compared to file on master
+
+    Example:
+
+        salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
+    '''
+    ret = ''
+
+    if not os.path.exists(minionfile):
+        ret = 'File {0} does not exist on the minion'.format(minionfile)
+        return ret
+
+    sfn = __salt__['cp.cache_file'](masterfile, env)
+    if sfn:
+        with nested(salt.utils.fopen(sfn, 'r'),
+                    salt.utils.fopen(minionfile, 'r')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
+        if diff:
+            for line in diff:
+                ret = ret + line
+    else:
+        ret = 'Failed to copy file from master'
+
+    return ret
 
 def manage_file(name,
         sfn,
@@ -1535,7 +1566,7 @@ def makedirs(path, user=None, group=None, mode=None):
         # turn on the executable bits for user, group and others.
         # Note: the special bits are set to 0.
         if mode:
-            mode = int(mode[-3:], 8) | 0111
+            mode = int(str(mode)[-3:], 8) | 0111
 
         makedirs_perms(directory, user, group, mode)
         # If a caller such as managed() is invoked  with

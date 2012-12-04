@@ -59,12 +59,16 @@ def _create_loader(
     return Loader(module_dirs, opts, tag)
 
 
-def minion_mods(opts):
+def minion_mods(opts, context=None):
     '''
     Returns the minion modules
     '''
     load = _create_loader(opts, 'modules', 'module')
-    functions = load.apply_introspection(load.gen_functions())
+    if context is None:
+        context = {}
+    pack = {'name': '__context__',
+            'value': context}
+    functions = load.apply_introspection(load.gen_functions(pack))
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -239,6 +243,27 @@ def _mod_type(module_path):
         return 'int'
     return 'ext'
 
+def in_pack(pack, name):
+    '''
+    Returns if the passed name is in the pack
+    '''
+    if isinstance(pack, list):
+        for chunk in pack:
+            if not isinstance(chunk, dict):
+                continue
+            try:
+                if name == chunk['name']:
+                    return True
+            except KeyError:
+                pass
+    elif isinstance(pack, dict):
+        try:
+            if name == pack['name']:
+                return True
+        except KeyError:
+            pass
+    return False
+
 
 class Loader(object):
     '''
@@ -373,7 +398,10 @@ class Loader(object):
         if pack:
             if isinstance(pack, list):
                 for chunk in pack:
-                    setattr(mod, chunk['name'], chunk['value'])
+                    try:
+                        setattr(mod, chunk['name'], chunk['value'])
+                    except KeyError:
+                        pass
             else:
                 setattr(mod, pack['name'], pack['value'])
 
@@ -514,7 +542,12 @@ class Loader(object):
             if pack:
                 if isinstance(pack, list):
                     for chunk in pack:
-                        setattr(mod, chunk['name'], chunk['value'])
+                        if not isinstance(chunk, dict):
+                            continue
+                        try:
+                            setattr(mod, chunk['name'], chunk['value'])
+                        except KeyError:
+                            pass
                 else:
                     setattr(mod, pack['name'], pack['value'])
 
@@ -592,7 +625,7 @@ class Loader(object):
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs
-            elif not pack:
+            elif not in_pack(pack, '__salt__'):
                 mod.__salt__.update(funcs)
         return funcs
 

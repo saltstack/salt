@@ -69,7 +69,7 @@ class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
     '''
-    def __init__(self, c_path='/etc/salt', mopts=None):
+    def __init__(self, c_path='/etc/salt/master', mopts=None):
         if mopts:
             self.opts - mopts
         else:
@@ -93,7 +93,7 @@ class LocalClient(object):
                 self.opts['cachedir'], '.{0}_key'.format(key_user)
                 )
         # Make sure all key parent directories are accessible
-        salt.utils.verify.check_parent_dirs(keyfile, key_user)
+        salt.utils.verify.check_path_traversal(self.opts['cachedir'], key_user)
 
         try:
             with salt.utils.fopen(keyfile, 'r') as KEY:
@@ -128,6 +128,22 @@ class LocalClient(object):
         except seco.range.RangeException as e:
             print(("Range server exception: {0}".format(e)))
             return []
+
+    def _get_timeout(self, timeout):
+        '''
+        Return the timeout to use
+        '''
+        if timeout is None:
+            return self.opts['timeout']
+        if isinstance(timeout, int):
+            return timeout
+        if isinstance(timeout, str):
+            try:
+                return int(timeout)
+            except ValueError:
+                return self.opts['timeout']
+        # Looks like the timeout is invalid, use config
+        return self.opts['timeout']
 
     def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
         '''
@@ -184,10 +200,65 @@ class LocalClient(object):
             expr_form,
             ret,
             jid=jid,
-            timeout=timeout or self.opts['timeout'],
+            timeout=self._get_timeout(timeout),
             **kwargs)
 
         return self._check_pub_data(pub_data)
+
+    def cmd_async(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        expr_form='glob',
+        ret='',
+        kwarg=None,
+        **kwargs):
+        '''
+        Execute a command and get back the jid, don't wait for anything
+        '''
+        arg = condition_kwarg(arg, kwarg)
+        pub_data = self.run_job(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            **kwargs)
+        try:
+            return pub_data['jid']
+        except KeyError:
+            return 0
+
+
+    def cmd_batch(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        expr_form='glob',
+        ret='',
+        kwarg=None,
+        batch='10%',
+        **kwargs):
+        '''
+        Execute a batch command
+        '''
+        import salt.cli.batch
+        arg = condition_kwarg(arg, kwarg)
+        opts = {'tgt': tgt,
+                'fun': fun,
+                'arg': arg,
+                'expr_form': expr_form,
+                'ret': ret,
+                'batch': batch}
+        for key, val in self.opts.items():
+            if key not in opts:
+                opts[key] = val
+        batch = salt.cli.batch.Batch(opts, True)
+        for ret in batch.run():
+            yield ret
+
 
     def cmd(
         self,
@@ -215,8 +286,10 @@ class LocalClient(object):
         if not pub_data:
             return pub_data
 
-        return self.get_returns(pub_data['jid'], pub_data['minions'],
-                timeout or self.opts['timeout'])
+        return self.get_returns(
+                pub_data['jid'],
+                pub_data['minions'],
+                self._get_timeout(timeout))
 
     def cmd_cli(
         self,
@@ -248,7 +321,7 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
-                    timeout or self.opts['timeout'],
+                    self._get_timeout(timeout),
                     tgt,
                     expr_form,
                     verbose,
@@ -288,7 +361,7 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
-                    timeout or self.opts['timeout'],
+                    self._get_timeout(timeout),
                     tgt,
                     expr_form,
                     **kwargs):
@@ -437,7 +510,10 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'.format(id_))
+                            print(
+                                'Execution is still running on {0}'.format(
+                                    id_)
+                                )
                         more_time = True
                 if more_time:
                     timeout += inc_timeout
@@ -554,7 +630,9 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret[fn_] = self.serial.load(salt.utils.fopen(retp, 'r'))
+                            ret[fn_] = self.serial.load(
+                                    salt.utils.fopen(retp, 'r')
+                                    )
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -606,10 +684,12 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
+                            ret_data = self.serial.load(
+                                    salt.utils.fopen(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                        salt.utils.fopen(outp, 'r'))
                         except Exception:
                             pass
             if ret and start == 999999999999:
@@ -758,7 +838,10 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'.format(id_))
+                            print(
+                                'Execution is still running on {0}'.format(
+                                    id_)
+                                )
                         more_time = True
                 if more_time:
                     timeout += inc_timeout

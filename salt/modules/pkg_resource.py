@@ -5,6 +5,7 @@ Resources needed by pkg providers
 import logging
 import os
 import re
+import yaml
 from pprint import pformat
 from types import StringTypes
 
@@ -100,14 +101,14 @@ def _pack_pkgs(sources):
     '''
     if type(sources) in StringTypes:
         try:
-            # Safely eval the string data into a list
-            sources = eval(sources,{'__builtins__': None},{})
-        except Exception as e:
+            sources = yaml.load(sources)
+        except yaml.parser.ParserError as e:
             log.error(e)
             return []
     if not isinstance(sources,list) \
     or [x for x in sources if type(x) not in StringTypes]:
         log.error('Invalid input: {0}'.format(pformat(source)))
+        log.error('Input must be a list of strings')
         return []
     return sources
 
@@ -122,15 +123,15 @@ def _pack_sources(sources):
     '''
     if type(sources) in StringTypes:
         try:
-            # Safely eval the string data into a list of dicts
-            sources = eval(sources,{'__builtins__': None},{})
-        except Exception as e:
+            sources = yaml.load(sources)
+        except yaml.parser.ParserError as e:
             log.error(e)
             return {}
     ret = {}
     for source in sources:
         if (not isinstance(source,dict)) or len(source) != 1:
             log.error('Invalid input: {0}'.format(pformat(sources)))
+            log.error('Input must be a list of 1-element dicts')
             return {}
         else:
             ret.update(source)
@@ -220,7 +221,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
-        or __grains__['os'] not in ('Gentoo',):
+        and __grains__['os'] not in ('Gentoo', 'OpenBSD',):
             problems = _verify_binary_pkg(srcinfo)
             # If any problems are found in the caching or metadata parsing done
             # in the above for loop, log each problem and return None,None,

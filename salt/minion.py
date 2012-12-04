@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Routines to set up a minion
 '''
@@ -657,6 +658,9 @@ class Minion(object):
                     payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
                 time.sleep(0.05)
+                # This next call(multiprocessing.active_children()) is
+                # intentional, from docs, "Calling this has the side affect of
+                # “joining” any processes which have already finished."
                 multiprocessing.active_children()
                 self.passive_refresh()
                 # Check the event system

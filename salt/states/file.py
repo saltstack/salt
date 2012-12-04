@@ -1038,6 +1038,14 @@ def recurse(name,
                 _ret['changes'] = { 'diff': 'Replaced directory with a new file' }
                 merge_ret(path, _ret)
 
+        # Conflicts can occur is some kwargs are passed in here
+        pass_kwargs = {}
+        faults = ['mode', 'makedirs', 'replace']
+        for key in kwargs:
+            if not key in faults:
+                pass_kwargs[key] = kwargs[key]
+
+
         _ret = managed(
             path,
             source=source,
@@ -1051,7 +1059,7 @@ def recurse(name,
             defaults=defaults,
             env=env,
             backup=backup,
-            **kwargs)
+            **pass_kwargs)
         merge_ret(path, _ret)
 
     def manage_directory(path):

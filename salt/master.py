@@ -246,6 +246,7 @@ class Master(SMaster):
                 self.master_key)
         reqserv.start_publisher()
         reqserv.start_event_publisher()
+        reqserv.start_reactor()
 
         def sigterm_clean(signum, frame):
             '''
@@ -393,6 +394,14 @@ class ReqServer(object):
         # Start the publisher
         self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
         self.eventpublisher.start()
+
+    def start_reactor(self):
+        '''
+        Start the reactor, but only if the reactor interface is configured
+        '''
+        if self.opts.get('reactor'):
+            self.reactor = salt.utils.event.Reactor(self.opts)
+            self.reactor.start()
 
     def run(self):
         '''
@@ -1009,7 +1018,8 @@ class AESFuncs(object):
             try:
                 timeout = int(clear_load['tmo'])
             except ValueError:
-                msg = 'Failed to parse timeout value: {0}'.format(clear_load['tmo'])
+                msg = 'Failed to parse timeout value: {0}'.format(
+                        clear_load['tmo'])
                 log.warn(msg)
                 return {}
         if 'tgt_type' in clear_load:
@@ -1242,7 +1252,8 @@ class ClearFuncs(object):
                     if re.match(line, keyid):
                         return True
                 except re.error:
-                    message = "{0} is not a valid regular expression, ignoring line in {1}"
+                    message = ('{0} is not a valid regular expression, '
+                               'ignoring line in {1}')
                     log.warn(message.format(line, autosign_file))
                     continue
 
