@@ -135,7 +135,7 @@ def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
                       "'{0}'".format(fields))
         else:
             log.debug("ext_pillar.mongo: found document, returning whole doc")
-        if '_id' in result :
+        if '_id' in result:
             # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
             # and whatnot will still cause problems.
