@@ -202,13 +202,13 @@ if 'bdist_esky' in sys.argv:
         ])
 
     options = setup_kwargs.get('options', {})
-    setup_kwargs['options'] = options
     options['bdist_esky'] = {
         "freezer_module": "bbfreeze",
         "freezer_options": {
             "includes": freezer_includes
         }
     }
+    setup_kwargs['options'] = options
 
 
 if with_setuptools:
