@@ -7,9 +7,6 @@ include /usr/share/python/python.mk
 PKGFILES := pkg/*.service pkg/*.upstart pkg/*.logrotate
 
 %:
-	dh $@ --with python2
-
-override_dh_auto_build:
 	cp $(PKGFILES) debian
-	dh_auto_build
 	make -C doc html
+	dh $@ --with python2

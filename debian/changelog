@@ -1,3 +1,10 @@
+salt (0.10.6b) unstable; urgency=low
+
+  * use shared logrotate, upstart, and systemd scripts
+  * add bash_completion and ufw support files
+
+ -- Sean Channel <pentabular@gmail.com>  Mon, 3 Dec 2012 11:14:35 -0700
+
 salt (0.10.5-1) unstable; urgency=low
 
   * [f735ab9] Filter pyc files
@@ -65,7 +72,7 @@ salt (0.10.2) precise; urgency=low
   * Non-maintainer upload.
   * New upstream version
 
- -- Dave Rawks <drawks@mint>  Wed, 01 Aug 2012 13:34:10 -0700
+ -- Dave Rawks <drawks@pandora.org>  Wed, 01 Aug 2012 13:34:10 -0700
 
 salt (0.10.1-3) unstable; urgency=low
 
