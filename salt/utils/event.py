@@ -158,6 +158,8 @@ class SaltEvent(object):
             self.sub.close()
         if self.cpush:
             self.push.close()
+        self.poller.unregister(self.sub)
+        del(self.poller)
         self.context.term()
 
 
@@ -176,6 +178,7 @@ class MinionEvent(SaltEvent):
     '''
     def __init__(self, **kwargs):
         super(MinionEvent, self).__init__('minion', **kwargs)
+
 
 class EventPublisher(Process):
     '''
