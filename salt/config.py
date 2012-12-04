@@ -121,16 +121,21 @@ def include_config(include, opts, orig_path, verbose):
         # Catch situation where user typos path in config; also warns for
         # empty include dir (which might be by design)
         if len(glob.glob(path)) == 0:
-            msg = ('Warning parsing configuration file: "include" path/glob '
-                   '"{0}" matches no files').format(path)
-            if verbose: log.warn(msg.format(path))
+            if verbose:
+                log.warn(
+                    'Warning parsing configuration file: "include" path/glob '
+                    '"{0}" matches no files'.format(path)
+                )
 
         for fn_ in glob.glob(path):
             try:
                 opts.update(_read_conf_file(fn_))
             except Exception as e:
-                msg = 'Error parsing configuration file: {0} - {1}'
-                log.warn(msg.format(fn_, e))
+                log.warn(
+                    'Error parsing configuration file: {0} - {1}'.format(
+                        fn_, e
+                    )
+                )
     return opts
 
 
@@ -218,7 +223,6 @@ def minion_config(path, check_dns=True):
             'retry_dns': 30,
             'recon_max': 5000,
             }
-
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')

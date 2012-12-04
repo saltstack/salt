@@ -326,9 +326,11 @@ class Publisher(multiprocessing.Process):
                         continue
                     raise exc
 
-        except KeyboardInterrupt:
+        #except KeyboardInterrupt:
+        finally:
             pub_sock.close()
             pull_sock.close()
+            context.term()
 
 
 class ReqServer(object):
@@ -409,6 +411,11 @@ class ReqServer(object):
         '''
         self.__bind()
 
+    def __del__(self):
+        self.clients.close()
+        self.workers.close()
+        self.context.term()
+
 
 class MWorker(multiprocessing.Process):
     '''
@@ -451,8 +458,10 @@ class MWorker(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-        except KeyboardInterrupt:
+        finally:
+        #except KeyboardInterrupt:
             socket.close()
+            context.term()
 
     def _handle_payload(self, payload):
         '''
@@ -1045,14 +1054,18 @@ class AESFuncs(object):
         else:
             ret_form = 'clean'
         if ret_form == 'clean':
-            return self.local.get_returns(
+            try:
+                return self.local.get_returns(
                     jid,
                     self.ckminions.check_minions(
                         clear_load['tgt'],
                         expr_form
-                        ),
+                    ),
                     timeout
-                    )
+                )
+            finally:
+                pub_sock.close()
+                context.term()
         elif ret_form == 'full':
             ret = self.local.get_full_returns(
                     jid,
@@ -1063,7 +1076,11 @@ class AESFuncs(object):
                     timeout
                     )
             ret['__jid__'] = jid
-            return ret
+            try:
+                return ret
+            finally:
+                pub_sock.close()
+                context.term()
 
     def run_func(self, func, load):
         '''
@@ -1647,6 +1664,14 @@ class ClearFuncs(object):
                 load['tgt'],
                 load.get('tgt_type', 'glob')
                 )
-        return {'enc': 'clear',
-                'load': {'jid': clear_load['jid'],
-                         'minions': minions}}
+        try:
+            return {
+                'enc': 'clear',
+                'load': {
+                    'jid': clear_load['jid'],
+                    'minions': minions
+                }
+            }
+        finally:
+            pub_sock.close()
+            context.term()

@@ -61,6 +61,26 @@ def is_logging_configured():
     return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
 
 
+if sys.version_info < (2, 7):
+    # Since the NullHandler is only available on python >= 2.7, here's a copy
+    class NullHandler(logging.Handler):
+        """ This is 1 to 1 copy of python's 2.7 NullHandler"""
+        def handle(self, record):
+            pass
+
+        def emit(self, record):
+            pass
+
+        def createLock(self):
+            self.lock = None
+
+    logging.NullHandler = NullHandler
+
+
+# Store a reference to the null logging handler
+LoggingNullHandler = logging.NullHandler()
+
+
 class Logging(LoggingLoggerClass):
     def __new__(cls, logger_name, *args, **kwargs):
         global MAX_LOGGER_MODNAME_LENGTH
@@ -78,6 +98,9 @@ class Logging(LoggingLoggerClass):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
+                if handler is LoggingNullHandler:
+                    continue
+
                 if not handler.lock:
                     handler.createLock()
                 handler.acquire()
@@ -106,22 +129,26 @@ class Logging(LoggingLoggerClass):
         return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
 
 
-def getLogger(name):
-    init()
-    return logging.getLogger(name)
-
-
-def init():
+# Override the python's logging logger class as soon as this module is imported
+if logging.getLoggerClass() is not Logging:
     '''
     Replace the default system logger with a version that includes trace()
     and garbage() methods.
     '''
-    if logging.getLoggerClass() is not Logging:
-        logging.setLoggerClass(Logging)
-        logging.addLevelName(TRACE, 'TRACE')
-        logging.addLevelName(GARBAGE, 'GARBAGE')
-        # Set the root logger at the lowest level possible
-        logging.getLogger().setLevel(GARBAGE)
+    logging.setLoggerClass(Logging)
+    logging.addLevelName(TRACE, 'TRACE')
+    logging.addLevelName(GARBAGE, 'GARBAGE')
+    # Set the root logger at the lowest level possible
+    rootLogger = logging.getLogger()
+    # Add a Null logging handler until logging is configured(will be removed at
+    # a later stage) so we stop getting:
+    #   No handlers could be found for logger "foo"
+    rootLogger.addHandler(LoggingNullHandler)
+    rootLogger.setLevel(GARBAGE)
+
+
+def getLogger(name):
+    return logging.getLogger(name)
 
 
 def setup_console_logger(log_level='error', log_format=None, date_format=None):
@@ -132,7 +159,8 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
         logging.getLogger(__name__).warn('Console logging already configured')
         return
 
-    init()
+    # Remove the temporary null logging handler
+    __remove_null_logging_handler()
 
     if log_level is None:
         log_level = 'warning'
@@ -183,7 +211,8 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         logging.getLogger(__name__).warn('Logfile logging already configured')
         return
 
-    init()
+    # Remove the temporary null logging handler
+    __remove_null_logging_handler()
 
     if log_level is None:
         log_level = 'warning'
@@ -295,7 +324,22 @@ def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
     '''
-    init()
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
     )
+
+
+def __remove_null_logging_handler():
+    if is_logfile_configured():
+        # In this case, the NullHandler has been removed, return!
+        return
+
+    rootLogger = logging.getLogger()
+    global LoggingNullHandler
+
+    for handler in rootLogger.handlers:
+        if handler is LoggingNullHandler:
+            rootLogger.removeHandler(LoggingNullHandler)
+            # Redefine the null handler to None so it can be garbage collected
+            LoggingNullHandler = None
+            break
