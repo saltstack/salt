@@ -99,9 +99,7 @@ libraries = ['ws2_32'] if sys.platform == 'win32' else []
 
 with open(salt_reqs) as f:
     lines = f.read().split('\n')
-    requirements = [
-        line for line in lines if (line and not line.startswith('#'))
-    ]
+    requirements = [line for line in lines if line]
 
 
 setup_kwargs = {'name': NAME,
