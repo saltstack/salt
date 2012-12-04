@@ -129,7 +129,7 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 60
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
 
     def __init__(self, opts=None):
         self.opts = opts
