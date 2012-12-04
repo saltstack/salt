@@ -154,45 +154,8 @@ setup_kwargs = {'name': NAME,
                                  ]),
                                ('share/man/man7', ['doc/man/salt.7']),
                                ],
-                'install_requires': requirements,
-                # The dynamic module loading in salt.modules makes this
-                # package zip unsafe.
-                'zip_safe': False
                 }
 
-
-# bbfreeze explicit includes
-# Sometimes the auto module traversal doesn't find everything, so we
-# explicitly add it. The auto dependency tracking especially does not work for
-# imports occurring in salt.modules, as they are loaded at salt runtime.
-# Specifying includes that don't exist doesn't appear to cause a freezing
-# error.
-freezer_includes = [
-    'zmq.core.*',
-    'zmq.utils.*',
-    'ast',
-    'difflib',
-    'distutils',
-    'distutils.version',
-    'json',
-]
-
-if sys.platform.startswith('win'):
-    freezer_includes.extend([
-        'win32api',
-        'win32file',
-        'win32con',
-        'win32security',
-        'ntsecuritycon',
-        '_winreg',
-        'wmi',
-    ])
-    setup_kwargs['install_requires'] += '\nwmi'
-elif sys.platform.startswith('linux'):
-    freezer_includes.extend([
-        'yum',
-        'spwd',
-    ])
 
 if 'bdist_esky' in sys.argv:
     # Add the esky bdist target if the module is available
@@ -200,6 +163,44 @@ if 'bdist_esky' in sys.argv:
     from esky import bdist_esky
     # bbfreeze chosen for its tight integration with distutils
     import bbfreeze
+
+    setup_kwargs['install_requires'] = requirements
+    # needed to ensure that grains and modules don't end up in library.zip
+    setup_kwargs['zip_safe'] = False
+
+    # bbfreeze explicit includes
+    # Sometimes the auto module traversal doesn't find everything, so we
+    # explicitly add it. The auto dependency tracking especially does not work for
+    # imports occurring in salt.modules, as they are loaded at salt runtime.
+    # Specifying includes that don't exist doesn't appear to cause a freezing
+    # error.
+    freezer_includes = [
+        'zmq.core.*',
+        'zmq.utils.*',
+        'ast',
+        'difflib',
+        'distutils',
+        'distutils.version',
+        'json',
+    ]
+
+    if sys.platform.startswith('win'):
+        freezer_includes.extend([
+            'win32api',
+            'win32file',
+            'win32con',
+            'win32security',
+            'ntsecuritycon',
+            '_winreg',
+            'wmi',
+        ])
+        setup_kwargs['install_requires'] += '\nwmi'
+    elif sys.platform.startswith('linux'):
+        freezer_includes.extend([
+            'yum',
+            'spwd',
+        ])
+
     options = setup_kwargs.get('options', {})
     options['bdist_esky'] = {
         "freezer_module": "bbfreeze",
@@ -208,6 +209,7 @@ if 'bdist_esky' in sys.argv:
         }
     }
     setup_kwargs['options'] = options
+
 
 if with_setuptools:
     setup_kwargs['entry_points'] = {
@@ -221,6 +223,10 @@ if with_setuptools:
                             "salt = salt.scripts:salt_main"
                             ],
     }
+    setup_kwargs['install_requires'] = requirements
+    # The dynamic module loading in salt.modules makes this
+    # package zip unsafe.
+    setup_kwargs['zip_safe'] = False
 else:
     setup_kwargs['scripts'] = ['scripts/salt-master',
                                'scripts/salt-minion',
@@ -230,10 +236,6 @@ else:
                                'scripts/salt-call',
                                'scripts/salt-run',
                                'scripts/salt']
-    # Distutils does not know what these are and throws warnings.
-    # Stop the warning.
-    setup_kwargs.pop('install_requires')
-    setup_kwargs.pop('zip_safe')
 
 if __name__ == '__main__':
     setup(**setup_kwargs)
