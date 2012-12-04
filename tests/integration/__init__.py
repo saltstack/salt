@@ -697,10 +697,13 @@ class ShellCase(TestCase):
             popen_kwargs['close_fds'] = True
 
             def detach_from_parent_group():
-                # dettach from parent group (no more inherited signals!)
+                # detach from parent group (no more inherited signals!)
                 os.setpgrp()
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
+
+        elif sys.platform.lower().startswith('win') and timeout is not None:
+            raise RuntimeError('Timeout is not supported under windows')
 
         process = Popen(cmd, **popen_kwargs)
 
