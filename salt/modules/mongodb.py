@@ -1,18 +1,19 @@
 '''
 Module to provide MongoDB functionality to Salt
 
-This module uses PyMongo, and accepts configuration details as parameters
-as well as configuration settings:
+:configuration: This module uses PyMongo, and accepts configuration details as
+    parameters as well as configuration settings::
 
-    mongodb.host: 'localhost'
-    mongodb.port: '27017'
-    mongodb.user: ''
-    mongodb.password: ''
+        mongodb.host: 'localhost'
+        mongodb.port: '27017'
+        mongodb.user: ''
+        mongodb.password: ''
 
-This data can also be passed into pillar. Options passed into opts will
-overwrite options passed into pillar.
+    This data can also be passed into pillar. Options passed into opts will
+    overwrite options passed into pillar.
 '''
 
+# Import python libs
 import logging
 
 # Import third party libs
@@ -23,7 +24,7 @@ except ImportError:
     has_mongodb = False
 
 log = logging.getLogger(__name__)
-__opts__ = {}
+
 
 def __virtual__():
     '''
@@ -40,13 +41,13 @@ def _connect(user=None, password=None, host=None, port=None, database="admin"):
     values assigned to missing values.
     '''
     if not user:
-        user = __opts__.get('mongodb.user') or __pillar__.get('mongodb.user')
+        user = __salt__['config.option']('mongodb.user')
     if not password:
-        password = __opts__.get('mongodb.password') or __pillar__.get('mongodb.password')
+        password = __salt__['config.option']('mongodb.password')
     if not host:
-        host = __opts__.get('mongodb.host') or __pillar__.get('mongodb.host')
+        host = __salt__['config.option']('mongodb.host')
     if not port:
-        port = __opts__.get('mongodb.port') or __pillar__.get('mongodb.port')
+        port = __salt__['config.option']('mongodb.port')
 
     try:
         conn = pymongo.connection.Connection(host=host, port=port)

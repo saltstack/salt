@@ -6,20 +6,15 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 import sys
 import os
+import re
 import logging
 import optparse
 import resource
 import tempfile
 
 # Import salt libs
-try:
-    import console
-    width, height = console.getTerminalSize()
-    PNUM = width
-except:
-    PNUM = 70
 import saltunittest
-from integration import TestDaemon
+from integration import print_header, PNUM, TestDaemon
 
 try:
     import xmlrunner
@@ -42,27 +37,9 @@ except ImportError:
     code_coverage = None
 
 
-REQUIRED_OPEN_FILES = 2048
+REQUIRED_OPEN_FILES = 3072
 
 TEST_RESULTS = []
-
-def print_header(header, sep='~', top=True, bottom=True, inline=False,
-                 centered=False):
-    if top and not inline:
-        print(sep * PNUM)
-
-    if centered and not inline:
-        fmt = u'{0:^{width}}'
-    elif inline and not centered:
-        fmt = u'{0:{sep}<{width}}'
-    elif inline and centered:
-        fmt = u'{0:{sep}^{width}}'
-    else:
-        fmt = u'{0}'
-    print(fmt.format(header, sep=sep, width=PNUM))
-
-    if bottom and not inline:
-        print(sep * PNUM)
 
 
 def run_suite(opts, path, display_name, suffix='[!_]*.py'):
@@ -125,7 +102,7 @@ def run_integration_tests(opts):
     if not any([opts.client, opts.module, opts.runner,
                 opts.shell, opts.state, opts.name]):
         return status
-    with TestDaemon(clean=opts.clean):
+    with TestDaemon(opts=opts):
         if opts.name:
             for name in opts.name:
                 results = run_suite(opts, '', name)
@@ -242,12 +219,20 @@ def parse_opts():
             action='store_true',
             help='Do NOT show the overall tests result'
     )
-
     parser.add_option('--coverage',
             default=False,
             action='store_true',
             help='Run tests and report code coverage'
     )
+    parser.add_option('--sysinfo',
+            default=False,
+            action='store_true',
+            help='Print some system information.'
+    )
+    parser.add_option('--no-colors',
+            default=False,
+            action='store_true',
+            help='Disable colour printing.')
 
     options, _ = parser.parse_args()
 
@@ -262,7 +247,8 @@ def parse_opts():
         )
     elif options.coverage:
         coverage_version = tuple(
-            [int(part) for part in coverage.__version__.split('.')]
+            [int(part) for part in
+             re.search(r'([0-9.]+)', coverage.__version__).group(0).split('.')]
         )
         if coverage_version < (3, 5, 3):
             # Should we just print the error instead of exiting?
@@ -302,10 +288,14 @@ def parse_opts():
     logging.root.setLevel(logging.DEBUG)
 
     print_header('Logging tests on {0}'.format(logfile), bottom=False)
+    print_header(
+        'Test suite is running under PID {0}'.format(os.getpid()), bottom=False
+    )
+
 
     # With greater verbosity we can also log to the console
     if options.verbosity > 2:
-        consolehandler = logging.StreamHandler(stream=sys.stderr)
+        consolehandler = logging.StreamHandler(sys.stderr)
         consolehandler.setLevel(logging.INFO)       # -vv
         consolehandler.setFormatter(formatter)
         if options.verbosity > 3:

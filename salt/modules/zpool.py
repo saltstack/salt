@@ -3,7 +3,7 @@ zfs support.
 
 Assumes FreeBSD
 
-requires: mkfile
+:depends:   - mkfile
 '''
 import os
 
@@ -20,7 +20,7 @@ def list_installed():
     '''
     installed = []
     pkgs = __salt__['cmd.run']('pkg info')
-    for p in pkgs.split('\n'):
+    for p in pkgs.splitlines():
         installed.append(p)
     return installed
 
@@ -38,7 +38,7 @@ def zpool_list():
     '''list zpool's size and usage'''
 
     res = __salt__['cmd.run']('zpool list')
-    pool_list = [ l for l in res.split('\n') ]
+    pool_list = [ l for l in res.splitlines() ]
     return { 'pools' : pool_list }
 
 
@@ -133,7 +133,7 @@ def zpool_create(pool_name, *disks):
 def zpool_status(name=None):
     ret = []
     res = __salt__['cmd.run']('zpool status')
-    for line in res.split('\n'):
+    for line in res.splitlines():
         ret.append(line)
     return ret
 
@@ -190,7 +190,7 @@ def add(pool_name, vdisk):
     # try and add watchout for mismatched replicaion levels
     cmd = 'zpool add {0} {1}'.format(pool_name, vdisk)
     res = __salt__['cmd.run'](cmd)
-    if not 'errors' in res.split('\n'):
+    if not 'errors' in res.splitlines():
         ret['Added'] = '{0} to {1}'.format(vdisk, pool_name)
         return ret
     ret['Error'] = 'Something went wrong add {0} to {1}'.format(vdisk, pool_name)
