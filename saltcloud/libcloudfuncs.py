@@ -58,7 +58,7 @@ def libcloud_version():
 
 def get_node(conn, name):
     '''
-    Return a libcloud node for the named vm
+    Return a libcloud node for the named VM
     '''
     nodes = conn.list_nodes()
     for node in nodes:
@@ -85,7 +85,7 @@ def ssh_pub(vm_):
 
 def avail_locations(conn=None):
     '''
-    Return a dict of all available vm locations on the cloud provider with
+    Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
     if not conn:
@@ -104,7 +104,7 @@ def avail_locations(conn=None):
 
 def avail_images(conn=None):
     '''
-    Return a dict of all available vm images on the cloud provider with
+    Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
     if not conn:
@@ -123,7 +123,7 @@ def avail_images(conn=None):
 
 def avail_sizes(conn=None):
     '''
-    Return a dict of all available vm images on the cloud provider with
+    Return a dict of all available VM images on the cloud provider with
     relevant data
     '''
     if not conn:
@@ -171,7 +171,7 @@ def get_image(conn, vm_):
 
 def get_size(conn, vm_):
     '''
-    Return the vm's size object
+    Return the VM's size object
     '''
     sizes = conn.list_sizes()
     if not 'size' in vm_:
@@ -205,7 +205,7 @@ def script(vm_):
 
 def destroy(name, conn=None):
     '''
-    Delete a single vm
+    Delete a single VM
     '''
     if not conn:
         conn = get_conn()
@@ -231,7 +231,7 @@ def destroy(name, conn=None):
 
 def reboot(name, conn=None):
     '''
-    Reboot a single vm
+    Reboot a single VM
     '''
     if not conn:
         conn = get_conn()
@@ -257,7 +257,7 @@ def reboot(name, conn=None):
 
 def list_nodes(conn=None):
     '''
-    Return a list of the vms that are on the provider
+    Return a list of the VMs that are on the provider
     '''
     if not conn:
         conn = get_conn()
@@ -277,7 +277,7 @@ def list_nodes(conn=None):
 
 def list_nodes_full(conn=None):
     '''
-    Return a list of the vms that are on the provider, with all fields
+    Return a list of the VMs that are on the provider, with all fields
     '''
     if not conn:
         conn = get_conn()
@@ -294,7 +294,7 @@ def list_nodes_full(conn=None):
 
 def list_nodes_select(conn=None):
     '''
-    Return a list of the vms that are on the provider, with select fields
+    Return a list of the VMs that are on the provider, with select fields
     '''
     if not conn:
         conn = get_conn()

@@ -44,7 +44,7 @@ class CloudConfigMixIn(object):
             '-V', '--profiles', '--vm_config',
             dest='vm_config',
             default='/etc/salt/cloud.profiles',
-            help=('The location of the saltcloud vm config file. Default: '
+            help=('The location of the saltcloud VM config file. Default: '
                   '%default')
         )
         self.add_option_group(group)
@@ -122,7 +122,7 @@ class CloudConfigMixIn(object):
         # 3rd - Override config with cli options
         self.__merge_config_with_cli()
 
-        # 4th - Include vm config
+        # 4th - Include VM config
         self.config['vm'] = config.vm_config(self.options.vm_config)
 
         # Remove log_level_logfile from config if set to None so it can be
@@ -160,7 +160,7 @@ class ExecutionOptionsMixIn(object):
         group.add_option(
             '-p', '--profile',
             default='',
-            help='Specify a profile to use for the vms'
+            help='Specify a profile to use for the VMs'
         )
         group.add_option(
             '-m', '--map',
@@ -171,14 +171,14 @@ class ExecutionOptionsMixIn(object):
             '-H', '--hard',
             default=False,
             action='store_true',
-            help=('Delete all vms that are not defined in the map file '
-                  'CAUTION!!! This operation can irrevocably destroy vms!')
+            help=('Delete all VMs that are not defined in the map file '
+                  'CAUTION!!! This operation can irrevocably destroy VMs!')
         )
         group.add_option(
             '-d', '--destroy',
             default=False,
             action='store_true',
-            help='Specify a vm to destroy'
+            help='Specify a VM to destroy'
         )
         group.add_option(
             '--no-deploy',

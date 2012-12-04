@@ -89,7 +89,7 @@ def prov_dict(opts):
 
 def vm_config(path):
     '''
-    Read in the salt cloud vm config file
+    Read in the salt cloud VM config file
     '''
     # No defaults
     opts = {}

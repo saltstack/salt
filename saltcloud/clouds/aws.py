@@ -93,7 +93,7 @@ if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
 
 def get_conn(**kwargs):
     '''
-    Return a conn object for the passed vm data
+    Return a conn object for the passed VM data
     '''
     if 'location' in kwargs:
         location = kwargs['location']
@@ -178,7 +178,7 @@ def get_availability_zone(conn, vm_):
 
 def create(vm_):
     '''
-    Create a single vm from a data dict
+    Create a single VM from a data dict
     '''
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))

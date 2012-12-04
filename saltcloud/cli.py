@@ -5,10 +5,10 @@ Primary interfaces for the salt-cloud system
 # CLI options
 # salt cloud config - /etc/salt/cloud
 # salt master config (for master integration)
-# salt vm config, where vms are defined - /etc/salt/cloud.vm
+# salt VM config, where VMs are defined - /etc/salt/cloud.profiles
 #
 # The cli, master and cloud configs will merge for opts
-# the vm data will be in opts['vm']
+# the VM data will be in opts['vm']
 
 # Import python libs
 import optparse
