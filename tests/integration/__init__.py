@@ -12,6 +12,7 @@ import tempfile
 import time
 import signal
 from hashlib import md5
+from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
 try:
     import pwd
@@ -34,16 +35,6 @@ try:
     PNUM = width
 except:
     PNUM = 70
-
-if sys.version_info >= (2, 7):
-    from subprocess import PIPE, Popen
-    print('Using regular subprocess')
-else:
-    # Don't do import py27_subprocess as subprocess so within the remaining of
-    # salt's source, whenever subprocess is imported, the proper one is used,
-    # even in under python 2.6
-    from py27_subprocess import PIPE, Popen
-    print('Using copied 2.7 subprocess')
 
 
 INTEGRATION_TEST_DIR = os.path.dirname(
@@ -307,7 +298,7 @@ class TestDaemon(object):
         wait_minion_connections.terminate()
         if wait_minion_connections.exitcode > 0:
             print(
-                '\n {RED_BOLD}*{ENDC} ERROR: Failed to sync minions'.format(
+                '\n {RED_BOLD}*{ENDC} ERROR: Minions failed to connect'.format(
                 **self.colors
                 )
             )
@@ -329,7 +320,6 @@ class TestDaemon(object):
                 return m.hexdigest()
             # Since we're not cleaning up, let's see if modules are already up
             # to date so we don't need to re-sync them
-            # /tmp/salttest/cachedir/extmods/modules/
             modules_dir = os.path.join(FILES, 'file', 'base', '_modules')
             for fname in os.listdir(modules_dir):
                 if not fname.endswith('.py'):
@@ -497,26 +487,26 @@ class TestDaemon(object):
             print_header('=', sep='=', inline=True)
             raise SystemExit()
 
-    def sync_minions(self, targets, timeout=120):
+    def sync_minion_modules(self, targets, timeout=120):
         # Let's sync all connected minions
         print(
-            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s dynamic '
-            'data(saltutil.sync_all)'.format(
+            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s modules '
+            '(saltutil.sync_modules)'.format(
                 ', '.join(targets),
                 **self.colors
             )
         )
         syncing = set(targets)
         jid_info = self.client.run_job(
-            ','.join(targets), 'saltutil.sync_all',
+            ','.join(targets), 'saltutil.sync_modules',
             expr_form='list',
             timeout=9999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync. Tests '
-                'requiring custom modules WILL fail'.format(**self.colors)
+                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync modules. '
+                'Tests requiring these modules WILL fail'.format(**self.colors)
             )
             raise SystemExit()
 
@@ -525,11 +515,8 @@ class TestDaemon(object):
             if rdata:
                 for name, output in rdata.iteritems():
                     print(
-                        '   {LIGHT_GREEN}*{ENDC} Synced {0}: modules=>{1} '
-                        'states=>{2} grains=>{3} renderers=>{4} '
-                        'returners=>{5}'.format(
-                            name, *output, **self.colors
-                        )
+                        '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
+                        '{1}'.format(name, *output, **self.colors)
                     )
                     # Synced!
                     try:
@@ -739,7 +726,24 @@ class ShellCase(TestCase):
                     return out
 
         if catch_stderr:
-            out, err = process.communicate()
+            if sys.version_info < (2, 7):
+                # On python 2.6, the subprocess'es communicate() method uses
+                # select which, is limited by the OS to 1024 file descriptors
+                # We need more available descriptors to run the tests which
+                # need the stderr output.
+                # So instead of .communicate() we wait for the process to
+                # finish, but, as the python docs state "This will deadlock
+                # when using stdout=PIPE and/or stderr=PIPE and the child
+                # process generates enough output to a pipe such that it
+                # blocks waiting for the OS pipe buffer to accept more data.
+                # Use communicate() to avoid that." <- a catch, catch situation
+                #
+                # Use this work around were it's needed only, python 2.6
+                process.wait()
+                out = process.stdout.read()
+                err = process.stderr.read()
+            else:
+                out, err = process.communicate()
             # Force closing stderr/stdout to release file descriptors
             process.stdout.close()
             process.stderr.close()
