@@ -165,6 +165,7 @@ def wait_for_ssh(host, port=22, timeout=900):
     '''
     start = time.time()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    trycount = 0
     while True:
         try:
             sock.connect((host, port))
@@ -172,7 +173,9 @@ def wait_for_ssh(host, port=22, timeout=900):
             return True
         except Exception:
             time.sleep(1)
+            log.warn('Retrying ssh connection (try {0})'.format(trycount))
             if time.time() - start > timeout:
+                log.error('ssh connection timed out: {0}'.format(timeout))
                 return False
 
 
@@ -182,7 +185,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
-    trycount=0
+    trycount = 0
     while trycount < maxtries:
         connectfail = False
         try:
