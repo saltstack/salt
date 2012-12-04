@@ -537,20 +537,25 @@ class TestDaemon(object):
         return True
 
 
-class ModuleCase(TestCase):
-    '''
-    Execute a module function
-    '''
+class SaltClientTestCaseMixIn(object):
 
-    _client = None
+    _salt_client_config_file_name_ = 'master'
+    __slots__ = ('client', '_salt_client_config_file_name_')
 
     @property
     def client(self):
-        if self._client is None:
-            self._client = salt.client.LocalClient(
-                os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        return salt.client.LocalClient(
+            os.path.join(
+                INTEGRATION_TEST_DIR, 'files', 'conf',
+                self._salt_client_config_file_name_
             )
-        return self._client
+        )
+
+
+class ModuleCase(TestCase, SaltClientTestCaseMixIn):
+    '''
+    Execute a module function
+    '''
 
     def minion_run(self, _function, *args, **kw):
         '''
@@ -642,20 +647,11 @@ class ModuleCase(TestCase):
         raise AssertionError('bad result: %r' % (ret))
 
 
-class SyndicCase(TestCase):
+class SyndicCase(TestCase, SaltClientTestCaseMixIn):
     '''
     Execute a syndic based execution test
     '''
-    def setUp(self):
-        '''
-        Generate the tools to test a module
-        '''
-        self.client = salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'syndic_master'
-            )
-        )
+    _salt_client_config_file_name_ = 'syndic_master'
 
     def run_function(self, function, arg=()):
         '''
