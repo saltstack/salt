@@ -8,7 +8,6 @@ Required python modules: ldap
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import traceback
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError

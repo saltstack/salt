@@ -50,7 +50,7 @@ def present(name,
     runas
         Name of the user to run the command
     '''
-    ret = {'name': name, 'result': True, 'comment': ''}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
 
@@ -85,7 +85,7 @@ def present(name,
         write = write or '.*'
         read = read or '.*'
         result = __salt__['rabbitmq.set_permissions'](
-            user, name, conf, write, read, runas=runas)
+            name, user, conf, write, read, runas=runas)
 
         if 'Error' in result:
             ret['result'] = False
@@ -107,7 +107,7 @@ def absent(name,
     runas
         User to run the command
     '''
-    ret = {'name': name, 'result': True, 'comment': ''}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
 

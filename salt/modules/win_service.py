@@ -25,7 +25,7 @@ def get_enabled():
     ret = set()
     services = []
     cmd = 'sc query type= service'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -34,7 +34,7 @@ def get_enabled():
             services.append(comps[1].strip())
     for service in services:
         cmd2 = 'sc qc "{0}"'.format(service)
-        lines = __salt__['cmd.run'](cmd2).split('\n')
+        lines = __salt__['cmd.run'](cmd2).splitlines()
         for line in lines:
             if 'AUTO_START' in line:
                 ret.add(service)
@@ -51,7 +51,7 @@ def get_disabled():
     ret = set()
     services = []
     cmd = 'sc query type= service'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -60,7 +60,7 @@ def get_disabled():
             services.append(comps[1].strip())
     for service in services:
         cmd2 = 'sc qc "{0}"'.format(service)
-        lines = __salt__['cmd.run'](cmd2).split('\n')
+        lines = __salt__['cmd.run'](cmd2).splitlines()
         for line in lines:
             if 'DEMAND_START' in line:
                 ret.add(service)
@@ -134,7 +134,7 @@ def status(name, sig=None):
         salt '*' service.status <service name> [service signature]
     '''
     cmd = 'sc query "{0}"'.format(name)
-    status = __salt__['cmd.run'](cmd).split('\n')
+    status = __salt__['cmd.run'](cmd).splitlines()
     for line in status:
         if 'RUNNING' in line:
             return getsid(name)
@@ -151,7 +151,7 @@ def getsid(name):
         salt '*' service.getsid <service name>
     '''
     cmd = 'sc showsid "{0}"'.format(name)
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE SID:' in line:
             comps = line.split(':', 1)
@@ -160,7 +160,7 @@ def getsid(name):
             else:
                 return None
 
-def enable(name):
+def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
@@ -172,7 +172,7 @@ def enable(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def disable(name):
+def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 
