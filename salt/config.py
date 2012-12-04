@@ -124,7 +124,7 @@ def include_config(include, opts, orig_path, verbose):
             if verbose:
                 log.warn(
                     'Warning parsing configuration file: "include" path/glob '
-                    '"{0}" matches no files').format(path)
+                    '"{0}" matches no files'.format(path)
                 )
 
         for fn_ in glob.glob(path):
@@ -223,7 +223,6 @@ def minion_config(path, check_dns=True):
             'retry_dns': 30,
             'recon_max': 5000,
             }
-
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
