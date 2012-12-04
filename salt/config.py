@@ -121,16 +121,21 @@ def include_config(include, opts, orig_path, verbose):
         # Catch situation where user typos path in config; also warns for
         # empty include dir (which might be by design)
         if len(glob.glob(path)) == 0:
-            msg = ('Warning parsing configuration file: "include" path/glob '
-                   '"{0}" matches no files').format(path)
-            if verbose: log.warn(msg.format(path))
+            if verbose:
+                log.warn(
+                    'Warning parsing configuration file: "include" path/glob '
+                    '"{0}" matches no files').format(path)
+                )
 
         for fn_ in glob.glob(path):
             try:
                 opts.update(_read_conf_file(fn_))
             except Exception as e:
-                msg = 'Error parsing configuration file: {0} - {1}'
-                log.warn(msg.format(fn_, e))
+                log.warn(
+                    'Error parsing configuration file: {0} - {1}'.format(
+                        fn_, e
+                    )
+                )
     return opts
 
 
