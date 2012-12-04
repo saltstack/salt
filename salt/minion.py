@@ -697,19 +697,31 @@ class Minion(object):
             except Exception:
                 log.critical(traceback.format_exc())
 
-    def __del__(self):
+    def destroy(self):
         if hasattr(self, 'poller'):
-            self.poller.unregister(self.socket)
+            for socket in self.poller.sockets.keys():
+                if not socket.closed:
+                    socket.close()
+                self.poller.unregister(socket)
         if hasattr(self, 'epoller'):
-            self.epoller.unregister(self.epull_sock)
+            for socket in self.epoller.sockets.keys():
+                if not socket.closed:
+                    socket.close()
+                self.epoller.unregister(socket)
         if hasattr(self, 'epub_sock'):
-            self.epub_sock.close()
+            if not self.epub_sock.closed:
+                self.epub_sock.close()
         if hasattr(self, 'epull_sock'):
-            self.epull_sock.close()
+            if not self.epull_sock.closed:
+                self.epull_sock.close()
         if hasattr(self, 'socket'):
-            self.socket.close()
+            if not self.socket.closed:
+                self.socket.close()
         if hasattr(self, 'context'):
             self.context.term()
+
+    def __del__(self):
+        self.destroy()
 
 
 class Syndic(salt.client.LocalClient, Minion):
@@ -816,9 +828,10 @@ class Matcher(object):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
+            funcname = '{0}_match'.format(matcher)
             if matcher == 'nodegroup':
-                return getattr(self, '{0}_match'.format(matcher))(match, nodegroups)
-            return getattr(self, '{0}_match'.format(matcher))(match)
+                return getattr(self, funcname)(match, nodegroups)
+            return getattr(self, funcname)(match)
         else:
             log.error('Attempting to match with unknown matcher: {0}'.format(
                 matcher
@@ -906,10 +919,17 @@ class Matcher(object):
         log.debug('tgt {0}'.format(tgt))
         comps = tgt.split(':')
         if len(comps) < 2:
-            log.error('Got insufficient arguments for pillar match statement from master')
+            log.error(
+                'Got insufficient arguments for pillar match statement '
+                'from master'
+            )
             return False
         if comps[0] not in self.opts['pillar']:
-            log.error('Got unknown pillar match statement from master: {0}'.format(comps[0]))
+            log.error(
+                'Got unknown pillar match statement from master: {0}'.format(
+                    comps[0]
+                )
+            )
             return False
         if isinstance(self.opts['pillar'][comps[0]], list):
             # We are matching a single component to a single list member

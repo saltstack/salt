@@ -160,6 +160,14 @@ class SREQ(object):
         load = payload.get('load', {})
         return self.send(enc, load)
 
-    def __del__(self):
-        self.socket.close()
+    def destroy(self):
+        for socket in self.poller.sockets.keys():
+            if not socket.closed:
+                socket.close()
+            self.poller.unregister(socket)
+        if not self.socket.closed:
+            self.socket.close()
         self.context.term()
+
+    def __del__(self):
+        self.destroy()

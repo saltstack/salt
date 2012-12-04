@@ -188,7 +188,7 @@ class LocalClient(object):
             jid = salt.utils.prep_jid(
                     self.opts['cachedir'],
                     self.opts['hash_type'],
-                    user = __opts__['user']
+                    user=__opts__['user']
                     )
         except Exception:
             jid = ''
@@ -230,7 +230,6 @@ class LocalClient(object):
         except KeyError:
             return 0
 
-
     def cmd_batch(
         self,
         tgt,
@@ -258,7 +257,6 @@ class LocalClient(object):
         batch = salt.cli.batch.Batch(opts, True)
         for ret in batch.run():
             yield ret
-
 
     def cmd(
         self,
@@ -480,7 +478,9 @@ class LocalClient(object):
                     while fn_ not in ret:
                         try:
                             check = True
-                            ret_data = self.serial.load(salt.utils.fopen(retp, 'r'))
+                            ret_data = self.serial.load(
+                                salt.utils.fopen(retp, 'r')
+                            )
                             if ret_data is None:
                                 # Sometimes the ret data is read at the wrong
                                 # time and returns None, do a quick re-read
@@ -489,7 +489,9 @@ class LocalClient(object):
                                     continue
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(salt.utils.fopen(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    salt.utils.fopen(outp, 'r')
+                                )
                         except Exception:
                             pass
                     found.add(fn_)
@@ -994,6 +996,12 @@ class LocalClient(object):
             return payload
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
+
+    def __del__(self):
+        # This IS really necessary!
+        # When running tests, if self.events is not destroyed, we leak 2
+        # threads per test case which uses self.client
+        self.event.destroy()
 
 
 class FunctionWrapper(dict):

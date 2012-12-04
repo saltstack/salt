@@ -135,7 +135,7 @@ class SaltEvent(object):
                     continue
                 yield data
         finally:
-            self.__cleanup()
+            self.destroy()
 
     def fire_event(self, data, tag=''):
         '''
@@ -148,7 +148,7 @@ class SaltEvent(object):
         self.push.send(event)
         return True
 
-    def __cleanup(self):
+    def destroy(self):
         if self.cpub:
             self.sub.close()
         if self.cpush:
@@ -156,11 +156,14 @@ class SaltEvent(object):
         # If socket's are not unregistered from a poller, nothing which touches
         # that poller get's garbage collected. The Poller itself, it's
         # registered sockets and the Context
-        self.poller.unregister(self.sub)
+        for socket in self.poller.sockets.keys():
+            if not socket.closed:
+                socket.close()
+            self.poller.unregister(socket)
         self.context.term()
 
     def __del__(self):
-        self.__cleanup()
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
