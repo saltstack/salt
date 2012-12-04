@@ -99,6 +99,8 @@ def _linux_cpudata():
                     grains['cpu_model'] = val
                 elif key == 'flags':
                     grains['cpu_flags'] = val.split()
+                elif key == 'Features':
+                    grains['cpu_flags'] = val.split()
                 # ARM support - /proc/cpuinfo
                 #
                 # Processor       : ARMv6-compatible processor rev 7 (v6l)
