@@ -1,6 +1,8 @@
 #!/bin/sh -e
 # Purge config files, logs, and directories created after package install.
 # Note that user-specified alternate locations for these are not affected.
+#
+# rename to salt-'common|master|minion|syndic'.postrm and call with "purge"
 
 clean_common() {
 # remove shared job cache and other runtime directories
@@ -42,7 +44,8 @@ case "$1" in
     remove)
         ;;
     purge)
-        purgefiles ;;
+        purgefiles
+        ;;
     upgrade|failed-upgrade|disappear|abort-install|abort-upgrade)
         ;;
     *)
@@ -50,5 +53,6 @@ case "$1" in
         exit 1 ;;
 esac
 
+# This tag is required:
 #DEBHELPER#
 exit 0
