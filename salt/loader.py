@@ -615,8 +615,7 @@ class Loader(object):
                     # now that callable passes all the checks, add it to the
                     # library of available functions of this type
                     funcs[attr_name] = func
-                    log.debug('Added {0} to {1}'.format(attr_name,
-                                                        self.tag))
+                    log.trace('Added {0} to {1}'.format(attr_name, self.tag))
                     self._apply_outputter(func, mod)
 
         # now that all the functions have been collected, iterate back over

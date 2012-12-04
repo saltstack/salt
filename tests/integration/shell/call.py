@@ -30,7 +30,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     _call_binary_ = 'salt-call'
 
     def test_default_output(self):
-        out = self.run_call('test.fib 3')
+        out = self.run_call('-l quiet test.fib 3')
+
         expect = ['local: !!python/tuple',
                   '- - 0',
                   '  - 1',
@@ -39,7 +40,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
-        out = self.run_call('--text-out test.fib 3')
+        out = self.run_call('-l quiet --text-out test.fib 3')
         if version.__version_info__ < (0, 10, 8):
             expect = [
                 "WARNING: The option --text-out is deprecated. Please "
@@ -56,7 +57,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
-        ret = self.run_call('-d user.delete')
+        ret = self.run_call('-l quiet -d user.delete')
         self.assertIn(
             'salt \'*\' user.delete name remove=True force=True',
             ''.join(ret)
