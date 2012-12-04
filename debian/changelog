@@ -1,4 +1,4 @@
-salt (0.10.5-3) unstable; urgency=low
+salt (0.10.5-1) unstable; urgency=low
 
   * add bash_completion and ufw support files
   * use shared package support files in pkg/
