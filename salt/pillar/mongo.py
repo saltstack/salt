@@ -129,7 +129,7 @@ def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
 
 
     result = db[collection].find_one({id_field: minion_id}, fields=fields)
-    if result :
+    if result:
         if fields:
             log.debug("ext_pillar.mongo: found document, returning fields "
                       "'{0}'".format(fields))
