@@ -61,6 +61,26 @@ def is_logging_configured():
     return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
 
 
+if sys.version_info < (2, 7):
+    # Since the NullHandler is only available on python >= 2.7, here's a copy
+    class NullHandler(logging.Handler):
+        """ This is 1 to 1 copy of python's 2.7 NullHandler"""
+        def handle(self, record):
+            pass
+
+        def emit(self, record):
+            pass
+
+        def createLock(self):
+            self.lock = None
+
+    logging.NullHandler = NullHandler
+
+
+# Store a reference to the null logging handler
+__NullHandler = logging.NullHandler()
+
+
 class Logging(LoggingLoggerClass):
     def __new__(cls, logger_name, *args, **kwargs):
         global MAX_LOGGER_MODNAME_LENGTH
@@ -78,6 +98,9 @@ class Logging(LoggingLoggerClass):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
+                if handler is __NullHandler:
+                    continue
+
                 if not handler.lock:
                     handler.createLock()
                 handler.acquire()
@@ -106,24 +129,7 @@ class Logging(LoggingLoggerClass):
         return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
 
 
-if sys.version_info < (2, 7):
-
-    class NullHandler(logging.Handler):
-        """ This is 1 to 1 copy of python's 2.7 NullHandler"""
-        def handle(self, record):
-            pass
-
-        def emit(self, record):
-            pass
-
-        def createLock(self):
-            self.lock = None
-
-    logging.NullHandler = NullHandler
-
-__NullHandler = logging.NullHandler()
-
-
+# Override the python's logging logger class as soon as this module is imported
 if logging.getLoggerClass() is not Logging:
     '''
     Replace the default system logger with a version that includes trace()
@@ -333,5 +339,6 @@ def __remove_null_logging_handler():
     for handler in rootLogger.handlers:
         if handler is NullHandler:
             rootLogger.removeHandler(__NullHandler)
-            del(__NullHandler)
+            # Redefine the null handler to None so it can be garbage collected
+            __NullHandler = None
             break
