@@ -1,12 +1,30 @@
 #!/usr/bin/make -f
 
-#export DH_VERBOSE=1
-
-include /usr/share/python/python.mk
-
 PKGFILES := pkg/*.service pkg/*.upstart pkg/*.logrotate
+SALT_BIN := common minion master syndic
 
 %:
 	cp $(PKGFILES) debian
+	for d in $(SALT_BIN); do \
+	    cp pkg/salt.postrm debian/salt-$${d}.postrm; done
+	dh $@ 
+
+dh_override_auto_build:
+	python setup.py build
 	make -C doc html
-	dh $@ --with python2
+
+JS_FILES = searchtools doctools sidebar jquery underscore
+
+override_dh_installdocs:
+	dh_installdocs
+	# Remove embedded copies of javascript libs
+	for f in $(JS_FILES) ; do \
+	    cd debian/salt-doc/usr/share/doc/salt/html/_static/ \
+	    && rm $${f}.js \
+	    && ln -s ../../../../javascript/sphinxdoc/1.0/$${f}.js . \
+	    && cd $(CURDIR) ; \
+	    done ;
+
+override_dh_auto_clean:
+	make -C doc clean
+	dh_auto_clean
