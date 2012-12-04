@@ -1,20 +1,26 @@
 '''
 Manages configuration files via augeas
+
+:depends:   - Augeas Python adapter
 '''
 # Load Augeas libs
-load = False
 try:
     from augeas import Augeas
-    load = True
 except ImportError:
-    pass
+    Augeas = False
+
+__outputter__ = {
+    'ls': 'yaml',
+    'get': 'yaml',
+    'match': 'yaml',
+}
 
 
 def __virtual__():
     '''
     Only run this module if the augeas python module is installed
     '''
-    if load:
+    if Augeas:
         return 'augeas'
     else:
         return False
@@ -35,8 +41,8 @@ def _recurmatch(path, aug):
 
         for i in aug.match(clean_path + '/*'):
             i = i.replace('!', '\!')  # escape some dirs
-            for x in _recurmatch(i, aug):
-                yield x
+            for _match in _recurmatch(i, aug):
+                yield _match
 
 
 def _lstrip_word(string, prefix):
@@ -58,10 +64,7 @@ def get(path, value=''):
 
         salt '*' augeas.get /files/etc/hosts/1/ ipaddr
     '''
-
-    from augeas import Augeas
     aug = Augeas()
-
     ret = {}
 
     path = path.rstrip('/')
@@ -112,12 +115,9 @@ def setvalue(*args):
 
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     '''
-    from augeas import Augeas
-    aug = Augeas()
-
-    ret = {'retval': False}
-
     prefix = None
+    aug = Augeas()
+    ret = {'retval': False}
 
 
     tuples = filter(lambda x: not x.startswith('prefix='), args)
@@ -155,9 +155,7 @@ def match(path, value=''):
 
         salt '*' augeas.match /files/etc/services/service-name ssh
     '''
-    from augeas import Augeas
     aug = Augeas()
-
     ret = {}
 
     try:
@@ -181,9 +179,7 @@ def remove(path):
 
         salt '*' augeas.remove /files/etc/sysctl.conf/net.ipv4.conf.all.log_martians
     '''
-    from augeas import Augeas
     aug = Augeas()
-
     ret = {'retval': False}
     try:
         count = aug.remove(path)
@@ -220,7 +216,6 @@ def ls(path):
             ret[_ma] = aug.get(_ma)
         return ret
 
-    from augeas import Augeas
     aug = Augeas()
 
     path = path.rstrip('/') + '/'
@@ -246,7 +241,6 @@ def tree(path):
 
         salt '*' augeas.tree /files/etc/
     '''
-    from augeas import Augeas
     aug = Augeas()
 
     path = path.rstrip('/') + '/'

@@ -1,19 +1,14 @@
 '''
 Cassandra NoSQL Database Module
 
-REQUIREMENT 1:
+:depends:   - pycassa Cassandra Python adapter
+:configuration:
+    The location of the 'nodetool' command, host, and thrift port needs to be
+    specified via pillar::
 
-The location of the 'nodetool' command, host, and thrift port
-needs to be specified via pillar.
-
-    cassandra.nodetool: /usr/local/bin/nodetool
-    cassandra.host: localhost
-    cassandra.thrift_port: 9160
-
-REQUIREMENT 2:
-
-The python module, 'pycassa', also needs to be installed on the
-minion.
+        cassandra.nodetool: /usr/local/bin/nodetool
+        cassandra.host: localhost
+        cassandra.thrift_port: 9160
 '''
 # Import Python libs
 import logging
@@ -34,31 +29,25 @@ __outputter__ = {
   'ring': 'txt',
 }
 
+nt = ''
+host = ''
+thrift_port = ''
+
 
 def __virtual__():
     '''
     Only load if pycassa is available and the system is configured
     '''
-    global nt
-    global host
-    global thrift_port
-
     if not load:
         return False
 
-    try:
-        nt = __pillar__['cassandra.nodetool']
-        host = __pillar__['cassandra.host']
-        thrift_port = str(__pillar__['cassandra.thrift_port'])
-    except ImportError:
-        #log.info('Module failed to load: pycassa is not installed')
-        return False
-    except KeyError:
-        #log.info('Module failed to load: cassandra.* pillar '
-        #    'values are incomplete')
-        return False
+    nt = __salt__['config.option']('cassandra.nodetool')
+    host = __salt__['config.option']('cassandra.host')
+    thrift_port = str(__salt__['config.option']('cassandra.thrift_port'))
 
-    return 'cassandra'
+    if nt and host and thrift_port:
+        return 'cassandra'
+    return False
 
 
 def _nodetool(cmd):

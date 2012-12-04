@@ -6,8 +6,9 @@ import shutil
 import sys
 
 # Import salt libs
-from saltunittest import skipIf
+import salt.utils
 import integration
+from saltunittest import skipIf
 
 
 class FileModuleTest(integration.ModuleCase):
@@ -16,16 +17,28 @@ class FileModuleTest(integration.ModuleCase):
     '''
     def setUp(self):
         self.myfile = os.path.join(integration.TMP, 'myfile')
-        with open(self.myfile, 'w+') as fp:
+        with salt.utils.fopen(self.myfile, 'w+') as fp:
             fp.write("Hello\n")
         self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
+        self.mysymlink = os.path.join(integration.TMP, 'mysymlink')
+        if os.path.islink(self.mysymlink):
+            os.remove(self.mysymlink)
+        os.symlink(self.myfile, self.mysymlink)
+        self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
+        if os.path.islink(self.mybadsymlink):
+            os.remove(self.mybadsymlink)
+        os.symlink('/nonexistantpath', self.mybadsymlink)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
         os.remove(self.myfile)
+        if os.path.islink(self.mysymlink):
+            os.remove(self.mysymlink)
+        if os.path.islink(self.mybadsymlink):
+            os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
 
@@ -41,7 +54,6 @@ class FileModuleTest(integration.ModuleCase):
         fstat = os.stat(self.myfile)
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
-
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_user(self):
@@ -79,7 +91,6 @@ class FileModuleTest(integration.ModuleCase):
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, os.getgid())
 
-
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chgrp(self):
         if sys.platform == 'darwin':
@@ -104,18 +115,18 @@ class FileModuleTest(integration.ModuleCase):
         src_patch = os.path.join(
             integration.FILES, 'file', 'base', 'hello.patch')
         src_file = os.path.join(integration.TMP, 'src.txt')
-        with open(src_file, 'w+') as fp:
+        with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write("Hello\n")
 
         # dry-run should not modify src_file
         ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
         assert ret['retcode'] == 0, repr(ret)
-        with open(src_file) as fp:
+        with salt.utils.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello\n')
 
         ret = self.minion_run('file.patch', src_file, src_patch)
         assert ret['retcode'] == 0, repr(ret)
-        with open(src_file) as fp:
+        with salt.utils.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_remove_file(self):
@@ -124,6 +135,14 @@ class FileModuleTest(integration.ModuleCase):
 
     def test_remove_dir(self):
         ret = self.run_function('file.remove', args=[self.mydir])
+        self.assertTrue(ret)
+
+    def test_remove_symlink(self):
+        ret = self.run_function('file.remove', args=[self.mysymlink])
+        self.assertTrue(ret)
+
+    def test_remove_broken_symlink(self):
+        ret = self.run_function('file.remove', args=[self.mybadsymlink])
         self.assertTrue(ret)
 
     def test_cannot_remove(self):

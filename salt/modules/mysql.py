@@ -1,30 +1,27 @@
 '''
 Module to provide MySQL compatibility to salt.
 
-REQUIREMENT 1:
+:depends:   - MySQLdb Python module
+:configuration: In order to connect to MySQL, certain configuration is required
+    in /etc/salt/minion on the relevant minions. Some sample configs might look
+    like::
 
-In order to connect to MySQL, certain configuration is required
-in /etc/salt/minion on the relevant minions. Some sample configs
-might look like::
+        mysql.host: 'localhost'
+        mysql.port: 3306
+        mysql.user: 'root'
+        mysql.pass: ''
+        mysql.db: 'mysql'
+        mysql.unix_socket: '/tmp/mysql.sock'
 
-    mysql.host: 'localhost'
-    mysql.port: 3306
-    mysql.user: 'root'
-    mysql.pass: ''
-    mysql.db: 'mysql'
+    You can also use a defaults file::
 
-You can also use a defaults file::
-
-    mysql.default_file: '/etc/mysql/debian.cnf'
-
-REQUIREMENT 2:
-
-Required python modules: MySQLdb
+        mysql.default_file: '/etc/mysql/debian.cnf'
 '''
 # Import Python libs
 import time
 import logging
 import re
+import sys
 
 # Import third party libs
 try:
@@ -40,14 +37,10 @@ __opts__ = {}
 
 def __virtual__():
     '''
-    Only load this module if the mysql config is set
+    Only load this module if the mysql libraries exist
     '''
-    if any(k.startswith('mysql.') for k in list(__opts__)):
-        if has_mysqldb:
-            return 'mysql'
-    elif any(k.startswith('mysql.') for k in list(__pillar__)):
-        if has_mysqldb:
-            return 'mysql'
+    if has_mysqldb:
+        return 'mysql'
     return False
 
 
@@ -100,16 +93,17 @@ def connect(**kwargs):
             key = name
         if name in kwargs:
             connargs[key] = kwargs[name]
-        elif 'mysql.{0}'.format(name) in __opts__:
-            connargs[key] = __opts__['mysql.{0}'.format(name)]
-        elif 'mysql.{0}'.format(name) in __pillar__:
-            connargs[key] = __pillar__['mysql.{0}'.format(name)]
+        else:
+            val = __salt__['config.option']('mysql.{0}'.format(name), None)
+            if val is not None:
+                connargs[key] = val
 
     _connarg('host')
     _connarg('user')
     _connarg('pass', 'passwd')
     _connarg('port')
     _connarg('db')
+    _connarg('unix_socket')
     _connarg('default_file', 'read_default_file')
 
     db = MySQLdb.connect(**connargs)
@@ -150,8 +144,9 @@ def query(database, query):
         {{ salt['mysql.query']("mydb","SELECT info from mytable limit 1")['results'][0][0] }}
 
     '''
-    #Doesn't do anything about sql warnings, e.g. empty values on an insert.
-    #I don't think it handles multiple queries at once, so adding "commit" might not work.
+    # Doesn't do anything about sql warnings, e.g. empty values on an insert.
+    # I don't think it handles multiple queries at once, so adding "commit"
+    # might not work.
     ret = {}
     db = connect(**{'db': database})
     cur = db.cursor()
@@ -782,3 +777,183 @@ def grant_revoke(grant,
         'revoked'.format(grant, database, user)
     )
     return False
+
+def processlist():
+    '''
+    Retrieves the processlist from the MySQL server via  
+    "SHOW FULL PROCESSLIST". 
+
+    Returns: a list of dicts, with each dict representing a process:
+        {'Command': 'Query',
+                          'Host': 'localhost',
+                          'Id': 39,
+                          'Info': 'SHOW FULL PROCESSLIST',
+                          'Rows_examined': 0,
+                          'Rows_read': 1,
+                          'Rows_sent': 0,
+                          'State': None,
+                          'Time': 0,
+                          'User': 'root',
+                          'db': 'mysql'}
+
+    CLI Example:
+        salt '*' mysql.processlist
+    
+    '''
+    ret = [] 
+    hdr=("Id", "User", "Host", "db", "Command","Time", "State", 
+         "Info", "Rows_sent", "Rows_examined", "Rows_read")
+
+    log.debug('processlist')
+    db = connect()
+    cur = db.cursor()
+    cur.execute("SHOW FULL PROCESSLIST")
+    for i in range(cur.rowcount):
+        row = cur.fetchone()        
+        r = {}
+        for j in range(len(hdr)):
+            try:
+                r[hdr[j]] = row[j]
+            except KeyError:
+                pass
+
+        ret.append(r)
+            
+    cur.close()
+    return ret
+def __do_query_into_hash(conn, sqlStr):
+    '''
+    Perform the query that is passed to it (sqlStr).
+    
+    Returns:
+       results in a dict.
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug("%s<--(%s)" % (mod, sqlStr))
+
+    rtnResults = []
+
+    try:
+        cursor = conn.cursor()
+    except Exception:
+        self.__log.error("%s: Can't get cursor for SQL->%s" % (mod, sqlStr))
+        cursor.close()
+        log.debug(('%s-->' % mod))        
+        return rtnResults
+
+    try:
+        rs = cursor.execute(sqlStr)
+    except Exception:
+        log.error("%s: try to execute : SQL->%s" % (mod, sqlStr))
+        cursor.close()
+        log.debug(('%s-->' % mod))        
+        return rtnResults
+
+    rs = cursor.fetchall()
+
+    for rowData in rs:
+        colCnt = 0
+        row = {}                
+        for colData in cursor.description:
+            colName = colData[0]
+            row[colName] = rowData[colCnt]
+            colCnt += 1
+
+        rtnResults.append(row)
+
+    cursor.close()
+    log.debug(('%s-->' % mod))        
+    return rtnResults
+
+def get_master_status():
+    '''
+    Retrieves the master status from the mimion.
+
+    Returns:
+        {'host.domain.com': {'Binlog_Do_DB': '',
+                         'Binlog_Ignore_DB': '',
+                         'File': 'mysql-bin.000021',
+                         'Position': 107}}
+
+    CLI Example:
+        salt '*' mysql.get_master_status
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug("%s<--" % (mod))
+
+    conn = connect()
+    rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
+    conn.close()
+
+    # check for if this minion is not a master
+    if (len(rtnv) == 0):
+        rtnv.append([])
+        
+    log.debug("%s-->%d" % (mod, len(rtnv[0])))        
+    return rtnv[0]
+ 
+def get_slave_status():
+    '''
+    Retrieves the slave status from the minion.
+
+    Returns:
+    {'host.domain.com': {'Connect_Retry': 60,
+                       'Exec_Master_Log_Pos': 107,
+                       'Last_Errno': 0,
+                       'Last_Error': '',
+                       'Last_IO_Errno': 0,
+                       'Last_IO_Error': '',
+                       'Last_SQL_Errno': 0,
+                       'Last_SQL_Error': '',
+                       'Master_Host': 'comet.scion-eng.com',
+                       'Master_Log_File': 'mysql-bin.000021',
+                       'Master_Port': 3306,
+                       'Master_SSL_Allowed': 'No',
+                       'Master_SSL_CA_File': '',
+                       'Master_SSL_CA_Path': '',
+                       'Master_SSL_Cert': '',
+                       'Master_SSL_Cipher': '',
+                       'Master_SSL_Key': '',
+                       'Master_SSL_Verify_Server_Cert': 'No',
+                       'Master_Server_Id': 1,
+                       'Master_User': 'replu',
+                       'Read_Master_Log_Pos': 107,
+                       'Relay_Log_File': 'klo-relay-bin.000071',
+                       'Relay_Log_Pos': 253,
+                       'Relay_Log_Space': 553,
+                       'Relay_Master_Log_File': 'mysql-bin.000021',
+                       'Replicate_Do_DB': '',
+                       'Replicate_Do_Table': '',
+                       'Replicate_Ignore_DB': '',
+                       'Replicate_Ignore_Server_Ids': '',
+                       'Replicate_Ignore_Table': '',
+                       'Replicate_Wild_Do_Table': '',
+                       'Replicate_Wild_Ignore_Table': '',
+                       'Seconds_Behind_Master': 0,
+                       'Skip_Counter': 0,
+                       'Slave_IO_Running': 'Yes',
+                       'Slave_IO_State': 'Waiting for master to send event',
+                       'Slave_SQL_Running': 'Yes',
+                       'Until_Condition': 'None',
+                       'Until_Log_File': '',
+                       'Until_Log_Pos': 0}}
+
+    CLI Example:
+        salt '*' mysql.get_slave_status
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug("%s<--" % (mod))
+
+    conn = connect()
+    rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
+    conn.close()
+
+    # check for if this minion is not a slave
+    if (len(rtnv) == 0):
+        rtnv.append([])
+        
+    log.debug("%s-->%d" % (mod, len(rtnv[0])))        
+    return rtnv[0]

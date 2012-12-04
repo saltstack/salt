@@ -11,7 +11,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return 'group' if __grains__['kernel'] == 'Linux' else False
+    return 'group' if __grains__.get('kernel', '') == 'Linux' else False
 
 
 def add(name, gid=None, system=False):

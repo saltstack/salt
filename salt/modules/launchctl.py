@@ -1,5 +1,7 @@
 '''
 Module for the management of MacOS systems that use launchd/launchctl
+
+:depends:   - plistlib Python module
 '''
 
 import plistlib
@@ -77,7 +79,7 @@ def start(job_label, runas=None):
     '''
     cmd = 'launchctl start {0}'.format(job_label, runas=runas)
 
-    return __salt__['cmd.run'](cmd, runas='marca')
+    return __salt__['cmd.run'](cmd, runas=runas)
 
 
 def restart(job_label, runas=None):

@@ -1,6 +1,6 @@
 '''
 Service support for Solaris 10 and 11, should work with other systems
-that use SMF also. (e.g. SmartOS) 
+that use SMF also. (e.g. SmartOS)
 '''
 
 
@@ -29,7 +29,7 @@ def get_enabled():
     '''
     ret = set()
     cmd = 'svcs -H -o SVC,STATE -s SVC'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -49,7 +49,7 @@ def get_disabled():
     '''
     ret = set()
     cmd = 'svcs -aH -o SVC,STATE -s SVC'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -69,7 +69,7 @@ def get_all():
     '''
     ret = set()
     cmd = 'svcs -aH -o SVC,STATE -s SVC'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -124,14 +124,14 @@ def status(name, sig=None):
         salt '*' service.status <service name>
     '''
     cmd = '/usr/bin/svcs -H -o STATE {0}'.format(name)
-    line = __salt__['cmd.run'](cmd).strip()
+    line = __salt__['cmd.run'](cmd)
     if line == 'online':
         return True
     else:
-        return False 
+        return False
 
 
-def enable(name):
+def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
@@ -143,7 +143,7 @@ def enable(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def disable(name):
+def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 

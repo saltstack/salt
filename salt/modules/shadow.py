@@ -2,11 +2,16 @@
 Manage the shadow file
 '''
 
+# Import python libs
 import os
 try:
     import spwd
 except ImportError:
     pass
+
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -50,9 +55,11 @@ def info(name):
             'expire': ''}
     return ret
 
+
 def set_inactdays(name, inactdays):
     '''
-    Set the number of days of inactivity after a password has expired before the account is locked. See man chage.
+    Set the number of days of inactivity after a password has expired before
+    the account is locked. See man chage.
 
     CLI Example::
 
@@ -67,9 +74,11 @@ def set_inactdays(name, inactdays):
     if post_info['inact'] != pre_info['inact']:
         return post_info['inact'] == inactdays
 
+
 def set_maxdays(name, maxdays):
     '''
-    Set the maximum number of days during which a password is valid. See man chage.
+    Set the maximum number of days during which a password is valid.
+    See man chage.
 
     CLI Example::
 
@@ -83,6 +92,7 @@ def set_maxdays(name, maxdays):
     post_info = info(name)
     if post_info['max'] != pre_info['max']:
         return post_info['max'] == maxdays
+
 
 def set_mindays(name, mindays):
     '''
@@ -102,6 +112,7 @@ def set_mindays(name, mindays):
         return post_info['min'] == mindays
     return False
 
+
 def set_password(name, password):
     '''
     Set the password for a named user. The password must be a properly defined
@@ -117,21 +128,25 @@ def set_password(name, password):
     if not os.path.isfile(s_file):
         return ret
     lines = []
-    for line in open(s_file, 'rb').readlines():
-        comps = line.strip().split(':')
-        if not comps[0] == name:
-            lines.append(line)
-            continue
-        comps[1] = password
-        line = ':'.join(comps)
-        lines.append('{0}\n'.format(line))
-    open(s_file, 'w+').writelines(lines)
+    with salt.utils.fopen(s_file, 'rb') as fp_:
+        for line in fp_:
+            comps = line.strip().split(':')
+            if not comps[0] == name:
+                lines.append(line)
+                continue
+            comps[1] = password
+            line = ':'.join(comps)
+            lines.append('{0}\n'.format(line))
+    with salt.utils.fopen(s_file, 'w+') as fp_:
+        fp_.writelines(lines)
     uinfo = info(name)
     return uinfo['pwd'] == password
 
+
 def set_warndays(name, warndays):
     '''
-    Set the number of days of warning before a password change is required. See man chage.
+    Set the number of days of warning before a password change is required.
+    See man chage.
 
     CLI Example::
 
@@ -147,9 +162,11 @@ def set_warndays(name, warndays):
         return post_info['warn'] == warndays
     return False
 
+
 def set_date(name, date):
     '''
-    sets the value for the date the password was last changed to the epoch (January 1, 1970). See man chage.
+    sets the value for the date the password was last changed to the epoch
+    (January 1, 1970). See man chage.
 
     CLI Example::
 
@@ -157,4 +174,4 @@ def set_date(name, date):
     '''
     cmd = 'chage -d {0} {1}'.format(date, name)
     __salt__['cmd.run'](cmd)
-    
+

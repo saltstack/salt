@@ -12,6 +12,7 @@ import resource
 import tempfile
 
 # Import Salt libs
+import salt.utils
 from saltunittest import skipIf, TestCase, TestsLoggingHandler
 
 from salt.utils.verify import (
@@ -114,7 +115,8 @@ class TestVerify(TestCase):
                                       (127, 'WARNING'), (196, 'CRITICAL')):
 
                     for n in range(prev, newmax):
-                        with open(os.path.join(keys_dir, str(n)), 'w') as fp_:
+                        kpath = os.path.join(keys_dir, str(n))
+                        with salt.utils.fopen(kpath, 'w') as fp_:
                             fp_.write(str(n))
 
                     opts = {
@@ -148,7 +150,8 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    with open(os.path.join(keys_dir, str(n)), 'w') as fp_:
+                    kpath = os.path.join(keys_dir, str(n))
+                    with salt.utils.fopen(kpath, 'w') as fp_:
                         fp_.write(str(n))
 
                 opts = {

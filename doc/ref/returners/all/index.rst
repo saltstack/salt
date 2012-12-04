@@ -1,8 +1,8 @@
 .. _all-salt.returners:
 
-==============================
-Full list of builtin returners
-==============================
+=====================================
+Full list of builtin returner modules
+=====================================
 
 .. currentmodule:: salt.returners
 
@@ -14,3 +14,4 @@ Full list of builtin returners
     cassandra_return
     mongo_return
     redis_return
+    mysql

@@ -2,7 +2,7 @@
 Provide the hyper module for kvm hypervisors. This is the interface used to
 interact with kvm on behalf of the salt-virt interface
 
-Required python modules: libvirt
+:depends:   - libvirt Python module
 '''
 
 # This is a test interface for the salt-virt system. The api in this file is
@@ -51,7 +51,7 @@ def __virtual__():
         return False
     if not os.path.exists('/proc/modules'):
         return False
-    if 'kvm_' not in open('/proc/modules').read():
+    if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
         return False
     if not has_libvirt:
         return False
@@ -214,6 +214,7 @@ def hyper_info():
 # get_disks
 # get_conf
 
+
 def _get_image(image, vda):
     '''
     Copy the image into place
@@ -346,7 +347,7 @@ def init(
     # The image is in place
     xml = _gen_xml(name, cpus, mem, vmdir, network, desc, opts)
     config = os.path.join(vmdir, 'config.xml')
-    open(config, 'w+').write(xml)
+    salt.utils.fopen(config, 'w+').write(xml)
     return start(config)
 
 
@@ -362,6 +363,7 @@ def start(config):
     # return
     cmd = 'virsh create {0}'.format(config)
     return not __salt__['cmd.retcode'](cmd)
+
 
 def halt(name):
     '''
@@ -471,8 +473,8 @@ def get_disks(name):
         if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
             disks[target.getAttribute('dev')] = {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
-            + disks[dev]['file'],
+        disks[dev].update(yaml.safe_load(subprocess.Popen(
+            'qemu-img info ' + disks[dev]['file'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]))
     return disks

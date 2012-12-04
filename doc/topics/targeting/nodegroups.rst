@@ -16,7 +16,7 @@ target documentation can be found here:
 For example, in the master config file :conf_master:`nodegroups` setting::
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
 Specify a nodegroup via the ``-N`` option at the command-line::

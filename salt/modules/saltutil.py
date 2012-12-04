@@ -1,6 +1,8 @@
 '''
-The Saltutil module is used to manage the state of the salt minion itself. It is
-used to manage minion modules as well as automate updates to the salt minion
+The Saltutil module is used to manage the state of the salt minion itself. It
+is used to manage minion modules as well as automate updates to the salt minion
+
+:depends:   - esky Python module
 '''
 
 # Import Python libs
@@ -9,6 +11,7 @@ import hashlib
 import shutil
 import signal
 import logging
+import fnmatch
 import sys
 
 # Import Salt libs
@@ -24,6 +27,7 @@ except ImportError:
     has_esky = False
 
 log = logging.getLogger(__name__)
+
 
 def _sync(form, env=None):
     '''
@@ -51,7 +55,7 @@ def _sync(form, env=None):
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
         cache.extend(__salt__['cp.cache_dir'](source, sub_env))
-        local_cache_dir=os.path.join(
+        local_cache_dir = os.path.join(
                 __opts__['cachedir'],
                 'files',
                 sub_env,
@@ -63,7 +67,7 @@ def _sync(form, env=None):
                 for fn_root in __opts__['file_roots'].get(sub_env, []):
                     if fn_.startswith(fn_root):
                         relpath = os.path.relpath(fn_, fn_root)
-                        relpath = relpath[relpath.index('/') +1:]
+                        relpath = relpath[relpath.index('/') + 1:]
                         relname = os.path.splitext(relpath)[0].replace(
                                 os.sep,
                                 '.')
@@ -77,8 +81,12 @@ def _sync(form, env=None):
             log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
-                srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
-                dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
+                srch = hashlib.md5(
+                    salt.utils.fopen(fn_, 'r').read()
+                ).hexdigest()
+                dsth = hashlib.md5(
+                    salt.utils.fopen(dest, 'r').read()
+                ).hexdigest()
                 if srch != dsth:
                     # The downloaded file differes, replace!
                     shutil.copyfile(fn_, dest)
@@ -109,17 +117,19 @@ def _sync(form, env=None):
     #dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with open(mod_file, 'a+') as f:
+        with salt.utils.fopen(mod_file, 'a+') as f:
             f.write('')
     return ret
+
 
 def _listdir_recursively(rootdir):
     fileList = []
     for root, subFolders, files in os.walk(rootdir):
         for file in files:
-            relpath=os.path.relpath(root,rootdir).strip('.')
-            fileList.append(os.path.join(relpath,file))
+            relpath = os.path.relpath(root, rootdir).strip('.')
+            fileList.append(os.path.join(relpath, file))
     return fileList
+
 
 def _list_emptydirs(rootdir):
     emptydirs = []
@@ -127,6 +137,7 @@ def _list_emptydirs(rootdir):
         if not files and not subFolders:
             emptydirs.append(root)
     return emptydirs
+
 
 def update(version=None):
     '''
@@ -145,18 +156,18 @@ def update(version=None):
         salt '*' saltutil.update 0.10.3
     '''
     if not has_esky:
-        return "Esky not available as import"
-    if not getattr(sys, "frozen", False):
-        return "Minion is not running an Esky build"
-    if not __opts__['update_url']:
-        return "'update_url' not configured on this minion"
+        return 'Esky not available as import'
+    if not getattr(sys, 'frozen', False):
+        return 'Minion is not running an Esky build'
+    if not __salt__['config.option']('update_url'):
+        return '"update_url" not configured on this minion'
     app = esky.Esky(sys.executable, __opts__['update_url'])
     oldversion = __grains__['saltversion']
     try:
         if not version:
             version = app.find_update()
         if not version:
-            return "No updates available"
+            return 'No updates available'
         app.fetch_version(version)
         app.install_version(version)
         app.cleanup()
@@ -167,6 +178,7 @@ def update(version=None):
         restarted[service] = __salt__['service.restart'](service)
     return {'comment': 'Updated from {0} to {1}'.format(oldversion, version),
             'restarted': restarted}
+
 
 def sync_modules(env=None):
     '''
@@ -267,16 +279,33 @@ def refresh_pillar():
     '''
     mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with open(mod_file, 'a+') as f:
+        with salt.utils.fopen(mod_file, 'a+') as f:
             f.write('pillar')
         return True
     except IOError:
         return False
 
 
+def is_running(fun):
+    '''
+    If the named function is running return the data associated with it/them.
+    The argument can be a glob
+
+    CLI Example::
+
+        salt '*' saltutil.is_running state.highstate
+    '''
+    run = running()
+    ret = []
+    for data in run:
+        if fnmatch.fnmatch(data.get('fun', ''), fun):
+            ret.append(data)
+    return ret
+
+
 def running():
     '''
-    Return the data on all running processes salt on the minion
+    Return the data on all running salt processes on the minion
 
     CLI Example::
 
@@ -291,7 +320,8 @@ def running():
         return []
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
-        data = serial.loads(open(path, 'rb').read())
+        with salt.utils.fopen(path, 'rb') as fp_:
+            data = serial.loads(fp_.read())
         if not isinstance(data, dict):
             # Invalid serial object
             continue

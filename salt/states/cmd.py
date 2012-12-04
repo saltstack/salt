@@ -29,15 +29,156 @@ syslog if there is no disk space:
     > /var/log/messages:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test
+
+Note that when executing a command or script, the state(ie, changed or not) of
+the command is unknown to Salt's state system. Therefore, by default, the
+``cmd`` state assumes that any command execution results in a changed state. 
+
+This means that if a ``cmd`` state is watched by another state then the
+state that's watching will always be executed due to the `changed` state in
+the ``cmd`` state.
+
+Many state functions in this module now also accept a ``stateful`` argument.
+If ``stateful`` is specified to be true then it is assumed that the command
+or script will determine its own state and communicate it back by following
+a simple protocol described below:
+
+    If there's nothing in the stdout of the command, then assume no changes.
+    Otherwise, the stdout must be either in JSON or its `last` non-empty line
+    must be a string of key=value pairs delimited by spaces(no spaces on the
+    sides of ``=``).
+
+    If it's JSON then it must be a JSON object(ie, {}). 
+    If it's key=value pairs then quoting may be used to include spaces.
+    (Python's shlex module is used to parse the key=value string)
+
+    Two special keys or attributes are recognized in the output::
+
+      changed: bool (ie, 'yes', 'no', 'true', 'false', case-insensitive)
+      comment: str  (ie, any string)
+
+    So, only if 'changed' is true then assume the command execution has changed
+    the state, and any other key values or attributes in the output will be set
+    as part of the changes.
+
+    If there's a comment then it will be used as the comment of the state.
+
+    Here's an example of how one might write a shell script for use with a
+    stateful command::
+
+      #!/bin/bash
+      #
+      echo "Working hard..."
+
+      # writing the state line
+      echo  # an empty line here so the next line will be the last.
+      echo "changed=yes comment=\"something's changed!\" whatever=123"
+
+
+    And an example salt file using this module::
+
+        Run myscript:
+          cmd.run:
+            - name: /path/to/myscript
+            - cwd: /
+            - stateful: true
+        
+        Run only if myscript changed something:
+          cmd.wait:
+            - name: echo hello
+            - cwd: /
+            - watch:
+              - cmd: Run myscript
+
+    Note that if the ``cmd.wait`` state also specfies ``stateful: true``
+    it can then be watched by some other states as well.
+
+
 '''
 
 # Import python libs
 import grp
 import os
 import copy
+import json
+import shlex
+import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
+import salt.state
+
+log = logging.getLogger(__name__)
+
+
+def _reinterpreted_state(state):
+    '''
+    Re-interpret the state return by salt.sate.run using our protocol.
+    '''
+    ret = state['changes']
+    state['changes'] = {}
+    state['comment'] = ''
+
+    out = ret.get('stdout')
+    if not out:
+        if ret.get('stderr'):
+            state['comment'] = ret['stderr'] 
+        return state
+
+    is_json = False
+    try:
+        d = json.loads(out)
+        if not isinstance(d, dict):
+            return _failout(state,
+                       'script JSON output must be a JSON object(ie, {})!')
+        is_json = True
+    except Exception:
+        idx = out.rstrip().rfind('\n')
+        if idx != -1:
+            out = out[idx+1:]
+        d = {}
+        try:
+            for item in shlex.split(out):
+                k, v = item.split('=')
+                d[k] = v
+        except ValueError:
+            return _failout(state,
+                'Failed parsing script output! '
+                'Stdout must be JSON or a line of name=value pairs.')
+
+    changed = _is_true(d.get('changed', 'no'))
+    
+    if 'comment' in d:
+        state['comment'] = d['comment']
+        del d['comment']
+
+    if changed:
+        for k in ret:
+            d.setdefault(k, ret[k])
+
+        # if stdout is the state output in json, don't show it.
+        # otherwise it contains the one line name=value pairs, strip it.
+        d['stdout'] = '' if is_json else d.get('stdout', '')[:idx]
+        state['changes'] = d
+
+    #FIXME: if it's not changed but there's stdout and/or stderr then those
+    #       won't be shown as the function output. (though, they will be shown
+    #       inside INFO logs).
+    return state        
+
+
+def _failout(state, msg):
+    state['comment'] = msg
+    state['result'] = False
+    return state
+
+
+def _is_true(v):
+    if v and str(v).lower() in ('true', 'yes', '1'):
+        return True
+    elif str(v).lower() in ('false', 'no', '0'):
+        return False
+    raise ValueError('Failed parsing boolean value: {0}'.format(v))
 
 
 def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
@@ -77,7 +218,9 @@ def wait(name,
         cwd='/root',
         user=None,
         group=None,
-        shell=None):
+        shell=None,
+        stateful=False,
+        **kwargs):
     '''
     Run the given command only if the watch statement calls it
 
@@ -105,6 +248,10 @@ def wait(name,
 
     shell
         The shell to use for execution, defaults to /bin/sh
+    
+    stateful
+        The command being executed is expected to return data about executing
+        a state
     '''
     return {'name': name,
             'changes': {},
@@ -122,11 +269,23 @@ def wait_script(name,
         group=None,
         shell=None,
         env=None,
+        stateful=False,
         **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
     statement calls it.
-
+    
+    source
+        The source script being downloaded to the minion, this source script is
+        hosted on the salt master server.  If the file is located on the master 
+        in the directory named spam, and is called eggs, the source string is 
+        salt://spam/eggs
+    
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
+    
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -151,6 +310,14 @@ def wait_script(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
+    
+    env
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+    
+    stateful
+        The command being executed is expected to return data about executing
+        a state
     '''
     return {'name': name,
             'changes': {},
@@ -166,6 +333,7 @@ def run(name,
         group=None,
         shell=None,
         env=(),
+        stateful=False,
         **kwargs):
     '''
     Run a command if certain circumstances are met
@@ -194,6 +362,14 @@ def run(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
+    
+    env
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+
+    stateful
+        The command being executed is expected to return data about executing
+        a state
     '''
     ret = {'name': name,
            'changes': {},
@@ -239,10 +415,10 @@ def run(name,
             ret['changes'] = cmd_all
             ret['result'] = not bool(cmd_all['retcode'])
             ret['comment'] = 'Command "{0}" run'.format(name)
-            return ret
+            return _reinterpreted_state(ret) if stateful else ret
         ret['result'] = None
         ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-        return ret
+        return _reinterpreted_state(ret) if stateful else ret
 
     finally:
         os.setegid(pgid)
@@ -258,11 +434,22 @@ def script(name,
         group=None,
         shell=None,
         env=None,
+        stateful=False,
         **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
     source or the source value can be defined.
-
+    source
+        The source script being downloaded to the minion, this source script is
+        hosted on the salt master server.  If the file is located on the master 
+        in the directory named spam, and is called eggs, the source string is 
+        salt://spam/eggs
+    
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
+    
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -287,6 +474,14 @@ def script(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
+    
+    env
+        The root directory of the environment for the referencing script. The
+        environments are defined in the master config file.
+    
+    stateful
+        The command being executed is expected to return data about executing
+        a state
     '''
     ret = {'changes': {},
            'comment': '',
@@ -332,7 +527,7 @@ def script(name,
             ret['result'] = None
             ret['comment'] = 'Command "{0}" would have been executed'
             ret['comment'] = ret['comment'].format(name)
-            return ret
+            return _reinterpreted_state(ret) if stateful else ret
 
         # Wow, we passed the test, run this sucker!
         try:
@@ -347,7 +542,7 @@ def script(name,
         else:
             ret['result'] = not bool(cmd_all['retcode'])
         ret['comment'] = 'Command "{0}" run'.format(name)
-        return ret
+        return _reinterpreted_state(ret) if stateful else ret
 
     finally:
         os.setegid(pgid)
@@ -357,13 +552,22 @@ def mod_watch(name, **kwargs):
     Execute a cmd function based on a watch call
     '''
     if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
+        if kwargs.get('stateful'):
+            kwargs.pop('stateful')
+            return _reinterpreted_state(run(name, **kwargs))
         return run(name, **kwargs)
+
     elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
+        if kwargs.get('stateful'):
+            kwargs.pop('stateful')
+            return _reinterpreted_state(script(name, **kwargs))
         return script(name, **kwargs)
+
     return {'name': name,
             'changes': {},
-            'comment': ('cmd.{0} does nto work with the watch requisite, '
+            'comment': ('cmd.{0} does not work with the watch requisite, '
                        'please use cmd.wait of cmd.wait_script').format(
                            kwargs['sfun']
                            ),
             'result': False}
+

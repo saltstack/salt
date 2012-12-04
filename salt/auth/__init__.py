@@ -56,7 +56,7 @@ class LoadAuth(object):
 
     def __auth_call(self, load):
         '''
-        Return the token and set the cache data for use 
+        Return the token and set the cache data for use
 
         Do not call this directly! Use the time_auth method to overcome timing
         attacks
@@ -117,7 +117,7 @@ class LoadAuth(object):
                  'name': fcall['args'][0],
                  'eauth': load['eauth'],
                  'token': tok}
-        with open(t_path, 'w+') as fp_:
+        with salt.utils.fopen(t_path, 'w+') as fp_:
             fp_.write(self.serial.dumps(tdata))
         return tdata
 
@@ -129,7 +129,7 @@ class LoadAuth(object):
         t_path = os.path.join(self.opts['token_dir'], tok)
         if not os.path.isfile(t_path):
             return {}
-        with open(t_path, 'r') as fp_:
+        with salt.utils.fopen(t_path, 'r') as fp_:
             tdata = self.serial.loads(fp_.read())
         rm_tok = False
         if not 'expire' in tdata:
@@ -162,12 +162,12 @@ class Resolver(object):
         '''
         ret = {}
         if not eauth:
-            print 'External authentication system has not been specified'
+            print('External authentication system has not been specified')
             return ret
         fstr = '{0}.auth'.format(eauth)
         if not fstr in self.auth:
-            print ('The specified external authentication system "{0}" is '
-                   'not available').format(eauth)
+            print(('The specified external authentication system "{0}" is '
+                   'not available').format(eauth))
             return ret
 
         args = salt.utils.arg_lookup(self.auth[fstr])
@@ -200,7 +200,7 @@ class Resolver(object):
         if not 'token' in tdata:
             return tdata
         try:
-            with open(self.opts['token_file'], 'w+') as fp_:
+            with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
         except (IOError, OSError):
             pass

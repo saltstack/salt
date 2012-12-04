@@ -1,8 +1,8 @@
 .. _all-salt.pillars:
 
-============================
-Full list of builtin pillars
-============================
+===================================
+Full list of builtin pillar modules
+===================================
 
 .. currentmodule:: salt.pillar
 

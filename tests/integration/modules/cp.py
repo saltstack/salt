@@ -1,6 +1,9 @@
 # Import python libs
 import os
 import hashlib
+
+# Import salt libs
+import salt.utils
 import integration
 
 
@@ -19,7 +22,66 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                     tgt,
                 ])
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_file_templated_paths(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'cheese')
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://{{grains.test_grain}}',
+                tgt.replace('cheese', '{{grains.test_grain}}')
+            ],
+            template='jinja'
+        )
+        with salt.utils.fopen(tgt, 'r') as cheese:
+            data = cheese.read()
+            self.assertIn('Gromit', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_file_gzipped(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'file.big')
+        src = os.path.join(integration.FILES, 'file/base/file.big')
+        with salt.utils.fopen(src, 'r') as fp_:
+            hash = hashlib.md5(fp_.read()).hexdigest()
+
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://file.big',
+                tgt,
+            ],
+            gzip=5
+        )
+        with salt.utils.fopen(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+            self.assertEqual(hash, hashlib.md5(data).hexdigest())
+
+    def test_get_file_makedirs(self):
+        '''
+        cp.get_file
+        '''
+        tgt = os.path.join(integration.TMP, 'make/dirs/scene33')
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://grail/scene33',
+                tgt,
+            ],
+            makedirs=True
+        )
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -36,7 +98,7 @@ class CPModuleTest(integration.ModuleCase):
                     tgt,
                     'spam=bacon',
                 ])
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('bacon', data)
             self.assertNotIn('spam', data)
@@ -57,6 +119,23 @@ class CPModuleTest(integration.ModuleCase):
         self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
         self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
 
+    def test_get_dir_templated_paths(self):
+        '''
+        cp.get_dir
+        '''
+        tgt = os.path.join(integration.TMP, 'many')
+        self.run_function(
+            'cp.get_dir',
+            [
+                'salt://{{grains.script}}',
+                tgt.replace('many', '{{grains.alot}}')
+            ]
+        )
+        self.assertIn('grail', os.listdir(tgt))
+        self.assertIn('36', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
+
     def test_get_url(self):
         '''
         cp.get_url
@@ -69,7 +148,7 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                     tgt,
                 ])
-        with open(tgt, 'r') as scene:
+        with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -83,7 +162,7 @@ class CPModuleTest(integration.ModuleCase):
                 [
                     'salt://grail/scene33',
                 ])
-        with open(ret, 'r') as scene:
+        with salt.utils.fopen(ret, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
@@ -98,7 +177,7 @@ class CPModuleTest(integration.ModuleCase):
                     ['salt://grail/scene33', 'salt://grail/36/scene'],
                 ])
         for path in ret:
-            with open(path, 'r') as scene:
+            with salt.utils.fopen(path, 'r') as scene:
                 data = scene.read()
                 self.assertIn('ARTHUR:', data)
                 self.assertNotIn('bacon', data)
@@ -118,12 +197,12 @@ class CPModuleTest(integration.ModuleCase):
         cp.cache_local_file
         '''
         src = os.path.join(integration.TMP, 'random')
-        with open(src, 'w+') as fn_:
+        with salt.utils.fopen(src, 'w+') as fn_:
             fn_.write('foo')
         ret = self.run_function(
                 'cp.cache_local_file',
                 [src])
-        with open(ret, 'r') as cp_:
+        with salt.utils.fopen(ret, 'r') as cp_:
             self.assertEqual(cp_.read(), 'foo')
 
     def test_list_states(self):
@@ -188,7 +267,7 @@ class CPModuleTest(integration.ModuleCase):
                 [
                     'salt://grail/scene33',
                 ])
-        with open(path, 'r') as fn_:
+        with salt.utils.fopen(path, 'r') as fn_:
             self.assertEqual(
                     md5_hash['hsum'],
                     hashlib.md5(fn_.read()).hexdigest()

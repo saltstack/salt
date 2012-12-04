@@ -3,11 +3,24 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-import fnmatch
+# Import python libs
 import os
 import re
+import fnmatch
+
+# Import salt libs
+import salt.utils
+
 
 __opts__ = {}
+
+
+# TODO: Make this module support windows hosts
+# TODO: Make this module support BSD hosts properly, this is very Linux specific
+def __virtual__():
+    if 'Windows' in __grains__['os']:
+        return False
+    return 'status'
 
 
 def _number(text):
@@ -17,13 +30,12 @@ def _number(text):
     point number if the string is a real number, or the string unchanged
     otherwise.
     '''
-    try:
+    if text.isdigit():
         return int(text)
+    try:
+        return float(text)
     except ValueError:
-        try:
-            return float(text)
-        except ValueError:
-            return text
+        return text
 
 
 def procs():
@@ -39,7 +51,7 @@ def procs():
     uind = 0
     pind = 0
     cind = 0
-    plines = __salt__['cmd.run'](__grains__['ps']).split('\n')
+    plines = __salt__['cmd.run'](__grains__['ps']).splitlines()
     guide = plines.pop(0).split()
     if 'USER' in guide:
         uind = guide.index('USER')
@@ -82,14 +94,12 @@ def custom():
         salt '*' status.custom
     '''
     ret = {}
-    for opt in __opts__:
-        keys = opt.split('.')
-        if keys[0] != 'status':
-            continue
-        func = '{0}()'.format(keys[1])
+    conf = __salt__['config.dot_vals']('status')
+    for key, val in conf.items():
+        func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)
 
-        for item in __opts__[opt]:
+        for item in val:
             ret[item] = vals[item]
 
     return ret
@@ -103,7 +113,7 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    return __salt__['cmd.run']('uptime').strip()
+    return __salt__['cmd.run']('uptime')
 
 
 def loadavg():
@@ -117,7 +127,7 @@ def loadavg():
     procf = '/proc/loadavg'
     if not os.path.isfile(procf):
         return {}
-    comps = open(procf, 'r').read().strip()
+    comps = salt.utils.fopen(procf, 'r').read().strip()
     load_avg = comps.split()
     return {'1-min':  _number(load_avg[0]),
             '5-min':  _number(load_avg[1]),
@@ -135,7 +145,7 @@ def cpustats():
     procf = '/proc/stat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -172,7 +182,7 @@ def meminfo():
     procf = '/proc/meminfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -198,7 +208,7 @@ def cpuinfo():
     procf = '/proc/cpuinfo'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -223,7 +233,7 @@ def diskstats():
     procf = '/proc/diskstats'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -282,7 +292,7 @@ def diskusage(*args):
         # determine which mount points host the specified fstypes
         p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
                             for fstype in fstypes))
-        with open(procf, 'r') as fp:
+        with salt.utils.fopen(procf, 'r') as fp:
             for line in fp:
                 comps = line.split()
                 if len(comps) >= 3:
@@ -313,7 +323,7 @@ def vmstats():
     procf = '/proc/vmstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -334,7 +344,7 @@ def netstats():
     procf = '/proc/net/netstat'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     headers = ['']
     for line in stats:
@@ -367,7 +377,7 @@ def netdev():
     procf = '/proc/net/dev'
     if not os.path.isfile(procf):
         return {}
-    stats = open(procf, 'r').read().split('\n')
+    stats = salt.utils.fopen(procf, 'r').read().splitlines()
     ret = {}
     for line in stats:
         if not line:
@@ -378,7 +388,7 @@ def netdev():
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
         #Support lines both like eth0:999 and eth0: 9999
-        comps.insert(1,line.split(':')[1].strip().split()[0])
+        comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
                          'rx_compressed': _number(comps[7]),
@@ -408,7 +418,7 @@ def w():
         salt '*' status.w
     '''
     user_list = []
-    users = __salt__['cmd.run']('w -h').split('\n')
+    users = __salt__['cmd.run']('w -h').splitlines()
     for row in users:
         if not row:
             continue
@@ -456,6 +466,4 @@ def pid(sig):
     '''
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
-    return (__salt__['cmd.run_stdout'](cmd) or '').strip()
-
-
+    return (__salt__['cmd.run_stdout'](cmd) or '')

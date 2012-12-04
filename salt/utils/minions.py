@@ -81,7 +81,9 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        minions = set(
+            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        )
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
@@ -92,7 +94,9 @@ class CkMinions(object):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                grains = self.serial.load(open(datap)).get('grains')
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
                 comps = expr.split(':')
                 if len(comps) < 2:
                     continue
@@ -134,7 +138,9 @@ class CkMinions(object):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                grains = self.serial.load(open(datap)).get('grains')
+                grains = self.serial.load(
+                    salt.utils.fopen(datap)
+                ).get('grains')
                 comps = expr.split(':')
                 if len(comps) < 2:
                     continue
@@ -245,28 +251,62 @@ class CkMinions(object):
                 vals.append(False)
         return all(vals)
 
-    def auth_check(self, auth_list, fun, tgt, tgt_type='glob'):
+    def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
+        # compound commands will come in a list so treat everything as a list
+        if not isinstance(funs, list):
+            funs = [funs]
+
+        for fun in funs:
+            for ind in auth_list:
+                if isinstance(ind, str):
+                    # Allowed for all minions
+                    if self.match_check(ind, fun):
+                        return True
+                elif isinstance(ind, dict):
+                    if len(ind) != 1:
+                        # Invalid argument
+                        continue
+                    valid = ind.keys()[0]
+                    # Check if minions are allowed
+                    if self.validate_tgt(
+                            valid,
+                            tgt,
+                            tgt_type):
+                        # Minions are allowed, verify function in allowed list
+                        if isinstance(ind[valid], str):
+                            if self.match_check(ind[valid], fun):
+                                return True
+                        elif isinstance(ind[valid], list):
+                            for regex in ind[valid]:
+                                if self.match_check(regex, fun):
+                                    return True
+        return False
+
+    def wheel_check(self, auth_list, fun):
+        '''
+        Check special api permissions
+        '''
+        comps = fun.split('.')
+        if len(comps) != 2:
+            return False
+        mod = comps[0]
+        fun = comps[1]
         for ind in auth_list:
             if isinstance(ind, str):
-                # Allowed for all minions
-                if self.match_check(ind, fun):
+                if ind.startswith('@') and ind[1:] == mod:
+                    return True
+                if ind == '@wheel':
                     return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
-                    # Invalid argument
                     continue
                 valid = ind.keys()[0]
-                # Check if minions are allowed
-                if self.validate_tgt(
-                        valid,
-                        tgt,
-                        tgt_type):
-                    # Minions are allowed, verify function in allowed list
+                if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
                             return True

@@ -11,9 +11,13 @@ import os
 import logging
 import traceback
 
+# Import Salt libs
+from salt.exceptions import SaltInvocationError
+
 # Import third party libs
 import yaml
 from jinja2 import Environment, FileSystemLoader
+
 try:
     import ldap
     import ldap.modlist
@@ -100,7 +104,7 @@ def _result_to_dict(data, result, conf):
                         data[k] = [v]
                     else:
                         data[k].append(v)
-    print 'Returning data %s' % data
+    print 'Returning data {0}'.format(data)
     return data
 
 
@@ -141,7 +145,7 @@ def _do_search(conf):
     return result
 
 
-def ext_pillar(config_file):
+def ext_pillar(pillar, config_file):
     '''
     Execute LDAP searches and return the aggregated data
     '''
@@ -165,7 +169,7 @@ def ext_pillar(config_file):
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
-        print 'source %s got result %s' % (source, result)
+        print 'source {0} got result {1}'.format(source, result)
         if result:
             data = _result_to_dict(data, result, config)
     return data

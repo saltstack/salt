@@ -79,7 +79,7 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(collection='pillar', id_field='_id', re_pattern=None,
+def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
                re_replace='', fields=None):
     """
     Connect to a mongo database and read per-node pillar information.
@@ -128,19 +128,19 @@ def ext_pillar(collection='pillar', id_field='_id', re_pattern=None,
              "in mongo".format(id_field, minion_id))
 
 
-    pillar = db[collection].find_one({id_field: minion_id}, fields=fields)
-    if pillar:
+    result = db[collection].find_one({id_field: minion_id}, fields=fields)
+    if result:
         if fields:
             log.debug("ext_pillar.mongo: found document, returning fields "
                       "'{0}'".format(fields))
         else:
             log.debug("ext_pillar.mongo: found document, returning whole doc")
-        if '_id' in pillar:
+        if '_id' in result:
             # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
             # and whatnot will still cause problems.
-            pillar['_id'] = str(pillar['_id'])
-        return pillar
+            result['_id'] = str(result['_id'])
+        return result
     else:
         # If we can't find the minion the database it's not necessarily an
         # error.

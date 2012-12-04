@@ -17,9 +17,17 @@ import datetime
 import tempfile
 import shlex
 import shutil
+import subprocess
 import time
 import platform
 from calendar import month_abbr as months
+
+try:
+    import fcntl
+    has_fcntl = True
+except ImportError:
+    # fcntl is not available on windows
+    has_fcntl = False
 
 # Import Salt libs
 import salt.minion
@@ -59,6 +67,9 @@ def _getargs(func):
 
     if inspect.isfunction(func):
         aspec = inspect.getargspec(func)
+    elif inspect.ismethod(func):
+        aspec = inspect.getargspec(func)
+        del aspec.args[0]  # self
     elif isinstance(func, object):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
@@ -191,7 +202,7 @@ def daemonize_if(opts, **kwargs):
     daemonize()
     sdata = {'pid': os.getpid()}
     sdata.update(data)
-    with open(fn_, 'w+') as f:
+    with salt.utils.fopen(fn_, 'w+') as f:
         f.write(serial.dumps(sdata))
 
 
@@ -296,7 +307,7 @@ def gen_mac(prefix='52:54:'):
     Generates a mac addr with the defined prefix
     '''
     src = ['1', '2', '3', '4', '5', '6', '7', '8',
-            '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
+           '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
     mac = prefix
     while len(mac) < 18:
         if len(mac) < 3:
@@ -318,9 +329,9 @@ def dns_check(addr, safe=False):
         try:
             addr = socket.gethostbyname(addr)
         except socket.gaierror:
-            err = ('This master address: \'{0}\' was previously resolvable but '
-                  'now fails to resolve! The previously resolved ip addr '
-                  'will continue to be used').format(addr)
+            err = ('This master address: \'{0}\' was previously resolvable '
+                   'but now fails to resolve! The previously resolved ip addr '
+                   'will continue to be used').format(addr)
             if safe:
                 import salt.log
                 if salt.log.is_console_configured():
@@ -328,7 +339,7 @@ def dns_check(addr, safe=False):
                     # the master or minion instance calling this hasn't even
                     # started running
                     logging.getLogger(__name__).error(err)
-                raise SaltClientError
+                raise SaltClientError()
             else:
                 err = err.format(addr)
                 sys.stderr.write(err)
@@ -346,7 +357,7 @@ def required_module_list(docstring=None):
     '''
     ret = []
     txt = 'Required python modules: '
-    data = docstring.split('\n') if docstring else []
+    data = docstring.splitlines() if docstring else []
     mod_list = list(x for x in data if x.startswith(txt))
     if not mod_list:
         return []
@@ -381,7 +392,7 @@ def prep_jid(cachedir, sum_type, user='root'):
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
         os.makedirs(jid_dir_)
-        with open(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
     else:
         return prep_jid(cachedir, sum_type)
@@ -429,8 +440,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
                 )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
-    fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
-    os.close(fd_)
+    tgt = mkstemp(prefix=bname, dir=dname)
     shutil.copyfile(source, tgt)
     mask = os.umask(0)
     os.umask(mask)
@@ -456,10 +466,12 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
-    try:
-        shutil.move(tgt, dest)
-    except Exception:
-        pass
+    shutil.move(tgt, dest)
+    # If SELINUX is available run a restorecon on the file
+    rcon = which('restorecon')
+    if rcon:
+        cmd = [rcon, dest]
+        subprocess.call(cmd)
     if os.path.isfile(tgt):
         # The temp file failed to move
         try:
@@ -500,7 +512,7 @@ def pem_finger(path, sum_type='md5'):
     '''
     if not os.path.isfile(path):
         return ''
-    with open(path, 'rb') as fp_:
+    with salt.utils.fopen(path, 'rb') as fp_:
         key = ''.join(fp_.readlines()[1:-1])
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
@@ -554,7 +566,7 @@ def build_whitepace_splited_regex(text):
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
-    return regex
+    return r'(?m)^{0}$'.format(regex)
 
 
 def format_call(fun, data):
@@ -568,27 +580,27 @@ def format_call(fun, data):
     aspec = _getargs(fun)
     arglen = 0
     deflen = 0
-    if isinstance(aspec[0], list):
-        arglen = len(aspec[0])
-    if isinstance(aspec[3], tuple):
-        deflen = len(aspec[3])
-    if aspec[2]:
+    if isinstance(aspec.args, list):
+        arglen = len(aspec.args)
+    if isinstance(aspec.defaults, tuple):
+        deflen = len(aspec.defaults)
+    if aspec.keywords:
         # This state accepts kwargs
         ret['kwargs'] = {}
         for key in data:
             # Passing kwargs the conflict with args == stack trace
-            if key in aspec[0]:
+            if key in aspec.args:
                 continue
             ret['kwargs'][key] = data[key]
     kwargs = {}
     for ind in range(arglen - 1, 0, -1):
         minus = arglen - ind
         if deflen - minus > -1:
-            kwargs[aspec[0][ind]] = aspec[3][-minus]
+            kwargs[aspec.args[ind]] = aspec.defaults[-minus]
     for arg in kwargs:
         if arg in data:
             kwargs[arg] = data[arg]
-    for arg in aspec[0]:
+    for arg in aspec.args:
         if arg in kwargs:
             ret['args'].append(kwargs[arg])
         else:
@@ -598,7 +610,8 @@ def format_call(fun, data):
 
 def arg_lookup(fun):
     '''
-    Return a dict containing the arguments and default arguments to the function
+    Return a dict containing the arguments and default arguments to the
+    function.
     '''
     ret = {'args': [],
            'kwargs': {}}
@@ -620,3 +633,151 @@ def arg_lookup(fun):
             ret['args'].append(arg)
     return ret
 
+
+def istextfile(fp_, blocksize=512):
+    '''
+    Uses heuristics to guess whether the given file is text or binary,
+    by reading a single block of bytes from the file.
+    If more than 30% of the chars in the block are non-text, or there
+    are NUL ('\x00') bytes in the block, assume this is a binary file.
+    '''
+    PY3 = sys.version_info[0] == 3
+    int2byte = (lambda x: bytes((x,))) if PY3 else chr
+    text_characters = (
+        b''.join(int2byte(i) for i in range(32, 127)) +
+        b'\n\r\t\f\b')
+    block = fp_.read(blocksize)
+    if b'\x00' in block:
+        # Files with null bytes are binary
+        return False
+    elif not block:
+        # An empty file is considered a valid text file
+        return True
+
+    nontext = block.translate(None, text_characters)
+    return float(len(nontext)) / len(block) <= 0.30
+
+
+def isorted(to_sort):
+    """
+    Sort a list of strings ignoring case.
+
+    >>> L = ['foo', 'Foo', 'bar', 'Bar']
+    >>> sorted(L)
+    ['Bar', 'Foo', 'bar', 'foo']
+    >>> sorted(L, key=lambda x: x.lower())
+    ['bar', 'Bar', 'foo', 'Foo']
+    >>>
+    """
+    return sorted(to_sort, key=lambda x: x.lower())
+
+
+def mysql_to_dict(data, key):
+    '''
+    Convert MySQL-style output to a python dictionary
+    '''
+    ret = {}
+    headers = ['']
+    for line in data:
+        if not line:
+            continue
+        if line.startswith('+'):
+            continue
+        comps = line.split('|')
+        for comp in range(len(comps)):
+            comps[comp] = comps[comp].strip()
+        if len(headers) > 1:
+            index = len(headers) - 1
+            row = {}
+            for field in range(index):
+                if field < 1:
+                    continue
+                else:
+                    row[headers[field]] = str_to_num(comps[field])
+            ret[row[key]] = row
+        else:
+            headers = comps
+    return ret
+
+
+def str_to_num(text):
+    '''
+    Convert a string to a number.
+    Returns an integer if the string represents an integer, a floating
+    point number if the string is a real number, or the string unchanged
+    otherwise.
+    '''
+    try:
+        return int(text)
+    except ValueError:
+        try:
+            return float(text)
+        except ValueError:
+            return text
+
+
+def memoize(func):
+    '''
+    Memoize aka cache the return output of a function
+    given a specific set of arguments
+    '''
+    cache = {}
+
+    def _m(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+    return _m
+
+
+def fopen(*args, **kwargs):
+    '''
+    Wrapper around open() built-in to set CLOEXEC on the fd.
+
+    This flag specifies that the file descriptor should be closed when an exec
+    function is invoked;
+    When a file descriptor is allocated (as with open or dup ), this bit is
+    initially cleared on the new file descriptor, meaning that descriptor will
+    survive into the new program after exec.
+    '''
+    fhandle = open(*args, **kwargs)
+    if has_fcntl:
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC
+        except AttributeError:
+            FD_CLOEXEC = 1
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+    return fhandle
+
+
+def mkstemp(*args, **kwargs):
+    '''
+    Helper function which does exactly what `tempfile.mkstemp()` does but
+    accepts another argument, `close_fd`, which, by default, is true and closes
+    the fd before returning the file path. Something commonly done throughout
+    Salt's code.
+    '''
+    close_fd = kwargs.pop('close_fd', True)
+    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
+    if close_fd is False:
+        return (fd_, fpath)
+    os.close(fd_)
+    del(fd_)
+    return fpath
+
+
+def clean_kwargs(**kwargs):
+    '''
+    Clean out the __pub* keys from the kwargs dict passed into the execution 
+    module functions. The __pub* keys are useful for tracking what was used to
+    invoke the function call, but they may not be desierable to have if
+    passing the kwargs forward wholesale.
+    '''
+    ret = {}
+    for key, val in kwargs.items():
+        if not key.startswith('__pub'):
+            ret[key] = val
+    return ret

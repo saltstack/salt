@@ -10,7 +10,6 @@ import sys
 import hmac
 import hashlib
 import logging
-import tempfile
 
 # Import Cryptography libs
 from M2Crypto import RSA
@@ -119,7 +118,7 @@ class MasterKeys(dict):
         if not os.path.isfile(self.pub_path):
             key = self.__get_keys()
             key.save_pub_key(self.pub_path)
-        return open(self.pub_path, 'r').read()
+        return salt.utils.fopen(self.pub_path, 'r').read()
 
 
 class Auth(object):
@@ -147,7 +146,7 @@ class Auth(object):
         key = None
         # Make sure all key parent directories are accessible
         user = self.opts.get('user', 'root')
-        salt.utils.verify.check_parent_dirs(self.rsa_path, user)
+        salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
             try:
@@ -171,8 +170,7 @@ class Auth(object):
         '''
         payload = {}
         key = self.get_keys()
-        fd_, tmp_pub = tempfile.mkstemp()
-        os.close(fd_)
+        tmp_pub = salt.utils.mkstemp()
         key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
@@ -183,7 +181,7 @@ class Auth(object):
             payload['load']['token'] = pub.public_encrypt(self.token, 4)
         except Exception:
             pass
-        with open(tmp_pub, 'r') as fp_:
+        with salt.utils.fopen(tmp_pub, 'r') as fp_:
             payload['load']['pub'] = fp_.read()
         os.remove(tmp_pub)
         return payload
@@ -211,13 +209,9 @@ class Auth(object):
 
         Returns a bool
         '''
-        fd_, tmp_pub = tempfile.mkstemp()
-        os.close(fd_)
-        with open(tmp_pub, 'w+') as fp_:
-            fp_.write(master_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
-            local_master_pub = open(m_pub_fn).read()
+            local_master_pub = salt.utils.fopen(m_pub_fn).read()
             if not master_pub == local_master_pub:
                 # This is not the last master we connected to
                 log.error('The master key has changed, the salt master could '
@@ -233,7 +227,7 @@ class Auth(object):
                 return False
             return True
         else:
-            open(m_pub_fn, 'w+').write(master_pub)
+            salt.utils.fopen(m_pub_fn, 'w+').write(master_pub)
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')

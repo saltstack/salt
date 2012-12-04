@@ -2,8 +2,9 @@
 Module for gathering and managing network information
 '''
 
-import sys
-from string import ascii_letters, digits
+# Import Salt libs
+import re
+# Import Salt libs
 from salt.utils.socket_util import sanitize_host
 
 __outputter__ = {
@@ -44,7 +45,7 @@ def netstat():
     '''
     ret = []
     cmd = 'netstat -na'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if line.startswith('  TCP'):
@@ -72,7 +73,7 @@ def traceroute(host):
     '''
     ret = []
     cmd = 'tracert {0}'.format(sanitize_host(host))
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if not ' ' in line:
             continue
@@ -124,7 +125,7 @@ def nslookup(host):
     '''
     ret = []
     cmd = 'nslookup {0}'.format(sanitize_host(host))
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if line.startswith('Non-authoritative'):
             continue
@@ -170,7 +171,6 @@ def _interfaces_ipconfig(out):
     Returns a dictionary of interfaces with various information about each
     (up/down state, ip address, netmask, and hwaddr)
     '''
-    import re
     ifaces = dict()
     iface = None
 

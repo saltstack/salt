@@ -1,5 +1,4 @@
-/tmp/salttest/issue-1879:
-      
+{{ salt['runtests_helpers.get_salt_temp_dir_for_path']('issue-1879') }}:
   file.append:
     - text: |
         # set variable identifying the chroot you work in (used in the prompt below)

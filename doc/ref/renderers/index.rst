@@ -45,6 +45,55 @@ use the Python or ``py`` renderer:
 
 The first line is a shebang that references the ``py`` renderer.
 
+Composing Renderers
+-------------------
+A renderer can be composed from other renderers by connecting them in a series
+of pipes(``|``). In fact, the default ``Jinja + YAML`` renderer is implemented
+by combining a yaml renderer and a jinja renderer. Such renderer configuration
+is specified as: ``jinja | yaml``.
+
+Other renderer combinations are possible, here's a few examples:
+
+  ``yaml``
+      i.e, just YAML, no templating.
+
+  ``mako | yaml``
+      pass the input to the ``mako`` renderer, whose output is then fed into the
+      ``yaml`` renderer.
+  
+  ``jinja | mako | yaml``
+      This one allows you to use both jinja and mako templating syntax in the
+      input and then parse the final rendererd output as YAML.
+
+And here's a contrived example sls file using the ``jinja | mako | yaml`` renderer:
+
+.. code-block:: python
+
+    #!jinja|mako|yaml
+
+    An_Example:
+      cmd.run:
+        - name: |
+            echo "Using Salt ${grains['saltversion']}" \
+                 "from path {{grains['saltpath']}}."
+        - cwd: /
+
+    <%doc> ${...} is Mako's notation, and so is this comment. </%doc>
+    {#     Similarly, {{...}} is Jinja's notation, and so is this comment. #}
+
+For backward compatibility, ``jinja | yaml``  can also be written as
+``yaml_jinja``, and similarly, the ``yaml_mako``, ``yaml_wempy``,
+``json_jinja``, ``json_mako``, and ``json_wempy`` renderers are all supported
+as well.
+
+Keep in mind that not all renderers can be used alone or with any other renderers.
+For example, the template renderers shouldn't be used alone as their outputs are
+just strings, which still need to be parsed by another renderer to turn them into
+highstate data structures. Also, for example, it doesn't make sense to specify
+``yaml | jinja`` either, because the output of the yaml renderer is a highstate
+data structure(a dict in Python), which cannot be used as the input to a template
+renderer. Therefore, when combining renderers, you should know what each renderer
+accepts as input and what it returns as output.
 
 Writing Renderers
 -----------------
@@ -64,26 +113,14 @@ renderers included with Salt can be found here:
 
 :blob:`salt/renderers`
 
-Here is a simple Jinja + YAML example:
+Here is a simple YAML renderer example:
 
 .. code-block:: python
 
-    # Import Python libs
-    import os
-
-    # Import Third Party libs
     import yaml
-    from jinja2 import Template
+    def render(yaml_data, env='', sls='', **kws):
+        if not isinstance(yaml_data, basestring):
+            yaml_data = yaml_data.read()
+        data = yaml.load(yaml_data)
+        return data if data else {}
 
-    def render(template):
-        '''
-        Render the data passing the functions and grains into the rendering system
-        '''
-        if not os.path.isfile(template):
-            return {}
-        passthrough = {}
-        passthrough.update(__salt__)
-        passthrough.update(__grains__)
-        template = Template(open(template, 'r').read())
-        yaml_data = template.render(**passthrough)
-        return yaml.load(yaml_data)

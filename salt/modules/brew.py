@@ -58,12 +58,12 @@ def remove(pkgs):
         salt '*' pkg.remove <package,package,package>
     '''
     formulas = ' '.join(pkgs.split(','))
-    cmd = '/usr/local/bin/brew uninstall {0}'.format(formulas)
+    cmd = 'brew uninstall {0}'.format(formulas)
 
     return __salt__['cmd.run'](cmd)
 
 
-def install(pkgs):
+def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Install the passed package(s) with ``brew install``
 
@@ -87,9 +87,13 @@ def install(pkgs):
     old = list_pkgs(*pkgs)
 
     formulas = ' '.join(pkgs)
-    user = __salt__['file.get_user']('/usr/local')
-    cmd = '/usr/local/bin/brew install {0}'.format(formulas)
-    __salt__['cmd.run'](cmd, runas=user)
+    homebrew_prefix = __salt__['cmd.run']('brew --prefix')
+    user = __salt__['file.get_user'](homebrew_prefix)
+    cmd = 'brew install {0}'.format(formulas)
+    if user != __opts__['user']:
+        __salt__['cmd.run'](cmd, runas=user)
+    else:
+        __salt__['cmd.run'](cmd)
 
     new = list_pkgs(*pkgs)
 
@@ -104,7 +108,7 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    cmd = '/usr/local/bin/brew outdated'
+    cmd = 'brew outdated'
 
     return __salt__['cmd.run'](cmd).splitlines()
 

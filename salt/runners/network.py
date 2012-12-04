@@ -2,7 +2,11 @@
 Network tools to run from the Master
 '''
 
+# Import python libs
 import socket
+
+# Import salt libs
+import salt.utils
 
 
 def wollist(maclist, bcast='255.255.255.255', destport=9):
@@ -12,13 +16,13 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
 
     CLI Example::
 
-        salt-run '/path/to/maclist'
-        salt-run '/path/to/maclist' 255.255.255.255 7
-        salt-run '/path/to/maclist' 255.255.255.255 7
+        salt-run network.wollist '/path/to/maclist'
+        salt-run network.wollist '/path/to/maclist' 255.255.255.255 7
+        salt-run network.wollist '/path/to/maclist' 255.255.255.255 7
     '''
     ret = []
     try:
-        file = open(maclist, 'r')
+        file = salt.utils.fopen(maclist, 'r')
         for mac in file:
             wol(mac.strip(), bcast, destport)
             print('Waking up {0}'.format(mac.strip()))

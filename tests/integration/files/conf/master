@@ -1,6 +1,6 @@
 publish_port: 64505
 ret_port: 64506
-worker_threads: 3
+worker_threads: 2
 root_dir: /tmp/salttest
 pidfile: masterpid
 pki_dir: pki
@@ -14,5 +14,6 @@ peer:
     - 'test.*'
 log_file: master
 key_logfile: key
-pub_refresh: False
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
+
+file_buffer_size: 8192

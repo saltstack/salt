@@ -4,7 +4,6 @@ A module to wrap pacman calls, since Arch is the best
 '''
 
 import logging
-import re
 
 log = logging.getLogger(__name__)
 
@@ -24,28 +23,6 @@ def _list_removed(old, new):
         if pkg not in new:
             pkgs.append(pkg)
     return pkgs
-
-
-def _parse_pkg_meta(path):
-    '''
-    Retrieve package name and version number from package metadata
-    '''
-    name = ''
-    version = ''
-    result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
-    if result['retcode'] == 0:
-        for line in result['stdout'].split('\n'):
-            if not name:
-                m = re.match('^Name\s*:\s*(.+)\s*$',line)
-                if m:
-                    name = m.group(1)
-                    continue
-            if not version:
-                m = re.match('^Version\s*:\s*(.+)\s*$',line)
-                if m:
-                    version = m.group(1)
-                    continue
-    return name,version
 
 
 def available_version(name):
@@ -82,7 +59,7 @@ def list_upgrades():
     upgrades = {}
     lines = __salt__['cmd.run'](
             'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
-            ).split('\n')
+            ).splitlines()
     for line in lines:
         comps = line.split(' ')
         if len(comps) < 2:
@@ -118,7 +95,7 @@ def list_pkgs():
     '''
     cmd = 'pacman -Q'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -139,7 +116,7 @@ def refresh_db():
     '''
     cmd = 'LANG=C pacman -Sy'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if line.strip().startswith('::'):
             continue
@@ -154,65 +131,75 @@ def refresh_db():
     return ret
 
 
-def install(name, refresh=False, **kwargs):
+def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     '''
-    Install the passed package, add refresh=True to install with an -Sy
+    Install the passed package, add refresh=True to install with an -Sy.
 
-    Return a dict containing the new package names and versions::
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if either "pkgs" or "sources" is passed. Additionally, please
+        note that this option can only be used to install packages from a
+        software repository. To install a package file manually, use the
+        "sources" option.
+
+        CLI Example::
+            salt '*' pkg.install <package name>
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of packages to install. Must be passed as a list of dicts, 
+        with the keys being package names, and the values being the source URI
+        or local path to the package.
+
+        CLI Example::
+            salt '*' pkg.install sources='[{"foo": "salt://foo.pkg.tar.xz"},{"bar": "salt://bar.pkg.tar.xz"}]'
+
+
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
-
-    CLI Example::
-
-        salt '*' pkg.install <package name>
+                       'new': '<new-version>']}
     '''
-
-    if 'source' in kwargs:
-        if __salt__['config.valid_fileproto'](kwargs['source']):
-            pkg_file = __salt__['cp.cache_file'](kwargs['source'])
-        else:
-            pkg_file = kwargs['source']
-        pname,pversion = _parse_pkg_meta(pkg_file)
-        if name != pname:
-            log.error('Package file {0} (Name: {1}) does not match the '
-                      'specified package name ({2})'.format(kwargs['source'],
-                                                            pname,
-                                                            name))
-            cmd = ''
-        else:
-            cmd = 'pacman -U --noprogressbar --noconfirm {0}'.format(pkg_file)
-    else:
-        fname = name
-        for vkey, vsign in (('gt', '>'), ('lt', '<'),
-                            ('eq', '='), ('version', '=')):
-            if vkey in kwargs and kwargs[vkey] is not None:
-                fname = '"{0}{1}{2}"'.format(name, vsign, kwargs[vkey])
-                break
-        if refresh:
+    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                 pkgs,
+                                                                 sources)
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
+    elif pkg_type == 'file':
+        cmd = 'pacman -U --noprogressbar --noconfirm ' \
+              '{0}'.format(' '.join(pkg_params))
+    elif pkg_type == 'repository':
+        fname = ' '.join(pkg_params)
+        if len(pkg_params) == 1:
+            for vkey, vsign in (('gt', '>'), ('lt', '<'),
+                                ('eq', '='), ('version', '=')):
+                if kwargs.get(vkey) is not None:
+                    fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
+                    break
+        # Catch both boolean input from state and string input from CLI
+        if refresh is True or refresh == 'True':
             cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
         else:
             cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
 
     old = list_pkgs()
-    if cmd: __salt__['cmd.retcode'](cmd)
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    if stderr:
+        log.error(stderr)
     new = list_pkgs()
-
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def upgrade():

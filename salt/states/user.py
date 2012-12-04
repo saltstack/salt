@@ -23,9 +23,11 @@ as either absent or present
       user.absent
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)
+
 
 def _changes(
         name,
@@ -65,7 +67,11 @@ def _changes(
             if gid:
                 if lusr['gid'] != gid:
                     change['gid'] = gid
-            if wanted_groups:
+            # remove the default group from the list for
+            # comparison purposes
+            if __salt__['file.gid_to_group'](gid or lusr['gid']) in lusr['groups']:
+                lusr['groups'].remove(__salt__['file.gid_to_group'](gid or lusr['gid']))
+            if groups is not None or wanted_groups:
                 if lusr['groups'] != wanted_groups:
                     change['groups'] = wanted_groups
             if home:
@@ -125,7 +131,7 @@ def present(
 
     gid
         The default group id
-    
+
     gid_from_name
         If True, the default group id will be set to the id of the group with
         the same name as the user.
@@ -133,6 +139,8 @@ def present(
     groups
         A list of groups to assign the user to, pass a list object. If a group
         specified here does not exist on the minion, the state will fail.
+        If set to the empty list, the user will be removed from all groups
+        except the default group.
 
     optional_groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -201,25 +209,29 @@ def present(
         for missing_optgroup in [x for x in optional_groups
                                  if x not in present_optgroups]:
             log.debug('Optional group "{0}" for user "{1}" is not '
-                      'present'.format(missing_optgroup,name))
+                      'present'.format(missing_optgroup, name))
     else:
         present_optgroups = None
-
 
     # Log a warning for all groups specified in both "groups" and
     # "optional_groups" lists.
     if groups and optional_groups:
         for x in set(groups).intersection(optional_groups):
             log.warning('Group "{0}" specified in both groups and '
-                        'optional_groups for user {1}'.format(x,name))
+                        'optional_groups for user {1}'.format(x, name))
 
-    if fullname is None: fullname = ''
-    if roomnumber is None: roomnumber = ''
-    if workphone is None: workphone = ''
-    if homephone is None: homephone = ''
+    if fullname is None:
+        fullname = ''
+    if roomnumber is None:
+        roomnumber = ''
+    if workphone is None:
+        workphone = ''
+    if homephone is None:
+        homephone = ''
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
+
     changes = _changes(
             name,
             uid,
@@ -235,6 +247,7 @@ def present(
             roomnumber,
             workphone,
             homephone)
+
     if changes:
         if __opts__['test']:
             ret['result'] = None

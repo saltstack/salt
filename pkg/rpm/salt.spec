@@ -9,7 +9,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.10.3
+Version: 0.10.4
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -24,6 +24,7 @@ Source4: %{name}-master.service
 Source5: %{name}-syndic.service
 Source6: %{name}-minion.service
 Source7: README.fedora
+Patch0: 0002-Fix-systemd-service-status.patch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
@@ -73,11 +74,14 @@ Requires(preun): initscripts
 Requires(postun): initscripts
 
 %else
-  %if 0%{?systemd_preun:1}
-    Requires(post): systemd-units
-    Requires(preun): systemd-units
-    Requires(postun): systemd-units
-  %endif
+
+%if 0%{?systemd_preun:1}
+
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
+
+%endif
 
 BuildRequires: systemd-units
 
@@ -111,6 +115,7 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -q
+%patch0 -p1 -b .systemd
 
 %build
 
@@ -289,6 +294,10 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
+- Moved to upstream release 0.10.4
+- Patched jcollie/systemd-service-status (SALT@GH#2335) (RHBZ#869669)
+
 * Tue Oct 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.3-1
 - Moved to upstream release 0.10.3
 - Added systemd scriplets (RHBZ#850408)

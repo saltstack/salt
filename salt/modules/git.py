@@ -3,7 +3,24 @@ Support for the Git SCM
 '''
 
 import os
-from salt import utils
+from salt import utils, exceptions
+
+def _git_run(cmd, cwd=None, **kwargs):
+    '''
+    simple, throw an exception with the error message on an error return code.
+
+    this function may be moved to the command module, spliced with
+    'cmd.run_all', and used as an alternative to 'cmd.run_all'. Some
+    commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
+    '''
+    result = __salt__['cmd.run_all'](cmd, cwd=cwd, **kwargs)
+
+    retcode = result['retcode']
+
+    if retcode == 0:
+        return result['stdout']
+    else:
+        raise exceptions.CommandExecutionError(result['stderr'])
 
 def _git_getdir(cwd, user=None):
     '''
@@ -45,12 +62,7 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     _check_git()
 
     cmd = 'git rev-parse {0}{1}'.format('--short ' if short else '', rev)
-    result = __salt__['cmd.run_all'](cmd, cwd, runas=user)
-
-    if result['retcode'] == 0:
-        return result['stdout']
-    else:
-        return ''
+    return _git_run(cmd, cwd, runas=user)
 
 def clone(cwd, repository, opts=None, user=None):
     '''
@@ -82,7 +94,7 @@ def clone(cwd, repository, opts=None, user=None):
         opts = ''
     cmd = 'git clone {0} {1} {2}'.format(repository, cwd, opts)
 
-    return __salt__['cmd.run'](cmd, runas=user)
+    return _git_run(cmd, runas=user)
 
 def describe(cwd, rev='HEAD', user=None):
     '''
@@ -146,7 +158,7 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
         fmt = ' --format={0}'.format(fmt) if fmt else '',
         prefix = ' --prefix="{0}"'.format(prefix if prefix else basename))
 
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user)
 
 def fetch(cwd, opts=None, user=None):
     '''
@@ -173,7 +185,7 @@ def fetch(cwd, opts=None, user=None):
         opts = ''
     cmd = 'git fetch {0}'.format(opts)
 
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user)
 
 def pull(cwd, opts=None, user=None):
     '''
@@ -196,7 +208,7 @@ def pull(cwd, opts=None, user=None):
 
     if not opts:
         opts = ''
-    return __salt__['cmd.run']('git pull {0}'.format(opts), cwd=cwd, runas=user)
+    return _git_run('git pull {0}'.format(opts), cwd=cwd, runas=user)
 
 def rebase(cwd, rev='master', opts=None, user=None):
     '''
@@ -224,7 +236,7 @@ def rebase(cwd, rev='master', opts=None, user=None):
 
     if not opts:
         opts = ''
-    return __salt__['cmd.run']('git rebase {0}'.format(opts), cwd=cwd, runas=user)
+    return _git_run('git rebase {0}'.format(opts), cwd=cwd, runas=user)
 
 def checkout(cwd, rev, force=False, opts=None, user=None):
     '''
@@ -258,7 +270,7 @@ def checkout(cwd, rev, force=False, opts=None, user=None):
     if not opts:
         opts = ''
     cmd = 'git checkout {0} {1} {2}'.format(' -f' if force else '', rev, opts)
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user)
 
 def merge(cwd, branch='@{upstream}', opts=None, user=None):
     '''
@@ -285,11 +297,11 @@ def merge(cwd, branch='@{upstream}', opts=None, user=None):
 
     if not opts:
         opts = ''
-    cmd = 'git merge {0}{1} {2}'.format(
+    cmd = 'git merge {0} {1}'.format(
             branch,
             opts)
 
-    return __salt__['cmd.run'](cmd, cwd, runas=user)
+    return _git_run(cmd, cwd, runas=user)
 
 def init(cwd, opts=None, user=None):
     '''
@@ -311,7 +323,7 @@ def init(cwd, opts=None, user=None):
     _check_git()
 
     cmd = 'git init {0} {1}'.format(cwd, opts)
-    return __salt__['cmd.run'](cmd, runas=user)
+    return _git_run(cmd, runas=user)
 
 def submodule(cwd, init=True, opts=None, user=None):
     '''
@@ -334,4 +346,4 @@ def submodule(cwd, init=True, opts=None, user=None):
     if not opts:
         opts = ''
     cmd = 'git submodule update {0} {1}'.format('--init' if init else '', opts)
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user)

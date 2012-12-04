@@ -8,6 +8,19 @@ import re
 import stat
 import tempfile
 
+# Import salt libs
+import salt.utils
+from salt.utils import which as _which
+
+
+__outputter__ = {
+    'rm_alias': 'txt',
+    'has_target': 'txt',
+    'get_target': 'txt',
+    'set_target': 'txt',
+    'list_aliases': 'yaml',
+}
+
 __ALIAS_RE = re.compile(r'([^:#]*)\s*:?\s*([^#]*?)(\s+#.*|$)')
 
 
@@ -15,12 +28,7 @@ def __get_aliases_filename():
     '''
     Return the path to the appropriate aliases file
     '''
-    if 'aliases.file' in __opts__:
-        return __opts__['aliases.file']
-    elif 'aliases.file' in __pillar__:
-        return __pillar__['aliases.file']
-    else:
-        return '/etc/aliases'
+    return __salt__['config.option']('aliases.file')
 
 
 def __parse_aliases():
@@ -36,12 +44,13 @@ def __parse_aliases():
     ret = []
     if not os.path.isfile(afn):
         return ret
-    for line in open(afn).readlines():
-        m = __ALIAS_RE.match(line)
-        if m:
-            ret.append(m.groups())
-        else:
-            ret.append((None, None, line.strip()))
+    with salt.utils.fopen(afn, 'r') as f:
+        for line in f:
+            m = __ALIAS_RE.match(line)
+            if m:
+                ret.append(m.groups())
+            else:
+                ret.append((None, None, line.strip()))
     return ret
 
 
@@ -77,9 +86,10 @@ def __write_aliases_file(lines):
     out.close()
     os.rename(out.name, afn)
 
-    newaliases_path = '/usr/bin/newaliases'
-    if os.path.exists(newaliases_path):
-        __salt__['cmd.run'](newaliases_path)
+    # Search $PATH for the newalises command
+    newaliases = _which('newaliases')
+    if newaliases is not None:
+        __salt__['cmd.run'](newaliases)
 
     return True
 

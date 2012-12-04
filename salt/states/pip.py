@@ -23,6 +23,7 @@ def installed(name,
               log=None,
               proxy=None,
               timeout=None,
+              repo=None,
               editable=None,
               find_links=None,
               index_url=None,
@@ -64,21 +65,25 @@ def installed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
         pip_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
-    except (CommandNotFoundError, CommandExecutionError), err:
+    except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if name in pip_list:
-        ret['result'] = True
-        ret['comment'] = 'Package already installed'
-        return ret
+    if ignore_installed == False and name.lower() in (p.lower() for p in pip_list):
+        if force_reinstall == False and upgrade == False:
+            ret['result'] = True
+            ret['comment'] = 'Package already installed'
+            return ret
 
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Python package {0} is set to be installed'.format(
                 name)
         return ret
+
+    if repo:
+        name = repo
 
     pip_install_call = __salt__['pip.install'](
         pkgs=name,
@@ -109,7 +114,7 @@ def installed(name,
         cwd=cwd
     )
 
-    if pip_install_call and pip_install_call['retcode']==0:
+    if pip_install_call and (pip_install_call['retcode'] == 0):
         ret['result'] = True
 
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
@@ -127,9 +132,10 @@ def installed(name,
         ret['comment'] = 'Package was successfully installed'
     elif pip_install_call:
         ret['result'] = False
-        ret['comment'] = 'Failed to install package {0}. Error: {1}'.format(
-            name, pip_install_call['stderr']
-        )
+        ret['comment'] = ('Failed to install package {0}. '
+                          'Error: {1} {2}').format(name,
+                                                   pip_install_call['stdout'],
+                                                   pip_install_call['stderr'])
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'
@@ -159,7 +165,7 @@ def removed(name,
 
     try:
         pip_list = __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd)
-    except (CommandExecutionError, CommandNotFoundError), err:
+    except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret

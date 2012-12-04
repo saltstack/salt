@@ -1,8 +1,8 @@
 .. _all-salt.runners:
 
-=========================
-Full list of Salt runners
-=========================
+===========================
+Full list of runner modules
+===========================
 
 .. currentmodule:: salt.runners
 

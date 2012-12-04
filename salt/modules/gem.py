@@ -6,9 +6,6 @@ Manage ruby gems.
 import re
 
 
-__opts__ = {}
-__pillar__ = {}
-
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
     if __salt__['rvm.is_installed']():
@@ -16,7 +13,7 @@ def _gem(command, ruby=None, runas=None):
 
     ret = __salt__['cmd.run_all'](
         cmdline,
-        runas=runas or __opts__.get('rvm.runas') or __pillar__.get('rvm.runas')
+        runas=runas
         )
 
     if ret['retcode'] == 0:
@@ -25,7 +22,7 @@ def _gem(command, ruby=None, runas=None):
         return False
 
 
-def install(gems, ruby=None, runas=None):
+def install(gems, ruby=None, runas=None, version=None, rdoc=False, ri=False):
     '''
     Installs one or several gems.
 
@@ -35,8 +32,23 @@ def install(gems, ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+    version : None
+        Specify the version to install for the gem.
+        Doesn't play nice with multiple gems at once
+    rdoc : False
+        Generate RDoc documentation for the gem(s).
+    ri : False
+        Generate RI documentation for the gem(s).
     '''
-    return _gem('install {gems}'.format(gems=gems), ruby, runas=runas)
+    options = ''
+    if version:
+        options += ' --version {0}'.format(version)
+    if not rdoc:
+        options += ' --no-rdoc'
+    if not ri:
+        options += ' --no-ri'
+
+    return _gem('install {gems} {options}'.format(gems=gems, options=options), ruby, runas=runas)
 
 
 def uninstall(gems, ruby=None, runas=None):

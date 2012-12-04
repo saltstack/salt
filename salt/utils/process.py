@@ -1,12 +1,16 @@
+# Import Python libs
 import logging
 import os
 import signal
 import time
+import sys
+
+import salt.utils
 
 log = logging.getLogger(__name__)
 
 
-def set_pidfile(pidfile):
+def set_pidfile(pidfile, user):
     '''
     Save the pidfile
     '''
@@ -14,10 +18,35 @@ def set_pidfile(pidfile):
     if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
-        with open(pidfile, 'w+') as f:
+        with salt.utils.fopen(pidfile, 'w+') as f:
             f.write(str(os.getpid()))
     except IOError:
         pass
+    log.debug(('Created pidfile: {0}').format(pidfile))
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
+    import pwd  # after confirming not running Windows
+    #import grp
+    try:
+        pwnam = pwd.getpwnam(user)
+        uid = pwnam[2]
+        gid = pwnam[3]
+        #groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+    except IndexError:
+        err = ('Failed to set the pid to user: '
+               '{0}. The user is not available.\n').format(user)
+        sys.stderr.write(err)
+        sys.exit(2)
+    try:
+        os.chown(pidfile, uid, gid)
+    except OSError as e:
+        msg = ('Failed to set the ownership of PID file {0} '
+               'to user {1}\n').format(pidfile, user)
+        log.debug(msg, exc_info=True)
+        sys.stderr.write(msg)
+        sys.exit(e.errno)
+    log.debug(('Chowned pidfile: {0} to user: {1}').format(pidfile, user))
 
 
 def clean_proc(proc, wait_for_kill=10):

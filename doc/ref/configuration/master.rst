@@ -1,3 +1,5 @@
+.. _configuration-salt-master:
+
 ===========================
 Configuring the Salt Master
 ===========================
@@ -80,7 +82,8 @@ Default: ``max_open_files``
 
 Each minion connecting to the master uses AT LEAST one file descriptor, the
 master subscription connection. If enough minions connect you might start
-seeing on the console(and then salt-master crashes):
+seeing on the console(and then salt-master crashes)::
+
   Too many open files (tcp_listener.cpp:335)
   Aborted (core dumped)
 
@@ -90,7 +93,8 @@ max open files.
 If you wish to set a different value than the default one, uncomment and
 configure this setting. Remember that this value CANNOT be higher than the
 hard limit. Raising the hard limit depends on your OS and/or distribution,
-a good way to find the limit is to search the internet for(for example):
+a good way to find the limit is to search the internet for(for example)::
+
   raise max open files hard limit debian
 
 .. code-block:: yaml
@@ -455,14 +459,14 @@ Pillar Configuration
 ``pillar_roots``
 ----------------
 
-Set the environments and directorirs used to hold pillar sls data. This
+Set the environments and directories used to hold pillar sls data. This
 configuration is the same as file_roots:
 
 Default: ``base: [/srv/pillar]``
 
 .. code-block:: yaml
 
-    file_roots:
+    pillar_roots:
       base:
         - /srv/pillar/
       dev:
@@ -483,7 +487,7 @@ Default: ``base: [/srv/pillar]``
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
 functions. The available ext_pillar functions are: hiera, cmd_yaml. By default
-the ext_pillar interface is not configued to run.
+the ext_pillar interface is not configured to run.
 
 Default:: ``None``
 

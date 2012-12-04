@@ -6,8 +6,8 @@ import os
 import shutil
 
 # Import Salt libs
+import salt.utils
 import integration
-
 
 AUTHORIZED_KEYS = os.path.join('/tmp/subsalttest', 'authorized_keys')
 KNOWN_HOSTS = os.path.join('/tmp/subsalttest', 'known_hosts')
@@ -23,7 +23,8 @@ class SSHModuleTest(integration.ModuleCase):
         Set up the ssh module tests
         '''
         super(SSHModuleTest, self).setUp()
-        with open(os.path.join(integration.FILES, 'ssh', 'raw')) as fd:
+        ssh_raw_path = os.path.join(integration.FILES, 'ssh', 'raw')
+        with salt.utils.fopen(ssh_raw_path) as fd:
             self.key = fd.read().strip()
 
     def tearDown(self):

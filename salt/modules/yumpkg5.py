@@ -1,32 +1,33 @@
 '''
 Support for YUM
 '''
+
 import logging
 from collections import namedtuple
 
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # Return this for pkg on RHEL/Fedora based distros that do not ship with
-    # python 2.6 or greater.
-    dists = ('CentOS', 'Scientific', 'RedHat', 'CloudLinux')
-    if __grains__['os'] == 'Fedora':
-        if int(__grains__['osrelease'].split('.')[0]) < 11:
-            return 'pkg'
-        else:
-            return False
+    # Work only on RHEL/Fedora based distros with python 2.6 or greater
+    try:
+        os_grain = __grains__['os']
+        os_family = __grains__['os_family']
+        os_major_version = int(__grains__['osrelease'].split('.')[0])
+    except Exception:
+        return False
+
+    # Fedora <= 10 need to use this module
+    if os_grain == 'Fedora' and os_major_version < 11:
+        return 'pkg'
     else:
-        if __grains__['os'] in dists:
-            if int(__grains__['osrelease'].split('.')[0]) <= 5:
-                return 'pkg'
-            else:
-                return False
-        else:
-            return False
+        # RHEL <= 5 and all variants need to use this module
+        if os_family == 'RedHat' and os_major_version <= 5:
+            return 'pkg'
+    return False
 
 
 def _parse_yum(arg):
@@ -39,7 +40,7 @@ def _parse_yum(arg):
 
     results = []
 
-    for line in out.split('\n'):
+    for line in out.splitlines():
         if len(line.split()) == 3:
             namearchstr, pkgver, pkgstatus = line.split()
             pkgname = namearchstr.rpartition('.')[0]
@@ -68,7 +69,7 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    out = _parse_yum('list updates {0}'.format(name))
+    out = _parse_yum('list update {0}'.format(name))
     return out[0].version if out else ''
 
 
@@ -91,9 +92,9 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
+    out = _parse_yum('list installed {0}'.format(name))
+    if out:
+        return out[0].version
     else:
         return ''
 
@@ -138,56 +139,77 @@ def refresh_db():
     return True
 
 
-def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
+def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
+            sources=None, **kwargs):
     '''
-    Install the passed package
+    Install the passed package(s), add refresh=True to clean the yum database
+    before package is installed.
 
-    pkg
-        The name of the package to be installed
-    refresh : False
-        Clean out the yum database before executing
-    repo : (default)
-        Specify a package repository to install from
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if either "pkgs" or "sources" is passed. Additionally, please
+        note that this option can only be used to install packages from a
+        software repository. To install a package file manually, use the
+        "sources" option.
+
+        CLI Example::
+            salt '*' pkg.install <package name>
+
+    refresh
+        Whether or not to clean the yum database before executing.
+
+    repo
+        Specify a package repository from which to install the package
         (e.g., ``yum --enablerepo=somerepo``)
-    skip_verify : False
+
+    skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
 
-    Return a dict containing the new package names and versions::
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of RPM packages to install. Must be passed as a list of dicts,
+        with the keys being package names, and the values being the source URI
+        or local path to the package.
+
+        CLI Example::
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+
+
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
-
-    CLI Example::
-
-        salt '*' pkg.install <package name>
+                       'new': '<new-version>']}
     '''
-    old = list_pkgs()
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
+        refresh_db()
+
+    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                 pkgs,
+                                                                 sources)
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
 
     cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
         repo='--enablerepo={0}'.format(repo) if repo else '',
         gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkg=pkg,
+        pkg=' '.join(pkg_params),
     )
-
-    if refresh:
-        refresh_db()
-    __salt__['cmd.retcode'](cmd)
+    old = list_pkgs()
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    if stderr:
+        log.error(stderr)
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def upgrade():

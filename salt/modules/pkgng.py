@@ -2,7 +2,12 @@
 Support for pkgng
 '''
 
-import os 
+# Import python libs
+import os
+
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -28,8 +33,8 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
     if not os.path.isfile(file_name):
         return 'Unable to find {0} on file system'.format(file_name)
 
-    with open(file_name) as f:
-        for line in f.readlines():
+    with salt.utils.fopen(file_name) as f:
+        for line in f:
             if line.startswith("#") or line.startswith("\n"):
                 pass
             else:
@@ -41,7 +46,13 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
 
 
 def version():
-    '''return the version of pkgng'''
+    '''
+    Displays the current version of pkg
+
+    CLI Example::
+        salt '*' pkgng.version
+    '''
+
     cmd = 'pkg -v'
     return __salt__['cmd.run'](cmd)
 
@@ -56,8 +67,9 @@ def update_package_site(new_url):
         salt '*' pkgng.update_package_site http://127.0.0.1/
     '''
     config_file = parse_config()['config_file']
-    __salt__['file.sed'](config_file,'PACKAGESITE.*', \
-        'PACKAGESITE\t : {0}'.format(new_url))
+    __salt__['file.sed'](
+        config_file, 'PACKAGESITE.*', 'PACKAGESITE\t : {0}'.format(new_url)
+    )
 
     # add change return later
     return True
@@ -73,7 +85,7 @@ def stats():
 
     cmd = 'pkg stats'
     res = __salt__['cmd.run'](cmd)
-    res = [ x.strip("\t") for x in res.split("\n") ]
+    res = [x.strip("\t") for x in res.split("\n")]
     return res
 
 
@@ -100,7 +112,7 @@ def restore(file_name):
 
 def add(pkg_path):
     '''
-    Adds files from remote or local package
+    Install a package from either a local source or remote one
 
     CLI Example::
         salt '*' pkgng.add /tmp/package.txz
@@ -111,6 +123,42 @@ def add(pkg_path):
     cmd = 'pkg add {0}'.format(pkg_path)
     res = __salt__['cmd.run'](cmd)
     return res
+
+
+def audit():
+    '''
+    Audits installed packages against known vulnerabilities
+
+    CLI Example::
+        salt '*' pkgng.audit
+    '''
+
+    cmd = 'pkg audit -F'
+    return __salt__['cmd.run'](cmd)
+
+
+def install(pkg_name):
+    '''
+    Install package from repositories
+
+    CLI Example::
+        salt '*' pkgng.install bash
+    '''
+
+    cmd = 'pkg install -y {0}'.format(pkg_name)
+    return __salt__['cmd.run'](cmd)
+
+
+def delete(pkg_name):
+    '''
+    Delete a package from the database and system
+
+    CLI Example::
+        salt '*' pkgng.delete bash
+    '''
+
+    cmd = 'pkg delete -y {0}'.format(pkg_name)
+    return __salt__['cmd.run'](cmd)
 
 
 def info(pkg=None):
@@ -132,6 +180,30 @@ def info(pkg=None):
     res = __salt__['cmd.run'](cmd)
 
     if not pkg:
-        res = res.split('\n')
+        res = res.splitlines()
 
     return res
+
+
+def update():
+    '''
+    Refresh PACKAGESITE contents
+
+    CLI Example::
+        salt '*' pkgng.update
+    '''
+
+    cmd = 'pkg update'
+    return __salt__['cmd.run'](cmd)
+
+
+def upgrade():
+    '''
+    Upgrade all packages
+
+    CLI Example::
+        salt '*' pkgng.upgrade
+    '''
+
+    cmd = 'pkg upgrade -y'
+    return __salt__['cmd.run'](cmd)

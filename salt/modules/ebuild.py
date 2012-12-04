@@ -1,6 +1,12 @@
 '''
 Support for Portage
+
+:optdepends:    - portage Python adapter
 '''
+
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     import portage
@@ -75,40 +81,70 @@ def refresh_db():
     '''
     return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
 
-def install(pkg, refresh=False, **kwargs):
+def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     '''
-    Install the passed package
+    Install the passed package(s), add refresh=True to sync the portage tree
+    before package is installed.
 
-    Return a dict containing the new package names and versions::
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if either "pkgs" or "sources" is passed. Additionally, please
+        note that this option can only be used to emerge a package from the
+        portage tree. To install a tbz2 package manually, use the "sources"
+        option described below.
+
+        CLI Example::
+            salt '*' pkg.install <package name>
+
+    refresh
+        Whether or not to sync the portage tree before installing.
+
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from the portage tree. Must be passed as
+        a python list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of tbz2 packages to install. Must be passed as a list of dicts,
+        with the keys being package names, and the values being the source URI
+        or local path to the package.
+
+        CLI Example::
+            salt '*' pkg.install sources='[{"foo": "salt://foo.tbz2"},{"bar": "salt://bar.tbz2"}]'
+
+
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                'new': '<new-version>']}
-
-    CLI Example::
-
-        salt '*' pkg.install <package name>
+                       'new': '<new-version>']}
     '''
-    if(refresh):
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
         refresh_db()
 
-    ret_pkgs = {}
-    old_pkgs = list_pkgs()
-    cmd = 'emerge --quiet {0}'.format(pkg)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
+    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                 pkgs,
+                                                                 sources)
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
+    elif pkg_type == 'file':
+        emerge_opts = 'tbz2file'
+    else:
+        emerge_opts = ''
 
-    for pkg in new_pkgs:
-        if pkg in old_pkgs:
-            if old_pkgs[pkg] == new_pkgs[pkg]:
-                continue
-            else:
-                ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                             'new': new_pkgs[pkg]}
-        else:
-            ret_pkgs[pkg] = {'old': '',
-                         'new': new_pkgs[pkg]}
+    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts,' '.join(pkg_params))
+    old = list_pkgs()
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    if stderr:
+        log.error(stderr)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old,new)
 
-    return ret_pkgs
 
 def update(pkg, refresh=False):
     '''

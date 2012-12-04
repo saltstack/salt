@@ -196,12 +196,36 @@ to the calling terminal.
 
 .. _`Python docstring`: #term-docstring
 
+Add Module meta data
+--------------------
+
+Add information about the module using the following field lists:
+
+.. code-block:: text
+
+    :maintainer:    Thomas Hatch <thatch@saltstack.com, Seth House <shouse@saltstack.com>
+    :maturity:      new
+    :depends:       python-mysqldb
+    :platform:      all
+
+The maintaner field is a comma-delimited list of developers who help maintain
+this module.
+
+The maturity field indicates the level of quality and testing for this module.
+Standard labels will be determined.
+
+The depends field is a comma-delimited list of modules that this module depends
+on.
+
+The platform field is a comma-delimited list of platforms that this modules is
+known to run on.
+
 How Functions are Read
 ======================
 
-In Salt, Python callable objects contained within a module are made available to
-the Salt minion for use. The only exception to this rule is a callable object
-with a name starting with an underscore ``_``.
+In Salt, Python callable objects contained within a module are made available
+to the Salt minion for use. The only exception to this rule is a callable
+object with a name starting with an underscore ``_``.
 
 Objects Loaded Into the Salt Minion
 -----------------------------------

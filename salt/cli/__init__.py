@@ -9,16 +9,20 @@ import sys
 # Import salt components
 import salt.cli.caller
 import salt.cli.cp
-import salt.cli.key
 import salt.cli.batch
 import salt.client
 import salt.output
 import salt.runner
 import salt.auth
+import salt.key
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env
-from salt.exceptions import SaltInvocationError, SaltClientError
+from salt.exceptions import (
+    SaltInvocationError,
+    SaltClientError,
+    EauthAuthenticationError
+)
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -33,19 +37,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(self.get_config_file_path('master'))
+            local = salt.client.LocalClient(
+                self.get_config_file_path('master')
+            )
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
 
-        if self.options.query:
-            ret = local.find_cmd(self.config['cmd'])
-            for jid in ret:
-                if isinstance(ret, list) or isinstance(ret, dict):
-                    print('Return data for job {0}:'.format(jid))
-                    salt.output.display_output(ret[jid], None, self.config)
-                    print('')
-        elif self.options.batch:
+        if self.options.batch:
             batch = salt.cli.batch.Batch(self.config)
             batch.run()
         else:
@@ -106,9 +105,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         for full_ret in local.cmd_cli(**kwargs):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
-            except SaltInvocationError as exc:
+            except (SaltInvocationError, EauthAuthenticationError) as exc:
                 ret = exc
                 out = ''
+                self._output_ret(ret, out)
 
     def _output_ret(self, ret, out):
         '''
@@ -181,6 +181,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
             verify_env_dirs = []
             if not self.config['gen_keys']:
                 verify_env_dirs.extend([
+                    self.config['pki_dir'],
                     os.path.join(self.config['pki_dir'], 'minions'),
                     os.path.join(self.config['pki_dir'], 'minions_pre'),
                     os.path.join(self.config['pki_dir'], 'minions_rejected'),
@@ -196,7 +197,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
 
         self.setup_logfile_logger()
 
-        key = salt.cli.key.Key(self.config)
+        key = salt.key.KeyCLI(self.config)
         key.run()
 
 
@@ -221,6 +222,12 @@ class SaltCall(parsers.SaltCallOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
+
+        if self.options.local:
+            self.config['file_client'] = 'local'
+
+        # Setup file logging!
+        self.setup_logfile_logger()
 
         caller = salt.cli.caller.Caller(self.config)
 

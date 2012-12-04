@@ -40,7 +40,8 @@ def present(name,
     runas
         Name of the user to run the command
     '''
-    ret = {'name': name, 'result': True, 'comment': ''}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    result = {}
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
@@ -71,9 +72,7 @@ def present(name,
                     name, runas=runas)
         else:
             log.debug('User exists, and force is not set - Abandoning')
-            result = {
-                'Error': 'User {0} exists and force is not set'.format(name)
-            }
+            ret['comment'] = 'User {0} is not going to be modified'.format(name)
 
         if 'Error' in result:
             ret['result'] = False
@@ -99,7 +98,7 @@ def absent(name,
     runas
         User to run the command
     '''
-    ret = {'name': name, 'result': True, 'comment': ''}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
@@ -111,7 +110,7 @@ def absent(name,
             ret['comment'] = 'User {0} is not present'.format(name)
     else:
         if user_exists:
-            result = __salt__['rabbitmq.delete_user']
+            result = __salt__['rabbitmq.delete_user'](name, runas=runas)
             if 'Error' in result:
                 ret['result'] = False
                 ret['comment'] = result['Error']

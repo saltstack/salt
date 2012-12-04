@@ -2,12 +2,24 @@
 Package support for openSUSE via the zypper package manager
 '''
 
+import logging
+
+# Import Salt libs
+import salt.utils
+
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
-    return 'pkg' if __grains__.get('os_family', '') == 'Suse' else False
+    if __grains__.get('os_family', '') != 'Suse':
+        return False
+    # Not all versions of Suse use zypper, check that it is available
+    if not salt.utils.which('zypper'):
+        return False
+    return 'pkg'
 
 
 def _list_removed(old, new):
@@ -27,7 +39,7 @@ def _available_versions():
     '''
     cmd = 'zypper packages -i'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -40,6 +52,7 @@ def _available_versions():
             ret[comps[2]] = comps[3]
     return ret
 
+
 def available_version(name):
     '''
     Return the available version of a given package
@@ -50,6 +63,7 @@ def available_version(name):
     '''
     avail = _available_versions()
     return avail.get(name, '')
+
 
 def version(name):
     '''
@@ -76,19 +90,13 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = 'zypper packages -i'
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
-    for line in out:
-        if not line:
-            continue
-        if '|' not in line:
-            continue
-        comps = []
-        for comp in line.split('|'):
-            comps.append(comp.strip())
-        if comps[0] == 'i':
-            ret[comps[2]] = comps[3]
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        name, version, rel = line.split('_|-')
+        pkgver = version
+        if rel: pkgver += '-{0}'.format(rel)
+        ret[name] = pkgver
     return ret
 
 
@@ -104,7 +112,7 @@ def refresh_db():
     '''
     cmd = 'zypper refresh'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         if not line:
             continue
@@ -119,40 +127,65 @@ def refresh_db():
     return ret
 
 
-def install(name, refresh=False, **kwargs):
+def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     '''
-    Install the passed package, add refresh=True to install with an -Sy
+    Install the passed package(s), add refresh=True to run 'zypper refresh'
+    before package is installed.
 
-    Return a dict containing the new package names and versions::
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if either "pkgs" or "sources" is passed. Additionally, please
+        note that this option can only be used to install packages from a
+        software repository. To install a package file manually, use the
+        "sources" option.
+
+        CLI Example::
+            salt '*' pkg.install <package name>
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of RPM packages to install. Must be passed as a list of dicts,
+        with the keys being package names, and the values being the source URI
+        or local path to the package.
+
+        CLI Example::
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+
+
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
-
-    CLI Example::
-
-        salt '*' pkg.install <package name>
+                       'new': '<new-version>']}
     '''
-    old = list_pkgs()
-    cmd = 'zypper -n install -l {0}'.format(name)
-    if refresh:
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
         refresh_db()
-    __salt__['cmd.retcode'](cmd)
+
+    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                 pkgs,
+                                                                 sources)
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
+
+    cmd = 'zypper -n install -l {0}'.format(' '.join(pkg_params))
+    old = list_pkgs()
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    if stderr:
+        log.error(stderr)
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def upgrade():

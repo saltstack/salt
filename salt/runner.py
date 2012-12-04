@@ -49,13 +49,10 @@ class RunnerClient(object):
         Pass in the runner function name and the low data structure
         '''
         l_fun = self.functions[fun]
-        fcall = salt.utils.format_call(l_fun, low)
-        if 'kwargs' in fcall:
-            ret = l_fun(*fcall['args'], **fcall['kwargs'])
-        else:
-            ret = l_fun(*f_call['args'])
+        f_call = salt.utils.format_call(l_fun, low)
+        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
-                      
+
 
 class Runner(RunnerClient):
     '''
@@ -67,8 +64,8 @@ class Runner(RunnerClient):
         '''
         ret = super(Runner, self).get_docs()
 
-        for fun, doc in ret.items():
-            print("{0}:\n{1}\n".format(fun, doc))
+        for fun in sorted(ret):
+            print("{0}:\n{1}\n".format(fun, ret[fun]))
 
     def run(self):
         '''

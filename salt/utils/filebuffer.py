@@ -7,6 +7,8 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import salt libs
+import salt.utils
 from salt.exceptions import SaltException
 
 
@@ -41,7 +43,7 @@ class BufferedReader(object):
         if 'a' in mode or 'w' in mode:
             raise InvalidFileMode("Cannot open file in write or append mode")
         self.__path = path
-        self.__file = open(self.__path, mode)
+        self.__file = salt.utils.fopen(self.__path, mode)
         self.__max_in_mem = max_in_mem
         self.__chunk_size = chunk_size
         self.__buffered = None
@@ -104,9 +106,9 @@ if __name__ == '__main__':
     tpath = "/tmp/starting_states.rst"
 
     for fmultiplier in (1, 10, 50, 100, 800, 3200):
-        ffile = open(tpath, "w")
+        ffile = salt.utils.fopen(tpath, "w")
         while fmultiplier > 0:
-            ffile.write(open(fpath).read())
+            ffile.write(salt.utils.fopen(fpath).read())
             fmultiplier -= 1
 
         ffile.close()

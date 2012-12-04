@@ -1,9 +1,12 @@
 '''
 Support for poudriere
 '''
+
+# Import Python libs
 import os
 import logging
 
+# Import Salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -23,22 +26,14 @@ def _config_file():
     '''
     Return the config file location to use
     '''
-    if 'poudriere.config' in __opts__:
-        return __opts__['poudriere.config']
-    elif 'poudriere.config' in __pillar__:
-        return __pillar__['poudriere.config']
-    return '/usr/local/etc/poudriere.conf'
+    return __salt__['config.option']('poudriere.config')
 
 
 def _config_dir():
     '''
     Return the configuration directory to use
     '''
-    if 'poudriere.config' in __opts__:
-        return __opts__['poudriere.config_dir']
-    elif 'poudriere.config' in __pillar__:
-        return __pillar__['poudriere.config_dir']
-    return '/usr/local/etc/poudriere.d'
+    return __salt__['config.option']('poudriere.config_dir')
 
 
 def _check_config_exists(config_file=None):
@@ -88,18 +83,18 @@ def make_pkgng_aware(jname):
 
     # Added args to file
     cmd = 'echo "WITH_PKGNG=yes" > {0}-make.conf'.format(
-            os.path.join(cdir,jname))
+            os.path.join(cdir, jname))
 
     __salt__['cmd.run'](cmd)
 
-    if os.path.isfile(os.path.join(cdir,jname) + '-make.conf'):
+    if os.path.isfile(os.path.join(cdir, jname) + '-make.conf'):
         ret['changes'] = 'Created {0}'.format(
                 os.path.join(cdir, '{0}-make.conf'.format(jname))
                 )
         return ret
     else:
         return 'Looks like file {0} could not be created'.format(
-                os.path.join(cdir,jname + '-make.conf')
+                os.path.join(cdir, jname + '-make.conf')
                 )
 
 
@@ -115,8 +110,8 @@ def parse_config(config_file=None):
         config_file = _config_file()
     ret = {}
     if _check_config_exists(config_file):
-        with open(config_file) as f:
-            for line in f.readlines():
+        with salt.utils.fopen(config_file) as f:
+            for line in f:
                 k, y = line.split('=')
                 ret[k] = y
         return ret
@@ -147,7 +142,7 @@ def list_jails():
     _check_config_exists()
     cmd = 'poudriere jails -l'
     res = __salt__['cmd.run'](cmd)
-    return res.split('\n')
+    return res.splitlines()
 
 
 def list_ports():
@@ -160,7 +155,7 @@ def list_ports():
     '''
     _check_config_exists()
     cmd = 'poudriere ports -l'
-    res = __salt__['cmd.run'](cmd).split('\n')
+    res = __salt__['cmd.run'](cmd).splitlines()
     return res
 
 
@@ -180,7 +175,7 @@ def create_jail(name, arch, version="9.0-RELEASE"):
     if is_jail(name):
         return '{0} already exists'.format(name)
 
-    cmd = 'poudriere jails -c -j {0} -v {1} -a {2}'.format(name,version,arch)
+    cmd = 'poudriere jails -c -j {0} -v {1} -a {2}'.format(name, version, arch)
     __salt__['cmd.run'](cmd)
 
     # Make jail pkgng aware
@@ -232,7 +227,7 @@ def create_ports_tree():
     Not working need to run portfetch non interactive
     '''
     _check_config_exists()
-    cmd =  'poudriere ports -c'
+    cmd = 'poudriere ports -c'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
@@ -262,10 +257,9 @@ def bulk_build(jail, pkg_file, keep=False):
 
     # Bulk build this can take some time, depending on pkg_file ... hours
     res = __salt__['cmd.run'](cmd)
-    lines = res.split('\n')
+    lines = res.splitlines()
     for line in lines:
         if "packages built" in line:
             return line
     return ('There may have been an issue building packages dumping output: '
             '{0}').format(res)
-

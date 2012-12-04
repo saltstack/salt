@@ -20,7 +20,7 @@ def __virtual__():
     return 'service'
 
 
-def _enable(name, started):
+def _enable(name, started, **kwargs):
     '''
     Enable the service
     '''
@@ -66,7 +66,7 @@ def _enable(name, started):
         ret['comment'] = 'Service {0} set to be enabled'.format(name)
         return ret
 
-    if __salt__['service.enable'](name):
+    if __salt__['service.enable'](name, **kwargs):
         # Service has been enabled
         if started is True:
             ret['changes'][name] = True
@@ -103,7 +103,7 @@ def _enable(name, started):
         return ret
 
 
-def _disable(name, started):
+def _disable(name, started, **kwargs):
     '''
     Disable the service
     '''
@@ -150,7 +150,7 @@ def _disable(name, started):
         ret['comment'] = 'Service {0} set to be disabled'.format(name)
         return ret
 
-    if __salt__['service.disable'](name):
+    if __salt__['service.disable'](name, **kwargs):
         # Service has been disabled
         if started is True:
             ret['changes'][name] = True
@@ -199,7 +199,7 @@ def _available(name, ret):
     return ret
 
 
-def running(name, enable=None, sig=None):
+def running(name, enable=None, sig=None, **kwargs):
     '''
     Verify that the service is running
 
@@ -222,9 +222,9 @@ def running(name, enable=None, sig=None):
     if __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already running'.format(name)
         if enable is True:
-            return _enable(name, None)
+            return _enable(name, None, **kwargs)
         elif enable is False:
-            return _disable(name, None)
+            return _disable(name, None, **kwargs)
         else:
             return ret
 
@@ -245,23 +245,23 @@ def running(name, enable=None, sig=None):
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            return _enable(name, False)
+            return _enable(name, False, **kwargs)
         elif enable is False:
-            return _disable(name, False)
+            return _disable(name, False, **kwargs)
         else:
             return ret
 
     if enable is True:
-        return _enable(name, True)
+        return _enable(name, True, **kwargs)
     elif enable is False:
-        return _disable(name, True)
+        return _disable(name, True, **kwargs)
     else:
         ret['changes'] = changes
         ret['comment'] = 'Started Service {0}'.format(name)
         return ret
 
 
-def dead(name, enable=None, sig=None):
+def dead(name, enable=None, sig=None, **kwargs):
     '''
     Ensure that the named service is dead
 
@@ -283,9 +283,9 @@ def dead(name, enable=None, sig=None):
     if not __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True:
-            return _enable(name, None)
+            return _enable(name, None, **kwargs)
         elif enable is False:
-            return _disable(name, None)
+            return _disable(name, None, **kwargs)
         else:
             return ret
 
@@ -319,7 +319,7 @@ def dead(name, enable=None, sig=None):
         return ret
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Verify that the service is enabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -329,10 +329,10 @@ def enabled(name):
     name
         The name of the init or rc script used to manage the service
     '''
-    return _enable(name, None)
+    return _enable(name, None, **kwargs)
 
 
-def disabled(name):
+def disabled(name, **kwargs):
     '''
     Verify that the service is disabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -342,7 +342,7 @@ def disabled(name):
     name
         The name of the init or rc script used to manage the service
     '''
-    return _disable(name, None)
+    return _disable(name, None, **kwargs)
 
 
 def mod_watch(name, sig=None, reload=False, full_restart=False):

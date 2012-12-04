@@ -2,7 +2,11 @@
 The jail module for FreeBSD
 '''
 
+# Import python libs
 import os
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -12,6 +16,7 @@ def __virtual__():
     return 'jail' if __grains__['os'] == 'FreeBSD' else False
 
 
+# TODO: This docstring needs updating to make sense
 def start(jail=''):
     '''
     Start the specified jail or all, if none specified
@@ -62,15 +67,16 @@ def get_enabled():
     '''
     ret = []
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
-        if os.path.isfile(rconf):
-            for line in open(rconf, 'r').readlines():
-                if not line.strip():
-                    continue
-                if not line.startswith('jail_list='):
-                    continue
-                jails = line.split('"')[1].split()
-                for j in jails:
-                    ret.append(j)
+        if os.access(rconf, os.R_OK):
+            with salt.utils.fopen(rconf, 'r') as _fp:
+                for line in _fp:
+                    if not line.strip():
+                        continue
+                    if not line.startswith('jail_list='):
+                        continue
+                    jails = line.split('"')[1].split()
+                    for j in jails:
+                        ret.append(j)
     return ret
 
 
@@ -84,45 +90,50 @@ def show_config(jail):
     '''
     ret = {}
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
-        if os.path.isfile(rconf):
-            for line in open(rconf, 'r').readlines():
-                if not line.strip():
-                    continue
-                if not line.startswith('jail_{0}_'.format(jail)):
-                    continue
-                k, v = line.split('=')
-                ret[k.split('_',2)[2]] = v.split('"')[1]
+        if os.access(rconf, os.R_OK):
+            with salt.utils.fopen(rconf, 'r') as _fp:
+                for line in _fp:
+                    if not line.strip():
+                        continue
+                    if not line.startswith('jail_{0}_'.format(jail)):
+                        continue
+                    k, v = line.split('=')
+                    ret[k.split('_', 2)[2]] = v.split('"')[1]
     return ret
 
 
 def fstab(jail):
     '''
     Display contents of a fstab(5) file defined in specified
-    jail's configuration. If no file defined return False.
+    jail's configuration. If no file is defined, return False.
 
     CLI Example::
 
         salt '*' jail.fstab <jail name>
     '''
     ret = []
-    config = __salt__['jail.show_config'](jail)
+    config = show_config(jail)
     if 'fstab' in config:
         fstab = config['fstab']
-        if os.path.isfile(fstab):
-            for line in open(fstab, 'r').readlines():
-                if not line.strip():
-                    continue
-                if line.strip().startswith('#'):
-                    continue
-                dv, m, f, o, dm, p = line.split()
-                ret.append({
-                    'device': dv, 'mountpoint': m,
-                    'fstype': f,  'options': o,
-                    'dump': dm,   'pass': p
-                    })
-        else:
-            ret = False
-    else:
+        if os.access(fstab, os.R_OK):
+            with salt.utils.fopen(fstab, 'r') as _fp:
+                for line in _fp:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith('#'):
+                        continue
+                    try:
+                        dv, m, f, o, dm, p = line.split()
+                    except ValueError:
+                        # Gracefully continue on invalid lines
+                        continue
+                    ret.append({
+                        'device': dv, 'mountpoint': m,
+                        'fstype': f,  'options': o,
+                        'dump': dm,   'pass': p
+                        })
+    if not ret:
         ret = False
     return ret
 
@@ -145,7 +156,7 @@ def sysctl():
     '''
     ret = {}
     sysctl=__salt__['cmd.run']('sysctl security.jail')
-    for s in sysctl.split('\n'):
-        k, v = s.split(':')
+    for s in sysctl.splitlines():
+        k, v = s.split(':', 1)
         ret[k.strip()] = v.strip()
     return ret

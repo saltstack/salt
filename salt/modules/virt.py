@@ -1,11 +1,12 @@
 '''
 Work with virtual machines managed by libvirt
 
-Required python modules: libvirt
+:depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
+# Import Python libs
 import os
 import re
 import shutil
@@ -20,8 +21,11 @@ except ImportError:
     has_libvirt = False
 import yaml
 
+# Import Salt libs
+import salt.utils
 from salt._compat import StringIO
 from salt.exceptions import CommandExecutionError
+
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -43,8 +47,8 @@ def __get_conn():
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
     '''
-    # This has only been tested on kvm and xen, it needs to be expanded to support
-    # all vm layers supported by libvirt
+    # This has only been tested on kvm and xen, it needs to be expanded to
+    # support all vm layers supported by libvirt
     try:
         conn = libvirt.open("qemu:///system")
     except Exception:
@@ -97,6 +101,7 @@ def list_vms():
     vms.extend(list_inactive_vms())
     return vms
 
+
 def list_active_vms():
     '''
     Return a list of names for active virtual machine on the minion
@@ -111,6 +116,7 @@ def list_active_vms():
         vms.append(conn.lookupByID(id_).name())
     return vms
 
+
 def list_inactive_vms():
     '''
     Return a list of names for inactive virtual machine on the minion
@@ -124,6 +130,7 @@ def list_inactive_vms():
     for id_ in conn.listDefinedDomains():
         vms.append(id_)
     return vms
+
 
 def vm_info(vm_=None):
     '''
@@ -166,6 +173,7 @@ def vm_info(vm_=None):
             info[vm_] = _info(vm_)
     return info
 
+
 def vm_state(vm_):
     '''
     Return the status of the named VM.
@@ -179,6 +187,7 @@ def vm_state(vm_):
     raw = dom.info()
     state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
     return state
+
 
 def node_info():
     '''
@@ -199,6 +208,7 @@ def node_info():
             'phymemory': raw[1],
             'sockets': raw[5]}
     return info
+
 
 def get_nics(vm_):
     '''
@@ -239,6 +249,7 @@ def get_nics(vm_):
             nics[nic['mac']] = nic
     return nics
 
+
 def get_macs(vm_):
     '''
     Return a list off MAC addresses from the named vm
@@ -255,6 +266,7 @@ def get_macs(vm_):
             for v_node in i_node.getElementsByTagName('mac'):
                 macs.append(v_node.getAttribute('address'))
     return macs
+
 
 def get_graphics(vm_):
     '''
@@ -301,7 +313,7 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if target.attributes.has_key('dev') and source.attributes.has_key('file'):
+        if ('dev' in target.attributes) and ('file' in source.attributes):
             disks[target.getAttribute('dev')] = {
                 'file': source.getAttribute('file')}
     for dev in disks:
@@ -502,7 +514,7 @@ def reboot(vm_):
     Reboot a domain via ACPI request
 
     CLI Example::
-    
+
         salt '*' virt.reboot <vm name>
     '''
     dom = _get_dom(vm_)
@@ -533,7 +545,7 @@ def ctrl_alt_del(vm_):
     Sends CTRL+ALT+DEL to a VM
 
     CLI Example::
-    
+
         salt '*' virt.ctrl_alt_del <vm name>
     '''
     dom = _get_dom(vm_)
@@ -562,7 +574,7 @@ def create_xml_path(path):
     '''
     if not os.path.isfile(path):
         return False
-    return create_xml_str(open(path, 'r').read())
+    return create_xml_str(salt.utils.fopen(path, 'r').read())
 
 
 def migrate_non_shared(vm_, target):
@@ -669,6 +681,7 @@ def set_autostart(vm_, state='on'):
         # return False if state is set to something other then on or off
         return False
 
+
 def destroy(vm_):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the
@@ -740,12 +753,13 @@ def is_kvm_hyper():
     if __grains__['virtual'] != 'physical':
         return False
     try:
-        if 'kvm_' not in open('/proc/modules').read():
+        if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
             return False
     except IOError:
             # No /proc/modules? Are we on Windows? Or Solaris?
             return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
 
 def is_xen_hyper():
     '''
@@ -762,12 +776,13 @@ def is_xen_hyper():
             # virtual_subtype isn't set everywhere.
             return False
     try:
-        if 'xen_' not in open('/proc/modules').read():
+        if 'xen_' not in salt.utils.fopen('/proc/modules').read():
             return False
     except IOError:
             # No /proc/modules? Are we on Windows? Or Solaris?
             return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
 
 def is_hyper():
     '''

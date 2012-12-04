@@ -1,0 +1,381 @@
+##### Primary configuration settings #####
+##########################################
+# This configuration file is used to manage the behavior of the Salt Master
+# Values that are commented out but have no space after the comment are
+# defaults that need not be set in the config. If there is a space after the
+# comment that the value is presented as an example and is not the default.
+#
+# Per default the master will automatically include all config files
+# from master.d/*.conf (master.d is a directory in the same directory
+# as the main master config file)
+#default_include: master.d/*.conf
+
+# The address of the interface to bind to
+#interface: 0.0.0.0
+
+# The tcp port used by the publisher
+#publish_port: 4505
+
+# The user to run the salt-master as. Salt will update all permissions to
+# allow the specified user to run the master. If the modified files cause
+# conflicts set verify_env to False.
+#user: root
+
+# Max open files
+# Each minion connecting to the master uses AT LEAST one file descriptor, the
+# master subscription connection. If enough minions connect you might start
+# seeing on the console(and then salt-master crashes):
+#   Too many open files (tcp_listener.cpp:335)
+#   Aborted (core dumped)
+#
+# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+# max open files.
+#
+# If you wish to set a different value than the default one, uncomment and
+# configure this setting. Remember that this value CANNOT be higher than the
+# hard limit. Raising the hard limit depends on your OS and/or distribution,
+# a good way to find the limit is to search the internet for(for example):
+#   raise max open files hard limit debian
+#
+#max_open_files: 100000
+
+# The number of worker threads to start, these threads are used to manage
+# return calls made from minions to the master, if the master seems to be
+# running slowly, increase the number of threads
+#worker_threads: 5
+
+# The port used by the communication interface. The ret (return) port is the
+# interface used for the file server, authentication, job returnes, etc.
+#ret_port: 4506
+
+# Specify the location of the daemon process ID file
+#pidfile: /var/run/salt-master.pid
+
+# The root directory prepended to these options: pki_dir, cachedir,
+# sock_dir, log_file, autosign_file, extension_modules
+#root_dir: /
+
+# Directory used to store public key data
+#pki_dir: /etc/salt/pki/master
+
+# Directory to store job and cache data
+#cachedir: /var/cache/salt/master
+
+# Verify and set permissions on configuration directories at startup
+#verify_env: True
+
+# Set the number of hours to keep old job information in the job cache
+#keep_jobs: 24
+
+# Set the default timeout for the salt command and api, the default is 5
+# seconds
+#timeout: 5
+
+# Set the directory used to hold unix sockets
+#sock_dir: /var/run/salt/master
+
+# The master maintains a job cache, while this is a great addition it can be
+# a burden on the master for larger deployments (over 5000 minions).
+# Disabling the job cache will make previously executed jobs unavailable to
+# the jobs system and is not generally recommended.
+#
+#job_cache: True
+
+# Cache minion grains and pillar data in the cachedir.
+#minion_data_cache: True
+
+# The master can include configuration from other files. To enable this,
+# pass a list of paths to this option. The paths can be either relative or
+# absolute; if relative, they are considered to be relative to the directory
+# the main master configuration file lives in (this file). Paths can make use
+# of shell-style globbing. If no files are matched by a path passed to this
+# option then the master will log a warning message.
+#
+#
+# Include a config file from some other path:
+# include: /etc/salt/extra_config
+#
+# Include config from several files and directories:
+# include:
+#   - /etc/salt/extra_config
+
+
+#####        Security settings       #####
+##########################################
+# Enable "open mode", this mode still maintains encryption, but turns off
+# authentication, this is only intended for highly secure environments or for
+# the situation where your keys end up in a bad state. If you run in open mode
+# you do so at your own risk!
+#open_mode: False
+
+# Enable auto_accept, this setting will automatically accept all incoming
+# public keys from the minions. Note that this is insecure.
+#auto_accept: False
+
+# If the autosign_file is specified only incoming keys specified in
+# the autosign_file will be automatically accepted. This is insecure.
+# Regular expressions as well as globing lines are supported.
+#autosign_file: /etc/salt/autosign.conf
+
+# Enable permissive access to the salt keys.  This allows you to run the
+# master or minion as root, but have a non-root group be given access to
+# your pki_dir.  To make the access explicit, root must belong to the group
+# you've given access to.  This is potentially quite insecure.
+#
+# If an autosign_file is specified permissive access will allow group access
+# to that specific file.
+#permissive_pki_access: False
+#
+# Allow users on the master access to execute specific commands on minions.
+# This setting should be treated with care since it opens up execution
+# capabilities to non root users. By default this capability is completely
+# disabled.
+#
+# client_acl:
+#   larry:
+#     - test.ping
+#     - network.*
+#
+# The external auth system uses the Salt auth modules to authenticate and
+# validate users to access areas of the Salt system
+#
+# external_auth:
+#   pam:
+#     fred:
+#       - test.*
+
+#####    Master Module Management    #####
+##########################################
+# Manage how master side modules are loaded
+#
+# Add any additional locations to look for master runners
+#runner_dirs: []
+#
+# Enable Cython for master side modules
+#cython_enable: False
+#
+
+#####      State System settings     #####
+##########################################
+# The state system uses a "top" file to tell the minions what environment to
+# use and what modules to use. The state_top file is defined relative to the
+# root of the base environment as defined in "File Server settings" below.
+#state_top: top.sls
+#
+# The master_tops option replaces the external_nodes option by creating
+# a plugable system for the generation of external top data. The external_nodes
+# option is deprecated by the master_tops option.
+# To gain the capabilities of the classic external_nodes system use the
+# following configuration
+#
+# master_tops:
+#   ext_nodes: <Shell command which returns yaml>
+#
+#master_tops: {}
+# 
+# The external_nodes option allows Salt to gather data that would normally be
+# placed in a top file. The external_nodes option is the executable that will
+# return the ENC data. Remember that Salt will look for external nodes AND top
+# files and combine the results if both are enabled!
+#external_nodes: None
+#
+# The renderer to use on the minions to render the state data
+#renderer: yaml_jinja
+#
+# The failhard option tells the minions to stop immediately after the first
+# failure detected in the state execution, defaults to False
+#failhard: False
+#
+# The state_verbose and state_output settings can be used to change the way
+# state system data is printed to the display. By default all data is printed.
+# The state_verbose setting can be set to True or False, when set to False
+# all data that has a result of True and no changes will be suppressed.
+#state_verbose: True
+# 
+# The state_output setting changes if the output is the full multi line
+# output for each changed state if set to 'full', but if set to 'terse'
+# the output will be shortened to a single line.
+#state_output: full
+
+#####      File Server settings      #####
+##########################################
+# Salt runs a lightweight file server written in zeromq to deliver files to
+# minions. This file server is built into the master daemon and does not
+# require a dedicated port.
+
+# The file server works on environments passed to the master, each environment
+# can have multiple root directories, the subdirectories in the multiple file
+# roots cannot match, otherwise the downloaded files will not be able to be
+# reliably ensured. A base environment is required to house the top file.
+# Example:
+# file_roots:
+#   base:
+#     - /srv/salt/
+#   dev:
+#     - /srv/salt/dev/services
+#     - /srv/salt/dev/states
+#   prod:
+#     - /srv/salt/prod/services
+#     - /srv/salt/prod/states
+#
+# Default:
+#file_roots:
+#  base:
+#    - /srv/salt
+
+# The hash_type is the hash to use when discovering the hash of a file on
+# the master server, the default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
+#hash_type: md5
+
+# The buffer size in the file server can be adjusted here:
+#file_buffer_size: 1048576
+
+# Pillar Configurations:
+# The Salt Pillar, is a system that allows for the building of global data
+# that is refined based on minion. Basically, the pillar creates data that
+# can be generated to be specific based on the grains of the minion. Pillar
+# is laid out in the same fashion as the file server, with environments, a top
+# file and sls files. The difference is that the data does not need to be
+# in the highstate format, and is generally just key/value pairs.
+#
+#pillar_roots:
+#  base:
+#    - /srv/pillar
+#
+# ext_pillar:
+#   - hiera: /etc/hiera.yaml
+#   - cmd_yaml: cat /etc/salt/yaml
+#
+# The pillar_opts option adds the master configuration file data to a dict in
+# the pillar called "master". This is used to set simple configurations in the
+# master config file that can then be used on minions.
+#pillar_opts: True
+
+#####          Syndic settings       #####
+##########################################
+# The Salt syndic is used to pass commands through a master from a higher
+# master. Using the syndic is simple, if this is a master that will have
+# syndic servers(s) below it set the "order_masters" setting to True, if this
+# is a master that will be running a syndic daemon for passthrough the
+# "syndic_master" setting needs to be set to the location of the master server
+# to receive commands from.
+#
+# Set the order_masters setting to True if this master will command lower
+# masters' syndic interfaces.
+#order_masters: False
+#
+# If this master will be running a salt syndic daemon, syndic_master tells
+# this master where to receive commands from.
+#syndic_master: masterofmaster
+
+#####      Peer Publish settings     #####
+##########################################
+# Salt minions can send commands to other minions, but only if the minion is
+# allowed to. By default "Peer Publication" is disabled, and when enabled it
+# is enabled for specific minions and specific commands. This allows secure
+# compartmentalization of commands based on individual minions.
+#
+# The configuration uses regular expressions to match minions and then a list
+# of regular expressions to match functions. The following will allow the
+# minion authenticated as foo.example.com to execute functions from the test
+# and pkg modules.
+# peer:
+#   foo.example.com:
+#       - test.*
+#       - pkg.*
+#
+# This will allow all minions to execute all commands:
+# peer:
+#   .*:
+#       - .*
+# This is not recommended, since it would allow anyone who gets root on any
+# single minion to instantly have root on all of the minions!
+#
+# Minions can also be allowed to execute runners from the salt master.
+# Since executing a runner from the minion could be considered a security risk,
+# it needs to be enabled. This setting functions just like the peer setting
+# except that it opens up runners instead of module functions.
+#
+# All peer runner support is turned off by default and must be enabled before
+# using. This will enable all peer runners for all minions:
+#
+# peer_run:
+#   .*:
+#     - .*
+#
+# To enable just the manage.up runner for the minion foo.example.com:
+#
+# peer_run:
+#   foo.example.com:
+#     - manage.up
+#
+
+#####         Logging settings       #####
+##########################################
+# The location of the master log file
+# This can be a path for the log file, or, this can be, since 0.10.6, a system
+# logger address, for example:
+#	tcp://localhost:514/LOG_USER
+#	tcp://localhost/LOG_DAEMON
+#	udp://localhost:5145/LOG_KERN
+#	udp://localhost
+#	file:///dev/log
+#	file:///dev/log/LOG_SYSLOG
+#	file:///dev/log/LOG_DAEMON
+#
+# The above examples are self explanatory, but:
+#	<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+#
+# Make sure you have a properly configured syslog or you won't get any warnings
+#
+#log_file: /var/log/salt/master
+#key_logfile: /var/log/salt/key
+#
+# The level of messages to send to the console.
+# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# Default: 'warning'
+#log_level: warning
+#
+# The level of messages to send to the log file.
+# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# Default: 'warning'
+#log_level_logfile:
+
+#
+# The date and time format used in log messages. Allowed date/time formating
+# can be seen here:
+#	http://docs.python.org/library/time.html#time.strftime
+#log_datefmt: '%Y-%m-%d %H:%M:%S'
+#
+# The format of the console logging messages. Allowed formatting options can
+# be seen here:
+#	http://docs.python.org/library/logging.html#logrecord-attributes
+#log_fmt_console: '[%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#
+# Logger levels can be used to tweak specific loggers logging levels.
+# For example, if you want to have the salt library at the 'warning' level,
+# but you still wish to have 'salt.modules' at the 'debug' level:
+#   log_granular_levels:
+#     'salt': 'warning',
+#     'salt.modules': 'debug'
+#
+#log_granular_levels: {}
+
+
+#####         Node Groups           #####
+##########################################
+# Node groups allow for logical groupings of minion nodes.
+# A group consists of a group name and a compound target.
+#
+# nodegroups:
+#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+#   group2: 'G@os:Debian and foo.domain.com'
+
+#####     Range Cluster settings     #####
+##########################################
+# The range server (and optional port) that serves your cluster information
+# https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+#
+# range_server: range:80

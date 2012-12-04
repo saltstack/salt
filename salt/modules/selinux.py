@@ -7,8 +7,7 @@ import os
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
-
-__selinux_fs_path__ = None
+from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -16,23 +15,21 @@ def __virtual__():
     Check if the os is Linux, and then if selinux is running in permissive or
     enforcing mode.
     '''
-    if not salt.utils.which('semanage'):
-        return False
-    if not salt.utils.which('seinfo'):
-        return False
+    required_cmds = ('semanage', 'seinfo', 'setenforce', 'setsebool')
 
-    global __selinux_fs_path__
-    if __grains__['kernel'] == 'Linux':
-        # systems running systemd (e.g. Fedora 15 and newer)
-        # have the selinux filesystem in a different location
-        for directory in ['/sys/fs/selinux', '/selinux']:
-            if os.path.isdir(directory):
-                if os.path.isfile(os.path.join(directory, 'enforce')):
-                    __selinux_fs_path__ = directory
-                    return 'selinux'
+    # Iterate over all of the commands this module uses and make sure
+    # each of them are available in the standard PATH to prevent breakage
+    for cmd in required_cmds:
+        if not salt.utils.which(cmd):
+            return False
+    # SELinux only makes sense on Linux *obviously*
+    if __grains__['kernel'] == 'Linux' and selinux_fs_path():
+        return 'selinux'
     return False
 
 
+# Cache the SELinux directory to not look it up over and over
+@salt.utils.memoize
 def selinux_fs_path():
     '''
     Return the location of the SELinux VFS directory
@@ -41,7 +38,13 @@ def selinux_fs_path():
 
         salt '*' selinux.selinux_fs_path
     '''
-    return __selinux_fs_path__
+    # systems running systemd (e.g. Fedora 15 and newer)
+    # have the selinux filesystem in a different location
+    for directory in ('/sys/fs/selinux', '/selinux'):
+        if os.path.isdir(directory):
+            if os.path.isfile(os.path.join(directory, 'enforce')):
+                return directory
+    return None
 
 
 def getenforce():
@@ -52,10 +55,16 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
-    if open(os.path.join(__selinux_fs_path__, 'enforce'), 'r').read() == '0':
-        return 'Permissive'
-    else:
-        return 'Enforcing'
+    enforce = os.path.join(selinux_fs_path(), 'enforce')
+    try:
+        with salt.utils.fopen(enforce, 'r') as _fp:
+            if _fp.readline().strip() == '0':
+                return 'Permissive'
+            else:
+                return 'Enforcing'
+    except (IOError, OSError) as exc:
+        msg = 'Could not read SELinux enforce file: {0}'
+        raise CommandExecutionError(msg.format(str(exc)))
 
 
 def setenforce(mode):
@@ -138,7 +147,7 @@ def list_sebool():
 
         salt '*' selinux.list_sebool
     '''
-    bdata = __salt__['cmd.run']('semanage boolean -l').split('\n')
+    bdata = __salt__['cmd.run']('semanage boolean -l').splitlines()
     ret = {}
     for line in bdata[1:]:
         if not line.strip():

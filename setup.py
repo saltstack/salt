@@ -97,9 +97,9 @@ else:
 
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
 
-requirements = ''
 with open(salt_reqs) as f:
-    requirements = f.read()
+    lines = f.read().split('\n')
+    requirements = [line for line in lines if line]
 
 
 setup_kwargs = {'name': NAME,
@@ -128,6 +128,7 @@ setup_kwargs = {'name': NAME,
                              'salt.cli',
                              'salt.ext',
                              'salt.auth',
+                             'salt.wheel',
                              'salt.tops',
                              'salt.grains',
                              'salt.modules',
@@ -136,6 +137,8 @@ setup_kwargs = {'name': NAME,
                              'salt.returners',
                              'salt.runners',
                              'salt.states',
+                             'salt.search',
+                             'salt.output',
                              'salt.utils',
                              ],
                 'package_data': {'salt.modules': ['rh_ip/*.jinja']},
@@ -170,7 +173,8 @@ freezer_includes = [
     'ast',
     'difflib',
     'distutils',
-    'distutils.version'
+    'distutils.version',
+    'json',
 ]
 
 if sys.platform.startswith('win'):
@@ -186,7 +190,8 @@ if sys.platform.startswith('win'):
     setup_kwargs['install_requires'] += '\nwmi'
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
-        'yum'
+        'yum',
+        'spwd',
     ])
 
 if 'bdist_esky' in sys.argv:
@@ -197,10 +202,10 @@ if 'bdist_esky' in sys.argv:
     import bbfreeze
     options = setup_kwargs.get('options', {})
     options['bdist_esky'] = {
-         "freezer_module": "bbfreeze",
-         "freezer_options": {
-             "includes": freezer_includes
-         }
+        "freezer_module": "bbfreeze",
+        "freezer_options": {
+            "includes": freezer_includes
+        }
     }
     setup_kwargs['options'] = options
 
@@ -225,6 +230,10 @@ else:
                                'scripts/salt-call',
                                'scripts/salt-run',
                                'scripts/salt']
+    # Distutils does not know what these are and throws warnings.
+    # Stop the warning.
+    setup_kwargs.pop('install_requires')
+    setup_kwargs.pop('zip_safe')
 
 if __name__ == '__main__':
     setup(**setup_kwargs)

@@ -31,7 +31,7 @@ def _runlevel():
     '''
     Return the current runlevel
     '''
-    out = __salt__['cmd.run']('runlevel').strip()
+    out = __salt__['cmd.run']('runlevel')
     # unknown will be returned while inside a kickstart environment, since
     # this is usually a server deployment it should be safe to assume runlevel
     # 3.  If not all service related states will throw an out of range
@@ -53,7 +53,7 @@ def get_enabled():
     rlevel = _runlevel()
     ret = set()
     cmd = '/sbin/chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -73,7 +73,7 @@ def get_disabled():
     rlevel = _runlevel()
     ret = set()
     cmd = '/sbin/chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -145,7 +145,7 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def enable(name):
+def enable(name, **kwargs):
     '''
     Enable the named service to start at boot
 
@@ -157,7 +157,7 @@ def enable(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def disable(name):
+def disable(name, **kwargs):
     '''
     Disable the named service to start at boot
 

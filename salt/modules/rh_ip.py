@@ -10,6 +10,9 @@ import StringIO
 # import third party libs
 import jinja2
 
+# Import Salt libs
+import salt.utils
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -24,6 +27,7 @@ def __virtual__():
     if __grains__['os_family'] == 'RedHat':
         return 'ip'
     return False
+
 
 # Setup networking attributes
 _ETHTOOL_CONFIG_OPTS = [
@@ -69,6 +73,7 @@ def _log_default_iface(iface, opt, value):
     msg = 'Using default option -- Interface: {0} Option: {1} Value: {2}'
     log.info(msg.format(iface, opt, value))
 
+
 def _error_msg_network(option, expected):
     '''
     Build an appropriate error message from a given option and
@@ -77,9 +82,11 @@ def _error_msg_network(option, expected):
     msg = 'Invalid network setting -- Setting: {0}, Expected: [{1}]'
     return msg.format(option, '|'.join(expected))
 
+
 def _log_default_network(opt, value):
     msg = 'Using existing setting -- Setting: {0} Value: {1}'
     log.info(msg.format(opt, value))
+
 
 def _parse_rh_config(path):
     rh_config = _read_file(path)
@@ -90,12 +97,13 @@ def _parse_rh_config(path):
             if len(line) == 0 or line.startswith('!') or line.startswith('#'):
                 continue
             pair = [p.rstrip() for p in line.split('=', 1)]
-            if len(pair) !=2:
+            if len(pair) != 2:
                 continue
             name, value = pair
             cv_rh_config[name.upper()] = value
 
-    return cv_rh_config 
+    return cv_rh_config
+
 
 def _parse_ethtool_opts(opts, iface):
     '''
@@ -161,9 +169,9 @@ def _parse_settings_bond(opts, iface):
         # 0 for stable (default)
         # 1 for bandwidth
         # 2 for count
-        'ad_select' : '0',
+        'ad_select': '0',
         # Max number of transmit queues (default = 16)
-        'tx_queues' : '16',
+        'tx_queues': '16',
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
         # arp interval in milliseconds
@@ -188,25 +196,46 @@ def _parse_settings_bond(opts, iface):
     }
 
     if opts['mode'] in ['balance-rr', '0']:
-        log.info('Device: {0} Bonding Mode: load balancing (round-robin)'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: load balancing (round-robin)'.format(
+                iface
+            )
+        )
         return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts['mode'] in ['active-backup', '1']:
-        log.info('Device: {0} Bonding Mode: fault-tolerance (active-backup)'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: fault-tolerance (active-backup)'.format(
+                iface
+            )
+        )
         return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts['mode'] in ['balance-xor', '2']:
-        log.info('Device: {0} Bonding Mode: load balancing (xor)'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: load balancing (xor)'.format(iface)
+        )
         return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts['mode'] in ['broadcast', '3']:
-        log.info('Device: {0} Bonding Mode: fault-tolerance (broadcast)'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: fault-tolerance (broadcast)'.format(
+                iface
+            )
+        )
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts['mode'] in ['802.3ad', '4']:
-        log.info('Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link aggregation'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link '
+            'aggregation'.format(iface)
+        )
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts['mode'] in ['balance-tlb', '5']:
-        log.info('Device: {0} Bonding Mode: transmit load balancing'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: transmit load balancing'.format(iface)
+        )
         return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts['mode'] in ['balance-alb', '6']:
-        log.info('Device: {0} Bonding Mode: adaptive load balancing'.format(iface))
+        log.info(
+            'Device: {0} Bonding Mode: adaptive load balancing'.format(iface)
+        )
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [
@@ -512,7 +541,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'dns' in opts:
         result['dns'] = opts['dns']
         result['peernds'] = 'yes'
-    
+
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
@@ -576,7 +605,10 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _raise_error_iface(iface, opts[opt], valid)
 
     if 'onboot' in opts:
-        log.warning('''The 'onboot' option is controlled by the 'enabled' option. Interface: {0} Enabled: {1}'''.format(iface, enabled))
+        log.warning(
+            'The \'onboot\' option is controlled by the \'enabled\' option. '
+            'Interface: {0} Enabled: {1}'.format(iface, enabled)
+        )
 
     if enabled:
         result['onboot'] = 'yes'
@@ -598,14 +630,15 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     return result
 
+
 def _parse_network_settings(opts, current):
     '''
     Filters given options and outputs valid settings for
     the global network settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for k,v in opts.iteritems())
-    current = dict((k.lower(), v) for k,v in current.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    current = dict((k.lower(), v) for (k, v) in current.iteritems())
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -647,8 +680,7 @@ def _parse_network_settings(opts, current):
 
     for opt in opts:
         if opt not in ['networking', 'hostname', 'nozeroconf']:
-          result[opt] = opts[opt]
-
+            result[opt] = opts[opt]
     return result
 
 
@@ -659,6 +691,7 @@ def _raise_error_iface(iface, option, expected):
     msg = _error_msg_iface(iface, option, expected)
     log.error(msg)
     raise AttributeError(msg)
+
 
 def _raise_error_network(option, expected):
     '''
@@ -674,7 +707,7 @@ def _read_file(path):
     Reads and returns the contents of a file
     '''
     try:
-        with open(path, 'rb') as contents:
+        with salt.utils.fopen(path, 'rb') as contents:
             return contents.readlines()
     except Exception:
         return ''
@@ -690,17 +723,19 @@ def _write_file_iface(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    fout = open(filename, 'w')
+    fout = salt.utils.fopen(filename, 'w')
     fout.write(data)
     fout.close()
+
 
 def _write_file_network(data, filename):
     '''
     Writes a file to disk
     '''
-    fout = open(filename, 'w')
+    fout = salt.utils.fopen(filename, 'w')
     fout.write(data)
     fout.close()
+
 
 def _read_temp(data):
     tout = StringIO.StringIO()
@@ -728,8 +763,12 @@ def build_bond(iface, settings):
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf')
     path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
-        __salt__['cmd.run']('sed -i -e "/^alias\s{0}.*/d" /etc/modprobe.conf'.format(iface))
-        __salt__['cmd.run']('sed -i -e "/^options\s{0}.*/d" /etc/modprobe.conf'.format(iface))
+        __salt__['cmd.run'](
+            'sed -i -e "/^alias\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+        )
+        __salt__['cmd.run'](
+            'sed -i -e "/^options\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+        )
         __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
     __salt__['kmod.load']('bonding')
 
@@ -857,10 +896,14 @@ def apply_network_settings(opts):
         opts['require_reboot'] = False
 
     if opts['require_reboot'] in _CONFIG_TRUE:
-        log.warning('The network state sls is requiring a reboot of the system to properly apply network configuration.')
+        log.warning(
+            'The network state sls is requiring a reboot of the system to '
+            'properly apply network configuration.'
+        )
         return True
     else:
         return __salt__['service.restart']('network')
+
 
 def build_network_settings(settings):
     '''
@@ -874,10 +917,10 @@ def build_network_settings(settings):
     current_network_settings = _parse_rh_config(_RH_NETWORK_FILE)
 
     # Build settings
-    opts = _parse_network_settings(settings,current_network_settings)
+    opts = _parse_network_settings(settings, current_network_settings)
     template = env.get_template('network.jinja')
     network = template.render(opts)
-    
+
     if settings['test']:
         return _read_temp(network)
 
