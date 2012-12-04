@@ -335,9 +335,10 @@ def __remove_null_logging_handler():
         return
 
     rootLogger = logging.getLogger()
+    global LoggingNullHandler
 
     for handler in rootLogger.handlers:
-        if handler is NullHandler:
+        if handler is LoggingNullHandler:
             rootLogger.removeHandler(LoggingNullHandler)
             # Redefine the null handler to None so it can be garbage collected
             LoggingNullHandler = None
