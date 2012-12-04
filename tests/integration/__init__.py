@@ -340,7 +340,7 @@ class TestDaemon(object):
         if sync_needed:
             # Wait for minions to "sync_all"
             sync_minions = multiprocessing.Process(
-                target=self.sync_minions,
+                target=self.sync_minion_modules,
                 args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
             )
             sync_minions.start()
@@ -516,7 +516,7 @@ class TestDaemon(object):
                 for name, output in rdata.iteritems():
                     print(
                         '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
-                        '{1}'.format(name, *output, **self.colors)
+                        '{1}'.format(name, ', '.join(output), **self.colors)
                     )
                     # Synced!
                     try:
