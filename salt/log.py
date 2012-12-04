@@ -106,22 +106,20 @@ class Logging(LoggingLoggerClass):
         return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
 
 
-def getLogger(name):
-    init()
-    return logging.getLogger(name)
-
-
-def init():
+if logging.getLoggerClass() is not Logging:
     '''
     Replace the default system logger with a version that includes trace()
     and garbage() methods.
     '''
-    if logging.getLoggerClass() is not Logging:
-        logging.setLoggerClass(Logging)
-        logging.addLevelName(TRACE, 'TRACE')
-        logging.addLevelName(GARBAGE, 'GARBAGE')
-        # Set the root logger at the lowest level possible
-        logging.getLogger().setLevel(GARBAGE)
+    logging.setLoggerClass(Logging)
+    logging.addLevelName(TRACE, 'TRACE')
+    logging.addLevelName(GARBAGE, 'GARBAGE')
+    # Set the root logger at the lowest level possible
+    logging.getLogger().setLevel(GARBAGE)
+
+
+def getLogger(name):
+    return logging.getLogger(name)
 
 
 def setup_console_logger(log_level='error', log_format=None, date_format=None):
@@ -131,8 +129,6 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     if is_console_configured():
         logging.getLogger(__name__).warn('Console logging already configured')
         return
-
-    init()
 
     if log_level is None:
         log_level = 'warning'
@@ -182,8 +178,6 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     if is_logfile_configured():
         logging.getLogger(__name__).warn('Logfile logging already configured')
         return
-
-    init()
 
     if log_level is None:
         log_level = 'warning'
@@ -295,7 +289,6 @@ def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
     '''
-    init()
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
     )
