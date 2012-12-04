@@ -78,7 +78,7 @@ if sys.version_info < (2, 7):
 
 
 # Store a reference to the null logging handler
-__NullHandler = logging.NullHandler()
+LoggingNullHandler = logging.NullHandler()
 
 
 class Logging(LoggingLoggerClass):
@@ -98,7 +98,7 @@ class Logging(LoggingLoggerClass):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
-                if handler is __NullHandler:
+                if handler is LoggingNullHandler:
                     continue
 
                 if not handler.lock:
@@ -143,7 +143,7 @@ if logging.getLoggerClass() is not Logging:
     # Add a Null logging handler until logging is configured(will be removed at
     # a later stage) so we stop getting:
     #   No handlers could be found for logger "foo"
-    rootLogger.addHandler(__NullHandler)
+    rootLogger.addHandler(LoggingNullHandler)
     rootLogger.setLevel(GARBAGE)
 
 
@@ -338,7 +338,7 @@ def __remove_null_logging_handler():
 
     for handler in rootLogger.handlers:
         if handler is NullHandler:
-            rootLogger.removeHandler(__NullHandler)
+            rootLogger.removeHandler(LoggingNullHandler)
             # Redefine the null handler to None so it can be garbage collected
-            __NullHandler = None
+            LoggingNullHandler = None
             break
