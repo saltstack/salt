@@ -1,7 +1,7 @@
-salt (0.10.6b) unstable; urgency=low
+salt (0.10.5-3) unstable; urgency=low
 
-  * use shared logrotate, upstart, and systemd scripts
   * add bash_completion and ufw support files
+  * use shared package support files in pkg/
 
  -- Sean Channel <pentabular@gmail.com>  Mon, 3 Dec 2012 11:14:35 -0700
 

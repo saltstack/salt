@@ -2,7 +2,7 @@ Source: salt
 Section: admin
 Priority: optional
 Maintainer: Sean Channel <pentabular@gmail.com>
-Build-Depends: debhelper,
+Build-Depends: debhelper (>= 7.0.50),
                cython,
                python | python-all | python-dev | python-all-dev,
                python-crypto,

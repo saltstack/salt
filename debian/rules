@@ -1,19 +1,18 @@
 #!/usr/bin/make -f
 
-PKGFILES := pkg/*.service pkg/*.upstart pkg/*.logrotate
-SALT_BIN := common minion master syndic
+PKGFILES = pkg/*.service pkg/*.upstart pkg/*.logrotate
+SALT_BIN = common minion master syndic
+JS_FILES = searchtools doctools sidebar jquery underscore
 
 %:
 	cp $(PKGFILES) debian
 	for d in $(SALT_BIN); do \
 	    cp pkg/salt.postrm debian/salt-$${d}.postrm; done
+	make -C doc html
 	dh $@ 
 
 dh_override_auto_build:
 	python setup.py build
-	make -C doc html
-
-JS_FILES = searchtools doctools sidebar jquery underscore
 
 override_dh_installdocs:
 	dh_installdocs
