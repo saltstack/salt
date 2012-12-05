@@ -326,10 +326,10 @@ class Publisher(multiprocessing.Process):
                         continue
                     raise exc
 
-        #except KeyboardInterrupt:
-        finally:
+        except KeyboardInterrupt:
             pub_sock.close()
             pull_sock.close()
+        finally:
             context.term()
 
 
@@ -458,9 +458,9 @@ class MWorker(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-        finally:
-        #except KeyboardInterrupt:
+        except KeyboardInterrupt:
             socket.close()
+        finally:
             context.term()
 
     def _handle_payload(self, payload):
