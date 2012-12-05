@@ -5,6 +5,8 @@ Support for YUM
             - rpm Python module
             - rpmUtils Python module
 '''
+import re
+
 try:
     import yum
     import rpm
@@ -175,7 +177,18 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs(name)
+    # since list_pkgs is used to support matching complex versions
+    # we can search for a digit in the name and if one doesn't exist
+    # then just use the dbMatch function, which is 1000 times quicker
+    m = re.search("[0-9]", name)
+    if m:
+        pkgs = list_pkgs(name)
+    else:
+        ts = rpm.TransactionSet()
+        mi = ts.dbMatch('name', name)
+        pkgs = {}
+        for h in mi:
+            pkgs[h['name']] = "-".join([h['version'], h['release']])
     if name in pkgs:
         return pkgs[name]
     else:
@@ -433,3 +446,96 @@ def purge(pkgs):
         salt '*' pkg.purge <package name>
     '''
     return remove(pkgs)
+
+
+def verify(*package):
+    '''
+    Runs an rpm -Va on a system, and returns the results in a dict
+
+    CLI Example::
+
+        salt '*' pkg.verify
+    '''
+    ftypes = {'c': 'config',
+              'd': 'doc',
+              'g': 'ghost',
+              'l': 'license',
+              'r': 'readme'}
+    ret = {}
+    if package:
+        packages = ' '.join(package)
+        cmd = 'rpm -V {0}'.format(packages)
+    else:
+        cmd = 'rpm -Va'
+    for line in __salt__['cmd.run'](cmd).split('\n'):
+        fdict = {'mismatch': []}
+        if 'missing' in line:
+            line = ' ' + line
+            fdict['missing'] = True
+            del(fdict['mismatch'])
+        fname = line[13:]
+        if line[11:12] in ftypes:
+            fdict['type'] = ftypes[line[11:12]]
+        if line[0:1] == 'S':
+            fdict['mismatch'].append('size')
+        if line[1:2] == 'M':
+            fdict['mismatch'].append('mode')
+        if line[2:3] == '5':
+            fdict['mismatch'].append('md5sum')
+        if line[3:4] == 'D':
+            fdict['mismatch'].append('device major/minor number')
+        if line[4:5] == 'L':
+            fdict['mismatch'].append('readlink path')
+        if line[5:6] == 'U':
+            fdict['mismatch'].append('user')
+        if line[6:7] == 'G':
+            fdict['mismatch'].append('group')
+        if line[7:8] == 'T':
+            fdict['mismatch'].append('mtime')
+        if line[8:9] == 'P':
+            fdict['mismatch'].append('capabilities')
+        ret[fname] = fdict
+    return ret
+
+
+def grouplist():
+    '''
+    Lists all groups known by yum on this system
+
+    CLI Example::
+
+        salt '*' pkg.grouplist
+    '''
+    ret = {'installed': [], 'available': [], 'available languages': {}}
+    yb = yum.YumBase()
+    (installed, available) = yb.doGroupLists()
+    for group in installed:
+        ret['installed'].append(group.name)
+    for group in available:
+        if group.langonly:
+            ret['available languages'][group.name] = {
+                'name': group.name,
+                'language': group.langonly}
+        else:
+            ret['available'].append(group.name)
+    return ret
+
+
+def groupinfo(groupname):
+    '''
+    Lists packages belonging to a certain group
+
+    CLI Example::
+
+        salt '*' pkg.groupinfo 'Perl Support'
+    '''
+    yb = yum.YumBase()
+    (installed, available) = yb.doGroupLists()
+    for group in installed + available:
+        if group.name == groupname:
+            return {'manditory packages': group.mandatory_packages,
+                   'optional packages': group.optional_packages,
+                   'default packages': group.default_packages,
+                   'conditional packages': group.conditional_packages,
+                   'description': group.description}
+

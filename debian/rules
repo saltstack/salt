@@ -1,8 +1,14 @@
 #!/usr/bin/make -f
+
+PKGFILES = pkg/*.service pkg/*.upstart pkg/*.logrotate
+SALT_BIN = common minion master syndic
+
 %:
-	dh $@
-		make -C doc html
-# overrides require debuilder >= 7.0.50
-# http://pkg-perl.alioth.debian.org/debhelper.html#forcing_special_tests
+	cp $(PKGFILES) debian
+	for d in $(SALT_BIN); do \
+	    cp pkg/salt.postrm debian/salt-$${d}.postrm; done
+	dh $@ 
+	make -C doc html
+
 dh_override_auto_build:
 	python setup.py build

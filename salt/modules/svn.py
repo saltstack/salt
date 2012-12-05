@@ -4,13 +4,14 @@ Subversion SCM
 
 import re
 import shlex
+from subprocess import list2cmdline
 from salt import utils, exceptions
 
 _INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
 
 
 def _check_svn():
-    """Check for svn on this node."""
+    '''Check for svn on this node.'''
     utils.check_or_die('svn')
 
 
@@ -39,10 +40,9 @@ def _run_svn(cmd, cwd, user, username, opts, **kwargs):
     '''
     cmd = 'svn --non-interactive {0} '.format(cmd)
     if username:
-        opts += ("--username", username)
+        opts += ('--username', username)
     if opts:
-        cmd += '"{0}"'.format('" "'.join(
-            [optstr.replace('"', r'\"') for optstr in opts]))
+        cmd += list2cmdline(opts)
 
     result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, **kwargs)
 
@@ -86,7 +86,7 @@ def info(cwd, targets=None, user=None, username=None, fmt='str'):
         return infos
 
     info_list = []
-    for infosplit in infos.split("\n\n"):
+    for infosplit in infos.split('\n\n'):
         info_list.append(_INI_RE.findall(infosplit))
 
     if fmt == 'list':

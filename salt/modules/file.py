@@ -89,7 +89,7 @@ def gid_to_group(gid):
         # This is not an integer, maybe it's already the group name?
         gid = group_to_gid(gid)
 
-    if not gid:
+    if gid == '':
         # Don't even bother to feed it to grp
         return ''
 
@@ -612,7 +612,13 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
     .. versionadded:: 0.10.4
     '''
-    dry_run_opt = ' --dry-run' if dry_run else ''
+    if dry_run:
+        if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
+            dry_run_opt = ' -C'
+        else:
+            dry_run_opt = ' --dry-run'
+    else:
+        dry_run_opt = ''
     cmd = 'patch {0}{1} {2} {3}'.format(
         options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd)
@@ -1146,9 +1152,11 @@ def check_managed(
             **kwargs
             )
     if comment:
+        __clean_tmp(sfn)
         return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, env)
+    __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
         for key, val in changes.items():
@@ -1201,6 +1209,37 @@ def check_file_meta(
         changes['mode'] = mode
     return changes
 
+def get_diff(
+        minionfile,
+        masterfile,
+        env='base'):
+    '''
+    Return unified diff of file compared to file on master
+
+    Example:
+
+        salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
+    '''
+    ret = ''
+
+    if not os.path.exists(minionfile):
+        ret = 'File {0} does not exist on the minion'.format(minionfile)
+        return ret
+
+    sfn = __salt__['cp.cache_file'](masterfile, env)
+    if sfn:
+        with nested(salt.utils.fopen(sfn, 'r'),
+                    salt.utils.fopen(minionfile, 'r')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        diff = difflib.unified_diff(nlines, slines, minionfile, masterfile)
+        if diff:
+            for line in diff:
+                ret = ret + line
+    else:
+        ret = 'Failed to copy file from master'
+
+    return ret
 
 def manage_file(name,
         sfn,
@@ -1378,7 +1417,7 @@ def makedirs(path, user=None, group=None, mode=None):
         # turn on the executable bits for user, group and others.
         # Note: the special bits are set to 0.
         if mode:
-            mode = int(mode[-3:], 8) | 0111
+            mode = int(str(mode)[-3:], 8) | 0111
 
         makedirs_perms(directory, user, group, mode)
         # If a caller such as managed() is invoked  with

@@ -19,7 +19,8 @@ def render(template_file, env='', sls='', context=None, tmplpath=None, **kws):
                     env=env,
                     sls=sls,
                     context=context,
-                    tmplpath=tmplpath)
+                    tmplpath=tmplpath,
+                    **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))

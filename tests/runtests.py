@@ -6,6 +6,7 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 import sys
 import os
+import re
 import logging
 import optparse
 import resource
@@ -246,7 +247,8 @@ def parse_opts():
         )
     elif options.coverage:
         coverage_version = tuple(
-            [int(part) for part in coverage.__version__.split('.')]
+            [int(part) for part in
+             re.search(r'([0-9.]+)', coverage.__version__).group(0).split('.')]
         )
         if coverage_version < (3, 5, 3):
             # Should we just print the error instead of exiting?
@@ -286,6 +288,10 @@ def parse_opts():
     logging.root.setLevel(logging.DEBUG)
 
     print_header('Logging tests on {0}'.format(logfile), bottom=False)
+    print_header(
+        'Test suite is running under PID {0}'.format(os.getpid()), bottom=False
+    )
+
 
     # With greater verbosity we can also log to the console
     if options.verbosity > 2:

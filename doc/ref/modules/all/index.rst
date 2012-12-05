@@ -40,6 +40,7 @@ Full list of builtin execution modules
     djangomod
     ebuild
     event
+    extfs
     file
     freebsdjail
     freebsdkmod
@@ -52,15 +53,18 @@ Full list of builtin execution modules
     glance
     grains
     groupadd
-    grub
+    grub_legacy
     hg
     hosts
+    iptables
+    keyboard
     keystone
     kmod
     kvm_hyper
     launchctl
     ldapmod
     linux_sysctl
+    locale
     mdadm
     mongodb
     monit
@@ -75,10 +79,13 @@ Full list of builtin execution modules
     openbsdservice
     osxdesktop
     pacman
+    pam
+    parted
     pecl
     pillar
     pip
     pkgng
+    pkg_resource
     pkgutil
     postgres
     poudriere
@@ -111,6 +118,7 @@ Full list of builtin execution modules
     svn
     systemd
     test
+    timezone
     tls
     tomcat
     upstart

@@ -9,7 +9,6 @@ import re
 import imp
 import random
 import sys
-import fcntl
 import socket
 import logging
 import inspect
@@ -22,6 +21,13 @@ import subprocess
 import time
 import platform
 from calendar import month_abbr as months
+
+try:
+    import fcntl
+    has_fcntl = True
+except ImportError:
+    # fcntl is not available on windows
+    has_fcntl = False
 
 # Import Salt libs
 import salt.minion
@@ -734,12 +740,15 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
-    try:
-        FD_CLOEXEC = fcntl.FD_CLOEXEC
-    except AttributeError:
-        FD_CLOEXEC = 1
-    old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-    fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+    if has_fcntl:
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC
+        except AttributeError:
+            FD_CLOEXEC = 1
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
@@ -757,3 +766,17 @@ def mkstemp(*args, **kwargs):
     os.close(fd_)
     del(fd_)
     return fpath
+
+
+def clean_kwargs(**kwargs):
+    '''
+    Clean out the __pub* keys from the kwargs dict passed into the execution 
+    module functions. The __pub* keys are useful for tracking what was used to
+    invoke the function call, but they may not be desierable to have if
+    passing the kwargs forward wholesale.
+    '''
+    ret = {}
+    for key, val in kwargs.items():
+        if not key.startswith('__pub'):
+            ret[key] = val
+    return ret

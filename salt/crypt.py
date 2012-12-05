@@ -144,7 +144,7 @@ class Auth(object):
         '''
         # Make sure all key parent directories are accessible
         user = self.opts.get('user', 'root')
-        salt.utils.verify.check_parent_dirs(self.rsa_path, user)
+        salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
             try:

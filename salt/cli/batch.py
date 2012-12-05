@@ -15,8 +15,9 @@ class Batch(object):
     '''
     Manage the execution of batch runs
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, quiet=False):
         self.opts = opts
+        self.quiet = quiet
         self.local = salt.client.LocalClient(opts['conf_file'])
         self.minions = self.__gather_minions()
 
@@ -39,7 +40,8 @@ class Batch(object):
         fret = []
         for ret in self.local.cmd_iter(*args):
             for minion in ret:
-                print('{0} Detected for this batch run'.format(minion))
+                if not self.quiet:
+                    print('{0} Detected for this batch run'.format(minion))
                 fret.append(minion)
         return sorted(fret)
 
@@ -58,8 +60,9 @@ class Batch(object):
             else:
                 return int(self.opts['batch'])
         except ValueError:
-            print(('Invalid batch data sent: {0}\nData must be in the form'
-                   'of %10, 10% or 3').format(self.opts['batch']))
+            if not quiet:
+                print(('Invalid batch data sent: {0}\nData must be in the form'
+                       'of %10, 10% or 3').format(self.opts['batch']))
 
     def run(self):
         '''
@@ -90,7 +93,8 @@ class Batch(object):
             active += next_
             args[0] = next_
             if next_:
-                print('\nExecuting run on {0}\n'.format(next_))
+                if not quiet:
+                    print('\nExecuting run on {0}\n'.format(next_))
                 iters.append(
                         self.local.cmd_iter_no_block(*args))
             else:
@@ -114,14 +118,15 @@ class Batch(object):
                     pass
             for minion, data in parts.items():
                 active.remove(minion)
+                yield data['ret']
                 ret[minion] = data['ret']
                 data[minion] = data.pop('ret')
                 if 'out' in data:
                     out = data.pop('out')
                 else:
                     out = None
-                salt.output.display_output(
-                        data,
-                        out,
-                        self.opts)
-        return ret
+                if not self.quiet:
+                    salt.output.display_output(
+                            data,
+                            out,
+                            self.opts)

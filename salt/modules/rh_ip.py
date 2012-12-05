@@ -10,6 +10,9 @@ import StringIO
 # import third party libs
 import jinja2
 
+# Import Salt libs
+import salt.utils
+
 # Set up logging
 log = logging.getLogger(__name__)
 

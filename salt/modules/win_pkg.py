@@ -14,6 +14,11 @@ try:
 except ImportError:
     pass
 
+import logging
+
+log = logging.getLogger(__name__)
+
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
@@ -40,7 +45,7 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    return 'Not implemented on Windows yet'
+    return 'pkg.available_version not implemented on Windows yet'
 
 
 def upgrade_available(name):
@@ -51,7 +56,8 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.upgrade_available not implemented on Windows yet')
+    return False
 
 
 def list_upgrades():
@@ -62,7 +68,8 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.list_upgrades not implemented on Windows yet')
+    return {}
 
 
 def version(name):
@@ -262,10 +269,11 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.refresh_db not implemented on Windows yet')
+    return {}
 
 
-def install(name, refresh=False, **kwargs):
+def install(name=None, refresh=False, **kwargs):
     '''
     Install the passed package
 
@@ -278,7 +286,8 @@ def install(name, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.install not implemented on Windows yet')
+    return {}
 
 
 def upgrade():
@@ -294,7 +303,8 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.upgrade not implemented on Windows yet')
+    return {}
 
 
 def remove(name):
@@ -307,7 +317,8 @@ def remove(name):
 
         salt '*' pkg.remove <package name>
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.remove not implemented on Windows yet')
+    return []
 
 
 def purge(name):
@@ -321,4 +332,5 @@ def purge(name):
 
         salt '*' pkg.purge <package name>
     '''
-    return 'Not implemented on Windows yet'
+    log.warning('pkg.purge not implemented on Windows yet')
+    return []

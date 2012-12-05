@@ -1,4 +1,4 @@
-conf/minion.template /etc/salt
+conf/minion /etc/salt
 scripts/salt-minion /usr/bin
 scripts/salt-call /usr/bin
 debian/salt-minion.service /lib/systemd/system

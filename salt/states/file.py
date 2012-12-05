@@ -976,6 +976,15 @@ def recurse(name,
            'result': True,
            'comment': {}  # { path: [comment, ...] }
            }
+
+    if 'mode' in kwargs:
+        ret['result'] = False
+        ret['comment'] = (
+            '\'mode\' is not allowed in \'file.recurse\'. Please use '
+            '\'file_mode\' and \'dir_mode\'.'
+        )
+        return ret
+
     u_check = _check_user(user, group)
     if u_check:
         # The specified user or group do not exist
@@ -1028,6 +1037,14 @@ def recurse(name,
                 _ret['changes'] = { 'diff': 'Replaced directory with a new file' }
                 merge_ret(path, _ret)
 
+        # Conflicts can occur is some kwargs are passed in here
+        pass_kwargs = {}
+        faults = ['mode', 'makedirs', 'replace']
+        for key in kwargs:
+            if not key in faults:
+                pass_kwargs[key] = kwargs[key]
+
+
         _ret = managed(
             path,
             source=source,
@@ -1041,7 +1058,7 @@ def recurse(name,
             defaults=defaults,
             env=env,
             backup=backup,
-            **kwargs)
+            **pass_kwargs)
         merge_ret(path, _ret)
 
     def manage_directory(path):

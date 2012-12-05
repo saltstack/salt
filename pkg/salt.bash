@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # written by David Pravec
 #   - feel free to /msg alekibango on IRC if you want to talk about this file
 

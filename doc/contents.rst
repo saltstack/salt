@@ -8,8 +8,8 @@ Full Table of Contents
 
     topics/index
     topics/installation/index
-    topics/hacking
     topics/configuration
+    topics/hacking
     topics/targeting/index
     topics/tutorials/modules
     topics/tutorials/starting_states
@@ -48,6 +48,7 @@ Full Table of Contents
     ref/runners/all/index
     ref/wheel/all/index
     ref/output/all/index
+    ref/clients/index
     ref/peer
     ref/clientacl
     ref/syndic
