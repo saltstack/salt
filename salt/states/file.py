@@ -261,8 +261,13 @@ def _check_directory(
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
-            for key, val in changes[fn_].items():
-                comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
+            # for some reason we're getting tuples and dicts.
+            # Let's do the right thing for each.
+            if isinstance(changes[fn_], tuple):
+                key, val = changes[fn_]
+            else:
+                key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
+            comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
