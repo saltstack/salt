@@ -150,7 +150,7 @@ def collectstatic(settings_module,
 
         salt '*' django.collectstatic settings.py
     '''
-    args = []
+    args = ['noinput']
     kwargs = {}
     if no_post_process:
         args.append('no-post-process')

@@ -18,7 +18,8 @@ def render(template_file, env='', sls='', argline='', context=None, **kws):
             pillar=__pillar__,
             env=env,
             sls=sls,
-            context=context)
+            context=context,
+            **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in the wempy renderer'))
