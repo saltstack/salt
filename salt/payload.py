@@ -142,7 +142,10 @@ class SREQ(object):
         self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
         while True:
-            if not self.poller.poll(timeout * 1000) and tried >= tries:
+            polled = self.poller.poll(timeout * 1000)
+            if polled:
+                break
+            elif tried >= tries:
                 raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
             tried += 1
         try:
