@@ -25,7 +25,8 @@ def present(
         fingerprint=None,
         port=None,
         enc=None,
-        config='.ssh/known_hosts'):
+        config='.ssh/known_hosts',
+        hash_hostname=True):
     '''
     Verifies that the specified host is known by the specified user
 
@@ -50,6 +51,9 @@ def present(
     config
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/known_hosts"
+
+    hash_hostname : True
+        Hash all hostnames and addresses in the output.
     '''
     ret = {'name': name,
            'changes': {},
@@ -75,7 +79,8 @@ def present(
                 fingerprint=fingerprint,
                 port=port,
                 enc=enc,
-                config=config)
+                config=config,
+                hash_hostname=hash_hostname)
     if result['status'] == 'exists':
         return dict(ret,
                     comment='{0} already exists in {1}'.format(name, config))
