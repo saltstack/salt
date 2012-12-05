@@ -184,11 +184,11 @@ def _item_list():
         #    }
     return ret
 
-    #The following is a list of functions that need to be incorporated in the
-    #nova module. This list should be updated as functions are added.
+#The following is a list of functions that need to be incorporated in the
+#nova module. This list should be updated as functions are added.
 
-    #image-download      Download a specific image.
-    #image-update        Update a specific image.
-    #member-create       Share a specific image with a tenant.
-    #member-delete       Remove a shared image from a tenant.
-    #member-list         Describe sharing permissions by image or tenant.
+#image-download      Download a specific image.
+#image-update        Update a specific image.
+#member-create       Share a specific image with a tenant.
+#member-delete       Remove a shared image from a tenant.
+#member-list         Describe sharing permissions by image or tenant.
