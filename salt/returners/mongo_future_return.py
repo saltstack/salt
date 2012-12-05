@@ -71,7 +71,6 @@ def returner(ret):
     '''
     conn, db = _get_conn()
     col = db[ret['id']]
-    back = {}
 
     if isinstance(ret['return'], dict):
         back = _remove_dots(ret['return'])
