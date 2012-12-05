@@ -18,13 +18,15 @@ def __virtual__():
 
 def output(data):
     '''
-    Print the output data in JSAON
+    Print the output data in JSON
     '''
     try:
-        # A good kwarg might be: indent=4
-        ret = json.dumps(data, indent=4)
+        if 'output_indent' in __opts__:
+            if __opts__['output_indent'] >= 0:
+                return json.dumps(data, indent=__opts__['output_indent'])
+            return json.dumps(data)
+        return json.dumps(data, indent=4)
     except TypeError:
         log.debug(traceback.format_exc())
-        # Return valid json for unserializable objects
-        ret = json.dumps({})
-    return ret
+    # Return valid json for unserializable objects
+    return json.dumps({})
