@@ -612,17 +612,7 @@ class OutputOptionsMixIn(object):
                 if getattr(self.options, opt.dest, default) is False:
                     return
 
-                # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
-                if version.__version_info__ >= (0, 10, 7):
-                    self.error(
-                        'The option {0} is deprecated. You must now use '
-                        '\'--out {1}\' instead.'.format(
-                            opt.get_opt_string(),
-                            opt.dest.split('_', 1)[0]
-                        )
-                    )
-
-                if opt.dest != 'out':
+                if opt.dest not in ('out', 'no_color'):
                     msg = (
                         'The option {0} is deprecated. Please consider using '
                         '\'--out {1}\' instead.'.format(
@@ -630,7 +620,10 @@ class OutputOptionsMixIn(object):
                             opt.dest.split('_', 1)[0]
                         )
                     )
-                    if log.is_console_configured():
+                    if version.__version_info__ >= (0, 10, 7):
+                        # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
+                        self.error(msg)
+                    elif log.is_console_configured():
                         logging.getLogger(__name__).warning(msg)
                     else:
                         sys.stdout.write('WARNING: {0}\n'.format(msg))
