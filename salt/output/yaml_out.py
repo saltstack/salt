@@ -15,11 +15,12 @@ def output(data):
     '''
     Print out YAML using the block mode
     '''
-    if 'output_indent' in __opts__ and __opts__['output_indent'] >= 0:
-        return yaml.dump(
-            data, default_flow_style=False, indent=__opts__['output_indent']
-        )
-    elif 'output_indent' in __opts__ and __opts__['output_indent'] < 0:
+    if 'output_indent' in __opts__:
+        if __opts__['output_indent'] >= 0:
+            return yaml.dump(
+                data, default_flow_style=False,
+                indent=__opts__['output_indent']
+            )
         # Disable indentation
         return yaml.dump(data, default_flow_style=True, indent=0)
     return yaml.dump(data, default_flow_style=False)
