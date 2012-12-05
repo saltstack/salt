@@ -341,7 +341,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    a = yb.downgradeLocal(target)
+                    yb.downgradeLocal(target)
             else:
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
@@ -350,7 +350,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying downgrade')
-                    a = yb.downgrade(pattern=target)
+                    yb.downgrade(pattern=target)
         except Exception:
             log.exception('Package "{0}" failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved by

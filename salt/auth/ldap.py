@@ -114,7 +114,7 @@ def auth(username, password):
     # Attempt bind with user dn and password
     log.debug('Attempting LDAP bind with user dn: {0}'.format(authdn))
     try:
-        _ldap = _LDAPConnection(**connargs).LDAP
+        _LDAPConnection(**connargs).LDAP
     except:
         log.warn('Failed to authenticate user dn via LDAP: {0}'.format(authdn))
         return False

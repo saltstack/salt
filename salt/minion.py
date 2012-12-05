@@ -238,7 +238,6 @@ class Minion(object):
         Takes the aes encrypted load, decrypts is and runs the encapsulated
         instructions
         '''
-        data = None
         try:
             data = self.crypticle.loads(load)
         except AuthenticationError:
@@ -365,7 +364,7 @@ class Minion(object):
                 ret['return'] = 'ERROR executing {0}: {1}'.format(
                     function_name, exc
                 )
-            except Exception as exc:
+            except Exception:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
                 log.warning(msg.format(trb))
@@ -739,7 +738,6 @@ class Syndic(salt.client.LocalClient, Minion):
         Takes the aes encrypted load, decrypts is and runs the encapsulated
         instructions
         '''
-        data = None
         # If the AES authentication has changed, re-authenticate
         try:
             data = self.crypticle.loads(load)

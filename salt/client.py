@@ -485,7 +485,6 @@ class LocalClient(object):
                                 # Sometimes the ret data is read at the wrong
                                 # time and returns None, do a quick re-read
                                 if check:
-                                    check = False
                                     continue
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):

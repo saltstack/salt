@@ -89,7 +89,6 @@ class MasterKeys(dict):
         '''
         Returns a key objects for the master
         '''
-        key = None
         if os.path.exists(self.rsa_path):
             try:
                 key = RSA.load_key(self.rsa_path)
@@ -143,7 +142,6 @@ class Auth(object):
         '''
         Returns a key objects for the minion
         '''
-        key = None
         # Make sure all key parent directories are accessible
         user = self.opts.get('user', 'root')
         salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
@@ -229,9 +227,6 @@ class Auth(object):
         else:
             salt.utils.fopen(m_pub_fn, 'w+').write(master_pub)
             return True
-        log.error('The salt master has failed verification for an unknown '
-                  'reason, verify your salt keys')
-        return False
 
     def sign_in(self):
         '''

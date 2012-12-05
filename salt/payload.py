@@ -144,8 +144,6 @@ class SREQ(object):
         while True:
             if not self.poller.poll(timeout * 1000) and tried >= tries:
                 raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
-            else:
-                break
             tried += 1
         try:
             return self.serial.loads(self.socket.recv())

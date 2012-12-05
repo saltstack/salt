@@ -81,8 +81,6 @@ def verify_socket(interface, pub_port, ret_port):
     '''
     Attempt to bind to the sockets to verify that they are available
     '''
-    result = None
-
     pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
