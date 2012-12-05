@@ -189,6 +189,10 @@ def version(name):
         pkgs = {}
         for h in mi:
             pkgs[h['name']] = "-".join([h['version'], h['release']])
+    # check for '.arch' appended to pkg name (i.e. 32 bit installed on 64 bit
+    # machine is '.i386')
+    if name.find('.') >= 0:
+        name = name.split('.')[0]
     if name in pkgs:
         return pkgs[name]
     else:
