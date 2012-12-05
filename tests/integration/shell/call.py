@@ -67,6 +67,9 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def test_issue_2731_masterless(self):
         config_dir = '/tmp/salttest'
         minion_config_file = os.path.join(config_dir, 'minion')
+        this_minion_key = os.path.join(
+            config_dir, 'pki', 'minions', 'minion_test_issue_2731'
+        )
 
         minion_config = {
             'id': 'minion_test_issue_2731',
@@ -97,13 +100,21 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 config_dir
             )
         )
-        self.assertIn('local: foo', ret)
-        stop = datetime.now()
+        try:
+            self.assertIn('local: foo', ret)
+        except AssertionError:
+            if os.path.isfile(minion_config_file):
+                os.unlink(minion_config_file)
+            # Let's remove our key from the master
+            if os.path.isfile(this_minion_key):
+                os.unlink(this_minion_key)
+
+            raise
 
         # Calculate the required timeout, since next will fail.
         # I needed this because after many attempts, I was unable to catch:
         #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
-        ellapsed = stop - start
+        ellapsed = datetime.now() - start
         timeout = ellapsed.seconds + 3
 
         # Now let's remove the master configuration
@@ -121,11 +132,20 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             timeout=timeout,
         )
 
-        self.assertIn(
-            'Process took more than {0} seconds to complete. '
-            'Process Killed!'.format(timeout),
-            out
-        )
+        try:
+            self.assertIn(
+                'Process took more than {0} seconds to complete. '
+                'Process Killed!'.format(timeout),
+                out
+            )
+        except AssertionError:
+            if os.path.isfile(minion_config_file):
+                os.unlink(minion_config_file)
+            # Let's remove our key from the master
+            if os.path.isfile(this_minion_key):
+                os.unlink(this_minion_key)
+
+            raise
 
         # Should work with --local
         ret = self.run_script(
@@ -135,7 +155,15 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             ),
             timeout=15
         )
-        self.assertIn('local: foo', ret)
+        try:
+            self.assertIn('local: foo', ret)
+        except AssertionError:
+            if os.path.isfile(minion_config_file):
+                os.unlink(minion_config_file)
+            # Let's remove our key from the master
+            if os.path.isfile(this_minion_key):
+                os.unlink(this_minion_key)
+            raise
 
         # Should work with local file client
         minion_config['file_client'] = 'local'
@@ -149,7 +177,14 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             ),
             timeout=15
         )
-        self.assertIn('local: foo', ret)
+        try:
+            self.assertIn('local: foo', ret)
+        finally:
+            if os.path.isfile(minion_config_file):
+                os.unlink(minion_config_file)
+            # Let's remove our key from the master
+            if os.path.isfile(this_minion_key):
+                os.unlink(this_minion_key)
 
 
 if __name__ == "__main__":
