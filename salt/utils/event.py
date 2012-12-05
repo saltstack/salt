@@ -237,10 +237,10 @@ class EventPublisher(Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-        finally:
-        #except KeyboardInterrupt:
+        except KeyboardInterrupt:
             self.epub_sock.close()
             self.epull_sock.close()
+        finally:
             self.context.term()
 
 
