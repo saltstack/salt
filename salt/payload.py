@@ -146,7 +146,11 @@ class SREQ(object):
             if polled:
                 break
             elif tried >= tries:
-                raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
+                raise SaltReqTimeoutError(
+                    'Waited {0} seconds'.format(
+                        timeout * tried
+                    )
+                )
             tried += 1
         try:
             return self.serial.loads(self.socket.recv())
