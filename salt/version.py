@@ -4,19 +4,20 @@ Set up the version of Salt
 
 # Import Python libs
 import sys
+import os
+import subprocess
+
+# Import Salt libs
+from salt.utils import which
 
 __version_info__ = (0, 10, 5)
 __version__ = '.'.join(map(str, __version_info__))
 
 
 # If we can get a version from Git use that instead, otherwise carry on
-try:
-    import os
-    import subprocess
-    from salt.utils import which
-
-    git = which('git')
-    if git:
+git = which('git')
+if git:
+    try:
         p = subprocess.Popen(
             [git, 'describe'],
             stdout=subprocess.PIPE,
@@ -46,9 +47,8 @@ try:
             else:
                 __version__ = parsed_version
                 __version_info__ = parsed_version_info
-
-except Exception:
-    pass
+    except Exception:
+        pass
 
 
 def versions_report():
