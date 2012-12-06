@@ -131,7 +131,7 @@ Install on Windows XP 32bit
 Single command bootstrap script
 ===============================
 
-On a 64 bit Windows host the following script makes an unattended install of salt including all dependencies:
+On a 64 bit Windows host the following script makes an unattended install of salt, including all dependencies:
 
 .. code-block:: bash
 
