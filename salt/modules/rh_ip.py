@@ -1,6 +1,7 @@
 '''
 The networking module for RHEL/Fedora based distros
 '''
+
 # Import python libs
 import logging
 import re
@@ -10,7 +11,7 @@ import StringIO
 # import third party libs
 import jinja2
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 # Set up logging

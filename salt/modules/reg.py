@@ -7,6 +7,7 @@ Manage the registry on Windows
 # TODO: Figure out the exceptions _winreg can raise and properly  catch
 #       them instead of a bare except that catches any exception at all
 
+# Import Third Party libs
 try:
     import _winreg
     has_windows_modules = True
@@ -19,6 +20,7 @@ except ImportError:
 
 # Import Python libs
 import logging
+
 # Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError

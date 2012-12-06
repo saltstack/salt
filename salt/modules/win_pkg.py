@@ -6,6 +6,8 @@ A module to manage software on Windows
             - win32con
             - win32api
 '''
+
+# Import third party libs
 try:
     import pythoncom
     import win32com.client
@@ -14,6 +16,7 @@ try:
 except ImportError:
     pass
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

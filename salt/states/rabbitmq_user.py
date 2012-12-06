@@ -8,6 +8,8 @@ Manage RabbitMQ Users.
             - password: password
             - force: True
 '''
+
+# Import Python libs
 import logging
 
 log = logging.getLogger(__name__)

@@ -10,6 +10,8 @@ Manage RabbitMQ Virtual Hosts.
             - write: .*
             - read: .*
 '''
+
+# Import Python libs
 import logging
 
 log = logging.getLogger(__name__)
