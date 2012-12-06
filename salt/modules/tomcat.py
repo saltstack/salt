@@ -2,17 +2,18 @@
 Support for Tomcat
 '''
 # Import Python Libs
-import os
+import glob
 
 
 def __catalina_home():
     '''
     Tomcat paths differ depending on packaging
     '''
-    locations = ['/usr/share/tomcat6', '/opt/tomcat']
+    locations = ['/usr/share/tomcat*', '/opt/tomcat']
     for location in locations:
-        if os.path.isdir(location):
-            return location
+        catalina_home = glob.glob(location)
+	if catalina_home:
+            return catalina_home[-1]
 
 
 def version():
