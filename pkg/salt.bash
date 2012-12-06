@@ -15,17 +15,17 @@
 
 _salt_get_grains(){
     if [ "$1" = 'local' ] ; then 
-        salt-call -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+        salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
-      salt '*' --timeout 2 -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+      salt '*' --timeout 2 --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     fi
 }
 
 _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
-        salt-call -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$' 
+        salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$' 
     else
-        salt '*' --timeout 2 -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$' 
+        salt '*' --timeout 2 --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$' 
     fi
 }
 
@@ -42,7 +42,7 @@ _salt(){
 	ppprev="${COMP_WORDS[COMP_CWORD-3]}"
     fi
 
-    opts="--help -h --version -c --compound \
+    opts="--help -h --version -c --compound --out=raw --out=txt --out=json --no-color \
           --timeout -t --static -s --batch-size -b -E --pcre -L --list \
           -G --grain --grain-pcre -X --exsel -N --nodegroup -R --range --return \
           -Q --query -c --config -s --static -t --timeout \
@@ -85,11 +85,11 @@ _salt(){
         return 0
         ;;
      salt)
-        COMPREPLY=($(compgen -W "\'*\' ${opts} `salt-key -l acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "\'*\' ${opts} `salt-key --no-color -l acc`" -- ${cur}))
         return 0
         ;;
      -E|--pcre) 
-        COMPREPLY=($(compgen -W "`salt-key -l acc`" -- ${cur}))
+        COMPREPLY=($(compgen -W "`salt-key --no-color -l acc`" -- ${cur}))
         return 0
         ;;
      -G|--grain|--grain-pcre)
@@ -118,7 +118,7 @@ _salt(){
      ;;
     esac
 
-    _salt_coms="$(salt '*' --timeout 2 -- sys.list_functions | sed 's/^.*\[//' | tr -d ",']" )"
+    _salt_coms="$(salt '*' --timeout 2 --out=txt -- sys.list_functions | sed 's/^.*\[//' | tr -d ",']" )"
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
 
@@ -158,15 +158,15 @@ _saltkey(){
 
     case "${prev}" in 
      -a|--accept)
-        COMPREPLY=($(compgen -W "$(salt-key -l un; salt-key -l rej)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
         return 0
       ;;
      -r|--reject)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color)" -- ${cur}))
         return 0
         ;;
      -d|--delete)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc; salt-key -l un; salt-key -l rej)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color; salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
         return 0
         ;;
      -c|--config)
@@ -185,7 +185,7 @@ _saltkey(){
         return 0
         ;;
      -p|--print)
-        COMPREPLY=($(compgen -W "$(salt-key -l acc; salt-key -l un; salt-key -l rej)" -- ${cur}))
+        COMPREPLY=($(compgen -W "$(salt-key -l acc --no-color; salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
         return 0
      ;;
      -l|--list)
@@ -207,7 +207,7 @@ _saltcall(){
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="-h --help -l --log-level  -d --doc -m --module-dirs"
+    opts="-h --help -l --log-level  -d --doc -m --module-dirs --out=raw --out=txt --out=yaml --out=json --no-color"
     if [ ${COMP_CWORD} -gt 2 ]; then
         pprev="${COMP_WORDS[COMP_CWORD-2]}"
     fi
@@ -244,7 +244,7 @@ _saltcall(){
 		;;
     esac
 
-    _salt_coms="$(salt-call -- sys.list_functions|sed 's/^.*\[//' | tr -d ",']"  )"
+    _salt_coms="$(salt-call --out=txt -- sys.list_functions|sed 's/^.*\[//' | tr -d ",']"  )"
     COMPREPLY=( $(compgen -W "${opts} ${_salt_coms}" -- ${cur} ))
     return 0
 }
@@ -272,7 +272,7 @@ _saltcp(){
     
     case ${prev} in
  	salt-cp)
-	    COMPREPLY=($(compgen -W "${opts} `salt-key -l acc`" -- ${cur}))
+	    COMPREPLY=($(compgen -W "${opts} `salt-key -l acc --no-color`" -- ${cur}))
 	    return 0
 	;;       
         -t|--timeout)
@@ -281,7 +281,7 @@ _saltcp(){
 	    return 0
         ;;
 	-E|--pcre)
-            COMPREPLY=($(compgen -W "`salt-key -l acc`" -- ${cur}))
+            COMPREPLY=($(compgen -W "`salt-key -l acc --no-color`" -- ${cur}))
             return 0
 	;;
 	-L|--list)
@@ -289,7 +289,7 @@ _saltcp(){
 	    prefpart="${cur%,*},"
 	    postpart=${cur##*,}
 	    filt="^\($(echo ${cur}| sed 's:,:\\|:g')\)$"
-            helper=($(salt-key -l acc | grep -v "${filt}" | sed "s/^/${prefpart}/"))
+            helper=($(salt-key -l acc --no-color | grep -v "${filt}" | sed "s/^/${prefpart}/"))
 	    COMPREPLY=($(compgen -W "${helper[*]}" -- ${cur}))
 
 	    return 0
@@ -318,4 +318,3 @@ _saltcp(){
 }
 
 complete -F _saltcp salt-cp
-
