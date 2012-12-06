@@ -2,7 +2,7 @@
 Routines to set up a minion
 '''
 
-# This module still needs package support, so that the functions dict
+# TODO: This module still needs package support, so that the functions dict
 # returned can send back functions like: foo.bar.baz
 
 # Import python libs
@@ -14,11 +14,12 @@ import logging
 import tempfile
 import traceback
 
-# Import Salt libs
+# Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 
 log = logging.getLogger(__name__)
+
 salt_base_path = os.path.dirname(salt.__file__)
 loaded_base_name = 'salt.loaded'
 

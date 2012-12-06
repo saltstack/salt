@@ -1,11 +1,15 @@
+'''
+Salt compatibility code
+'''
 
+# Import Python libs
 import sys
 import types
-
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
 
 # True if we are running on Python 3.
 PY3 = sys.version_info[0] == 3

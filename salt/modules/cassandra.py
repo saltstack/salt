@@ -10,6 +10,7 @@ Cassandra NoSQL Database Module
         cassandra.host: localhost
         cassandra.thrift_port: 9160
 '''
+
 # Import Python libs
 import logging
 log = logging.getLogger(__name__)

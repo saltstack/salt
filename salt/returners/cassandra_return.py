@@ -14,8 +14,10 @@ returner::
 Required python modules: pycassa
 '''
 
+# Import python libs
 import logging
 
+# Import third party libs
 try:
     import pycassa
     has_pycassa = True

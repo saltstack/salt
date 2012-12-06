@@ -2,6 +2,7 @@
 Package support for openSUSE via the zypper package manager
 '''
 
+# Import Python libs
 import logging
 
 # Import Salt libs

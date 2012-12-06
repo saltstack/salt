@@ -2,6 +2,7 @@
 Module for managing keyboards on posix-like systems.
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

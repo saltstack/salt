@@ -6,7 +6,7 @@ The management of salt command line utilities are stored in here
 import os
 import sys
 
-# Import salt components
+# Import salt libs
 import salt.cli.caller
 import salt.cli.cp
 import salt.cli.batch

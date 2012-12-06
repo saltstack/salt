@@ -1,6 +1,8 @@
 '''
 Manage groups on Solaris
 '''
+
+# Import python libs
 try:
     import grp
 except ImportError:

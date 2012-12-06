@@ -6,6 +6,7 @@ Control the state system on the minion
 import os
 import copy
 import logging
+import json
 
 # Import Salt libs
 import salt.utils
@@ -13,7 +14,6 @@ import salt.state
 import salt.payload
 from salt.utils.yaml import load as yaml_load
 from salt.utils.yaml import CustomLoader as YamlCustomLoader
-import json
 from salt._compat import string_types
 
 

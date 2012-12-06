@@ -4,14 +4,17 @@ Support for Portage
 :optdepends:    - portage Python adapter
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)
 
+# Import third party libs
 try:
     import portage
 except ImportError:
     pass
+
 
 def __virtual__():
     '''

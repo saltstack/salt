@@ -2,6 +2,7 @@
 This module contains routines used to verify the matcher against the minions
 expected to return
 '''
+
 # Import Python libs
 import os
 import glob

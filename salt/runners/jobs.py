@@ -2,10 +2,10 @@
 A convenience system to manage jobs, both active and already run
 '''
 
-# Import Python Modules
+# Import Python libs
 import os
 
-# Import Salt Modules
+# Import Salt libs
 import salt.client
 import salt.payload
 import salt.utils

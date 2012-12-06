@@ -2,8 +2,9 @@
 Extract the pillar data for this minion
 '''
 
-# Import Salt modules
+# Import Salt libs
 import salt.pillar
+
 
 def data():
     '''

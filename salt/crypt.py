@@ -11,7 +11,7 @@ import hmac
 import hashlib
 import logging
 
-# Import Cryptography libs
+# Import third party libs
 from M2Crypto import RSA
 from Crypto.Cipher import AES
 

@@ -8,11 +8,10 @@ try:
     import pwd
 except ImportError:
     pass
-
 import logging
 from copy import deepcopy
 
-# Import Python libs
+# Import Salt libs
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)

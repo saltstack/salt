@@ -75,6 +75,7 @@ something like this:
       file.recurse:
         - source: salt://code/flask
 '''
+
 # Import Python libs
 import os
 import shutil

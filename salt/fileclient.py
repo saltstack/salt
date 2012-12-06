@@ -1,6 +1,7 @@
 '''
 Classes that manage file clients
 '''
+
 # Import python libs
 import contextlib
 import logging
@@ -10,7 +11,7 @@ import shutil
 import string
 import subprocess
 
-# Import third-party libs
+# Import third party libs
 import yaml
 
 # Import salt libs
@@ -23,7 +24,6 @@ import salt.payload
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
-
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
 

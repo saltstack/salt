@@ -2,9 +2,10 @@
 Execute salt convenience routines
 '''
 
+# Import python libs
 import sys
 
-# Import salt modules
+# Import salt libs
 import salt.loader
 import salt.exceptions
 import salt.utils

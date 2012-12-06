@@ -1,6 +1,7 @@
 '''
 Support for Debconf
 '''
+
 # Import Python libs
 import os
 import re

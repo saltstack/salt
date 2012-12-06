@@ -2,6 +2,7 @@
 Module to manage Linux kernel modules
 '''
 
+# Import python libs
 import os
 
 

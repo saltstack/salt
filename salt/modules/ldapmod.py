@@ -29,7 +29,8 @@ Module to provide LDAP commands via salt.
     to the same LDAP server.  It's easy enough to override this behaviour, but
     badness may ensue - you have been warned.
 '''
-# Import Python libs
+
+# Import python libs
 import time
 import logging
 

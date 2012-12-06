@@ -1,6 +1,7 @@
 '''
 Manage events
 '''
+
 # Events are all fired off via a zeromq pub socket, and listened to with
 # local subscribers. The event messages are comprised of two parts delimited
 # at the 20 char point. The first 20 characters are used for the zeromq
@@ -10,8 +11,7 @@ Manage events
 # extracted. All of the formatting is self contained in the event module, so
 # we should be able to modify the structure in the future since the same module
 # to read is the same module to fire off events.
-#
-#
+
 # Import Python libs
 import os
 import fnmatch

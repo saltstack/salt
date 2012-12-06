@@ -1,6 +1,7 @@
 '''
 Support for nzbget
 '''
+
 # Import Salt libs
 import salt.utils
 

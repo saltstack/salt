@@ -1,8 +1,10 @@
 '''
 The service module for OpenBSD
 '''
+
 # Import Python libs
 import os
+
 # Import Salt libs
 import salt.utils
 

@@ -81,7 +81,7 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            import salt.utils  # Need to re-import, need to find out why
+            import salt.utils  # TODO: Need to re-import, need to find out why
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as f:
                     f.readline()  # skip first line
@@ -242,7 +242,7 @@ def minion_config(path, check_dns=True):
         check_dns = False
 
     if check_dns is True:
-        # Because I import salt.log bellow I need to re-import salt.utils here
+        # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
             opts['master_ip'] = salt.utils.dns_check(opts['master'], True)

@@ -13,7 +13,7 @@ import shutil
 import subprocess
 from xml.dom import minidom
 
-# Import Third Party Libs
+# Import Third Party libs
 try:
     import libvirt
     has_libvirt = True

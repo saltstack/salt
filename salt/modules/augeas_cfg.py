@@ -3,7 +3,8 @@ Manages configuration files via augeas
 
 :depends:   - Augeas Python adapter
 '''
-# Load Augeas libs
+
+# Load third party libs
 has_augeas = False
 try:
     from augeas import Augeas

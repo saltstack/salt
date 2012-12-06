@@ -1,10 +1,12 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
+
 # Import Python libs
 import os
 import logging
 import shutil
+
 # Import Salt libs
 import salt.utils
 from salt._compat import string_types

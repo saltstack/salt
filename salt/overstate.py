@@ -2,13 +2,14 @@
 Manage the proces of the overstate. The overstate is a means to orchistrate
 the deployment of states over groups of servers.
 '''
+
 # 1. Read in overstate
 # 2. Create initial order
 # 3. Start list evaluation
 # 4. Verify requisites
 # 5. Execute state call
 # 6. append data to running
-#
+
 # Import Python libs
 import sys
 import os
@@ -17,7 +18,7 @@ import os
 import salt.client
 import salt.utils
 
-# Import third party libs
+# Import Third Party libs
 import yaml
 
 
