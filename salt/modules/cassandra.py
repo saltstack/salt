@@ -14,10 +14,10 @@ Cassandra NoSQL Database Module
 import logging
 log = logging.getLogger(__name__)
 
-load = False
+has_pycassa = False
 try:
     from pycassa.system_manager import SystemManager
-    load = True
+    has_pycassa = True
 except ImportError:
     pass
 
@@ -38,7 +38,7 @@ def __virtual__():
     '''
     Only load if pycassa is available and the system is configured
     '''
-    if not load:
+    if not has_pycassa:
         return False
 
     nt = __salt__['config.option']('cassandra.nodetool')
