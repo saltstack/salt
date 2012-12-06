@@ -23,7 +23,7 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1,2,3])) is None:
+    if msgpack.loads(msgpack.dumps([1, 2, 3])) is None:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
@@ -118,17 +118,18 @@ class Serial(object):
 
 class SREQ(object):
     '''
-    Create a generic interface to wrap salt zeromq req calls. 
+    Create a generic interface to wrap salt zeromq req calls.
     '''
     def __init__(self, master, id_='', serial='msgpack', linger=0):
         self.master = master
         self.serial = Serial(serial)
-        context = zmq.Context()
-        self.socket = context.socket(zmq.REQ)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REQ)
         self.socket.linger = linger
         if id_:
             self.socket.setsockopt(zmq.IDENTITY, id_)
         self.socket.connect(master)
+        self.poller = zmq.Poller()
 
     def send(self, enc, load, tries=1, timeout=60):
         '''
@@ -138,18 +139,19 @@ class SREQ(object):
         payload['load'] = load
         package = self.serial.dumps(payload)
         self.socket.send(package)
-        poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN)
+        self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
         while True:
-            if not poller.poll(timeout*1000) and tried >= tries:
-                raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
-            else:
+            polled = self.poller.poll(timeout * 1000)
+            if polled:
                 break
+            elif tried >= tries:
+                raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
             tried += 1
-        ret = self.serial.loads(self.socket.recv())
-        poller.unregister(self.socket)
-        return ret
+        try:
+            return self.serial.loads(self.socket.recv())
+        finally:
+            self.poller.unregister(self.socket)
 
     def send_auto(self, payload):
         '''
@@ -158,3 +160,15 @@ class SREQ(object):
         enc = payload.get('enc', 'clear')
         load = payload.get('load', {})
         return self.send(enc, load)
+
+    def destroy(self):
+        for socket in self.poller.sockets.keys():
+            if not socket.closed:
+                socket.close()
+            self.poller.unregister(socket)
+        if not self.socket.closed:
+            self.socket.close()
+        self.context.term()
+
+    def __del__(self):
+        self.destroy()

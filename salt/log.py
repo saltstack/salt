@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
     salt.log
     ~~~~~~~~
@@ -9,8 +10,11 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+import os
 import re
 import sys
+import socket
+import urlparse
 import logging
 import logging.handlers
 
@@ -57,6 +61,26 @@ def is_logging_configured():
     return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
 
 
+if sys.version_info < (2, 7):
+    # Since the NullHandler is only available on python >= 2.7, here's a copy
+    class NullHandler(logging.Handler):
+        """ This is 1 to 1 copy of python's 2.7 NullHandler"""
+        def handle(self, record):
+            pass
+
+        def emit(self, record):
+            pass
+
+        def createLock(self):
+            self.lock = None
+
+    logging.NullHandler = NullHandler
+
+
+# Store a reference to the null logging handler
+LoggingNullHandler = logging.NullHandler()
+
+
 class Logging(LoggingLoggerClass):
     def __new__(cls, logger_name, *args, **kwargs):
         global MAX_LOGGER_MODNAME_LENGTH
@@ -74,6 +98,9 @@ class Logging(LoggingLoggerClass):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
+                if handler is LoggingNullHandler:
+                    continue
+
                 if not handler.lock:
                     handler.createLock()
                 handler.acquire()
@@ -102,22 +129,26 @@ class Logging(LoggingLoggerClass):
         return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
 
 
-def getLogger(name):
-    init()
-    return logging.getLogger(name)
-
-
-def init():
+# Override the python's logging logger class as soon as this module is imported
+if logging.getLoggerClass() is not Logging:
     '''
     Replace the default system logger with a version that includes trace()
     and garbage() methods.
     '''
-    if logging.getLoggerClass() is not Logging:
-        logging.setLoggerClass(Logging)
-        logging.addLevelName(TRACE, 'TRACE')
-        logging.addLevelName(GARBAGE, 'GARBAGE')
-        # Set the root logger at the lowest level possible
-        logging.getLogger().setLevel(GARBAGE)
+    logging.setLoggerClass(Logging)
+    logging.addLevelName(TRACE, 'TRACE')
+    logging.addLevelName(GARBAGE, 'GARBAGE')
+    # Set the root logger at the lowest level possible
+    rootLogger = logging.getLogger()
+    # Add a Null logging handler until logging is configured(will be removed at
+    # a later stage) so we stop getting:
+    #   No handlers could be found for logger "foo"
+    rootLogger.addHandler(LoggingNullHandler)
+    rootLogger.setLevel(GARBAGE)
+
+
+def getLogger(name):
+    return logging.getLogger(name)
 
 
 def setup_console_logger(log_level='error', log_format=None, date_format=None):
@@ -128,7 +159,8 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
         logging.getLogger(__name__).warn('Console logging already configured')
         return
 
-    init()
+    # Remove the temporary null logging handler
+    __remove_null_logging_handler()
 
     if log_level is None:
         log_level = 'warning'
@@ -159,29 +191,117 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                          date_format=None):
     '''
     Setup the logfile logger
+
+    Since version 0.10.6 we support logging to syslog, some examples:
+
+        tcp://localhost:514/LOG_USER
+        tcp://localhost/LOG_DAEMON
+        udp://localhost:5145/LOG_KERN
+        udp://localhost
+        file:///dev/log
+        file:///dev/log/LOG_SYSLOG
+        file:///dev/log/LOG_DAEMON
+
+    The above examples are self explanatory, but:
+        <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+
     '''
 
     if is_logfile_configured():
         logging.getLogger(__name__).warn('Logfile logging already configured')
         return
 
-    init()
+    # Remove the temporary null logging handler
+    __remove_null_logging_handler()
 
     if log_level is None:
         log_level = 'warning'
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    try:
-        rootLogger = logging.getLogger()
-        handler = getattr(
-            logging.handlers, 'WatchedFileHandler', logging.FileHandler
-        )(log_path, 'a', 'utf-8', delay=0)
-    except (IOError, OSError):
-        err = ('Failed to open log file, do you have permission to write to '
-               '{0}'.format(log_path))
-        sys.stderr.write('{0}\n'.format(err))
-        sys.exit(2)
+    parsed_log_path = urlparse.urlparse(log_path)
+
+    rootLogger = logging.getLogger()
+
+    if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
+        syslog_opts = {
+            'facility': logging.handlers.SysLogHandler.LOG_USER,
+            'socktype': socket.SOCK_DGRAM
+
+        }
+
+        if parsed_log_path.scheme == 'file' and parsed_log_path.path:
+            facility_name = parsed_log_path.path.split(os.sep)[-1].upper()
+            if not facility_name.startswith('LOG_'):
+                # The user is not specifying a syslog facility
+                facility_name = 'LOG_USER'      # Syslog default
+                syslog_opts['address'] = parsed_log_path.path
+            else:
+                # The user has set a syslog facility, let's update the path to
+                # the logging socket
+                syslog_opts['address'] = os.sep.join(
+                    parsed_log_path.path.split(os.sep)[:-1]
+                )
+        elif parsed_log_path.path:
+            # In case of udp or tcp with a facility specified
+            facility_name = parsed_log_path.path.lstrip(os.sep).upper()
+            if not facility_name.startswith('LOG_'):
+                # Logging facilities start with LOG_ if this is not the case
+                # fail right now!
+                raise RuntimeError(
+                    'The syslog facility {0!r} is not know'.format(
+                        facility_name
+                    )
+                )
+        else:
+            # This is the case of udp or tcp without a facility specified
+            facility_name = 'LOG_USER'      # Syslog default
+
+        facility = getattr(
+            logging.handlers.SysLogHandler, facility_name, None
+        )
+        if facility is None:
+            # This python syslog version does not know about the user provided
+            # facility name
+            raise RuntimeError(
+                'The syslog facility {0!r} is not know'.format(
+                    facility_name
+                )
+            )
+        syslog_opts['facility'] = facility
+
+        if parsed_log_path.scheme == 'tcp':
+            # tcp syslog support was only added on python versions >= 2.7
+            if sys.version_info < (2, 7):
+                raise RuntimeError(
+                    'Python versions lower than 2.7 do not support logging '
+                    'to syslog using tcp sockets'
+                )
+            syslog_opts['socktype'] = socket.SOCK_STREAM
+
+        if parsed_log_path.scheme in ('tcp', 'udp'):
+            syslog_opts['address'] = (
+                parsed_log_path.hostname,
+                parsed_log_path.port or logging.handlers.SYSLOG_UDP_PORT
+            )
+
+        if sys.version_info < (2, 7) or parsed_log_path.scheme == 'file':
+            # There's not socktype support on python versions lower than 2.7
+            syslog_opts.pop('socktype', None)
+
+        # Et voilá! Finally our syslog handler instance
+        handler = logging.handlers.SysLogHandler(**syslog_opts)
+    else:
+        try:
+            handler = getattr(
+                logging.handlers, 'WatchedFileHandler', logging.FileHandler
+            )(log_path, 'a', 'utf-8', delay=0)
+        except (IOError, OSError):
+            sys.stderr.write(
+                'Failed to open log file, do you have permission to write to '
+                '{0}\n'.format(log_path)
+            )
+            sys.exit(2)
 
     handler.setLevel(level)
 
@@ -204,7 +324,22 @@ def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
     '''
-    init()
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
     )
+
+
+def __remove_null_logging_handler():
+    if is_logfile_configured():
+        # In this case, the NullHandler has been removed, return!
+        return
+
+    rootLogger = logging.getLogger()
+    global LoggingNullHandler
+
+    for handler in rootLogger.handlers:
+        if handler is LoggingNullHandler:
+            rootLogger.removeHandler(LoggingNullHandler)
+            # Redefine the null handler to None so it can be garbage collected
+            LoggingNullHandler = None
+            break

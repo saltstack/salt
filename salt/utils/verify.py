@@ -81,8 +81,6 @@ def verify_socket(interface, pub_port, ret_port):
     '''
     Attempt to bind to the sockets to verify that they are available
     '''
-    result = None
-
     pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -241,29 +239,48 @@ def check_user(user):
     return True
 
 
-def check_parent_dirs(fname, user='root'):
+def list_path_traversal(path):
+    """
+    Returns a full list of directories leading up to, and including, a path.
+
+    So list_path_traversal('/path/to/salt') would return:
+        ['/', '/path', '/path/to', '/path/to/salt']
+    in that order.
+
+    This routine has been tested on Windows systems as well.
+    list_path_traversal('c:\\path\\to\\salt') on Windows would return:
+        ['c:\\', 'c:\\path', 'c:\\path\\to', 'c:\\path\\to\\salt']
+    """
+    out = [path]
+    (head, tail) = os.path.split(path)
+    if tail == '':
+        # paths with trailing separators will return an empty string
+        out = [head]
+        (head, tail) = os.path.split(head)
+    while head != out[0]:
+        # loop until head is the same two consecutive times
+        out.insert(0, head)
+        (head, tail) = os.path.split(head)
+    return out
+
+
+def check_path_traversal(path, user='root'):
     '''
     Walk from the root up to a directory and verify that the current
     user has access to read each directory. This is used for  making
     sure a user can read all parent directories of the minion's  key
     before trying to go and generate a new key and raising an IOError
     '''
-    # TODO: Test the below line on Windows
-    dir_comps = fname.split(os.path.sep)[1:-1]
-    # Loop over all parent directories of the minion key
-    # to properly test if salt has read access to  them.
-    for i, dirname in enumerate(dir_comps):
-        # Create the full path to the directory using a list slice
-        d = os.path.join(os.path.sep, *dir_comps[:i + 1])
-        msg = 'Could not access directory {0}.'.format(d)
-        current_user = getpass.getuser()
-        # Make the error message more intelligent based on how
-        # the user invokes salt-call or whatever other script.
-        if user != current_user:
-            msg += ' Try running as user {0}.'.format(user)
-        else:
-            msg += ' Please give {0} read permissions.'.format(user, d)
-        if not os.access(d, os.R_OK):
+    for p in list_path_traversal(path):
+        if not os.access(p, os.R_OK):
+            msg = 'Could not access {0}.'.format(p)
+            current_user = getpass.getuser()
+            # Make the error message more intelligent based on how
+            # the user invokes salt-call or whatever other script.
+            if user != current_user:
+                msg += ' Try running as user {0}.'.format(user)
+            else:
+                msg += ' Please give {0} read permissions.'.format(user, p)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)

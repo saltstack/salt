@@ -1,4 +1,4 @@
-conf/master.template /etc/salt
+conf/master /etc/salt
 scripts/salt-master /usr/bin
 scripts/salt-cp /usr/bin
 scripts/salt-run /usr/bin

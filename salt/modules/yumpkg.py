@@ -189,6 +189,10 @@ def version(name):
         pkgs = {}
         for h in mi:
             pkgs[h['name']] = "-".join([h['version'], h['release']])
+    # check for '.arch' appended to pkg name (i.e. 32 bit installed on 64 bit
+    # machine is '.i386')
+    if name.find('.') >= 0:
+        name = name.split('.')[0]
     if name in pkgs:
         return pkgs[name]
     else:
@@ -337,7 +341,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    a = yb.downgradeLocal(target)
+                    yb.downgradeLocal(target)
             else:
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
@@ -346,7 +350,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying downgrade')
-                    a = yb.downgrade(pattern=target)
+                    yb.downgrade(pattern=target)
         except Exception:
             log.exception('Package "{0}" failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved by
@@ -496,4 +500,46 @@ def verify(*package):
             fdict['mismatch'].append('capabilities')
         ret[fname] = fdict
     return ret
+
+
+def grouplist():
+    '''
+    Lists all groups known by yum on this system
+
+    CLI Example::
+
+        salt '*' pkg.grouplist
+    '''
+    ret = {'installed': [], 'available': [], 'available languages': {}}
+    yb = yum.YumBase()
+    (installed, available) = yb.doGroupLists()
+    for group in installed:
+        ret['installed'].append(group.name)
+    for group in available:
+        if group.langonly:
+            ret['available languages'][group.name] = {
+                'name': group.name,
+                'language': group.langonly}
+        else:
+            ret['available'].append(group.name)
+    return ret
+
+
+def groupinfo(groupname):
+    '''
+    Lists packages belonging to a certain group
+
+    CLI Example::
+
+        salt '*' pkg.groupinfo 'Perl Support'
+    '''
+    yb = yum.YumBase()
+    (installed, available) = yb.doGroupLists()
+    for group in installed + available:
+        if group.name == groupname:
+            return {'manditory packages': group.mandatory_packages,
+                   'optional packages': group.optional_packages,
+                   'default packages': group.default_packages,
+                   'conditional packages': group.conditional_packages,
+                   'description': group.description}
 

@@ -48,6 +48,7 @@ Full Table of Contents
     ref/runners/all/index
     ref/wheel/all/index
     ref/output/all/index
+    ref/clients/index
     ref/peer
     ref/clientacl
     ref/syndic

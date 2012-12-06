@@ -1,9 +1,0 @@
-/var/log/salt/key
-/var/log/salt/*.log
-{
-	weekly
-	missingok
-	rotate 7
-	compress
-	notifempty
-}

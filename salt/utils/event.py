@@ -33,6 +33,7 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+
 class SaltEvent(object):
     '''
     The base class used to manage salt events
@@ -133,11 +134,8 @@ class SaltEvent(object):
                 if data is None:
                     continue
                 yield data
-        except KeyboardInterrupt:
-            if self.cpub:
-                self.sub.close()
-            if self.cpush:
-                self.push.close()
+        finally:
+            self.destroy()
 
     def fire_event(self, data, tag=''):
         '''
@@ -149,6 +147,23 @@ class SaltEvent(object):
         event = '{0}{1}'.format(tag, self.serial.dumps(data))
         self.push.send(event)
         return True
+
+    def destroy(self):
+        if self.cpub:
+            self.sub.close()
+        if self.cpush:
+            self.push.close()
+        # If socket's are not unregistered from a poller, nothing which touches
+        # that poller get's garbage collected. The Poller itself, it's
+        # registered sockets and the Context
+        for socket in self.poller.sockets.keys():
+            if not socket.closed:
+                socket.close()
+            self.poller.unregister(socket)
+        self.context.term()
+
+    def __del__(self):
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -167,6 +182,7 @@ class MinionEvent(SaltEvent):
     def __init__(self, **kwargs):
         super(MinionEvent, self).__init__('minion', **kwargs)
 
+
 class EventPublisher(Process):
     '''
     The interface that takes master events and republishes them out to anyone
@@ -181,20 +197,20 @@ class EventPublisher(Process):
         Bind the pub and pull sockets for events
         '''
         # Set up the context
-        context = zmq.Context(1)
+        self.context = zmq.Context(1)
         # Prepare the master event publisher
-        epub_sock = context.socket(zmq.PUB)
+        self.epub_sock = self.context.socket(zmq.PUB)
         epub_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
                 )
         # Prepare master event pull socket
-        epull_sock = context.socket(zmq.PULL)
+        self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
         # Start the master event publisher
-        epub_sock.bind(epub_uri)
-        epull_sock.bind(epull_uri)
+        self.epub_sock.bind(epub_uri)
+        self.epull_sock.bind(epull_uri)
         # Restrict access to the sockets
         pub_mode = 448
         if self.opts.get('client_acl') or self.opts.get('external_auth'):
@@ -215,15 +231,17 @@ class EventPublisher(Process):
                 # Catch and handle EINTR from when this process is sent
                 # SIGUSR1 gracefully so we don't choke and die horribly
                 try:
-                    package = epull_sock.recv()
-                    epub_sock.send(package)
+                    package = self.epull_sock.recv()
+                    self.epub_sock.send(package)
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
         except KeyboardInterrupt:
-            epub_sock.close()
-            epull_sock.close()
+            self.epub_sock.close()
+            self.epull_sock.close()
+        finally:
+            self.context.term()
 
 
 class Reactor(multiprocessing.Process, salt.state.Compiler):
@@ -332,7 +350,7 @@ class ReactWrap(object):
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
-        return local.cmd(*args, **kwargs)
+        return local.cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''

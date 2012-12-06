@@ -200,9 +200,9 @@ class Compiler(object):
                     # Is this is a short state? It needs to be padded!
                     if '.' in high[name]:
                         comps = high[name].split('.')
-                        if len(comps) > 2:
+                        if len(comps) >= 2:
                             # Merge the comps
-                            comps[1] == '.'.join(comps[1:len(comps)])
+                            comps[1] = '.'.join(comps[1:len(comps)])
                         high[name] = {
                             #'__sls__': template,
                             #'__env__': None,
@@ -224,9 +224,9 @@ class Compiler(object):
                     continue
                 if '.' in key:
                     comps = key.split('.')
-                    if len(comps) > 2:
+                    if len(comps) >= 2:
                         # Merge the comps
-                        comps[1] == '.'.join(comps[1:len(comps)])
+                        comps[1] = '.'.join(comps[1:len(comps)])
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
@@ -495,6 +495,7 @@ class State(object):
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.opts['pillar'] = self.__gather_pillar()
+        self.state_con = {}
         self.load_modules()
         self.active = set()
         self.mod_init = set()
@@ -530,14 +531,15 @@ class State(object):
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
-        self.functions = salt.loader.minion_mods(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts, self.state_con)
         if isinstance(data, dict):
             if data.get('provider', False):
-                provider = {}
                 if isinstance(data['provider'], str):
                     providers = [{data['state']: data['provider']}]
                 elif isinstance(data['provider'], list):
                     providers = data['provider']
+                else:
+                    providers = {}
                 for provider in providers:
                     for mod in provider:
                         funcs = salt.loader.raw_mod(self.opts,
@@ -553,31 +555,36 @@ class State(object):
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
 
-    def module_refresh(self, data):
+    def module_refresh(self):
         '''
-        Check to see if the modules for this state instance need to be
-        updated, only update if the state is a file. If the function is
-        managed check to see if the file is a possible module type, e.g. a
-        python, pyx, or .so. Always refresh if the function is recurse,
-        since that can lay down anything.
+        Refresh all the modules
         '''
-        def _refresh():
-            self.load_modules()
-            module_refresh_path = os.path.join(
-                self.opts['cachedir'],
-                'module_refresh')
-            with salt.utils.fopen(module_refresh_path, 'w+') as f:
-                f.write('')
+        self.load_modules()
+        module_refresh_path = os.path.join(
+            self.opts['cachedir'],
+            'module_refresh')
+        with salt.utils.fopen(module_refresh_path, 'w+') as f:
+            f.write('')
 
+    def check_refresh(self, data, ret):
+        '''
+        Check to see if the modules for this state instance need to be updated,
+        only update if the state is a file or a package and if it changed
+        something. If the file function is managed check to see if the file is a
+        possible module type, e.g. a python, pyx, or .so. Always refresh if the
+        function is recurse, since that can lay down anything.
+        '''
+        if not ret['changes']:
+            return
         if data['state'] == 'file':
             if data['fun'] == 'managed':
                 if data['name'].endswith(
                     ('.py', '.pyx', '.pyo', '.pyc', '.so')):
-                    _refresh()
+                    self.module_refresh()
             elif data['fun'] == 'recurse':
-                _refresh()
+                self.module_refresh()
         elif data['state'] == 'pkg':
-            _refresh()
+            self.module_refresh()
 
     def verify_ret(self, ret):
         '''
@@ -1183,7 +1190,7 @@ class State(object):
             ret['__run_num__'] = self.__run_num
             self.__run_num += 1
             format_log(ret)
-            self.module_refresh(data)
+            self.check_refresh(data, ret)
             return ret
 
         log.info(
@@ -1215,7 +1222,7 @@ class State(object):
         format_log(ret)
         if 'provider' in data:
             self.load_modules()
-        self.module_refresh(data)
+        self.check_refresh(data, ret)
         return ret
 
     def call_chunks(self, chunks):
@@ -1746,8 +1753,7 @@ class BaseHighState(object):
         syncd = self.state.functions['saltutil.sync_all'](list(matches))
         if syncd[2]:
             self.opts['grains'] = salt.loader.grains(self.opts)
-        faux = {'state': 'file', 'fun': 'recurse'}
-        self.state.module_refresh(faux)
+        self.state.module_refresh()
 
     def render_state(self, sls, env, mods, matches):
         '''
@@ -2018,8 +2024,8 @@ class BaseHighState(object):
         high, errors = self.render_highstate(matches)
         err += errors
 
-        if errors:
-            return errors
+        if err:
+            return err
 
         return high
 

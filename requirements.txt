@@ -1,4 +1,3 @@
-# pip requirements file for Salt
 Jinja2
 M2Crypto
 msgpack-python
