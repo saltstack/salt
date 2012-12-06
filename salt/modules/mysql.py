@@ -32,6 +32,8 @@ except ImportError:
     has_mysqldb = False
 
 log = logging.getLogger(__name__)
+
+# TODO: this is not used anywhere in the code?
 __opts__ = {}
 
 
