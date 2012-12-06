@@ -208,12 +208,17 @@ def create(vm_):
         log.error(err)
         return False
     log.info('Created node {0}'.format(vm_['name']))
+    waiting_for_ip = 0
     while not data.public_ips:
         time.sleep(0.5)
+        waiting_for_ip += 1
         data = get_node(conn, vm_['name'])
+        log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
     if ssh_interface(vm_) == "private_ips":
+        log.info('Salt node data. Public_ip: {0}'.format(data.private_ips[0]))
         ip_address = data.private_ips[0]
     else:
+        log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
