@@ -14,6 +14,12 @@ import logging
 # Import third party libs
 from M2Crypto import RSA
 from Crypto.Cipher import AES
+try:
+    import win32api
+    import win32con
+    is_windows = True
+except ImportError:
+    is_windows = False
 
 # Import salt utils
 import salt.utils
@@ -37,9 +43,7 @@ def clean_old_key(rsa_path):
     except (IOError, OSError):
         pass
     # Set write permission for minion.pem file - reverted after saving the key
-    if sys.platform == 'win32':
-        import win32api
-        import win32con
+    if is_windows:
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
     try:
         mkey.save_key(rsa_path, None)
@@ -49,9 +53,7 @@ def clean_old_key(rsa_path):
                  'releases may not be able to use this key').format(rsa_path)
                 )
     # Set read-only permission for minion.pem file
-    if sys.platform == 'win32':
-        import win32api
-        import win32con
+    if is_windows:
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
     return mkey
 
