@@ -12,7 +12,7 @@ Module for handling openstack nova calls.
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
 
-# Import 3rd party libs
+# Import third party libs
 has_nova = False
 try:
     from novaclient.v1_1 import client

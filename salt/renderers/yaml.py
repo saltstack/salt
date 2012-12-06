@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-# Import Python Modules
+# Import Python libs
 import getopt
 import logging
 import warnings

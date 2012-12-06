@@ -2,6 +2,7 @@
 Top level package command wrapper, used to translate the os detected by the
 grains to the correct service manager
 '''
+
 # Import Salt Libs
 import salt.utils
 

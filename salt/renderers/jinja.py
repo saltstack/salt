@@ -1,10 +1,11 @@
 from __future__ import absolute_import
+
+# Import Python libs
 from StringIO import StringIO
 
 # Import Salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
-
 
 
 def render(template_file, env='', sls='', argline='',

@@ -6,6 +6,7 @@ Execute overstate functions
 import salt.overstate
 import salt.output
 
+
 def over(env='base', os_fn=None):
     '''
     Execute an overstate sequence to orchestrate the executing of states

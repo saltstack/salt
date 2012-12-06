@@ -1,7 +1,8 @@
 '''
 Support for Tomcat
 '''
-# Import Python Libs
+
+# Import Python libs
 import glob
 
 
