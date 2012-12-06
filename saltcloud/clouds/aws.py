@@ -215,7 +215,7 @@ def create(vm_):
         data = get_node(conn, vm_['name'])
         log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
     if ssh_interface(vm_) == "private_ips":
-        log.info('Salt node data. Public_ip: {0}'.format(data.private_ips[0]))
+        log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
         ip_address = data.private_ips[0]
     else:
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
@@ -226,9 +226,9 @@ def create(vm_):
                 username = user
                 break
     if __opts__['deploy'] is True:
-        deploy_command='bash /tmp/deploy.sh'
+        deploy_command = 'bash /tmp/deploy.sh'
         if username == 'root':
-            deploy_command='/tmp/deploy.sh'
+            deploy_command = '/tmp/deploy.sh'
         deployed = saltcloud.utils.deploy_script(
             host=ip_address,
             username=username,
@@ -265,7 +265,7 @@ def create_attach_volumes(volumes, location, data):
         if avz.availability_zone.name == node_avz:
             break
     for volume in volumes:
-        volume_name= volume['device'] + " on " +  data.name
+        volume_name = volume['device'] + " on " +  data.name
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
