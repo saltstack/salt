@@ -345,7 +345,7 @@ def disabled(name, **kwargs):
     return _disable(name, None, **kwargs)
 
 
-def mod_watch(name, sig=None, reload=False, full_restart=False):
+def mod_watch(name, sig=None, reload=False, full_restart=False, restart=False):
     '''
     The service watcher, called to invoke the watch command.
 
@@ -358,17 +358,24 @@ def mod_watch(name, sig=None, reload=False, full_restart=False):
     if __salt__['service.status'](name, sig):
         if 'service.reload' in __salt__ and reload:
             restart_func = __salt__['service.reload']
+            action = 'reload'
         elif 'service.full_restart' in __salt__ and full_restart:
             restart_func = __salt__['service.full_restart']
-        else:
+            action = 'restart'
+        elif not 'service.force_reload' in __salt__ or restart:
             restart_func = __salt__['service.restart']
+            action = 'restart'
+        else:
+            restart_func = __salt__['service.force_reload']
+            action = 'reload'
     else:
         restart_func = __salt__['service.start']
+        action = 'start'
 
     result = restart_func(name)
     return {'name': name,
             'changes': {name: result},
             'result': result,
-            'comment': 'Service restarted' if result else \
-                       'Failed to restart the service'
+            'comment': 'Service {0}ed'.format(action) if result else \
+                       'Failed to {0} the service'.format(action)
            }

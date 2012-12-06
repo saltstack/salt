@@ -119,6 +119,18 @@ def reload(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def force_reload(name):
+    '''
+    Force-reload the named service
+
+    CLI Example::
+
+        salt '*' service.force_reload <service name>
+    '''
+    cmd = 'service {0} force-reload'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
 def status(name, sig=None):
     '''
     Return the status for a service, pass a signature to use to find
