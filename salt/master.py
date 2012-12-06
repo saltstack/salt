@@ -659,8 +659,8 @@ class AESFuncs(object):
         with salt.utils.fopen(fnd['path'], 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
-            if not data:
-                ret.update(self._file_hash(load))
+            #if not data:
+            #    ret.update(self._file_hash(load))
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
                 ret['gzip'] = gzip
