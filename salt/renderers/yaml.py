@@ -11,10 +11,8 @@ from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 
-
-HAS_ORDERED_DICT = True
-
 # code fragment taken from https://gist.github.com/844388
+has_ordered_dict = True
 try:
     # included in standard lib from Python 2.7
     from collections import OrderedDict
@@ -24,7 +22,7 @@ except ImportError:
     try:
         from ordereddict import OrderedDict
     except ImportError:
-        HAS_ORDERED_DICT = False
+        has_ordered_dict = False
 
 
 def get_yaml_loader(argline):
@@ -40,7 +38,7 @@ Options:
 ''')
         raise
     if ('-o', '') in opts:
-        if HAS_ORDERED_DICT:
+        if has_ordered_dict:
             def Loader(*args):
                 return CustomLoader(*args, dictclass=OrderedDict)
             return Loader
