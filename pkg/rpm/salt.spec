@@ -9,7 +9,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.10.4
+Version: 0.10.5
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -139,10 +139,8 @@ install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
 install -p %{SOURCE7} .
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
-install -p -m 0640 conf/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
-install -p -m 0640 conf/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion.template
-install -p -m 0640 conf/master.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
-install -p -m 0640 conf/master.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/master.template
+install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
+install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
  
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -169,7 +167,6 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %config(noreplace) %{_sysconfdir}/salt/minion
-%config %{_sysconfdir}/salt/minion.template
 
 %files -n salt-master
 %defattr(-,root,root)
@@ -193,7 +190,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_unitdir}/salt-syndic.service
 %endif
 %config(noreplace) %{_sysconfdir}/salt/master
-%config %{_sysconfdir}/salt/master.template
 
 # less than RHEL 8 / Fedora 16
 # not sure if RHEL 7 will use systemd yet
@@ -294,6 +290,11 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Dec 05 2012 Mike Chesnut <mchesnut@gmail.com> - 0.10.5-1
+- moved to upstream release 0.10.5
+- removing references to minion.template and master.template, as those files
+  have been removed from the repo
+
 * Tue Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
 - Moved to upstream release 0.10.4
 - Patched jcollie/systemd-service-status (SALT@GH#2335) (RHBZ#869669)
