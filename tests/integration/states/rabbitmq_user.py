@@ -26,7 +26,8 @@ class RabbitUserTestCase(integration.ModuleCase,
         ret = self.run_state(
             'rabbitmq_user.present', name='null_name', test=True
         )
-        self.assertSaltTrueReturn(ret)
+        self.assertSaltFalseReturn(ret)
+        self.assertInSaltComment(ret, 'User null_name is set to be created')
 
     def absent(self):
         '''
