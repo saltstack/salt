@@ -242,6 +242,19 @@ def parse_targets(name=None, pkgs=None, sources=None):
         return None,None
 
 
+def sort_pkglist(pkgs):
+    '''
+    Accepts a dict obtained from pkg.list_pkgs() and sorts in place the list of
+    versions for any packages that have multiple versions installed, so that
+    two package lists can be compared to one another.
+    '''
+    # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
+    # so long as the sorting is consistent.
+    for key in pkgs.keys():
+        if isinstance(pkgs[key],list):
+            pkgs[key].sort()
+
+
 def find_changes(old={}, new={}):
     '''
     Compare before and after results from pkg.list_pkgs() to determine what
