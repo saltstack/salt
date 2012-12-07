@@ -582,15 +582,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             )
         return orig[minion_tgt]
 
-    def state_result(self, ret, raw=False):
-        '''
-        Return the result data from a single state return
-        '''
-        res = ret[next(iter(ret))]
-        if raw:
-            return res
-        return res['result']
-
     def run_state(self, function, **kwargs):
         '''
         Run the state.single command and return the state return structure
@@ -623,20 +614,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         return salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
-
-    def assert_success(self, ret):
-        try:
-            res = self.state_result(ret, raw=True)
-        except TypeError:
-            pass
-        else:
-            if isinstance(res, dict):
-                if res['result'] is True:
-                    return
-                if 'comment' in res:
-                    raise AssertionError(res['comment'])
-                ret = res
-        raise AssertionError('bad result: %r' % (ret))
 
 
 class SyndicCase(TestCase, SaltClientTestCaseMixIn):
