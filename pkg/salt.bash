@@ -42,12 +42,14 @@ _salt(){
 	ppprev="${COMP_WORDS[COMP_CWORD-3]}"
     fi
 
-    opts="--help -h --version -c --compound --out=raw --out=txt --out=json --no-color \
-          --timeout -t --static -s --batch-size -b -E --pcre -L --list \
-          -G --grain --grain-pcre -X --exsel -N --nodegroup -R --range --return \
-          -Q --query -c --config -s --static -t --timeout \
-          -b --batch-size  -X --exsel" 
-          
+    opts="-h --help -d --doc --documentation --version --versions-report -c \
+          --config-dir= -v --verbose -t --timeout= -s --static -b --batch= \
+          --batch-size= -E --pcre -L --list -G --grain --grain-pcre -N \
+          --nodegroup -R --range -C --compound -X --exsel -I --pillar \
+          --return= -a --auth= --eauth= --extended-auth= -T --make-token -S \
+          --ipcidr --out=pprint --out=yaml --out=overstatestage --out=json \
+          --out=raw --out=highstate --out=key --out=txt --no-color --out-indent= "
+
     if [[ "${cur}" == -* ]] ; then
         COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
         return 0
@@ -133,11 +135,13 @@ _saltkey(){
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="--version -h --help -l --list -L --list-all -a --accept \
-         -R --reject-all -p --print -P --print-all -r --reject \
-         -d --delete -q --quiet -D --delete-all --key-logfile -c \
-         --config -q --quiet --gen-keys --gen-keys-dir \
-         --keysize accept-all -A "
+    opts="-c --config-dir= -h --help --version --versions-report -q --quiet \
+          -y --yes --gen-keys= --gen-keys-dir= --keysize= --key-logfile= \
+          -l --list= -L --list-all -a --accept= -A --accept-all \ 
+          -r --reject= -R --reject-all -p --print= -P --print-all \ 
+          -d --delete= -D --delete-all -f --finger= -F --finger-all \
+          --out=pprint --out=yaml --out=overstatestage --out=json --out=raw \
+          --out=highstate --out=key --out=txt --no-color --out-indent= "
     if [ ${COMP_CWORD} -gt 2 ]; then
         pprev="${COMP_WORDS[COMP_CWORD-2]}"
     fi
@@ -207,7 +211,10 @@ _saltcall(){
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="-h --help -l --log-level  -d --doc -m --module-dirs --out=raw --out=txt --out=yaml --out=json --no-color"
+    opts="-h --help -d --doc --documentation --version --versions-report \
+          -m --module-dirs= -g --grains --return= --local -c --config-dir= -l --log-level= \
+          --out=pprint --out=yaml --out=overstatestage --out=json --out=raw \
+          --out=highstate --out=key --out=txt --no-color --out-indent= "
     if [ ${COMP_CWORD} -gt 2 ]; then
         pprev="${COMP_WORDS[COMP_CWORD-2]}"
     fi
@@ -257,7 +264,12 @@ _saltcp(){
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="-h --help -L --list -E --pcre -G --grain  --grain-pcre -R --range -C --compound -c --config= -t --timeout= " 
+    opts="-t --timeout= -s --static -b --batch= --batch-size= \
+          -h --help --version --versions-report -c --config-dir= \
+          -E --pcre -L --list -G --grain --grain-pcre -N --nodegroup \ 
+          -R --range -C --compound -X --exsel -I --pillar \
+          --out=pprint --out=yaml --out=overstatestage --out=json --out=raw \
+          --out=highstate --out=key --out=txt --no-color --out-indent= "
     if [[ "${cur}" == -* ]] ; then
         COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
         return 0
