@@ -939,6 +939,16 @@ class SaltReturnAssertsMixIn(object):
             )
         return True
 
+    def assertSaltCommentRegexpMatches(self, ret, pattern):
+        self.assertReturnSaltType(ret)
+        for part in ret.itervalues():
+            if 'comment' in part:
+                return self.assertRegexpMatches(part['comment'], pattern)
+        else:
+            raise AssertionError(
+                'There\'s no comment key in any of salt\'s return parts'
+            )
+
     def __assertSaltStateChanges(self, ret, keys=()):
         self.assertSaltTrueReturn(ret)
         if keys and isinstance(keys, tuple):
