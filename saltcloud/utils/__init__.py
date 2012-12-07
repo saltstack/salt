@@ -167,15 +167,16 @@ def wait_for_ssh(host, port=22, timeout=900):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     trycount = 0
     while True:
+        trycount += 1
         try:
             sock.connect((host, port))
             sock.shutdown(2)
             return True
         except Exception:
             time.sleep(1)
-            log.warn('Retrying ssh connection (try {0})'.format(trycount))
+            log.debug('Retrying SSH connection (try {0})'.format(trycount))
             if time.time() - start > timeout:
-                log.error('ssh connection timed out: {0}'.format(timeout))
+                log.error('SSH connection timed out: {0}'.format(timeout))
                 return False
 
 
@@ -205,7 +206,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 connectfail = True
                 ssh.close()
                 trycount += 1
-                log.warn('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
+                log.debug('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
                     time.sleep(trysleep)
                     continue
@@ -277,13 +278,19 @@ def deploy_script(host, port=22, timeout=900, username='root',
             ssh.exec_command('chmod +x /tmp/deploy.sh')
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-            queue = multiprocessing.Queue()
-            process = multiprocessing.Process(
-                    target=lambda: check_auth(name=name, pub_key=pub_key, sock_dir=sock_dir,
-                                              timeout=newtimeout, queue=queue),
-                    )
-            log.debug('Starting new process to wait for salt-minion')
-            process.start()
+            queue = None
+            process = None
+            # Consider this code experimental. It causes Salt Cloud to wait
+            # for the minion to check in, and then fire a startup event.
+            # Unfortunately, it doesn't currently work with Paramiko.
+            if start_action:
+                queue = multiprocessing.Queue()
+                process = multiprocessing.Process(
+                        target=lambda: check_auth(name=name, pub_key=pub_key, sock_dir=sock_dir,
+                                                  timeout=newtimeout, queue=queue),
+                        )
+                log.debug('Starting new process to wait for salt-minion')
+                process.start()
 
             log.debug('Executing /tmp/deploy.sh')
             root_cmd(deploy_command, tty, sudo, **kwargs)
@@ -299,17 +306,18 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if minion_conf:
                 ssh.exec_command('rm /tmp/minion')
                 log.debug('Removed /tmp/minion')
-            queuereturn = queue.get()
-            process.join()
-            if queuereturn and start_action:
-                #client = salt.client.LocalClient(conf_file)
-                #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
-                #for line in output:
-                #    print(line)
-                log.info('Executing {0} on the salt-minion'.format(start_action))
-                root_cmd('salt-call {0}'.format(start_action), tty, sudo, **kwargs)
-                log.info('Finished executing {0} on the salt-minion'.format(start_action))
-            # Fire deploy action
+            if start_action:
+                queuereturn = queue.get()
+                process.join()
+                if queuereturn and start_action:
+                    #client = salt.client.LocalClient(conf_file)
+                    #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
+                    #for line in output:
+                    #    print(line)
+                    log.info('Executing {0} on the salt-minion'.format(start_action))
+                    root_cmd('salt-call {0}'.format(start_action), tty, sudo, **kwargs)
+                    log.info('Finished executing {0} on the salt-minion'.format(start_action))
+            #Fire deploy action
             event = salt.utils.event.SaltEvent(
                 'master',
                 sock_dir,
