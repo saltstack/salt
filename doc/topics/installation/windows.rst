@@ -125,7 +125,7 @@ Install on Windows XP 32bit
         sudo salt '*' test.ping
 
     
-        You should get the following response: {'your minion hostname': True}
+You should get the following response: {'your minion hostname': True}
 
 
 Single command bootstrap script
