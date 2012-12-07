@@ -23,17 +23,15 @@ class RabbitUserTestCase(integration.ModuleCase):
         rabbitmq_user.present null_name
         '''
         ret = self.run_state(
-            'rabbitmq_user.present', name='null_name', test=True)
-
-        self.assertTrue(ret)
-        self.assertFalse(self.state_result(ret))
+            'rabbitmq_user.present', name='null_name', test=True
+        )
+        self.assertSaltTrueReturn(ret)
 
     def absent(self):
         '''
         rabbitmq_user.absent null_name
         '''
         ret = self.run_state(
-            'rabbitmq_user.absent', name='null_name', test=True)
-
-        self.assertTrue(ret)
-        self.assertFalse(self.state_result(ret))
+            'rabbitmq_user.absent', name='null_name', test=True
+        )
+        self.assertSaltFalseReturn(ret)
