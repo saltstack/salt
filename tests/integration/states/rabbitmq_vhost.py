@@ -5,7 +5,8 @@ import os
 import integration
 
 
-class RabbitVHostTestCase(integration.ModuleCase):
+class RabbitVHostTestCase(integration.ModuleCase,
+                          integration.SaltReturnAssertsMixIn):
     '''
     Validate the rabbitmq virtual host states.
     '''

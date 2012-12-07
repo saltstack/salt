@@ -5,7 +5,8 @@ import os
 import integration
 
 
-class RabbitUserTestCase(integration.ModuleCase):
+class RabbitUserTestCase(integration.ModuleCase,
+                         integration.SaltReturnAssertsMixIn):
     '''
     Validate the rabbitmq user states.
     '''

@@ -5,7 +5,8 @@ import os
 import integration
 
 
-class SupervisordTest(integration.ModuleCase):
+class SupervisordTest(integration.ModuleCase,
+                      integration.SaltReturnAssertsMixIn):
     '''
     Validate the supervisord states.
     '''
