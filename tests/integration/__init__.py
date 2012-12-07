@@ -938,3 +938,35 @@ class SaltReturnAssertsMixIn(object):
                 'There\'s no comment key in any of salt\'s return parts'
             )
         return True
+
+    def __assertSaltStateChanges(self, ret, keys=()):
+        self.assertSaltTrueReturn(ret)
+        if keys and isinstance(keys, tuple):
+            keys = list(keys)
+        elif keys and isinstance(keys, string):
+            keys = [keys]
+        elif keys and not isinstance(keys, list):
+            raise RuntimeError('The passed keys need to be a list')
+
+        for part in ret.itervalues():
+            changes = part['changes']
+            okeys = keys[:]
+            while okeys:
+                try:
+                    changes = changes[okeys.pop(0)]
+                except (KeyError, TypeError):
+                    raise AssertionError(
+                        'Could not find state{0} in the state state '
+                        'return: {1}'.format(
+                            ''.join(['[{0!r}]'.format(k) for k in keys]), ret
+                        )
+                    )
+            yield changes
+
+    def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
+        for change in self.__assertSaltStateChanges(ret, keys):
+            self.assertEqual(change, comparison)
+
+    def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
+        for change in self.__assertSaltStateChanges(ret, keys):
+            self.assertNotEqual(change, comparison)
