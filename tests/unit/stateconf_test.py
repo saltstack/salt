@@ -3,7 +3,7 @@ import sys
 from cStringIO import StringIO
 
 # Import Salt libs
-from salt.renderers.yaml import HAS_ORDERED_DICT
+from salt.renderers.yaml import has_ordered_dict
 from saltunittest import TestCase
 import salt.loader
 import salt.config
