@@ -194,7 +194,7 @@ extend:
                          set('ABCDE'))
 
     def test_implicit_require_with_goal_state(self):
-        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+        if sys.version_info < (2, 7) and not has_ordered_dict:
             self.skipTest('OrderedDict is not available')
 
         result = render_sls('''
