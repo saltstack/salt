@@ -2,12 +2,12 @@
 Package support for OpenBSD
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import re
 import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)

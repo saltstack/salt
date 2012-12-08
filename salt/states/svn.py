@@ -11,11 +11,11 @@ Manage repositiry checkouts via the svn vcs system:
         - target: /tmp/swallow
 '''
 
-# Import Python libs
+# Import python libs
 import logging
 import os
 
-# Import Salt libs
+# Import salt libs
 from salt import exceptions
 from salt.states.git import _fail
 

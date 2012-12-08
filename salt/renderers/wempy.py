@@ -1,7 +1,7 @@
-# Import Python libs
+# Import python libs
 from StringIO import StringIO
 
-# Import Salt libs
+# Import salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
