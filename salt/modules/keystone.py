@@ -12,6 +12,8 @@ Module for handling openstack keystone calls.
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
+
+# Import third party libs
 has_keystone = False
 try:
     from keystoneclient.v2_0 import client

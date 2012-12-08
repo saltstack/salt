@@ -1,10 +1,11 @@
 '''
 Manage the information in the hosts file
 '''
+
 # Import python libs
 import os
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 

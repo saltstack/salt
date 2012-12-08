@@ -1,16 +1,18 @@
 '''
 Manage users with the useradd command
 '''
+
+# Import python libs
 try:
     import grp
     import pwd
 except ImportError:
     pass
-
 import os
 import logging
 from copy import deepcopy
 
+# From salt libs
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)

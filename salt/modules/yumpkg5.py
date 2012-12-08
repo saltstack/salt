@@ -2,11 +2,12 @@
 Support for YUM
 '''
 
+# Import python libs
 import logging
 from collections import namedtuple
 
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''

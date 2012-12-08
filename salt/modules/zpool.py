@@ -5,7 +5,10 @@ Assumes FreeBSD
 
 :depends:   - mkfile
 '''
+
+# Import python libs
 import os
+
 
 def __virtual__():
     '''

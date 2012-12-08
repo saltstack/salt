@@ -1,18 +1,18 @@
 '''
 Jinja loading utils to enable a more powerful backend for jinja templates
 '''
+
 # Import python libs
 from os import path
 import logging
 
-# Import third-party libs
+# Import third party libs
 from jinja2 import BaseLoader
 from jinja2.exceptions import TemplateNotFound
 
-# Import Salt libs
+# Import salt libs
 import salt
 import salt.fileclient
-
 
 log = logging.getLogger(__name__)
 

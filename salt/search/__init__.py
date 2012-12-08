@@ -2,7 +2,7 @@
 Set up the correct search system
 '''
 
-# Import Python libs
+# Import python libs
 import os
 
 # Import salt libs

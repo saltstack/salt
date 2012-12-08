@@ -7,7 +7,7 @@ specific to the minion
 import os
 import ast
 
-# Import salt lins
+# Import salt libs
 import salt.utils
 import salt.payload
 

@@ -7,7 +7,7 @@ import os
 import collections
 import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.loader
 import salt.fileclient
 import salt.minion

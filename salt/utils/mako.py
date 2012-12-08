@@ -1,8 +1,13 @@
 from __future__ import absolute_import
 
+# Import python libs
 import os
 import urlparse
+
+# Import third party libs
 from mako.lookup import TemplateCollection, TemplateLookup
+
+# Import salt libs
 import salt.fileclient
 
 class SaltMakoTemplateLookup(TemplateCollection):

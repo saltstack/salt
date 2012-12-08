@@ -13,7 +13,7 @@ import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import pickle
 
-# Import zeromq
+# Import third party libs
 import zmq
 
 log = salt.log.logging.getLogger(__name__)

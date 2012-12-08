@@ -3,11 +3,13 @@ Support for SQLite3
 '''
 from __future__ import absolute_import
 
+# Import python libs
 try:
     import sqlite3
     has_sqlite3 = True
 except ImportError:
     has_sqlite3 = False
+
 
 def __virtual__():
     if not has_sqlite3:

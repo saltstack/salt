@@ -2,7 +2,9 @@
 Support for nginx
 '''
 
+# Import salt libs
 import salt.utils
+
 
 __outputter__ = {
     'signal': 'txt',

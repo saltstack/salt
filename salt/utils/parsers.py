@@ -7,12 +7,15 @@ salt.utils.parsers
 :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
 import os
 import sys
 import logging
 import optparse
 import traceback
 from functools import partial
+
+# Import salt libs
 from salt import config, loader, log, version
 
 

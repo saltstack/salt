@@ -2,11 +2,12 @@
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 """
 
+# Import python libs
+import re
+
 __opts__ = {
     "rvm.runas": None,
 }
-
-import re
 
 
 def _rvm(command, arguments="", runas=None):

@@ -2,6 +2,7 @@
 Module for gathering disk information
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

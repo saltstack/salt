@@ -5,8 +5,12 @@ Support for YUM
             - rpm Python module
             - rpmUtils Python module
 '''
-import re
 
+# Import python libs
+import re
+import logging
+
+# Import third party libs
 try:
     import yum
     import rpm
@@ -14,8 +18,6 @@ try:
     has_yumdeps = True
 except (ImportError, AttributeError):
     has_yumdeps = False
-
-import logging
 
 log = logging.getLogger(__name__)
 

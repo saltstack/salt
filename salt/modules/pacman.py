@@ -3,10 +3,12 @@ A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
+# Import python libs
 import logging
 from types import StringTypes
 
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
