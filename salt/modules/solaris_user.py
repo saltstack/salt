@@ -2,7 +2,7 @@
 Manage users with the useradd command
 '''
 
-# Import Python libs
+# Import python libs
 try:
     import grp
     import pwd
@@ -11,7 +11,7 @@ except ImportError:
 import logging
 from copy import deepcopy
 
-# Import Salt libs
+# Import salt libs
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)

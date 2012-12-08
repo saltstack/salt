@@ -9,7 +9,7 @@ Manage RabbitMQ Users.
             - force: True
 '''
 
-# Import Python libs
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)
