@@ -836,7 +836,7 @@ def directory(name,
             if targets:
                 file_tree = __salt__['file.find'](name)
                 for path in file_tree:
-                    fstat = os.stat(path)
+                    fstat = os.lstat(path)
                     if 'user' in targets and fstat.st_uid != uid:
                             needs_fixed['user'] = True
                             if needs_fixed.get('group'):
