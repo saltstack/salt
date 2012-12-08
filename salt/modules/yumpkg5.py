@@ -109,8 +109,18 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    out = _parse_yum('list installed')
-    return dict([(i.name, i.version) for i in out])
+    cmd = 'rpm -qa --queryformat ' \
+          '"%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}\n"'
+    ret = {}
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        name, version, rel, arch = line.split('_|-')
+        pkgver = version
+        if rel:
+            pkgver += '-{0}'.format(rel)
+        pkgver += '.{0}'.format(arch)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    return ret
 
 
 def list_upgrades():
