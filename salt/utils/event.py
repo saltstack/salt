@@ -12,7 +12,7 @@ Manage events
 # we should be able to modify the structure in the future since the same module
 # to read is the same module to fire off events.
 
-# Import Python libs
+# Import python libs
 import os
 import fnmatch
 import glob
@@ -22,10 +22,10 @@ import logging
 import multiprocessing
 from multiprocessing import Process
 
-# Import Third Party libs
+# Import third party libs
 import zmq
 
-# Import Salt libs
+# Import salt libs
 import salt.payload
 import salt.loader
 import salt.state

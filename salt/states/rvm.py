@@ -102,7 +102,7 @@ configuration could look like:
           - rvm: ruby-1.9.2
 '''
 
-# Import Python libs
+# Import python libs
 import re
 
 

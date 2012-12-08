@@ -12,7 +12,7 @@ Interaction with the Supervisor daemon.
             - pkg: supervisor
 '''
 
-# Import Python libs
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

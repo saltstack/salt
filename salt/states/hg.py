@@ -16,12 +16,12 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - target: /tmp/example_repo
 '''
 
-# Import Python libs
+# Import python libs
 import logging
 import os
 import shutil
 
-# Import Salt libs
+# Import salt libs
 from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)

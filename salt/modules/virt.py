@@ -6,14 +6,14 @@ Work with virtual machines managed by libvirt
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-# Import Python libs
+# Import python libs
 import os
 import re
 import shutil
 import subprocess
 from xml.dom import minidom
 
-# Import Third Party libs
+# Import third party libs
 try:
     import libvirt
     has_libvirt = True
@@ -21,7 +21,7 @@ except ImportError:
     has_libvirt = False
 import yaml
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt._compat import StringIO
 from salt.exceptions import CommandExecutionError

@@ -2,7 +2,7 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-# Import python modules
+# Import python libs
 import glob
 import os
 import socket

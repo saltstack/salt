@@ -18,7 +18,7 @@ Module to provide MySQL compatibility to salt.
         mysql.default_file: '/etc/mysql/debian.cnf'
 '''
 
-# Import Python libs
+# Import python libs
 import time
 import logging
 import re

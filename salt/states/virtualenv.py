@@ -4,7 +4,7 @@ Setup of Python virtualenv sandboxes.
 
 '''
 
-# Import Python libs
+# Import python libs
 import logging
 import os
 

@@ -3,13 +3,13 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import glob
 import fnmatch
 import re
 
-# Import Salt libs
+# Import salt libs
 import salt.payload
 
 

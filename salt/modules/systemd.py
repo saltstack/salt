@@ -2,10 +2,10 @@
 Provide the service module for systemd
 '''
 
-# Import Python libs
+# Import python libs
 import re
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 LOCAL_CONFIG_PATH = '/etc/systemd/system'

@@ -2,7 +2,7 @@
 Module for running arbitrary tests
 '''
 
-# Import Salt libs
+# Import salt libs
 import time
 
 

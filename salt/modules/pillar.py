@@ -2,7 +2,7 @@
 Extract the pillar data for this minion
 '''
 
-# Import Salt libs
+# Import salt libs
 import salt.pillar
 
 

@@ -2,11 +2,11 @@
 This module contains the function calls to execute command line scipts
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import sys
 
-# Import Salt libs
+# Import salt libs
 import salt
 import salt.cli
 

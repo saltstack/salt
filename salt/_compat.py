@@ -2,7 +2,7 @@
 Salt compatibility code
 '''
 
-# Import Python libs
+# Import python libs
 import sys
 import types
 try:

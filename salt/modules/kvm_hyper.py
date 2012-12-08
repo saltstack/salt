@@ -9,14 +9,14 @@ interact with kvm on behalf of the salt-virt interface
 # VERY likely to change.
 
 
-# Import Python libs
+# Import python libs
 import os
 import shutil
 import string
 import subprocess
 from xml.dom import minidom
 
-# Import Third Party libs
+# Import third party libs
 import yaml
 try:
     import libvirt
@@ -24,7 +24,7 @@ try:
 except ImportError:
     has_libvirt = False
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt._compat import StringIO
 

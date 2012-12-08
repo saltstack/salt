@@ -1,11 +1,11 @@
-# Import Python libs
+# Import python libs
 import logging
 import os
 import signal
 import time
 import sys
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)

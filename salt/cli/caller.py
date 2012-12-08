@@ -3,7 +3,7 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 '''
 
-# Import python modules
+# Import python libs
 import os
 import sys
 import logging

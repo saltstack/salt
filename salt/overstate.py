@@ -10,15 +10,15 @@ the deployment of states over groups of servers.
 # 5. Execute state call
 # 6. append data to running
 
-# Import Python libs
+# Import python libs
 import sys
 import os
 
-# Import Salt libs
+# Import salt libs
 import salt.client
 import salt.utils
 
-# Import Third Party libs
+# Import third party libs
 import yaml
 
 

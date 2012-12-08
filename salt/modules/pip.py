@@ -2,12 +2,12 @@
 Install Python packages with pip to either the system or a virtualenv
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import logging
 import shutil
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError

@@ -3,7 +3,7 @@ Some of the utils used by salt
 '''
 from __future__ import absolute_import
 
-# Import Python libs
+# Import python libs
 import os
 import re
 import imp
@@ -29,7 +29,7 @@ except ImportError:
     # fcntl is not available on windows
     has_fcntl = False
 
-# Import Salt libs
+# Import salt libs
 import salt.minion
 import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError

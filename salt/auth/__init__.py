@@ -12,7 +12,7 @@ so that any external authentication system can be used inside of Salt
 # 5. Cache auth token with relative data opts['token_dir']
 # 6. Interface to verify tokens
 
-# Import Python libs
+# Import python libs
 import os
 import hashlib
 import time
@@ -20,7 +20,7 @@ import logging
 import random
 import getpass
 
-# Import Salt libs
+# Import salt libs
 import salt.loader
 import salt.utils
 import salt.payload

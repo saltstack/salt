@@ -2,10 +2,10 @@
 Package support for openSUSE via the zypper package manager
 '''
 
-# Import Python libs
+# Import python libs
 import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)

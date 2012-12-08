@@ -76,7 +76,7 @@ something like this:
         - source: salt://code/flask
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import shutil
 import difflib
@@ -85,7 +85,7 @@ import copy
 import re
 import fnmatch
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 import salt.utils.templates
 from salt._compat import string_types

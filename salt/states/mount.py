@@ -15,7 +15,7 @@ Mount any type of mountable filesystem with the mounted function:
           - defaults
 '''
 
-# Import Salt libs
+# Import salt libs
 from salt._compat import string_types
 
 

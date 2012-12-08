@@ -2,13 +2,13 @@
 Control the state system on the minion
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import copy
 import logging
 import json
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 import salt.state
 import salt.payload

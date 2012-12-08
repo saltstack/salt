@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
-# Import Python libs
+# Import python libs
 import getopt
 import logging
 import warnings
 
-# Import Salt libs
+# Import salt libs
 from salt.utils.yaml import CustomLoader, load
 from salt.exceptions import SaltRenderError
 

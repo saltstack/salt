@@ -2,7 +2,7 @@
 Execute overstate functions
 '''
 
-# Import Salt libs
+# Import salt libs
 import salt.overstate
 import salt.output
 

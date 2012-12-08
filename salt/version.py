@@ -2,12 +2,12 @@
 Set up the version of Salt
 '''
 
-# Import Python libs
+# Import python libs
 import sys
 import os
 import subprocess
 
-# Import Salt libs
+# Import salt libs
 from salt.utils import which
 
 __version_info__ = (0, 10, 5)

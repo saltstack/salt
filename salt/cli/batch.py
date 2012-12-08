@@ -2,12 +2,12 @@
 Execute batch runs
 '''
 
-# Import Python libs
+# Import python libs
 import math
 import time
 import copy
 
-# Import Salt libs
+# Import salt libs
 import salt.client
 import salt.output
 

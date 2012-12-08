@@ -135,7 +135,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
           - network: eth4
 '''
 
-# Import Python libs
+# Import python libs
 import difflib
 
 
