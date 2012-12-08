@@ -242,6 +242,19 @@ def parse_targets(name=None, pkgs=None, sources=None):
         return None,None
 
 
+def add_pkg(pkgs, name, version):
+    '''
+    Add a package to a dict of installed packages.
+    '''
+    cur = pkgs.get(name)
+    if cur is None:
+        pkgs[name] = version
+    elif type(cur) in StringTypes:
+        pkgs[name] = [cur, version]
+    else:
+        pkgs[name].append(version)
+
+
 def sort_pkglist(pkgs):
     '''
     Accepts a dict obtained from pkg.list_pkgs() and sorts in place the list of

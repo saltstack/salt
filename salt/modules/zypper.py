@@ -95,8 +95,10 @@ def list_pkgs():
     for line in __salt__['cmd.run'](cmd).splitlines():
         name, version, rel = line.split('_|-')
         pkgver = version
-        if rel: pkgver += '-{0}'.format(rel)
-        ret[name] = pkgver
+        if rel:
+            pkgver += '-{0}'.format(rel)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 
