@@ -98,6 +98,23 @@ def _linux_cpudata():
                     grains['cpu_model'] = val
                 elif key == 'flags':
                     grains['cpu_flags'] = val.split()
+                # ARM support - /proc/cpuinfo
+                #
+                # Processor       : ARMv6-compatible processor rev 7 (v6l)
+                # BogoMIPS        : 697.95
+                # Features        : swp half thumb fastmult vfp edsp java tls
+                # CPU implementer : 0x41
+                # CPU architecture: 7
+                # CPU variant     : 0x0
+                # CPU part        : 0xb76
+                # CPU revision    : 7
+                #
+                # Hardware        : BCM2708
+                # Revision        : 0002
+                # Serial          : 00000000XXXXXXXX
+                elif key == 'Processor':
+                    grains['cpu_model'] = val.split('-')[0]
+                    grains['num_cpus'] = 1
     if 'num_cpus' not in grains:
         grains['num_cpus'] = 0
     if 'cpu_model' not in grains:
