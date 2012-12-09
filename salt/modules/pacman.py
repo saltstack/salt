@@ -5,7 +5,6 @@ A module to wrap pacman calls, since Arch is the best
 
 # Import python libs
 import logging
-from types import StringTypes
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +105,7 @@ def list_pkgs():
         cur = ret.get(pkg)
         if cur is None:
             ret[pkg] = version
-        elif type(cur) in StringTypes:
+        elif isinstance(cur, basestring):
             ret[pkg] = [cur, version]
         else:
             ret[pkg].append(version)
@@ -169,7 +168,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
             salt '*' pkg.install pkgs='["foo","bar"]'
 
     sources
-        A list of packages to install. Must be passed as a list of dicts, 
+        A list of packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 

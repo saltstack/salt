@@ -3,12 +3,11 @@ Resources needed by pkg providers
 '''
 
 # Import python libs
-import logging
 import os
 import re
 import yaml
-from pprint import pformat
-from types import StringTypes
+import pprint
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -100,15 +99,15 @@ def _pack_pkgs(sources):
 
     Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
     '''
-    if type(sources) in StringTypes:
+    if isinstance(sources, basestring):
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
             log.error(e)
             return []
-    if not isinstance(sources,list) \
-    or [x for x in sources if type(x) not in StringTypes]:
-        log.error('Invalid input: {0}'.format(pformat(source)))
+    if not isinstance(sources, list) \
+    or [x for x in sources if not isinstance(x, basestring)]:
+        log.error('Invalid input: {0}'.format(pprint.pformat(source)))
         log.error('Input must be a list of strings')
         return []
     return sources
@@ -122,7 +121,7 @@ def _pack_sources(sources):
     Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
     become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
     '''
-    if type(sources) in StringTypes:
+    if instance(sources, basestring):
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
@@ -131,7 +130,7 @@ def _pack_sources(sources):
     ret = {}
     for source in sources:
         if (not isinstance(source,dict)) or len(source) != 1:
-            log.error('Invalid input: {0}'.format(pformat(sources)))
+            log.error('Invalid input: {0}'.format(pprint.pformat(sources)))
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
