@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-salt.utils.parsers
-~~~~~~~~~~~~~~~~~~
+    salt.utils.parsers
+    ~~~~~~~~~~~~~~~~~~
 
-:copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-:license: Apache 2.0, see LICENSE for more details.
+    This is were all the black magic happens on all of salt's cli tools.
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 import os
