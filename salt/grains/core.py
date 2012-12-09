@@ -148,6 +148,19 @@ def _bsd_cpudata(osdata):
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
     grains['cpu_flags'] = []
+    if os.path.isfile('/var/run/dmesg.boot'):
+        with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
+            cpu_here = False
+            for line in _fp:
+                if line.startswith('CPU: '):
+                    cpu_here = True  # starts cpu descr
+                    continue
+                if cpu_here:
+                    if not line.startswith(' '):
+                        break  # game over
+                    if 'Features' in line:
+                        f = line[line.find('<') + 1:line.find('>')].split(',')
+                        grains['cpu_flags'].extend(f)
     try:
         grains['num_cpus'] = int(grains['num_cpus'])
     except ValueError:
