@@ -431,6 +431,7 @@ _REPLACE_LINUX_RE = re.compile(r'linux', re.IGNORECASE)
 _OS_NAME_MAP = {
     'redhatente': 'RedHat',
     'gentoobase': 'Gentoo',
+    'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
 }
@@ -457,6 +458,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
+    'Arch ARM': 'Arch',
 }
 
 
@@ -513,6 +515,25 @@ def os_data():
                         if match:
                             # Adds: lsb_distrib_{id,release,codename,description}
                             grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+            elif os.path.isfile('/etc/os-release'):
+                # Arch ARM linux
+                with open('/etc/os-release') as f:
+                    # Imitate lsb-release
+                    for line in f:
+                        # NAME="Arch Linux ARM"
+                        # ID=archarm
+                        # ID_LIKE=arch
+                        # PRETTY_NAME="Arch Linux ARM"
+                        # ANSI_COLOR="0;36"
+                        # HOME_URL="http://archlinuxarm.org/"
+                        # SUPPORT_URL="https://archlinuxarm.org/forum"
+                        # BUG_REPORT_URL="https://github.com/archlinuxarm/PKGBUILDs/issues"
+                        regex = re.compile('^([\w]+)=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                        match = regex.match(line.rstrip('\n'))
+                        if match:
+                            name, value = match.groups()
+                            if name.lower() == 'name':
+                                grains['lsb_distrib_id'] = value.strip()
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
                                               supported_dists=_supported_dists)
