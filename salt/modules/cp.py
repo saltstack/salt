@@ -22,7 +22,6 @@ def recv(files, dest):
     '''
     ret = {}
     for path, data in files.items():
-        final = ''
         if os.path.basename(path) == os.path.basename(dest)\
                 and not os.path.isdir(dest):
             final = dest

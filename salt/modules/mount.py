@@ -231,7 +231,7 @@ def set_fstab(
             with salt.utils.fopen(config, 'w+') as fh:
                 # The line was changed, commit it!
                 fh.writelines(lines)
-        except (IOError, OSError) as exc:
+        except (IOError, OSError):
             msg = 'File not writable {0}'
             raise CommandExecutionError(msg.format(config))
 
@@ -251,7 +251,7 @@ def set_fstab(
             with salt.utils.fopen(config, 'w+') as fh:
                 # The line was changed, commit it!
                 fh.writelines(lines)
-        except (IOError, OSError) as exc:
+        except (IOError, OSError):
             msg = 'File not writable {0}'
             raise CommandExecutionError(msg.format(config))
     if present and not change:

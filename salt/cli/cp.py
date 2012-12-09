@@ -29,7 +29,6 @@ class SaltCP(object):
             err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        data = ''
         with salt.utils.fopen(fn_, 'r') as fp_:
             data = fp_.read()
         return {fn_: data}

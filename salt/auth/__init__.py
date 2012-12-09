@@ -76,7 +76,6 @@ class LoadAuth(object):
             err = 'Authentication module threw an exception: {0}'.format(exc)
             log.critical(err)
             return False
-        return False
 
     def time_auth(self, load):
         '''

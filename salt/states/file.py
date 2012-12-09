@@ -261,8 +261,13 @@ def _check_directory(
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
-            for key, val in changes[fn_].items():
-                comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
+            # for some reason we're getting tuples and dicts.
+            # Let's do the right thing for each.
+            if isinstance(changes[fn_], tuple):
+                key, val = changes[fn_]
+            else:
+                key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
+            comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
@@ -368,7 +373,6 @@ def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
         ret = True
 
     return ret
-
 
 def symlink(
         name,
@@ -832,7 +836,7 @@ def directory(name,
             if targets:
                 file_tree = __salt__['file.find'](name)
                 for path in file_tree:
-                    fstat = os.stat(path)
+                    fstat = os.lstat(path)
                     if 'user' in targets and fstat.st_uid != uid:
                             needs_fixed['user'] = True
                             if needs_fixed.get('group'):
@@ -1671,7 +1675,6 @@ def rename(name, source, force=False, makedirs=False):
     except (IOError, OSError):
         return _error(
             ret, 'Failed to move "{0}" to "{1}"'.format(source, name))
-        return ret
 
     ret['comment'] = 'Moved "{0}" to "{1}"'.format(source, name)
     ret['changes'] = {name: source}

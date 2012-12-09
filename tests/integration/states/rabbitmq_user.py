@@ -5,7 +5,8 @@ import os
 import integration
 
 
-class RabbitUserTestCase(integration.ModuleCase):
+class RabbitUserTestCase(integration.ModuleCase,
+                         integration.SaltReturnAssertsMixIn):
     '''
     Validate the rabbitmq user states.
     '''
@@ -23,17 +24,16 @@ class RabbitUserTestCase(integration.ModuleCase):
         rabbitmq_user.present null_name
         '''
         ret = self.run_state(
-            'rabbitmq_user.present', name='null_name', test=True)
-
-        self.assertTrue(ret)
-        self.assertFalse(self.state_result(ret))
+            'rabbitmq_user.present', name='null_name', test=True
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertInSaltComment(ret, 'User null_name is set to be created')
 
     def absent(self):
         '''
         rabbitmq_user.absent null_name
         '''
         ret = self.run_state(
-            'rabbitmq_user.absent', name='null_name', test=True)
-
-        self.assertTrue(ret)
-        self.assertFalse(self.state_result(ret))
+            'rabbitmq_user.absent', name='null_name', test=True
+        )
+        self.assertSaltFalseReturn(ret)

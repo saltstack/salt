@@ -248,7 +248,6 @@ def _get_reg_value(reg_hive, reg_key, value_name=''):
     Read one value from Windows registry.
     If 'name' is empty string, reads default value.
     '''
-    value_data = ''
     try:
         key_handle = win32api.RegOpenKeyEx(
             reg_hive, reg_key, 0, win32con.KEY_ALL_ACCESS)

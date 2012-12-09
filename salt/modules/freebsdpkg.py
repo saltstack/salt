@@ -231,7 +231,7 @@ def remove(name):
         if _check_pkgng():
             pkg_command = '{0} delete -y'.format(_cmd('pkg'))
         else:
-            pkg_command - '{0}'.format(_cmd('pkg_delete'))
+            pkg_command = '{0}'.format(_cmd('pkg_delete'))
         __salt__['cmd.retcode']('{0} {1}'.format(pkg_command, name))
     new = list_pkgs()
     return _list_removed(old, new)

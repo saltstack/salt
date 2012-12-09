@@ -94,7 +94,7 @@ class Caller(object):
             for returner in self.opts['return'].split(','):
                 try:
                     self.minion.returners['{0}.returner'.format(returner)](ret)
-                except Exception as exc:
+                except Exception:
                     pass
         return ret
 

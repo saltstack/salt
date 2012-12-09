@@ -8,13 +8,14 @@ import re
 
 # Import Python libs
 import salt.utils
+from .systemd import _sd_booted
 
 
 def __virtual__():
     '''
-    Only work on Debian
+    Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] == 'Debian':
+    if __grains__['os'] == 'Debian' and not _sd_booted():
         return 'service'
     return False
 

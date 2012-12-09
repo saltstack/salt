@@ -534,11 +534,12 @@ class State(object):
         self.functions = salt.loader.minion_mods(self.opts, self.state_con)
         if isinstance(data, dict):
             if data.get('provider', False):
-                provider = {}
                 if isinstance(data['provider'], str):
                     providers = [{data['state']: data['provider']}]
                 elif isinstance(data['provider'], list):
                     providers = data['provider']
+                else:
+                    providers = {}
                 for provider in providers:
                     for mod in provider:
                         funcs = salt.loader.raw_mod(self.opts,
@@ -2023,8 +2024,8 @@ class BaseHighState(object):
         high, errors = self.render_highstate(matches)
         err += errors
 
-        if errors:
-            return errors
+        if err:
+            return err
 
         return high
 

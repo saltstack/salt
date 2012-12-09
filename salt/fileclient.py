@@ -336,7 +336,6 @@ class Client(object):
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
         except URLError as ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
-        return ''
 
     def get_template(
             self,

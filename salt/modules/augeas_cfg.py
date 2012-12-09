@@ -115,7 +115,6 @@ def setvalue(*args):
 
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     '''
-    prefix = None
     aug = Augeas()
     ret = {'retval': False}
 
