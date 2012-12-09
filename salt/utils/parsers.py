@@ -678,7 +678,7 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    description = "TODO: explain what salt-master is"
+    description = "The Salt master, used to control the Salt minions."
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path('master'))
@@ -688,7 +688,7 @@ class MinionOptionParser(MasterOptionParser):
 
     __metaclass__ = OptionParserMeta
 
-    description = "TODO: explain what salt-minion is"
+    description = "The Salt minion, receives commands from a remote Salt master."
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path('minion'))
