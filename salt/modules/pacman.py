@@ -99,8 +99,13 @@ def list_pkgs():
     for line in out:
         if not line:
             continue
-        name, version = line.split()[0:2]
-        __salt__['pkg_resource.add_pkg'](ret, name, version)
+        try:
+            name, version = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Q: Unexpected formatting in '
+                      'line: "{0}"'.format(line))
+        else:
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 

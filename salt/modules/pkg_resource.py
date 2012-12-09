@@ -7,7 +7,6 @@ import os
 import re
 import yaml
 from pprint import pformat
-from types import StringTypes
 
 log = logging.getLogger(__name__)
 
@@ -99,14 +98,14 @@ def _pack_pkgs(sources):
 
     Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
     '''
-    if type(sources) in StringTypes:
+    if isinstance(sources, basestring):
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
             log.error(e)
             return []
     if not isinstance(sources,list) \
-    or [x for x in sources if type(x) not in StringTypes]:
+    or [x for x in sources if not isinstance(x, basestring)]:
         log.error('Invalid input: {0}'.format(pformat(source)))
         log.error('Input must be a list of strings')
         return []
@@ -121,7 +120,7 @@ def _pack_sources(sources):
     Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
     become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
     '''
-    if type(sources) in StringTypes:
+    if isinstance(sources, basestring):
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
@@ -249,7 +248,7 @@ def add_pkg(pkgs, name, version):
     cur = pkgs.get(name)
     if cur is None:
         pkgs[name] = version
-    elif type(cur) in StringTypes:
+    elif isinstance(cur, basestring):
         pkgs[name] = [cur, version]
     else:
         pkgs[name].append(version)
