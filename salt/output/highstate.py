@@ -18,8 +18,10 @@ state_output:
     set to `terse` then the output is greatly simplified and shown in only one
     line
 '''
-# Import salt libs
+
+# Import python libs
 import pprint
+
 # Import salt libs
 import salt.utils
 from salt._compat import string_types

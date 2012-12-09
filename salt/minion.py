@@ -4,11 +4,9 @@ Routines to set up a minion
 '''
 
 # Import python libs
-
 import logging
 import getpass
 import multiprocessing
-
 import fnmatch
 import os
 import hashlib
@@ -36,7 +34,7 @@ from salt.utils.debug import enable_sigusr1_handler
 log = logging.getLogger(__name__)
 
 # To set up a minion:
-# 1, Read in the configuration
+# 1. Read in the configuration
 # 2. Generate the function mapping dict
 # 3. Authenticate with the master
 # 4. Store the aes key

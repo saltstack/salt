@@ -1,6 +1,7 @@
 '''
 Template render systems
 '''
+
 from __future__ import absolute_import
 
 # Import python libs
@@ -11,13 +12,13 @@ import logging
 import tempfile
 import traceback
 
+# Import third party libs
+import jinja2
+
 # Import salt libs
 import salt.utils
 import salt.exceptions
-
-import jinja2
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
-
 
 logger = logging.getLogger(__name__)
 

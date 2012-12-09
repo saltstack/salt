@@ -7,6 +7,7 @@ on the minion.
 # Import python libs
 import pprint
 
+
 def output(data):
     '''
     Output the data in lines, very nice for running commands

@@ -2,11 +2,11 @@
 Service support for Debian systems - uses update-rc.d and service to modify the system
 '''
 
-# Import Salt libs
+# Import python libs
 import glob
 import re
 
-# Import Python libs
+# Import salt libs
 import salt.utils
 from .systemd import _sd_booted
 

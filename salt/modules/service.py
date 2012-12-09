@@ -2,9 +2,11 @@
 The default service module, if not otherwise specified salt will fall back
 to this basic module
 '''
-# Import Python libs
+
+# Import python libs
 import os
-# Import Salt libs
+
+# Import salt libs
 import salt.utils
 
 

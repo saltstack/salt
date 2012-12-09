@@ -5,12 +5,12 @@ intended to handle text files.
 Salt-cp can be used to distribute configuration files
 '''
 
-# Import python modules
+# Import python libs
 import os
 import sys
 import pprint
 
-# Import salt modules
+# Import salt libs
 import salt.client
 
 

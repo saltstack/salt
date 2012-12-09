@@ -2,7 +2,10 @@
 Support for Apache
 '''
 
+# Import python libs
 import re
+
+# Import salt libs
 import salt.utils
 
 __outputter__ = {

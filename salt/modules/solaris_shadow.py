@@ -12,6 +12,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only work on posix-like systems

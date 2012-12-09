@@ -9,10 +9,10 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
 
-# This needs some refactoring, I made it "as fast as I could" and could be a
-# lot clearer, so far it is spaghetti code
-# Import python modules
+# TODO: This needs some refactoring, I made it "as fast as I could" and could
+# be a lot clearer, so far it is spaghetti code
 
+# Import python libs
 import os
 import socket
 import sys
@@ -27,12 +27,14 @@ from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'enterprise', 'ovs', 'system')
 
+# Import salt libs
 import salt.log
 import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet

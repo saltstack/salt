@@ -3,7 +3,9 @@ Alex Martelli's soulution for recursive dict update from
 http://stackoverflow.com/a/3233356
 '''
 
+# Import python libs
 import collections
+
 
 def update(d, u):
     for k, v in u.iteritems():

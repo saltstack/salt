@@ -8,7 +8,7 @@ import os
 # Import salt libs
 import salt.search
 
-# Import whoosh libs
+# Import third party libs
 has_whoosh = False
 try:
     import whoosh.index

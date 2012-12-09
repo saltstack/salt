@@ -1,14 +1,15 @@
 '''
 Provide the service module for systemd
 '''
-# Import Python libs
+# Import python libs
 import os
 import re
-# Import Salt libs
+
+# Import salt libs
 import salt.utils
 
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
-VALID_UNIT_TYPES = ['service','socket', 'device', 'mount', 'automount',
+VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
 def _sd_booted():

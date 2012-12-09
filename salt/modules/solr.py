@@ -59,12 +59,11 @@ verbose : True
     Get verbose output
 '''
 
-# Import Python Libs
-
+# Import python Libs
 import json
 import os
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt._compat import string_types, url_open
 

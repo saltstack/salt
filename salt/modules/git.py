@@ -2,8 +2,12 @@
 Support for the Git SCM
 '''
 
+# Import python libs
 import os
+
+# Import salt libs
 from salt import utils, exceptions
+
 
 def _git_run(cmd, cwd=None, **kwargs):
     '''

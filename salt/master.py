@@ -3,7 +3,7 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
-# Import python modules
+# Import python libs
 import os
 import re
 import time
@@ -21,16 +21,12 @@ import resource
 import subprocess
 import multiprocessing
 
-# Import zeromq
+# Import third party libs
 import zmq
-
-# Import Third Party Libs
 import yaml
-
-# RSA Support
 from M2Crypto import RSA
 
-# Import salt modules
+# Import salt libs
 import salt.crypt
 import salt.utils
 import salt.client

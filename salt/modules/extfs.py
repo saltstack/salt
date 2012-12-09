@@ -2,6 +2,7 @@
 Module for managing ext2/3/4 file systems
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

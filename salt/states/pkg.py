@@ -11,11 +11,13 @@ declarations are typically rather simple:
     vim:
       pkg.installed
 '''
+
 # Import python ilbs
 import logging
 import os
 from distutils.version import LooseVersion
 
+# Import salt libs
 import salt.utils
 
 logger = logging.getLogger(__name__)

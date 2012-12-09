@@ -17,6 +17,7 @@ import yaml
 # Set up logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only return if hiera is installed

@@ -1,6 +1,8 @@
 '''
 Manage groups on Linux
 '''
+
+# Import python libs
 try:
     import grp
 except ImportError:

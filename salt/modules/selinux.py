@@ -1,6 +1,7 @@
 '''
 Execute calls on selinux
 '''
+
 # Import python libs
 import os
 

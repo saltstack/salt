@@ -13,6 +13,7 @@ config, these are the defaults:
 # Import python libs
 import json
 
+# Import third party libs
 try:
     import redis
     has_redis = True

@@ -3,11 +3,12 @@ The Salt Key backend api and interface used by the CLI. The Key class can be
 used to manage salt keys directly without interfacing with the cli.
 '''
 
-# Import python modules
+# Import python libs
 import os
 import shutil
 import fnmatch
-# Import salt modules
+
+# Import salt libs
 import salt.crypt
 import salt.utils
 import salt.utils.event

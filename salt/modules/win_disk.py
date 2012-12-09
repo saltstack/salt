@@ -3,13 +3,18 @@ Module for gathering disk information on Windows
 
 :depends:   - win32api Python module
 '''
+
+# Import python libs
+import ctypes
+import string
+
+# Import third party libs
 try:
-    import ctypes
-    import string
     import win32api
     is_windows = True
 except ImportError:
     is_windows = False
+
 
 def __virtual__():
     '''

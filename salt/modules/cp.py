@@ -1,6 +1,7 @@
 '''
 Minion side functions for salt-cp
 '''
+
 # Import python libs
 import os
 import logging
