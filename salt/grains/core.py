@@ -517,7 +517,7 @@ def os_data():
                             grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
             elif os.path.isfile('/etc/os-release'):
                 # Arch ARM linux
-                with open('/etc/os-release') as f:
+                with salt.utils.fopen('/etc/os-release') as f:
                     # Imitate lsb-release
                     for line in f:
                         # NAME="Arch Linux ARM"
