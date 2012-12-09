@@ -1,10 +1,11 @@
 '''
 The service module for FreeBSD
 '''
-# Import Python libs
+
+# Import python libs
 import os
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt.exceptions import CommandNotFoundError
 

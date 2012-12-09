@@ -3,11 +3,14 @@ Manages configuration files via augeas
 
 :depends:   - Augeas Python adapter
 '''
-# Load Augeas libs
+
+# Load third party libs
+has_augeas = False
 try:
     from augeas import Augeas
+    has_augeas = True
 except ImportError:
-    Augeas = False
+    pass
 
 __outputter__ = {
     'ls': 'yaml',
@@ -20,7 +23,7 @@ def __virtual__():
     '''
     Only run this module if the augeas python module is installed
     '''
-    if Augeas:
+    if has_augeas:
         return 'augeas'
     else:
         return False
