@@ -49,7 +49,7 @@ Post-Deploy Commands
 
 Once a minion has been deployed, it has the option to run a salt command. Normally, this would be the state.highstate command, which would finish provisioning the VM. Another common option is state.sls, or for just testing, test.ping. This is configured in the main cloud config file:
 
-.. clode-block:: yaml
+.. code-block:: yaml
 
     start_action: state.highstate
 
@@ -69,7 +69,7 @@ For whatever reason, you may want to skip the deploy script altogether. This res
 
 Or it can be set from the main cloud config file:
 
-.. clode-block:: yaml
+.. code-block:: yaml
 
     deploy: False
 
