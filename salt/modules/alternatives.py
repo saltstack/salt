@@ -1,7 +1,17 @@
+# -*- coding: utf-8 -*-
 '''
-Support for Alternatives system
+    salt.modules.alternatives
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Support for Alternatives system
+
+    :codeauthor: :email:`Radek Rada <radek.rada@gmail.com>`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+
 '''
 
+# Import python libs
 import os
 
 __outputter__ = {
@@ -32,7 +42,7 @@ def _get_cmd():
 
 def display(name):
     '''
-    Display alteratives settings for defined command name.
+    Display alternatives settings for defined command name.
 
     CLI Example::
 
