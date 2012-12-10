@@ -1,20 +1,8 @@
-# -*- coding: utf-8 -*-
 '''
-    salt.modules.alternatives
-    ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Support for Alternatives system
-
-    :codeauthor: :email:`Radek Rada <radek.rada@gmail.com>`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
+Support for Alternatives system
 '''
 
-# Import python libs
 import os
-
-# Import salt libs
-from salt.utils import which
 
 __outputter__ = {
     'display': 'txt',
@@ -25,30 +13,42 @@ __outputter__ = {
 
 def __virtual__():
     '''
-    Only if update-alternatives command is available
+    Only if alternatives dir is available
     '''
-    return 'alternatives' if which('update-alternatives') else False
+    if os.path.isdir("/etc/alternatives"):
+        return 'alternatives'
+    return False
 
+
+def _get_cmd():
+    '''
+    Alteratives commands and differ across distributions
+    '''
+    if __grains__['os_family'] == 'RedHat':
+        return 'alternatives'
+    else:
+        return 'update-alternatives'
+    
 
 def display(name):
     '''
-    Display alternatives settings for defined command name.
+    Display alteratives settings for defined command name.
 
     CLI Example::
 
         salt '*' alternatives.display <command name>
     '''
 
-    cmd = "update-alternatives --display {0}".format(name)
+    cmd = "{0} --display {1}".format(_get_cmd(), name)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] > 0 and out['stderr'] != '':
         return out['stderr']
     return out['stdout']
 
-
 def show_current(name):
     '''
     '''
+
     alt_link_path = '/etc/alternatives/{0}'.format(name)
     if os.path.islink(alt_link_path):
         path = os.path.realpath(alt_link_path)
@@ -62,7 +62,7 @@ def check_installed(name, path):
 
     CLI Example::
 
-        salt '*' alternatives.check_installed link path
+        salt '*' alternatives.check_installed name path
     '''
 
     alt_link_path = '/etc/alternatives/{0}'.format(name)
@@ -80,9 +80,7 @@ def install(name, link, path, priority):
         salt '*' alternatives.install name link path priority
     '''
 
-    cmd = 'update-alternatives --install {0} {1} {2} {3}'.format(
-        link, name, path, priority
-    )
+    cmd = "{0} --install {1} {2} {3} {4}".format(_get_cmd(), link, name, path, priority)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] > 0 and out['stderr'] != '':
         return out['stderr']
@@ -98,8 +96,9 @@ def remove(name, path):
         salt '*' alternatives.remove name path
     '''
 
-    cmd = 'update-alternatives --remove {0} {1}'.format(name, path)
+    cmd = "{0} --remove {1} {2}".format(_get_cmd(), name, path)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
+
