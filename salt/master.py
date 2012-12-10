@@ -540,7 +540,7 @@ class AESFuncs(object):
             return fnd
         for root in self.opts['file_roots'][env]:
             full = os.path.join(root, path)
-            if os.path.isfile(full):
+            if os.path.isfile(full) and not self.__is_file_ignored(full):
                 fnd['path'] = full
                 fnd['rel'] = path
                 return fnd
@@ -721,7 +721,9 @@ class AESFuncs(object):
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(os.path.relpath(root, path))
+                    rel_fn = os.path.relpath(root, path)
+                    if not self.__is_file_ignored(rel_fn):
+                        ret.append(rel_fn)
         return ret
 
     def _dir_list(self, load):
