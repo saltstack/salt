@@ -338,11 +338,13 @@ def list_pkgs(regex_string=''):
 
     out = __salt__['cmd.run_stdout'](cmd)
 
+    # Typical line of output:
+    # install ok installed zsh 4.3.17-1ubuntu1
     for line in out.splitlines():
         cols = line.split()
         if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and \
                                                         'installed' in cols[2]:
-            ret[cols[3]] = cols[4]
+            __salt__['pkg_resource.add_pkg'](ret, cols[3], cols[4])
 
     # If ret is empty at this point, check to see if the package is virtual.
     # We also need aptitude past this point.
@@ -359,6 +361,7 @@ def list_pkgs(regex_string=''):
             ret[regex_string] = '1'  # Setting all 'installed' virtual package
                                      # versions to '1'
 
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 

@@ -108,7 +108,7 @@ def list_pkgs():
         elif isinstance(cur, basestring):
             ret[pkg] = [cur, version]
         else:
-            ret[pkg].append(version)
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
