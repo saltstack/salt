@@ -576,22 +576,22 @@ class AESFuncs(object):
                   .format(id_))
         return False
 
-    def __is_file_ignored(self, fn, file_ignore_regex, file_ignore_glob):
+    def __is_file_ignored(self, fn):
         '''
         If file_ignore_regex or file_ignore_glob were given in config,
         compare the given file path against all of them and return True
         on the first match.
         '''
-        if (file_ignore_regex):
-            for r in file_ignore_regex:
-                if r.search(fn):
-                    log.debug('File matching file_ignore_regex. Skipping: {0}'.format(fn) )
+        if self.opts['file_ignore_regex']:
+            for r in self.opts['file_ignore_regex']:
+                if re.search(r, fn):
+                    log.debug('File matching file_ignore_regex. Skipping: {0}'.format(fn))
                     return True
 
-        if (file_ignore_glob):
-            for g in file_ignore_glob:
+        if self.opts['file_ignore_glob']:
+            for g in self.opts['file_ignore_glob']:
                 if fnmatch.fnmatch(fn, g):
-                    log.debug('File matching file_ignore_glob. Skipping: {0}'.format(fn) )
+                    log.debug('File matching file_ignore_glob. Skipping: {0}'.format(fn))
                     return True
         return False
 
@@ -700,29 +700,6 @@ class AESFuncs(object):
         if load['env'] not in self.opts['file_roots']:
             return ret
 
-        # Make sure all the configured regex are wrapped in a list
-        file_ignore_regex = []
-        if (self.opts.get('file_ignore_regex')):
-            if isinstance(self.opts.get('file_ignore_regex'), str):
-                ignore_regex = [ self.opts.get('file_ignore_regex') ]
-            elif isinstance(self.opts.get('file_ignore_regex'), list):
-                ignore_regex = self.opts.get('file_ignore_regex')
-
-            # Then parse them and keep only the valid ones
-            for r in ignore_regex:
-                try:
-                    file_ignore_regex.append(re.compile(r))
-                except:
-                    log.warning('Unable to parse file_ignore_regex. Skipping: {0}'.format(r))
-
-        # Make sure all the configured globs are wrapped in a list
-        file_ignore_glob = []
-        if (self.opts.get('file_ignore_glob')):
-            if isinstance(self.opts.get('file_ignore_glob'), str):
-                file_ignore_glob = [ self.opts.get('file_ignore_glob') ]
-            elif isinstance(self.opts.get('file_ignore_glob'), list):
-                file_ignore_glob = self.opts.get('file_ignore_glob')
-
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path, followlinks=True):
                 for fn in files:
@@ -730,7 +707,7 @@ class AESFuncs(object):
                                 os.path.join(root, fn),
                                 path
                             )
-                    if not self.__is_file_ignored(rel_fn, file_ignore_regex, file_ignore_glob):
+                    if not self.__is_file_ignored(rel_fn):
                         ret.append(rel_fn)
         return ret
 
