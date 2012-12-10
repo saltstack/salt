@@ -53,6 +53,11 @@ Once a minion has been deployed, it has the option to run a salt command. Normal
 
     start_action: state.highstate
 
+This is currently considered to be experimental functionality, and may not work well with all providers. If you experience problems with Salt Cloud hanging after Salt is deployed, consider using Startup States instead:
+
+http://docs.saltstack.org/en/latest/ref/states/startup.html
+
+
 Skipping the Deploy Script
 ==========================
 
