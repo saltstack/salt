@@ -252,6 +252,14 @@ def show_sls(mods, env='base', test=None, **kwargs):
     return high
 
 
+def show_top():
+    '''
+    Return the top data that the minion will use for a highstate
+    '''
+    st_ = salt.state.HighState(__opts__)
+    return st_.get_top()
+
+
 def show_masterstate():
     '''
     Display the data gathered from the master compiled state
