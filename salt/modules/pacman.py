@@ -101,16 +101,16 @@ def list_pkgs():
     for line in out:
         if not line:
             continue
-        pkg, version = line.split()[0:2]
-        cur = ret.get(pkg)
-        if cur is None:
-            ret[pkg] = version
-        elif isinstance(cur, basestring):
-            ret[pkg] = [cur, version]
+        try:
+            name, version = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Q: Unexpected formatting in '
+                      'line: "{0}"'.format(line))
         else:
             __salt__['pkg_resource.add_pkg'](ret, name, version)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
+
 
 
 def refresh_db():
