@@ -957,7 +957,7 @@ def recurse(name,
         (default is False)
 
     include_pat
-	When copying, include only this pattern from the source. Default
+        When copying, include only this pattern from the source. Default
         is glob match , if prefixed with E@ then regexp match
         Example::
 
@@ -965,7 +965,7 @@ def recurse(name,
           - include_pat: E@hello      :: regexp matches 'otherhello', 'hello01' ...
 
     exclude_pat
-	When copying, exclude this pattern from the source. If both
+        When copying, exclude this pattern from the source. If both
         include_pat and exclude_pat are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat and
         then with in that result, applies exclude_pat.
