@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "October 12, 2012" "0.8.1" "salt-cloud"
+.TH "SALT-CLOUD" "7" "December 10, 2012" "0.8.3" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -42,7 +42,7 @@ fedora_rackspace:
   provider: rackspace
   image: Fedora 17
   size: 256 server
-  os: Fedora
+  script: Fedora
 .ft P
 .fi
 .sp
@@ -55,7 +55,7 @@ centos_rackspace:
   provider: rackspace
   image: CentOS 6.2
   size: 1024 server
-  os: RHEL6
+  script: RHEL6
   minion:
     master: salt.example.com
   grains:
@@ -75,7 +75,7 @@ base_aws:
   provider: aws
   image: ami\-e565ba8c
   size: Micro Instance
-  os: RHEL6
+  script: RHEL6
   minion:
       cheese: edam
 
@@ -83,7 +83,7 @@ ubuntu_rackspace:
   provider: rackspace
   image: Ubuntu 12.04 LTS
   size: 256 server
-  os: Ubuntu
+  script: Ubuntu
   minion:
       cheese: edam
 
@@ -91,7 +91,7 @@ fedora_rackspace:
   provider: rackspace
   image: Fedora 17
   size: 256 server
-  os: Fedora
+  script: Fedora
   minion:
       cheese: edam
 
@@ -99,18 +99,18 @@ cent_linode:
   provider: linode
   image: CentOS 6.2 64bit
   size: Linode 512
-  os: RHEL6
+  script: RHEL6
 
 cent_gogrid:
   provider: gogrid
   image: 12834
   size: 512MB
-  os: RHEL6
+  script: RHEL6
 
 cent_joyent:
   provider: joyent
   image: centos\-6
-  os: RHEL6
+  script: RHEL6
   size: Small 1GB
 .ft P
 .fi
@@ -229,9 +229,9 @@ to execute the create function can and should be included in the provider
 module.
 .sp
 A good example to follow for writing a cloud provider module is the module
-provided for rackspace:
+provided for Linode:
 .sp
-\fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/clouds/rackspace.py\fP
+\fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/clouds/linode.py\fP
 .sp
 If possible it is prefered that libcloud is used to connect to public cloud
 systems, but if libcloud support is not available or another system makes more
@@ -240,7 +240,7 @@ sense then by all means, use the other system to connect to the cloud provider.
 .sp
 Salt cloud works primarily by executing a script on the virtual machines as
 soon as they become available. The script that is executed is referenced in
-the cloud profile as the \fBos\fP.
+the cloud profile as the \fBscript\fP.
 .sp
 The script should be written in bash and is a Jinja template. Deploy scripts
 need to execute a number of functions to do a complete salt setup. These
@@ -284,6 +284,38 @@ systemctl enable salt\-minion.service
 systemctl start salt\-minion.service
 .ft P
 .fi
+.SS Post\-Deploy Commands
+.sp
+Once a minion has been deployed, it has the option to run a salt command. Normally, this would be the state.highstate command, which would finish provisioning the VM. Another common option is state.sls, or for just testing, test.ping. This is configured in the main cloud config file:
+.sp
+.nf
+.ft C
+start_action: state.highstate
+.ft P
+.fi
+.sp
+This is currently considered to be experimental functionality, and may not work well with all providers. If you experience problems with Salt Cloud hanging after Salt is deployed, consider using Startup States instead:
+.sp
+\fI\%http://docs.saltstack.org/en/latest/ref/states/startup.html\fP
+.SS Skipping the Deploy Script
+.sp
+For whatever reason, you may want to skip the deploy script altogether. This results in a VM being spun up much faster, with absolutely no configuration. This can be set from the command line:
+.sp
+.nf
+.ft C
+salt\-cloud \-\-no\-deploy \-p micro_aws my_instance
+.ft P
+.fi
+.sp
+Or it can be set from the main cloud config file:
+.sp
+.nf
+.ft C
+deploy: False
+.ft P
+.fi
+.sp
+The default for deploy is True.
 .SH CORE CONFIGURATION
 .sp
 A number of core configuration options and some options that are global to
@@ -369,6 +401,61 @@ be set in the config file to enable interfacing with GoGrid:
 .ft C
 GOGRID.apikey: asdff7896asdh789
 GOGRID.sharedsecret: saltybacon
+.ft P
+.fi
+.SS OpenStack
+.sp
+OpenStack configuration differs between providers, and at the moment several
+options need to be specified. This module has been officially tested against
+the HP and the Rackspace implementations, and some examples are provided for
+both.
+.sp
+.nf
+.ft C
+# For HP
+OPENSTACK.identity_url: \(aqhttps://region\-a.geo\-1.identity.hpcloudsvc.com:35357/v2.0/\(aq
+OPENSTACK.compute_name: Compute
+OPENSTACK.compute_region: \(aqaz\-1.region\-a.geo\-1\(aq
+OPENSTACK.tenant: myuser\-tenant1
+OPENSTACK.user: myuser
+OPENSTACK.ssh_key_name: mykey
+OPENSTACK.ssh_key_file: \(aq/etc/salt/hpcloud/mykey.pem\(aq
+OPENSTACK.password: mypass
+
+# For Rackspace
+OPENSTACK.identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
+OPENSTACK.compute_name: cloudServersOpenStack
+OPENSTACK.compute_region: DFW
+OPENSTACK.tenant: 5555555
+OPENSTACK.user: myuser
+OPENSTACK.password: mypass
+OPENSTACK.protocol: ipv4
+.ft P
+.fi
+.sp
+If you have an API key for your provider, it may be specified instead of a
+password:
+.sp
+.nf
+.ft C
+OPENSTACK.apikey: 901d3f579h23c8v73q9
+.ft P
+.fi
+.SS IBM SmartCloud Enterprise
+.sp
+In addition to a username and password, the IBM SCE module requires an SSH key,
+which is currently configured inside IBM\(aqs web interface. A location is also
+required to create instances, but not to query their cloud. This is important,
+because you need to use salt\-cloud \-\-list\-locations (with the other options
+already set) in order to find the name of the location that you want to use.
+.sp
+.nf
+.ft C
+IBMSCE.user: myuser@mycorp.com
+IBMSCE.password: mypass
+IBMSCE.ssh_key_name: mykey
+IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+IBMSCE.location: Raleigh
 .ft P
 .fi
 .SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
@@ -826,6 +913,155 @@ providers a different user (ec2\-user, ubuntu, bitnami, etc). Deployment on
 such images must be handled using sudo. Previously, sudo was used to issue
 all deployment commands, but this failed on images where sudo was not installed
 by default (such as FreeBSD). Now sudo will only be used with non\-root logins.
+.SS Salt Cloud 0.8.2 Release Notes
+.sp
+This is a great release for Salt Cloud! New cloud providers have been added,
+and the deploy functionality has been embiggened! Read on to see the cromulent
+new features.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.2.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.2.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS Select Query Option
+.sp
+The last release of Salt Cloud added the \-F/\-\-full query option, to display
+all information available for a particular instance. We now also have the \-S
+or \-\-select\-query option, which lets you specify which fields to display. Any
+fields not specified will not be displayed, and if you specify a field that
+doesn\(aqt exist on a particular provider, it will be ignored for them. Just
+add a query.selection option to /etc/salt/cloud like such:
+.sp
+.nf
+.ft C
+query.selection:
+  \- id
+  \- state
+  \- public_ips
+  \- keyname
+  \- TOTALXFER
+.ft P
+.fi
+.SS os vs script
+.sp
+In a cloud profile, you need to specify which deploy script to use to install
+Salt on the newly\-provisioned VM. The option for this has always been \(aqos\(aq,
+which has been confusing to some. As of this release, you may now specify
+\(aqscript\(aq instead of \(aqos\(aq. If you specify both, the value for \(aqscript\(aq will be
+used. See the SmartOS Deploy Script below for an example.
+.SS SmartOS Deploy Script
+.sp
+Of particular interest to Joyent users may be the new SmartOS deploy script.
+Salt itself is not fully\-supported on SmartOS just yet, in part because ZeroMQ
+is also not yet supported. When this script is used for deployment, it will
+automatically install the required libraries and build ZeroMQ, and then use
+easy_install to install the latest versions of PyZMQ and Salt. To use this,
+just specify SmartOS as the \(aqos\(aq or \(aqscript\(aq option in your cloud.profiles:
+.sp
+.nf
+.ft C
+joyent_smartos:
+  provider: joyent
+  size: Extra Small 512 MB
+  image: smartos
+  script: SmartOS
+.ft P
+.fi
+.SS OpenStack and IBM Modules
+.sp
+Support has been added for clouds using OpenStack (OPENSTACK) and for IBM\(aqs
+SmartCloud Enterprise (IBMSCE) offering. We know that people have already
+started using the OpenStack module, because pull requests have already been
+merged from the community. This module has been tested against both the HP
+and the Rackspace implementations of OpenStack. This can be a tricky module
+to configure, depending on your provider, so some examples are provided here:
+.sp
+.nf
+.ft C
+# For HP
+OPENSTACK.identity_url: \(aqhttps://region\-a.geo\-1.identity.hpcloudsvc.com:35357/v2.0/\(aq
+OPENSTACK.compute_name: Compute
+OPENSTACK.compute_region: \(aqaz\-1.region\-a.geo\-1\(aq
+OPENSTACK.tenant: myuser\-tenant1
+OPENSTACK.user: myuser
+OPENSTACK.ssh_key_name: mykey
+OPENSTACK.ssh_key_file: \(aq/etc/salt/hpcloud/mykey.pem\(aq
+OPENSTACK.password: mypass
+
+# For Rackspace
+OPENSTACK.identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
+OPENSTACK.compute_name: cloudServersOpenStack
+OPENSTACK.compute_region: DFW
+OPENSTACK.tenant: 5555555
+OPENSTACK.user: myuser
+OPENSTACK.password: mypass
+OPENSTACK.protocol: ipv4
+.ft P
+.fi
+.sp
+It is important to note that currently, only password\-based authentication is
+provided through the Salt Cloud OpenStack module.
+.sp
+IBM has fewer things that need to be configured, but setting them up can be
+tricky as well. An example might look like:
+.sp
+.nf
+.ft C
+IBMSCE.user: myuser@mycorp.com
+IBMSCE.password: mypass
+IBMSCE.ssh_key_name: mykey
+IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
+IBMSCE.location: Raleigh
+.ft P
+.fi
+.sp
+The location currently must be configured in order to create an instance, but
+not to query the IBM cloud. This is important, because you need to use
+salt\-cloud \-\-list\-locations (with the other options already set) in order to
+find the name of the location that you want to use.
+.SS OpenStack with Salt
+.sp
+This isn\(aqt specifically another Salt Cloud feature, but it should be noted that
+with the release of Salt 0.10.5, OpenStack is not only the first Cloud product,
+but in fact the first piece of software explicitly supported by both Salt Cloud
+(from a user perspective) and Salt itself (from an admin perspective).
+.SS Salt Cloud Logging
+.sp
+Those who have tried to hack on Salt Cloud may have discovered a complete lack
+of logging support. With this release, Salt Cloud has started to implement
+the logging features already available in Salt. The default log location is
+/var/log/salt/cloud (with a default level of warn), but it can be changed in
+your cloud configuration file:
+.sp
+.nf
+.ft C
+log_file: /var/log/salt/cloud
+log_level_logfile: debug
+.ft P
+.fi
+.sp
+If you would like to change the default logging level for the command line, you
+can also configure that in the same place:
+.sp
+.nf
+.ft C
+log_level: debug
+.ft P
+.fi
+.sp
+Check salt\-cloud \-\-help for a list of logging levels, which can also be
+specified from the command line.
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
