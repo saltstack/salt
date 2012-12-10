@@ -21,13 +21,6 @@ Control the alternatives system
     
 '''
 
-def __virtual__():
-    '''
-    Only if update-alternatives command is available
-    '''
-    return 'alternatives' if __salt__['cmd.has_exec']('update-alternatives') else False
-
-
 def install(name, link, path, priority):
     '''
     Install new alternative for defined <name>
