@@ -143,6 +143,7 @@ class SREQ(object):
         tried = 0
         while True:
             polled = self.poller.poll(timeout * 1000)
+            tried += 1
             if polled:
                 break
             elif tried >= tries:
@@ -151,7 +152,6 @@ class SREQ(object):
                         timeout * tried
                     )
                 )
-            tried += 1
         try:
             return self.serial.loads(self.socket.recv())
         finally:
