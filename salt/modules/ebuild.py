@@ -69,6 +69,10 @@ def list_pkgs():
     pkgs = _vartree().dbapi.cpv_all()
     for cpv in pkgs:
         ret[_cpv_to_name(cpv)] = _cpv_to_version(cpv)
+        __salt__['pkg_resource.add_pkg'](ret,
+                                         _cpv_to_name(cpv),
+                                         _cpv_to_version(cpv))
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 def refresh_db():
