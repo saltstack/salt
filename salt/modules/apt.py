@@ -204,8 +204,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False,
                 if kwargs.get(vkey) is not None:
                     fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
                     break
-        cmd = 'apt-get -q -y {confold} {verify} {target} install {pkg}'.format(
+        cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install {pkg}'.format(
             confold='-o DPkg::Options::=--force-confold',
+            confdef='-o DPkg::Options::=--force-confdef',
             verify='--allow-unauthenticated' if skip_verify else '',
             target='-t {0}'.format(repo) if repo else '',
             pkg=fname,
@@ -293,7 +294,7 @@ def upgrade(refresh=True, **kwargs):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -q -y -o DPkg::Options::=--force-confold dist-upgrade'
+    cmd = 'apt-get -q -y -o DPkg::Options::=--force-confold -o DPkg::Options::=--force-confdef dist-upgrade'
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
