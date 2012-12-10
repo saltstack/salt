@@ -245,6 +245,8 @@ def add_pkg(pkgs, name, version):
     '''
     Add a package to a dict of installed packages.
     '''
+
+    ''' multiple-version support (not yet implemented)
     cur = pkgs.get(name)
     if cur is None:
         pkgs[name] = version
@@ -252,6 +254,8 @@ def add_pkg(pkgs, name, version):
         pkgs[name] = [cur, version]
     else:
         pkgs[name].append(version)
+    '''
+    pkgs[name] = version
 
 
 def sort_pkglist(pkgs):
