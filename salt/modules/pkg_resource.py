@@ -107,7 +107,7 @@ def _pack_pkgs(sources):
             return []
     if not isinstance(sources,list) \
     or [x for x in sources if not isinstance(x, basestring)]:
-        log.error('Invalid input: {0}'.format(pformat(source)))
+        log.error('Invalid input: {0}'.format(pprint.pformat(source)))
         return []
     return sources
 
