@@ -13,8 +13,8 @@ def __catalina_home():
     locations = ['/usr/share/tomcat*', '/opt/tomcat']
     for location in locations:
         catalina_home = glob.glob(location)
-	if catalina_home:
-            return catalina_home[-1]
+    if catalina_home:
+        return catalina_home[-1]
 
 
 def version():
