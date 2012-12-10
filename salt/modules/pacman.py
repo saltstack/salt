@@ -5,7 +5,6 @@ A module to wrap pacman calls, since Arch is the best
 
 # Import python libs
 import logging
-from types import StringTypes
 
 log = logging.getLogger(__name__)
 
@@ -102,14 +101,13 @@ def list_pkgs():
     for line in out:
         if not line:
             continue
-        pkg, version = line.split()[0:2]
-        cur = ret.get(pkg)
-        if cur is None:
-            ret[pkg] = version
-        elif type(cur) in StringTypes:
-            ret[pkg] = [cur, version]
+        try:
+            name, version = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Q: Unexpected formatting in '
+                      'line: "{0}"'.format(line))
         else:
-            ret[pkg].append(version)
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
