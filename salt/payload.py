@@ -127,7 +127,7 @@ class SREQ(object):
         self.socket = self.context.socket(zmq.REQ)
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
             self.socket.setsockopt(
-                zmq.RECONNECT_IVL_MAX, 5
+                zmq.RECONNECT_IVL_MAX, 5000
             )
         self.socket.linger = linger
         if id_:
