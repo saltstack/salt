@@ -105,16 +105,9 @@ def _pack_pkgs(sources):
         except yaml.parser.ParserError as e:
             log.error(e)
             return []
-<<<<<<< HEAD
-    if not isinstance(sources, list) \
-    or [x for x in sources if not isinstance(x, basestring)]:
-        log.error('Invalid input: {0}'.format(pprint.pformat(source)))
-=======
     if not isinstance(sources,list) \
     or [x for x in sources if not isinstance(x, basestring)]:
         log.error('Invalid input: {0}'.format(pformat(source)))
->>>>>>> 868aa1b221528f9330b1a6e87b31a73fdcd8df11
-        log.error('Input must be a list of strings')
         return []
     return sources
 
@@ -127,11 +120,7 @@ def _pack_sources(sources):
     Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
     become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
     '''
-<<<<<<< HEAD
-    if instance(sources, basestring):
-=======
     if isinstance(sources, basestring):
->>>>>>> 868aa1b221528f9330b1a6e87b31a73fdcd8df11
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
