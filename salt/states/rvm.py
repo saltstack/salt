@@ -108,7 +108,7 @@ import re
 
 def _check_rvm(ret):
     '''
-    Check to see if rmv is installed and install it
+    Check to see if rvm is installed and install it
     '''
     if not __salt__['rvm.is_installed']():
         ret['result'] = False
