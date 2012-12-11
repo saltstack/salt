@@ -2,6 +2,7 @@
 Control aspects of the grains data
 '''
 
+# Import python libs
 from math import floor
 
 # Seed the grains dict so cython will build
@@ -10,8 +11,8 @@ __grains__ = {}
 # Change the default outputter to make it more readable
 __outputter__ = {
     'item': 'txt',
-    'ls': 'yaml',
-    'items': 'yaml',
+    'ls': 'grains',
+    'items': 'grains',
 }
 
 

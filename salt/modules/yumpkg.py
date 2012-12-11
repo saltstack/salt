@@ -5,8 +5,12 @@ Support for YUM
             - rpm Python module
             - rpmUtils Python module
 '''
-import re
 
+# Import python libs
+import re
+import logging
+
+# Import third party libs
 try:
     import yum
     import rpm
@@ -14,8 +18,6 @@ try:
     has_yumdeps = True
 except (ImportError, AttributeError):
     has_yumdeps = False
-
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -209,30 +211,16 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
-    ts = rpm.TransactionSet()
-    pkgs = {}
-    # In order to support specific package versions, we are going to use the
-    # yum libraries to handle pattern matching
-    yb = yum.YumBase()
-    setattr(yb.conf, 'assumeyes', True)
-
-    # if no args are passed in get all packages
-    if len(args) == 0:
-        for h in ts.dbMatch():
-            pkgs[h['name']] = '-'.join([h['version'], h['release']])
-    else:
-        # get package version for each package in *args
-        for arg in args:
-            # Make yum do the pattern matching
-            a = yb.pkgSack.returnPackages(patterns=[arg], ignore_case=False)
-            # make sure there is an a
-            if len(a) > 0:
-                arg = a[0].name
-            # use the name from yum to do an rpm lookup
-            for h in ts.dbMatch('name', arg):
-                pkgs[h['name']] = '-'.join([h['version'], h['release']])
-
-    return pkgs
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    ret = {}
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        name, version, rel = line.split('_|-')
+        pkgver = version
+        if rel:
+            pkgver += '-{0}'.format(rel)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    return ret
 
 
 def refresh_db():

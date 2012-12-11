@@ -1,10 +1,12 @@
 '''
 Fire events on the minion, events can be fired up to the master
 '''
-# Import Salt libs
+
+# Import salt libs
 import salt.crypt
 import salt.utils.event
 import salt.payload
+
 
 def fire_master(data, tag):
     '''

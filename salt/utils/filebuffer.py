@@ -3,7 +3,10 @@
     salt.utils.filebuffer
     ~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    This utility allows parsing a file in chunks.
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
@@ -38,7 +41,7 @@ class BufferedReader(object):
     :param mode: The mode the file should be opened. **Only read modes**.
 
     '''
-    def __init__(self, path, max_in_mem=256*1024, chunk_size=32*1024,
+    def __init__(self, path, max_in_mem=256 * 1024, chunk_size=32 * 1024,
                  mode='r'):
         if 'a' in mode or 'w' in mode:
             raise InvalidFileMode("Cannot open file in write or append mode")

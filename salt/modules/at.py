@@ -5,10 +5,12 @@ Also, a 'tag' feature has been added to more
 easily tag jobs.
 '''
 
+# Import python libs
 import re
 import time
 import datetime
 
+# Import salt libs
 import salt.utils
 
 __outputter__ = {

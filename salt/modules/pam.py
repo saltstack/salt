@@ -2,11 +2,11 @@
 Support for pam
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import argparse
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt.exceptions import SaltException
 

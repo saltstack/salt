@@ -2,12 +2,12 @@
 Resources needed by pkg providers
 '''
 
-import logging
+# Import python libs
 import os
 import re
 import yaml
-from pprint import pformat
-from types import StringTypes
+import pprint
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -99,16 +99,15 @@ def _pack_pkgs(sources):
 
     Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
     '''
-    if type(sources) in StringTypes:
+    if isinstance(sources, basestring):
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
             log.error(e)
             return []
     if not isinstance(sources,list) \
-    or [x for x in sources if type(x) not in StringTypes]:
-        log.error('Invalid input: {0}'.format(pformat(source)))
-        log.error('Input must be a list of strings')
+    or [x for x in sources if not isinstance(x, basestring)]:
+        log.error('Invalid input: {0}'.format(pprint.pformat(source)))
         return []
     return sources
 
@@ -121,7 +120,7 @@ def _pack_sources(sources):
     Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
     become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
     '''
-    if type(sources) in StringTypes:
+    if isinstance(sources, basestring):
         try:
             sources = yaml.load(sources)
         except yaml.parser.ParserError as e:
@@ -130,7 +129,7 @@ def _pack_sources(sources):
     ret = {}
     for source in sources:
         if (not isinstance(source,dict)) or len(source) != 1:
-            log.error('Invalid input: {0}'.format(pformat(sources)))
+            log.error('Invalid input: {0}'.format(pprint.pformat(sources)))
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
@@ -240,6 +239,36 @@ def parse_targets(name=None, pkgs=None, sources=None):
     else:
         log.error('No package sources passed to pkg.install.')
         return None,None
+
+
+def add_pkg(pkgs, name, version):
+    '''
+    Add a package to a dict of installed packages.
+    '''
+
+    ''' multiple-version support (not yet implemented)
+    cur = pkgs.get(name)
+    if cur is None:
+        pkgs[name] = version
+    elif isinstance(cur, basestring):
+        pkgs[name] = [cur, version]
+    else:
+        pkgs[name].append(version)
+    '''
+    pkgs[name] = version
+
+
+def sort_pkglist(pkgs):
+    '''
+    Accepts a dict obtained from pkg.list_pkgs() and sorts in place the list of
+    versions for any packages that have multiple versions installed, so that
+    two package lists can be compared to one another.
+    '''
+    # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
+    # so long as the sorting is consistent.
+    for key in pkgs.keys():
+        if isinstance(pkgs[key],list):
+            pkgs[key].sort()
 
 
 def find_changes(old={}, new={}):

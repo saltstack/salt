@@ -1,3 +1,8 @@
+'''
+Homebrew for Mac OS X
+'''
+
+# Import salt libs
 import salt
 from salt.modules.yumpkg import _compare_versions
 

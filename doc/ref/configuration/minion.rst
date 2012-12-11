@@ -308,6 +308,21 @@ were checked
 
     state_verbose: True
 
+.. conf_minion:: state_output
+
+``state_output``
+----------------
+
+Default: ``full``
+
+The state_output setting changes if the output is the full multi line
+output for each changed state if set to 'full', but if set to 'terse'
+the output will be shortened to a single line.
+
+.. code-block:: yaml
+
+    state_output: full
+
 .. conf_minion:: autoload_dynamic_modules
 
 ``autoload_dynamic_modules``

@@ -5,8 +5,6 @@ overlaid onto the minion's pillar data
 
 # Import python libs
 import logging
-
-# Import third party libs
 import json
 
 # Set up logging

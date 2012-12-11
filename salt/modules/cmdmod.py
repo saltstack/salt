@@ -4,7 +4,8 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
-# Import Python libs
+
+# Import python libs
 import logging
 import os
 import shutil
@@ -12,7 +13,7 @@ import subprocess
 import sys
 from functools import partial
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.grains.extra import shell as shell_grain

@@ -32,7 +32,8 @@ about this, at least.
 DO NOT use this module on Red Hat systems, as Red Hat systems should use the
 rh_service module, since red hat systems support chkconfig
 '''
-# Import Python libs
+
+# Import python libs
 import glob
 import os
 

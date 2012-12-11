@@ -2,10 +2,10 @@
 The Saltutil module is used to manage the state of the salt minion itself. It
 is used to manage minion modules as well as automate updates to the salt minion
 
-:depends:   - esky Python module
+:depends:   - esky Python module for update functionality
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import hashlib
 import shutil
@@ -14,12 +14,12 @@ import logging
 import fnmatch
 import sys
 
-# Import Salt libs
+# Import salt libs
 import salt.payload
 import salt.state
 from salt._compat import string_types
 
-# Import esky for update functionality
+# Import third party libs
 try:
     import esky
     has_esky = True

@@ -3,7 +3,11 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
+
+# Import salt libs
 from salt import exceptions, utils
+
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

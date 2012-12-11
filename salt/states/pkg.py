@@ -11,11 +11,13 @@ declarations are typically rather simple:
     vim:
       pkg.installed
 '''
+
 # Import python ilbs
 import logging
 import os
 from distutils.version import LooseVersion
 
+# Import salt libs
 import salt.utils
 
 logger = logging.getLogger(__name__)
@@ -82,19 +84,19 @@ def installed(
 
     if refresh or os.path.isfile(rtag):
         changes = __salt__['pkg.install'](name,
-                          True,
-                          version=version,
-                          repo=repo,
-                          skip_verify=skip_verify,
-                          **kwargs)
+                                          refresh=True,
+                                          version=version,
+                                          repo=repo,
+                                          skip_verify=skip_verify,
+                                          **kwargs)
         if os.path.isfile(rtag):
             os.remove(rtag)
     else:
         changes = __salt__['pkg.install'](name,
-                          version=version,
-                          repo=repo,
-                          skip_verify=skip_verify,
-                          **kwargs)
+                                          version=version,
+                                          repo=repo,
+                                          skip_verify=skip_verify,
+                                          **kwargs)
     if not changes:
         return {'name': name,
                 'changes': changes,
@@ -137,12 +139,13 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         try:
             has_newer = LooseVersion(avail) > LooseVersion(version)
         except AttributeError:
-            logger.debug(
-                    'Error comparing versions for "{0}" ({1} > {2})'.format(
-                    name, avail, version)
-                    )
-            ret['comment'] = 'No version could be retrieved for "{0}"'.format(
-                    name)
+            logger.debug('Error comparing versions'
+                         ' for "{0}" ({1} > {2})'.format(name,
+                                                         avail,
+                                                         version)
+                         )
+            ret['comment'] = 'No version could be retrieved' \
+                             ' for "{0}"'.format(name)
             return ret
 
     if has_newer:
@@ -152,18 +155,18 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
             return ret
         if refresh or os.path.isfile(rtag):
             ret['changes'] = __salt__['pkg.install'](name,
-                             True,
-                             repo=repo,
-                             skip_verify=skip_verify,
-                             **kwargs)
+                                                     refresh=True,
+                                                     repo=repo,
+                                                     skip_verify=skip_verify,
+                                                     **kwargs)
             if os.path.isfile(rtag):
                 os.remove(rtag)
 
         else:
             ret['changes'] = __salt__['pkg.install'](name,
-                             repo=repo,
-                             skip_verify=skip_verify,
-                             **kwargs)
+                                                     repo=repo,
+                                                     skip_verify=skip_verify,
+                                                     **kwargs)
 
         if ret['changes']:
             ret['comment'] = 'Package {0} upgraded to latest'.format(name)
@@ -207,9 +210,9 @@ def removed(name):
                 'result': False,
                 'comment': 'Package {0} failed to remove'.format(name)}
     return {'name': name,
-        'changes': changes,
-        'result': True,
-        'comment': 'Package {0} removed'.format(name)}
+            'changes': changes,
+            'result': True,
+            'comment': 'Package {0} removed'.format(name)}
 
 
 def purged(name):
@@ -240,9 +243,9 @@ def purged(name):
                 'result': False,
                 'comment': 'Package {0} failed to purge'.format(name)}
     return {'name': name,
-        'changes': changes,
-        'result': True,
-        'comment': 'Package {0} purged'.format(name)}
+            'changes': changes,
+            'result': True,
+            'comment': 'Package {0} purged'.format(name)}
 
 
 def mod_init(low):

@@ -1,9 +1,11 @@
 '''
 Define some generic socket functions for network modules
 '''
-# Import Python libs
+
+# Import python libs
 import socket
 from string import ascii_letters, digits
+
 
 def sanitize_host(host):
     '''

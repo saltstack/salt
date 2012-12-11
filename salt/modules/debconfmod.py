@@ -1,11 +1,12 @@
 '''
 Support for Debconf
 '''
-# Import Python libs
+
+# Import python libs
 import os
 import re
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 

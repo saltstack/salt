@@ -2,6 +2,7 @@
 Return config information
 '''
 
+# Import python libs
 import re
 
 # Set up the default values for all systems
@@ -38,7 +39,6 @@ defaults = {'mongo.db': 'salt',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
             }
-
 
 
 def backup_mode(backup=''):

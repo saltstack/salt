@@ -1,6 +1,7 @@
 '''
 Classes that manage file clients
 '''
+
 # Import python libs
 import contextlib
 import logging
@@ -10,7 +11,7 @@ import shutil
 import string
 import subprocess
 
-# Import third-party libs
+# Import third party libs
 import yaml
 
 # Import salt libs
@@ -23,7 +24,6 @@ import salt.payload
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
-
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
 
@@ -562,6 +562,7 @@ class RemoteClient(Client):
         cache
         '''
         log.info('Fetching file \'{0}\''.format(path))
+        d_tries = 0
         path = self._check_proto(path)
         load = {'path': path,
                 'env': env,
@@ -603,6 +604,21 @@ class RemoteClient(Client):
                         if not os.path.exists(cache_dest):
                             with salt.utils.fopen(cache_dest, 'wb+') as f:
                                 f.write(data['data'])
+                if 'hsum' in data and d_tries < 3:
+                    # Master has prompted a file verification, if the
+                    # verification fails, redownload the file. Try 3 times
+                    d_tries += 1
+                    with salt.utils.fopen(dest, 'rb') as fp_:
+                        hsum = getattr(
+                                hashlib,
+                                data.get('hash_type', 'md5')
+                                )(fp_.read()).hexdigest()
+                        if hsum != data['hsum']:
+                            log.warn(
+                                ('Bad download of file {0}, attempt {1} of 3'
+                                    ).format(path, d_tries)
+                                )
+                            continue
                 break
             if not fn_:
                 with self._cache_loc(data['dest'], env) as cache_dest:

@@ -1,7 +1,10 @@
 '''
 A few checks to make sure the environment is sane
 '''
+
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
+
+# Import python libs
 import os
 import re
 import sys
@@ -9,11 +12,14 @@ import stat
 import socket
 import getpass
 import logging
+
+# Import third party libs
 if sys.platform.startswith('win'):
     import win32file
 else:
     import resource
 
+# Import salt libs
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 

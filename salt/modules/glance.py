@@ -12,6 +12,8 @@ Module for handling openstack glance calls.
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
+
+# Import third party libs
 has_glance = False
 try:
     from glanceclient import client
@@ -19,6 +21,7 @@ try:
     has_glance = True
 except ImportError:
     pass
+
 
 def __virtual__():
     '''

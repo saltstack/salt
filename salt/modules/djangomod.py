@@ -2,7 +2,9 @@
 Manage Django sites
 '''
 
+# Import python libs
 import os
+
 
 def __virtual__():
     return 'django'

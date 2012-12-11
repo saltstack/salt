@@ -3,9 +3,11 @@ A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -99,9 +101,16 @@ def list_pkgs():
     for line in out:
         if not line:
             continue
-        comps = line.split()
-        ret[comps[0]] = comps[1]
+        try:
+            name, version = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Q: Unexpected formatting in '
+                      'line: "{0}"'.format(line))
+        else:
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
+
 
 
 def refresh_db():
@@ -159,7 +168,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
             salt '*' pkg.install pkgs='["foo","bar"]'
 
     sources
-        A list of packages to install. Must be passed as a list of dicts, 
+        A list of packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
         or local path to the package.
 

@@ -1,8 +1,12 @@
 from __future__ import absolute_import
+
+# Import python libs
 from StringIO import StringIO
 
+# Import salt libs
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
+
 
 def render(template_file, env='', sls='', context=None, tmplpath=None, **kws):
     '''

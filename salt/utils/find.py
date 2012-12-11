@@ -90,6 +90,8 @@ import time
 try:
     import grp
     import pwd
+    # TODO: grp and pwd are both used in the code, we better make sure that
+    # that code never gets run if importing them does not succeed
 except ImportError:
     pass
 

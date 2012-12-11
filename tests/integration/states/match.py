@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-# vim: sw=4 ts=4 fenc=utf-8
-"""
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details
-"""
+'''
+    tests.integration.states.match
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+'''
 
 # Import python libs
 import os

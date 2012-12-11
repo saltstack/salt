@@ -2,8 +2,10 @@
 Execute puppet routines
 '''
 
+# Import python libs
 import re
 
+# Import salt libs
 from salt import utils
 
 __outputter__ = {
@@ -12,6 +14,7 @@ __outputter__ = {
     'fact': 'txt',
     'facts': None,
 }
+
 
 def _check_puppet():
     '''

@@ -23,8 +23,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         name = os.path.join(integration.TMP, 'symlink')
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', name=name, target=tgt)
-        result = self.state_result(ret)
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
 
     def test_test_symlink(self):
         '''
@@ -33,8 +32,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         name = os.path.join(integration.TMP, 'symlink')
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
-        result = self.state_result(ret)
-        self.assertIsNone(result)
+        self.assertSaltNoneReturn(ret)
 
     def test_absent_file(self):
         '''
@@ -44,8 +42,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
-        result = self.state_result(ret)
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
         self.assertFalse(os.path.isfile(name))
 
     def test_absent_dir(self):
@@ -57,8 +54,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # left behind... Don't fail because of this!
             os.makedirs(name)
         ret = self.run_state('file.absent', name=name)
-        result = self.state_result(ret)
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
         self.assertFalse(os.path.isdir(name))
 
     def test_absent_link(self):
@@ -69,11 +65,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if not os.path.islink('{0}.tgt'.format(name)):
             os.symlink(name, '{0}.tgt'.format(name))
         ret = self.run_state('file.absent', name=name)
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        self.assertFalse(os.path.islink(name))
-        if os.path.islink('{0}.tgt'.format(name)):
-            os.unlink('{0}.tgt'.format(name))
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertFalse(os.path.islink(name))
+        finally:
+            if os.path.islink('{0}.tgt'.format(name)):
+                os.unlink('{0}.tgt'.format(name))
 
     def test_test_absent(self):
         '''
@@ -83,10 +80,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         with salt.utils.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
-        result = self.state_result(ret)
-        self.assertIsNone(result)
-        self.assertTrue(os.path.isfile(name))
-        os.remove(name)
+        try:
+            self.assertSaltNoneReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
+            os.remove(name)
 
     def test_managed(self):
         '''
@@ -104,8 +102,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         with salt.utils.fopen(name, 'r') as fp_:
             minion_data = fp_.read()
         self.assertEqual(master_data, minion_data)
-        result = self.state_result(ret)
-        self.assertTrue(result)
+        self.assertSaltTrueReturn(ret)
 
     def test_test_managed(self):
         '''
@@ -115,9 +112,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state(
             'file.managed', test=True, name=name, source='salt://grail/scene33'
         )
+        self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(name))
-        result = self.state_result(ret)
-        self.assertIsNone(result)
 
     def test_directory(self):
         '''
@@ -125,9 +121,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         name = os.path.join(integration.TMP, 'a_new_dir')
         ret = self.run_state('file.directory', name=name)
+        self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
-        result = self.state_result(ret)
-        self.assertTrue(result)
 
     def test_test_directory(self):
         '''
@@ -135,9 +130,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         name = os.path.join(integration.TMP, 'a_not_dir')
         ret = self.run_state('file.directory', test=True, name=name)
+        self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isdir(name))
-        result = self.state_result(ret)
-        self.assertIsNone(result)
 
     def test_recurse(self):
         '''
@@ -145,10 +139,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         name = os.path.join(integration.TMP, 'recurse_dir')
         ret = self.run_state('file.recurse', name=name, source='salt://grail')
-        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        shutil.rmtree(name, ignore_errors=True)
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
+        finally:
+            if os.path.isdir(name):
+                shutil.rmtree(name, ignore_errors=True)
 
     def test_test_recurse(self):
         '''
@@ -158,9 +154,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state(
             'file.recurse', test=True, name=name, source='salt://grail',
         )
+        self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
-        result = self.state_result(ret)
-        self.assertIsNone(result)
         self.assertFalse(os.path.exists(name))
 
     def test_recurse_template(self):
@@ -172,32 +167,37 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail',
             template='jinja', defaults={'spam': _ts})
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        self.assertIn(
-            _ts, salt.utils.fopen(os.path.join(name, 'scene33'), 'r').read()
-        )
-        shutil.rmtree(name, ignore_errors=True)
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertIn(
+                _ts,
+                salt.utils.fopen(os.path.join(name, 'scene33'), 'r').read()
+            )
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
 
     def test_recurse_clean(self):
         '''
         file.recurse with clean=True
         '''
         name = os.path.join(integration.TMP, 'recurse_clean_dir')
-        os.makedirs(name)
+        if not os.path.isdir(name):
+            os.makedirs(name)
         strayfile = os.path.join(name, 'strayfile')
         salt.utils.fopen(strayfile, 'w').close()
+
         # Corner cases: replacing file with a directory and vice versa
         salt.utils.fopen(os.path.join(name, '36'), 'w').close()
         os.makedirs(os.path.join(name, 'scene33'))
         ret = self.run_state(
             'file.recurse', name=name, source='salt://grail', clean=True)
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        self.assertFalse(os.path.exists(strayfile))
-        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
-        self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
-        shutil.rmtree(name, ignore_errors=True)
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertFalse(os.path.exists(strayfile))
+            self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
+            self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
+        finally:
+            shutil.rmtree(name, ignore_errors=True)
 
     def test_sed(self):
         '''
@@ -209,11 +209,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state(
             'file.sed', name=name, before='change', after='salt'
         )
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertIn('salt', fp_.read())
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertIn('salt', fp_.read())
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_test_sed(self):
         '''
@@ -225,111 +226,120 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state(
             'file.sed', test=True, name=name, before='change', after='salt'
         )
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertIn('change', fp_.read())
-        result = self.state_result(ret)
-        self.assertIsNone(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertIn('change', fp_.read())
+            self.assertSaltNoneReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_comment(self):
         '''
         file.comment
         '''
         name = os.path.join(integration.TMP, 'comment_test')
-        # write a line to file
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('comment_me')
-        # comment once
-        _ret = self.run_state('file.comment', name=name, regex='^comment')
-        # line is commented
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertTrue(fp_.read().startswith('#comment'))
-        # result is positive
-        ret = list(_ret.values())[0]
-        self.assertTrue(ret['result'], ret)
-        # comment twice
-        _ret = self.run_state('file.comment', name=name, regex='^comment')
-        # line is still commented
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertTrue(fp_.read().startswith('#comment'))
-        # result is still positive
-        ret = list(_ret.values())[0]
-        self.assertTrue(ret['result'], ret)
-        os.remove(name)
+        try:
+            # write a line to file
+            with salt.utils.fopen(name, 'w+') as fp_:
+                fp_.write('comment_me')
+            # comment once
+            ret = self.run_state('file.comment', name=name, regex='^comment')
+            # result is positive
+            self.assertSaltTrueReturn(ret)
+            # line is commented
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertTrue(fp_.read().startswith('#comment'))
+
+            # comment twice
+            ret = self.run_state('file.comment', name=name, regex='^comment')
+            # result is still positive
+            self.assertSaltTrueReturn(ret)
+            # line is still commented
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertTrue(fp_.read().startswith('#comment'))
+        finally:
+            os.remove(name)
 
     def test_test_comment(self):
         '''
         file.comment test interface
         '''
         name = os.path.join(integration.TMP, 'comment_test_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('comment_me')
-        ret = self.run_state(
-            'file.comment', test=True, name=name, regex='.*comment.*',
-        )
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertNotIn('#comment', fp_.read())
-        result = self.state_result(ret)
-        self.assertIsNone(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'w+') as fp_:
+                fp_.write('comment_me')
+            ret = self.run_state(
+                'file.comment', test=True, name=name, regex='.*comment.*',
+            )
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertNotIn('#comment', fp_.read())
+            self.assertSaltNoneReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_uncomment(self):
         '''
         file.uncomment
         '''
         name = os.path.join(integration.TMP, 'uncomment_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('#comment_me')
-        ret = self.run_state('file.uncomment', name=name, regex='^comment')
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertNotIn('#comment', fp_.read())
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'w+') as fp_:
+                fp_.write('#comment_me')
+            ret = self.run_state('file.uncomment', name=name, regex='^comment')
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertNotIn('#comment', fp_.read())
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_test_uncomment(self):
         '''
         file.comment test interface
         '''
         name = os.path.join(integration.TMP, 'uncomment_test_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('#comment_me')
-        ret = self.run_state(
-            'file.uncomment', test=True, name=name, regex='^comment.*'
-        )
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertIn('#comment', fp_.read())
-        result = self.state_result(ret)
-        self.assertIsNone(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'w+') as fp_:
+                fp_.write('#comment_me')
+            ret = self.run_state(
+                'file.uncomment', test=True, name=name, regex='^comment.*'
+            )
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertIn('#comment', fp_.read())
+            self.assertSaltNoneReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_append(self):
         '''
         file.append
         '''
         name = os.path.join(integration.TMP, 'append_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('#salty!')
-        ret = self.run_state('file.append', name=name, text='cheese')
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertIn('cheese', fp_.read())
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'w+') as fp_:
+                fp_.write('#salty!')
+            ret = self.run_state('file.append', name=name, text='cheese')
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertIn('cheese', fp_.read())
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_test_append(self):
         '''
         file.append test interface
         '''
         name = os.path.join(integration.TMP, 'append_test_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('#salty!')
-        ret = self.run_state('file.append', test=True, name=name, text='cheese')
-        with salt.utils.fopen(name, 'r') as fp_:
-            self.assertNotIn('cheese', fp_.read())
-        result = self.state_result(ret)
-        self.assertIsNone(result)
-        os.remove(name)
+        try:
+            with salt.utils.fopen(name, 'w+') as fp_:
+                fp_.write('#salty!')
+            ret = self.run_state(
+                'file.append', test=True, name=name, text='cheese'
+            )
+            with salt.utils.fopen(name, 'r') as fp_:
+                self.assertNotIn('cheese', fp_.read())
+            self.assertSaltNoneReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_append_issue_1864_makedirs(self):
         '''
@@ -338,8 +348,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(integration.TMP, fname)
         ret = self.run_state('file.append', name=name, text='cheese')
-        result = self.state_result(ret)
-        self.assertFalse(result)
+        self.assertSaltFalseReturn(ret)
 
         try:
             # Non existing file get's touched
@@ -349,8 +358,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
             )
-            result = self.state_result(ret)
-            self.assertTrue(result)
+            self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isfile(name):
                 os.remove(name)
@@ -361,8 +369,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_state(
                 'file.append', name=name, text='cheese', makedirs=True
             )
-            result = self.state_result(ret)
-            self.assertTrue(result)
+            self.assertSaltTrueReturn(ret)
         finally:
             shutil.rmtree(
                 os.path.join(integration.TMP, 'issue_1864'),
@@ -375,10 +382,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         name = os.path.join(integration.TMP, 'touch_test')
         ret = self.run_state('file.touch', name=name)
-        self.assertTrue(os.path.isfile(name))
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        os.remove(name)
+        try:
+            self.assertTrue(os.path.isfile(name))
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(name)
 
     def test_test_touch(self):
         '''
@@ -387,8 +395,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         name = os.path.join(integration.TMP, 'touch_test')
         ret = self.run_state('file.touch', test=True, name=name)
         self.assertFalse(os.path.isfile(name))
-        result = self.state_result(ret)
-        self.assertIsNone(result)
+        self.assertSaltNoneReturn(ret)
 
     def test_touch_directory(self):
         '''
@@ -404,10 +411,11 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         self.assertTrue(os.path.isdir(name))
         ret = self.run_state('file.touch', name=name)
-        result = self.state_result(ret)
-        self.assertTrue(result)
-        self.assertTrue(os.path.isdir(name))
-        os.removedirs(name)
+        try:
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isdir(name))
+        finally:
+            os.removedirs(name)
 
     def test_issue_2227_file_append(self):
         '''
@@ -429,18 +437,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             ret = self.run_function(
                 'state.sls', mods='testappend.issue-2227'
             )
-            for change in ret.values():
-                self.assertTrue(isinstance(change, dict))
-                self.assertTrue(change['result'])
+            self.assertSaltTrueReturn(ret)
             contents = salt.utils.fopen(tmp_file_append, 'r').read()
 
             # It should not append text again
             ret = self.run_function(
                 'state.sls', mods='testappend.issue-2227'
             )
-            for change in ret.values():
-                self.assertTrue(isinstance(change, dict))
-                self.assertTrue(change['result'])
+            self.assertSaltTrueReturn(ret)
 
             self.assertEqual(
                 contents, salt.utils.fopen(tmp_file_append, 'r').read()
@@ -459,7 +463,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         src_file = os.path.join(integration.TMP, 'src.txt')
         with salt.utils.fopen(src_file, 'w+') as fp:
             fp.write(src)
-        ret = self.run_state('file.patch',
+        ret = self.run_state(
+            'file.patch',
             name=src_file,
             source='salt://{0}.patch'.format(patch_name),
             hash='md5=f0ef7081e1539ac00ef5b761b4fb01b3',
@@ -468,22 +473,23 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_patch(self):
         src_file, ret = self.do_patch()
-        self.assert_success(ret)
+        self.assertSaltTrueReturn(ret)
         with salt.utils.fopen(src_file) as fp:
             self.assertEqual(fp.read(), 'Hello world\n')
 
     def test_patch_hash_mismatch(self):
         src_file, ret = self.do_patch('hello_dolly')
-        result = self.state_result(ret, raw=True)
-        msg = 'File {0} hash mismatch after patch was applied'.format(src_file)
-        self.assertEqual(result['comment'], msg)
-        self.assertEqual(result['result'], False)
+        self.assertSaltFalseReturn(ret)
+        self.assertInSaltComment(
+            ret, 'File {0} hash mismatch after patch was applied'.format(
+                src_file
+            )
+        )
 
     def test_patch_already_applied(self):
-        ret = self.do_patch(src='Hello world\n')[1]
-        result = self.state_result(ret, raw=True)
-        self.assertEqual(result['comment'], 'Patch is already applied')
-        self.assertEqual(result['result'], True)
+        src_file, ret = self.do_patch(src='Hello world\n')
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment(ret, 'Patch is already applied')
 
     def test_issue_2401_file_comment(self):
         # Get a path to the temporary file
@@ -500,29 +506,15 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_function('state.template_str', [template])
 
-            self.assertTrue(isinstance(ret, dict)), ret
-            self.assertNotEqual(ret, {})
-
-            for part in ret.itervalues():
-                self.assertTrue(part['result'])
-                self.assertNotEqual(
-                    part['comment'], 'Pattern already commented'
-                )
-                self.assertEqual(
-                    part['comment'], 'Commented lines successfully'
-                )
+            self.assertSaltTrueReturn(ret)
+            self.assertNotInSaltComment(ret, 'Pattern already commented')
+            self.assertInSaltComment(ret, 'Commented lines successfully')
 
             # This next time, it is already commented.
             ret = self.run_function('state.template_str', [template])
 
-            self.assertTrue(isinstance(ret, dict)), ret
-            self.assertNotEqual(ret, {})
-
-            for part in ret.itervalues():
-                self.assertTrue(part['result'])
-                self.assertEqual(
-                    part['comment'], 'Pattern already commented'
-                )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(ret, 'Pattern already commented')
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
@@ -549,14 +541,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_function('state.template_str', [template])
 
-            self.assertTrue(isinstance(ret, dict)), ret
-            self.assertNotEqual(ret, {})
-
-            for part in ret.itervalues():
-                self.assertTrue(part['result'])
-                self.assertEqual(
-                    part['comment'], 'Appended 1 lines'
-                )
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(ret, 'Appended 1 lines')
         except AssertionError:
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise

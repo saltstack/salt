@@ -3,7 +3,7 @@ Output data in YAML, this outputter defaults to printing in YAML block mode
 for better readability.
 '''
 
-# Third Party libs
+# Import third party libs
 import yaml
 
 

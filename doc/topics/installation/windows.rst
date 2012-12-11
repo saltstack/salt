@@ -125,13 +125,13 @@ Install on Windows XP 32bit
         sudo salt '*' test.ping
 
     
-        You should get the following response: {'your minion hostname': True}
+You should get the following response: {'your minion hostname': True}
 
 
 Single command bootstrap script
 ===============================
 
-On a 64 bit Windows host the following script makes an unattended install of salt including all dependencies:
+On a 64 bit Windows host the following script makes an unattended install of salt, including all dependencies:
 
 .. code-block:: bash
 

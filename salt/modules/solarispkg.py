@@ -2,10 +2,10 @@
 Package support for Solaris
 '''
 
-# Import Python libs
+# Import python libs
 import os
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 

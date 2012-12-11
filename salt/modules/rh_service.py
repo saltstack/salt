@@ -3,7 +3,8 @@ Service support for classic Red Hat type systems. This interface uses the
 service command (so it is compatible with upstart systems) and the chkconfig
 command.
 '''
-# Import Salt libs
+
+# Import salt libs
 import salt.utils
 
 

@@ -15,11 +15,11 @@ Module to provide Postgres compatibility to salt.
     overwrite options passed into pillar
 '''
 
-# Import Python libs
+# Import python libs
 import pipes
 import logging
 
-# Import Salt libs
+# Import salt libs
 from salt.utils import check_or_die
 from salt.exceptions import CommandNotFoundError
 

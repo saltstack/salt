@@ -45,10 +45,10 @@ from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
 # Try to import range from https://github.com/ytoolshed/range
-RANGE = False
+has_range = False
 try:
     import seco.range
-    RANGE = True
+    has_range = True
 except ImportError:
     pass
 
@@ -943,7 +943,7 @@ class LocalClient(object):
 
         # Convert a range expression to a list of nodes and change expression
         # form to list
-        if expr_form == 'range' and RANGE:
+        if expr_form == 'range' and has_range:
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 

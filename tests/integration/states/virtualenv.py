@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details
-"""
+'''
+    tests.integration.states.virtualenv
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+'''
 
 # Import python libs
 import os
@@ -17,7 +21,7 @@ class VirtualenvTest(integration.ModuleCase,
                      integration.SaltReturnAssertsMixIn):
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
+    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
         if not self.run_function('user.add', [user]):

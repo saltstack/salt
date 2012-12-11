@@ -3,7 +3,7 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 '''
 
-# Import salt utils
+# Import salt libs
 import salt.loader
 
 

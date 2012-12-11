@@ -2,18 +2,18 @@
 Control the state system on the minion
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import copy
 import logging
+import json
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 import salt.state
 import salt.payload
 from salt.utils.yaml import load as yaml_load
 from salt.utils.yaml import CustomLoader as YamlCustomLoader
-import json
 from salt._compat import string_types
 
 
@@ -250,6 +250,14 @@ def show_sls(mods, env='base', test=None, **kwargs):
     if errors:
         return errors
     return high
+
+
+def show_top():
+    '''
+    Return the top data that the minion will use for a highstate
+    '''
+    st_ = salt.state.HighState(__opts__)
+    return st_.get_top()
 
 
 def show_masterstate():

@@ -582,15 +582,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             )
         return orig[minion_tgt]
 
-    def state_result(self, ret, raw=False):
-        '''
-        Return the result data from a single state return
-        '''
-        res = ret[next(iter(ret))]
-        if raw:
-            return res
-        return res['result']
-
     def run_state(self, function, **kwargs):
         '''
         Run the state.single command and return the state return structure
@@ -623,20 +614,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         return salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
-
-    def assert_success(self, ret):
-        try:
-            res = self.state_result(ret, raw=True)
-        except TypeError:
-            pass
-        else:
-            if isinstance(res, dict):
-                if res['result'] is True:
-                    return
-                if 'comment' in res:
-                    raise AssertionError(res['comment'])
-                ret = res
-        raise AssertionError('bad result: %r' % (ret))
 
 
 class SyndicCase(TestCase, SaltClientTestCaseMixIn):
@@ -938,3 +915,45 @@ class SaltReturnAssertsMixIn(object):
                 'There\'s no comment key in any of salt\'s return parts'
             )
         return True
+
+    def assertSaltCommentRegexpMatches(self, ret, pattern):
+        self.assertReturnSaltType(ret)
+        for part in ret.itervalues():
+            if 'comment' in part:
+                return self.assertRegexpMatches(part['comment'], pattern)
+        else:
+            raise AssertionError(
+                'There\'s no comment key in any of salt\'s return parts'
+            )
+
+    def __assertSaltStateChanges(self, ret, keys=()):
+        self.assertSaltTrueReturn(ret)
+        if keys and isinstance(keys, tuple):
+            keys = list(keys)
+        elif keys and isinstance(keys, string):
+            keys = [keys]
+        elif keys and not isinstance(keys, list):
+            raise RuntimeError('The passed keys need to be a list')
+
+        for part in ret.itervalues():
+            changes = part['changes']
+            okeys = keys[:]
+            while okeys:
+                try:
+                    changes = changes[okeys.pop(0)]
+                except (KeyError, TypeError):
+                    raise AssertionError(
+                        'Could not find state{0} in the state state '
+                        'return: {1}'.format(
+                            ''.join(['[{0!r}]'.format(k) for k in keys]), ret
+                        )
+                    )
+            yield changes
+
+    def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
+        for change in self.__assertSaltStateChanges(ret, keys):
+            self.assertEqual(change, comparison)
+
+    def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
+        for change in self.__assertSaltStateChanges(ret, keys):
+            self.assertNotEqual(change, comparison)

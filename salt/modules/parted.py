@@ -8,6 +8,7 @@ Check man 8 parted for more information, or the online docs at:
 http://www.gnu.org/software/parted/manual/html_chapter/parted_2.html
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

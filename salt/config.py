@@ -2,9 +2,10 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-# Import python modules
+# Import python libs
 import glob
 import os
+import re
 import socket
 import logging
 import time
@@ -81,7 +82,7 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            import salt.utils  # Need to re-import, need to find out why
+            import salt.utils  # TODO: Need to re-import, need to find out why
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as f:
                     f.readline()  # skip first line
@@ -242,7 +243,7 @@ def minion_config(path, check_dns=True):
         check_dns = False
 
     if check_dns is True:
-        # Because I import salt.log bellow I need to re-import salt.utils here
+        # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
             opts['master_ip'] = salt.utils.dns_check(opts['master'], True)
@@ -330,6 +331,8 @@ def master_config(path):
             'external_auth': {},
             'token_expire': 720,
             'file_buffer_size': 1048576,
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
@@ -343,6 +346,7 @@ def master_config(path):
             'order_masters': False,
             'job_cache': True,
             'ext_job_cache': '',
+            'master_ext_job_cache': '',
             'minion_data_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': None,
@@ -397,6 +401,29 @@ def master_config(path):
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+
+    if opts['file_ignore_regex']:
+        # If file_ignore_regex was given, make sure it's wrapped in a list.
+        # Only keep valid regex entries for improved performance later on.
+        if isinstance(opts['file_ignore_regex'], str):
+            ignore_regex = [ opts['file_ignore_regex'] ]
+        elif isinstance(opts['file_ignore_regex'], list):
+            ignore_regex = opts['file_ignore_regex']
+
+        opts['file_ignore_regex'] = []
+        for r in ignore_regex:
+            try:
+                # Can't store compiled regex itself in opts (breaks serialization)
+                re.compile(r)
+                opts['file_ignore_regex'].append(r)
+            except:
+                log.warning('Unable to parse file_ignore_regex. Skipping: {0}'.format(r))
+
+    if opts['file_ignore_glob']:
+        # If file_ignore_glob was given, make sure it's wrapped in a list.
+        if isinstance(opts['file_ignore_glob'], str):
+            opts['file_ignore_glob'] = [ opts['file_ignore_glob'] ]
+
     return opts
 
 

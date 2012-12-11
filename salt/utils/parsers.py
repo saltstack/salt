@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
-salt.utils.parsers
-~~~~~~~~~~~~~~~~~~
+    salt.utils.parsers
+    ~~~~~~~~~~~~~~~~~~
 
-:copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-:license: Apache 2.0, see LICENSE for more details.
+    This is were all the black magic happens on all of salt's cli tools.
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
 import os
 import sys
 import logging
 import optparse
 import traceback
 from functools import partial
+
+# Import salt libs
 from salt import config, loader, log, version
 
 
@@ -675,7 +681,7 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    description = "TODO: explain what salt-master is"
+    description = "The Salt master, used to control the Salt minions."
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path('master'))
@@ -685,7 +691,7 @@ class MinionOptionParser(MasterOptionParser):
 
     __metaclass__ = OptionParserMeta
 
-    description = "TODO: explain what salt-minion is"
+    description = "The Salt minion, receives commands from a remote Salt master."
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path('minion'))

@@ -182,3 +182,21 @@ class TestsLoggingHandler(object):
     def __exit__(self, type, value, traceback):
         self.deactivate()
         self.activated = False
+
+    # Mimic some handler attributes and methods
+    @property
+    def lock(self):
+        if self.activated:
+            return self.handler.lock
+
+    def createLock(self):
+        if self.activated:
+            return self.handler.createLock()
+
+    def acquire(self):
+        if self.activated:
+            return self.handler.acquire()
+
+    def release(self):
+        if self.activated:
+            return self.handler.release()

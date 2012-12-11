@@ -2,11 +2,12 @@
 Support for APT (Advanced Packaging Tool)
 '''
 
+# Import python libs
 import os
 import re
 import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -203,8 +204,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False,
                 if kwargs.get(vkey) is not None:
                     fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
                     break
-        cmd = 'apt-get -q -y {confold} {verify} {target} install {pkg}'.format(
+        cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install {pkg}'.format(
             confold='-o DPkg::Options::=--force-confold',
+            confdef='-o DPkg::Options::=--force-confdef',
             verify='--allow-unauthenticated' if skip_verify else '',
             target='-t {0}'.format(repo) if repo else '',
             pkg=fname,
@@ -292,7 +294,7 @@ def upgrade(refresh=True, **kwargs):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -q -y -o DPkg::Options::=--force-confold dist-upgrade'
+    cmd = 'apt-get -q -y -o DPkg::Options::=--force-confold -o DPkg::Options::=--force-confdef dist-upgrade'
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
@@ -336,11 +338,13 @@ def list_pkgs(regex_string=''):
 
     out = __salt__['cmd.run_stdout'](cmd)
 
+    # Typical line of output:
+    # install ok installed zsh 4.3.17-1ubuntu1
     for line in out.splitlines():
         cols = line.split()
         if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and \
                                                         'installed' in cols[2]:
-            ret[cols[3]] = cols[4]
+            __salt__['pkg_resource.add_pkg'](ret, cols[3], cols[4])
 
     # If ret is empty at this point, check to see if the package is virtual.
     # We also need aptitude past this point.
@@ -357,6 +361,7 @@ def list_pkgs(regex_string=''):
             ret[regex_string] = '1'  # Setting all 'installed' virtual package
                                      # versions to '1'
 
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 

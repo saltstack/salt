@@ -231,6 +231,24 @@
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
 
+# A regular expression (or a list of expressions) that will be matched
+# against the file path before syncing the modules and states to the minions.
+# This includes files affected by the file.recurse state.
+# For example, if you manage your custom modules and states in subversion
+# and don't want all the '.svn' folders and content synced to your minions,
+# you could set this to '/\.svn($|/)'. By default nothing is ignored.
+#file_ignore_regex:
+# - '/\.svn($|/)'
+# - '/\.git($|/)'
+
+# A file glob (or list of file globs) that will be matched against the file
+# path before syncing the modules and states to the minions. This is similar
+# to file_ignore_regex above, but works on globs instead of regex. By default
+# nothing is ignored.
+#file_ignore_glob:
+#  - '*.pyc'
+#  - '*/somefolder/*.bak'
+
 # Pillar Configurations:
 # The Salt Pillar, is a system that allows for the building of global data
 # that is refined based on minion. Basically, the pillar creates data that

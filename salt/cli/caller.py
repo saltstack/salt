@@ -3,7 +3,7 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 '''
 
-# Import python modules
+# Import python libs
 import os
 import sys
 import logging
@@ -116,7 +116,7 @@ class Caller(object):
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        salt.output.display_output(grains, 'yaml', self.opts)
+        salt.output.display_output({'local': grains}, 'grains', self.opts)
 
     def run(self):
         '''

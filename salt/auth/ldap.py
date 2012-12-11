@@ -5,11 +5,12 @@ REQUIREMENT 1:
 
 Required python modules: ldap
 '''
-# Import Python libs
+
+# Import python libs
 from __future__ import absolute_import
 import logging
 
-# Import Salt libs
+# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)

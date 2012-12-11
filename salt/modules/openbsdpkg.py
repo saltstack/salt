@@ -1,14 +1,17 @@
 '''
 Package support for OpenBSD
 '''
+
+# Import python libs
 import os
 import re
 import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
+
 
 # XXX need a way of setting PKG_PATH instead of inheriting from the environment
 
