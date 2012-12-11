@@ -196,3 +196,7 @@ class TestsLoggingHandler(object):
     def acquire(self):
         if self.activated:
             return self.handler.acquire()
+
+    def release(self):
+        if self.activated:
+            return self.handler.release()
