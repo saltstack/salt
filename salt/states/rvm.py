@@ -108,11 +108,11 @@ import re
 
 def _check_rvm(ret):
     '''
-    Check to see if rvm is installed and install it
+    Check to see if rvm is installed.
     '''
     if not __salt__['rvm.is_installed']():
         ret['result'] = False
-        ret['comment'] = 'Could not install RVM.'
+        ret['comment'] = 'RVM is not installed.'
     return ret
 
 
@@ -182,7 +182,8 @@ def installed(name, default=False, runas=None):
 
     ret = _check_rvm(ret)
     if ret['result'] == False:
-        return ret
+        if not __salt__['rvm.install']():
+            return ret
 
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
