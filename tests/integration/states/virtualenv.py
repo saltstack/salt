@@ -21,7 +21,7 @@ class VirtualenvTest(integration.ModuleCase,
                      integration.SaltReturnAssertsMixIn):
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
+    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
         if not self.run_function('user.add', [user]):
