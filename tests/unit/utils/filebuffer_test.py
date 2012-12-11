@@ -3,14 +3,15 @@
     tests.unit.utils.filebuffer_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
-
+# Import salt libs
 from saltunittest import TestCase, TestLoader, TextTestRunner
-
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode
+
 
 class TestFileBuffer(TestCase):
     def test_read_only_mode(self):
@@ -25,6 +26,7 @@ class TestFileBuffer(TestCase):
 
         with self.assertRaises(InvalidFileMode):
             BufferedReader('/tmp/foo', mode='wb')
+
 
 if __name__ == "__main__":
     loader = TestLoader()
