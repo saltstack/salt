@@ -111,11 +111,8 @@ def _check_rvm(ret):
     Check to see if rmv is installed and install it
     '''
     if not __salt__['rvm.is_installed']():
-        if __salt__['rvm.install']():
-            ret['changes']['rvm'] = 'Installed'
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Could not install RVM.'
+        ret['result'] = False
+        ret['comment'] = 'Could not install RVM.'
     return ret
 
 
