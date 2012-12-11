@@ -27,7 +27,6 @@ from cStringIO import StringIO
 
 # Import salt libs
 import salt.utils
-from salt.renderers.yaml import HAS_ORDERED_DICT
 from salt.exceptions import SaltRenderError
 
 __all__ = [ 'render' ]
