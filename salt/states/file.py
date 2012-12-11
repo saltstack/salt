@@ -339,29 +339,30 @@ def _symlink_check(name, target, force):
                        'should be. Did you mean to use force?'.format(name))
 
 
-def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
+def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     '''
      Check for glob or regexp patterns for include_pat and exclude_pat in the
      'path_str' string and return True/False conditions as follows.
-      - Default: return 'True' if no include_pat or exclude_pat patterns are supplied
-      - If only include_pat or exclude_pat is supplied. Return 'True' if string passes
-        the include_pat test or failed exclude_pat test respectively
-      - If both include_pat and exclude_pat are supplied, return Ture if include_pat
-        matches 'AND' exclude_pat does not matches
+      - Default: return 'True' if no include_pat or exclude_pat patterns are
+        supplied
+      - If only include_pat or exclude_pat is supplied. Return 'True' if string
+        passes the include_pat test or failed exclude_pat test respectively
+      - If both include_pat and exclude_pat are supplied, return Ture if
+        include_pat matches 'AND' exclude_pat does not matches
     '''
     ret = True    #-- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
     if include_pat:
-        if re.match('E@',include_pat):
+        if re.match('E@', include_pat):
             retchk_include = True if re.search(include_pat[2:], path_str) else False
         else:
-            retchk_include = True if fnmatch.fnmatch(path_str,include_pat) else False
+            retchk_include = True if fnmatch.fnmatch(path_str, include_pat) else False
 
     if exclude_pat:
-        if re.match('E@',exclude_pat):
+        if re.match('E@', exclude_pat):
             retchk_exclude = False if re.search(exclude_pat[2:], path_str) else True
         else:
-            retchk_exclude = False if fnmatch.fnmatch(path_str,exclude_pat) else True
+            retchk_exclude = False if fnmatch.fnmatch(path_str, exclude_pat) else True
 
     # Now apply include/exclude conditions
     if include_pat and not exclude_pat:
