@@ -27,7 +27,7 @@ class UseraddModuleTest(integration.ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
+    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the
         # name
