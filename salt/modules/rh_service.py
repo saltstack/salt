@@ -32,7 +32,7 @@ def _runlevel():
     '''
     Return the current runlevel
     '''
-    out = __salt__['cmd.run']('runlevel')
+    out = __salt__['cmd.run']('/sbin/runlevel')
     # unknown will be returned while inside a kickstart environment, since
     # this is usually a server deployment it should be safe to assume runlevel
     # 3.  If not all service related states will throw an out of range
