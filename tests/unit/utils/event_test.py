@@ -3,18 +3,22 @@
     tests.unit.utils.event_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
 import os
-import integration
 import hashlib
-from saltunittest import TestCase, TestLoader, TextTestRunner
 
+# Import salt libs
+import integration
+from saltunittest import TestCase, TestLoader, TextTestRunner
 from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
+
 
 class TestSaltEvent(TestCase):
 
@@ -40,13 +44,17 @@ class TestSaltEvent(TestCase):
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
-                os.path.join(SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash))
+                os.path.join(
+                    SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash)
+                )
             )
         )
         self.assertEqual(
             me.pulluri,
             'ipc://{0}'.format(
-                os.path.join(SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash))
+                os.path.join(
+                    SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash)
+                )
             )
         )
 
@@ -62,16 +70,19 @@ class TestSaltEvent(TestCase):
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
-                os.path.join(SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash))
+                os.path.join(
+                    SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash)
+                )
             )
         )
         self.assertEqual(
             me.pulluri,
             'ipc://{0}'.format(
-                os.path.join(SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash))
+                os.path.join(
+                    SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash)
+                )
             )
         )
-
 
 
 if __name__ == "__main__":
