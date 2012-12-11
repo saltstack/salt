@@ -2,11 +2,11 @@
 Support for poudriere
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)

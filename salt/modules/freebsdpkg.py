@@ -127,7 +127,10 @@ def list_pkgs():
         if not line:
             continue
         comps = line.split(' ')[0].split('-')
-        ret['-'.join(comps[0:-1])] = comps[-1]
+        __salt__['pkg_resource.add_pkg'](ret,
+                                        '-'.join(comps[0:-1]),
+                                        comps[-1])
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 

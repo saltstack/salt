@@ -7,6 +7,7 @@ Thi syslog returner simply reuses the operating system's syslog
 facility to log return data
 '''
 
+# Import python libs
 import syslog
 import json
 
