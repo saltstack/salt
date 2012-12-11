@@ -110,7 +110,24 @@ class Logging(LoggingLoggerClass):
                 fmt = formatter._fmt.replace('%', '%%')
 
                 match = MODNAME_PATTERN.search(fmt)
-                if match and match.group('digits') is not None and int(match.group('digits')) < max_logger_length:
+                if not match:
+                    # Not matched. Release handler and return.
+                    handler.release()
+                    return instance
+
+                if 'digits' not in match.groupdict():
+                    # No digits group. Release handler and return.
+                    handler.release()
+                    return instance
+
+                digits = match.group('digits')
+                if not digits or not (digits and digits.isdigit()):
+                    # No valid digits. Release handler and return.
+                    handler.release()
+                    return instance
+
+                if int(digits) < max_logger_length:
+                    # Formatter digits value is lower than current max, update.
                     fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
                     formatter = logging.Formatter(
                         fmt % max_logger_length,
