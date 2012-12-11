@@ -114,10 +114,18 @@ class Swarm(object):
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
 
+        import sys
+        minion_pkidir = os.path.join(dpath, 'pki')
+        os.makedirs(minion_pkidir)
+        minion_pem = os.path.join(self.pki, 'minion.pem')
+        minion_pub = os.path.join(self.pki, 'minion.pub')
+        shutil.copy(minion_pem, minion_pkidir)
+        shutil.copy(minion_pub, minion_pkidir)
+
         data = {
             'id': minion_id,
             'user': pwd.getpwuid(os.getuid()).pw_name,
-            'pki_dir': self.pki,
+            'pki_dir': minion_pkidir,
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
             'log_file': os.path.join(dpath, 'minion.log')
