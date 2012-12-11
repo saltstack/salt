@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
+'''
     tests.integration.modules.pip
-    =============================
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache 2.0, see LICENSE for more details
-"""
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
+'''
 
+# Import python libs
 import os
 import shutil
 import tempfile
@@ -53,10 +55,11 @@ class PipModuleTest(integration.ModuleCase):
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
         self.assertEqual(ret['retcode'], 0)
         self.assertIn('installed pep8', ret['stdout'])
-        ret = self.run_function('pip.uninstall', ['pep8'], bin_env=self.venv_dir)
+        ret = self.run_function(
+            'pip.uninstall', ['pep8'], bin_env=self.venv_dir
+        )
         self.assertEqual(ret['retcode'], 0)
         self.assertIn('uninstalled pep8', ret['stdout'])
-
 
     def tearDown(self):
         super(PipModuleTest, self).tearDown()

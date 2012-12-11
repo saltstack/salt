@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-    tests.unit.config
-    ~~~~~~~~~~~~~~~~~
+'''
+    tests.unit.config_test
+    ~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
-"""
+'''
 
 # Import python libs
 import os
