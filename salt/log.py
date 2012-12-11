@@ -110,7 +110,7 @@ class Logging(LoggingLoggerClass):
                 fmt = formatter._fmt.replace('%', '%%')
 
                 match = MODNAME_PATTERN.search(fmt)
-                if match and int(match.group('digits')) < max_logger_length:
+                if match and match.group('digits') is not None and int(match.group('digits')) < max_logger_length:
                     fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
                     formatter = logging.Formatter(
                         fmt % max_logger_length,

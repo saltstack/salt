@@ -125,6 +125,10 @@ class SREQ(object):
         self.serial = Serial(serial)
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            self.socket.setsockopt(
+                zmq.RECONNECT_IVL_MAX, 5000
+            )
         self.socket.linger = linger
         if id_:
             self.socket.setsockopt(zmq.IDENTITY, id_)
@@ -143,6 +147,7 @@ class SREQ(object):
         tried = 0
         while True:
             polled = self.poller.poll(timeout * 1000)
+            tried += 1
             if polled:
                 break
             elif tried >= tries:
@@ -151,7 +156,6 @@ class SREQ(object):
                         timeout * tried
                     )
                 )
-            tried += 1
         try:
             return self.serial.loads(self.socket.recv())
         finally:

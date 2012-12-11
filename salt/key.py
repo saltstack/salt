@@ -376,6 +376,10 @@ class Key(object):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                             'act': 'delete',
+                             'id': key}
+                    self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
         return self.list_keys()
@@ -388,6 +392,10 @@ class Key(object):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                             'act': 'delete',
+                             'id': key}
+                    self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
         return self.list_keys()

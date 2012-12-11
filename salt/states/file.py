@@ -803,7 +803,7 @@ def directory(name,
                     # file.user_to_uid returns '' if user does not exist. Above
                     # check for user is not fatal, so we need to be sure user
                     # exists.
-                    if type(uid).__name__ == 'str':
+                    if isinstance(uid, basestring):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
@@ -820,7 +820,7 @@ def directory(name,
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
-                    if type(gid).__name__ == 'str':
+                    if isinstance(gid, basestring):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)

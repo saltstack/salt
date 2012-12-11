@@ -311,6 +311,37 @@ the Salt master
 Master State System Settings
 ----------------------------
 
+.. conf_master:: state_verbose
+
+``state_verbose``
+-----------------
+
+Default: ``False``
+
+state_verbose allows for the data returned from the minion to be more
+verbose. Normally only states that fail or states that have changes are
+returned, but setting state_verbose to ``True`` will return all states that
+were checked
+
+.. code-block:: yaml
+
+    state_verbose: True
+
+.. conf_master:: state_output
+
+``state_output``
+----------------
+
+Default: ``full``
+
+The state_output setting changes if the output is the full multi line
+output for each changed state if set to 'full', but if set to 'terse'
+the output will be shortened to a single line.
+
+.. code-block:: yaml
+
+    state_output: full
+
 .. conf_master:: state_top
 
 ``state_top``
