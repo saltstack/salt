@@ -189,7 +189,9 @@ def grains(opts):
         salt.config.load_config(
             pre_opts, opts['conf_file'], 'SALT_MINION_CONFIG'
         )
-        default_include = pre_opts.get('default_include', opts['default_include'])
+        default_include = pre_opts.get(
+            'default_include', opts['default_include']
+        )
         include = pre_opts.get('include', [])
         pre_opts = salt.config.include_config(
             default_include, pre_opts, opts['conf_file'], verbose=False
@@ -243,6 +245,7 @@ def _mod_type(module_path):
     if module_path.startswith(salt_base_path):
         return 'int'
     return 'ext'
+
 
 def in_pack(pack, name):
     '''
@@ -426,7 +429,7 @@ class Loader(object):
 
                 funcs[
                     '{0}.{1}'.format(
-                        mod.__name__[mod.__name__.rindex('.')+1:], attr
+                        mod.__name__[mod.__name__.rindex('.') + 1:], attr
                     )
                 ] = func
                 self._apply_outputter(func, mod)
@@ -579,13 +582,21 @@ class Loader(object):
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            if virtual:
-                                # update the module name with the new name
-                                module_name = virtual
-                            else:
+                            if virtual is False:
                                 # if __virtual__() returns false then the
-                                # module wasn't meant for this platform.
+                                # module wasn't meant for this platform or it's
+                                # not supposed to load for some other reason.
                                 continue
+
+                            if module_name != virtual:
+                                # update the module name with the new name
+                                log.debug(
+                                    'Loaded {0} as virtual {1}'.format(
+                                        module_name, virtual
+                                    )
+                                )
+                                module_name = virtual
+
                 except Exception:
                     # If the module throws an exception during __virtual__()
                     # then log the information and continue to the next.
@@ -607,9 +618,8 @@ class Loader(object):
                     func = getattr(mod, attr)
                     if isinstance(func, type):
                         # skip callables that might be exceptions
-                        if any([
-                            'Error' in func.__name__,
-                            'Exception' in func.__name__]):
+                        if any(['Error' in func.__name__,
+                                'Exception' in func.__name__]):
                             continue
                     # now that callable passes all the checks, add it to the
                     # library of available functions of this type
