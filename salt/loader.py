@@ -579,9 +579,7 @@ class Loader(object):
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            if virtual and module_name != virtual:
-                                log.debug(('Loaded {0} as virtual '
-                                           '{1}').format(module_name, virtual))
+                            if virtual:
                                 # update the module name with the new name
                                 module_name = virtual
                             else:
