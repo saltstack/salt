@@ -579,13 +579,21 @@ class Loader(object):
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            if virtual:
-                                # update the module name with the new name
-                                module_name = virtual
-                            else:
+                            if virtual is False:
                                 # if __virtual__() returns false then the
-                                # module wasn't meant for this platform.
+                                # module wasn't meant for this platform or it's
+                                # not supposed to load for some other reason.
                                 continue
+
+                            if module_name != virtual:
+                                # update the module name with the new name
+                                log.debug(
+                                    'Loaded {0} as virtual {1}').format(
+                                        module_name, virtual
+                                    )
+                                )
+                                module_name = virtual
+
                 except Exception:
                     # If the module throws an exception during __virtual__()
                     # then log the information and continue to the next.
