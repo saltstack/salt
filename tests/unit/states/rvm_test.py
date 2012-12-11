@@ -10,9 +10,16 @@ try:
 except ImportError:
     has_mock = False
 
-import salt.states.rvm as rvm
-rvm.__salt__ = {}
-rvm.__opts__ = {'test': False}
+if has_mock:
+    import salt.states.rvm as rvm
+    rvm.__salt__ = {}
+    rvm.__opts__ = {'test': False}
+
+    import salt.modules.rvm
+    salt.modules.rvm.__salt__ = {
+        'cmd.has_exec': MagicMock(return_value=True),
+        'config.option': MagicMock(return_value=None)
+    }
 
 
 @skipIf(has_mock is False, "mock python module is unavailable")
@@ -25,7 +32,8 @@ class TestRvmState(TestCase):
             {'rvm.is_installed': MagicMock(return_value=False),
              'rvm.install': mock}):
             rvm._check_rvm({'changes': {}})
-            mock.assert_called_once_with()
+            # rvm.install is not run anymore while checking rvm.is_installed
+            self.assertEqual(mock.call_count, 0)
 
     def test__check_and_install_ruby(self):
         mock_check_rvm = MagicMock(
