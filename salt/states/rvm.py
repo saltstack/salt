@@ -180,14 +180,14 @@ def installed(name, default=False, runas=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    if __opts__['test']:
+        ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
+        return ret
+
     ret = _check_rvm(ret)
     if ret['result'] == False:
         if not __salt__['rvm.install']():
             return ret
-
-    if __opts__['test']:
-        ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
-        return ret
 
     return _check_and_install_ruby(ret, name, default, runas=runas)
 
