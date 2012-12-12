@@ -55,10 +55,9 @@ class VirtualenvTest(integration.ModuleCase,
         venv_path = os.path.join(integration.TMP, 'issue-2594-ve')
         if os.path.exists(venv_path):
             shutil.rmtree(venv_path)
-        print dir(integration)
         # Our virtualenv requirements file
         requirements_file_path = os.path.join(
-            integration.FILES, 'file', 'base', 'issue-2594-requirements.txt'
+            integration.TMP_STATE_TREE, 'issue-2594-requirements.txt'
         )
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
