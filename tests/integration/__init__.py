@@ -930,7 +930,7 @@ class SaltReturnAssertsMixIn(object):
         self.assertSaltTrueReturn(ret)
         if keys and isinstance(keys, tuple):
             keys = list(keys)
-        elif keys and isinstance(keys, string):
+        elif keys and isinstance(keys, basestring):
             keys = [keys]
         elif keys and not isinstance(keys, list):
             raise RuntimeError('The passed keys need to be a list')
