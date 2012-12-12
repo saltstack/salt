@@ -49,6 +49,7 @@ SYS_TMP_DIR = tempfile.gettempdir()
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
+TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 
 
 def print_header(header, sep='~', top=True, bottom=True, inline=False,
@@ -159,7 +160,12 @@ class TestDaemon(object):
             'base': [os.path.join(FILES, 'pillar', 'base')]
         }
         self.master_opts['file_roots'] = {
-            'base': [os.path.join(FILES, 'file', 'base')]
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                TMP_STATE_TREE
+            ]
         }
         self.master_opts['ext_pillar'] = [
             {'cmd_yaml': 'cat {0}'.format(
@@ -198,6 +204,7 @@ class TestDaemon(object):
                     self.smaster_opts['sock_dir'],
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
+                    TMP_STATE_TREE,
                     TMP
                     ],
                    pwd.getpwuid(os.getuid()).pw_name)
@@ -853,56 +860,20 @@ class SaltReturnAssertsMixIn(object):
                 '{} is equal to {}. Salt returned an empty dictionary.'
             )
 
-    def __assertReturn(self, ret, which_case):
-        self.assertReturnNonEmptySaltType(ret)
-
-        for part in ret.itervalues():
-            self.assertReturnNonEmptySaltType(part)
-            try:
-                self.assertTrue(isinstance(part, dict))
-            except AssertionError:
-                raise AssertionError(
-                    '{0} is not dict. Salt returned: {1}'.format(
-                        type(part), part
-                    )
-                )
-            try:
-                if which_case is True:
-                    self.assertTrue(part['result'])
-                elif which_case is False:
-                    self.assertFalse(part['result'])
-                elif which_case is None:
-                    self.assertIsNone(part['result'])
-            except AssertionError:
-                raise AssertionError(
-                    '{result} is not {0}. Salt Comment:\n{comment}'.format(
-                        which_case, **part
-                    )
-                )
-
-    def assertSaltTrueReturn(self, ret):
-        self.__assertReturn(ret, True)
-
-    def assertSaltFalseReturn(self, ret):
-        self.__assertReturn(ret, False)
-
-    def assertSaltNoneReturn(self, ret):
-        self.__assertReturn(ret, None)
-
     def __return_valid_keys(self, keys):
-        if keys and isinstance(keys, tuple):
+        if isinstance(keys, tuple):
             # If it's a tuple, turn it into a list
             keys = list(keys)
-        elif keys and isinstance(keys, basestring):
+        elif isinstance(keys, basestring):
             # If it's a basestring , make it a one item list
             keys = [keys]
-        elif keys and not isinstance(keys, list):
+        elif not isinstance(keys, list):
             # If we've reached here, it's a bad type passed to keys
             raise RuntimeError('The passed keys need to be a list')
         return keys
 
     def __getWithinSaltReturn(self, ret, keys):
-        self.assertReturnSaltType(ret)
+        self.assertReturnNonEmptySaltType(ret)
         keys = self.__return_valid_keys(keys)
         okeys = keys[:]
         for part in ret.itervalues():
@@ -924,6 +895,36 @@ class SaltReturnAssertsMixIn(object):
                         )
                     )
             return ret_item
+
+    def assertSaltTrueReturn(self, ret):
+        try:
+            self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
+        except AssertionError:
+            raise AssertionError(
+                '{result} is not True. Salt Comment:\n{comment}'.format(
+                    **(ret.values()[0])
+                )
+            )
+
+    def assertSaltFalseReturn(self, ret):
+        try:
+            self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
+        except AssertionError:
+            raise AssertionError(
+                '{result} is not False. Salt Comment:\n{comment}'.format(
+                    **(ret.values()[0])
+                )
+            )
+
+    def assertSaltNoneReturn(self, ret):
+        try:
+            self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
+        except AssertionError:
+            raise AssertionError(
+                '{result} is not None. Salt Comment:\n{comment}'.format(
+                    **(ret.values()[0])
+                )
+            )
 
     def assertInSaltComment(self, ret, in_comment):
         return self.assertIn(
