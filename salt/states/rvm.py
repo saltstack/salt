@@ -34,7 +34,6 @@ configuration could look like:
           - curl
           - git-core
           - subversion
-          - sudo
 
     mri-deps:
       pkg.installed:
