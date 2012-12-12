@@ -47,7 +47,7 @@ def install():
     #   bash coreutils gzip bzip2 gawk sed curl git-core subversion
     installer = 'https://get.rvm.io'
     return 0 == __salt__['cmd.retcode'](
-        # the RVM installer automaticall does a multi-user install when it is invoked with root privileges
+        # the RVM installer automatically does a multi-user install when it is invoked with root privileges
         'curl -s {installer} | bash -s stable'.format(installer=installer))
 
 
