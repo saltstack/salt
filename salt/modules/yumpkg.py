@@ -394,6 +394,28 @@ def upgrade():
     return _compare_versions(old, new)
 
 
+def _compare_versions(old, new):
+    '''
+    Returns a dict that that displays old and new versions for a package after
+    install/upgrade of package.
+    '''
+    pkgs = {}
+    for npkg in new:
+        if npkg in old:
+            if old[npkg] == new[npkg]:
+                # no change in the package
+                continue
+            else:
+                # the package was here before and the version has changed
+                pkgs[npkg] = {'old': old[npkg],
+                              'new': new[npkg]}
+        else:
+            # the package is freshly installed
+            pkgs[npkg] = {'old': '',
+                          'new': new[npkg]}
+    return pkgs
+
+
 def remove(pkgs):
     '''
     Removes packages with yum remove
