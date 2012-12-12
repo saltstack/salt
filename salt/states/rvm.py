@@ -186,10 +186,11 @@ def installed(name, default=False, runas=None):
     ret = _check_rvm(ret)
     if ret['result'] == False:
         if not __salt__['rvm.install']():
+            ret['comment'] = 'RVM failed to install'
+            ret['result'] = False
             return ret
-
-    return _check_and_install_ruby(ret, name, default, runas=runas)
-
+        else:
+            return _check_and_install_ruby(ret, name, default, runas=runas)     
 
 def gemset_present(name, ruby='default', runas=None):
     '''
