@@ -16,7 +16,7 @@ def __virtual__():
     return 'archive'
 
 
-def tar(options, tarfile, cwd=None, *sources):
+def tar(options, tarfile, cwd=None, template=None, *sources):
     '''
     Uses the tar command to pack, unpack, etc tar files
 
@@ -26,11 +26,11 @@ def tar(options, tarfile, cwd=None, *sources):
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'tar -{0} {1} {2}'.format(options, tarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd, cwd).splitlines()
+    out = __salt__['cmd.run'](cmd, cwd, template=template).splitlines()
     return out
 
 
-def gzip(sourcefile):
+def gzip(sourcefile, template=None):
     '''
     Uses the gzip command to create gzip files
 
@@ -39,11 +39,11 @@ def gzip(sourcefile):
         salt '*' archive.gzip /tmp/sourcefile.txt
     '''
     cmd = 'gzip {0}'.format(sourcefile)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
 
 
-def gunzip(gzipfile):
+def gunzip(gzipfile, template=None):
     '''
     Uses the gunzip command to unpack gzip files
 
@@ -52,11 +52,11 @@ def gunzip(gzipfile):
         salt '*' archive.gunzip /tmp/sourcefile.txt.gz
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
 
 
-def zip(zipfile, *sources):
+def zip(zipfile, template=None, *sources):
     '''
     Uses the zip command to create zip files
 
@@ -66,11 +66,11 @@ def zip(zipfile, *sources):
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'zip {0} {1}'.format(zipfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
 
 
-def unzip(zipfile, dest, *xfiles):
+def unzip(zipfile, dest, template=None, *xfiles):
     '''
     Uses the unzip command to unpack zip files
 
@@ -82,11 +82,11 @@ def unzip(zipfile, dest, *xfiles):
     cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
     if xfileslist:
         cmd = cmd + ' -x {0}'.format(xfiles)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
 
 
-def rar(rarfile, *sources):
+def rar(rarfile, template=None, *sources):
     '''
     Uses the rar command to create rar files
     Uses rar for Linux from http://www.rarlab.com/
@@ -98,11 +98,11 @@ def rar(rarfile, *sources):
     # TODO: Check that len(sources) >= 1
     sourcefiles = ' '.join(sources)
     cmd = 'rar a -idp {0} {1}'.format(rarfile, sourcefiles)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
 
 
-def unrar(rarfile, dest, *xfiles):
+def unrar(rarfile, dest, template=None, *xfiles):
     '''
     Uses the unrar command to unpack rar files
     Uses rar for Linux from http://www.rarlab.com/
@@ -116,5 +116,5 @@ def unrar(rarfile, dest, *xfiles):
     if xfileslist:
         cmd = cmd + ' {0}'.format(xfiles)
     cmd = cmd + ' {0}'.format(dest)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, template=template).splitlines()
     return out
