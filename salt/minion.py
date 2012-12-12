@@ -728,8 +728,11 @@ class Syndic(salt.client.LocalClient, Minion):
     '''
     def __init__(self, opts):
         self._syndic = True
-        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
         Minion.__init__(self, opts)
+        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
+        opts.update(self.opts)
+        self.opts = opts
+
 
     def _handle_aes(self, load):
         '''
