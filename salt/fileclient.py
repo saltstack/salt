@@ -294,7 +294,8 @@ class Client(object):
                 # the relative path on the minion.
                 minion_relpath = string.lstrip(fn_[len(prefix):], '/')
                 minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
-                os.makedirs(minion_mkdir)
+                if not os.path.isdir(minion_mkdir):
+                    os.makedirs(minion_mkdir)
                 ret.append(minion_mkdir)
         ret.sort()
         return ret
