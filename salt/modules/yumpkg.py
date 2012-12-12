@@ -182,6 +182,7 @@ def version(name):
     # since list_pkgs is used to support matching complex versions
     # we can search for a digit in the name and if one doesn't exist
     # then just use the dbMatch function, which is 1000 times quicker
+    pkgs = None
     m = re.search("[0-9]", name)
     if m:
         pkgs = list_pkgs(name)
@@ -220,6 +221,12 @@ def list_pkgs(*args):
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if args:
+        pkgs = ret
+        ret = {}
+        for pkg in pkgs.keys():
+            if pkg in args:
+                ret[pkg] = pkgs[pkg]
     return ret
 
 
