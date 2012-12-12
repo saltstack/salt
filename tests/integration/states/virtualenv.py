@@ -49,3 +49,85 @@ class VirtualenvTest(integration.ModuleCase,
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
             self.run_function('user.delete', [user, True, True])
+
+    def test_issue_2594_non_invalidated_cache(self):
+        # Testing virtualenv directory
+        venv_path = os.path.join(integration.TMP, 'issue-2594-ve')
+        if os.path.exists(venv_path):
+            shutil.rmtree(venv_path)
+        # Our virtualenv requirements file
+        requirements_file_path = os.path.join(
+            integration.TMP_STATE_TREE, 'issue-2594-requirements.txt'
+        )
+        if os.path.exists(requirements_file_path):
+            os.unlink(requirements_file_path)
+
+        # Out state template
+        template = [
+            '{0}:'.format(venv_path),
+            '  virtualenv.managed:',
+            '    - no_site_packages: True',
+            '    - clear: false',
+            '    - mirrors: http://testpypi.python.org/pypi',
+            '    - requirements: salt://issue-2594-requirements.txt',
+        ]
+
+        # Let's populate the requirements file, just pep-8 for now
+        open(requirements_file_path, 'a').write('pep8==1.3.3\n')
+
+        # Let's run our state!!!
+        try:
+            ret = self.run_function(
+                'state.template_str', ['\n'.join(template)]
+            )
+
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(ret, 'Created new virtualenv')
+            self.assertSaltStateChangesEqual(
+                ret, ['pep8==1.3.3'], keys=('packages', 'new')
+            )
+        except AssertionError:
+            # Always clean up the tests temp files
+            if os.path.exists(venv_path):
+                shutil.rmtree(venv_path)
+            if os.path.exists(requirements_file_path):
+                os.unlink(requirements_file_path)
+            raise
+
+        # Let's make sure, it really got installed
+        ret = self.run_function('pip.freeze', bin_env=venv_path)
+        self.assertIn('pep8==1.3.3', ret)
+        self.assertNotIn('zope.interface==4.0.1', ret)
+
+        # Now let's update the requirements file, which is now cached.
+        open(requirements_file_path, 'w').write('zope.interface==4.0.1\n')
+
+        # Let's run our state!!!
+        try:
+            ret = self.run_function(
+                'state.template_str', ['\n'.join(template)]
+            )
+
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment(ret, 'virtualenv exists')
+            self.assertSaltStateChangesEqual(
+                ret, ['zope.interface==4.0.1'], keys=('packages', 'new')
+            )
+        except AssertionError:
+            # Always clean up the tests temp files
+            if os.path.exists(venv_path):
+                shutil.rmtree(venv_path)
+            if os.path.exists(requirements_file_path):
+                os.unlink(requirements_file_path)
+            raise
+
+        # Let's make sure, it really got installed
+        ret = self.run_function('pip.freeze', bin_env=venv_path)
+        self.assertIn('pep8==1.3.3', ret)
+        self.assertIn('zope.interface==4.0.1', ret)
+
+        # If we reached this point no assertion failed, so, cleanup!
+        if os.path.exists(venv_path):
+            shutil.rmtree(venv_path)
+        if os.path.exists(requirements_file_path):
+            os.unlink(requirements_file_path)
