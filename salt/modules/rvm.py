@@ -45,7 +45,7 @@ def install():
     '''
     # RVM dependencies on Ubuntu 10.04:
     #   bash coreutils gzip bzip2 gawk sed curl git-core subversion
-    installer = 'https://get.rvm.io'
+    installer = 'https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer'
     return 0 == __salt__['cmd.retcode'](
         # the RVM installer automatically does a multi-user install when it is invoked with root privileges
         'curl -s {installer} | bash -s stable'.format(installer=installer))
