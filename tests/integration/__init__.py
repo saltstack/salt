@@ -49,6 +49,7 @@ SYS_TMP_DIR = tempfile.gettempdir()
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
+TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 
 
 def print_header(header, sep='~', top=True, bottom=True, inline=False,
@@ -159,7 +160,12 @@ class TestDaemon(object):
             'base': [os.path.join(FILES, 'pillar', 'base')]
         }
         self.master_opts['file_roots'] = {
-            'base': [os.path.join(FILES, 'file', 'base')]
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                TMP_STATE_TREE
+            ]
         }
         self.master_opts['ext_pillar'] = [
             {'cmd_yaml': 'cat {0}'.format(
@@ -198,6 +204,7 @@ class TestDaemon(object):
                     self.smaster_opts['sock_dir'],
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
+                    TMP_STATE_TREE,
                     TMP
                     ],
                    pwd.getpwuid(os.getuid()).pw_name)
