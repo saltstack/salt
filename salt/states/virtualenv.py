@@ -61,7 +61,10 @@ def managed(name,
         if not cached_requirements:
             # It's not cached, let's cache it.
             cached_requirements = __salt__['cp.cache_file'](requirements)
-
+        # Check if the master version has changed.
+        if __salt__['cp.hash_file'](requirements) != \
+                __salt__['cp.hash_file'](cached_requirements):
+                    cached_requirements = __salt__['cp.cache_file'](requirements)
         if not cached_requirements:
             ret.update({
                 'result': False,
