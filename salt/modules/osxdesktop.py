@@ -6,6 +6,7 @@ Mac OS X implementations of various commands in the "desktop" interface
 def __virtual__():
     if __grains__['os'] == 'MacOS':
         return 'desktop'
+    return False
 
 
 def get_output_volume():
