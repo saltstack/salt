@@ -131,7 +131,7 @@ def _check_and_install_ruby(ret, ruby, default=False, runas=None):
             ret['comment'] = 'Could not install ruby.'
             return ret
 
-    if not ret['default'] and default:
+    if default:
         __salt__['rvm.set_default'](ruby, runas=runas)
 
     return ret
