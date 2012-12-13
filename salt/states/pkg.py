@@ -36,6 +36,8 @@ def installed(
         refresh=False,
         repo='',
         skip_verify=False,
+        pkgs=None,
+        sources=None,
         **kwargs):
     '''
     Verify that the package is installed, and only that it is installed. This
@@ -43,44 +45,124 @@ def installed(
     installed
 
     name
-        The name of the package to install
+        The name of the package to be installed. This parameter is ignored if
+        either "pkgs" or "sources" is used. Additionally, please note that this
+        option can only be used to install packages from a software repository.
+        To install a package file manually, use the "sources" option detailed
+        below.
     repo
         Specify a non-default repository to install from
     skip_verify : False
         Skip the GPG verification check for the package to be installed
     version : None
-        Install a specific version of a package
+        Install a specific version of a package. This option is ignored if
+        either "pkgs" or "sources" is used.
 
     Usage::
 
         httpd:
-          pkg:
-            - installed
+          pkg.installed:
             - repo: mycustomrepo
             - skip_verify: True
             - version: 2.0.6~ubuntu3
+
+
+    Multiple Package Installation Options: (not supported in Windows, FreeBSD)
+
+    pkgs
+        A list of packages to install from a software repository.
+
+    Usage::
+
+        mypkgs:
+          pkg.installed:
+            - pkgs:
+              - foo
+              - bar
+              - baz
+
+    sources
+        A list of packages to install, along with the source URI or local path
+        from which to install each package.
+
+    Usage::
+
+        mypkgs:
+          pkg.installed:
+            - sources:
+              - foo: salt://rpms/foo.rpm
+              - bar: http://somesite.org/bar.rpm
+              - baz: ftp://someothersite.org/baz.rpm
+              - qux: /minion/path/to/qux.rpm
     '''
     rtag = __gen_rtag()
-    cver = __salt__['pkg.version'](name)
-    if cver == version:
-        # The package is installed and is the correct version
+
+    if all((pkgs, sources)):
         return {'name': name,
                 'changes': {},
-                'result': True,
-                'comment': ('Package {0} is already installed and is the '
-                            'correct version').format(name)}
-    elif cver:
-        # The package is installed
-        return {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': 'Package {0} is already installed'.format(name)}
+                'result': False,
+                'comment': 'Only one of "pkgs" and "sources" is permitted.'}
+
+    old_pkgs = __salt__['pkg.list_pkgs']()
+    if any((pkgs, sources)):
+        if pkgs:
+            desired_pkgs = __salt__['pkg_resource.pack_pkgs'](pkgs)
+        elif sources:
+            desired_pkgs = __salt__['pkg_resource.pack_sources'](sources)
+
+        if not desired_pkgs:
+            # Badly-formatted SLS
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'Invalidly formatted "{0}" parameter. See ' \
+                               'minion log.'.format('pkgs' if pkgs
+                                                    else 'sources')}
+
+        targets = [x for x in desired_pkgs if x not in old_pkgs]
+
+        if not targets:
+            # All specified packages are installed
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'All specified packages are already ' \
+                               'installed'.format(name)}
+        else:
+            # Remove any targets that are already installed to avoid upgrading
+            if pkgs:
+                pkgs = targets
+            elif sources:
+                sources = [x for x in sources if x.keys()[0] in targets]
+
+    else:
+        targets = [name]
+
+        cver = old_pkgs.get(name,'')
+        if cver == version:
+            # The package is installed and is the correct version
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': ('Package {0} is already installed and is the '
+                                'correct version').format(name)}
+        elif cver:
+            # The package is installed
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'Package {0} is already installed'.format(name)}
 
     if __opts__['test']:
+        if len(targets) > 1:
+            comment = 'The following packages are set to be ' \
+                      'installed: {0}'.format(', '.join(targets))
+        else:
+            comment = 'Package {0} is set to be installed'.format(targets[0])
         return {'name': name,
                 'changes': {},
                 'result': None,
-                'comment': 'Package {0} is set to be installed'.format(name)}
+                'comment': comment}
 
     if refresh or os.path.isfile(rtag):
         changes = __salt__['pkg.install'](name,
@@ -88,6 +170,8 @@ def installed(
                                           version=version,
                                           repo=repo,
                                           skip_verify=skip_verify,
+                                          pkgs=pkgs,
+                                          sources=sources,
                                           **kwargs)
         if os.path.isfile(rtag):
             os.remove(rtag)
@@ -96,16 +180,37 @@ def installed(
                                           version=version,
                                           repo=repo,
                                           skip_verify=skip_verify,
+                                          pkgs=pkgs,
+                                          sources=sources,
                                           **kwargs)
-    if not changes:
+
+    installed = [x for x in changes.keys() if x in targets]
+
+    # Some (or all) of the requested packages failed to install
+    if len(installed) != len(targets):
+        if len(targets) > 1:
+            failed = [x for x in targets if x not in installed]
+            comment = 'The following packages failed to install: ' \
+                      '{0}'.format(', '.join(failed))
+        else:
+            comment = 'Package {0} failed to install'.format(targets[0])
+
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package {0} failed to install'.format(name)}
+                'comment': comment}
+
+    # Success!
+    if len(targets) > 1:
+        comment = 'The following pacakages were installed: ' \
+                  '{0}'.format(', '.join(targets))
+    else:
+        comment = 'Package {0} installed'.format(targets[0])
+
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Package {0} installed'.format(name)}
+            'comment': comment}
 
 
 def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
