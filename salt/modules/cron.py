@@ -23,6 +23,8 @@ def _render_tab(lst):
     if len(ret):
         if not ret[-1] == TAG:
             ret.append(TAG)
+    else:
+        ret.append(TAG)
     for env in lst['env']:
         if (env['value'] is None) or (env['value'] == ""):
             ret.append('{0}=""\n'.format(env['name']))
