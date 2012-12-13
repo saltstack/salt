@@ -1,8 +1,11 @@
-description "salt-minion"
+description "Salt Minion"
 
 start on (net-device-up
           and local-filesystems
           and runlevel [2345])
 stop on runlevel [!2345]
+
+# work-around for unpredictable exit codes
+normal exit 0 1 9 15 143 SIGTERM SIGKILL
 
 exec /usr/bin/salt-minion >/dev/null 2>&1
