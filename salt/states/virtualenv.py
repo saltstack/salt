@@ -83,8 +83,16 @@ def managed(name,
 
     # Create (or clear) the virtualenv
     if __opts__['test']:
+        if venv_exists and clear:
+            ret['result'] = None
+            ret['comment'] = 'Virtualenv {0} is set to be cleared'.format(name)
+            return ret
+        if venv_exists and not clear:
+            #ret['result'] = None
+            ret['comment'] = 'Virtualenv {0} is already created'.format(name)
+            return ret
         ret['result'] = None
-        ret['comment'] = 'Virtualenv {0} is set to be created or cleared'
+        ret['comment'] = 'Virtualenv {0} is set to be created'.format(name)
         return ret
 
     if not venv_exists or (venv_exists and clear):
