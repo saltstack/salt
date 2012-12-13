@@ -183,7 +183,7 @@ def version(name):
     # we can search for a digit in the name and if one doesn't exist
     # then just use the dbMatch function, which is 1000 times quicker
     pkgs = None
-    m = re.search("[0-9]", name)
+    m = re.search('[0-9]', name)
     if m:
         pkgs = list_pkgs(name)
     else:
@@ -191,7 +191,7 @@ def version(name):
         mi = ts.dbMatch('name', name)
         pkgs = {}
         for h in mi:
-            pkgs[h['name']] = "-".join([h['version'], h['release']])
+            pkgs[h['name']] = '-'.join([h['version'], h['release']])
     # check for '.arch' appended to pkg name (i.e. 32 bit installed on 64 bit
     # machine is '.i386')
     if name.find('.') >= 0:
