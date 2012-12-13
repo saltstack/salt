@@ -5,6 +5,4 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
-kill timeout 10
-
 exec /usr/bin/salt-master >/dev/null 2>&1
