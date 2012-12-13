@@ -1,0 +1,27 @@
+=========================
+Salt 0.11.0 Release Notes
+=========================
+
+Salt 0.11.0 is here, with some highly sought after and exciting features.
+These features include the new overstate system, the reactor system, a new
+state run scope component called __context__, the begining of the search
+system (still needs a great deal of work), multiple package states, the
+MySQL returner and a better system to arbitrarily reference outputters.
+
+It is also noteworthy that we are chaging how we mark release numbers. For
+the life of the project we have been pushing every release with features
+and fixes as point releases. We will now be releasing point releases for
+bug fixes only on a more regular basis and major feature releases on a
+slightly less regular basis. This means that the next release will be a
+bugfix only release with a version number of 0.11.1. The next feature release
+will be named 0.12.0 and will mark the end of life for the 0.11 series.
+
+Major Features
+==============
+
+OverState
+---------
+
+The overstate system is a simple way to manage rolling state executions across
+many minions. The overstate allows for the state system to be managed very
+cleanly from the salt master.
