@@ -58,14 +58,17 @@ def _list_removed(old, new):
 def available_version(name):
     '''
     The available version of the package in the repository
-   
+
     CLI Example::
+
         salt '*' pkg.available_version <package name>
     '''
-
-    cmd = 'pkg info {0}'.format(name)
-    out = __salt__['cmd.run'](cmd).split()
-    return out[0]
+    if _check_pkgng():
+        for line in __salt__['cmd.run']('pkg search -f {0}'.format(name)).splitlines():
+            if line.startswith('Version'):
+                fn, ver = line.split(':', 1)
+                return ver.strip()
+    return ''
 
 
 def version(name):
