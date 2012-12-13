@@ -215,6 +215,8 @@ def list_pkgs(*args):
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
+        if not '_|-' in line:
+            continue
         name, version, rel = line.split('_|-')
         pkgver = version
         if rel:
