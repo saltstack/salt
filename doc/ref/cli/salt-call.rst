@@ -33,6 +33,16 @@ Options
     Specify an additional directories to pull modules from, multiple
     directories can be delimited by commas
 
+.. option:: --return RETURNER
+
+    Set salt-call to pass the return data to one or many returner interfaces.
+    To use many returner interfaces specify a comma delimited list of
+    returners.
+
+.. option:: --local
+
+    Run salt-call locally, as if there was no master running.
+
 .. option:: -d, --doc
 
     Return the documentation for the specified module or for all modules if
@@ -43,6 +53,12 @@ Options
     Console log level. One of ``info``, ``none``, ``garbage``,
     ``trace``, ``warning``, ``error``, ``debug``. For the logfile
     settings see the config file. Default: ``info``.
+
+.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
+
+    The location of the Salt configuration directory, this directory contains
+    the configuration files for Salt master and minions. The default location
+    on most systems is /etc/salt.
 
 .. option:: --out
 
@@ -55,6 +71,11 @@ Options
     If an outputter is used that does not support the data passed into it, then
     Salt will fall back on the pprint outputter and display the return data
     using the python pprint library.
+
+.. option:: --out-indent OUTPUT_INDENT, --output-indent OUTPUT_INDENT
+
+    Print the output indented by the provided value in spaces. Negative values
+    disables indentation. Only applicable in outputters that support indentation.
 
 .. option:: --no-color
 
