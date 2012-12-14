@@ -62,6 +62,10 @@ Options
 
     Print the version of Salt that is running.
 
+.. option:: --versions-report
+
+    Show program's dependencies version number and exit
+
 .. option:: -E, --pcre
 
     The target expression will be interpreted as a pcre regular expression
