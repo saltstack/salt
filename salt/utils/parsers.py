@@ -871,9 +871,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
     __metaclass__ = OptionParserMeta
     _skip_console_logging_config_ = True
 
-    description = "XXX: Add salt-key description"
+    description = 'Salt key is used to manage Salt authentication keys'
 
-    usage = "%prog [options]"
+    usage = '%prog [options]'
 
     def _mixin_setup(self):
 
@@ -1054,11 +1054,12 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                            OutputOptionsWithTextMixIn):
     __metaclass__ = OptionParserMeta
 
-    _default_logging_level_ = "info"
+    _default_logging_level_ = 'info'
 
-    description = "XXX: Add salt-call description"
+    description = ('Salt call is used to execute module functions locally '
+                   'on a minion')
 
-    usage = "%prog [options] <function> [arguments]"
+    usage = '%prog [options] <function> [arguments]'
 
     def _mixin_setup(self):
         self.add_option(
