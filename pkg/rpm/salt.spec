@@ -9,14 +9,14 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.10.5
-Release: 2%{?dist}
+Version: 0.11.0
+Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     http://saltstack.org/
-Source0: https://github.com/downloads/saltstack/%{name}/%{name}-%{version}.tar.gz
+Source0: http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1: %{name}-master
 Source2: %{name}-syndic
 Source3: %{name}-minion
@@ -290,6 +290,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Fri Dec 14 2012 Clint Savage <herlo1@gmail.com> - 0.11.0-1
+- Moved to upstream release 0.11.0
+
 * Wed Dec 05 2012 Mike Chesnut <mchesnut@gmail.com> - 0.10.5-2
 - moved to upstream release 0.10.5
 - removing references to minion.template and master.template, as those files
