@@ -37,7 +37,7 @@ def _parse_pkg_meta(path):
                 if not rel:
                     m = re.match('^Release\s*:\s*(\S+)', line)
                     if m:
-                        version = m.group(1)
+                        rel = m.group(1)
                         continue
         if rel:
             version += '-{0}'.format(rel)
