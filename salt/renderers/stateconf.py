@@ -27,7 +27,6 @@ from cStringIO import StringIO
 
 # Import salt libs
 import salt.utils
-from salt.renderers.yaml import HAS_ORDERED_DICT
 from salt.exceptions import SaltRenderError
 
 __all__ = [ 'render' ]
@@ -111,7 +110,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         render_template = renderers[name]  # eg, the mako renderer
     except KeyError, e:
         raise SaltRenderError('Renderer: {0} is not available!'.format(e))
-    except IndexError, e:
+    except IndexError:
         raise INVALID_USAGE_ERROR
 
     def process_sls_data(data, context=None, extract=False):

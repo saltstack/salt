@@ -9,7 +9,7 @@ Display clean output of an overstate stage
 #             }
 #             ]
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 

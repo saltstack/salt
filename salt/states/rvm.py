@@ -34,7 +34,6 @@ configuration could look like:
           - curl
           - git-core
           - subversion
-          - sudo
 
     mri-deps:
       pkg.installed:
@@ -101,20 +100,18 @@ configuration could look like:
         - require:
           - rvm: ruby-1.9.2
 '''
-# Import Python libs
+
+# Import python libs
 import re
 
 
 def _check_rvm(ret):
     '''
-    Check to see if rmv is installed and install it
+    Check to see if rvm is installed.
     '''
     if not __salt__['rvm.is_installed']():
-        if __salt__['rvm.install']():
-            ret['changes']['rvm'] = 'Installed'
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Could not install RVM.'
+        ret['result'] = False
+        ret['comment'] = 'RVM is not installed.'
     return ret
 
 
@@ -134,7 +131,7 @@ def _check_and_install_ruby(ret, ruby, default=False, runas=None):
             ret['comment'] = 'Could not install ruby.'
             return ret
 
-    if not ret['default'] and default:
+    if default:
         __salt__['rvm.set_default'](ruby, runas=runas)
 
     return ret
@@ -182,15 +179,19 @@ def installed(name, default=False, runas=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    ret = _check_rvm(ret)
-    if ret['result'] == False:
-        return ret
-
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
         return ret
 
-    return _check_and_install_ruby(ret, name, default, runas=runas)
+    ret = _check_rvm(ret)
+    if ret['result'] == False:
+        if not __salt__['rvm.install']():
+            ret['comment'] = 'RVM failed to install.'
+            return ret
+        else:
+            return _check_and_install_ruby(ret, name, default, runas=runas)
+    else:
+        return _check_and_install_ruby(ret, name, default, runas=runas)
 
 
 def gemset_present(name, ruby='default', runas=None):

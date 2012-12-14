@@ -63,12 +63,14 @@ Required python modules: psycopg2
 # Import python libs
 import json
 
+# Import third party libs
 try:
     import psycopg2
     #import psycopg2.extras
     has_postgres = True
 except ImportError:
     has_postgres = False
+
 
 def __virtual__():
     if not has_postgres:
