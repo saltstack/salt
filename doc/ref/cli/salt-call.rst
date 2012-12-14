@@ -81,6 +81,14 @@ Options
 
     Disable all colored output
 
+.. option:: --version
+
+    Show program's version number and exit
+
+.. option:: --versions-report
+
+    Show program's dependencies version number and exit
+
 See also
 ========
 
