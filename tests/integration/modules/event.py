@@ -3,17 +3,20 @@
     tests.integration.modules.event
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
 import time
 import threading
 from Queue import Queue, Empty
 
+# Import salt libs
 import integration
-
 from salt.utils import event
+
 
 class EventModuleTest(integration.ModuleCase):
     def test_event_fire_master(self):
@@ -35,7 +38,9 @@ class EventModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
 
         eventfired = events.get(block=True, timeout=10)
-        self.assertIn('event.fire_master: just test it!!!!', eventfired['data'])
+        self.assertIn(
+            'event.fire_master: just test it!!!!', eventfired['data']
+        )
 
         ret = self.run_function(
             'event.fire_master',

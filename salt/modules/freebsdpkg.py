@@ -64,8 +64,7 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     if _check_pkgng():
-        cmd = '{0} search -f {1}'.format(_cmd('pkg'), name)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        for line in __salt__['cmd.run']('pkg search -f {0}'.format(name)).splitlines():
             if line.startswith('Version'):
                 fn, ver = line.split(':', 1)
                 return ver.strip()
@@ -127,7 +126,10 @@ def list_pkgs():
         if not line:
             continue
         comps = line.split(' ')[0].split('-')
-        ret['-'.join(comps[0:-1])] = comps[-1]
+        __salt__['pkg_resource.add_pkg'](ret,
+                                        '-'.join(comps[0:-1]),
+                                        comps[-1])
+    __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 
@@ -231,7 +233,7 @@ def remove(name):
         if _check_pkgng():
             pkg_command = '{0} delete -y'.format(_cmd('pkg'))
         else:
-            pkg_command - '{0}'.format(_cmd('pkg_delete'))
+            pkg_command = '{0}'.format(_cmd('pkg_delete'))
         __salt__['cmd.retcode']('{0} {1}'.format(pkg_command, name))
     new = list_pkgs()
     return _list_removed(old, new)

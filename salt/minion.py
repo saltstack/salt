@@ -4,11 +4,9 @@ Routines to set up a minion
 '''
 
 # Import python libs
-
 import logging
 import getpass
 import multiprocessing
-
 import fnmatch
 import os
 import hashlib
@@ -36,7 +34,7 @@ from salt.utils.debug import enable_sigusr1_handler
 log = logging.getLogger(__name__)
 
 # To set up a minion:
-# 1, Read in the configuration
+# 1. Read in the configuration
 # 2. Generate the function mapping dict
 # 3. Authenticate with the master
 # 4. Store the aes key
@@ -238,7 +236,6 @@ class Minion(object):
         Takes the aes encrypted load, decrypts is and runs the encapsulated
         instructions
         '''
-        data = None
         try:
             data = self.crypticle.loads(load)
         except AuthenticationError:
@@ -365,7 +362,7 @@ class Minion(object):
                 ret['return'] = 'ERROR executing {0}: {1}'.format(
                     function_name, exc
                 )
-            except Exception as exc:
+            except Exception:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
                 log.warning(msg.format(trb))
@@ -731,15 +728,17 @@ class Syndic(salt.client.LocalClient, Minion):
     '''
     def __init__(self, opts):
         self._syndic = True
-        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
         Minion.__init__(self, opts)
+        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
+        opts.update(self.opts)
+        self.opts = opts
+
 
     def _handle_aes(self, load):
         '''
         Takes the aes encrypted load, decrypts is and runs the encapsulated
         instructions
         '''
-        data = None
         # If the AES authentication has changed, re-authenticate
         try:
             data = self.crypticle.loads(load)

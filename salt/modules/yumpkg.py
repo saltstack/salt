@@ -5,8 +5,12 @@ Support for YUM
             - rpm Python module
             - rpmUtils Python module
 '''
-import re
 
+# Import python libs
+import re
+import logging
+
+# Import third party libs
 try:
     import yum
     import rpm
@@ -14,8 +18,6 @@ try:
     has_yumdeps = True
 except (ImportError, AttributeError):
     has_yumdeps = False
-
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -177,18 +179,12 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    # since list_pkgs is used to support matching complex versions
-    # we can search for a digit in the name and if one doesn't exist
-    # then just use the dbMatch function, which is 1000 times quicker
-    m = re.search("[0-9]", name)
-    if m:
-        pkgs = list_pkgs(name)
-    else:
-        ts = rpm.TransactionSet()
-        mi = ts.dbMatch('name', name)
-        pkgs = {}
-        for h in mi:
-            pkgs[h['name']] = "-".join([h['version'], h['release']])
+    pkgs = list_pkgs(name)
+
+    # check for '.arch' appended to pkg name (i.e. 32 bit installed on 64 bit
+    # machine is '.i386')
+    if name.find('.') >= 0:
+        name = name.split('.')[0]
     if name in pkgs:
         return pkgs[name]
     else:
@@ -205,30 +201,24 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
-    ts = rpm.TransactionSet()
-    pkgs = {}
-    # In order to support specific package versions, we are going to use the
-    # yum libraries to handle pattern matching
-    yb = yum.YumBase()
-    setattr(yb.conf, 'assumeyes', True)
-
-    # if no args are passed in get all packages
-    if len(args) == 0:
-        for h in ts.dbMatch():
-            pkgs[h['name']] = '-'.join([h['version'], h['release']])
-    else:
-        # get package version for each package in *args
-        for arg in args:
-            # Make yum do the pattern matching
-            a = yb.pkgSack.returnPackages(patterns=[arg], ignore_case=False)
-            # make sure there is an a
-            if len(a) > 0:
-                arg = a[0].name
-            # use the name from yum to do an rpm lookup
-            for h in ts.dbMatch('name', arg):
-                pkgs[h['name']] = '-'.join([h['version'], h['release']])
-
-    return pkgs
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    ret = {}
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if not '_|-' in line:
+            continue
+        name, version, rel = line.split('_|-')
+        pkgver = version
+        if rel:
+            pkgver += '-{0}'.format(rel)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    if args:
+        pkgs = ret
+        ret = {}
+        for pkg in pkgs.keys():
+            if pkg in args:
+                ret[pkg] = pkgs[pkg]
+    return ret
 
 
 def refresh_db():
@@ -337,7 +327,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    a = yb.downgradeLocal(target)
+                    yb.downgradeLocal(target)
             else:
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
@@ -346,7 +336,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.debug('Added {0} transactions'.format(len(a)))
                 if len(a) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying downgrade')
-                    a = yb.downgrade(pattern=target)
+                    yb.downgrade(pattern=target)
         except Exception:
             log.exception('Package "{0}" failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved by
@@ -400,6 +390,28 @@ def upgrade():
 
     new = list_pkgs()
     return _compare_versions(old, new)
+
+
+def _compare_versions(old, new):
+    '''
+    Returns a dict that that displays old and new versions for a package after
+    install/upgrade of package.
+    '''
+    pkgs = {}
+    for npkg in new:
+        if npkg in old:
+            if old[npkg] == new[npkg]:
+                # no change in the package
+                continue
+            else:
+                # the package was here before and the version has changed
+                pkgs[npkg] = {'old': old[npkg],
+                              'new': new[npkg]}
+        else:
+            # the package is freshly installed
+            pkgs[npkg] = {'old': '',
+                          'new': new[npkg]}
+    return pkgs
 
 
 def remove(pkgs):

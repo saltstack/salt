@@ -5,12 +5,12 @@ intended to handle text files.
 Salt-cp can be used to distribute configuration files
 '''
 
-# Import python modules
+# Import python libs
 import os
 import sys
 import pprint
 
-# Import salt modules
+# Import salt libs
 import salt.client
 
 
@@ -29,7 +29,6 @@ class SaltCP(object):
             err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        data = ''
         with salt.utils.fopen(fn_, 'r') as fp_:
             data = fp_.read()
         return {fn_: data}

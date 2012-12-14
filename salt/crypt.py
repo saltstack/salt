@@ -11,9 +11,15 @@ import hmac
 import hashlib
 import logging
 
-# Import Cryptography libs
+# Import third party libs
 from M2Crypto import RSA
 from Crypto.Cipher import AES
+try:
+    import win32api
+    import win32con
+    is_windows = True
+except ImportError:
+    is_windows = False
 
 # Import salt utils
 import salt.utils
@@ -37,9 +43,7 @@ def clean_old_key(rsa_path):
     except (IOError, OSError):
         pass
     # Set write permission for minion.pem file - reverted after saving the key
-    if sys.platform == 'win32':
-        import win32api
-        import win32con
+    if is_windows:
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
     try:
         mkey.save_key(rsa_path, None)
@@ -49,9 +53,7 @@ def clean_old_key(rsa_path):
                  'releases may not be able to use this key').format(rsa_path)
                 )
     # Set read-only permission for minion.pem file
-    if sys.platform == 'win32':
-        import win32api
-        import win32con
+    if is_windows:
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
     return mkey
 
@@ -89,7 +91,6 @@ class MasterKeys(dict):
         '''
         Returns a key objects for the master
         '''
-        key = None
         if os.path.exists(self.rsa_path):
             try:
                 key = RSA.load_key(self.rsa_path)
@@ -143,7 +144,6 @@ class Auth(object):
         '''
         Returns a key objects for the minion
         '''
-        key = None
         # Make sure all key parent directories are accessible
         user = self.opts.get('user', 'root')
         salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
@@ -229,9 +229,6 @@ class Auth(object):
         else:
             salt.utils.fopen(m_pub_fn, 'w+').write(master_pub)
             return True
-        log.error('The salt master has failed verification for an unknown '
-                  'reason, verify your salt keys')
-        return False
 
     def sign_in(self):
         '''

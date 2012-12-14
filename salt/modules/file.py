@@ -291,9 +291,9 @@ def get_sum(path, form='md5'):
             return getattr(hashlib, form)(f.read()).hexdigest()
     except (IOError, OSError) as e:
         return 'File Error: {0}'.format(e)
-    except AttributeError as e:
+    except AttributeError:
         return 'Hash {0} not supported'.format(form)
-    except NameError as e:
+    except NameError:
         return 'Hashlib unavailable - please fix your python install'
     except Exception as e:
         return str(e)
@@ -748,7 +748,7 @@ def touch(name, atime=None, mtime=None):
             times = (atime, mtime)
         os.utime(name, times)
 
-    except TypeError as exc:
+    except TypeError:
         raise SaltInvocationError('atime and mtime must be integers')
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
@@ -981,7 +981,6 @@ def get_managed(
 
         if data['result']:
             sfn = data['data']
-            hsum = ''
             with salt.utils.fopen(sfn, 'r') as source:
                 hsum = hashlib.md5(source.read()).hexdigest()
             source_sum = {'hash_type': 'md5',
@@ -1135,7 +1134,6 @@ def check_managed(
     '''
     Check to see what changes need to be made for a file
     '''
-    changes = {}
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 
@@ -1408,153 +1406,6 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' is in the correct state'
         __clean_tmp(sfn)
         return ret
-    # Check changes if the target file exists
-    if os.path.isfile(name):
-        # Only test the checksums on files with managed contents
-        if source:
-            name_sum = ''
-            hash_func = getattr(hashlib, source_sum['hash_type'])
-            with salt.utils.fopen(name, 'rb') as namefile:
-                name_sum = hash_func(namefile.read()).hexdigest()
-
-        # Check if file needs to be replaced
-        if source and source_sum['hsum'] != name_sum:
-            if not sfn:
-                sfn = __salt__['cp.cache_file'](source, env)
-            if not sfn:
-                return _error(
-                    ret, 'Source file {0} not found'.format(source))
-            # If the downloaded file came from a non salt server source verify
-            # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
-                with salt.utils.fopen(sfn, 'rb') as dlfile:
-                    dl_sum = hash_func(dlfile.read()).hexdigest()
-                if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(
-                                              name,
-                                              source_sum['hsum'],
-                                              dl_sum
-                                              )
-                    ret['result'] = False
-                    return ret
-
-            # Check to see if the files are bins
-            if _is_bin(sfn) or _is_bin(name):
-                ret['changes']['diff'] = 'Replace binary file'
-            else:
-                with nested(salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(name, 'rb')) as (src, name_):
-                    slines = src.readlines()
-                    nlines = name_.readlines()
-                # Print a diff equivalent to diff -u old new
-                    ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(nlines,
-                                                                    slines)))
-            # Pre requisites are met, and the file needs to be replaced, do it
-            try:
-                salt.utils.copyfile(
-                        sfn,
-                        name,
-                        __salt__['config.backup_mode'](backup),
-                        __opts__['cachedir'])
-            except IOError:
-                __clean_tmp(sfn)
-                return _error(
-                    ret, 'Failed to commit change, permission error')
-
-        ret, perms = check_perms(name, ret, user, group, mode)
-
-        if ret['changes']:
-            ret['comment'] = 'File {0} updated'.format(name)
-
-        elif not ret['changes'] and ret['result']:
-            ret['comment'] = 'File {0} is in the correct state'.format(name)
-        __clean_tmp(sfn)
-        return ret
-    else:
-        # Only set the diff if the file contents is managed
-        if source:
-            # It is a new file, set the diff accordingly
-            ret['changes']['diff'] = 'New file'
-            # Apply the new file
-            if not sfn:
-                sfn = __salt__['cp.cache_file'](source, env)
-            if not sfn:
-                return ret.error(
-                    ret, 'Source file {0} not found'.format(source))
-            # If the downloaded file came from a non salt server source verify
-            # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
-                hash_func = getattr(hashlib, source_sum['hash_type'])
-                with salt.utils.fopen(sfn, 'rb') as dlfile:
-                    dl_sum = hash_func(dlfile.read()).hexdigest()
-                if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(
-                                              name,
-                                              source_sum['hsum'],
-                                              dl_sum
-                                              )
-                    ret['result'] = False
-                    return ret
-
-            if not os.path.isdir(os.path.dirname(name)):
-                if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
-                else:
-                    __clean_tmp(sfn)
-                    return _error(ret, 'Parent directory not present')
-        else:
-            if not os.path.isdir(os.path.dirname(name)):
-                if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
-                else:
-                    __clean_tmp(sfn)
-                    return _error(ret, 'Parent directory not present')
-
-            # Create the file, user rw-only if mode will be set to prevent
-            # a small security race problem before the permissions are set
-            if mode:
-                current_umask = os.umask(63)
-
-            # Create a new file when test is False and source is None
-            if not __opts__['test']:
-                if touch(name):
-                    ret['changes']['new'] = 'file {0} created'.format(name)
-                    ret['comment'] = 'Empty file'
-                else:
-                    return _error(
-                        ret, 'Empty file {0} not created'.format(name)
-                    )
-
-            if mode:
-                os.umask(current_umask)
-
-        # Now copy the file contents if there is a source file
-        if sfn:
-            salt.utils.copyfile(
-                    sfn,
-                    name,
-                    __salt__['config.backup_mode'](backup),
-                    __opts__['cachedir'])
-            __clean_tmp(sfn)
-
-        # Check and set the permissions if necessary
-        ret, perms = check_perms(name, ret, user, group, mode)
-
-        if not ret['comment']:
-            ret['comment'] = 'File ' + name + ' updated'
-
-        if __opts__['test']:
-            ret['comment'] = 'File ' + name + ' not updated'
-        elif not ret['changes'] and ret['result']:
-            ret['comment'] = 'File ' + name + ' is in the correct state'
-        __clean_tmp(sfn)
-        return ret
-
 
 def makedirs(path, user=None, group=None, mode=None):
     '''

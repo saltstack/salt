@@ -11,7 +11,7 @@ A state module to manage system installed python packages
         - version: 3.0.1
 '''
 
-# Import Salt libs
+# Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 

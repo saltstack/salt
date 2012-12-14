@@ -32,6 +32,7 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 '''
+
 # Import python libs
 import os
 from salt.utils import mkstemp
@@ -44,11 +45,11 @@ def _check_cron(cmd, user, minute, hour, dom, month, dow):
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if not minute == cron['min'] or \
-                    not hour == cron['hour'] or \
-                    not dom == cron['daymonth'] or \
-                    not month == cron['month'] or \
-                    not dow == cron['dayweek']:
+            if not str(minute) == cron['min'] or \
+                    not str(hour) == cron['hour'] or \
+                    not str(dom) == cron['daymonth'] or \
+                    not str(month) == cron['month'] or \
+                    not str(dow) == cron['dayweek']:
                 return 'update'
             return 'present'
     return 'absent'

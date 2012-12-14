@@ -59,12 +59,11 @@ verbose : True
     Get verbose output
 '''
 
-# Import Python Libs
-
+# Import python Libs
 import json
 import os
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 from salt._compat import string_types, url_open
 
@@ -364,11 +363,9 @@ def _pre_index_check(handler, host=None, core_name=None):
         err = [
             'solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
-    '''
-    solr can run out of memory quickly if the dih is processing multiple
-    handlers at the same time, so if it's a multicore setup require a
-    core_name param.
-    '''
+    #solr can run out of memory quickly if the dih is processing multiple
+    #handlers at the same time, so if it's a multicore setup require a
+    #core_name param.
     if _get_none_or_value(core_name) is None and _check_for_cores():
         errors = ['solr.full_import is not safe to multiple handlers at once']
         return _get_return_dict(False, errors=errors)
@@ -640,12 +637,10 @@ def is_replication_enabled(host=None, core_name=None):
             else:
                 enabled = slave['masterDetails']['master'][
                     'replicationEnabled']
-                '''
-                if replication is turned off on the master, or polling is
-                disabled we need to return false. These may not not errors,
-                but the purpose of this call is to check to see if the slaves
-                can replicate.
-                '''
+                #if replication is turned off on the master, or polling is
+                #disabled we need to return false. These may not not errors,
+                #but the purpose of this call is to check to see if the slaves
+                #can replicate.
             if enabled == 'false':
                 resp['warnings'].append("Replication is disabled on master.")
                 success = False

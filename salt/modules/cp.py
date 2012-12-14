@@ -1,6 +1,7 @@
 '''
 Minion side functions for salt-cp
 '''
+
 # Import python libs
 import os
 import logging
@@ -22,7 +23,6 @@ def recv(files, dest):
     '''
     ret = {}
     for path, data in files.items():
-        final = ''
         if os.path.basename(path) == os.path.basename(dest)\
                 and not os.path.isdir(dest):
             final = dest

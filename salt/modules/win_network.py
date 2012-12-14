@@ -2,9 +2,10 @@
 Module for gathering and managing network information
 '''
 
-# Import Salt libs
+# Import python libs
 import re
-# Import Salt libs
+
+# Import salt libs
 from salt.utils.socket_util import sanitize_host
 
 __outputter__ = {

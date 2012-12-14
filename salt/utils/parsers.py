@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
-salt.utils.parsers
-~~~~~~~~~~~~~~~~~~
+    salt.utils.parsers
+    ~~~~~~~~~~~~~~~~~~
 
-:copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-:license: Apache 2.0, see LICENSE for more details.
+    This is were all the black magic happens on all of salt's cli tools.
+
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
+    :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
 import os
 import sys
 import logging
 import optparse
 import traceback
 from functools import partial
+
+# Import salt libs
 from salt import config, loader, log, version
 
 
@@ -600,6 +606,15 @@ class OutputOptionsMixIn(object):
             )
         )
         group.add_option(
+            '--out-indent', '--output-indent',
+            dest='output_indent',
+            default=None,
+            type=int,
+            help=('Print the output indented by the provided value in spaces. '
+                  'Negative values disables indentation. Only applicable in '
+                  'outputters that support indentation.')
+        )
+        group.add_option(
             '--no-color',
             default=False,
             action='store_true',
@@ -612,17 +627,7 @@ class OutputOptionsMixIn(object):
                 if getattr(self.options, opt.dest, default) is False:
                     return
 
-                # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
-                if version.__version_info__ >= (0, 10, 7):
-                    self.error(
-                        'The option {0} is deprecated. You must now use '
-                        '\'--out {1}\' instead.'.format(
-                            opt.get_opt_string(),
-                            opt.dest.split('_', 1)[0]
-                        )
-                    )
-
-                if opt.dest != 'out':
+                if opt.dest not in ('out', 'output_indent', 'no_color'):
                     msg = (
                         'The option {0} is deprecated. Please consider using '
                         '\'--out {1}\' instead.'.format(
@@ -630,7 +635,10 @@ class OutputOptionsMixIn(object):
                             opt.dest.split('_', 1)[0]
                         )
                     )
-                    if log.is_console_configured():
+                    if version.__version_info__ >= (0, 10, 7):
+                        # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
+                        self.error(msg)
+                    elif log.is_console_configured():
                         logging.getLogger(__name__).warning(msg)
                     else:
                         sys.stdout.write('WARNING: {0}\n'.format(msg))
@@ -654,8 +662,8 @@ class OutputOptionsMixIn(object):
         )
         if len(group_options_selected) > 1:
             self.error(
-                "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join([
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format('/'.join([
                     option.get_opt_string() for
                     option in group_options_selected
                 ]))
@@ -673,7 +681,7 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    description = "TODO: explain what salt-master is"
+    description = "The Salt master, used to control the Salt minions."
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path('master'))
@@ -683,7 +691,7 @@ class MinionOptionParser(MasterOptionParser):
 
     __metaclass__ = OptionParserMeta
 
-    description = "TODO: explain what salt-minion is"
+    description = "The Salt minion, receives commands from a remote Salt master."
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path('minion'))
@@ -863,9 +871,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
     __metaclass__ = OptionParserMeta
     _skip_console_logging_config_ = True
 
-    description = "XXX: Add salt-key description"
+    description = 'Salt key is used to manage Salt authentication keys'
 
-    usage = "%prog [options]"
+    usage = '%prog [options]'
 
     def _mixin_setup(self):
 
@@ -1046,11 +1054,12 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                            OutputOptionsWithTextMixIn):
     __metaclass__ = OptionParserMeta
 
-    _default_logging_level_ = "info"
+    _default_logging_level_ = 'info'
 
-    description = "XXX: Add salt-call description"
+    description = ('Salt call is used to execute module functions locally '
+                   'on a minion')
 
-    usage = "%prog [options] <function> [arguments]"
+    usage = '%prog [options] <function> [arguments]'
 
     def _mixin_setup(self):
         self.add_option(

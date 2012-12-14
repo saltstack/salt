@@ -2,6 +2,7 @@
 Module for managing ext2/3/4 file systems
 '''
 
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)
@@ -156,7 +157,6 @@ def tune(device, **kwargs):
                  'journal': 'j',
                  'journal_opts': 'J',
                  'label': 'L',
-                 'reserved': 'm',
                  'last_dir': 'M',
                  'opts': 'o',
                  'feature': 'O',
@@ -216,7 +216,6 @@ def dump(device, args=None):
     ret = {'attributes': {}, 'blocks': {}}
     out = __salt__['cmd.run'](cmd).splitlines()
     mode = 'opts'
-    blkgrp = None
     group = None
     for line in out:
         if not line:

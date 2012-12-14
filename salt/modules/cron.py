@@ -23,6 +23,8 @@ def _render_tab(lst):
     if len(ret):
         if not ret[-1] == TAG:
             ret.append(TAG)
+    else:
+        ret.append(TAG)
     for env in lst['env']:
         if (env['value'] is None) or (env['value'] == ""):
             ret.append('{0}=""\n'.format(env['name']))
@@ -217,12 +219,6 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
 
         salt '*' cron.rm_job root \* \* \* \* 1 /usr/local/weekly
     '''
-    # Scrub the types
-    minute = str(minute)
-    hour = str(hour)
-    dom = str(dom)
-    month = str(month)
-    dow = str(dow)
     lst = list_tab(user)
     ret = 'absent'
     rm_ = None

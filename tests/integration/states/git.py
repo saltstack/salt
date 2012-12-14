@@ -6,7 +6,7 @@ import shutil
 import integration
 
 
-class GitTest(integration.ModuleCase):
+class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate the git state
     '''
@@ -24,9 +24,8 @@ class GitTest(integration.ModuleCase):
                 target=name,
                 submodules=True
             )
+            self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-            result = self.state_result(ret)
-            self.assertTrue(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -43,9 +42,8 @@ class GitTest(integration.ModuleCase):
                 target=name,
                 submodules=True
             )
+            self.assertSaltFalseReturn(ret)
             self.assertFalse(os.path.isdir(os.path.join(name, '.git')))
-            result = self.state_result(ret)
-            self.assertFalse(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -64,9 +62,8 @@ class GitTest(integration.ModuleCase):
                 target=name,
                 submodules=True
             )
+            self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
-            result = self.state_result(ret)
-            self.assertTrue(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -82,6 +79,7 @@ class GitTest(integration.ModuleCase):
                 target=name,
                 submodules=True
             )
+            self.assertSaltTrueReturn(ret)
             self.assertTrue(
                 # with git 1.7.9.5, it's not a directory, it's a file with the
                 # contents:
@@ -96,8 +94,6 @@ class GitTest(integration.ModuleCase):
                     )
                 )
             )
-            result = self.state_result(ret)
-            self.assertTrue(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -112,9 +108,8 @@ class GitTest(integration.ModuleCase):
                 name=name,
                 bare=True
             )
+            self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
-            result = self.state_result(ret)
-            self.assertTrue(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -134,9 +129,8 @@ class GitTest(integration.ModuleCase):
                 name=name,
                 bare=True
             )
+            self.assertSaltFalseReturn(ret)
             self.assertFalse(os.path.isfile(os.path.join(name, 'HEAD')))
-            result = self.state_result(ret)
-            self.assertFalse(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -153,9 +147,8 @@ class GitTest(integration.ModuleCase):
                 name=name,
                 bare=True
             )
+            self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
-            result = self.state_result(ret)
-            self.assertTrue(result)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 

@@ -8,7 +8,7 @@ data
 # Import python libs
 import os
 
-# Import Salt libs
+# Import salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 

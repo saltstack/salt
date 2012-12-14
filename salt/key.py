@@ -3,11 +3,12 @@ The Salt Key backend api and interface used by the CLI. The Key class can be
 used to manage salt keys directly without interfacing with the cli.
 '''
 
-# Import python modules
+# Import python libs
 import os
 import shutil
 import fnmatch
-# Import salt modules
+
+# Import salt libs
 import salt.crypt
 import salt.utils
 import salt.utils.event
@@ -375,6 +376,10 @@ class Key(object):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                             'act': 'delete',
+                             'id': key}
+                    self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
         return self.list_keys()
@@ -387,6 +392,10 @@ class Key(object):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                             'act': 'delete',
+                             'id': key}
+                    self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
         return self.list_keys()

@@ -14,7 +14,7 @@ class RabbitModuleTest(integration.ModuleCase):
         if not ret:
             self.skipTest('RabbitMQ not installed')
         if os.geteuid() != 0:
-            self.skipTest('You must be this root to run this test')
+            self.skipTest('You must be root to run this test')
 
     def test_user_exists(self):
         '''

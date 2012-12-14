@@ -2,7 +2,9 @@
 Wheel system wrapper for key system
 '''
 
+# Import salt libs
 import salt.key
+
 
 def list_all():
     '''

@@ -15,6 +15,7 @@ import os.path
 import hashlib
 import logging
 
+# Import third party libs
 try:
     import win32security
     import ntsecuritycon as con
@@ -260,9 +261,9 @@ def get_sum(path, form='md5'):
         ).hexdigest()
     except (IOError, OSError) as e:
         return 'File Error: {0}'.format(e)
-    except AttributeError as e:
+    except AttributeError:
         return 'Hash {0} not supported'.format(form)
-    except NameError as e:
+    except NameError:
         return 'Hashlib unavailable - please fix your python install'
     except Exception as e:
         return str(e)

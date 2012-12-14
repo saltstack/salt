@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
+'''
     tests.unit.utils.path_join_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
-"""
+'''
 
+# Import python libs
 import os
 import sys
 import posixpath
@@ -19,6 +21,7 @@ if __name__ == "__main__":
         0, os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     )
 
+# Import salt libs
 from saltunittest import TestCase, TextTestRunner
 from salt.utils import path_join
 

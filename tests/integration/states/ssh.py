@@ -11,7 +11,8 @@ GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 GITHUB_IP = '207.97.227.239'
 
 
-class SSHKnownHostsStateTest(integration.ModuleCase):
+class SSHKnownHostsStateTest(integration.ModuleCase,
+                             integration.SaltReturnAssertsMixIn):
     '''
     Validate the ssh state
     '''
@@ -24,51 +25,79 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         '''
         ssh_known_hosts.present
         '''
-        kwargs = {'name': 'github.com',
-                  'user': 'root',
-                  'fingerprint': GITHUB_FINGERPRINT,
-                  'config': KNOWN_HOSTS
+        kwargs = {
+            'name': 'github.com',
+            'user': 'root',
+            'fingerprint': GITHUB_FINGERPRINT,
+            'config': KNOWN_HOSTS
         }
         # test first
-        _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['result'], None, ret)
+        ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
+        self.assertSaltNoneReturn(ret)
+
         # save once, new key appears
-        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['changes']['new']['fingerprint'],
-                         GITHUB_FINGERPRINT, ret)
+        ret = self.run_state('ssh_known_hosts.present', **kwargs)
+        try:
+            self.assertSaltTrueReturn(ret)
+        except AssertionError, err:
+            try:
+                self.assertInSaltComment(
+                    ret, 'Unable to receive remote host key'
+                )
+                self.skipTest('Unable to receive remote host key')
+            except AssertionError:
+                # raise initial assertion error
+                raise err
+
+        self.assertSaltStateChangesEqual(
+            ret, GITHUB_FINGERPRINT, keys=('new', 'fingerprint')
+        )
+
         # save twice, no changes
-        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['changes'], {}, ret)
+        ret = self.run_state('ssh_known_hosts.present', **kwargs)
+        self.assertSaltStateChangesEqual(ret, {})
+
         # test again, nothing is about to be changed
-        _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['result'], None, ret)
+        ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
+        self.assertSaltNoneReturn(ret)
+
         # then add a record for IP address
-        _ret = self.run_state('ssh_known_hosts.present',
-                              **dict(kwargs, name=GITHUB_IP))
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['changes']['new']['fingerprint'],
-                         GITHUB_FINGERPRINT, ret)
+        ret = self.run_state('ssh_known_hosts.present',
+                             **dict(kwargs, name=GITHUB_IP))
+        self.assertSaltStateChangesEqual(
+            ret, GITHUB_FINGERPRINT, keys=('new', 'fingerprint')
+        )
+
         # record for every host must be available
-        ret = self.run_function('ssh.get_known_host', ['root', 'github.com'],
-                                config=KNOWN_HOSTS)
-        self.assertFalse(ret is None)
-        ret = self.run_function('ssh.get_known_host', ['root', GITHUB_IP],
-                                config=KNOWN_HOSTS)
-        self.assertFalse(ret is None)
+        ret = self.run_function(
+            'ssh.get_known_host', ['root', 'github.com'], config=KNOWN_HOSTS
+        )
+        try:
+            self.assertNotIn(ret, ('', None))
+        except AssertionError:
+            raise AssertionError(
+                'Salt return {0!r} is in (\'\', None).'.format(ret)
+            )
+        ret = self.run_function(
+            'ssh.get_known_host', ['root', GITHUB_IP], config=KNOWN_HOSTS
+        )
+        try:
+            self.assertNotIn(ret, ('', None, {}))
+        except AssertionError:
+            raise AssertionError(
+                'Salt return {0!r} is in (\'\', None,'.format(ret) + ' {})'
+            )
 
     def test_present_fail(self):
         # save something wrong
-        _ret = self.run_state('ssh_known_hosts.present',
-                       name='github.com',
-                       user='root',
-                       fingerprint='aa:bb:cc:dd',
-                       config=KNOWN_HOSTS)
-        ret = list(_ret.values())[0]
-        self.assertFalse(ret['result'], ret)
+        ret = self.run_state(
+            'ssh_known_hosts.present',
+            name='github.com',
+            user='root',
+            fingerprint='aa:bb:cc:dd',
+            config=KNOWN_HOSTS
+        )
+        self.assertSaltFalseReturn(ret)
 
     def test_absent(self):
         '''
@@ -77,26 +106,30 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         known_hosts = os.path.join(integration.FILES, 'ssh', 'known_hosts')
         shutil.copyfile(known_hosts, KNOWN_HOSTS)
         if not os.path.isfile(KNOWN_HOSTS):
-            self.skipTest("Unable to copy {0} to {1}".format(known_hosts, KNOWN_HOSTS))
+            self.skipTest(
+                'Unable to copy {0} to {1}'.format(
+                    known_hosts, KNOWN_HOSTS
+                )
+            )
 
         kwargs = {'name': 'github.com', 'user': 'root', 'config': KNOWN_HOSTS}
         # test first
-        _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['result'], None, ret)
+        ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
+        self.assertSaltNoneReturn(ret)
+
         # remove once, the key is gone
-        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['changes']['old']['fingerprint'],
-                         GITHUB_FINGERPRINT, ret)
+        ret = self.run_state('ssh_known_hosts.absent', **kwargs)
+        self.assertSaltStateChangesEqual(
+            ret, GITHUB_FINGERPRINT, keys=('old', 'fingerprint')
+        )
+
         # remove twice, nothing has changed
-        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['changes'], {}, ret)
+        ret = self.run_state('ssh_known_hosts.absent', **kwargs)
+        self.assertSaltStateChangesEqual(ret, {})
+
         # test again
-        _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
-        ret = list(_ret.values())[0]
-        self.assertEqual(ret['result'], None, ret)
+        ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
+        self.assertSaltNoneReturn(ret)
 
 
 if __name__ == '__main__':

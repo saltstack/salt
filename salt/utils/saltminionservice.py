@@ -1,8 +1,13 @@
+# Import salt libs
 from salt.utils.winservice import Service, instart
+import salt
+
+# Import third party libs
 import win32serviceutil
 import win32service
 import winerror
-import salt
+
+# Import python libs
 import sys
 
 

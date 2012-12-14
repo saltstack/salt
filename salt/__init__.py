@@ -135,12 +135,15 @@ class Syndic(parsers.SyndicOptionParser):
         try:
             if self.config['verify_env']:
                 verify_env([
-                        self.config['pki_dir'], self.config['cachedir'],
-                        os.path.dirname(self.config['log_file']),
-                    ],
-                    self.config['user'],
-                    permissive=self.config['permissive_pki_access'],
-                    pki_dir=self.config['pki_dir'],
+                    self.config['pki_dir'],
+                    self.config['cachedir'],
+                    self.config['sock_dir'],
+                    self.config['extension_modules'],
+                    os.path.dirname(self.config['log_file']),
+                ],
+                self.config['user'],
+                permissive=self.config['permissive_pki_access'],
+                pki_dir=self.config['pki_dir'],
                 )
         except OSError as err:
             sys.exit(err.errno)

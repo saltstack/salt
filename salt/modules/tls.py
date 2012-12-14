@@ -10,7 +10,7 @@ or use Self-Signed certificates.
         ca.cert_base_path: '/etc/pki'
 '''
 
-# Import Python libs
+# Import python libs
 import os
 import time
 import logging
@@ -23,7 +23,7 @@ try:
 except ImportError:
     pass
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 

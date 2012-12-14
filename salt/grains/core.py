@@ -9,10 +9,10 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
 
-# This needs some refactoring, I made it "as fast as I could" and could be a
-# lot clearer, so far it is spaghetti code
-# Import python modules
+# TODO: This needs some refactoring, I made it "as fast as I could" and could
+# be a lot clearer, so far it is spaghetti code
 
+# Import python libs
 import os
 import socket
 import sys
@@ -27,12 +27,14 @@ from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'enterprise', 'ovs', 'system')
 
+# Import salt libs
 import salt.log
 import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet
@@ -96,6 +98,23 @@ def _linux_cpudata():
                     grains['cpu_model'] = val
                 elif key == 'flags':
                     grains['cpu_flags'] = val.split()
+                # ARM support - /proc/cpuinfo
+                #
+                # Processor       : ARMv6-compatible processor rev 7 (v6l)
+                # BogoMIPS        : 697.95
+                # Features        : swp half thumb fastmult vfp edsp java tls
+                # CPU implementer : 0x41
+                # CPU architecture: 7
+                # CPU variant     : 0x0
+                # CPU part        : 0xb76
+                # CPU revision    : 7
+                #
+                # Hardware        : BCM2708
+                # Revision        : 0002
+                # Serial          : 00000000XXXXXXXX
+                elif key == 'Processor':
+                    grains['cpu_model'] = val.split('-')[0]
+                    grains['num_cpus'] = 1
     if 'num_cpus' not in grains:
         grains['num_cpus'] = 0
     if 'cpu_model' not in grains:
@@ -129,6 +148,23 @@ def _bsd_cpudata(osdata):
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
     grains['cpu_flags'] = []
+    if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
+        # TODO: at least it needs to be tested for BSD other then FreeBSD
+        with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
+            cpu_here = False
+            for line in _fp:
+                if line.startswith('CPU: '):
+                    cpu_here = True  # starts cpu descr
+                    continue
+                if cpu_here:
+                    if not line.startswith(' '):
+                        break  # game over
+                    if 'Features' in line:
+                        start = line.find('<')
+                        end = line.find('>')
+                        if start > 0 and end > 0:
+                            f = line[start + 1:end].split(',')
+                            grains['cpu_flags'].extend(f)
     try:
         grains['num_cpus'] = int(grains['num_cpus'])
     except ValueError:
@@ -145,12 +181,11 @@ def _sunos_cpudata(osdata):
     #   cpuarch
     #   num_cpus
     #   cpu_model
-    grains = {'num_cpus': 0}
+    grains = {}
 
     grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
-    for line in __salt__['cmd.run'](psrinfo).splitlines():
-        grains['num_cpus'] += 1
+    grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
     kstat_info = 'kstat -p cpu_info:*:*:implementation'
     grains['cpu_model'] = __salt__['cmd.run'](kstat_info).split()[1].strip()
     return grains
@@ -415,6 +450,7 @@ _REPLACE_LINUX_RE = re.compile(r'linux', re.IGNORECASE)
 _OS_NAME_MAP = {
     'redhatente': 'RedHat',
     'gentoobase': 'Gentoo',
+    'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
 }
@@ -441,6 +477,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
+    'Arch ARM': 'Arch',
 }
 
 
@@ -497,6 +534,25 @@ def os_data():
                         if match:
                             # Adds: lsb_distrib_{id,release,codename,description}
                             grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+            elif os.path.isfile('/etc/os-release'):
+                # Arch ARM linux
+                with salt.utils.fopen('/etc/os-release') as f:
+                    # Imitate lsb-release
+                    for line in f:
+                        # NAME="Arch Linux ARM"
+                        # ID=archarm
+                        # ID_LIKE=arch
+                        # PRETTY_NAME="Arch Linux ARM"
+                        # ANSI_COLOR="0;36"
+                        # HOME_URL="http://archlinuxarm.org/"
+                        # SUPPORT_URL="https://archlinuxarm.org/forum"
+                        # BUG_REPORT_URL="https://github.com/archlinuxarm/PKGBUILDs/issues"
+                        regex = re.compile('^([\w]+)=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                        match = regex.match(line.rstrip('\n'))
+                        if match:
+                            name, value = match.groups()
+                            if name.lower() == 'name':
+                                grains['lsb_distrib_id'] = value.strip()
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
                                               supported_dists=_supported_dists)

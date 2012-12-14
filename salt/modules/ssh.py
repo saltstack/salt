@@ -1,6 +1,7 @@
 '''
 Manage client ssh components
 '''
+
 # Import python libs
 import os
 import re
@@ -160,7 +161,7 @@ def _validate_keys(key_file):
                             'comment': comment,
                             'options': options,
                             'fingerprint': fingerprint}
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         msg = 'Problem reading ssh key file {0}'
         raise CommandExecutionError(msg.format(key_file))
 
@@ -360,7 +361,6 @@ def set_auth_key_from_file(
         msg = 'Failed to pull key file from salt file server'
         raise CommandExecutionError(msg)
 
-    newkey = {}
     rval = ''
     newkey = _validate_keys(lfile)
     for k in newkey:
@@ -593,7 +593,7 @@ def set_known_host(user, hostname,
         return {'status': 'exists', 'key': stored_host}
 
     remote_host = recv_known_host(user, hostname, enc=enc, port=port,
-                                  hash_hostname=True)
+                                  hash_hostname=hash_hostname)
     if not remote_host:
         return {'status': 'error',
                 'error': 'Unable to receive remote host key'}
@@ -613,15 +613,9 @@ def set_known_host(user, hostname,
     try:
         with salt.utils.fopen(full, 'a') as fd:
             fd.write(line)
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         raise CommandExecutionError("Couldn't append to known hosts file")
 
     if os.geteuid() == 0:
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
-
-    # TODO: The lines below this are dead code, fix the above return and make these work
-    status = check_known_host(user, hostname, fingerprint=fingerprint,
-                                               config=config)
-    if status == 'exists':
-        return None

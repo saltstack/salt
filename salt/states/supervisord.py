@@ -11,6 +11,8 @@ Interaction with the Supervisor daemon.
         - require:
             - pkg: supervisor
 '''
+
+# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

@@ -1,6 +1,7 @@
 '''
 Manage events
 '''
+
 # Events are all fired off via a zeromq pub socket, and listened to with
 # local subscribers. The event messages are comprised of two parts delimited
 # at the 20 char point. The first 20 characters are used for the zeromq
@@ -10,9 +11,8 @@ Manage events
 # extracted. All of the formatting is self contained in the event module, so
 # we should be able to modify the structure in the future since the same module
 # to read is the same module to fire off events.
-#
-#
-# Import Python libs
+
+# Import python libs
 import os
 import fnmatch
 import glob
@@ -22,10 +22,10 @@ import logging
 import multiprocessing
 from multiprocessing import Process
 
-# Import Third Party libs
+# Import third party libs
 import zmq
 
-# Import Salt libs
+# Import salt libs
 import salt.payload
 import salt.loader
 import salt.state
@@ -237,10 +237,10 @@ class EventPublisher(Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-        finally:
-        #except KeyboardInterrupt:
+        except KeyboardInterrupt:
             self.epub_sock.close()
             self.epull_sock.close()
+        finally:
             self.context.term()
 
 

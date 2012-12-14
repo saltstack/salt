@@ -1,11 +1,12 @@
 '''
 Support for Debconf
 '''
-# Import Python libs
+
+# Import python libs
 import os
 import re
 
-# Import Salt libs
+# Import salt libs
 import salt.utils
 
 
@@ -68,9 +69,6 @@ def show(name):
 
         salt '*' debconf.show <package name>
     '''
-
-    result = None
-
     selections = get_selections()
 
     result = selections.get(name)

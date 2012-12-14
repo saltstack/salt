@@ -15,6 +15,7 @@ exists in "~/.ssh/known_hosts" file.
         - rev: develop
         - target: /tmp/salt
 '''
+
 import logging
 import os
 import shutil

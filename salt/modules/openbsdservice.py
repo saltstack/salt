@@ -1,9 +1,11 @@
 '''
 The service module for OpenBSD
 '''
-# Import Python libs
+
+# Import python libs
 import os
-# Import Salt libs
+
+# Import salt libs
 import salt.utils
 
 # XXX enable/disable support would be nice

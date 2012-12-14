@@ -6,7 +6,8 @@ service state via provider interface:
 
   - provider: daemontools
 '''
-# Import Python libs
+
+# Import python libs
 import os
 import re
 
@@ -15,6 +16,7 @@ __outputter__ = {
 }
 
 SERVICE_DIR = "/service"
+
 
 def _service_path(name):
     '''

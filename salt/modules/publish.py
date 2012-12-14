@@ -10,6 +10,7 @@ import salt.crypt
 import salt.payload
 from salt._compat import string_types, integer_types
 
+
 def _publish(
         tgt,
         fun,

@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-    tests.unit.utils.runtime_whitespace_regex
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''
+    tests.unit.utils.runtime_whitespace_regex_test
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
-"""
+'''
 
+# Import python libs
 import re
-from saltunittest import TestCase, TestLoader, TextTestRunner
 
+# Import salt libs
+from saltunittest import TestCase, TestLoader, TextTestRunner
 from salt.utils import build_whitepace_splited_regex
+
 
 DOUBLE_TXT = """\
 # set variable identifying the chroot you work in (used in the prompt below)

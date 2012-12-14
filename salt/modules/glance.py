@@ -12,6 +12,8 @@ Module for handling openstack glance calls.
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 '''
+
+# Import third party libs
 has_glance = False
 try:
     from glanceclient import client
@@ -19,6 +21,7 @@ try:
     has_glance = True
 except ImportError:
     pass
+
 
 def __virtual__():
     '''
@@ -176,7 +179,6 @@ def _item_list():
         salt '*' nova.item_list
     '''
     nt = _auth()
-    ret = {}
     ret = []
     for item in nt.items.list():
         ret.append(item.__dict__)
@@ -185,14 +187,11 @@ def _item_list():
         #    }
     return ret
 
-    '''
-    The following is a list of functions that need to be incorporated in the
-    nova module. This list should be updated as functions are added.
+#The following is a list of functions that need to be incorporated in the
+#nova module. This list should be updated as functions are added.
 
-    image-download      Download a specific image.
-    image-update        Update a specific image.
-    member-create       Share a specific image with a tenant.
-    member-delete       Remove a shared image from a tenant.
-    member-list         Describe sharing permissions by image or tenant.
-
-    '''
+#image-download      Download a specific image.
+#image-update        Update a specific image.
+#member-create       Share a specific image with a tenant.
+#member-delete       Remove a shared image from a tenant.
+#member-list         Describe sharing permissions by image or tenant.

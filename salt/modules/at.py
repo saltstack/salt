@@ -5,10 +5,12 @@ Also, a 'tag' feature has been added to more
 easily tag jobs.
 '''
 
+# Import python libs
 import re
 import time
 import datetime
 
+# Import salt libs
 import salt.utils
 
 __outputter__ = {
@@ -148,7 +150,6 @@ def atrm(*args):
         salt '*' at.atrm all
         salt '*' at.atrm all [tag]
     '''
-    opts = ''
 
     # Need to do this here also since we use atq()
     if not salt.utils.which('at'):
@@ -191,7 +192,6 @@ def at(*args, **kwargs):
         salt '*' at.at 12:05am '/sbin/reboot' tag=reboot
         salt '*' at.at '3:05am +3 days' 'bin/myscript' tag=nightly runas=jim
     '''
-    echo_cmd = ''
 
     if len(args) < 2:
         return {'jobs': []}

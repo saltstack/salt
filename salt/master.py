@@ -3,7 +3,7 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
-# Import python modules
+# Import python libs
 import os
 import re
 import time
@@ -21,16 +21,12 @@ import resource
 import subprocess
 import multiprocessing
 
-# Import zeromq
+# Import third party libs
 import zmq
-
-# Import Third Party Libs
 import yaml
-
-# RSA Support
 from M2Crypto import RSA
 
-# Import salt modules
+# Import salt libs
 import salt.crypt
 import salt.utils
 import salt.client
@@ -326,10 +322,10 @@ class Publisher(multiprocessing.Process):
                         continue
                     raise exc
 
-        #except KeyboardInterrupt:
-        finally:
+        except KeyboardInterrupt:
             pub_sock.close()
             pull_sock.close()
+        finally:
             context.term()
 
 
@@ -458,9 +454,9 @@ class MWorker(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-        finally:
-        #except KeyboardInterrupt:
+        except KeyboardInterrupt:
             socket.close()
+        finally:
             context.term()
 
     def _handle_payload(self, payload):
@@ -468,7 +464,6 @@ class MWorker(multiprocessing.Process):
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         '''
-        key = load = None
         try:
             key = payload['enc']
             load = payload['load']
@@ -549,7 +544,7 @@ class AESFuncs(object):
             return fnd
         for root in self.opts['file_roots'][env]:
             full = os.path.join(root, path)
-            if os.path.isfile(full):
+            if os.path.isfile(full) and not self.__is_file_ignored(full):
                 fnd['path'] = full
                 fnd['rel'] = path
                 return fnd
@@ -583,6 +578,25 @@ class AESFuncs(object):
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
                   .format(id_))
+        return False
+
+    def __is_file_ignored(self, fn):
+        '''
+        If file_ignore_regex or file_ignore_glob were given in config,
+        compare the given file path against all of them and return True
+        on the first match.
+        '''
+        if self.opts['file_ignore_regex']:
+            for r in self.opts['file_ignore_regex']:
+                if re.search(r, fn):
+                    log.debug('File matching file_ignore_regex. Skipping: {0}'.format(fn))
+                    return True
+
+        if self.opts['file_ignore_glob']:
+            for g in self.opts['file_ignore_glob']:
+                if fnmatch.fnmatch(fn, g):
+                    log.debug('File matching file_ignore_glob. Skipping: {0}'.format(fn))
+                    return True
         return False
 
     def _ext_nodes(self, load):
@@ -659,6 +673,8 @@ class AESFuncs(object):
         with salt.utils.fopen(fnd['path'], 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
+            #if not data:
+            #    ret.update(self._file_hash(load))
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
                 ret['gzip'] = gzip
@@ -689,18 +705,16 @@ class AESFuncs(object):
         ret = []
         if load['env'] not in self.opts['file_roots']:
             return ret
+
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path, followlinks=True):
                 for fn in files:
-                    ret.append(
-                        os.path.relpath(
-                            os.path.join(
-                                root,
-                                fn
-                                ),
-                            path
+                    rel_fn = os.path.relpath(
+                                os.path.join(root, fn),
+                                path
                             )
-                        )
+                    if not self.__is_file_ignored(rel_fn):
+                        ret.append(rel_fn)
         return ret
 
     def _file_list_emptydirs(self, load):
@@ -713,7 +727,9 @@ class AESFuncs(object):
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(os.path.relpath(root, path))
+                    rel_fn = os.path.relpath(root, path)
+                    if not self.__is_file_ignored(rel_fn):
+                        ret.append(rel_fn)
         return ret
 
     def _dir_list(self, load):
@@ -796,6 +812,10 @@ class AESFuncs(object):
                     self.opts['hash_type'])
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
+        if self.opts['master_ext_job_cache']:
+            fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
+            self.mminion.returners[fstr](load)
+            return
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
         jid_dir = salt.utils.jid_dir(
@@ -878,6 +898,8 @@ class AESFuncs(object):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
+            if 'out' in load:
+                ret['out'] = load['out']
             self._return(ret)
         if os.path.isfile(wtag):
             os.remove(wtag)

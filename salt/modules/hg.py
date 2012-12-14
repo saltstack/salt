@@ -2,12 +2,14 @@
 Support for the Mercurial SCM
 '''
 
+# Import salt libs
 from salt import utils
 
 __outputter__ = {
   'clone': 'txt',
   'revision': 'txt',
 }
+
 
 def _check_hg():
     utils.check_or_die('hg')

@@ -1,8 +1,10 @@
 # winservice.py
 
+# Import python libs
 from os.path import splitext, abspath
 from sys import modules
 
+# Import third party libs
 import win32serviceutil
 import win32service
 import win32event
