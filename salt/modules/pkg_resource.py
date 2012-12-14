@@ -101,7 +101,7 @@ def pack_pkgs(pkgs):
     '''
     if isinstance(pkgs, basestring):
         try:
-            sources = yaml.load(pkgs)
+            pkgs = yaml.load(pkgs)
         except yaml.parser.ParserError as e:
             log.error(e)
             return []
