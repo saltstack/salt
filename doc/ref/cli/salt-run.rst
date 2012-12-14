@@ -27,12 +27,6 @@ Options
 
     Print a usage message briefly summarizing these command-line options
 
-.. option:: -c CONFIG, --config=CONFIG
-
-    The location of the Salt master configuration file, the Salt master
-    settings are required to know where the connections are;
-    default=/etc/salt/master
-
 .. option:: --version
 
     Show program's version number and exit
