@@ -9,14 +9,14 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.10.5
+Version: 0.11.0
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     http://saltstack.org/
-Source0: https://github.com/downloads/saltstack/%{name}/%{name}-%{version}.tar.gz
+Source0: http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1: %{name}-master
 Source2: %{name}-syndic
 Source3: %{name}-minion
@@ -24,14 +24,15 @@ Source4: %{name}-master.service
 Source5: %{name}-syndic.service
 Source6: %{name}-minion.service
 Source7: README.fedora
-Patch0: 0002-Fix-systemd-service-status.patch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
 
 %ifarch %{ix86} x86_64
- Requires: dmidecode
+Requires: dmidecode
 %endif
+
+Requires: pciutils
 
 %if 0%{?with_python26}
 BuildRequires: python26-zmq
@@ -115,7 +116,6 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -q
-%patch0 -p1 -b .systemd
 
 %build
 
@@ -290,10 +290,17 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
-* Wed Dec 05 2012 Mike Chesnut <mchesnut@gmail.com> - 0.10.5-1
+* Fri Dec 14 2012 Clint Savage <herlo1@gmail.com> - 0.11.0-1
+- Moved to upstream release 0.11.0
+
+* Wed Dec 05 2012 Mike Chesnut <mchesnut@gmail.com> - 0.10.5-2
 - moved to upstream release 0.10.5
 - removing references to minion.template and master.template, as those files
   have been removed from the repo
+
+* Sun Nov 18 2012 Clint Savage <herlo1@gmail.com> - 0.10.5-1
+- Moved to upstream release 0.10.5
+- Added pciutils as Requires
 
 * Tue Oct 24 2012 Clint Savage <herlo1@gmail.com> - 0.10.4-1
 - Moved to upstream release 0.10.4
