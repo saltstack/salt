@@ -1,4 +1,4 @@
-.TH "SALT" "1" "November 15, 2012" "0.10.5" "Salt"
+.TH "SALT" "1" "December 14, 2012" "0.11.0" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -40,8 +40,6 @@ salt \-E \(aq.*\(aq [ options ] sys.doc cmd
 salt \-G \(aqos:Arch.*\(aq [ options ] test.ping
 .sp
 salt \-C \fI\%'G@os\fP:Arch.* and webserv* or \fI\%G@kernel\fP:FreeBSD\(aq [ options ] test.ping
-.sp
-salt \-Q test.ping
 .UNINDENT
 .UNINDENT
 .SH DESCRIPTION
@@ -96,6 +94,11 @@ Print the version of Salt that is running.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-versions\-report
+Show program\(aqs dependencies version number and exit
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-E, \-\-pcre
 The target expression will be interpreted as a pcre regular expression
 rather than a shell glob.
@@ -146,6 +149,13 @@ file.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-I, \-\-pillar
+Instead of using shell globs to evaluate the target use a pillar value to
+identify targets, the syntax for the target is the pillar key followed by
+a glob expression: "role:production*"
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-S, \-\-ipcidr
 Match based on Subnet (CIDR notation) or IPv4 address.
 .UNINDENT
@@ -168,20 +178,10 @@ but will be sent to the specified return system.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-Q, \-\-query
-The \-Q option is being deprecated and will be removed in version 0.9.9,
-Use the Salt jobs interface instead, for documentation on the Salt jobs
-interface execute the command "salt\-run \-d jobs"
-.sp
-Execute a salt command query, this can be used to find the results of a
-previous function call: \-Q test.echo\(aq)
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-c CONFIG, \-\-config=CONFIG
-The location of the Salt master configuration file, the Salt master
-settings are required to know where the connections are;
-default=/etc/salt/master
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory, this directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is /etc/salt.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -191,26 +191,27 @@ print out extra data like the job id.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-raw\-out
-Print the output from the salt command in raw Python
-form, this is suitable for re\-reading the output into
-an executing Python script with eval.
+.B \-d, \-\-doc, \-\-documentation
+Return the documentation for the module functions available on the minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-text\-out
-Print the output from the salt command in the same
-form the shell would.
+.B \-\-out
+Pass in an alternative outputter to display the return of data. This
+outputter can be any of the available outputters:
+grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
+Some outputters are formatted only for data returned from specific
+functions, for instance the grains outputter will not work for non grains
+data.
+If an outputter is used that does not support the data passed into it, then
+Salt will fall back on the pprint outputter and display the return data
+using the python pprint library.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-yaml\-out
-Print the output from the salt command in YAML.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-json\-out
-Print the output from the salt command in JSON.
+.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
+Print the output indented by the provided value in spaces. Negative values
+disables indentation. Only applicable in outputters that support indentation.
 .UNINDENT
 .INDENT 0.0
 .TP
