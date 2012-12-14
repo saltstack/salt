@@ -13,8 +13,6 @@ Synopsis
 
     salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
 
-    salt -Q test.ping
-
 Description
 ===========
 
@@ -126,15 +124,6 @@ Options
     returner is used then the return will not come back to the command line
     but will be sent to the specified return system.
 
-.. option:: -Q, --query
-
-    The -Q option is being deprecated and will be removed in version 0.9.9,
-    Use the Salt jobs interface instead, for documentation on the Salt jobs
-    interface execute the command "salt-run -d jobs"
-
-    Execute a salt command query, this can be used to find the results of a
-    previous function call: -Q test.echo')
-
 .. option:: -c CONFIG, --config=CONFIG
 
     The location of the Salt master configuration file, the Salt master
@@ -146,24 +135,17 @@ Options
     Turn on verbosity for the salt call, this will cause the salt command to
     print out extra data like the job id.
 
-.. option::  --raw-out
+.. option::   --out
 
-    Print the output from the salt command in raw Python
-    form, this is suitable for re-reading the output into
-    an executing Python script with eval.
-
-.. option::   --text-out
-
-    Print the output from the salt command in the same
-    form the shell would.
-
-.. option::   --yaml-out
-
-    Print the output from the salt command in YAML.
-
-.. option::   --json-out
-
-    Print the output from the salt command in JSON.
+    Pass in an alternative outputter to display the return of data. This
+    outputter can be any of the available outputters:
+    grains, highstate, json, key, overstatestage, pprint, raw, txt, yaml
+    Some outputters are formatted only for data returned from specific
+    functions, for instance the grains outputter will not work for non grains
+    data.
+    If an outputter is used that does not support the data passed into it, then
+    Salt will fall back on the pprint outputter and display the return data
+    using the python pprint library.
 
 .. option:: --no-color
 
