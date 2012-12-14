@@ -1,9 +1,10 @@
-salt (0.10.5-1) unstable; urgency=low
+salt (0.11.0) unstable; urgency=low
 
   * add bash_completion and ufw support files
   * use shared package support files in pkg/
+  * ignore certain exit codes in upstart
 
- -- Sean Channel <pentabular@gmail.com>  Mon, 3 Dec 2012 11:14:35 -0700
+ -- Sean Channel <pentabular@gmail.com>  Fri, 14 Dec 2012 10:52:35 -0700
 
 salt (0.10.5-1) unstable; urgency=low
 
