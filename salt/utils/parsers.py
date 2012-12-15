@@ -635,8 +635,8 @@ class OutputOptionsMixIn(object):
                             opt.dest.split('_', 1)[0]
                         )
                     )
-                    if version.__version_info__ >= (0, 10, 7):
-                        # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
+                    if version.__version_info__ >= (0, 12):
+                        # XXX: CLEAN THIS CODE WHEN 0.13 is about to come out
                         self.error(msg)
                     elif log.is_console_configured():
                         logging.getLogger(__name__).warning(msg)
