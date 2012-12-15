@@ -75,6 +75,11 @@ def load_config(opts, path, env_var):
     Attempts to update ``opts`` dict by parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
+    if path is None:
+        # When the passed path is None, we just want the configuration
+        # defaults, not actually loading the whole configuration.
+        return opts
+
     if not path or not os.path.isfile(path):
         path = os.environ.get(env_var, path)
     # If the configuration file is missing, attempt to copy the template,
@@ -112,6 +117,11 @@ def include_config(include, opts, orig_path, verbose):
     if not include:
         return opts
 
+    if orig_path is None:
+        # When the passed path is None, we just want the configuration
+        # defaults, not actually loading the whole configuration.
+        return opts
+
     if isinstance(include, str):
         include = [include]
 
@@ -119,8 +129,8 @@ def include_config(include, opts, orig_path, verbose):
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(orig_path), path)
 
-        # Catch situation where user typos path in config; also warns for
-        # empty include dir (which might be by design)
+        # Catch situation where user typos path in configuration; also warns
+        # for empty include directory (which might be by design)
         if len(glob.glob(path)) == 0:
             if verbose:
                 log.warn(
