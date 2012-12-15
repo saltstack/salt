@@ -588,9 +588,7 @@ class OutputOptionsMixIn(object):
             )
 
         outputters = loader.outputters(
-            config.minion_config(
-                '/etc/salt/minion', check_dns=False
-            )
+            config.minion_config(None, check_dns=False)
         )
 
         group.add_option(
