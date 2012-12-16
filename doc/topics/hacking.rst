@@ -150,9 +150,10 @@ installation is working::
     salt-key -c ./etc/salt -A
     salt -c ./etc/salt '*' test.ping
 
-Running the master and minion in debug mode in the foreground can be helpful
-when developing. To do this, replace the ``-d`` in the calls to ``salt-master``
-and ``salt-minion`` above with ``-l debug``.
+Running the master and minion in debug mode can be helpful when developing. To
+do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
+If you would like to log to the console instead of to the log file, remove the
+``-d``.
 
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
