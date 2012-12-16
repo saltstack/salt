@@ -48,9 +48,9 @@ Then::
 - The docs then are built in the ``docs/_build/html/`` folder. If you make
   changes and want to see the results, ``make html`` again.
 - The docs use ``reStructuredText`` for markup. See a live demo at
-  http://rst.ninjs.org/
+  http://rst.ninjs.org/.
 - The help information on each module or state is culled from the python code
-  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
+  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
 - If you are developing using Arch Linux (or any other distribution for which
   Python 3 is the default Python installation), then ``sphinx-build`` may be
   named ``sphinx-build2`` instead. If this is the case, then you will need to
@@ -133,7 +133,8 @@ Edit the minion config file:
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with
     ``-c /path/to/your/virtualenv/etc/salt`` so that salt can find the minion
-    config file. Without the ``-c`` option, Salt finds its config files in `/etc/salt`.
+    config file. Without the ``-c`` option, Salt finds its config files in
+    `/etc/salt`.
 
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
@@ -179,4 +180,4 @@ Finally you use setup.py to run the tests with the following command::
 
 For greater control while running the tests, please try::
 
-	./tests/runtests.py -h
+    ./tests/runtests.py -h
