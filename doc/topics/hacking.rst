@@ -51,6 +51,12 @@ Then::
   http://rst.ninjs.org/
 - The help information on each module or state is culled from the python code
   that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
+- If you are developing using Arch Linux (or any other distribution for which
+  Python 3 is the default Python installation), then ``sphinx-build`` may be
+  named ``sphinx-build2`` instead. If this is the case, then you will need to
+  run the following ``make`` command::
+
+    make SPHINXBUILD=sphinx-build2 html
 
 Installing Salt for development
 -------------------------------
@@ -132,11 +138,15 @@ Edit the minion config file:
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
 
-    salt-master -c ./etc/salt -d
-    salt-minion -c ./etc/salt -d
+    salt-master -c ./etc/salt -d --pid-file ./salt-master.pid
+    salt-minion -c ./etc/salt -d --pid-file ./salt-minion.pid
     salt-key -c ./etc/salt -L
     salt-key -c ./etc/salt -A
     salt -c ./etc/salt '*' test.ping
+
+Running the master and minion in debug mode in the foreground can be helpful
+when developing. To do this, replace the ``-d`` in the calls to ``salt-master``
+and ``salt-minion`` above with ``-l debug``.
 
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
