@@ -61,7 +61,10 @@ def managed(name,
         if not cached_requirements:
             # It's not cached, let's cache it.
             cached_requirements = __salt__['cp.cache_file'](requirements)
-
+        # Check if the master version has changed.
+        if __salt__['cp.hash_file'](requirements) != \
+                __salt__['cp.hash_file'](cached_requirements):
+                    cached_requirements = __salt__['cp.cache_file'](requirements)
         if not cached_requirements:
             ret.update({
                 'result': False,
@@ -80,8 +83,16 @@ def managed(name,
 
     # Create (or clear) the virtualenv
     if __opts__['test']:
+        if venv_exists and clear:
+            ret['result'] = None
+            ret['comment'] = 'Virtualenv {0} is set to be cleared'.format(name)
+            return ret
+        if venv_exists and not clear:
+            #ret['result'] = None
+            ret['comment'] = 'Virtualenv {0} is already created'.format(name)
+            return ret
         ret['result'] = None
-        ret['comment'] = 'Virtualenv {0} is set to be created or cleared'
+        ret['comment'] = 'Virtualenv {0} is set to be created'.format(name)
         return ret
 
     if not venv_exists or (venv_exists and clear):

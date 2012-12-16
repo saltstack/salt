@@ -31,6 +31,15 @@ language.
 
 Read the :doc:`Salt overview <topics/index>` for a more thorough description.
 
+Salt (Masterless) Quickstart
+----------------------------
+
+Install salt-minion and provision a webserver in 3 easy steps. The fastest way to start
+using salt's configuration management.
+
+:doc:`Salt Quickstart </topics/tutorials/quickstart>`
+
+
 Tutorial 1: Remote execution
 ----------------------------
 

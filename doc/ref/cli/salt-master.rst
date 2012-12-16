@@ -23,13 +23,23 @@ Options
 
     Print a usage message briefly summarizing these command-line options.
 
+.. option:: --version
+
+    Show program's version number and exit
+
+.. option:: --versions-report
+
+    Show program's dependencies version number and exit
+
 .. option:: -d, --daemon
 
     Run the Salt master as a daemon
 
-.. option:: -c CONFIG, --config=CONFIG
+.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
 
-    The master configuration file to use, the default is /etc/salt/master
+    The location of the Salt configuration directory, this directory contains
+    the configuration files for Salt master and minions. The default location
+    on most systems is /etc/salt.
 
 .. option:: -u USER, --user=USER
 

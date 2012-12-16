@@ -57,6 +57,19 @@ def version():
     return __salt__['cmd.run'](cmd)
 
 
+def available_version(name):
+    '''
+    The available version of the package in the repository
+   
+    CLI Example::
+        salt '*' pkgng.available_version <package name>
+    '''
+
+    cmd = 'pkg info {0}'.format(name)
+    out = __salt__['cmd.run'](cmd).split()
+    return out[0]
+
+
 def update_package_site(new_url):
     '''
     Updates remote package repo url, PACKAGESITE var to be exact.

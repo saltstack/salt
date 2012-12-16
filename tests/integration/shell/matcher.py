@@ -94,6 +94,10 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        data = self.run_salt('-I "knights:Bedevere" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
 
     def test_compound(self):
         '''

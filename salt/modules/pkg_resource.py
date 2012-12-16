@@ -37,7 +37,7 @@ def _parse_pkg_meta(path):
                 if not rel:
                     m = re.match('^Release\s*:\s*(\S+)', line)
                     if m:
-                        version = m.group(1)
+                        rel = m.group(1)
                         continue
         if rel:
             version += '-{0}'.format(rel)
@@ -92,27 +92,28 @@ def _parse_pkg_meta(path):
     return metaparser(path)
 
 
-def _pack_pkgs(sources):
+def pack_pkgs(pkgs):
     '''
     Accepts list (or a string representing a list) and returns back either the
     list passed, or the list represenation of the string passed.
 
     Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
     '''
-    if isinstance(sources, basestring):
+    if isinstance(pkgs, basestring):
         try:
-            sources = yaml.load(sources)
+            pkgs = yaml.load(pkgs)
         except yaml.parser.ParserError as e:
             log.error(e)
             return []
-    if not isinstance(sources,list) \
-    or [x for x in sources if not isinstance(x, basestring)]:
-        log.error('Invalid input: {0}'.format(pprint.pformat(source)))
+    if not isinstance(pkgs,list) \
+    or [x for x in pkgs if not isinstance(x, basestring)]:
+        log.error('Invalid input: {0}'.format(pprint.pformat(pkgs)))
+        log.error('Input must be a list of strings')
         return []
-    return sources
+    return pkgs
 
 
-def _pack_sources(sources):
+def pack_sources(sources):
     '''
     Accepts list of dicts (or a string representing a list of dicts) and packs
     the key/value pairs into a single dict.
@@ -191,7 +192,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
     elif pkgs and __grains__['os_family'] != 'Solaris':
         if name:
             log.warning('"name" parameter will be ignored in favor of "pkgs"')
-        pkgs = _pack_pkgs(pkgs)
+        pkgs = pack_pkgs(pkgs)
         if not pkgs:
             return None,None
         else:
@@ -202,7 +203,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         if name and __grains__['os_family'] != 'Solaris':
             log.warning('"name" parameter will be ignored in favor of '
                         '"sources".')
-        sources = _pack_sources(sources)
+        sources = pack_sources(sources)
         if not sources:
             return None,None
 

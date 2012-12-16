@@ -179,18 +179,8 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    # since list_pkgs is used to support matching complex versions
-    # we can search for a digit in the name and if one doesn't exist
-    # then just use the dbMatch function, which is 1000 times quicker
-    m = re.search("[0-9]", name)
-    if m:
-        pkgs = list_pkgs(name)
-    else:
-        ts = rpm.TransactionSet()
-        mi = ts.dbMatch('name', name)
-        pkgs = {}
-        for h in mi:
-            pkgs[h['name']] = "-".join([h['version'], h['release']])
+    pkgs = list_pkgs(name)
+
     # check for '.arch' appended to pkg name (i.e. 32 bit installed on 64 bit
     # machine is '.i386')
     if name.find('.') >= 0:
@@ -214,12 +204,20 @@ def list_pkgs(*args):
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
+        if not '_|-' in line:
+            continue
         name, version, rel = line.split('_|-')
         pkgver = version
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if args:
+        pkgs = ret
+        ret = {}
+        for pkg in pkgs.keys():
+            if pkg in args:
+                ret[pkg] = pkgs[pkg]
     return ret
 
 
@@ -392,6 +390,28 @@ def upgrade():
 
     new = list_pkgs()
     return _compare_versions(old, new)
+
+
+def _compare_versions(old, new):
+    '''
+    Returns a dict that that displays old and new versions for a package after
+    install/upgrade of package.
+    '''
+    pkgs = {}
+    for npkg in new:
+        if npkg in old:
+            if old[npkg] == new[npkg]:
+                # no change in the package
+                continue
+            else:
+                # the package was here before and the version has changed
+                pkgs[npkg] = {'old': old[npkg],
+                              'new': new[npkg]}
+        else:
+            # the package is freshly installed
+            pkgs[npkg] = {'old': '',
+                          'new': new[npkg]}
+    return pkgs
 
 
 def remove(pkgs):

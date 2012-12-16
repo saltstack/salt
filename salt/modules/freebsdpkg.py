@@ -64,8 +64,7 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     if _check_pkgng():
-        cmd = '{0} search -f {1}'.format(_cmd('pkg'), name)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        for line in __salt__['cmd.run']('pkg search -f {0}'.format(name)).splitlines():
             if line.startswith('Version'):
                 fn, ver = line.split(':', 1)
                 return ver.strip()

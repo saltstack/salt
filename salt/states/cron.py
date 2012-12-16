@@ -45,11 +45,11 @@ def _check_cron(cmd, user, minute, hour, dom, month, dow):
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if not minute == cron['min'] or \
-                    not hour == cron['hour'] or \
-                    not dom == cron['daymonth'] or \
-                    not month == cron['month'] or \
-                    not dow == cron['dayweek']:
+            if not str(minute) == cron['min'] or \
+                    not str(hour) == cron['hour'] or \
+                    not str(dom) == cron['daymonth'] or \
+                    not str(month) == cron['month'] or \
+                    not str(dow) == cron['dayweek']:
                 return 'update'
             return 'present'
     return 'absent'
