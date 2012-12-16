@@ -138,6 +138,7 @@ Edit the minion config file:
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
 
+    cd /path/to/your/virtualenv
     salt-master -c ./etc/salt -d --pid-file ./salt-master.pid
     salt-minion -c ./etc/salt -d --pid-file ./salt-minion.pid
     salt-key -c ./etc/salt -L
