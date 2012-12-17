@@ -186,7 +186,7 @@ class Auth(object):
         os.remove(tmp_pub)
         return payload
 
-    def decrypt_aes(self, payload):
+    def decrypt_aes(self, payload, master_pub=True):
         '''
         This function is used to decrypt the aes seed phrase returned from
         the master server, the seed phrase is decrypted with the ssh rsa
@@ -217,6 +217,8 @@ class Auth(object):
             if 'token' in payload:
                 token = key.private_decrypt(payload['token'], 4)
                 return key_str, token
+            elif not master_pub:
+                return key_str, ''
         return '', ''
 
     def verify_master(self, payload):
@@ -242,7 +244,7 @@ class Auth(object):
             return aes
         else:
             salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-            aes, token = self.decrypt_aes(payload)
+            aes, token = self.decrypt_aes(payload, False)
             return aes
 
     def sign_in(self):
