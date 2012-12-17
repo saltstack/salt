@@ -201,16 +201,13 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        if not '_|-' in line:
-            continue
-        name, version, rel = line.split('_|-')
-        pkgver = version
-        if rel:
-            pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    yb = yum.YumBase()
+    for p in yb.rpmdb:
+        pkgver = p.version
+        if p.release:
+            pkgver += '-{0}'.format(p.release)
+        __salt__['pkg_resource.add_pkg'](ret, p.name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
     if args:
         pkgs = ret
