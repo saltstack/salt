@@ -1477,8 +1477,7 @@ class ClearFuncs(object):
             ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
-        sig = self.master_key.key.private_encrypt(digest, 5)
-        ret['sig'] = pub.public_encrypt(digest, 4)
+        ret['sig'] = self.master_key.key.private_encrypt(digest, 5)
         eload = {'result': True,
                  'act': 'accept',
                  'id': load['id'],
