@@ -1447,7 +1447,6 @@ class ClearFuncs(object):
 
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
-               'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
         if self.opts['auth_mode'] >= 2:
