@@ -1450,16 +1450,35 @@ class ClearFuncs(object):
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
-        if 'token' in load:
-            try:
-                mtoken = self.master_key.key.private_decrypt(load['token'], 4)
-                ret['token'] = pub.public_encrypt(mtoken, 4)
-            except Exception:
-                # Token failed to decrypt, send back the salty bacon to
-                # support older minions
-                pass
+        if self.opts['auth_mode'] >= 2:
+            if 'token' in load:
+                try:
+                    mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                    aes = '{0}_|-{1}'.format(self.opts['aes'], mtoken)
+                except Exception:
+                    # Token failed to decrypt, send back the salty bacon to
+                    # support older minions
+                    pass
+            else:
+                aes = self.opts['aes']
 
-        ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
+            ret['aes'] = pub.public_encrypt(aes, 4)
+        else:
+            if 'token' in load:
+                try:
+                    mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                    ret['token'] = pub.public_encrypt(mtoken, 4)
+                except Exception:
+                    # Token failed to decrypt, send back the salty bacon to
+                    # support older minions
+                    pass
+
+            aes = self.opts['aes']
+            ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
+        # Be aggressive about the signature
+        digest = hashlib.sha256(aes).hexdigest()
+        sig = self.master_key.key.private_encrypt(digest, 5)
+        ret['sig'] = pub.public_encrypt(digest, 4)
         eload = {'result': True,
                  'act': 'accept',
                  'id': load['id'],
@@ -1493,7 +1512,7 @@ class ClearFuncs(object):
                     **clear_load)
         except Exception as exc:
             log.error(
-                    ('Exception occured in the wheel system: {0}'
+                    ('Exception occurred in the wheel system: {0}'
                         ).format(exc)
                     )
             return ''

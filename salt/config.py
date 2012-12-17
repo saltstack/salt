@@ -313,6 +313,7 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
+            'auth_mode': 1,
             'user': 'root',
             'worker_threads': 5,
             'sock_dir': '/var/run/salt/master',
