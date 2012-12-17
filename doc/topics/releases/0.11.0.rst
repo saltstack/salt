@@ -104,3 +104,37 @@ separate directories. Salt will also attempt to migrate all of the old key data
 into the correct new directories, but if it is not successful it may need to be
 done manually. If your keys exhibit issues after updating make sure that they
 have been moved from `/etc/salt/pki` to `/etc/salt/pki/{master,minion}`.
+
+The old setup will look like this:
+
+.. code-block:: raw
+
+    /etc/salt/pki
+    |-- master.pem
+    |-- master.pub
+    |-- minions
+    |   `-- ragnarok.saltstack.net
+    |-- minions_pre
+    |-- minion.pem
+    |-- minion.pub
+    |-- minion_master.pub
+    |-- minions_pre
+    `-- minions_rejected
+
+With the accepted minion keys in /etc/salt/pki/minions, the new setup places the
+accepted minion keys in /etc/salt/pki/master/minions
+
+.. code-block:: raw
+
+    /etc/salt/pki
+    |-- master
+    |   |-- master.pem
+    |   |-- master.pub
+    |   |-- minions
+    |   |   `-- ragnarok.saltstack.net
+    |   |-- minions_pre
+    |   `-- minions_rejected
+    |-- minion
+    |   |-- minion.pem
+    |   |-- minion.pub
+    |   `-- minion_master.pub
