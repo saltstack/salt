@@ -390,6 +390,7 @@ def _ps(osdata):
         grains['ps'] = 'ps -efH'
     return grains
 
+
 def _windows_platform_data(osdata):
     '''
     Use the platform module for as much as we can.
@@ -457,6 +458,7 @@ _OS_NAME_MAP = {
 
 # Map the 'os' grain to the 'os_family' grain
 _OS_FAMILY_MAP = {
+    'debian': 'Debian',
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
     'CentOS': 'RedHat',
@@ -555,7 +557,7 @@ def os_data():
                                 grains['lsb_distrib_id'] = value.strip()
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
-                                              supported_dists=_supported_dists)
+            supported_dists=_supported_dists)
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
