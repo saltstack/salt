@@ -119,7 +119,7 @@ class Batch(object):
                     pass
             for minion, data in parts.items():
                 active.remove(minion)
-                yield data['ret']
+                yield {minion: data['ret']}
                 ret[minion] = data['ret']
                 data[minion] = data.pop('ret')
                 if 'out' in data:
