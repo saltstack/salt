@@ -346,20 +346,23 @@ def list_pkgs(regex_string=''):
                                                         'installed' in cols[2]:
             __salt__['pkg_resource.add_pkg'](ret, cols[3], cols[4])
 
-    # If ret is empty at this point, check to see if the package is virtual.
-    # We also need aptitude past this point.
-    if not ret and __salt__['cmd.has_exec']('aptitude'):
-        cmd = (
-            'aptitude search "?name(^{0}$) ?virtual '
-            '?reverse-provides(?installed)"'.format(
-                regex_string
-            )
-        )
+    # Check for virtual packages. We need aptitude for this.
+    if __salt__['cmd.has_exec']('aptitude'):
+        if not ret:
+            search_string = regex_string
+        else:
+            search_string = '.+'
+        cmd = 'aptitude search "?name(^{0}$) ?virtual ' \
+              '?reverse-provides(?installed)"'.format(search_string)
 
         out = __salt__['cmd.run_stdout'](cmd)
-        if out:
-            ret[regex_string] = '1'  # Setting all 'installed' virtual package
-                                     # versions to '1'
+        for line in out.splitlines():
+            # Setting all matching 'installed' virtual package versions to 1
+            try:
+                name = line.split()[1]
+            except IndexError:
+                continue
+            __salt__['pkg_resource.add_pkg'](ret, name, '1')
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
