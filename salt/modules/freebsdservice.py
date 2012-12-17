@@ -191,12 +191,19 @@ def reload(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service (True or False).
+
+    name
+        Name of service.
+
+    sig : None
+        Signature. If sig is passed use as service name instead of
+        name argument.
+
 
     CLI Example::
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
-    return __salt__['status.pid'](sig if sig else name)
+    cmd = 'service {0} onestatus'.format(sig if sig else name)
+    return not __salt__['cmd.retcode'](cmd)
