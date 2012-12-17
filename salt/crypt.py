@@ -241,7 +241,7 @@ class Auth(object):
                 return ''
             return aes
         else:
-            salt.utils.fopen(m_pub_fn, 'w+').write(master_pub)
+            salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
             aes, token = self.decrypt_aes(payload)
             return aes
 
