@@ -198,8 +198,8 @@ class Auth(object):
         log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         key_str = key.private_decrypt(payload['aes'], 4)
-        m_path = os.path.join(self.opts['pki_dir'], self.mpub)
         if 'sig' in payload:
+            m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
                 try:
                     mkey = RSA.load_pub_key(m_path)
@@ -209,7 +209,8 @@ class Auth(object):
                 m_digest = mkey.public_decrypt(payload['sig'], 5)
                 if not m_digest == digest:
                     return '', ''
-        print 'sig ok'
+        else:
+            return '', ''
         if '_|-' in key_str:
             return key_str.split('_|-')
         else:
@@ -232,8 +233,6 @@ class Auth(object):
                 return ''
             try:
                 aes, token = self.decrypt_aes(payload)
-                print aes
-                print token
                 if not token == self.token:
                     log.error('The master failed to decrypt the random minion token')
                     return ''
