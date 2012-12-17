@@ -48,9 +48,15 @@ Then::
 - The docs then are built in the ``docs/_build/html/`` folder. If you make
   changes and want to see the results, ``make html`` again.
 - The docs use ``reStructuredText`` for markup. See a live demo at
-  http://rst.ninjs.org/
+  http://rst.ninjs.org/.
 - The help information on each module or state is culled from the python code
-  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
+  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
+- If you are developing using Arch Linux (or any other distribution for which
+  Python 3 is the default Python installation), then ``sphinx-build`` may be
+  named ``sphinx-build2`` instead. If this is the case, then you will need to
+  run the following ``make`` command::
+
+    make SPHINXBUILD=sphinx-build2 html
 
 Installing Salt for development
 -------------------------------
@@ -102,23 +108,27 @@ the configuration, log, and cache files contained in the virtualenv as well.
 Copy the master and minion config files into your virtualenv::
 
     mkdir -p /path/to/your/virtualenv/etc/salt
-    cp ./salt/conf/master.template /path/to/your/virtualenv/etc/salt/master
-    cp ./salt/conf/minion.template /path/to/your/virtualenv/etc/salt/minion
+    cp ./salt/conf/master /path/to/your/virtualenv/etc/salt/master
+    cp ./salt/conf/minion /path/to/your/virtualenv/etc/salt/minion
 
 Edit the master config file:
 
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  If you are also running a non-development version of Salt you will have to
+3.  Uncomment and change the ``pidfile: /var/run/salt-minion.pid`` value to
+    point to ``/path/to/your/virtualenv/salt-minion.pid``.
+4.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
 
 Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
-3.  Uncomment and change the ``id:`` value to something descriptive like
+2.  Uncomment and change the ``pidfile: /var/run/salt-master.pid`` value to
+    point to ``/path/to/your/virtualenv/salt-master.pid``.
+3.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
+4.  Uncomment and change the ``id:`` value to something descriptive like
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
     which Salt installation you are working with.
 
@@ -127,16 +137,23 @@ Edit the minion config file:
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with
     ``-c /path/to/your/virtualenv/etc/salt`` so that salt can find the minion
-    config file. Without the ``-c`` option, Salt finds its config files in `/etc/salt`.
+    config file. Without the ``-c`` option, Salt finds its config files in
+    `/etc/salt`.
 
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
 
+    cd /path/to/your/virtualenv
     salt-master -c ./etc/salt -d
     salt-minion -c ./etc/salt -d
     salt-key -c ./etc/salt -L
     salt-key -c ./etc/salt -A
     salt -c ./etc/salt '*' test.ping
+
+Running the master and minion in debug mode can be helpful when developing. To
+do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
+If you would like to log to the console instead of to the log file, remove the
+``-d``.
 
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
@@ -168,4 +185,4 @@ Finally you use setup.py to run the tests with the following command::
 
 For greater control while running the tests, please try::
 
-	./tests/runtests.py -h
+    ./tests/runtests.py -h

@@ -221,7 +221,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
-        and __grains__['os'] not in ('Gentoo', 'OpenBSD',):
+        and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD', ):
             problems = _verify_binary_pkg(srcinfo)
             # If any problems are found in the caching or metadata parsing done
             # in the above for loop, log each problem and return None,None,
@@ -278,17 +278,17 @@ def find_changes(old={}, new={}):
     changes were made to the packages installed on the minion.
     '''
     pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
+    for npkg in set(new.keys()).union(old.keys()):
+        if npkg not in old:
             # the package is freshly installed
             pkgs[npkg] = {'old': '',
+                          'new': new[npkg]}
+        elif npkg not in new:
+            # the package is removed
+            pkgs[npkg] = {'new': '',
+                          'old': old[npkg]}
+        elif new[npkg] != old[npkg]:
+            # the package was here before and the version has changed
+            pkgs[npkg] = {'old': old[npkg],
                           'new': new[npkg]}
     return pkgs
