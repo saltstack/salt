@@ -28,9 +28,9 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
-__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+_dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
+_dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
+_dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 def _validate_file_roots(file_roots):
@@ -215,9 +215,9 @@ def minion_config(path, check_dns=True):
             'log_file': '/var/log/salt/minion',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_datefmt': _dflt_log_datefmt,
+            'log_fmt_console': _dflt_log_fmt_console,
+            'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
@@ -361,9 +361,9 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_datefmt': _dflt_log_datefmt,
+            'log_fmt_console': _dflt_log_fmt_console,
+            'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
