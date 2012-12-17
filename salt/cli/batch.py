@@ -61,7 +61,7 @@ class Batch(object):
             else:
                 return int(self.opts['batch'])
         except ValueError:
-            if not quiet:
+            if not self.quiet:
                 print(('Invalid batch data sent: {0}\nData must be in the form'
                        'of %10, 10% or 3').format(self.opts['batch']))
 
@@ -94,7 +94,7 @@ class Batch(object):
             active += next_
             args[0] = next_
             if next_:
-                if not quiet:
+                if not self.quiet:
                     print('\nExecuting run on {0}\n'.format(next_))
                 iters.append(
                         self.local.cmd_iter_no_block(*args))
