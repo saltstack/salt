@@ -281,7 +281,7 @@
 ######         Logging settings       #####
 ###########################################
 # The location of the minion log file.
-# This can be a path for the log file, or, this can be, since 0.10.6, a system
+# This can be a path for the log file, or, this can be, since 0.11.0, a system
 # logger address, for example:
 #	tcp://localhost:514/LOG_USER
 #	tcp://localhost/LOG_DAEMON
@@ -311,7 +311,8 @@
 #
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen on http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%Y-%m-%d %H:%M:%S'
+#log_datefmt: '%H:%M:%S'
+#log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen on http://docs.python.org/library/logging.html#logrecord-attributes
