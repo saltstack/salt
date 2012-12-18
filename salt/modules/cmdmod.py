@@ -250,7 +250,8 @@ def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), templ
     return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True, template=template)
 
 
-def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+        template=None, rstrip=True):
     '''
     Execute the passed command and return the output as a string
 
@@ -265,13 +266,15 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
         salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    out = _run(cmd, runas=runas, shell=shell,
-               cwd=cwd, stderr=subprocess.STDOUT, env=env, template=template)['stdout']
+    out = _run(cmd, runas=runas, shell=shell, cwd=cwd,
+               stderr=subprocess.STDOUT, env=env, template=template,
+               rstrip=rstrip)['stdout']
     log.debug('output: {0}'.format(out))
     return out
 
 
-def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+               template=None, rstrip=True):
     '''
     Execute a command, and only return the standard out
 
@@ -286,12 +289,14 @@ def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=
         salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=(), template=template)["stdout"]
+    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=(),
+                  template=template, rstrip=rstrip)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
-def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+               template=None, rstrip=True):
     '''
     Execute a command and only return the standard error
 
@@ -306,12 +311,14 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=
         salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, template=template)["stderr"]
+    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
+                  template=template, rstrip=rstrip)["stderr"]
     log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
-def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+            template=None, rstrip=True):
     '''
     Execute the passed command and return a dict of return data
 
@@ -326,7 +333,8 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=Non
         salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, template=template)
+    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
+               template=template, rstrip=rstrip)
 
     if ret['retcode'] != 0:
         rcode = ret['retcode']
