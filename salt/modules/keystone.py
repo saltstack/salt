@@ -457,10 +457,10 @@ def user_role_list(user_id=None, tenant_id=None, user_name=None, tenant_name=Non
 
     CLI Examples::
 
-        salt '*' keystone.user_role_list user_id=298ce377245c4ec9b70e1c639c89e654
-        salt '*' keystone.user_role_list tenant_id=7167a092ece84bae8cead4bf9d15bb3b
-        salt '*' keystone.user_role_list user_name=admin
-        salt '*' keystone.user_role_list tenant_name=admin
+        salt '*' keystone.user_role_list \ 
+            user_id=298ce377245c4ec9b70e1c639c89e654 \ 
+            tenant_id=7167a092ece84bae8cead4bf9d15bb3b
+        salt '*' keystone.user_role_list user_name=admin tenant_name=admin
     '''
     ks = auth()
     ret = {}
@@ -476,14 +476,12 @@ def user_role_list(user_id=None, tenant_id=None, user_name=None, tenant_name=Non
                 continue
     if not user_id and not tenant_id:
         return {'Error': 'Unable to resolve user or tenant id'}
-    #ret = []
     for role in ks.roles.roles_for_user(user=user_id, tenant=tenant_id):
-        #ret.append(role.__dict__)
         ret[role.name] = {
                 'id': role.id,
                 'name': role.name,
-                'user_id': role.user_id,
-                'tenant_id': role.tenant_id,
+                'user_id': user_id,
+                'tenant_id': tenant_id,
                 }
     return ret
 
