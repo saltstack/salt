@@ -87,6 +87,9 @@ def _chugid(runas):
 
 
 def _render_cmd(cmd, cwd, template):
+    '''
+    If template is a valid template engine, process the cmd and cwd through that engine.
+    '''
     if not template:
         return (cmd, cwd)
 
@@ -254,6 +257,13 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
     CLI Example::
 
         salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
     out = _run(cmd, runas=runas, shell=shell,
                cwd=cwd, stderr=subprocess.STDOUT, env=env, template=template)['stdout']
@@ -268,6 +278,13 @@ def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=
     CLI Example::
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
     stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=(), template=template)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
@@ -281,6 +298,13 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=
     CLI Example::
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
     stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, template=template)["stderr"]
     log.debug('stderr: {0}'.format(stderr))
@@ -294,6 +318,13 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=Non
     CLI Example::
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
     ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, template=template)
 
@@ -322,6 +353,13 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=Non
     CLI Example::
 
         salt '*' cmd.retcode "file /bin/bash"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
+
     '''
     return _run(
             cmd,
