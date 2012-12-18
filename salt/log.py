@@ -84,7 +84,6 @@ LoggingNullHandler = logging.NullHandler()
 
 class Logging(LoggingLoggerClass):
     def __new__(cls, logger_name, *args, **kwargs):
-        global MAX_LOGGER_MODNAME_LENGTH
         # This makes module name padding increase to the biggest module name
         # so that logs keep readability.
         #
