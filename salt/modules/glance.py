@@ -52,11 +52,11 @@ def _auth():
 
 def image_create(**kwargs):
     '''
-    Create an image (nova image-create)
+    Create an image (glance image-create)
 
     CLI Example::
 
-        salt '*' nova.image_create name=f16-jeos is_public=true \
+        salt '*' glance.image_create name=f16-jeos is_public=true \
                  disk_format=qcow2 container_format=ovf \
                  copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
@@ -75,13 +75,13 @@ def image_create(**kwargs):
 
 def image_delete(id=None, name=None):
     '''
-    Delete an image (nova image-delete)
+    Delete an image (glance image-delete)
 
     CLI Examples::
 
-        salt '*' nova.image_delete c2eb2eb0-53e1-4a80-b990-8ec887eae7df
-        salt '*' nova.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
-        salt '*' nova.image_delete name=f16-jeos
+        salt '*' glance.image_delete c2eb2eb0-53e1-4a80-b990-8ec887eae7df
+        salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
+        salt '*' glance.image_delete name=f16-jeos
     '''
     nt = _auth()
     if name:
@@ -100,11 +100,11 @@ def image_delete(id=None, name=None):
 
 def image_show(id=None, name=None):
     '''
-    Return details about a specific image (nova image-show)
+    Return details about a specific image (glance image-show)
 
     CLI Example::
 
-        salt '*' nova.image_get
+        salt '*' glance.image_get
     '''
     nt = _auth()
     ret = {}
@@ -138,11 +138,11 @@ def image_show(id=None, name=None):
 
 def image_list(id=None):
     '''
-    Return a list of available images (nova image-list)
+    Return a list of available images (glance image-list)
 
     CLI Example::
 
-        salt '*' nova.image_list
+        salt '*' glance.image_list
     '''
     nt = _auth()
     ret = {}
@@ -172,11 +172,11 @@ def image_list(id=None):
 def _item_list():
     '''
     Template for writing list functions
-    Return a list of available items (nova items-list)
+    Return a list of available items (glance items-list)
 
     CLI Example::
 
-        salt '*' nova.item_list
+        salt '*' glance.item_list
     '''
     nt = _auth()
     ret = []
@@ -188,7 +188,7 @@ def _item_list():
     return ret
 
 #The following is a list of functions that need to be incorporated in the
-#nova module. This list should be updated as functions are added.
+#glance module. This list should be updated as functions are added.
 
 #image-download      Download a specific image.
 #image-update        Update a specific image.
