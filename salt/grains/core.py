@@ -15,6 +15,7 @@ as those returned here
 # Import python libs
 import os
 import socket
+import subprocess
 import sys
 import re
 import platform
@@ -121,6 +122,53 @@ def _linux_cpudata():
         grains['cpu_model'] = 'Unknown'
     if 'cpu_flags' not in grains:
         grains['cpu_flags'] = []
+    return grains
+
+
+def _linux_gpu_data():
+    """
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    """
+    # dominant gpu vendors to search for (MUST be lowercase)
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+
+    devs = []
+    try:
+        lspci = subprocess.Popen(['lspci', '-vmm'], stdout=subprocess.PIPE)
+        cur_dev = {}
+        for line in lspci.stdout:
+            # check for record-separating empty lines (only newline char)
+            if len(line) == 1:
+                if cur_dev.get('Class', '') == 'VGA compatible controller':
+                    devs.append(cur_dev)
+                # XXX; may also need to search for "3D controller"
+                cur_dev = {}
+                continue
+            key, val = line.split(':', 1)
+            cur_dev[key.strip()] = val.strip()
+    except OSError:
+        pass
+
+    gpus = []
+    for gpu in devs:
+        vendor = gpu['Vendor'].lower()
+        vendor_lower = gpu['Vendor'].lower()
+        for name in known_vendors:
+            # search for an 'expected' vendor name in the string
+            if name in vendor_lower:
+                vendor = name
+                break
+        else:
+            # unknown vendor - just use the original string
+            vendor = gpu['Vendor']
+        gpus.append({'vendor': vendor, 'model': gpu['Device']})
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
     return grains
 
 
@@ -390,6 +438,7 @@ def _ps(osdata):
         grains['ps'] = 'ps -efH'
     return grains
 
+
 def _windows_platform_data(osdata):
     '''
     Use the platform module for as much as we can.
@@ -457,6 +506,7 @@ _OS_NAME_MAP = {
 
 # Map the 'os' grain to the 'os_family' grain
 _OS_FAMILY_MAP = {
+    'debian': 'Debian',
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
     'CentOS': 'RedHat',
@@ -485,7 +535,11 @@ def os_data():
     '''
     Return grains pertaining to the operating system
     '''
-    grains = {}
+    grains = {
+        'num_gpus': 0,
+        'gpus': [],
+    }
+
     try:
         (grains['defaultlanguage'],
          grains['defaultencoding']) = locale.getdefaultlocale()
@@ -555,7 +609,7 @@ def os_data():
                                 grains['lsb_distrib_id'] = value.strip()
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
-                                              supported_dists=_supported_dists)
+            supported_dists=_supported_dists)
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -573,6 +627,7 @@ def os_data():
         # traditional short names that Salt has used.
         grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
+        grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
         if os.path.isfile('/etc/release'):
@@ -790,3 +845,5 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+
+

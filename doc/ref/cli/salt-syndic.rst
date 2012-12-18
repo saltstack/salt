@@ -33,13 +33,19 @@ Options
 
     Specify the location of the pidfile
 
-.. option:: --master-config=MASTER_CONFIG
+.. option:: --version
 
-    The master configuration file to use, the default is /etc/salt/master
+    Show program's version number and exit
 
-.. option:: --minion-config=MINION_CONFIG
+.. option:: --versions-report
 
-    The minion configuration file to use, the default is /etc/salt/minion
+    Show program's dependencies version number and exit
+
+.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
+
+    The location of the Salt configuration directory, this directory contains
+    the configuration files for Salt master and minions. The default location
+    on most systems is /etc/salt.
 
 See also
 ========

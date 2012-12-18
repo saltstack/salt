@@ -6,6 +6,7 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
+import os
 import optparse
 import pprint
 import time
@@ -40,6 +41,8 @@ def parse():
     for k, v in options.__dict__.items():
         if v is not None:
             opts[k] = v
+
+    opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['node'])
 
     return opts
 

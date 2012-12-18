@@ -28,9 +28,12 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
-__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+_dflt_log_datefmt = '%H:%M:%S'
+_dflt_log_datefmt_logfile = '%Y-%m-%d %H:%M:%S'
+_dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
+_dflt_log_fmt_logfile = (
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+)
 
 
 def _validate_file_roots(file_roots):
@@ -75,6 +78,11 @@ def load_config(opts, path, env_var):
     Attempts to update ``opts`` dict by parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
+    if path is None:
+        # When the passed path is None, we just want the configuration
+        # defaults, not actually loading the whole configuration.
+        return opts
+
     if not path or not os.path.isfile(path):
         path = os.environ.get(env_var, path)
     # If the configuration file is missing, attempt to copy the template,
@@ -112,6 +120,11 @@ def include_config(include, opts, orig_path, verbose):
     if not include:
         return opts
 
+    if orig_path is None:
+        # When the passed path is None, we just want the configuration
+        # defaults, not actually loading the whole configuration.
+        return opts
+
     if isinstance(include, str):
         include = [include]
 
@@ -119,8 +132,8 @@ def include_config(include, opts, orig_path, verbose):
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(orig_path), path)
 
-        # Catch situation where user typos path in config; also warns for
-        # empty include dir (which might be by design)
+        # Catch situation where user typos path in configuration; also warns
+        # for empty include directory (which might be by design)
         if len(glob.glob(path)) == 0:
             if verbose:
                 log.warn(
@@ -205,9 +218,10 @@ def minion_config(path, check_dns=True):
             'log_file': '/var/log/salt/minion',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_datefmt': _dflt_log_datefmt,
+            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
+            'log_fmt_console': _dflt_log_fmt_console,
+            'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
@@ -303,6 +317,7 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
+            'auth_mode': 1,
             'user': 'root',
             'worker_threads': 5,
             'sock_dir': '/var/run/salt/master',
@@ -351,9 +366,10 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_datefmt': _dflt_log_datefmt,
+            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
+            'log_fmt_console': _dflt_log_fmt_console,
+            'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
@@ -406,23 +422,28 @@ def master_config(path):
         # If file_ignore_regex was given, make sure it's wrapped in a list.
         # Only keep valid regex entries for improved performance later on.
         if isinstance(opts['file_ignore_regex'], str):
-            ignore_regex = [ opts['file_ignore_regex'] ]
+            ignore_regex = [opts['file_ignore_regex']]
         elif isinstance(opts['file_ignore_regex'], list):
             ignore_regex = opts['file_ignore_regex']
 
         opts['file_ignore_regex'] = []
         for r in ignore_regex:
             try:
-                # Can't store compiled regex itself in opts (breaks serialization)
+                # Can't store compiled regex itself in opts (breaks
+                # serialization)
                 re.compile(r)
                 opts['file_ignore_regex'].append(r)
             except:
-                log.warning('Unable to parse file_ignore_regex. Skipping: {0}'.format(r))
+                log.warning(
+                    'Unable to parse file_ignore_regex. Skipping: {0}'.format(
+                        r
+                    )
+                )
 
     if opts['file_ignore_glob']:
         # If file_ignore_glob was given, make sure it's wrapped in a list.
         if isinstance(opts['file_ignore_glob'], str):
-            opts['file_ignore_glob'] = [ opts['file_ignore_glob'] ]
+            opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
     return opts
 

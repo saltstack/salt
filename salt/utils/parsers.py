@@ -322,7 +322,10 @@ class LogLevelMixIn(object):
             # Remove it from config so it get's the default value bellow
             self.config.pop('log_datefmt', None)
 
-        datefmt = self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        datefmt = self.config.get(
+            'log_datefmt_logfile',
+            self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        )
         log.setup_logfile_logger(
             self.config[lfkey],
             loglevel,
@@ -588,9 +591,7 @@ class OutputOptionsMixIn(object):
             )
 
         outputters = loader.outputters(
-            config.minion_config(
-                '/etc/salt/minion', check_dns=False
-            )
+            config.minion_config(None, check_dns=False)
         )
 
         group.add_option(
@@ -635,8 +636,8 @@ class OutputOptionsMixIn(object):
                             opt.dest.split('_', 1)[0]
                         )
                     )
-                    if version.__version_info__ >= (0, 10, 7):
-                        # XXX: CLEAN THIS CODE WHEN 0.10.8 is about to come out
+                    if version.__version_info__ >= (0, 12):
+                        # XXX: CLEAN THIS CODE WHEN 0.13 is about to come out
                         self.error(msg)
                     elif log.is_console_configured():
                         logging.getLogger(__name__).warning(msg)
@@ -871,9 +872,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
     __metaclass__ = OptionParserMeta
     _skip_console_logging_config_ = True
 
-    description = "XXX: Add salt-key description"
+    description = 'Salt key is used to manage Salt authentication keys'
 
-    usage = "%prog [options]"
+    usage = '%prog [options]'
 
     def _mixin_setup(self):
 
@@ -1054,11 +1055,12 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                            OutputOptionsWithTextMixIn):
     __metaclass__ = OptionParserMeta
 
-    _default_logging_level_ = "info"
+    _default_logging_level_ = 'info'
 
-    description = "XXX: Add salt-call description"
+    description = ('Salt call is used to execute module functions locally '
+                   'on a minion')
 
-    usage = "%prog [options] <function> [arguments]"
+    usage = '%prog [options] <function> [arguments]'
 
     def _mixin_setup(self):
         self.add_option(

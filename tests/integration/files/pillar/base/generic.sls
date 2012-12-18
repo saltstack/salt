@@ -5,3 +5,9 @@ class: redhat
 {% else %}
 class: other
 {% endif %}
+
+knights:
+  - Lancelot
+  - Galahad
+  - Bedevere
+  - Robin

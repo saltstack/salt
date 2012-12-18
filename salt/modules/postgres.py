@@ -101,18 +101,24 @@ def db_list(user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
-    cmd = _psql_cmd('-l', user=user, host=host, port=port)
+    query = """SELECT datname as "Name", pga.rolname as "Owner", """
+    """pg_encoding_to_char(encoding) as "Encoding", datcollate as "Collate", datctype as "Ctype", """
+    """datacl as "Access privileges" FROM pg_database pgd, pg_authid pga WHERE pga.oid = pgd.datdba"""
+
+    cmd = _psql_cmd('-c', query,
+            host=host, user=user, port=port)
+
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 6]
-    try:
+    if not lines:
+        log.error("no results from postgres.db_list")
+    else:
+        log.debug(lines)
         header = [x.strip() for x in lines[0].split("|")]
-    except IndexError:
-        log.error("Invalid PostgreSQL output: '%s'", cmdret)
-        return []
-    for line in lines[1:]:
-        line = [x.strip() for x in line.split("|")]
-        if not line[0] == "":
-            ret.append(list(zip(header[:-1], line[:-1])))
+        for line in lines[1:]:
+            line = [x.strip() for x in line.split("|")]
+            if not line[0] == "":
+                ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
 
