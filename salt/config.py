@@ -28,9 +28,12 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-_dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
+_dflt_log_datefmt = '%H:%M:%S'
+_dflt_log_datefmt_logfile = '%Y-%m-%d %H:%M:%S'
 _dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-_dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+_dflt_log_fmt_logfile = (
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+)
 
 
 def _validate_file_roots(file_roots):
@@ -216,6 +219,7 @@ def minion_config(path, check_dns=True):
             'log_level': None,
             'log_level_logfile': None,
             'log_datefmt': _dflt_log_datefmt,
+            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
             'log_fmt_console': _dflt_log_fmt_console,
             'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
@@ -363,6 +367,7 @@ def master_config(path):
             'log_level': None,
             'log_level_logfile': None,
             'log_datefmt': _dflt_log_datefmt,
+            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
             'log_fmt_console': _dflt_log_fmt_console,
             'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
@@ -417,23 +422,28 @@ def master_config(path):
         # If file_ignore_regex was given, make sure it's wrapped in a list.
         # Only keep valid regex entries for improved performance later on.
         if isinstance(opts['file_ignore_regex'], str):
-            ignore_regex = [ opts['file_ignore_regex'] ]
+            ignore_regex = [opts['file_ignore_regex']]
         elif isinstance(opts['file_ignore_regex'], list):
             ignore_regex = opts['file_ignore_regex']
 
         opts['file_ignore_regex'] = []
         for r in ignore_regex:
             try:
-                # Can't store compiled regex itself in opts (breaks serialization)
+                # Can't store compiled regex itself in opts (breaks
+                # serialization)
                 re.compile(r)
                 opts['file_ignore_regex'].append(r)
             except:
-                log.warning('Unable to parse file_ignore_regex. Skipping: {0}'.format(r))
+                log.warning(
+                    'Unable to parse file_ignore_regex. Skipping: {0}'.format(
+                        r
+                    )
+                )
 
     if opts['file_ignore_glob']:
         # If file_ignore_glob was given, make sure it's wrapped in a list.
         if isinstance(opts['file_ignore_glob'], str):
-            opts['file_ignore_glob'] = [ opts['file_ignore_glob'] ]
+            opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
     return opts
 

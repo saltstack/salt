@@ -322,7 +322,10 @@ class LogLevelMixIn(object):
             # Remove it from config so it get's the default value bellow
             self.config.pop('log_datefmt', None)
 
-        datefmt = self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        datefmt = self.config.get(
+            'log_datefmt_logfile',
+            self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        )
         log.setup_logfile_logger(
             self.config[lfkey],
             loglevel,
