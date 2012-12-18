@@ -23,6 +23,13 @@ def tar(options, tarfile, cwd=None, template=None, *sources):
     CLI Example::
 
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1 /tmp/file_2
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.tar template=jinja cjvf /tmp/salt.tar.bz2 {{grains.saltpath}}
+
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'tar -{0} {1} {2}'.format(options, tarfile, sourcefiles)
@@ -37,6 +44,13 @@ def gzip(sourcefile, template=None):
     CLI Example to create ``/tmp/sourcefile.txt.gz``::
 
         salt '*' archive.gzip /tmp/sourcefile.txt
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.gzip template=jinja /tmp/{{grains.id}}.txt
+
     '''
     cmd = 'gzip {0}'.format(sourcefile)
     out = __salt__['cmd.run'](cmd, template=template).splitlines()
@@ -50,6 +64,13 @@ def gunzip(gzipfile, template=None):
     CLI Example to create ``/tmp/sourcefile.txt``::
 
         salt '*' archive.gunzip /tmp/sourcefile.txt.gz
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.gunzip template=jinja /tmp/{{grains.id}}.txt.gz
+
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
     out = __salt__['cmd.run'](cmd, template=template).splitlines()
@@ -63,6 +84,13 @@ def zip(zipfile, template=None, *sources):
     CLI Example::
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1 /tmp/sourcefile2
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1 /tmp/{{grains.id}}.txt
+
     '''
     sourcefiles = ' '.join(sources)
     cmd = 'zip {0} {1}'.format(zipfile, sourcefiles)
@@ -77,6 +105,13 @@ def unzip(zipfile, dest, template=None, *xfiles):
     CLI Example::
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ file_1 file_2
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ file_1 file_2
+
     '''
     xfileslist = ' '.join(xfiles)
     cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
@@ -94,6 +129,14 @@ def rar(rarfile, template=None, *sources):
     CLI Example::
 
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1 /tmp/sourcefile2
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.rar template=jinja /tmp/rarfile.rar /tmp/sourcefile1 /tmp/{{grains.id}}.txt
+
+
     '''
     # TODO: Check that len(sources) >= 1
     sourcefiles = ' '.join(sources)
@@ -110,6 +153,13 @@ def unrar(rarfile, dest, template=None, *xfiles):
     CLI Example::
 
         salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ file_1 file_2
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/ file_1 file_2
+
     '''
     xfileslist = ' '.join(xfiles)
     cmd = 'rar x -idp {0}'.format(rarfile, dest)
