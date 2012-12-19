@@ -5,7 +5,7 @@ The networking module for RHEL/Fedora based distros
 # Import python libs
 import logging
 import re
-from os.path import exists, join
+import os.path
 import os
 import StringIO
 
@@ -721,9 +721,9 @@ def _write_file_iface(iface, data, folder, pattern):
     '''
     Writes a file to disk
     '''
-    filename = join(folder, pattern.format(iface))
-    if not exists(folder):
-        msg = '{0} cannot be written. {1} does not exists'
+    filename = os.path.join(folder, pattern.format(iface))
+    if not os.path.exists(folder):
+        msg = '{0} cannot be written. {1} does not exist'
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
@@ -769,7 +769,7 @@ def build_bond(iface, settings):
         return ''
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf')
-    path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
+    path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
             'sed -i -e "/^alias\s{0}.*/d" /etc/modprobe.conf'.format(iface)
@@ -828,7 +828,7 @@ def build_interface(iface, iface_type, enabled, settings):
         return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}')
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
 
     return _read_file(path)
 
@@ -855,7 +855,7 @@ def get_bond(iface):
 
         salt '*' ip.get_bond bond0
     '''
-    path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
+    path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     return _read_file(path)
 
 
@@ -867,7 +867,7 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     '''
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
     return _read_file(path)
 
 
