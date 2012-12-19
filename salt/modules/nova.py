@@ -241,6 +241,86 @@ def image_meta_delete(id=None, name=None, keys=None):
     return {id: 'Deleted: {0}'.format(pairs)}
 
 
+def list():
+    '''
+    To maintain the feel of the nova command line, this function simply calls
+    the server_list function.
+    '''
+    return server_list()
+
+
+def server_list():
+    '''
+    Return detailed information for an active server
+
+    CLI Example::
+
+        salt '*' nova.show
+    '''
+    nt = _auth()
+    ret = {}
+    for item in nt.servers.list():
+        ret[item.name] = {
+            'id': item.id,
+            'name': item.name,
+            'status': item.status,
+            }
+    return ret
+
+
+def show(server_id):
+    '''
+    To maintain the feel of the nova command line, this function simply calls
+    the server_show function.
+    '''
+    return server_show(server_id)
+
+
+def server_show(server_id):
+    '''
+    Return detailed information for an active server
+
+    CLI Example::
+
+        salt '*' nova.show
+    '''
+    nt = _auth()
+    ret = {}
+    for item in nt.servers.list():
+        if item.id == server_id:
+            ret[item.name] = {
+                'OS-DCF': {'diskConfig': item.__dict__['OS-DCF:diskConfig']},
+                'OS-EXT-SRV-ATTR': {'host': item.__dict__['OS-EXT-SRV-ATTR:host'],
+                                    'hypervisor_hostname': item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname'],
+                                    'instance_name': item.__dict__['OS-EXT-SRV-ATTR:instance_name']},
+                'OS-EXT-STS': {'power_state': item.__dict__['OS-EXT-STS:power_state'],
+                               'task_state': item.__dict__['OS-EXT-STS:task_state'],
+                               'vm_state': item.__dict__['OS-EXT-STS:vm_state']},
+                'accessIPv4': item.accessIPv4,
+                'accessIPv6': item.accessIPv6,
+                'addresses': item.addresses,
+                'config_drive': item.config_drive,
+                'created': item.created,
+                'flavor': {'id': item.flavor['id'],
+                           'links': item.flavor['links']},
+                'hostId': item.hostId,
+                'id': item.id,
+                'image': {'id': item.image['id'],
+                           'links': item.image['links']},
+                'key_name': item.key_name,
+                'links': item.links,
+                'metadata': item.metadata,
+                'name': item.name,
+                'progress': item.progress,
+                'security_groups': item.security_groups,
+                'status': item.status,
+                'tenant_id': item.tenant_id,
+                'updated': item.updated,
+                'user_id': item.user_id,
+                }
+    return ret
+
+
 def secgroup_create(name, description):
     '''
     Add a secgroup to nova (nova secgroup-create)
@@ -273,8 +353,7 @@ def secgroup_delete(name):
 
 def secgroup_list():
     '''
-    Template for writing list functions
-    Return a list of available items (nova items-list)
+    Return a list of available security groups (nova items-list)
 
     CLI Example::
 
@@ -360,7 +439,6 @@ def _item_list():
 #image-create        Create a new image by taking a snapshot of a running
 #                    server.
 #image-delete        Delete an image.
-#list                List active servers.
 #live-migration      Migrates a running instance to a new machine.
 #lock                Lock a server.
 #meta                Set or Delete metadata on a server.
@@ -388,7 +466,6 @@ def _item_list():
 #                    Delete a rule from a security group.
 #secgroup-list-rules
 #                    List rules for a security group.
-#show                Show details about the given server.
 #ssh                 SSH into a server.
 #suspend             Suspend a server.
 #unlock              Unlock a server.
