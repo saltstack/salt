@@ -59,11 +59,19 @@ package or the custom grains directory. The functions in the modules of
 the grains must return a Python `dict`_, where the keys in the dict are the
 names of the grains and the values are the values.
 
-Custom grains should be placed in a ``_grains`` directory located under
-your :conf_master:`file_roots`. Before adding a grain to Salt, consider
-what the grain is and remember that grains need to be static data.
+Custom grains should be placed in a ``_grains`` directory located under the
+:conf_master:`file_roots` specified by the master config file. They will be
+distributed to the minions when `state.highstate`_ is run, or by executing the
+`saltutil.sync_grains`_ or `saltutil.sync_all`_ functions.
+
+Before adding a grain to Salt, consider what the grain is and remember that
+grains need to be static data. If the data is something that is likely to
+change, consider using :doc:`Pillar <../pillar/index>` instead.
 
 .. _`dict`: http://docs.python.org/library/stdtypes.html#typesmapping
+.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
+.. _`saltutil.sync_grains`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_grains
+.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
 
 Examples of Grains
 ------------------
