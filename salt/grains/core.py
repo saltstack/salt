@@ -98,6 +98,8 @@ def _linux_cpudata():
                     grains['cpu_model'] = val
                 elif key == 'flags':
                     grains['cpu_flags'] = val.split()
+                elif key == 'Features':
+                    grains['cpu_flags'] = val.split()
                 # ARM support - /proc/cpuinfo
                 #
                 # Processor       : ARMv6-compatible processor rev 7 (v6l)
@@ -121,6 +123,52 @@ def _linux_cpudata():
         grains['cpu_model'] = 'Unknown'
     if 'cpu_flags' not in grains:
         grains['cpu_flags'] = []
+    return grains
+
+
+def _linux_gpu_data():
+    """
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    """
+    # dominant gpu vendors to search for (MUST be lowercase for matching below)
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+
+    devs = []
+    try:
+        lspci_out = __salt__['cmd.run']('lspci -vmm')
+
+        cur_dev = {}
+        for line in lspci_out.splitlines():
+            # check for record-separating empty lines
+            if line == '':
+                if cur_dev.get('Class', '') == 'VGA compatible controller':
+                    devs.append(cur_dev)
+                # XXX; may also need to search for "3D controller"
+                cur_dev = {}
+                continue
+            key, val = line.split(':', 1)
+            cur_dev[key.strip()] = val.strip()
+    except OSError:
+        pass
+
+    gpus = []
+    for gpu in devs:
+        vendor_str_lower = gpu['Vendor'].lower()
+        # default vendor to 'unknown', overwrite if we match a known one
+        vendor = 'unknown'
+        for name in known_vendors:
+            # search for an 'expected' vendor name in the string
+            if name in vendor_str_lower:
+                vendor = name
+                break
+        gpus.append({'vendor': vendor, 'model': gpu['Device']})
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
     return grains
 
 
@@ -454,6 +502,7 @@ _OS_NAME_MAP = {
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
+    'fedoraremi': 'RedHat',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -487,15 +536,11 @@ def os_data():
     '''
     Return grains pertaining to the operating system
     '''
-    grains = {}
-    try:
-        (grains['defaultlanguage'],
-         grains['defaultencoding']) = locale.getdefaultlocale()
-    except Exception:
-        # locale.getdefaultlocale can ValueError!! Catch anything else it
-        # might do, per #2205
-        grains['defaultlanguage'] = 'unknown'
-        grains['defaultencoding'] = 'unknown'
+    grains = {
+        'num_gpus': 0,
+        'gpus': [],
+    }
+
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04
@@ -575,6 +620,7 @@ def os_data():
         # traditional short names that Salt has used.
         grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
+        grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
         if os.path.isfile('/etc/release'):
@@ -611,6 +657,24 @@ def os_data():
     grains.update(_ps(grains))
 
     return grains
+
+
+def locale_info():
+    '''
+    Provides
+        defaultlanguage
+        defaultencoding
+    '''
+    grains = {}
+    try:
+        (grains['defaultlanguage'], grains['defaultencoding']) = locale.getdefaultlocale()
+    except Exception:
+        # locale.getdefaultlocale can ValueError!! Catch anything else it
+        # might do, per #2205
+        grains['defaultlanguage'] = 'unknown'
+        grains['defaultencoding'] = 'unknown'
+    return grains
+
 
 
 def hostname():
@@ -792,3 +856,5 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+
+

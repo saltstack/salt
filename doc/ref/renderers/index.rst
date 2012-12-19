@@ -98,12 +98,19 @@ accepts as input and what it returns as output.
 Writing Renderers
 -----------------
 
-Writing a renderer is easy, all that is required is that a Python module
-is placed in the rendered directory and that the module implements the
-render function. The render function will be passed the path of the SLS file.
-In the render function, parse the passed file and return the data structure
+Writing a renderer is easy, all that is required is that a Python module is
+placed in the rendered directory and that the module implements the ``render``
+function. The ``render`` function will be passed the path of the SLS file.  In
+the ``render`` function, parse the passed file and return the data structure
 derived from the file. You can place your custom renderers in a ``_renderers``
-directory in your file root (``/srv/salt/``).
+directory within the :conf_master:`file_roots` specified by the master config
+file. These custom renderers are distributed when `state.highstate`_ is run, or
+by executing the `saltutil.sync_renderers`_ or `saltutil.sync_all`_ functions.
+
+.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
+.. _`saltutil.sync_renderers`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_renderers
+.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
+
 
 Examples
 --------

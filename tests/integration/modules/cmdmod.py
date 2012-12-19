@@ -104,8 +104,16 @@ sys.stdout.write('cheese')
         '''
         cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
+
+        try:
+            runas=os.getlogin()
+        except:
+            # On some distros (notably Gentoo) os.getlogin() fails
+            import pwd
+            runas=pwd.getpwuid(os.getuid())[0]
+
         result = self.run_function('cmd.run_stdout', [cmd],
-                                   runas=os.getlogin()).strip()
+                                   runas=runas).strip()
         self.assertEqual(result, expected_result)
 
 
