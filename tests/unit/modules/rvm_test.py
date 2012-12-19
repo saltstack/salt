@@ -13,7 +13,9 @@ except ImportError:
 if has_mock:
     import salt.modules.rvm as rvm
     rvm.__salt__ = {
-        'cmd.has_exec': MagicMock(return_value=True)}
+        'cmd.has_exec': MagicMock(return_value=True),
+        'config.option' : MagicMock(return_value=None)
+    }
 
 
 @skipIf(has_mock is False, "mock python module is unavailable")
