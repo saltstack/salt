@@ -15,7 +15,6 @@ as those returned here
 # Import python libs
 import os
 import socket
-import subprocess
 import sys
 import re
 import platform
@@ -134,16 +133,17 @@ def _linux_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     """
-    # dominant gpu vendors to search for (MUST be lowercase)
+    # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']
 
     devs = []
     try:
-        lspci = subprocess.Popen(['lspci', '-vmm'], stdout=subprocess.PIPE)
+        lspci_out = __salt__['cmd.run']('lspci -vmm')
+
         cur_dev = {}
-        for line in lspci.stdout:
-            # check for record-separating empty lines (only newline char)
-            if len(line) == 1:
+        for line in lspci_out.splitlines():
+            # check for record-separating empty lines
+            if line == '':
                 if cur_dev.get('Class', '') == 'VGA compatible controller':
                     devs.append(cur_dev)
                 # XXX; may also need to search for "3D controller"
@@ -156,16 +156,14 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor = gpu['Vendor'].lower()
-        vendor_lower = gpu['Vendor'].lower()
+        vendor_str_lower = gpu['Vendor'].lower()
+        # default vendor to 'unknown', overwrite if we match a known one
+        vendor = 'unknown'
         for name in known_vendors:
             # search for an 'expected' vendor name in the string
-            if name in vendor_lower:
+            if name in vendor_str_lower:
                 vendor = name
                 break
-        else:
-            # unknown vendor - just use the original string
-            vendor = gpu['Vendor']
         gpus.append({'vendor': vendor, 'model': gpu['Device']})
 
     grains = {}
