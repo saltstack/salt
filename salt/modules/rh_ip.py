@@ -6,11 +6,12 @@ The networking module for RHEL/Fedora based distros
 import logging
 import re
 from os.path import exists, join
-from os import sep
+import os
 import StringIO
 
 # import third party libs
 import jinja2
+from jinja2.exceptions import TemplateNotFound
 
 # Import salt libs
 import salt.utils
@@ -20,7 +21,7 @@ from salt.modules import __path__ as saltmodpath
 log = logging.getLogger(__name__)
 
 # Set up template environment
-env = jinja2.Environment(loader=jinja2.FileSystemLoader(saltmodpath[0] + sep + 'rh_ip'))
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip'))
 
 
 def __virtual__():
@@ -763,7 +764,7 @@ def build_bond(iface, settings):
     opts = _parse_settings_bond(settings, iface)
     try:
         template = env.get_template('conf.jinja')
-    except Exception:
+    except TemplateNotFound:
         log.error('Could not load template conf.jinja')
         return ''
     data = template.render({'name': iface, 'bonding': opts})
@@ -818,7 +819,7 @@ def build_interface(iface, iface_type, enabled, settings):
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
-        except Exception:
+        except TemplateNotFound:
             log.error('Could not load template rh{0}_eth.jinja'.format(rh_major))
             return ''
         ifcfg = template.render(opts)
@@ -931,7 +932,7 @@ def build_network_settings(settings):
     opts = _parse_network_settings(settings, current_network_settings)
     try:
         template = env.get_template('network.jinja')
-    except Exception:
+    except TemplateNotFound:
         log.error('Could not load template network.jinja')
         return ''
     network = template.render(opts)
