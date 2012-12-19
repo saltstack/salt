@@ -99,7 +99,7 @@ class OptionParser(optparse.OptionParser):
 
         optparse.OptionParser.__init__(self, *args, **kwargs)
 
-        if '%prog' in self.epilog:
+        if self.epilog and '%prog' in self.epilog:
             self.epilog = self.epilog.replace('%prog', self.get_prog_name())
 
     def parse_args(self, args=None, values=None):
