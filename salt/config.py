@@ -389,7 +389,7 @@ def master_config(path):
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
             'win_repo': '/srv/salt/win/repo',
-            'win_repo_cachefile': '/srv/salt/win/repo/winrepo.cache',
+            'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.cache',
     }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
