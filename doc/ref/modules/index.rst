@@ -12,8 +12,11 @@ Easy Modules to write
 =====================
 
 Salt modules are amazingly simple to write. Just write a regular Python module
-or a regular `Cython`_ module and place it in the ``salt/modules`` directory. You
-can also place them in a directory called ``_modules/`` in your state directory.
+or a regular `Cython`_ module and place it in the ``salt/modules`` directory.
+You can also place them in a directory called ``_modules/`` within the
+:conf_master:`file_roots` specified by the master config file, and they will be
+synced to the minions when `state.highstate`_ is run, or by executing the
+`saltutil.sync_modules`_ or `saltutil.sync_all`_ functions.
 
 Since Salt modules are just Python/Cython modules, there are no restraints on
 what you can put inside of a Salt module. If a Salt module has errors and
@@ -26,6 +29,9 @@ compilation of the Cython module is automatic and happens when the minion
 starts, so only the ``*.pyx`` file is required.
 
 .. _`Cython`: http://cython.org/
+.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
+.. _`saltutil.sync_modules`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_modules
+.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
 
 Cross Calling Modules
 =====================
