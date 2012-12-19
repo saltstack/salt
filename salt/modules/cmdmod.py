@@ -96,7 +96,8 @@ def _run(cmd,
          shell=DEFAULT_SHELL,
          env=(),
          rstrip=True,
-         retcode=False):
+         retcode=False,
+         template=None):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
