@@ -160,7 +160,7 @@ class SaltEvent(object):
             if not socket.closed:
                 socket.close()
             self.poller.unregister(socket)
-        self.context.term()
+        #self.context.term()
 
     def __del__(self):
         self.destroy()
