@@ -350,11 +350,11 @@ if __name__ == '__main__':
 
         no_problems_found = False
 
-        print_header(u'\u22c6\u22c6\u22c6 {0}  '.format(name), sep=u'\u22c6', inline=True)
+        print_header(u'*** {0}  '.format(name), sep=u'*', inline=True)
         if results.skipped:
             print_header(u' --------  Skipped Tests  ', sep='-', inline=True)
             maxlen = len(max([tc.id() for (tc, reason) in results.skipped], key=len))
-            fmt = u'   \u2192 {0: <{maxlen}}  \u2192  {1}'
+            fmt = u'   -> {0: <{maxlen}}  ->  {1}'
             for tc, reason in results.skipped:
                 print(fmt.format(tc.id(), reason, maxlen=maxlen))
             print_header(u' ', sep='-', inline=True)
@@ -362,7 +362,7 @@ if __name__ == '__main__':
         if results.errors:
             print_header(u' --------  Tests with Errors  ', sep='-', inline=True)
             for tc, reason in results.errors:
-                print_header(u'   \u2192 {0}  '.format(tc.id()), sep=u'.', inline=True)
+                print_header(u'   -> {0}  '.format(tc.id()), sep=u'.', inline=True)
                 for line in reason.rstrip().splitlines():
                     print('       {0}'.format(line.rstrip()))
                 print_header(u'   ', sep=u'.', inline=True)
@@ -371,18 +371,18 @@ if __name__ == '__main__':
         if results.failures:
             print_header(u' --------  Failed Tests  ', sep='-', inline=True)
             for tc, reason in results.failures:
-                print_header(u'   \u2192 {0}  '.format(tc.id()), sep=u'.', inline=True)
+                print_header(u'   -> {0}  '.format(tc.id()), sep=u'.', inline=True)
                 for line in reason.rstrip().splitlines():
                     print('       {0}'.format(line.rstrip()))
                 print_header(u'   ', sep=u'.', inline=True)
             print_header(u' ', sep='-', inline=True)
 
-        print_header(u'', sep=u'\u22c6', inline=True)
+        print_header(u'', sep=u'*', inline=True)
 
     if no_problems_found:
         print_header(
-            u'\u22c6\u22c6\u22c6  No Problems Found While Running Tests  ',
-            sep=u'\u22c6', inline=True
+            u'***  No Problems Found While Running Tests  ',
+            sep=u'*', inline=True
         )
 
     print_header('  Overall Tests Report  ', sep='=', centered=True, inline=True)
