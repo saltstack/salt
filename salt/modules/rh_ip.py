@@ -6,6 +6,7 @@ The networking module for RHEL/Fedora based distros
 import logging
 import re
 from os.path import exists, join
+from os import sep
 import StringIO
 
 # import third party libs
@@ -13,12 +14,13 @@ import jinja2
 
 # Import salt libs
 import salt.utils
+from salt.modules import __path__ as saltmodpath
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
-env = jinja2.Environment(loader=jinja2.PackageLoader('salt.modules', 'rh_ip'))
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(saltmodpath[0] + sep + 'rh_ip'))
 
 
 def __virtual__():
@@ -759,7 +761,11 @@ def build_bond(iface, settings):
     rh_major = __grains__['osrelease'][:1]
 
     opts = _parse_settings_bond(settings, iface)
-    template = env.get_template('conf.jinja')
+    try:
+        template = env.get_template('conf.jinja')
+    except Exception:
+        log.error('Could not load template conf.jinja')
+        return ''
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf')
     path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
@@ -810,7 +816,11 @@ def build_interface(iface, iface_type, enabled, settings):
 
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
-        template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
+        try:
+            template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
+        except Exception:
+            log.error('Could not load template rh{0}_eth.jinja'.format(rh_major))
+            return ''
         ifcfg = template.render(opts)
 
     if settings['test']:
@@ -919,7 +929,11 @@ def build_network_settings(settings):
 
     # Build settings
     opts = _parse_network_settings(settings, current_network_settings)
-    template = env.get_template('network.jinja')
+    try:
+        template = env.get_template('network.jinja')
+    except Exception:
+        log.error('Could not load template network.jinja')
+        return ''
     network = template.render(opts)
 
     if settings['test']:
