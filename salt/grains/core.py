@@ -55,74 +55,131 @@ if sys.platform.startswith('win'):
                       "will be missing")
 
 
-def _windows_cpudata():
-    '''
-    Return some cpu information on Windows minions
-    '''
-    # Provides:
-    #   num_cpus
-    #   cpu_model
-    grains = {}
-    if 'NUMBER_OF_PROCESSORS' in os.environ:
-        # Cast to int so that the logic isn't broken when used as a
-        # conditional in templating. Also follows _linux_cpudata()
+class CPUData:
+    """
+    Provides:
+        num_cpus
+        cpu_model
+        cpu_flags
+        cpu_arch    # TODO
+    """
+    @staticmethod
+    def windows():
+        grains = {}
+        if 'NUMBER_OF_PROCESSORS' in os.environ:
+            # Cast to int so that the logic isn't broken when used as a
+            # conditional in templating. Also follows _linux_cpudata()
+            try:
+                grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
+            except ValueError:
+                grains['num_cpus'] = 1
+        grains['cpu_model'] = platform.processor()
+        return grains
+
+    @staticmethod
+    def linux():
+        grains = {}
+        cpuinfo = '/proc/cpuinfo'
+        # Parse over the cpuinfo file
+        if os.path.isfile(cpuinfo):
+            with salt.utils.fopen(cpuinfo, 'r') as _fp:
+                for line in _fp:
+                    comps = line.split(':')
+                    if not len(comps) > 1:
+                        continue
+                    key = comps[0].strip()
+                    val = comps[1].strip()
+                    if key == 'processor':
+                        grains['num_cpus'] = int(val) + 1
+                    elif key == 'model name':
+                        grains['cpu_model'] = val
+                    elif key == 'flags':
+                        grains['cpu_flags'] = val.split()
+                    # ARM support - /proc/cpuinfo
+                    #
+                    # Processor       : ARMv6-compatible processor rev 7 (v6l)
+                    # BogoMIPS        : 697.95
+                    # Features        : swp half thumb fastmult vfp edsp java tls
+                    # CPU implementer : 0x41
+                    # CPU architecture: 7
+                    # CPU variant     : 0x0
+                    # CPU part        : 0xb76
+                    # CPU revision    : 7
+                    #
+                    # Hardware        : BCM2708
+                    # Revision        : 0002
+                    # Serial          : 00000000XXXXXXXX
+                    elif key == 'Processor':
+                        grains['cpu_model'] = val.split('-')[0]
+                        grains['num_cpus'] = 1
+        if 'num_cpus' not in grains:
+            grains['num_cpus'] = 0
+        if 'cpu_model' not in grains:
+            grains['cpu_model'] = 'Unknown'
+        if 'cpu_flags' not in grains:
+            grains['cpu_flags'] = []
+        return grains
+
+    @staticmethod
+    def bsd(osdata):
+        '''
+        Return cpu information for BSD-like systems
+        '''
+        # Provides:
+        #   cpuarch
+        #   num_cpus
+        #   cpu_model
+        #   cpu_flags
+        sysctl = salt.utils.which('sysctl')
+        arch = salt.utils.which('arch')
+        cmds = {}
+
+        if sysctl:
+            cmds.update({
+                'num_cpus': '{0} -n hw.ncpu'.format(sysctl),
+                'cpuarch': '{0} -n hw.machine'.format(sysctl),
+                'cpu_model': '{0} -n hw.model'.format(sysctl),
+            })
+        if arch and osdata['kernel'] == 'OpenBSD':
+            cmds['cpuarch'] = '{0} -s'.format(arch)
+
+        grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
+        grains['cpu_flags'] = []
+        if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
+            # TODO: at least it needs to be tested for BSD other then FreeBSD
+            with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
+                cpu_here = False
+                for line in _fp:
+                    if line.startswith('CPU: '):
+                        cpu_here = True  # starts cpu descr
+                        continue
+                    if cpu_here:
+                        if not line.startswith(' '):
+                            break  # game over
+                        if 'Features' in line:
+                            start = line.find('<')
+                            end = line.find('>')
+                            if start > 0 and end > 0:
+                                f = line[start + 1:end].split(',')
+                                grains['cpu_flags'].extend(f)
         try:
-            grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
+            grains['num_cpus'] = int(grains['num_cpus'])
         except ValueError:
             grains['num_cpus'] = 1
-    grains['cpu_model'] = platform.processor()
-    return grains
+
+        return grains
+
+    @staticmethod
+    def sunos(osdata):
+        grains = {}
+        grains['cpuarch'] = __salt__['cmd.run']('uname -p')
+        psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
+        grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
+        kstat_info = 'kstat -p cpu_info:*:*:implementation'
+        grains['cpu_model'] = __salt__['cmd.run'](kstat_info).split()[1].strip()
+        return grains
 
 
-def _linux_cpudata():
-    '''
-    Return some cpu information for Linux minions
-    '''
-    # Provides:
-    #   num_cpus
-    #   cpu_model
-    #   cpu_flags
-    grains = {}
-    cpuinfo = '/proc/cpuinfo'
-    # Parse over the cpuinfo file
-    if os.path.isfile(cpuinfo):
-        with salt.utils.fopen(cpuinfo, 'r') as _fp:
-            for line in _fp:
-                comps = line.split(':')
-                if not len(comps) > 1:
-                    continue
-                key = comps[0].strip()
-                val = comps[1].strip()
-                if key == 'processor':
-                    grains['num_cpus'] = int(val) + 1
-                elif key == 'model name':
-                    grains['cpu_model'] = val
-                elif key == 'flags':
-                    grains['cpu_flags'] = val.split()
-                # ARM support - /proc/cpuinfo
-                #
-                # Processor       : ARMv6-compatible processor rev 7 (v6l)
-                # BogoMIPS        : 697.95
-                # Features        : swp half thumb fastmult vfp edsp java tls
-                # CPU implementer : 0x41
-                # CPU architecture: 7
-                # CPU variant     : 0x0
-                # CPU part        : 0xb76
-                # CPU revision    : 7
-                #
-                # Hardware        : BCM2708
-                # Revision        : 0002
-                # Serial          : 00000000XXXXXXXX
-                elif key == 'Processor':
-                    grains['cpu_model'] = val.split('-')[0]
-                    grains['num_cpus'] = 1
-    if 'num_cpus' not in grains:
-        grains['num_cpus'] = 0
-    if 'cpu_model' not in grains:
-        grains['cpu_model'] = 'Unknown'
-    if 'cpu_flags' not in grains:
-        grains['cpu_flags'] = []
-    return grains
 
 
 def _linux_gpu_data():
@@ -169,73 +226,6 @@ def _linux_gpu_data():
     grains = {}
     grains['num_gpus'] = len(gpus)
     grains['gpus'] = gpus
-    return grains
-
-
-def _bsd_cpudata(osdata):
-    '''
-    Return cpu information for BSD-like systems
-    '''
-    # Provides:
-    #   cpuarch
-    #   num_cpus
-    #   cpu_model
-    #   cpu_flags
-    sysctl = salt.utils.which('sysctl')
-    arch = salt.utils.which('arch')
-    cmds = {}
-
-    if sysctl:
-        cmds.update({
-            'num_cpus': '{0} -n hw.ncpu'.format(sysctl),
-            'cpuarch': '{0} -n hw.machine'.format(sysctl),
-            'cpu_model': '{0} -n hw.model'.format(sysctl),
-        })
-    if arch and osdata['kernel'] == 'OpenBSD':
-        cmds['cpuarch'] = '{0} -s'.format(arch)
-
-    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
-    grains['cpu_flags'] = []
-    if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
-        # TODO: at least it needs to be tested for BSD other then FreeBSD
-        with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
-            cpu_here = False
-            for line in _fp:
-                if line.startswith('CPU: '):
-                    cpu_here = True  # starts cpu descr
-                    continue
-                if cpu_here:
-                    if not line.startswith(' '):
-                        break  # game over
-                    if 'Features' in line:
-                        start = line.find('<')
-                        end = line.find('>')
-                        if start > 0 and end > 0:
-                            f = line[start + 1:end].split(',')
-                            grains['cpu_flags'].extend(f)
-    try:
-        grains['num_cpus'] = int(grains['num_cpus'])
-    except ValueError:
-        grains['num_cpus'] = 1
-
-    return grains
-
-
-def _sunos_cpudata(osdata):
-    '''
-    Return the cpu information for Solaris-like systems
-    '''
-    # Provides:
-    #   cpuarch
-    #   num_cpus
-    #   cpu_model
-    grains = {}
-
-    grains['cpuarch'] = __salt__['cmd.run']('uname -p')
-    psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
-    grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
-    kstat_info = 'kstat -p cpu_info:*:*:implementation'
-    grains['cpu_model'] = __salt__['cmd.run'](kstat_info).split()[1].strip()
     return grains
 
 
@@ -561,7 +551,7 @@ def os_data():
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
         grains.update(_windows_platform_data(grains))
-        grains.update(_windows_cpudata())
+        grains.update(CPUData.windows())
         grains.update(_ps(grains))
         return grains
     elif grains['kernel'] == 'Linux':
@@ -626,7 +616,7 @@ def os_data():
         # this maps the long names from the /etc/DISTRO-release files to the
         # traditional short names that Salt has used.
         grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
-        grains.update(_linux_cpudata())
+        grains.update(CPUData.linux())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
@@ -635,16 +625,16 @@ def os_data():
                 rel_data = fp_.read()
                 if 'SmartOS' in rel_data:
                     grains['os'] = 'SmartOS'
-        grains.update(_sunos_cpudata(grains))
+        grains.update(CPUData.sunos(grains))
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
-        grains.update(_bsd_cpudata(grains))
+        grains.update(CPUData.bsd(grains))
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD'):
-        grains.update(_bsd_cpudata(grains))
+        grains.update(CPUData.bsd(grains))
     if not grains['os']:
         grains['os'] = 'Unknown {0}'.format(grains['kernel'])
         grains['os_family'] = 'Unknown'
