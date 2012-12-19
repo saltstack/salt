@@ -9,18 +9,29 @@ import logging
 
 log = logging.getLogger(__name__)
 
+has_portage = False
+
 # Import third party libs
 try:
     import portage
+    has_portage = True
 except ImportError:
-    pass
-
+    import os
+    import sys
+    if os.path.isdir('/usr/lib/portage/pym'):
+        try:
+            # In a virtualenv, the portage python path needs to be manually added
+            sys.path.insert(0, '/usr/lib/portage/pym')
+            import portage
+            has_portage = True
+        except ImportError:
+            pass
 
 def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if __grains__['os'] == 'Gentoo' else False
+    return 'pkg' if (has_portage and __grains__['os'] == 'Gentoo') else False
 
 def _vartree():
     return portage.db[portage.root]['vartree']
@@ -130,6 +141,16 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>']}
     '''
+
+    logging.debug('Called modules.pkg.install: {0}'.format(
+        {
+            'name' : name,
+            'refresh' : refresh,
+            'pkgs' : pkgs,
+            'sources' : sources,
+            'kwargs' : kwargs
+        }
+    ))
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
         refresh_db()
