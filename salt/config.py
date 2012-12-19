@@ -237,6 +237,7 @@ def minion_config(path, check_dns=True):
             'update_restart_services': [],
             'retry_dns': 30,
             'recon_max': 5000,
+            'win_repo': 'win/repo/winrepo.cache',
             'win_repo_cachefile': '/var/cache/salt/minion/winrepo.cache',
             }
 
