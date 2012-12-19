@@ -22,7 +22,7 @@ def genrepo():
     '''
     ret = {}
     repo = __opts__['win_repo']
-    winrepo = __opts__['win_repo_cachefile']
+    winrepo = __opts__['win_repo_mastercachefile']
     for root, dirs, files in os.walk(repo):
         for name in files:
             if name.endswith('.sls'):

@@ -272,8 +272,17 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    log.warning('pkg.refresh_db not implemented on Windows yet')
-    return {}
+    repocache = __opts__['win_repo_cachefile']
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
+        # It's not cached. Cache it, mate.
+        cached_repo = __salt__['cp.cache_file'](repocache)
+        return True
+    # Check if the master's cache file has changed
+    if __salt__['cp.hash_file'](repocache) !=\
+            __salt__['cp.hash_file'](cached_repo):
+                cached_repo = __salt__['cp.cache_file'](repocache)
+    return True
 
 
 def install(name=None, refresh=False, **kwargs):
