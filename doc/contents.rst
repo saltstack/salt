@@ -31,6 +31,7 @@ Full Table of Contents
     topics/event/index
     topics/tests/*
     topics/reactor/*
+    topics/style
 
     ref/index
     ref/modules/*
