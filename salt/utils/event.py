@@ -150,17 +150,24 @@ class SaltEvent(object):
 
     def destroy(self):
         if self.cpub:
+            # Wait at most 2.5 secs to send any remaining messages in the
+            # socket or the context.term() bellow will hang indefinitely.
+            # See https://github.com/zeromq/pyzmq/issues/102
+            self.sub.setsockopt(zmq.LINGER, 2500)
             self.sub.close()
         if self.cpush:
+            self.push.setsockopt(zmq.LINGER, 2500)
             self.push.close()
         # If socket's are not unregistered from a poller, nothing which touches
         # that poller get's garbage collected. The Poller itself, it's
         # registered sockets and the Context
         for socket in self.poller.sockets.keys():
             if not socket.closed:
+                # Should already be closed from above, but....
+                socket.setsockopt(zmq.LINGER, 2500)
                 socket.close()
             self.poller.unregister(socket)
-        #self.context.term()
+        self.context.term()
 
     def __del__(self):
         self.destroy()
@@ -238,7 +245,12 @@ class EventPublisher(Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
+            # Wait at most 2.5 secs to send any remaining messages in the
+            # socket or the context.term() bellow will hang indefinitely.
+            # See https://github.com/zeromq/pyzmq/issues/102
+            self.epub_sock.setsockopt(zmq.LINGER, 2500)
             self.epub_sock.close()
+            self.epull_sock.setsockopt(zmq.LINGER, 2500)
             self.epull_sock.close()
         finally:
             self.context.term()
@@ -366,4 +378,3 @@ class ReactWrap(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
         return wheel.master_call(**kwargs)
-
