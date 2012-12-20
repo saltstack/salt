@@ -40,7 +40,7 @@ def _active_mountinfo(ret):
 
 
 def _active_mounts(ret):
-    filename = '/proc/self/mountinfo'
+    filename = '/proc/self/mounts'
     if not os.access(filename, os.R_OK):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
@@ -65,7 +65,7 @@ def active():
     ret = {}
     try:
         _active_mountinfo(ret)
-    except IOError:
+    except CommandExecutionError:
         _active_mounts(ret)
     return ret
 
