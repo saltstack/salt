@@ -56,7 +56,7 @@ def available_version(name):
     if not cached_repo:
         __salt__['pkg.refresh_db']
     try:
-        with salt.utils.fopen(cache_repo, 'r') as repofile:
+        with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
             except:
