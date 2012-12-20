@@ -51,26 +51,7 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache)
-    if not cached_repo:
-        __salt__['pkg.refresh_db']
-    try:
-        with salt.utils.fopen(cached_repo, 'r') as repofile:
-            try:
-                repodata = msgpack.loads(repofile.read()) or {}
-            except:
-                return 'Windows package repo not available'
-    except IOError as exc:
-        log.debug('Not able to read repo file')
-        return 'Windows package repo not available'
-    if not repodata:
-        return 'Windows package repo not available'
-    if name in repodata:
-        return repodata[name]
-    else:
-        return name, ' is not available.'
-    return name, ' is not available.'
+    return _get_package_info(name)
 
 
 def upgrade_available(name):
@@ -320,8 +301,21 @@ def install(name=None, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    log.warning('pkg.install not implemented on Windows yet')
-    return {}
+
+    if refresh:
+        refresh_db()
+    old = list_pkgs()
+    pkginfo = _get_package_info(name)
+    cached_pkg = __salt__['cp.is_cached'](pkginfo['installer'])
+    if not cached_pkg:
+        # It's not cached. Cache it, mate.
+        cached_pkg = __salt__['cp.cache_file'](pkginfo['installer'])
+    cmd = cached_pkg, pkginfo['install_flags']
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
+    if stderr:
+        log.error(stderr)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():
@@ -368,3 +362,30 @@ def purge(name):
     '''
     log.warning('pkg.purge not implemented on Windows yet')
     return []
+
+def _get_package_info(name):
+    '''
+    Return package info.
+    TODO: Add option for version
+    '''
+    repocache = __opts__['win_repo_cachefile']
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
+        __salt__['pkg.refresh_db']
+    try:
+        with salt.utils.fopen(cached_repo, 'r') as repofile:
+            try:
+                repodata = msgpack.loads(repofile.read()) or {}
+            except:
+                return 'Windows package repo not available'
+    except IOError as exc:
+        log.debug('Not able to read repo file')
+        return 'Windows package repo not available'
+    if not repodata:
+        return 'Windows package repo not available'
+    if name in repodata:
+        return repodata[name]
+    else:
+        return name, ' is not available.'
+    return name, ' is not available.'
+
