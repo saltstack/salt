@@ -4,22 +4,24 @@ Debian
 
 Installation
 ============
+
 Salt is currently available in in the Debian package tree:
 
 http://packages.debian.org/source/salt
 
-To install Salt on Wheezy or later use:
+If you're running a Debian release more recent than Wheezy use:
 
 .. code-block:: bash
 
     apt-get install salt-master
     apt-get install salt-minion
 
+As of this writing salt is only available in Debian unstable.
+
 Squeeze
 =======
 
-Salt is available for squeeze in the Debian backports repository, and may be
-installed as follows:
+To build your own salt Debian packages on squeeze use:
 
 .. code-block:: bash
 
@@ -27,8 +29,32 @@ installed as follows:
     deb http://backports.debian.org/debian-backports squeeze-backports main
     EOF
     apt-get update
-    apt-get -t squeeze-backports install salt-master
-    apt-get -t squeeze-backports install salt-minion
+    apt-get install build-essential fakeroot
+    apt-get install python-argparse python-zmq
+    apt-get -t squeeze-backports install debhelper python-sphinx
+
+After installing the necessary dependencies build the packages with:
+
+.. code-block:: bash
+
+    git clone https://github.com/saltstack/salt.git
+    cd salt
+    fakeroot debian/rules binary
+
+You will need to install the salt-common package along with the salt-minion or
+salt-master packages. For example:
+
+.. code-block:: bash
+
+   dpkg -i salt-common_<version>.deb salt-minion<version>.deb
+   apt-get -f install
+
+The last command pulls in the required dependencies for your salt packages.
+
+Wheezy
+======
+
+Backports for Wheezy should be available shortly after it's release.
 
 For more information how to use debian-backports see
 http://backports-master.debian.org/Instructions/
