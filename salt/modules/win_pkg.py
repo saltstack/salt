@@ -52,15 +52,20 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     repocache = __opts__['win_repo_cachefile']
-    if not os.path.exists(repocache):
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
         __salt__['pkg.refresh_db']
-    with salt.utils.fopen(repocache, 'r') as repofile:
-        try:
-            repodata = msgpack.loads(repofile.read()) or {}
-        except:
-            return 'Windows package repo not available'
+    try:
+        with salt.utils.fopen(cache_repo, 'r') as repofile:
+            try:
+                repodata = msgpack.loads(repofile.read()) or {}
+            except:
+                return 'Windows package repo not available'
+    except IOError as exc:
+        log.debug('Not able to read repo file')
+        return 'Windows package repo not available'
     if not repodata:
-         return 'Windows package repo not available'
+        return 'Windows package repo not available'
     if repodata[name]:
         return repodata[name]
     else:
