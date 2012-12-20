@@ -60,7 +60,7 @@ def _create_loader(
     return Loader(module_dirs, opts, tag)
 
 
-def minion_mods(opts, context=None):
+def minion_mods(opts, context=None, whitelist=None):
     '''
     Returns the minion modules
     '''
@@ -69,7 +69,12 @@ def minion_mods(opts, context=None):
         context = {}
     pack = {'name': '__context__',
             'value': context}
-    functions = load.apply_introspection(load.gen_functions(pack))
+    functions = load.apply_introspection(
+            load.gen_functions(
+                pack,
+                whitelist=whitelist
+                )
+            )
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -437,7 +442,7 @@ class Loader(object):
             mod.__salt__ = functions
         return funcs
 
-    def gen_functions(self, pack=None, virtual_enable=True):
+    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -602,6 +607,12 @@ class Loader(object):
                     # then log the information and continue to the next.
                     log.exception(('Failed to read the virtual function for '
                                    'module: {0}').format(module_name))
+                    continue
+
+            if whitelist:
+                # It a whitelist is defined then only load the module if it is
+                # in the whitelist
+                if module_name not in whitelist:
                     continue
 
             for attr in dir(mod):
