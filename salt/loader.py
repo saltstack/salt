@@ -94,14 +94,14 @@ def raw_mod(opts, name, functions):
     return load.gen_module(name, functions)
 
 
-def returners(opts, functions):
+def returners(opts, functions, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def pillars(opts, functions):
@@ -122,12 +122,12 @@ def tops(opts):
     return load.filter_func('top')
 
 
-def wheels(opts):
+def wheels(opts, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
-    return load.gen_functions()
+    return load.gen_functions(whitelist=whitelist)
 
 
 def outputters(opts):
@@ -138,32 +138,32 @@ def outputters(opts):
     return load.filter_func('output')
 
 
-def auth(opts):
+def auth(opts, whitelist):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
-    return load.gen_functions()
+    return load.gen_functions(whitelist=whitelist)
 
 
-def states(opts, functions):
+def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
-def search(opts, returners):
+def search(opts, returners, whitelist=None):
     '''
     Returns the state modules
     '''
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def render(opts, functions):
