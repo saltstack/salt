@@ -66,7 +66,7 @@ def available_version(name):
         return 'Windows package repo not available'
     if not repodata:
         return 'Windows package repo not available'
-    if repodata[name]:
+    if name in repodata:
         return repodata[name]
     else:
         return name, ' is not available.'
