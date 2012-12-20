@@ -138,7 +138,7 @@ def outputters(opts):
     return load.filter_func('output')
 
 
-def auth(opts, whitelist):
+def auth(opts, whitelist=None):
     '''
     Returns the returner modules
     '''
