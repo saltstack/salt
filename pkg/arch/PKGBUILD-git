@@ -1,6 +1,6 @@
 # Maintainer: Christer Edwards <christer.edwards@gmail.com>
 pkgname=salt-git
-pkgver=$(date +%Y%m%d)
+pkgver=20121219
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
@@ -31,9 +31,9 @@ source=("salt-master.service"
         "salt-minion"
         "salt-syndic")
 
-md5sums=('3be813f49bf5ab9580cfc23e915eea4b'
-         '8ef6ab9bf9750f146d31bd8da9da963b'
-         '97e1daa0f7232f48d109b62890b68d0e'
+md5sums=('3a2b032ec37077363c049969105b128e'
+         '833d31ebee69f5c0e2c0b6c8d345b6d7'
+         'e4c6adce5087e947c26c5c9d9fc3c9bb'
          '1594591acb0a266854186a694da21103'
          '21ab2eac231e9f61bf002ba5f16f8a3d'
          '09683ef4966e401761f7d2db6ad4b692')
