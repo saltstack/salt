@@ -9,7 +9,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.11.0
+Version: 0.11.1
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -290,6 +290,10 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Fri Dec 14 2012 Clint Savage <herlo1@gmail.com> - 0.11.1-1
+- Upstream patch release 0.11.1
+- Fixes security vulnerability (https://github.com/saltstack/salt/issues/2916)
+
 * Fri Dec 14 2012 Clint Savage <herlo1@gmail.com> - 0.11.0-1
 - Moved to upstream release 0.11.0
 
