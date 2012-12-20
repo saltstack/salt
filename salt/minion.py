@@ -134,7 +134,8 @@ class MasterMinion(object):
             returners=True,
             states=True,
             rend=True,
-            matcher=True):
+            matcher=True,
+            whitelist=None):
         self.opts = opts
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
@@ -148,7 +149,9 @@ class MasterMinion(object):
         '''
         Load all of the modules for the minion
         '''
-        self.functions = salt.loader.minion_mods(self.opts)
+        self.functions = salt.loader.minion_mods(
+                self.opts,
+                whitelist=whitelist)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
