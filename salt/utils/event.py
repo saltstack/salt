@@ -245,9 +245,6 @@ class EventPublisher(Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            # Wait at most 2.5 secs to send any remaining messages in the
-            # socket or the context.term() bellow will hang indefinitely.
-            # See https://github.com/zeromq/pyzmq/issues/102
             self.epub_sock.setsockopt(zmq.LINGER, 2500)
             self.epub_sock.close()
             self.epull_sock.setsockopt(zmq.LINGER, 2500)

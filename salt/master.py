@@ -323,9 +323,6 @@ class Publisher(multiprocessing.Process):
                     raise exc
 
         except KeyboardInterrupt:
-            # Wait at most 2.5 secs to send any remaining messages in the
-            # socket or the context.term() bellow will hang indefinitely.
-            # See https://github.com/zeromq/pyzmq/issues/102
             pub_sock.setsockopt(zmq.LINGER, 2500)
             pub_sock.close()
             pull_sock.setsockopt(zmq.LINGER, 2500)
@@ -413,9 +410,6 @@ class ReqServer(object):
         self.__bind()
 
     def destroy(self):
-        # Wait at most 2.5 secs to send any remaining messages in the
-        # socket or the context.term() bellow will hang indefinitely.
-        # See https://github.com/zeromq/pyzmq/issues/102
         self.clients.setsockopt(zmq.LINGER, 2500)
         self.clients.close()
         self.workers.setsockopt(zmq.LINGER, 2500)
@@ -468,9 +462,6 @@ class MWorker(multiprocessing.Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            # Wait at most 2.5 secs to send any remaining messages in the
-            # socket or the context.term() bellow will hang indefinitely.
-            # See https://github.com/zeromq/pyzmq/issues/102
             socket.setsockopt(zmq.LINGER, 2500)
             socket.close()
         finally:
@@ -1103,9 +1094,6 @@ class AESFuncs(object):
                     timeout
                 )
             finally:
-                # Wait at most 2.5 secs to send any remaining messages in the
-                # socket or the context.term() bellow will hang indefinitely.
-                # See https://github.com/zeromq/pyzmq/issues/102
                 pub_sock.setsockopt(zmq.LINGER, 2500)
                 pub_sock.close()
                 context.term()
@@ -1122,9 +1110,6 @@ class AESFuncs(object):
             try:
                 return ret
             finally:
-                # Wait at most 2.5 secs to send any remaining messages in the
-                # socket or the context.term() bellow will hang indefinitely.
-                # See https://github.com/zeromq/pyzmq/issues/102
                 pub_sock.setsockopt(zmq.LINGER, 2500)
                 pub_sock.close()
                 context.term()
@@ -1737,9 +1722,6 @@ class ClearFuncs(object):
                 }
             }
         finally:
-            # Wait at most 2.5 secs to send any remaining messages in the
-            # socket or the context.term() bellow will hang indefinitely.
-            # See https://github.com/zeromq/pyzmq/issues/102
             pub_sock.setsockopt(zmq.LINGER, 2500)
             pub_sock.close()
             context.term()
