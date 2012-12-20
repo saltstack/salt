@@ -10,6 +10,29 @@ rc scripts, services can be defined as running or dead.
     httpd:
       service:
         - running
+
+The service can also be set to be started at runtime via the enable option:
+
+.. code-block:: yaml
+
+    openvpn:
+      service:
+        - running
+        - enable: True
+
+By default if a service is triggered to refresh due to a watch statement the
+service is by default restarted. If the desired behaviour is to reload the
+service then set the reload value to True:
+
+.. code-block:: yaml
+
+    redis:
+      service:
+        - running
+        - enable: True
+        - reload: True
+        - watch:
+          - pkg: redis
 '''
 
 
