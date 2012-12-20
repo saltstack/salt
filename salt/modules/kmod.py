@@ -50,7 +50,7 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
-    mod_dir = os.path.join('/lib/modules/', os.uname()[2], 'kernel')
+    mod_dir = os.path.join('/lib/modules/', os.uname()[2])
     for root, dirs, files in os.walk(mod_dir):
         for fn_ in files:
             if '.ko' in fn_:
