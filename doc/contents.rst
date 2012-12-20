@@ -32,6 +32,7 @@ Full Table of Contents
     topics/tests/*
     topics/reactor/*
     topics/style
+    topics/git/*
 
     ref/index
     ref/modules/*
