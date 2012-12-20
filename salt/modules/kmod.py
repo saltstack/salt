@@ -53,8 +53,8 @@ def available():
     mod_dir = os.path.join('/lib/modules/', os.uname()[2])
     for root, dirs, files in os.walk(mod_dir):
         for fn_ in files:
-            if '.ko' in fn_:
-                ret.append(fn_[:fn_.index('.ko')])
+            if fn_.endswith('.ko'):
+                ret.append(fn_[:-3])
     return sorted(list(ret))
 
 
