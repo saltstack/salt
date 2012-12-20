@@ -25,6 +25,7 @@ except ImportError:
 import salt.utils
 import salt.payload
 import salt.utils.verify
+import salt.version
 from salt.exceptions import AuthenticationError, SaltClientError, SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
@@ -295,11 +296,11 @@ class Auth(object):
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
                 'The master may need to be updated if it is a version of Salt '
-                'lower than 0.10.4, or\n'
+                'lower than {0}, or\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
                 'Salt Minion.\nThe master public key can be found '
-                'at:\n{0}'.format(m_pub_fn)
+                'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
             sys.exit(42)
         if self.opts.get('master_finger', False):
