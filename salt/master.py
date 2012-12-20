@@ -538,7 +538,10 @@ class AESFuncs(object):
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
         # Create the master minion to access the external job cache
-        self.mminion = salt.minion.MasterMinion(self.opts)
+        self.mminion = salt.minion.MasterMinion(
+                self.opts,
+                states=False,
+                rend=False)
 
     def __find_file(self, path, env='base'):
         '''
@@ -1181,7 +1184,10 @@ class ClearFuncs(object):
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data
-        self.mminion = salt.minion.MasterMinion(self.opts)
+        self.mminion = salt.minion.MasterMinion(
+                self.opts,
+                states=False,
+                rend=False)
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
 
