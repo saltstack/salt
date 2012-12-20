@@ -18,6 +18,9 @@ except ImportError:
 
 # Import python libs
 import logging
+import msgpack
+import os
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +51,21 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    return 'pkg.available_version not implemented on Windows yet'
+    repocache = __opts__['win_repo_cachefile']
+    if not os.path.exists(repocache):
+        __salt__['pkg.refresh_db']
+    with salt.utils.fopen(repocache, 'r') as repofile:
+        try:
+            repodata = msgpack.loads(repofile.read()) or {}
+        except:
+            return 'Windows package repo not available'
+    if not repodata:
+         return 'Windows package repo not available'
+    if repodata[name]:
+        return repodata[name]
+    else:
+        return name, ' is not available.'
+    return name, ' is not available.'
 
 
 def upgrade_available(name):
