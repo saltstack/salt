@@ -172,9 +172,14 @@ class SREQ(object):
     def destroy(self):
         for socket in self.poller.sockets.keys():
             if not socket.closed:
+                # Wait at most 2.5 secs to send any remaining messages in the
+                # socket or the context.term() bellow will hang indefinitely.
+                # See https://github.com/zeromq/pyzmq/issues/102
+                socket.setsockopt(zmq.LINGER, 2500)
                 socket.close()
             self.poller.unregister(socket)
         if not self.socket.closed:
+            self.socket.setsockopt(zmq.LINGER, 2500)
             self.socket.close()
         self.context.term()
 
