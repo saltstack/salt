@@ -1,0 +1,19 @@
+language: python
+
+python:
+  - '2.6'
+  - '2.7'
+
+before_install:
+  - sudo apt-get update && sudo apt-get install swig supervisor rabbitmq-server ruby
+  - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
+  - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2 ordereddict; fi"
+
+install: pip install -r requirements.txt --use-mirrors
+script: sudo -E python setup.py test --runtests-opts='--run-destructive --sysinfo -v'
+
+notifications:
+  irc:
+    channels: "irc.freenode.org#salt-devel"
+    on_success: change
+    on_failure: change

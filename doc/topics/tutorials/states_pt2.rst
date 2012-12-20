@@ -2,12 +2,14 @@
 States tutorial, part 2
 =======================
 
-This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`. It is
-recommended that you begin there.
+.. note:: 
 
-In the last Salt States tutorial we covered the basics of installing a package.
-In this tutorial we will modify our ``webserver.sls`` file to be more
-complicated, have requirements, and use even more Salt States.
+  This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`.
+  It is recommended that you begin there.
+
+In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered
+the basics of installing a package. We will now modify our ``webserver.sls``
+file to have requirements, and use even more Salt States.
 
 Call multiple States
 ====================
@@ -32,7 +34,7 @@ the output.
 Expand the SLS module
 =====================
 
-As you have seen, sls modules are appended with the file extension ``.sls`` and
+As you have seen, SLS modules are appended with the file extension ``.sls`` and
 are referenced by name starting at the root of the state tree. An SLS module
 can be also defined as a directory. Demonstrate that now by creating a
 directory named ``webserver`` and moving and renaming ``webserver.sls`` to
@@ -40,9 +42,9 @@ directory named ``webserver`` and moving and renaming ``webserver.sls`` to
 
 ::
 
-        |- top.sls
-        `- webserver/
-           `- init.sls
+    |- top.sls
+    `- webserver/
+       `- init.sls
 
 .. admonition:: Organizing SLS modules
 
@@ -65,7 +67,7 @@ installed and running. Include the following at the bottom of your
 
 .. code-block:: yaml
     :linenos:
-    :emphasize-lines: 6,11
+    :emphasize-lines: 7,11
 
     apache:
       pkg:
@@ -80,25 +82,25 @@ installed and running. Include the following at the bottom of your
         - require:                              # requisite declaration
           - pkg: apache                         # requisite reference
 
-Again in **line 1** is the :term:`ID declaration`. In this example it is the
+**line 7** is the :term:`ID declaration`. In this example it is the
 location we want to install our custom HTML file. (**Note:** the default
 location that Apache serves may differ from the above on your OS or distro.
 ``/srv/www`` could also be a likely place to look.)
 
-**Line 2** the :term:`state declaration`. This example uses the Salt :mod:`file
+**Line 8** the :term:`state declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
 
-**Line 3** is the :term:`function declaration`. The :func:`managed function
+**Line 9** is the :term:`function declaration`. The :func:`managed function
 <salt.states.file.managed>` will download a file from the master and install it
 in the location specified.
 
-**Line 4** is a :term:`function arg declaration` which, in this example, passes
+**Line 10** is a :term:`function arg declaration` which, in this example, passes
 the ``source`` argument to the :func:`managed function
-<salt.states.file.managed>`. 
+<salt.states.file.managed>`.
 
-**Line 5** is a :term:`requisite declaration`.
+**Line 11** is a :term:`requisite declaration`.
 
-**Line 6** is a :term:`requisite reference` which refers to a state and an ID.
+**Line 12** is a :term:`requisite reference` which refers to a state and an ID.
 In this example, it is referring to the ``ID declaration`` from our example in
 :doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML
 file until Apache is installed.
@@ -119,7 +121,7 @@ Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the
 minion will fetch and execute the highstate as well as our HTML file from the
 master using Salt's File Server::
 
-    salt '*' salt.highstate
+    salt '*' state.highstate
 
 Verify that Apache is now serving your custom HTML.
 
@@ -158,4 +160,4 @@ Next steps
 ==========
 
 In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends and
-templating to make hugely complicated State Tree configurations dead-simple.
+templating to make a more complete State Tree configuration.

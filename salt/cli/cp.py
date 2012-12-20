@@ -5,14 +5,12 @@ intended to handle text files.
 Salt-cp can be used to distribute configuration files
 '''
 
-# Import python modules
+# Import python libs
 import os
 import sys
+import pprint
 
-# Import third party libs
-import yaml
-
-# Import salt modules
+# Import salt libs
 import salt.client
 
 
@@ -28,10 +26,12 @@ class SaltCP(object):
         Take a path and return the contents of the file as a string
         '''
         if not os.path.isfile(fn_):
-            err = 'The referenced file, ' + fn_ + ' is not available.'
+            err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        return {fn_: open(fn_, 'r').read()}
+        with salt.utils.fopen(fn_, 'r') as fp_:
+            data = fp_.read()
+        return {fn_: data}
 
     def _recurse_dir(self, fn_, files={}):
         '''
@@ -55,7 +55,7 @@ class SaltCP(object):
             if os.path.isfile(fn_):
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
-                print fn_ + ' is a directory, only files are supported.'
+                print(fn_ + ' is a directory, only files are supported.')
                 #files.update(self._recurse_dir(fn_))
         return files
 
@@ -70,13 +70,11 @@ class SaltCP(object):
                 arg,
                 self.opts['timeout'],
                 ]
-        if self.opts['pcre']:
-            args.append('pcre')
-        elif self.opts['list']:
-            args.append('list')
-        elif self.opts['grain']:
-            args.append('grain')
+
+        selected_target_option = self.opts.get('selected_target_option', None)
+        if selected_target_option is not None:
+            args.append(selected_target_option)
 
         ret = local.cmd(*args)
 
-        print yaml.dump(ret)
+        pprint.pprint(ret)

@@ -1,17 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/python
 '''
 Publish commands to the salt system from the command line on the master.
 '''
 
-import salt.cli
+from salt.scripts import salt_cp
 
-
-def main():
-    '''
-    The main function
-    '''
-    cp_ = salt.cli.SaltCP()
-    cp_.run()
 
 if __name__ == '__main__':
-    main()
+    salt_cp()

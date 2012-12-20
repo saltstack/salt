@@ -1,18 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/python
 '''
 Directly call a salt command in the modules, does not require a running salt
 minion to run.
 '''
 
-import salt.cli
+from salt.scripts import salt_call
 
-
-def main():
-    '''
-    The main function
-    '''
-    client = salt.cli.SaltCall()
-    client.run()
 
 if __name__ == '__main__':
-    main()
+    salt_call()

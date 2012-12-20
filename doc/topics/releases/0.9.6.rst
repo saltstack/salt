@@ -1,0 +1,47 @@
+========================
+Salt 0.9.6 Release Notes
+========================
+
+Salt 0.9.6 is a release targeting a few bugs and changes. This is primarily
+targeting an issue found in the names declaration in the state system. But a
+few other bugs were also repaired, like missing support for grains in extmods.
+
+Due to a conflict in distribution packaging msgpack will no longer be bundled
+with Salt, and is required as a dependency.
+
+New Features
+============
+
+http and ftp support in files.managed
+-------------------------------------
+
+Now under the source option in the file.managed state a http or ftp address
+can be used instead of a file located on the salt master.
+
+Allow Multiple Returners
+------------------------
+
+Now the returner interface can define multiple returners, and will also return
+data back to the master, making the process less ambiguous.
+
+Minion Memory Improvements
+--------------------------
+
+A number of modules have been taken out of the minion if the underlying
+systems required by said modules are not present on the minion system.
+A number of other modules need to be stripped out in this same way which
+should continue to make the minion more efficient.
+
+Minions Can Locally Cache Return Data
+-------------------------------------
+
+A new option, cache_jobs, has been added to the minion to allow for all of the
+historically run jobs to cache on the minion, allowing for looking up historic
+returns. By default cache_jobs is set to False.
+
+Pure Python Template Support For file.managed
+---------------------------------------------
+
+Templates in the file.managed state can now be defined in a Python script.
+This script needs to have a run function that returns the string that needs to
+be in the named file.

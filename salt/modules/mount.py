@@ -2,12 +2,56 @@
 Salt module to manage unix mounts and the fstab file
 '''
 
-import logging
+# Import python libs
 import os
+import logging
+
+# Import salt libs
+import salt.utils
+from salt._compat import string_types
+from salt.utils import which as _which
+from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 
 # Set up logger
 log = logging.getLogger(__name__)
+
+
+def _active_mountinfo(ret):
+    filename = '/proc/self/mountinfo'
+    if not os.access(filename, os.R_OK):
+        msg = 'File not readable {0}'
+        raise CommandExecutionError(msg.format(filename))
+
+    with salt.utils.fopen(filename) as fh:
+        for line in fh:
+            comps = line.split()
+            device = comps[2].split(':')
+            ret[comps[4]] = {'mountid': comps[0],
+                             'parentid': comps[1],
+                             'major': device[0],
+                             'minor': device[1],
+                             'root': comps[3],
+                             'opts': comps[5].split(','),
+                             'fstype': comps[7],
+                             'device': comps[8],
+                             'superopts': comps[9].split(',')}
+    return ret
+
+
+def _active_mounts(ret):
+    filename = '/proc/self/mountinfo'
+    if not os.access(filename, os.R_OK):
+        msg = 'File not readable {0}'
+        raise CommandExecutionError(msg.format(filename))
+
+    with salt.utils.fopen(filename) as fh:
+        for line in fh:
+            comps = line.split()
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': comps[3].split(',')}
+    return ret
 
 
 def active():
@@ -19,14 +63,10 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    for line in __salt__['cmd.run_stdout']('mount').split('\n'):
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            continue
-        ret[comps[2]] = {'device': comps[0],
-                         'fstype': comps[4],
-                         'opts': comps[5][1:-1].split(',')}
+    try:
+        _active_mountinfo(ret)
+    except IOError:
+        _active_mounts(ret)
     return ret
 
 
@@ -41,22 +81,23 @@ def fstab(config='/etc/fstab'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    for line in open(config).readlines():
-        if line.startswith('#'):
-            # Commented
-            continue
-        if not line.strip():
-            # Blank line
-            continue
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            continue
-        ret[comps[1]] = {'device': comps[0],
-                         'fstype': comps[2],
-                         'opts': comps[3].split(','),
-                         'dump': comps[4],
-                         'pass': comps[5]}
+    with salt.utils.fopen(config) as f:
+        for line in f:
+            if line.startswith('#'):
+                # Commented
+                continue
+            if not line.strip():
+                # Blank line
+                continue
+            comps = line.split()
+            if not len(comps) == 6:
+                # Invalid entry
+                continue
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': comps[3].split(','),
+                             'dump': comps[4],
+                             'pass': comps[5]}
     return ret
 
 
@@ -66,32 +107,43 @@ def rm_fstab(name, config='/etc/fstab'):
 
     CLI Example::
 
-        salt '*' /mnt/foo
+        salt '*' mount.rm_fstab /mnt/foo
     '''
     contents = fstab(config)
     if name not in contents:
         return True
     # The entry is present, get rid of it
     lines = []
-    for line in open(config).readlines():
-        if line.startswith('#'):
-            # Commented
-            lines.append(line)
-            continue
-        if not line.strip():
-            # Blank line
-            lines.append(line)
-            continue
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            lines.append(line)
-            continue
-        comps = line.split()
-        if comps[1] == name:
-            continue
-        lines.append(line)
-    open(config, 'w+').writelines(lines)
+    try:
+        with salt.utils.fopen(config, 'r') as fh:
+            for line in fh:
+                if line.startswith('#'):
+                    # Commented
+                    lines.append(line)
+                    continue
+                if not line.strip():
+                    # Blank line
+                    lines.append(line)
+                    continue
+                comps = line.split()
+                if not len(comps) == 6:
+                    # Invalid entry
+                    lines.append(line)
+                    continue
+                comps = line.split()
+                if comps[1] == name:
+                    continue
+                lines.append(line)
+    except (IOError, OSError) as exc:
+        msg = "Couldn't read from {0}: {1}"
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    try:
+        with salt.utils.fopen(config, 'w+') as fh:
+            fh.writelines(lines)
+    except (IOError, OSError) as exc:
+        msg = "Couldn't write to {0}: {1}"
+        raise CommandExecutionError(msg.format(config, str(exc)))
     return True
 
 
@@ -105,7 +157,7 @@ def set_fstab(
         config='/etc/fstab',
         ):
     '''
-    Verify that this mount is represented in the fstab, chage the mount point
+    Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
 
     CLI Example::
@@ -113,57 +165,78 @@ def set_fstab(
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
     # Fix the opts type if it is a list
-    if type(opts) == type(list()):
+    if isinstance(opts, list):
         opts = ','.join(opts)
     lines = []
     change = False
     present = False
+
     if not os.path.isfile(config):
-        return 'bad config'
-    for line in open(config).readlines():
-        if line.startswith('#'):
-            # Commented
-            lines.append(line)
-            continue
-        if not line.strip():
-            # Blank line
-            lines.append(line)
-            continue
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            lines.append(line)
-            continue
-        if comps[1] == name:
-            # check to see if there are changes and fix them if there are
-            present = True
-            if comps[0] != device:
-                change = True
-                comps[0] = device
-            if comps[2] != fstype:
-                change = True
-                comps[2] = fstype
-            if comps[3] != opts:
-                change = True
-                comps[3] = opts
-            if comps[4] != str(dump):
-                change = True
-                comps[4] = str(dump)
-            if comps[5] != str(pass_num):
-                change = True
-                comps[5] = str(pass_num)
-            if change:
-                log.debug('fstab entry for mount point {0} is being updated'
-                          .format(name))
-                newline = ('{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'
-                           .format(device, name, fstype, opts, dump, pass_num))
-                lines.append(newline)
-        else:
-            lines.append(line)
+        raise CommandExecutionError('Bad config file "{0}"'.format(config))
+
+    try:
+        with salt.utils.fopen(config, 'r') as fh:
+            for line in fh:
+                if line.startswith('#'):
+                    # Commented
+                    lines.append(line)
+                    continue
+                if not line.strip():
+                    # Blank line
+                    lines.append(line)
+                    continue
+                comps = line.split()
+                if not len(comps) == 6:
+                    # Invalid entry
+                    lines.append(line)
+                    continue
+                if comps[1] == name:
+                    # check to see if there are changes
+                    # and fix them if there are any
+                    present = True
+                    if comps[0] != device:
+                        change = True
+                        comps[0] = device
+                    if comps[2] != fstype:
+                        change = True
+                        comps[2] = fstype
+                    if comps[3] != opts:
+                        change = True
+                        comps[3] = opts
+                    if comps[4] != str(dump):
+                        change = True
+                        comps[4] = str(dump)
+                    if comps[5] != str(pass_num):
+                        change = True
+                        comps[5] = str(pass_num)
+                    if change:
+                        log.debug(
+                            'fstab entry for mount point {0} is being '
+                            'updated'.format(name)
+                        )
+                        newline = (
+                            '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
+                                device, name, fstype, opts, dump, pass_num
+                            )
+                        )
+                        lines.append(newline)
+                else:
+                    lines.append(line)
+    except (IOError, OSError) as exc:
+        msg = 'Couldn\'t write to {0}: {1}'
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
     if change:
-        # The line was changed, commit it!
-        open(config, 'w+').writelines(lines)
+        try:
+            with salt.utils.fopen(config, 'w+') as fh:
+                # The line was changed, commit it!
+                fh.writelines(lines)
+        except (IOError, OSError):
+            msg = 'File not writable {0}'
+            raise CommandExecutionError(msg.format(config))
+
         return 'change'
+
     if not change and not present:
         # The entry is new, add it to the end of the fstab
         newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
@@ -174,7 +247,13 @@ def set_fstab(
                 dump,
                 pass_num)
         lines.append(newline)
-        open(config, 'w+').writelines(lines)
+        try:
+            with salt.utils.fopen(config, 'w+') as fh:
+                # The line was changed, commit it!
+                fh.writelines(lines)
+        except (IOError, OSError):
+            msg = 'File not writable {0}'
+            raise CommandExecutionError(msg.format(config))
     if present and not change:
         # The right entry is already here
         return 'present'
@@ -189,7 +268,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
-    if type(opts) == type(str()):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
@@ -212,12 +291,12 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
-    if type(opts) == type(str()):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        if not opts.count('remount'):
+        if 'remount' not in opts:
             opts.append('remount')
         lopts = ','.join(opts)
         cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
@@ -227,8 +306,27 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
         if out['retcode']:
             return out['stderr']
         return True
-    else:
-        return mount(name, device, mkmnt, fstype, opts)
+    # Mount a filesystem that isn't already
+    return mount(name, device, mkmnt, fstype, opts)
+
+
+def umount(name):
+    '''
+    Attempt to unmount a device by specifying the directory it is mounted on
+
+    CLI Example::
+
+        salt '*' mount.umount /mnt/foo
+    '''
+    mnts = active()
+    if name not in mnts:
+        return "{0} does not have anything mounted".format(name)
+
+    cmd = 'umount {0}'.format(name)
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode']:
+        return out['stderr']
+    return True
 
 
 def is_fuse_exec(cmd):
@@ -239,13 +337,13 @@ def is_fuse_exec(cmd):
 
         salt '*' mount.is_fuse_exec sshfs
     '''
-    if not __salt__['cmd.has_exec'](cmd):
+    cmd_path = _which(cmd)
+
+    # No point in running ldd on a command that doesn't exist
+    if not cmd_path:
         return False
-    for path in os.environ['PATH'].split(os.pathsep):
-        if not __salt__['cmd.has_exec'](path):
-            continue
-        out = __salt__['cmd.run']('ldd {0}'.format(path))
-        for line in out.split('\n'):
-            if line.count('libfuse'):
-                return True
-    return False
+    elif not _which('ldd'):
+        raise CommandNotFoundError('ldd')
+
+    out = __salt__['cmd.run']('ldd {0}'.format(cmd_path))
+    return 'libfuse' in out

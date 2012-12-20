@@ -2,6 +2,7 @@
 Module to manage Linux kernel modules
 '''
 
+# Import python libs
 import os
 
 
@@ -23,7 +24,7 @@ def _new_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(post.difference(pre))
+    return list(post - pre)
 
 
 def _rm_mods(pre_mods, post_mods):
@@ -37,7 +38,7 @@ def _rm_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(pre.difference(post))
+    return list(pre - post)
 
 
 def available():
@@ -49,27 +50,23 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
-    for path in __salt__['cmd.run']('modprobe -l').split('\n'):
-        bpath = os.path.basename(path)
-        comps = bpath.split('.')
-        if comps.count('ko'):
-            # This is a kernel module, return it without the .ko extension
-            ret.append('.'.join(comps[:comps.index('ko')]))
-    return ret
+    mod_dir = os.path.join('/lib/modules/', os.uname()[2], 'kernel')
+    for root, dirs, files in os.walk(mod_dir):
+        for fn_ in files:
+            if '.ko' in fn_:
+                ret.append(fn_[:fn_.index('.ko')])
+    return sorted(list(ret))
 
 
 def check_available(mod):
     '''
-    Check to see if the speciified kernel module is available
+    Check to see if the specified kernel module is available
 
     CLI Example::
 
         salt '*' kmod.check_available kvm
     '''
-    if available().count(mod):
-        # the module is available, return True
-        return True
-    return False
+    return mod in available()
 
 
 def lsmod():
@@ -81,22 +78,37 @@ def lsmod():
         salt '*' kmod.lsmod
     '''
     ret = []
-    for line in __salt__['cmd.run']('lsmod').split('\n'):
+    for line in __salt__['cmd.run']('lsmod').splitlines():
         comps = line.split()
         if not len(comps) > 2:
             continue
         if comps[0] == 'Module':
             continue
-        mdat = {}
-        mdat['module'] = comps[0]
-        mdat['size'] = comps[1]
-        mdat['depcount'] = comps[2]
+        mdat = {
+            'size': comps[1],
+            'module': comps[0],
+            'depcount': comps[2],
+        }
         if len(comps) > 3:
             mdat['deps'] = comps[3].split(',')
         else:
             mdat['deps'] = []
         ret.append(mdat)
     return ret
+
+
+def mod_list():
+    '''
+    Return a list of the loaded module names
+
+    CLI Example::
+
+        salt '*' kmod.mod_list
+    '''
+    mods = set()
+    for mod in lsmod():
+        mods.add(mod['module'])
+    return sorted(list(mods))
 
 
 def load(mod):
@@ -108,7 +120,7 @@ def load(mod):
         salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
-    data = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
+    __salt__['cmd.run_all']('modprobe {0}'.format(mod))
     post_mods = lsmod()
     return _new_mods(pre_mods, post_mods)
 
@@ -122,6 +134,6 @@ def remove(mod):
         salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
-    data = __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
+    __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
     post_mods = lsmod()
     return _rm_mods(pre_mods, post_mods)

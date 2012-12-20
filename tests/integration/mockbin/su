@@ -1,0 +1,12 @@
+#!/bin/bash
+# "Fake" su command
+#
+# Just executes the command without changing effective uid. Used in integration
+# tests.
+while true; do
+    shift
+    test "x$1" == "x-c" && break
+    test "x$1" == "x" && break
+done
+shift
+exec /bin/bash -c "$@"

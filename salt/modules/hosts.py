@@ -2,7 +2,22 @@
 Manage the information in the hosts file
 '''
 
+# Import python libs
 import os
+
+# Import salt libs
+import salt.utils
+
+
+def __get_hosts_filename():
+    '''
+    Return the path to the appropriate hosts file
+    '''
+    # TODO: Investigate using  "%SystemRoot%\system32" for this
+    if __grains__['kernel'].startswith('Windows'):
+        return 'C:\Windows\System32\drivers\etc\hosts'
+    else:
+        return __salt__['config.option']('hosts.file')
 
 
 def list_hosts():
@@ -15,18 +30,23 @@ def list_hosts():
 
         salt '*' hosts.list_hosts
     '''
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     ret = {}
     if not os.path.isfile(hfn):
         return ret
-    for line in open(hfn).readlines():
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith('#'):
-            continue
-        comps = line.split()
-        ret[comps[0]] = comps[1:]
+    with salt.utils.fopen(hfn) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('#'):
+                continue
+            comps = line.split()
+            if comps[0] in ret:
+                # maybe log a warning ?
+                ret[comps[0]].extend(comps[1:])
+            else:
+                ret[comps[0]] = comps[1:]
     return ret
 
 
@@ -35,6 +55,7 @@ def get_ip(host):
     Return the ip associated with the named host
 
     CLI Example::
+
         salt '*' hosts.get_ip <hostname>
     '''
     hosts = list_hosts()
@@ -42,7 +63,7 @@ def get_ip(host):
         return ''
     # Look for the op
     for addr in hosts:
-        if hosts[addr].count(host):
+        if host in hosts[addr]:
             return addr
     # ip not found
     return ''
@@ -53,6 +74,7 @@ def get_alias(ip):
     Return the list of aliases associated with an ip
 
     CLI Example::
+
         salt '*' hosts.get_alias <ip addr>
     '''
     hosts = list_hosts()
@@ -66,29 +88,27 @@ def has_pair(ip, alias):
     Return true if the alias is set
 
     CLI Example::
+
         salt '*' hosts.has_pair <ip> <alias>
     '''
     hosts = list_hosts()
-    if ip not in hosts:
-        return False
-    if hosts[ip].count(alias):
-        return True
-    return False
+    return ip in hosts and alias in hosts[ip]
 
 
 def set_host(ip, alias):
     '''
-    Set the host entry in th hosts file for the given ip, this will overwrite
+    Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
 
     CLI Example::
+
         salt '*' hosts.set_host <ip> <alias>
     '''
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     ovr = False
     if not os.path.isfile(hfn):
         return False
-    lines = open(hfn).readlines()
+    lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -97,12 +117,19 @@ def set_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            lines[ind] = ip + '\t\t' + alias + '\n'
-            ovr = True
+            if not ovr:
+                lines[ind] = ip + '\t\t' + alias + '\n'
+                ovr = True
+            else:  # remove other entries
+                lines[ind] = ''
     if not ovr:
+        # make sure there is a newline
+        if lines and not lines[-1].endswith(('\n', '\r')):
+            lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    open(hfn, 'w+').writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as f:
+        f.writelines(lines)
     return True
 
 
@@ -111,12 +138,13 @@ def rm_host(ip, alias):
     Remove a host entry from the hosts file
 
     CLI Example::
+
         salt '*' hosts.rm_host <ip> <alias>
     '''
     if not has_pair(ip, alias):
         return True
-    hfn = '/etc/hosts'
-    lines = open(hfn).readlines()
+    hfn = __get_hosts_filename()
+    lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -125,16 +153,19 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = comps[0] + '\t'
+            newline = '{0}\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t' + existing
+                newline += '\t{0}'.format(existing)
             if newline.strip() == ip:
+                # No aliases exist for the line, make it empty
                 lines[ind] = ''
             else:
-                lines[ind] = newline
-    open(hfn, 'w+').writelines(lines)
+                # Only an alias was removed
+                lines[ind] = '{0}\n'.format(newline)
+    with salt.utils.fopen(hfn, 'w+') as f:
+        f.writelines(lines)
     return True
 
 
@@ -144,13 +175,14 @@ def add_host(ip, alias):
     it with the given host
 
     CLI Example::
+
         salt '*' hosts.add_host <ip> <alias>
     '''
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     ovr = False
     if not os.path.isfile(hfn):
         return False
-    lines = open(hfn).readlines()
+    lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
         if not tmpline:
@@ -162,11 +194,18 @@ def add_host(ip, alias):
             newline = comps[0] + '\t'
             for existing in comps[1:]:
                 newline += '\t' + existing
-            newline += '\t' + alias
+            newline += '\t' + alias + '\n'
+            lines.remove(lines[ind])
             lines.append(newline)
             ovr = True
+            # leave any other matching entries alone
+            break
     if not ovr:
+        # make sure there is a newline
+        if lines and not lines[-1].endswith(('\n', '\r')):
+            lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    open(hfn, 'w+').writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as f:
+        f.writelines(lines)
     return True

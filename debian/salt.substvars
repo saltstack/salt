@@ -1,3 +1,0 @@
-python:Versions=2.6, 2.7
-python:Depends=python, python-support (>= 0.90.0)
-misc:Depends=

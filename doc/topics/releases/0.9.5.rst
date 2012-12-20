@@ -1,0 +1,403 @@
+========================
+Salt 0.9.5 Release Notes
+========================
+
+Salt 0.9.5 is one of the largest steps forward in the development of Salt.
+
+0.9.5 comes with many milestones, this release has seen the community of
+developers grow out to an international team of 46 code contributors and has
+many feature additions, feature enhancements, bug fixes and speed improvements.
+
+.. warning::
+
+    Be sure to :ref:`read the upgrade instructions <v0.9.5-msgpack>` about the
+    switch to msgpack before upgrading!
+
+Community
+=========
+
+Nothing has proven to have more value to the development of Salt that the
+outstanding community that has been growing at such a great pace around Salt.
+This has proven not only that Salt has great value, but also the
+expandability of Salt is as exponential as I originally intended.
+
+0.9.5 has received over 600 additional commits since 0.9.4 with a swath of new
+commiters. The following individuals have contributed to the development of
+0.9.5:
+
+* Aaron Bull Schaefer
+* Antti Kaihola
+* Bas Tichelaar
+* Brad Barden
+* Brian Wagner
+* Byron Clark
+* Chris Scheller
+* Christer Edwards
+* Clint Savage
+* Corey Quinn
+* David Boucha
+* Eivind Uggedal
+* Eric Poelke
+* Evan Borgstrom
+* Jed Glazner
+* Jeff Schroeder
+* Jeffrey C. Ollie
+* Jonas Buckner
+* Kent Tenney
+* Martin Schnabel
+* Maxim Burgerhout
+* Mitch Anderson
+* Nathaniel Whiteinge
+* Seth House
+* Thomas S Hatch
+* Thomas Schreiber
+* Tor Hveem
+* lzyeval
+* syphernl
+
+This makes 21 new developers since 0.9.4 was released!
+
+To keep up with the growing community follow Salt on Ohloh
+(http://www.ohloh.net/p/salt), to join the Salt development community, fork
+Salt on Github, and get coding (https://github.com/saltstack/salt)!
+
+Major Features
+==============
+
+.. _v0.9.5-msgpack:
+
+SPEED! Pickle to msgpack
+------------------------
+
+For a few months now we have been talking about moving away from Python
+pickles for network serialization, but a preferred serialization format
+had not yet been found. After an extensive performance testing period
+involving everything from JSON to protocol buffers, a clear winner emerged.
+Message Pack (http://msgpack.org/) proved to not only be the fastest and most
+compact, but also the most "salt like". Message Pack is simple, and the code
+involved is very small. The msgpack library for Python has been added directly
+to Salt.
+
+This move introduces a few changes to Salt. First off, Salt is no longer a
+"noarch" package, since the msgpack lib is written in C. Salt 0.9.5 will also
+have compatibility issues with 0.9.4 with the default configuration.
+
+We have gone through great lengths to avoid backwards compatibility issues with
+Salt, but changing the serialization medium was going to create issues
+regardless. Salt 0.9.5 is somewhat backwards compatible with earlier minions. A
+0.9.5 master can command older minions, but only if the :conf_master:`serial`
+config value in the master is set to ``pickle``. This will tell the master to
+publish messages in pickle format and will allow the master to receive messages
+in both msgpack and pickle formats.
+
+Therefore **the suggested methods for upgrading** are either to just upgrade
+everything at once, or:
+
+1.  Upgrade the master to 0.9.5
+2.  Set :conf_master:`serial` to ``pickle`` in the master config
+3.  Upgrade the minions
+4.  Remove the ``serial`` option from the master config
+
+Since pickles can be used as a security exploit the ability for a master to
+accept pickles from minions at all will be removed in a future release.
+
+C Bindings for YAML
+--------------------
+
+All of the YAML rendering is now done with the YAML C bindings. This speeds up
+all of the sls files when running states.
+
+Experimental Windows Support
+----------------------------
+
+David Boucha has worked tirelessly to bring initial support to Salt for
+Microsoft Windows operating systems. Right now the Salt Minion can run as a
+native Windows service and accept commands.
+
+In the weeks and months to come Windows will receive the full treatment and
+will have support for Salt States and more robust support for managing Windows
+systems. This is a big step forward for Salt to move entirely outside of the
+Unix world, and proves Salt is a viable cross platform solution. Big Thanks
+to Dave for his contribution here!
+
+Dynamic Module Distribution
+---------------------------
+
+Many Salt users have expressed the desire to have Salt distribute in-house
+modules, states, renderers, returners, and grains. This support has been added
+in a number of ways:
+
+Modules via States
+```````````````````
+
+Now when salt modules are deployed to a minion via the state system as a file,
+then the modules will be automatically loaded into the active running minion
+- no restart required - and into the active running state. So custom state
+modules can be deployed and used in the same state run.
+
+Modules via Module Environment Directories
+```````````````````````````````````````````
+Under the file_roots each environment can now have directories that are used
+to deploy large groups of modules. These directories sync modules at the
+beginning of a state run on the minion, or can be manually synced via the Salt
+module :mod:`salt.modules.saltutil.sync_all`.
+
+The directories are named:
+
+* ``_modules``
+* ``_states``
+* ``_grains``
+* ``_renderers``
+* ``_returners``
+
+The modules are pushed to their respective scopes on the minions.
+
+Module Reloading
+----------------
+
+Modules can now be reloaded without restarting the minion, this is done by
+calling the :mod:`salt.modules.sys.reload_modules` function.
+
+But wait, there's more! Now when a salt module of any type is added via
+states the modules will be automatically reloaded, allowing for modules to be
+laid down with states and then immediately used.
+
+Finally, all modules are reloaded when modules are dynamically distributed
+from the salt master.
+
+Enable / Disable Added to Service
+---------------------------------
+
+A great deal of demand has existed for adding the capability to set services
+to be started at boot in the service module. This feature also comes with an
+overhaul of the service modules and initial systemd support.
+
+This means that the :mod:`service state <salt.states.service.running>` can now
+accept ``- enable: True`` to make sure a service is enabled at boot, and ``-
+enable: False`` to make sure it is disabled.
+
+Compound Target
+---------------
+
+A new target type has been added to the lineup, the compound target. In
+previous versions the desired minions could only be targeted via a single
+specific target type, but now many target specifications can be declared.
+
+These targets can also be separated by and/or operators, so certain properties
+can be used to omit a node::
+
+    salt -C 'webserv* and G@os:Debian or E@db.*' test.ping
+
+will match all minions with ids starting with webserv via a glob and minions
+matching the ``os:Debian`` grain. Or minions that match the ``db.*`` regular
+expression.
+
+
+Node Groups
+-----------
+
+Often the convenience of having a predefined group of minions to execute
+targets on is desired. This can be accomplished with the new nodegroups
+feature. Nodegroups allow for predefined compound targets to be declared in
+the master configuration file::
+
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+
+And then used via the ``-N`` option::
+
+    salt -N group1 test.ping
+
+Minion Side Data Store
+-----------------------
+
+The data module introduces the initial approach into storing persistent data on
+the minions, specific to the minions. This allows for data to be stored on
+minions that can be accessed from the master or from the minion.
+
+The Minion datastore is young, and will eventually provide an interface similar
+to a more mature key/value pair server.
+
+Major Grains Improvement
+-------------------------
+
+The Salt grains have been overhauled to include a massive amount of extra data.
+this includes hardware data, os data and salt specific data.
+
+Salt -Q is Useful Now
+---------------------
+
+In the past the salt query system, which would display the data from recent
+executions would be displayed in pure Python, and it was unreadable.
+
+0.9.5 has added the outputter system to the ``-Q`` option, thus enabling the
+salt query system to return readable output.
+
+Packaging Updates
+=================
+
+Huge strides have been made in packaging Salt for distributions. These
+additions are thanks to our wonderful community where the work to set up
+packages has proceeded tirelessly.
+
+FreeBSD
+-------
+
+Salt on FreeBSD? There a port for that:
+
+http://www.freebsd.org/cgi/cvsweb.cgi/ports/sysutils/salt/pkg-descr
+
+This port was developed and added by Christer Edwards. This also marks the
+first time Salt has been included in an upstream packaging system!
+
+Fedora and Red Hat Enterprise
+------------------------------
+
+Salt packages have been prepared for inclusion in the Fedora Project and in
+EPEL for Red Hat Enterprise 5 and 6. These packages are the result of the
+efforts made by Clint Savage (herlo).
+
+Debian/Ubuntu
+-------------
+
+A team of many contributors have assisted in developing packages for Debian
+and Ubuntu. Salt is still actively seeking inclusion in upstream Debian and
+Ubuntu and the package data that has been prepared is being pushed through
+the needed channels for inclusion.
+
+These packages have been prepared with the help of:
+
+* Corey
+* Aaron Toponce
+* and`
+
+More to Come
+------------
+
+We are actively seeking inclusion in more distributions. Primarily getting
+Salt into Gentoo, Suse, OpenBSD and preparing Solaris support are all turning
+into higher priorities. 
+
+Refinement
+==========
+
+Salt continues to be refined into a faster, more stable and more usable
+application. 0.9.5 comes with more debug logging, more bug fixes and more
+complete support.
+
+More Testing, More BugFixes
+---------------------------
+
+0.9.5 comes with more bugfixes due to more testing than any previous release.
+The growing community and the introduction a a dedicated QA environment have
+unearthed many issues that were hiding under the covers. This has further
+refined and cleaned the state interface, taking care of things from minor
+visual issues to repairing misleading data.
+
+Custom Exceptions
+-----------------
+
+A custom exception module has been added to throw salt specific exceptions.
+This allows Salt to give much more granular error information.
+
+New Modules
+-----------
+
+:mod:`data <salt.modules.data>`
+```````````````````````````````
+The new data module manages a persistent datastore on the minion.
+Big thanks to bastichelaar for his help refining this module
+
+:mod:`freebsdkmod <salt.modules.freebsdkmod>`
+`````````````````````````````````````````````
+FreeBSD kernel modules can now be managed in the same way Salt handles Linux
+kernel modules.
+
+This module was contributed thanks to the efforts of Christer Edwards
+
+:mod:`gentoo_service <salt.modules.gentoo_service>`
+```````````````````````````````````````````````````
+Support has been added for managing services in Gentoo. Now Gentoo services
+can be started, stopped, restarted, enabled, disabled and viewed.
+
+:mod:`pip <salt.modules.pip>`
+`````````````````````````````
+The pip module introduces management for pip installed applications.
+Thanks goes to whitinge for the addition of the pip module
+
+:mod:`rh_service <salt.modules.rh_service>`
+```````````````````````````````````````````
+The rh_service module enables Red Hat and Fedora specific service management.
+Now Red Hat like systems come with extensive management of the classic init
+system used by Red Hat
+
+:mod:`saltutil <salt.modules.saltutil>`
+```````````````````````````````````````
+The saltutil module has been added as a place to hold functions used in the
+maintenance and management of salt itself. Saltutil is used to salt the salt
+minion. The saltutil module is presently used only to sync extension modules
+from the master server.
+
+:mod:`systemd <salt.modules.systemd>`
+`````````````````````````````````````
+Systemd support has been added to Salt, now systems using this next generation
+init system are supported on systems running systemd.
+
+:mod:`virtualenv <salt.modules.virtualenv>`
+```````````````````````````````````````````
+The virtualenv module has been added to allow salt to create virtual Python
+environments.
+Thanks goes to whitinge for the addition of the virtualenv module
+
+:mod:`win_disk <salt.modules.win_disk>`
+```````````````````````````````````````
+Support for gathering disk information on Microsoft Windows minions
+The windows modules come courtesy of Utah_Dave
+
+:mod:`win_service <salt.modules.win_service>`
+`````````````````````````````````````````````
+The win_service module adds service support to Salt for Microsoft Windows
+services
+
+:mod:`win_useradd <salt.modules.win_useradd>`
+`````````````````````````````````````````````
+Salt can now manage local users on Microsoft Windows Systems
+
+:mod:`yumpkg5 <salt.modules.yumpkg5>`
+`````````````````````````````````````
+The yumpkg module introduces in 0.9.4 uses the yum api to interact with the
+yum package manager. Unfortunately, on Red Hat 5 systems salt does not have
+access to the yum api because the yum api is running under Python 2.4 and Salt
+needs to run under Python 2.6.
+
+The yumpkg5 module bypasses this issue by shelling out to yum on systems where
+the yum api is not available.
+
+New States
+-----------
+
+:mod:`mysql_database <salt.states.mysql_database>`
+``````````````````````````````````````````````````
+The new mysql_database state adds the ability to systems running a mysql
+server to manage the existence of mysql databases.
+
+The mysql states are thanks to syphernl
+
+:mod:`mysql_user <salt.states.mysql_user>`
+``````````````````````````````````````````
+The mysql_user state enables mysql user management.
+
+:mod:`virtualenv <salt.states.virtualenv>`
+``````````````````````````````````````````
+The virtualenv state can manage the state of Python virtual environments.
+Thanks to Whitinge for the virtualenv state
+
+New Returners
+-------------
+
+:mod:`cassandra_returner <salt.returners.cassandra_return>`
+```````````````````````````````````````````````````````````
+
+A returner allowing Salt to send data to a cassandra server.
+Thanks to Byron Clark for contributing this returner

@@ -12,7 +12,6 @@ def echo(text):
     CLI Example:
     salt '*' test.echo 'foo bar baz quo qux'
     '''
-    print 'Echo got called!'
     return text
 
 

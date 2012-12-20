@@ -1,0 +1,6 @@
+Jinja2
+M2Crypto
+msgpack-python
+pycrypto
+PyYAML
+pyzmq >= 2.1.9

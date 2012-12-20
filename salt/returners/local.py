@@ -8,4 +8,4 @@ def returner(ret):
     '''
     Print the return data to the terminal to verify functionality
     '''
-    print ret
+    print(ret)

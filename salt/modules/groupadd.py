@@ -2,17 +2,21 @@
 Manage groups on Linux
 '''
 
-import grp
+# Import python libs
+try:
+    import grp
+except ImportError:
+    pass
 
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return 'group' if __grains__['kernel'] == 'Linux' else False
+    return 'group' if __grains__.get('kernel', '') == 'Linux' else False
 
 
-def add(name, gid=None):
+def add(name, gid=None, system=False):
     '''
     Add the specified group
 
@@ -23,6 +27,8 @@ def add(name, gid=None):
     cmd = 'groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
+    if system:
+        cmd += '-r '
     cmd += name
 
     ret = __salt__['cmd.run_all'](cmd)
@@ -51,11 +57,15 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    grinfo = grp.getgrnam(name)
-    return {'name': grinfo.gr_name,
-            'passwd': grinfo.gr_passwd,
-            'gid': grinfo.gr_gid,
-            'members': grinfo.gr_mem}
+    try:
+        grinfo = grp.getgrnam(name)
+    except KeyError:
+        return {}
+    else:
+        return {'name': grinfo.gr_name,
+                'passwd': grinfo.gr_passwd,
+                'gid': grinfo.gr_gid,
+                'members': grinfo.gr_mem}
 
 
 def getent():
@@ -74,11 +84,11 @@ def getent():
 
 def chgid(name, gid):
     '''
-    Change the default shell of the user
+    Change the gid for a named group
 
     CLI Example::
 
-        salt '*' user.chshell foo /bin/zsh
+        salt '*' group.chgid foo 4376
     '''
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:
@@ -87,6 +97,5 @@ def chgid(name, gid):
     __salt__['cmd.run'](cmd)
     post_gid = __salt__['file.group_to_gid'](name)
     if post_gid != pre_gid:
-        if post_gid == gid:
-            return True
+        return post_gid == gid
     return False

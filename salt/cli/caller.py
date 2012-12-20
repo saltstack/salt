@@ -3,13 +3,27 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 '''
 
-# Import python modules
-import pprint
+# Import python libs
+import os
+import sys
+import logging
+import datetime
+import traceback
 
 # Import salt libs
-import salt
 import salt.loader
 import salt.minion
+import salt.output
+import salt.payload
+from salt._compat import string_types
+from salt.log import LOG_LEVELS
+
+# Custom exceptions
+from salt.exceptions import (
+    SaltClientError,
+    CommandNotFoundError,
+    CommandExecutionError,
+)
 
 
 class Caller(object):
@@ -21,23 +35,67 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
-        opts['grains'] = salt.loader.grains(opts)
-        self.minion = salt.minion.SMinion(opts)
+        self.serial = salt.payload.Serial(self.opts)
+        # Handle this here so other deeper code which might
+        # be imported as part of the salt api doesn't do  a
+        # nasty sys.exit() and tick off our developer users
+        try:
+            self.minion = salt.minion.SMinion(opts)
+        except SaltClientError as exc:
+            raise SystemExit(str(exc))
 
     def call(self):
         '''
         Call the module
         '''
         ret = {}
-        if self.opts['fun'] not in self.minion.functions:
-            print 'Function {0} is not available'.format(self.opts['fun'])
-        ret['return'] = self.minion.functions[self.opts['fun']](
-                *self.opts['arg']
-                )
-        if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
-            oput = self.minion.functions[self.opts['fun']].__outputter__
-            if isinstance(oput, str):
+        fun = self.opts['fun']
+        ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        proc_fn = os.path.join(
+                salt.minion.get_proc_dir(self.opts['cachedir']),
+                ret['jid'])
+        if fun not in self.minion.functions:
+            sys.stderr.write('Function {0} is not available\n'.format(fun))
+            sys.exit(1)
+        try:
+            args, kw = salt.minion.detect_kwargs(
+                self.minion.functions[fun], self.opts['arg'])
+            sdata = {
+                    'fun': fun,
+                    'pid': os.getpid(),
+                    'jid': ret['jid'],
+                    'tgt': 'salt-call'}
+            with salt.utils.fopen(proc_fn, 'w+') as fp_:
+                fp_.write(self.serial.dumps(sdata))
+            ret['return'] = self.minion.functions[fun](*args, **kw)
+        except (TypeError, CommandExecutionError) as exc:
+            msg = 'Error running \'{0}\': {1}\n'
+            active_level = LOG_LEVELS.get(
+                self.opts['log_level'].lower, logging.ERROR)
+            if active_level <= logging.DEBUG:
+                sys.stderr.write(traceback.format_exc())
+            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.exit(1)
+        except CommandNotFoundError as exc:
+            msg = 'Command required for \'{0}\' not found: {1}\n'
+            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.exit(1)
+        try:
+            os.remove(proc_fn)
+        except (IOError, OSError):
+            pass
+        if hasattr(self.minion.functions[fun], '__outputter__'):
+            oput = self.minion.functions[fun].__outputter__
+            if isinstance(oput, string_types):
                 ret['out'] = oput
+        if self.opts.get('return', ''):
+            ret['id'] = self.opts['id']
+            ret['fun'] = fun
+            for returner in self.opts['return'].split(','):
+                try:
+                    self.minion.returners['{0}.returner'.format(returner)](ret)
+                except Exception:
+                    pass
         return ret
 
     def print_docs(self):
@@ -50,39 +108,22 @@ class Caller(object):
                 if func.__doc__:
                     docs[name] = func.__doc__
         for name in sorted(docs):
-            if name.startswith(self.opts['fun']):
-                print '{0}:\n{1}\n'.format(name, docs[name])
+            if name.startswith(self.opts.get('fun', '')):
+                print('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        pprint.pprint(grains)
+        salt.output.display_output({'local': grains}, 'grains', self.opts)
 
     def run(self):
         '''
         Execute the salt call logic
         '''
-        if self.opts['doc']:
-            self.print_docs()
-        elif self.opts['grains_run']:
-            self.print_grains()
-        else:
-            ret = self.call()
-            # Determine the proper output method and run it
-            get_outputter = salt.output.get_outputter
-            if self.opts['raw_out']:
-                printout = get_outputter('raw')
-            elif self.opts['json_out']:
-                printout = get_outputter('json')
-            elif self.opts['txt_out']:
-                printout = get_outputter('txt')
-            elif self.opts['yaml_out']:
-                printout = get_outputter('yaml')
-            elif 'out' in ret:
-                printout = get_outputter(ret['out'])
-            else:
-                printout = get_outputter(None)
-
-            printout({'local': ret['return']}, color=self.opts['color'])
+        ret = self.call()
+        salt.output.display_output(
+                {'local': ret['return']},
+                ret.get('out', 'pprint'),
+                self.opts)

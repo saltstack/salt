@@ -1,28 +1,40 @@
-# Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
-pkgname=salt
+# Maintainer: Christer Edwards <christer.edwards@gmail.com>
+pkgname=salt-git
 pkgver=$(date +%Y%m%d)
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
-url="https://github.com/thatch45/salt"
+url="https://github.com/saltstack/salt"
 license=('APACHE')
 groups=()
 depends=('python2'
          'python2-pyzmq'
          'python-m2crypto'
          'python2-yaml'
-         'pycrypto'
+         'python2-crypto'
          'python2-psutil'
-         'python2-jinja')
-makedepends=('git')
-provides=()
-backup=('etc/salt/master' 
+         'python2-jinja'
+         'python2-msgpack')
+
+backup=('etc/salt/master'
         'etc/salt/minion')
+
+makedepends=('git')
+optdepends=()
 options=()
-source=("salt-master"
+conflicts=('salt')
+
+source=("salt-master.service"
+        "salt-minion.service"
+        "salt-syndic.service"
+        "salt-master"
         "salt-minion"
         "salt-syndic")
-md5sums=('1594591acb0a266854186a694da21103'
+
+md5sums=('3be813f49bf5ab9580cfc23e915eea4b'
+         '8ef6ab9bf9750f146d31bd8da9da963b'
+         '97e1daa0f7232f48d109b62890b68d0e'
+         '1594591acb0a266854186a694da21103'
          '21ab2eac231e9f61bf002ba5f16f8a3d'
          '09683ef4966e401761f7d2db6ad4b692')
 
@@ -30,32 +42,40 @@ _gitroot="git://github.com/saltstack/salt.git"
 _gitname="salt"
 
 build() {
-  cd "$srcdir"
+  cd ${srcdir}
   msg "Connecting to GIT server...."
 
-  if [ -d $_gitname ] ; then
-    cd $_gitname && git pull origin
+  if [ -d ${_gitname} ] ; then
+    cd ${_gitname} && git pull origin
     msg "The local files are updated."
   else
-    git clone $_gitroot $_gitname
+    git clone ${_gitroot} ${_gitname}
   fi
 
   msg "GIT checkout done or server timeout"
   msg "Starting make..."
 
-  rm -rf "$srcdir/$_gitname-build"
-  git clone "$srcdir/$_gitname" "$srcdir/$_gitname-build"
+  rm -rf ${srcdir}/${_gitname}-build
+  git clone ${srcdir}/${_gitname} ${srcdir}/${_gitname}-build
 
 }
 
 package() {
-  cd "$srcdir/$_gitname-build"
+  cd ${srcdir}/${_gitname}-build
 
-  python2 setup.py install --root=$pkgdir/ --optimize=1
-  
+  python2 setup.py install --root=${pkgdir}/ --optimize=1
+
   mkdir -p $pkgdir/etc/rc.d/
-  cp $srcdir/salt-master $pkgdir/etc/rc.d/
-  cp $srcdir/salt-minion $pkgdir/etc/rc.d/
-  cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
-  chmod +x $pkgdir/etc/rc.d/*
-} 
+  cp ${srcdir}/salt-master ${pkgdir}/etc/rc.d/
+  cp ${srcdir}/salt-minion ${pkgdir}/etc/rc.d/
+  cp ${srcdir}/salt-syndic ${pkgdir}/etc/rc.d/
+  chmod +x $pkgdir/etc/rc.d/salt-{master,minion,syndic}
+
+  install -Dm644 ${srcdir}/salt/pkg/salt-master.service ${pkgdir}/usr/lib/systemd/system/salt-master.service
+  install -Dm644 ${srcdir}/salt/pkg/salt-syndic.service ${pkgdir}/usr/lib/systemd/system/salt-syndic.service
+  install -Dm644 ${srcdir}/salt/pkg/salt-minion.service ${pkgdir}/usr/lib/systemd/system/salt-minion.service
+
+  mkdir -p ${pkgdir}/etc/salt/
+  cp ${srcdir}/salt-build/conf/master ${pkgdir}/etc/salt/
+  cp ${srcdir}/salt-build/conf/minion ${pkgdir}/etc/salt/
+}

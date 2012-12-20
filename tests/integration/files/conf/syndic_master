@@ -1,0 +1,11 @@
+publish_port: 54505
+ret_port: 54506
+worker_threads: 3
+root_dir: /tmp/saltsyndictest
+pidfile: syndicmasterpid
+pki_dir: pki
+cachedir: cache
+timeout: 1
+sock_dir: .salt-unix-syndic
+open_mode: True
+order_masters: True

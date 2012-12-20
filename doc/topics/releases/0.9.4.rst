@@ -24,8 +24,8 @@ Or from PiPy:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.4.tar.gz
 
-For instructions on how to set up Salt please see the :doc:`installation
-instructions </topics/installation>`.
+For instructions on how to set up Salt please see the :ref:`installation`
+instructions.
 
 New Features
 ============
@@ -127,6 +127,7 @@ set the order to last:
       pkg:
         - installed
         - order: last
+
 Substantial testing has gone into the state system and it is ready for real
 world usage. A great deal has been added to the documentation for states and
 the modules and functions available to states have been cleanly documented.

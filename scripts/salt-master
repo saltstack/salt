@@ -1,17 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/python
 '''
 Start the salt-master
 '''
 
-import salt
+from salt.scripts import salt_master
 
-
-def main():
-    '''
-    The main function
-    '''
-    master = salt.Master()
-    master.start()
 
 if __name__ == '__main__':
-    main()
+    salt_master()

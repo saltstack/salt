@@ -1,14 +1,29 @@
 '''
-Hosts File Management
-=====================
-The hosts file can be managed to contain definitions for specific hosts:
+Management of addresses and names in hosts file.
+================================================
+
+The /etc/hosts file can be managed to contain definitions for specific hosts:
 
 .. code-block:: yaml
 
     salt-master:
-      host:
-        - present
+      host.present:
         - ip: 192.168.0.42
+
+Or using the "names:" directive, you can put several names for the same IP.
+(Do not try one name with space-seperated values).
+
+.. code-block:: yaml
+
+    server1:
+      host.present:
+        - ip: 192.168.0.42
+        - names:
+          - server1
+          - florida
+
+NOTE: changing the IP or name(s) in the present() function does not cause an
+update to remove the old entry.
 '''
 
 
@@ -24,11 +39,14 @@ def present(name, ip):
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': None,
            'comment': ''}
     if __salt__['hosts.has_pair'](ip, name):
         ret['result'] = True
         ret['comment'] = 'Host {0} already present'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Host {0} needs to be added'.format(name)
         return ret
     if __salt__['hosts.add_host'](ip, name):
         ret['changes'] = {'host': name}
@@ -43,7 +61,7 @@ def present(name, ip):
 
 def absent(name, ip):
     '''
-    Ensure that the the named host is absent
+    Ensure that the named host is absent
 
     name
         The host to remove
@@ -53,11 +71,14 @@ def absent(name, ip):
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False,
+           'result': None,
            'comment': ''}
     if not __salt__['hosts.has_pair'](ip, name):
         ret['result'] = True
         ret['comment'] = 'Host {0} already absent'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Host {0} needs to be removed'.format(name)
         return ret
     if __salt__['hosts.rm_host'](ip, name):
         ret['changes'] = {'host': name}

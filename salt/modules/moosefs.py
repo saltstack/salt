@@ -18,9 +18,9 @@ def dirinfo(path, opts=None):
     cmd += ' ' + path
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     for line in output:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split(':')
         ret[comps[0].strip()] = comps[1].strip()
@@ -40,9 +40,9 @@ def fileinfo(path):
     chunknum = ''
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     for line in output:
-        if not line.count(' '):
+        if not line:
             continue
         if '/' in line:
             comps = line.split('/')
@@ -83,9 +83,9 @@ def mounts():
     ret = {}
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     for line in output:
-        if not line.count(' '):
+        if not line:
             continue
         if 'fuse.mfs' in line:
             comps = line.split(' ')
@@ -122,7 +122,7 @@ def getgoal(path, opts=None):
     cmd += ' ' + path
     out = __salt__['cmd.run_all'](cmd)
 
-    output = out['stdout'].split('\n')
+    output = out['stdout'].splitlines()
     if not 'r' in opts:
         goal = output[0].split(': ')
         ret = {
@@ -130,7 +130,7 @@ def getgoal(path, opts=None):
         }
     else:
         for line in output:
-            if not line.count(' '):
+            if not line:
                 continue
             if path in line:
                 continue

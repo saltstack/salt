@@ -2,9 +2,9 @@
 Command Line Reference
 ======================
 
-Salt can be controlled by a command line client by the root user on the Salt 
+Salt can be controlled by a command line client by the root user on the Salt
 master. The Salt command line client uses the Salt client API to communicate
-with the Salt master server. The Salt client is straightforward and simple 
+with the Salt master server. The Salt client is straightforward and simple
 to use.
 
 Using the Salt client commands can be easily sent to the minions.
@@ -21,7 +21,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 Using the Salt Command
 ======================
 
-The Salt command needs a few components to send information to the salt
+The Salt command needs a few components to send information to the Salt
 minions. The target minions need to be defined, the function to call and any
 arguments the function requires.
 
@@ -34,7 +34,7 @@ glob:
 
 .. code-block:: bash
 
-    salt '*foo.com' sys.doc
+    salt \*foo.com sys.doc
 
 
 Salt can also define the target minions with regular expressions:
@@ -82,20 +82,74 @@ Targeting with Executions
 `````````````````````````
 
 As of 0.8.8 targeting with executions is still under heavy development and this
-documentation is written to refernce the behavior of execution matching in the
+documentation is written to reference the behavior of execution matching in the
 future.
 
 Execution matching allows for a primary function to be executed, and then based
 on the return of the primary function the main function is executed.
 
-Execution matching allows for matching minions based on any arbitrairy running
-data on tne minions.
+Execution matching allows for matching minions based on any arbitrary running
+data on the minions.
+
+Compound Targeting
+``````````````````
+
+.. versionadded:: 0.9.5
+
+Multiple target interfaces can be used in conjunction to determine the command
+targets. These targets can then be combined using and or or statements. This
+is well defined with an example:
+
+.. code-block:: bash
+
+    salt -C 'G@os:Debian and webser* or E@db.*' test.ping
+
+In this example any minion who's id starts with ``webser`` and is running
+Debian, or any minion who's id starts with db will be matched.
+
+The type of matcher defaults to glob, but can be specified with the
+corresponding letter followed by the ``@`` symbol. In the above example a grain
+is used with ``G@`` as well as a regular expression with ``E@``. The
+``webser*`` target does not need to be prefaced with a target type specifier
+because it is a glob.
+
+Node Group Targeting
+````````````````````
+
+.. versionadded:: 0.9.5
+
+Often the convenience of having a predefined group of minions to execute
+targets on is desired. This can be accomplished with the new nodegroups
+feature. Nodegroups allow for predefined compound targets to be declared in
+the master configuration file:
+
+.. code-block:: yaml
+
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
 
 Calling the Function
 --------------------
 
 The function to call on the specified target is placed after the target
 specification.
+
+.. versionadded:: 0.9.8
+
+Functions may also accept arguments, space-delimited:
+
+.. code-block:: bash
+
+    salt '*' cmd.exec_code python 'import sys; print sys.version'
+
+Optional, keyword arguments are also supported:
+
+.. code-block:: bash
+
+    salt '*' pip.install salt timeout=5 upgrade=True
+
+They are always in the form of ``kwarg=argument``. 
 
 Finding available minion functions
 ``````````````````````````````````
@@ -110,8 +164,8 @@ be retried from the minions via the :func:`sys.doc` function:
 Compound Command Execution
 --------------------------
 
-If a series of commands need to be sent to a single target specification then
-the multiple commands can be send in a single publish. This can make gathering
+If a series of commands needs to be sent to a single target specification then
+the commands can be sent in a single publish. This can make gathering
 groups of information faster, and lowers the stress on the network for repeated
 commands.
 

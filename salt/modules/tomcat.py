@@ -2,17 +2,19 @@
 Support for Tomcat
 '''
 
-import os
+# Import python libs
+import glob
 
 
 def __catalina_home():
     '''
     Tomcat paths differ depending on packaging
     '''
-    locations = ['/usr/share/tomcat6', '/opt/tomcat']
+    locations = ['/usr/share/tomcat*', '/opt/tomcat']
     for location in locations:
-        if os.path.isdir(location):
-            return location
+        catalina_home = glob.glob(location)
+    if catalina_home:
+        return catalina_home[-1]
 
 
 def version():
@@ -24,10 +26,9 @@ def version():
         salt '*' tomcat.version
     '''
     cmd = __catalina_home() + '/bin/catalina.sh version'
-    out = __salt__['cmd.run'](cmd).split('\n')
-    ret = out[0].split(': ')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if 'Server version' in line:
             comps = line.split(': ')
@@ -40,13 +41,13 @@ def fullversion():
 
     CLI Example::
 
-        salt '*' full.fullversion
+        salt '*' tomcat.fullversion
     '''
     cmd = __catalina_home() + '/bin/catalina.sh version'
     ret = {}
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if ': ' in line:
             comps = line.split(': ')
@@ -70,5 +71,7 @@ def signal(signal=None):
     if not valid_signals[signal]:
         return
 
-    cmd = __catalina_home() + '/bin/catalina.sh %s' % valid_signals[signal]
-    out = __salt__['cmd.run'](cmd)
+    cmd = '{0}/bin/catalina.sh {1}'.format(
+        __catalina_home(), valid_signals[signal]
+    )
+    __salt__['cmd.run'](cmd)

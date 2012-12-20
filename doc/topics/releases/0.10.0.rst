@@ -1,0 +1,99 @@
+=========================
+Salt 0.10.0 Release Notes
+=========================
+
+0.10.0 has arrived! This release comes with MANY bug fixes, and new
+capabilities which greatly enhance performance and reliability. This
+release is primarily a bug fix release with many new tests and many repaired
+bugs. This release also introduces a few new key features which were brought
+in primarily to repair bugs and some limitations found in some of the
+components of the original architecture.
+
+Major Features
+==============
+
+Event System
+------------
+
+The Salt Master now comes equipped with a new event system. This event system
+has replaced some of the back end of the Salt client and offers the beginning of
+a system which will make plugging external applications into Salt. The event
+system relies on a local zeromq publish socket and other processes can connect
+to this socket and listen for events. The new events can be easily managed via
+Salt's event library.
+
+Unprivileged User Updates
+-------------------------
+
+Some enhancements have been added to Salt for running as a user other than
+root. These new additions should make switching the user that the Salt Master
+is running as very painless, simply change the ``user`` option in the master
+configuration and restart the master, Salt will take care of all of the
+particulars for you.
+
+Peer Runner Execution
+---------------------
+
+Salt has long had the peer communication system used to allow minions to send
+commands via the salt master. 0.10.0 adds a new capability here, now the
+master can be configured to allow for minions to execute Salt runners via
+the ``peer_run`` option in the salt master configuration.
+
+YAML Parsing Updates
+--------------------
+
+In the past the YAML parser for sls files would return the incorrect numbers
+when the file mode was set with a preceding 0. The yaml parser used in Salt
+has been modified to no longer convert these number into octal but to keep
+them as the correct value so that sls files can be a little cleaner to write.
+
+State Call Data Files
+=====================
+
+It was requested that the minion keep a local cache of the most recent executed
+state run. This has been added and now with state runs the data is stored in a
+msgpack file in the minion's cachedir.
+
+Turning Off the Job Cache
+=========================
+
+A new option has been added to the master configuration file. In previous
+releases the Salt client would look over the Salt job cache to read in
+the minion return data. With the addition of the event system the Salt client
+can now watch for events directly from the master worker processes.
+
+This means that the job cache is no longer a hard requirement. Keep in mind
+though, that turning off the job cache means that historic job execution data
+cannot be retrieved.
+
+Test Updates
+============
+
+Minion Swarms Are Faster
+------------------------
+
+To continue our efforts with testing Salt's ability to scale the minionswarm
+script has been updated. The minionswarm can now start up minions much faster
+than it could before and comes with a new feature allowing modules to be
+disabled, thus lowering the minion's footprint when making a swarm. These new
+updates have allows us to test 
+
+.. code-block:: bash
+
+    # python minionswarm.py -m 20 --master salt-master
+
+
+Many Fixes
+==========
+
+To get a good idea for the number of bugfixes this release offers take a look
+at the closed tickets for 0.10.0, this is a very substantial update:
+
+https://github.com/saltstack/salt/issues?milestone=12&state=closed
+
+Master and Minion Stability Fixes
+---------------------------------
+
+As Salt deployments grow new ways to break Salt are discovered. 0.10.0 comes
+with a number of fixes for the minions and master greatly improving Salt
+stability.

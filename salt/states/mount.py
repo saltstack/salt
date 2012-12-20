@@ -1,19 +1,22 @@
 '''
-Mount Managment
-===============
+Mounting of filesystems.
+========================
+
 Mount any type of mountable filesystem with the mounted function:
 
 .. code-block:: yaml
 
     /mnt/sdb:
-      mount:
-        - mounted
+      mount.mounted:
         - device: /dev/sdb1
         - fstype: ext4
         - mkmnt: True
         - opts:
           - defaults
 '''
+
+# Import salt libs
+from salt._compat import string_types
 
 
 def mounted(
@@ -25,7 +28,6 @@ def mounted(
         dump=0,
         pass_num=0,
         config='/etc/fstab',
-        remount=True,             # FIXME: where is 'remount' used?
         persist=True,
         ):
     '''
@@ -71,23 +73,36 @@ def mounted(
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
-    if type(opts) == type(str()):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
 
     # Get the active data
     active = __salt__['mount.active']()
     if name not in active:
         # The mount is not present! Mount it
-            out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
-            if type(out) == type(str()):
-                # Failed to remount, the state has failed!
-                ret['comment'] = out
-                ret['result'] = False
-            elif out == True:
-                # Remount worked!
-                ret['changes']['mount'] = True
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('Mount point {0} is not mounted but needs to '
+                              'be').format(name)
+            return ret
+        out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
+        if isinstance(out, string_types):
+            # Failed to remount, the state has failed!
+            ret['comment'] = out
+            ret['result'] = False
+        elif out is True:
+            # Remount worked!
+            ret['changes']['mount'] = True
 
     if persist:
+        if __opts__['test']:
+            fstab_data = __salt__['mount.fstab'](config)
+            if not name in fstab_data:
+                ret['result'] = None
+                ret['comment'] = ('Mount point {0} is mounted but needs to '
+                                  'be set to be made persistant').format(name)
+                return ret
+
         # present, new, change, bad config
         # Make sure the entry is in the fstab
         out = __salt__['mount.set_fstab'](

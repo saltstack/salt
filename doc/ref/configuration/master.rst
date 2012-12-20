@@ -1,3 +1,5 @@
+.. _configuration-salt-master:
+
 ===========================
 Configuring the Salt Master
 ===========================
@@ -7,8 +9,8 @@ of the Salt system each have a respective configuration file. The
 :command:`salt-master` is configured via the master configuration file, and the
 :command:`salt-minion` is configured via the minion configuration file.
 
-.. seealso:: 
-    :ref:`example master configuration file <configuration-examples-master>` 
+.. seealso::
+    :ref:`example master configuration file <configuration-examples-master>`
 
 The configuration file for the salt-master is located at
 :file:`/etc/salt/master`. The available options are as follows:
@@ -42,18 +44,62 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
-.. conf_master:: publish_pull_port
 
-``publish_pull_port``
----------------------
+.. conf_master:: pub_refresh
 
-Default: ``45055``
+``pub_refresh``
+---------------
 
-The port used to communicate to the local publisher
+Default: ``False``
+
+The pub_refresh system manually refreshed the master ZeroMQ publisher. It is
+used in some cases where the minions loose connection to the master and it
+is solved by restarting the master.
 
 .. code-block:: yaml
 
-    publish_pull_port: 45055
+    pub_refresh: False
+
+.. conf_master:: user
+
+``user``
+--------
+
+Default: ``root``
+
+The user to run the Salt processes
+
+.. code-block:: yaml
+
+    user: root
+
+.. conf_master:: max_open_files
+
+``max_open_files``
+------------------
+
+Default: ``max_open_files``
+
+Each minion connecting to the master uses AT LEAST one file descriptor, the
+master subscription connection. If enough minions connect you might start
+seeing on the console(and then salt-master crashes)::
+
+  Too many open files (tcp_listener.cpp:335)
+  Aborted (core dumped)
+
+By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+max open files.
+
+If you wish to set a different value than the default one, uncomment and
+configure this setting. Remember that this value CANNOT be higher than the
+hard limit. Raising the hard limit depends on your OS and/or distribution,
+a good way to find the limit is to search the internet for(for example)::
+
+  raise max open files hard limit debian
+
+.. code-block:: yaml
+
+    max_open_files: 100000
 
 .. conf_master:: worker_threads
 
@@ -70,19 +116,6 @@ worker_threads value.
 
     worker_threads: 5
 
-``worker_start_port``
----------------------
-
-Default: ``5``
-
-The port to begin binding workers on, the workers will be created on
-increasingly higher ports
-
-
-.. code-block:: yaml
-
-    worker_start_port: 45056
-
 .. conf_master:: ret_port
 
 ``ret_port``
@@ -96,6 +129,33 @@ execution returns and command executions.
 .. code-block:: yaml
 
     ret_port: 4506
+
+.. conf_master:: pidfile
+
+``pidfile``
+-----------
+
+Default: ``/var/run/salt-master.pid``
+
+Specify the location of the master pidfile
+
+.. code-block:: yaml
+
+    pidfile: /var/run/salt-master.pid
+
+.. conf_master:: root_dir
+
+``root_dir``
+------------
+
+Default: :file:`/`
+
+The system root directory to operate from, change this to make Salt run from
+an alternative root
+
+.. code-block:: yaml
+
+    root_dir: /
 
 .. conf_master:: pki_dir
 
@@ -133,6 +193,30 @@ Default: ``24``
 
 Set the number of hours to keep old job information
 
+.. conf_master:: job_cache
+
+``job_cache``
+-------------
+
+Default: ``True``
+
+The master maintains a job cache, while this is a great addition it can be
+a burden on the master for larger deployments (over 5000 minions).
+Disabling the job cache will make previously executed jobs unavailable to
+the jobs system and is not generally recommended. Normally it is wise to make
+sure the master has access to a faster IO system or a tmpfs is mounted to the
+jobs dir
+
+.. conf_master:: sock_dir
+
+``sock_dir``
+------------
+
+Default:: :file:`/tmp/salt-unix`
+
+Set the location to use for creating Unix sockets for master process
+communication
+
 Master Security Settings
 ------------------------
 
@@ -147,9 +231,9 @@ Open mode is a dangerous security feature. One problem encountered with pki
 authentication systems is that keys can become "mixed up" and authentication
 begins to fail. Open mode turns off authentication and tells the master to
 accept all authentication. This will clean up the pki keys received from the
-minions. Open mode should not be turned on for general use, open mode should
+minions. Open mode should not be turned on for general use. Open mode should
 only be used for a short period of time to clean up pki keys. To turn on open
-mode the value passed must be ``True``.
+mode set this value to ``True``.
 
 .. code-block:: yaml
 
@@ -162,22 +246,108 @@ mode the value passed must be ``True``.
 
 Default: ``False``
 
-Enable auto_accept, this setting will automatically accept all incoming
+Enable auto_accept. This setting will automatically accept all incoming
 public keys from the minions
 
 .. code-block:: yaml
 
     auto_accept: False
 
+.. conf_master:: autosign_file
+
+``autosign_file``
+-----------------
+
+Default ``not defined``
+
+If the autosign_file is specified incoming keys specified in
+the autosign_file will be automatically accepted. Regular expressions as
+well as globbing can be used. This is insecure!
+
+.. conf_master:: client_acl
+
+``client_acl``
+--------------
+
+Default: {}
+
+Enable user accounts on the master to execute specific modules. These modules
+can be expressed as regular expressions
+
+.. code-block:: yaml
+
+    client_acl:
+      fred:
+        - test.ping
+        - pkg.*
+
+
+Master Module Management
+------------------------
+
+.. conf_master:: runner_dirs
+
+``runner_dirs``
+---------------
+
+Default: ``[]``
+
+Set additional directories to search for runner modules
+
+.. conf_master:: cython_enable
+
+``cython_enable``
+-----------------
+
+Default: ``False``
+
+Set to true to enable cython modules (.pyx files) to be compiled on the fly on
+the Salt master
+
+.. code-block:: yaml
+
+    cython_enable: False
+
 Master State System Settings
 ----------------------------
+
+.. conf_master:: state_verbose
+
+``state_verbose``
+-----------------
+
+Default: ``False``
+
+state_verbose allows for the data returned from the minion to be more
+verbose. Normally only states that fail or states that have changes are
+returned, but setting state_verbose to ``True`` will return all states that
+were checked
+
+.. code-block:: yaml
+
+    state_verbose: True
+
+.. conf_master:: state_output
+
+``state_output``
+----------------
+
+Default: ``full``
+
+The state_output setting changes if the output is the full multi line
+output for each changed state if set to 'full', but if set to 'terse'
+the output will be shortened to a single line.
+
+.. code-block:: yaml
+
+    state_output: full
 
 .. conf_master:: state_top
 
 ``state_top``
 -------------
 
-Default: ``top.yml``
+Default: ``top.sls``
 
 The state system uses a "top" file to tell the minions what environment to
 use and what modules to use. The state_top file is defined relative to the
@@ -185,7 +355,24 @@ root of the base environment
 
 .. code-block:: yaml
 
-    state_top: top.yml
+    state_top: top.sls
+
+.. conf_master:: external_nodes
+
+``external_nodes``
+------------------
+
+Default: None
+
+The external_nodes option allows Salt to gather data that would normally be
+placed in a top file from and external node controller. The external_nodes
+option is the executable that will return the ENC data. Remember that Salt
+will look for external nodes AND top files and combine the results if both
+are enabled and available!
+
+.. code-block:: yaml
+
+    external_nodes: cobbler-ext-nodes
 
 .. conf_master:: renderer
 
@@ -200,6 +387,34 @@ The renderer to use on the minions to render the state data
 
     renderer: yaml_jinja
 
+.. conf_master:: failhard
+
+``failhard``
+------------
+
+Default:: ``False``
+
+Set the global failhard flag, this informs all states to stop running states
+at the moment a single state fails
+
+.. code-block:: yaml
+
+    failhard: False
+
+.. conf_master:: test
+
+``test``
+--------
+
+Default:: ``False``
+
+Set all state calls to only test if they are going to acctually make changes
+or just post what changes are going to be made
+
+.. code-block:: yaml
+
+    test: False
+
 Master File Server Settings
 ---------------------------
 
@@ -213,10 +428,11 @@ Default: ``base: [/srv/salt]``
 Salt runs a lightweight file server written in zeromq to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
-The file server works on environments passed to the master, each environment
-can have multiple root directories, the subdirectories in the multiple file
+
+The file server works on environments passed to the master. Each environment
+can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
-reliably ensured. A base environment is required to house the top file
+reliably ensured. A base environment is required to house the top file.
 Example:
 
 .. code-block:: yaml
@@ -264,6 +480,169 @@ The buffer size in the file server in bytes
 
     file_buffer_size: 1048576
 
+.. _pillar-configuration:
+
+Pillar Configuration
+--------------------
+
+.. conf_master:: pillar_roots
+
+``pillar_roots``
+----------------
+
+Set the environments and directories used to hold pillar sls data. This
+configuration is the same as file_roots:
+
+Default: ``base: [/srv/pillar]``
+
+.. code-block:: yaml
+
+    pillar_roots:
+      base:
+        - /srv/pillar/
+      dev:
+        - /srv/pillar/dev/
+      prod:
+        - /srv/pillar/prod/
+
+.. code-block:: yaml
+
+    base:
+      - /srv/pillar
+
+.. conf_master:: ext_pillar
+
+``ext_pillar``
+--------------
+
+The ext_pillar option allows for any number of external pillar interfaces to be
+called when populating pillar data. The configuration is based on ext_pillar
+functions. The available ext_pillar functions are: hiera, cmd_yaml. By default
+the ext_pillar interface is not configured to run.
+
+Default:: ``None``
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - hiera: /etc/hiera.yaml
+      - cmd_yaml: cat /etc/salt/yaml
+
+There are additional details at :ref:`salt-pillars`
+
+Syndic Server Settings
+----------------------
+
+A Salt syndic is a Salt master used to pass commands from a higher Salt master to
+minions below the syndic. Using the syndic is simple. If this is a master that
+will have syndic servers(s) below it, set the "order_masters" setting to True. If this
+is a master that will be running a syndic daemon for passthrough the
+"syndic_master" setting needs to be set to the location of the master server
+
+.. conf_master:: order_masters
+
+``order_masters``
+-----------------
+
+Default: ``False``
+
+Extra data needs to be sent with publications if the master is controlling a
+lower level master via a syndic minion. If this is the case the order_masters
+value must be set to True
+
+.. code-block:: yaml
+
+    order_masters: False
+
+.. conf_master:: syndic_master
+
+``syndic_master``
+-----------------
+
+Default: ``None``
+
+If this master will be running a salt-syndic to connect to a higher level
+master, specify the higher level master with this configuration value
+
+.. code-block:: yaml
+
+    syndic_master: masterofmasters
+
+Peer Publish Settings
+---------------------
+
+Salt minions can send commands to other minions, but only if the minion is
+allowed to. By default "Peer Publication" is disabled, and when enabled it
+is enabled for specific minions and specific commands. This allows secure
+compartmentalization of commands based on individual minions.
+
+.. conf_master:: peer
+
+``peer``
+--------
+
+Default: ``{}``
+
+The configuration uses regular expressions to match minions and then a list
+of regular expressions to match functions. The following will allow the
+minion authenticated as foo.example.com to execute functions from the test
+and pkg modules
+
+.. code-block:: yaml
+
+    peer:
+      foo.example.com:
+          - test.*
+          - pkg.*
+
+This will allow all minions to execute all commands:
+
+.. code-block:: yaml
+
+    peer:
+      .*:
+          - .*
+
+This is not recommended, since it would allow anyone who gets root on any
+single minion to instantly have root on all of the minions!
+
+.. conf_master:: peer_run
+
+``peer_run``
+------------
+
+Default: ``{}``
+
+The peer_run option is used to open up runners on the master to access from the
+minions. The peer_run configuration matches the format of the peer
+configuration.
+
+The following example would allow foo.example.com to execute the manage.up
+runner:
+
+
+.. code-block:: yaml
+
+    peer_run:
+      foo.example.com:
+          - manage.up
+
+Node Groups
+-----------
+
+.. conf_master:: nodegroups
+
+Default: ``{}``
+
+Node groups allow for logical groupings of minion nodes.
+A group consists of a group name and a compound target.
+
+.. code-block:: yaml
+
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+
 Master Logging Settings
 -----------------------
 
@@ -272,7 +651,7 @@ Master Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/etc/salt/pki`
+Default: :file:`/var/log/salt/master`
 
 The location of the master log file
 
@@ -302,12 +681,21 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 Default: ``{}``
 
 Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the salt library at the 'warning' level, but, you
+Imagine you want to have the Salt library at the 'warning' level, but you
 still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml
 
-  log_granular_levels: {
+  log_granular_levels:
     'salt': 'warning',
     'salt.modules': 'debug'
-  }
+
+``default_include``
+-------------------
+
+Default: ``master.d/*.conf``
+
+The minion can include configuration from other files. Per default the
+minion will automatically include all config files from `master.d/*.conf`
+where minion.d is relative to the directory of the minion configuration
+file.

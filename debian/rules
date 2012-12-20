@@ -1,18 +1,14 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
-# Sample debian/rules that uses debhelper.
-# This file was originally written by Joey Hess and Craig Small.
-# As a special exception, when this file is copied by dh-make into a
-# dh-make output file, you may use that output file without restriction.
-# This special exception was added by Craig Small in version 0.37 of dh-make.
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+PKGFILES = pkg/*.service pkg/*.upstart pkg/*.logrotate
+SALT_BIN = common minion master syndic
 
 %:
+	make -C doc html
+	cp $(PKGFILES) debian
+	for d in $(SALT_BIN); do \
+	    cp pkg/salt.postrm debian/salt-$${d}.postrm; done
 	dh $@ 
 
-override_dh_installinit:
-	dh_installinit --no-start --name="salt-master"
-	dh_installinit --no-start --name="salt-minion"
-	dh_installinit --no-start --name="salt-syndic"
+dh_override_auto_build:
+	python setup.py build

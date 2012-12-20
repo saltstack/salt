@@ -2,7 +2,7 @@
 ``salt-master``
 ===============
 
-The salt master daemon, used to control the salt minions
+The Salt master daemon, used to control the Salt minions
 
 Synopsis
 ========
@@ -12,7 +12,7 @@ salt-master [ options ]
 Description
 ===========
 
-The master daemon controls the salt minions
+The master daemon controls the Salt minions
 
 Options
 =======
@@ -23,10 +23,41 @@ Options
 
     Print a usage message briefly summarizing these command-line options.
 
+.. option:: --version
+
+    Show program's version number and exit
+
+.. option:: --versions-report
+
+    Show program's dependencies version number and exit
+
 .. option:: -d, --daemon
 
-    Run the salt master as a daemon
+    Run the Salt master as a daemon
 
-.. option:: -c CONFIG, --config=CONFIG
+.. option:: -c CONFIG_DIR, --config-dir=CONFIG_dir
 
-    The master configuration file to use, the default is /etc/salt/master
+    The location of the Salt configuration directory, this directory contains
+    the configuration files for Salt master and minions. The default location
+    on most systems is /etc/salt.
+
+.. option:: -u USER, --user=USER
+
+    Specify user to run minion
+
+.. option:: --pid-file PIDFILE
+
+    Specify the location of the pidfile.
+
+.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
+
+    Console log level. One of ``info``, ``none``, ``garbage``,
+    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
+    settings see the config file. Default: ``warning``.
+
+See also
+========
+
+:manpage:`salt(1)`
+:manpage:`salt(7)`
+:manpage:`salt-minion(1)`

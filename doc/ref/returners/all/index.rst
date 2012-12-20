@@ -1,8 +1,8 @@
 .. _all-salt.returners:
 
-==============================
-Full list of builtin returners
-==============================
+=====================================
+Full list of builtin returner modules
+=====================================
 
 .. currentmodule:: salt.returners
 
@@ -11,5 +11,7 @@ Full list of builtin returners
     :template: autosummary.rst.tmpl
 
     local
+    cassandra_return
     mongo_return
     redis_return
+    mysql
