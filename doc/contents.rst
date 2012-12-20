@@ -30,6 +30,7 @@ Full Table of Contents
     topics/projects/index
     topics/event/index
     topics/tests/*
+    topics/reactor/*
 
     ref/index
     ref/modules/*
