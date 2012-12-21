@@ -12,6 +12,47 @@ goals of Salt.
     :doc:`Installing Salt for development </topics/hacking>` and contributing
     to the project.
 
+Quick Install
+-------------
+
+Many popular distributions will be able to install the salt minion by executing the bootstrap script::
+
+  wget -O - http://bootstrap.saltstack.org | sudo sh
+
+The script should also make it simple to install a salt master, if desired.
+
+Currently the install script supports:
+
+* Ubuntu 10.x/11.x/12.x
+* Debian 6.x
+* CentOS 6.3
+* Fedora
+* Arch
+* FreeBSD 9.0
+
+See `Salt Bootstrap`_ for more information.
+
+.. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
+
+
+Platform-specific installation instructions
+-------------------------------------------
+
+These guides go into detail how to install salt on a given platform.
+
+.. toctree::
+    :maxdepth: 1
+
+    arch
+    debian
+    ubuntu
+    fedora
+    freebsd
+    gentoo
+    windows
+    solaris
+
+
 Dependencies
 ------------
 
@@ -39,17 +80,3 @@ Optional Dependencies
 .. _`Cython`: http://cython.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 
-Platform-specific installation instructions
--------------------------------------------
-
-.. toctree::
-    :maxdepth: 1
-
-    arch
-    debian
-    ubuntu
-    fedora
-    freebsd
-    gentoo
-    windows
-    solaris
