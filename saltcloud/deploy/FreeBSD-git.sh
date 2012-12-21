@@ -15,7 +15,7 @@ cd salt
 /usr/local/bin/python setup.py install
 cd
 mkdir -p /etc/salt/pki
-echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
-echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-echo '{{ minion }}' > /etc/salt/minion
+echo '{{ vm['priv_key'] }}' > /usr/local/etc/salt/pki/minion.pem
+echo '{{ vm['pub_key'] }}' > /usr/local/etc/salt/pki/minion.pub
+echo '{{ minion }}' > /usr/local/etc/salt/minion
 salt-minion -d
