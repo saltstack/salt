@@ -317,7 +317,7 @@ def install(name=None, refresh=False, **kwargs):
     cached_pkg = cached_pkg.replace('/', '\\')
     print 'post: ', cached_pkg
     #cmd = os.path.join(cached_pkg, pkginfo['install_flags'])
-    cmd = str(cached_pkg) + str(pkginfo['install_flags'])
+    cmd = '"' + str(cached_pkg) + '"' + str(pkginfo['install_flags'])
     print 'cmd is: ', cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
