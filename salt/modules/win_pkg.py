@@ -309,6 +309,7 @@ def install(name=None, refresh=False, **kwargs):
     pprint(pkginfo)
     print 'pkg file: ', str(pkginfo['installer'])
     cached_pkg = __salt__['cp.is_cached'](str(pkginfo['installer']))
+    print 'got here: ', cached_pkg
     if not cached_pkg:
         # It's not cached. Cache it, mate.
         cached_pkg = __salt__['cp.cache_file'](str(pkginfo['installer']))
