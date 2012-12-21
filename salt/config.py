@@ -233,6 +233,7 @@ def minion_config(path, check_dns=True):
             'update_restart_services': [],
             'retry_dns': 30,
             'recon_max': 5000,
+            'pidfile': '/var/run/salt-minion.pid',
             }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -295,7 +296,7 @@ def minion_config(path, check_dns=True):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules'
+        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules', 'pidfile',
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -403,7 +404,7 @@ def master_config(path):
             )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'pidfile',
                             'sock_dir', 'key_logfile', 'extension_modules',
                             'autosign_file', 'token_dir'])
 
