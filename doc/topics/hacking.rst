@@ -69,10 +69,18 @@ Create a new `virtualenv`_::
 
     virtualenv /path/to/your/virtualenv
 
-.. note:: site packages
+On Arch Linux, where Python 3 is the default installation of Python, use the
+``virtualenv2`` command instead of ``virtualenv``.
 
-    If you wish to use installed packages rather than have pip download and
-    compile new ones into this environment, add "--system-site-packages".
+.. note:: Using your system Python modules in the virtualenv
+
+    If you have the required python modules installed on your system already
+    and would like to use them in the virtualenv rather than having pip
+    download and compile new ones into this environment, run ``virtualenv``
+    with the "--system-site-packages" option. If you do this, you can skip the
+    pip command below that installs the dependencies (pyzmq, M2Crypto, etc.),
+    assuming that the listed modules are all installed in your system
+    PYTHONPATH at the time you create your virtualenv.
 
 .. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
 
@@ -82,6 +90,7 @@ Activate the virtualenv::
 
 Install Salt (and dependencies) into the virtualenv::
 
+    pip install pyzmq M2Crypto PyYAML pycrypto msgpack-python jinja2 psutil
     pip install -e ./salt       # the path to the salt git clone from above
 
 .. note:: Installing M2Crypto
