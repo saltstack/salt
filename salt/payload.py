@@ -23,7 +23,7 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3])) is None:
+    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
