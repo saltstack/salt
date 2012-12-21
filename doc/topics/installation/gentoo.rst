@@ -6,7 +6,7 @@ Salt can be easily installed on Gentoo via Portage:
 
 .. code-block:: bash
 
-    emerge salt
+    emerge app-admin/salt
 
 Post-installation tasks
 =======================
