@@ -301,24 +301,16 @@ def install(name=None, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    from pprint import pprint
     if refresh:
         refresh_db()
     old = list_pkgs()
     pkginfo = _get_package_info(name)
-    pprint(pkginfo)
-    print 'pkg file: ', pkginfo['installer']
     cached_pkg = __salt__['cp.is_cached'](pkginfo['installer'])
-    print 'got here: ', cached_pkg
     if not cached_pkg:
         # It's not cached. Cache it, mate.
         cached_pkg = __salt__['cp.cache_file'](pkginfo['installer'])
-    print 'pre: ', cached_pkg
     cached_pkg = cached_pkg.replace('/', '\\')
-    print 'post: ', cached_pkg
-    #cmd = os.path.join(cached_pkg, pkginfo['install_flags'])
     cmd = '"' + str(cached_pkg) + '"' + str(pkginfo['install_flags'])
-    print 'cmd is: ', cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
