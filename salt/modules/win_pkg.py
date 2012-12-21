@@ -313,7 +313,9 @@ def install(name=None, refresh=False, **kwargs):
     if not cached_pkg:
         # It's not cached. Cache it, mate.
         cached_pkg = __salt__['cp.cache_file'](pkginfo['installer'])
-    pprint(cached_pkg)
+    print 'pre: ', cached_pkg
+    cached_pkg = cached_pkg.replace('/', '\\')
+    print 'post: ', cached_pkg
     #cmd = os.path.join(cached_pkg, pkginfo['install_flags'])
     cmd = str(cached_pkg) + str(pkginfo['install_flags'])
     print 'cmd is: ', cmd
