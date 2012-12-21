@@ -237,7 +237,7 @@ def minion_config(path, check_dns=True):
             'update_restart_services': [],
             'retry_dns': 30,
             'recon_max': 5000,
-            'win_repo_cachefile': '/var/cache/salt/minion/win_repo',
+            'win_repo_cachefile': 'salt://win/repo/winrepo.p',
             }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -389,7 +389,7 @@ def master_config(path):
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
             'win_repo': '/srv/salt/win/repo',
-            'win_repo_cachefile': '/srv/salt/win/repo/win_repo',
+            'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.p',
     }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
