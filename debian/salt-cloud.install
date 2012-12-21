@@ -1,2 +1,3 @@
 conf/cloud /etc/salt
 usr/lib/python2*/dist-packages/saltcloud/
+scripts/salt-cloud /usr/bin
