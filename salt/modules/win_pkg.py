@@ -314,7 +314,7 @@ def install(name=None, refresh=False, **kwargs):
         # It's not cached. Cache it, mate.
         cached_pkg = __salt__['cp.cache_file'](pkginfo['installer'])
     pprint(cached_pkg)
-    cmd = cached_pkg, pkginfo['install_flags']
+    cmd = os.path.join(cached_pkg, pkginfo['install_flags'])
     print cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
