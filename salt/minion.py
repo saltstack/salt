@@ -137,6 +137,7 @@ class MasterMinion(object):
             matcher=True,
             whitelist=None):
         self.opts = opts
+        self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
         self.mk_returners = returners
@@ -151,7 +152,7 @@ class MasterMinion(object):
         '''
         self.functions = salt.loader.minion_mods(
                 self.opts,
-                whitelist=whitelist)
+                whitelist=self.whitelist)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
