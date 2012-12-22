@@ -52,7 +52,7 @@
 #pidfile: /var/run/salt-master.pid
 
 # The root directory prepended to these options: pki_dir, cachedir,
-# sock_dir, log_file, autosign_file, extension_modules
+# sock_dir, log_file, autosign_file, extension_modules, key_logfile, pidfile.
 #root_dir: /
 
 # Directory used to store public key data

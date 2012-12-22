@@ -24,7 +24,8 @@
 # Specify the location of the daemon process ID file
 #pidfile: /var/run/salt-minion.pid
 
-# The root directory prepended to these options: pki_dir, cachedir, log_file.
+# The root directory prepended to these options: pki_dir, cachedir, log_file,
+# sock_dir, pidfile.
 #root_dir: /
 
 # The directory to store the pki information in
