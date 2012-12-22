@@ -269,6 +269,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     skip_verify
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
 
+    version
+        Install a specific version of the package, e.g. 1.0.9. Ignored
+        if "pkgs" or "sources" is passed.
 
     Multiple Package Installation Options:
 
@@ -293,6 +296,11 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>']}
     '''
+
+    # This allows modules to specify the version in a kwarg, like the other package modules
+    if kwargs.get('version') and pkgs is None and sources is None:
+        name = '{0}-{1}'.format(name, kwargs.get('version'))
+
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
         refresh_db()
