@@ -40,9 +40,7 @@ def installed(
         sources=None,
         **kwargs):
     '''
-    Verify that the package is installed, and only that it is installed. This
-    state will not upgrade an existing package and only verify that it is
-    installed
+    Verify that the package is installed, and that it is the correct version (if specified).
 
     name
         The name of the package to be installed. This parameter is ignored if
@@ -146,12 +144,14 @@ def installed(
                     'result': True,
                     'comment': ('Package {0} is already installed and is the '
                                 'correct version').format(name)}
-        elif cver:
+        # if a version wasn't specified, we are done
+        elif version is None:
             # The package is installed
             return {'name': name,
                     'changes': {},
                     'result': True,
                     'comment': 'Package {0} is already installed'.format(name)}
+
 
     if __opts__['test']:
         if len(targets) > 1:
