@@ -780,3 +780,17 @@ def clean_kwargs(**kwargs):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
+
+@memoize
+def is_windows():
+    '''
+    Simple function to return if a host is Windows or not
+    '''
+    return sys.platform.startswith('win')
+
+@memoize
+def is_linux():
+    '''
+    Simple function to return if a host is Linux or not
+    '''
+    return sys.platform.startswith('linux')
