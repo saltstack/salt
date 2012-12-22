@@ -69,6 +69,8 @@ Create a new `virtualenv`_::
 
     virtualenv /path/to/your/virtualenv
 
+.. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
+
 On Arch Linux, where Python 3 is the default installation of Python, use the
 ``virtualenv2`` command instead of ``virtualenv``.
 
@@ -77,12 +79,10 @@ On Arch Linux, where Python 3 is the default installation of Python, use the
     If you have the required python modules installed on your system already
     and would like to use them in the virtualenv rather than having pip
     download and compile new ones into this environment, run ``virtualenv``
-    with the "--system-site-packages" option. If you do this, you can skip the
-    pip command below that installs the dependencies (pyzmq, M2Crypto, etc.),
-    assuming that the listed modules are all installed in your system
+    with the ``--system-site-packages`` option. If you do this, you can skip
+    the pip command below that installs the dependencies (pyzmq, M2Crypto,
+    etc.), assuming that the listed modules are all installed in your system
     PYTHONPATH at the time you create your virtualenv.
-
-.. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
 
 Activate the virtualenv::
 
@@ -106,6 +106,29 @@ Install Salt (and dependencies) into the virtualenv::
     needs to be installed via apt:
 
         apt-get install python-m2crypto
+
+
+.. note:: Important note for those developing using RedHat variants
+
+    If you are developing on a RedHat variant, be advised that the package
+    provider for newer Redhat-based systems (:doc:`yumpkg.py
+    <../ref/modules/all/salt.modules.yumpkg>`) relies on RedHat's python
+    interface for yum. The variants that use this module to provide package
+    support include the following:
+
+    * `RHEL`_ and `CentOS`_ releases 6 and later
+    * `Fedora Linux`_ releases 11 and later
+    * `Amazon Linux`_
+
+    If you are developing using one of these releases, you will want to create
+    your virtualenv using the ``--system-site-packages`` option so that these
+    modules are available in the virtualenv.
+
+.. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
+.. _`CentOS`: http://centos.org/
+.. _`Fedora Linux`: http://fedoraproject.org/
+.. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
+
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
