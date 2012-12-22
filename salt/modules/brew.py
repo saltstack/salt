@@ -14,6 +14,7 @@ def __virtual__():
 
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
         return 'pkg'
+    return False
 
 
 def list_pkgs(*args):
