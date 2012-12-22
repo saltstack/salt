@@ -273,8 +273,15 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 Default: (empty)
 
 A module provider can be statically overwritten or extended for the minion via
-the providers option. This can be done on an individual basis in an SLS file or
-globally here in the minion config.
+the ``providers`` option. This can be done :doc:`on an individual basis in an
+SLS file <../states/providers>`, or globally here in the minion config, like
+below.
+
+.. code-block:: yaml
+
+    providers:
+      pkg: yumpkg5
+      service: systemd
 
 State Management Settings
 -------------------------
