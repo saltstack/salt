@@ -1962,7 +1962,11 @@ class BaseHighState(object):
                                         state[id_]['__sls__'])
                                 )
                     if state:
-                        highstate.update(state)
+                        try:
+                            highstate.update(state)
+                        except ValueError, e:
+                            errors.append(('Error when rendering state with '
+                            'contents: {0}').format(state))
                     if err:
                         errors += err
         # Clean out duplicate extend data
