@@ -39,7 +39,7 @@ def __virtual__():
     Only work on posix-like systems
     '''
     # win_file takes care of windows
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         return False
     return 'file'
 
