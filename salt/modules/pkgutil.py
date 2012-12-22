@@ -7,7 +7,7 @@ def __virtual__():
     Set the virtual pkg module if the os is Solaris
     '''
     if __grains__['os'] == 'Solaris':
-        return 'pkg'
+        return 'pkgutil'
     return False
 
 
