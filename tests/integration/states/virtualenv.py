@@ -14,11 +14,17 @@ import shutil
 
 # Import salt libs
 import integration
+
 from saltunittest import skipIf, destructiveTest
 
 
 class VirtualenvTest(integration.ModuleCase,
                      integration.SaltReturnAssertsMixIn):
+    def setUp(self):
+        super(VirtualenvTest, self).setUp()
+        ret = self.run_function('cmd.has_exec', ['virtualenv'])
+        if not ret:
+            self.skipTest('virtualenv not installed')
 
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be root to run this test')

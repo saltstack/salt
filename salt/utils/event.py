@@ -24,6 +24,7 @@ from multiprocessing import Process
 
 # Import third party libs
 import zmq
+from zmq.core.error import ZMQBaseError
 
 # Import salt libs
 import salt.payload
@@ -170,7 +171,11 @@ class SaltEvent(object):
         self.context.term()
 
     def __del__(self):
-        self.destroy()
+        try:
+            # This blows up horribly during the unit tests
+	    self.destroy()
+        except ZMQBaseError:
+            pass
 
 
 class MasterEvent(SaltEvent):
