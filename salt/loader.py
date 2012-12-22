@@ -587,10 +587,12 @@ class Loader(object):
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            if virtual is False:
-                                # if __virtual__() returns false then the
+                            if not virtual:
+                                # if __virtual__() evaluates to false then the
                                 # module wasn't meant for this platform or it's
                                 # not supposed to load for some other reason.
+                                # Some modules might accidentally return None
+                                # and are improperly loaded
                                 continue
 
                             if module_name != virtual:
