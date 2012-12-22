@@ -7,19 +7,19 @@ from __future__ import absolute_import
 import os
 import re
 import imp
-import random
 import sys
+import time
+import shlex
+import shutil
+import random
 import socket
 import logging
 import inspect
 import hashlib
 import datetime
-import tempfile
-import shlex
-import shutil
-import subprocess
-import time
 import platform
+import tempfile
+import subprocess
 from calendar import month_abbr as months
 
 try:
@@ -257,6 +257,7 @@ def which_bin(exes):
         if not path:
             continue
         return path
+    return None
 
 
 def list_files(directory):
@@ -417,10 +418,7 @@ def check_or_die(command):
     if command is None:
         raise CommandNotFoundError("'None' is not a valid command.")
 
-    import salt.modules.cmdmod
-    __salt__ = {'cmd.has_exec': salt.modules.cmdmod.has_exec}
-
-    if not __salt__['cmd.has_exec'](command):
+    if not which(command):
         raise CommandNotFoundError(command)
 
 
