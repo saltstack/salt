@@ -43,7 +43,7 @@ def search(pkg_name):
 
 def __virtual__():
     '''
-    Set the virtual pkg module if the os is Arch
+    Set the virtual pkg module if the os is FreeBSD
     '''
     return 'pkg' if __grains__['os'] == 'FreeBSD' else False
 
