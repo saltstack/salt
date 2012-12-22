@@ -8,22 +8,22 @@ Salt predetermines what modules should be mapped to what uses based on the
 properties of a system. These determinations are generally made for modules
 that provide things like package and service management.
 
-Sometimes in states it may be needed for an alternative module to be used
-to provide the functionality needed. For instance, an Arch Linux system may
-have been set up with systemd support, so instead of using the default service
-module detected for Arch Linux, the systemd module can be used:
+Sometimes in states, it may be necessary to use an alternative module to
+provide the needed functionality. For instance, an older Arch Linux system may
+not be running systemd, so instead of using the systemd service module, you can
+revert to the default service module:
 
 .. code-block:: yaml
 
     httpd:
       service.running:
         - enable: True
-        - provider: systemd
+        - provider: service
 
-In this instance the :py:mod:`~salt.modules.systemd` module will replace the
-:py:mod:`~salt.modules.service` basic module which is used by default on Arch
-Linux, and the :program:`httpd` service will be set up using
-:program:`systemd`.
+In this instance, the basic :py:mod:`~salt.modules.service` module will replace
+the :py:mod:`~salt.modules.systemd` module which is used by default on Arch
+Linux, and the :program:`httpd` service will be managed using
+:program:`sysvinit`.
 
 .. note::
 
