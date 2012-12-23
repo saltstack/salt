@@ -9,7 +9,15 @@ Websocket API.
 
 .. _`Salt`: http://saltstack.org/
 
-netapi Modules
+Getting started
+===============
+
+Running :command:`salt-api` will automatically start any netapi modules that
+have been configured in your Salt master config file. Consult the documentation
+for each netapi module for what options are required. :command:`salt-api` must
+be run on the same machine as your Salt master.
+
+netapi modules
 ==============
 
 The core functionality for :command:`salt-api` lies in pluggable netapi modules
