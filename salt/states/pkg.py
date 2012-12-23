@@ -144,8 +144,9 @@ def installed(
                     'result': True,
                     'comment': ('Package {0} is already installed and is the '
                                 'correct version').format(name)}
-        # if a version wasn't specified, we are done
-        elif version is None:
+
+        # if cver is not an empty string, the package is already installed
+        elif cver:
             # The package is installed
             return {'name': name,
                     'changes': {},
