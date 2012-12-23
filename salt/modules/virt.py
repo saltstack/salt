@@ -318,10 +318,38 @@ def get_disks(vm_):
                 'file': source.getAttribute('file')}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen(['qemu-img', 'info',
+            output = []
+            qemu_output = subprocess.Popen(['qemu-img', 'info',
                 disks[dev]['file']],
                 shell=False,
-                stdout=subprocess.PIPE).communicate()[0]))
+                stdout=subprocess.PIPE).communicate()[0]
+            snapshots = False
+            columns = None
+            lines =  qemu_output.strip().split('\n')
+            for line in lines:
+                if line.startswith('Snapshot list:'):
+                    snapshots = True
+                    continue
+                elif snapshots:
+                    if line.startswith('ID'): # Do not parse table headers
+                        line = line.replace('VM SIZE', 'VMSIZE')
+                        line = line.replace('VM CLOCK', 'TIME VMCLOCK')
+                        columns = re.split('\s+', line)
+                        columns = [c.lower() for c in columns]
+                        print columns
+                        output.append('snapshots:')
+                        continue
+                    fields = re.split('\s+', line)
+                    for i, field in enumerate(fields):
+                        sep = ' '
+                        if i == 0:
+                            sep = '-'
+                        output.append('%s %s: %s' %(sep, columns[i], field))
+                    continue
+                output.append(line)
+            output = '\n'.join(output)
+            print output
+            disks[dev].update(yaml.safe_load(output))
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
