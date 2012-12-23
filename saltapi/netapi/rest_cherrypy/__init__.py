@@ -57,12 +57,12 @@ import cherrypy.wsgiserver as wsgiserver
 import cherrypy.wsgiserver.ssl_builtin
 
 import jinja2
+import yaml
 
 # Import Salt libs
 import salt.auth
 import salt.log
 import salt.output
-from salt.utils import yaml
 
 # Import salt-api libs
 import saltapi
@@ -110,8 +110,8 @@ def salt_auth_tool():
 
 # Be conservative in what you send; maps Content-Type to Salt outputters
 ct_out_map = {
-    'application/json': 'json',
-    'application/x-yaml': 'yaml',
+    'application/json': json.dumps,
+    'application/x-yaml': yaml.dump,
 }
 
 def hypermedia_handler(*args, **kwargs):
@@ -146,12 +146,7 @@ def hypermedia_handler(*args, **kwargs):
     cherrypy.response.headers['Content-Type'] = best
 
     out = content_types[best]
-
-    # Allow handlers to supply the outputter (mostly for the HTML one-offs)
-    if callable(out):
-        return out(ret)
-
-    return salt.output.out_format(ret, out, __opts__)
+    return out(ret)
 
 def hypermedia_out():
     '''
