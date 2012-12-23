@@ -318,9 +318,9 @@ def get_disks(vm_):
                 'file': source.getAttribute('file')}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '
-                + disks[dev]['file'],
-                shell=True,
+            disks[dev].update(yaml.safe_load(subprocess.Popen(['qemu-img', 'info',
+                disks[dev]['file']],
+                shell=False,
                 stdout=subprocess.PIPE).communicate()[0]))
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
