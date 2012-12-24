@@ -13,8 +13,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return 'service'
-    else:
-        return False
+    return False
 
 def get_enabled():
     '''

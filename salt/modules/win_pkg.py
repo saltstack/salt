@@ -30,9 +30,8 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows():
-        if has_dependencies:
-		return 'pkg'
+    if salt.utils.is_windows() and  has_dependencies:
+        return 'pkg'
     return False
 
 
