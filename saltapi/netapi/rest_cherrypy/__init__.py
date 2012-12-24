@@ -126,6 +126,8 @@ def hypermedia_handler(*args, **kwargs):
     try:
         cherrypy.response.processors = ct_out_map # handlers may modify this
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
+    except salt.exceptions.EauthAuthenticationError:
+        raise cherrypy.InternalRedirect('/login')
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
