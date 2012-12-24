@@ -336,7 +336,6 @@ def get_disks(vm_):
                         line = line.replace('VM CLOCK', 'TIME VMCLOCK')
                         columns = re.split('\s+', line)
                         columns = [c.lower() for c in columns]
-                        print columns
                         output.append('snapshots:')
                         continue
                     fields = re.split('\s+', line)
@@ -348,7 +347,6 @@ def get_disks(vm_):
                     continue
                 output.append(line)
             output = '\n'.join(output)
-            print output
             disks[dev].update(yaml.safe_load(output))
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
