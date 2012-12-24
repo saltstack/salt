@@ -343,7 +343,7 @@ def get_disks(vm_):
                         sep = ' '
                         if i == 0:
                             sep = '-'
-                        output.append('%s %s: %s' %(sep, columns[i], field))
+                        output.append('%s %s: "%s"' %(sep, columns[i], field))
                     continue
                 output.append(line)
             output = '\n'.join(output)
