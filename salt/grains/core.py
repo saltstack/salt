@@ -495,19 +495,23 @@ _REPLACE_LINUX_RE = re.compile(r'linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
-# Please see _supported_dists defined at the top of the file
+# Please see os_data() and _supported_dists.
+# If your system is not detecting properly it likely needs an entry here.
 _OS_NAME_MAP = {
     'redhatente': 'RedHat',
     'gentoobase': 'Gentoo',
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
+    'debiangnu/': 'Debian',
     'fedoraremi': 'RedHat',
 }
 
 # Map the 'os' grain to the 'os_family' grain
+# These should always be capitalized entries as the lookup comes
+# post-_OS_NAME_MAP. If your system is having trouble with detection, please
+# make sure that the 'os' grain is capitalized and working correctly first.
 _OS_FAMILY_MAP = {
-    'debian': 'Debian',
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
     'CentOS': 'RedHat',
