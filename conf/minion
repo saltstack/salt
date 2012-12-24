@@ -377,10 +377,10 @@
 # or leave to the OS defaults (-1), on linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
-# How long before the first keepalive should be sent in seconds. Default -1 
-# to use OS defaults, typically 7200 seconds on Linux see 
-# /proc/sys/net/ipv4/tcp_keepalive_time.
-#tcp_keepalive_idle: -1
+# How long before the first keepalive should be sent in seconds. Default 300
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds 
+# on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
+#tcp_keepalive_idle: 300
 #
 # How many lost probes are needed to consider the connection lost. Default -1
 # to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
