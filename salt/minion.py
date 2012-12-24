@@ -657,6 +657,11 @@ class Minion(object):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive'])
+            self.socket.setsockopt(zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle'])
+            self.socket.setsockopt(zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt'])
+            self.socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl'])
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)

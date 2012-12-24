@@ -239,6 +239,10 @@ def minion_config(path, check_dns=True):
             'recon_max': 5000,
             'win_repo_cachefile': 'salt://win/repo/winrepo.p',
             'pidfile': '/var/run/salt-minion.pid',
+            'tcp_keepalive': True,
+            'tcp_keepalive_idle': 300,
+            'tcp_keepalive_cnt': -1,
+            'tcp_keepalive_intvl': -1,
             }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
