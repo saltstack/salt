@@ -502,6 +502,7 @@ _OS_NAME_MAP = {
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
+    'debiangnu/': 'Debian',
     'fedoraremi': 'RedHat',
 }
 
