@@ -24,7 +24,11 @@ from multiprocessing import Process
 
 # Import third party libs
 import zmq
-from zmq.core.error import ZMQBaseError
+try:
+    # Work on older and newer zeromq versions
+    from zmq.core.error import ZMQBaseError
+except ImportError:
+    from zmq import ZMQBaseError
 
 # Import salt libs
 import salt.payload
