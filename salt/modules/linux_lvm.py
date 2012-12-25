@@ -2,9 +2,6 @@
 Support for Linux LVM2
 '''
 
-# Import python libs
-import re
-
 # Import salt libs
 import salt.utils
 
