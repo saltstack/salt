@@ -30,27 +30,33 @@ except ImportError:
         except ImportError:
             pass
 
+
 def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
     return 'pkg' if (has_portage and __grains__['os'] == 'Gentoo') else False
 
+
 def _vartree():
     return portage.db[portage.root]['vartree']
 
+
 def _porttree():
     return portage.db[portage.root]['porttree']
+
 
 def _cpv_to_name(cpv):
     if cpv == '':
         return ''
     return str(portage.cpv_getkey(cpv))
 
+
 def _cpv_to_version(cpv):
     if cpv == '':
         return ''
     return str(cpv[len(_cpv_to_name(cpv)+'-'):])
+
 
 def available_version(name):
     '''
@@ -62,6 +68,7 @@ def available_version(name):
     '''
     return _cpv_to_version(_porttree().dep_bestmatch(name))
 
+
 def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
@@ -71,6 +78,21 @@ def version(name):
         salt '*' pkg.version <package name>
     '''
     return _cpv_to_version(_vartree().dep_bestmatch(name))
+
+
+def porttree_matches(name):
+    '''
+    Returns a list containing the matches for a given package name from the
+    portage tree. Note that the specific version of the package will not be
+    provided for packages that have several versions in the portage tree, but
+    rather the name of the package (i.e. "dev-python/paramiko").
+    '''
+    if not name:
+        return []
+    else:
+        return [x for x in _porttree().getallnodes()
+                if x.endswith('/' + str(name))]
+
 
 def list_pkgs():
     '''
@@ -92,6 +114,7 @@ def list_pkgs():
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
+
 def refresh_db():
     '''
     Updates the portage tree (emerge --sync)
@@ -101,6 +124,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
+
 
 def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     '''
