@@ -165,6 +165,30 @@ def _verify_binary_pkg(srcinfo):
     return problems
 
 
+def check_targets(targets=[]):
+    '''
+    Examines target package names to make sure they were formatted properly.
+    Returns a list of problems encountered.
+    '''
+    problems = []
+    # If minion is Gentoo-based, check targeted packages to ensure they are
+    # properly submitted as category/pkgname. For any package that does not
+    # follow this format, offer matches from the portage tree.
+    if __grains__['os_family'] == 'Gentoo':
+        for pkg in targets:
+            if '/' not in pkg:
+                matches = __salt__['pkg.porttree_matches'](pkg)
+                if matches:
+                    msg = 'Package category missing for "{0}" (possible ' \
+                          'matches: {1}).'.format(pkg, ', '.join(matches))
+                else:
+                    msg = 'Package category missing for "{0}" and no match ' \
+                          'found in portage tree.'.format(pkg)
+                log.error(msg)
+                problems.append(msg)
+    return problems
+
+
 def parse_targets(name=None, pkgs=None, sources=None):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
