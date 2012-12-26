@@ -337,14 +337,13 @@ class LogLevelMixIn(object):
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
-        if hasattr(self.options, 'daemon'):
-            if self.options.daemon:
-                self.config['log_level'] = 'quiet'
-        log.setup_console_logger(
-            self.config['log_level'],
-            log_format=self.config['log_fmt_console'],
-            date_format=self.config['log_datefmt']
-        )
+        if getattr(self.options, 'daemon', False) is False:
+            # Since we're not going to be a daemon, setup the console logger
+            log.setup_console_logger(
+                self.config['log_level'],
+                log_format=self.config['log_fmt_console'],
+                date_format=self.config['log_datefmt']
+            )
 
 
 class RunUserMixin(object):
