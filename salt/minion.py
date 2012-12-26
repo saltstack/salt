@@ -658,10 +658,18 @@ class Minion(object):
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
         if hasattr(zmq, 'TCP_KEEPALIVE'):
-            self.socket.setsockopt(zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive'])
-            self.socket.setsockopt(zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle'])
-            self.socket.setsockopt(zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt'])
-            self.socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl'])
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+            )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)
@@ -706,24 +714,21 @@ class Minion(object):
     def destroy(self):
         if hasattr(self, 'poller'):
             for socket in self.poller.sockets.keys():
-                if not socket.closed:
+                if socket.closed is False:
                     socket.close()
                 self.poller.unregister(socket)
         if hasattr(self, 'epoller'):
             for socket in self.epoller.sockets.keys():
-                if not socket.closed:
+                if socket.closed is False:
                     socket.close()
                 self.epoller.unregister(socket)
-        if hasattr(self, 'epub_sock'):
-            if not self.epub_sock.closed:
-                self.epub_sock.close()
-        if hasattr(self, 'epull_sock'):
-            if not self.epull_sock.closed:
-                self.epull_sock.close()
-        if hasattr(self, 'socket'):
-            if not self.socket.closed:
-                self.socket.close()
-        if hasattr(self, 'context'):
+        if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
+            self.epub_sock.close()
+        if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
+            self.epull_sock.close()
+        if hasattr(self, 'socket') and self.socket.closed is False:
+            self.socket.close()
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
     def __del__(self):
@@ -741,7 +746,6 @@ class Syndic(salt.client.LocalClient, Minion):
         salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
-
 
     def _handle_aes(self, load):
         '''
@@ -995,11 +999,12 @@ class Matcher(object):
                     # If an unknown matcher is called at any time, fail out
                     return False
                 results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
+                    str(
+                        getattr(self, '{0}_match'.format(matcher))(
+                            '@'.join(comps[1:])
+                        )
+                    )
+                )
             elif match in opers:
                 # We didn't match a target, so append a boolean operator
                 results.append(match)
