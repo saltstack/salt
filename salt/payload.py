@@ -171,14 +171,15 @@ class SREQ(object):
 
     def destroy(self):
         for socket in self.poller.sockets.keys():
-            if not socket.closed:
+            if socket.closed is False:
                 socket.setsockopt(zmq.LINGER, 2500)
                 socket.close()
             self.poller.unregister(socket)
-        if not self.socket.closed:
+        if self.socket.closed is False:
             self.socket.setsockopt(zmq.LINGER, 2500)
             self.socket.close()
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()

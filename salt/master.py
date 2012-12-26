@@ -323,12 +323,15 @@ class Publisher(multiprocessing.Process):
                     raise exc
 
         except KeyboardInterrupt:
-            pub_sock.setsockopt(zmq.LINGER, 2500)
-            pub_sock.close()
-            pull_sock.setsockopt(zmq.LINGER, 2500)
-            pull_sock.close()
+            if pub_sock.closed is False:
+                pub_sock.setsockopt(zmq.LINGER, 2500)
+                pub_sock.close()
+            if pull_sock.closed is False:
+                pull_sock.setsockopt(zmq.LINGER, 2500)
+                pull_sock.close()
         finally:
-            context.term()
+            if self.context.closed is False:
+                context.term()
 
 
 class ReqServer(object):
@@ -410,11 +413,14 @@ class ReqServer(object):
         self.__bind()
 
     def destroy(self):
-        self.clients.setsockopt(zmq.LINGER, 2500)
-        self.clients.close()
-        self.workers.setsockopt(zmq.LINGER, 2500)
-        self.workers.close()
-        self.context.term()
+        if self.clients.closed is False:
+            self.clients.setsockopt(zmq.LINGER, 2500)
+            self.clients.close()
+        if self.work_procs.closed is False:
+            self.workers.setsockopt(zmq.LINGER, 2500)
+            self.workers.close()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()
@@ -462,10 +468,12 @@ class MWorker(multiprocessing.Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            socket.setsockopt(zmq.LINGER, 2500)
-            socket.close()
+            if socket.closed is False:
+                socket.setsockopt(zmq.LINGER, 2500)
+                socket.close()
         finally:
-            context.term()
+            if context.closed is False:
+                context.term()
 
     def _handle_payload(self, payload):
         '''
@@ -1097,9 +1105,11 @@ class AESFuncs(object):
                     timeout
                 )
             finally:
-                pub_sock.setsockopt(zmq.LINGER, 2500)
-                pub_sock.close()
-                context.term()
+                if pub_sock.closed is False:
+                    pub_sock.setsockopt(zmq.LINGER, 2500)
+                    pub_sock.close()
+                if context.closed is False:
+                    context.term()
         elif ret_form == 'full':
             ret = self.local.get_full_returns(
                     jid,
@@ -1113,9 +1123,11 @@ class AESFuncs(object):
             try:
                 return ret
             finally:
-                pub_sock.setsockopt(zmq.LINGER, 2500)
-                pub_sock.close()
-                context.term()
+                if pub_sock.closed is False:
+                    pub_sock.setsockopt(zmq.LINGER, 2500)
+                    pub_sock.close()
+                if context.closed is False:
+                    context.term()
 
     def run_func(self, func, load):
         '''
@@ -1728,6 +1740,8 @@ class ClearFuncs(object):
                 }
             }
         finally:
-            pub_sock.setsockopt(zmq.LINGER, 2500)
-            pub_sock.close()
-            context.term()
+            if pub_sock.closed is False:
+                pub_sock.setsockopt(zmq.LINGER, 2500)
+                pub_sock.close()
+            if context.closed is False:
+                context.term()
