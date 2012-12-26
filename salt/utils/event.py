@@ -177,7 +177,7 @@ class SaltEvent(object):
     def __del__(self):
         try:
             # This blows up horribly during the unit tests
-	    self.destroy()
+            self.destroy()
         except ZMQBaseError:
             pass
 
