@@ -24,11 +24,6 @@ from multiprocessing import Process
 
 # Import third party libs
 import zmq
-try:
-    # Work on older and newer zeromq versions
-    from zmq.core.error import ZMQBaseError
-except ImportError:
-    from zmq import ZMQBaseError
 
 # Import salt libs
 import salt.payload
@@ -154,32 +149,29 @@ class SaltEvent(object):
         return True
 
     def destroy(self):
-        if self.cpub:
+        if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() bellow will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
             self.sub.setsockopt(zmq.LINGER, 2500)
             self.sub.close()
-        if self.cpush:
+        if self.cpush is True and self.push.closed is False:
             self.push.setsockopt(zmq.LINGER, 2500)
             self.push.close()
         # If socket's are not unregistered from a poller, nothing which touches
         # that poller get's garbage collected. The Poller itself, it's
         # registered sockets and the Context
         for socket in self.poller.sockets.keys():
-            if not socket.closed:
+            if socket.closed is False:
                 # Should already be closed from above, but....
                 socket.setsockopt(zmq.LINGER, 2500)
                 socket.close()
             self.poller.unregister(socket)
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
-        try:
-            # This blows up horribly during the unit tests
-	    self.destroy()
-        except ZMQBaseError:
-            pass
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -254,12 +246,15 @@ class EventPublisher(Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            self.epub_sock.setsockopt(zmq.LINGER, 2500)
-            self.epub_sock.close()
-            self.epull_sock.setsockopt(zmq.LINGER, 2500)
-            self.epull_sock.close()
+            if self.epub_sock.closed is False:
+                self.epub_sock.setsockopt(zmq.LINGER, 2500)
+                self.epub_sock.close()
+            if self.epull_sock.closed is False:
+                self.epull_sock.setsockopt(zmq.LINGER, 2500)
+                self.epull_sock.close()
         finally:
-            self.context.term()
+            if self.context.closed is False:
+                self.context.term()
 
 
 class Reactor(multiprocessing.Process, salt.state.Compiler):
