@@ -20,7 +20,7 @@ from distutils.version import LooseVersion
 # Import salt libs
 import salt.utils
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def __gen_rtag():
@@ -127,10 +127,11 @@ def installed(
                     'comment': 'All specified packages are already ' \
                                'installed'.format(name)}
         else:
-            # Remove any targets that are already installed to avoid upgrading
             if pkgs:
                 pkgs = targets
             elif sources:
+                # Remove any targets that are already installed, to avoid
+                # upgrading them.
                 sources = [x for x in sources if x.keys()[0] in targets]
 
     else:
@@ -153,6 +154,27 @@ def installed(
                     'result': True,
                     'comment': 'Package {0} is already installed'.format(name)}
 
+    # If minion is Gentoo-based, check targeted packages to ensure they are
+    # properly submitted as category/pkgname. For any package that does not
+    # follow this format, offer matches from the portage tree.
+    if not sources and  __grains__['os_family'] == 'Gentoo':
+        problems = []
+        for pkg in targets:
+            if '/' not in pkg:
+                matches = __salt__['pkg.porttree_matches'](pkg)
+                if matches:
+                    msg = 'Package category missing for "{0}" (possible ' \
+                          'matches: {1}).'.format(pkg, ', '.join(matches))
+                else:
+                    msg = 'Package category missing for "{0}" and no match ' \
+                          'found in portage tree.'.format(pkg)
+                log.error(msg)
+                problems.append(msg)
+        if problems:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': ' '.join(problems)}
 
     if __opts__['test']:
         if len(targets) > 1:
@@ -245,7 +267,7 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         try:
             has_newer = LooseVersion(avail) > LooseVersion(version)
         except AttributeError:
-            logger.debug('Error comparing versions'
+            log.debug('Error comparing versions'
                          ' for "{0}" ({1} > {2})'.format(name,
                                                          avail,
                                                          version)
