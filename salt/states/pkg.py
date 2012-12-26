@@ -154,22 +154,8 @@ def installed(
                     'result': True,
                     'comment': 'Package {0} is already installed'.format(name)}
 
-    # If minion is Gentoo-based, check targeted packages to ensure they are
-    # properly submitted as category/pkgname. For any package that does not
-    # follow this format, offer matches from the portage tree.
-    if not sources and  __grains__['os_family'] == 'Gentoo':
-        problems = []
-        for pkg in targets:
-            if '/' not in pkg:
-                matches = __salt__['pkg.porttree_matches'](pkg)
-                if matches:
-                    msg = 'Package category missing for "{0}" (possible ' \
-                          'matches: {1}).'.format(pkg, ', '.join(matches))
-                else:
-                    msg = 'Package category missing for "{0}" and no match ' \
-                          'found in portage tree.'.format(pkg)
-                log.error(msg)
-                problems.append(msg)
+    if not sources:
+        problems = __salt__['pkg_resource.check_targets'](targets)
         if problems:
             return {'name': name,
                     'changes': {},
