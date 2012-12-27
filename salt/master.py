@@ -554,6 +554,21 @@ class AESFuncs(object):
                 self.opts,
                 states=False,
                 rend=False)
+        self.__setup_fileserver()
+
+    def __setup_fileserver(self):
+        '''
+        Set the local file objects from the file server interface
+        '''
+        fsfuncs = salt.loader.fileserver(
+                __opts__,
+                __opts__.get('fileserver_backend', 'roots')
+                )
+        self._serve_file = fsfuncs['serve_file']
+        self._file_hash = fsfuncs['file_hash']
+        self._file_list = fsfuncs['file_list']
+        self._file_list_emptydirs = fsfuncs['file_list_emptydirs']
+        self._dir_list = fsfuncs['dir_list']
 
     def __find_file(self, path, env='base'):
         '''
