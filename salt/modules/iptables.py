@@ -374,8 +374,8 @@ def _parser():
     ## mac
     add_arg('--mac-source', dest='mac-source', action='append')
     ## multiport
-    add_arg('--source-ports', dest='source-ports', action='append')
-    add_arg('--destination-ports', dest='destination-ports', action='append')
+    add_arg('--sports', '--source-ports', dest='source-ports', action='append')
+    add_arg('--dports', '--destination-ports', dest='destination-ports', action='append')
     add_arg('--ports', dest='ports', action='append')
     ## owner
     add_arg('--uid-owner', dest='uid-owner', action='append')
@@ -572,10 +572,6 @@ def _parser():
     add_arg('--ulog-prefix', dest='ulog-prefix', action='append')
     add_arg('--ulog-cprange', dest='ulog-cprange', action='append')
     add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
-
-    # Not in iptables man page
-    add_arg('--sports', '--source-ports', dest='source_ports', action='append')
-    add_arg('--dports', '--destination-ports', dest='destination_ports', action='append')
 
     return parser
 
