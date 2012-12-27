@@ -12,7 +12,7 @@ declarations are typically rather simple:
       pkg.installed
 '''
 
-# Import python ilbs
+# Import python libs
 import logging
 import os
 from distutils.version import LooseVersion
@@ -40,7 +40,8 @@ def installed(
         sources=None,
         **kwargs):
     '''
-    Verify that the package is installed, and that it is the correct version (if specified).
+    Verify that the package is installed, and that it is the correct version
+    (if specified).
 
     name
         The name of the package to be installed. This parameter is ignored if
@@ -113,7 +114,7 @@ def installed(
             return {'name': name,
                     'changes': {},
                     'result': False,
-                    'comment': 'Invalidly formatted "{0}" parameter. See ' \
+                    'comment': 'Invalidly formatted "{0}" parameter. See '
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
 
@@ -124,7 +125,7 @@ def installed(
             return {'name': name,
                     'changes': {},
                     'result': True,
-                    'comment': 'All specified packages are already ' \
+                    'comment': 'All specified packages are already '
                                'installed'.format(name)}
         else:
             if pkgs:
@@ -137,7 +138,7 @@ def installed(
     else:
         targets = [name]
 
-        cver = old_pkgs.get(name,'')
+        cver = old_pkgs.get(name, '')
         if cver == version:
             # The package is installed and is the correct version
             return {'name': name,
@@ -253,13 +254,16 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         try:
             has_newer = LooseVersion(avail) > LooseVersion(version)
         except AttributeError:
-            log.debug('Error comparing versions'
-                         ' for "{0}" ({1} > {2})'.format(name,
-                                                         avail,
-                                                         version)
-                         )
-            ret['comment'] = 'No version could be retrieved' \
-                             ' for "{0}"'.format(name)
+            flog.debug(
+                'Error comparing versions' ' for "{0}" ({1} > {2})'.format(
+                    name,
+                    avail,
+                    version
+                )
+            )
+            ret['comment'] = 'No version could be retrieved for "{0}"'.format(
+                name
+            )
             return ret
 
     if has_newer:
