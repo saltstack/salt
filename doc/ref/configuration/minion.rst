@@ -65,7 +65,7 @@ The user to run the Salt processes
 
 Default: ``/var/run/salt-minion.pid``
 
-The location of the daemons process ID file
+The location of the daemon's process ID file
 
 .. code-block:: yaml
 
@@ -78,7 +78,7 @@ The location of the daemons process ID file
 
 Default: ``/``
 
-The root directory prepended to the following options: :conf_minion:`pki_dir`,
+This directory is prepended to the following options: :conf_minion:`pki_dir`,
 :conf_minion:`cachedir`, :conf_minion:`log_file`, :conf_minion:`sock_dir`, and
 :conf_minion:`pidfile`.
 
@@ -233,9 +233,9 @@ master.
 
 Default: ``True``
 
-When healing a dns_check is run, this is to make sure that the originally
-resolved dns has not changed, if this is something that does not happen in your
-environment then set this value to ``False``.
+When healing, a dns_check is run. This is to make sure that the originally
+resolved dns has not changed. If this is something that does not happen in your
+environment, set this value to ``False``.
 
 .. code-block:: yaml
 
