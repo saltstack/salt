@@ -143,6 +143,9 @@
 #   pam:
 #     fred:
 #       - test.*
+#
+# Time (in seconds) for a newly generated token to live. Default: 12 hours
+# token_expire: 43200
 
 #####    Master Module Management    #####
 ##########################################
