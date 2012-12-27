@@ -354,6 +354,7 @@ def master_config(path):
             'file_buffer_size': 1048576,
             'file_ignore_regex': None,
             'file_ignore_glob': None,
+            'fileserver_backend': 'roots',
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
