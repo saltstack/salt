@@ -9,7 +9,7 @@ try:
 except ImportError:
     pass
 import logging
-from copy import deepcopy
+import copy
 
 # Import salt libs
 from salt._compat import string_types, callable
@@ -274,7 +274,7 @@ def chfullname(name, fullname):
     if not pre_info: return False
     if fullname == pre_info['fullname']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -297,7 +297,7 @@ def chroomnumber(name, roomnumber):
     if not pre_info: return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -320,7 +320,7 @@ def chworkphone(name, workphone):
     if not pre_info: return False
     if workphone == pre_info['workphone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -343,7 +343,7 @@ def chhomephone(name, homephone):
     if not pre_info: return False
     if homephone == pre_info['homephone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
