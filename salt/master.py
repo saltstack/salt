@@ -330,7 +330,7 @@ class Publisher(multiprocessing.Process):
                 pull_sock.setsockopt(zmq.LINGER, 2500)
                 pull_sock.close()
         finally:
-            if self.context.closed is False:
+            if context.closed is False:
                 context.term()
 
 
@@ -416,11 +416,15 @@ class ReqServer(object):
         if self.clients.closed is False:
             self.clients.setsockopt(zmq.LINGER, 2500)
             self.clients.close()
-        if self.work_procs.closed is False:
+        if self.workers.closed is False:
             self.workers.setsockopt(zmq.LINGER, 2500)
             self.workers.close()
         if self.context.closed is False:
             self.context.term()
+        # Also stop the workers
+        for worker in self.work_procs:
+            if worker.is_alive() is True:
+                worker.terminate()
 
     def __del__(self):
         self.destroy()
