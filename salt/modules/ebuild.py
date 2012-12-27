@@ -254,7 +254,8 @@ def upgrade(refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    __salt__['cmd.retcode']('emerge --update --quiet world')
+    cmd = 'emerge --update --newuse --deep --with-bdeps=y --quiet world'
+    __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
