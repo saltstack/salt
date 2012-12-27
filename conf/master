@@ -252,6 +252,14 @@
 #  - '*.pyc'
 #  - '*/somefolder/*.bak'
 
+# File Server Backend
+# Salt supports a modular fileserver backend system, this system allows
+# the salt master to link directly to third party systems to gather and
+# manage the files. The defult and classic backend is "roots", be advised
+# that the file_roots configuration value will differ based on the underlying
+# fileserver backend
+#fileserver_backend: roots
+
 # Pillar Configurations:
 # The Salt Pillar, is a system that allows for the building of global data
 # that is refined based on minion. Basically, the pillar creates data that
