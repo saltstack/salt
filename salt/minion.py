@@ -20,9 +20,10 @@ import sys
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltReqTimeoutError
+from salt.exceptions import (
+    AuthenticationError, CommandExecutionError, CommandNotFoundError,
+    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit
+)
 import salt.client
 import salt.crypt
 import salt.loader
@@ -620,7 +621,24 @@ class Minion(object):
         else:
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
-
+            for uri in (epub_uri, epull_uri):
+                if uri.startswith('tcp://'):
+                    # This check only applies to IPC sockets
+                    continue
+                # The socket path is limited to 107 characters on Solaris and
+                # Linux, and 103 characters on BSD-based systems.
+                # Let's fail at the lower level so no system checks are
+                # required.
+                if len(uri) > 103:
+                    raise SaltSystemExit(
+                        'The socket path length is more that what ZMQ allows. '
+                        'The length of {0!r} is more than 103 characters. '
+                        'Either try to reduce the length of this setting\'s '
+                        'path or switch to TCP; In the configuration file set '
+                        '"ipc_mode: tcp"'.format(
+                            uri
+                        )
+                    )
         log.debug(
             '{0} PUB socket URI: {1}'.format(
                 self.__class__.__name__, epub_uri
