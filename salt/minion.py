@@ -622,7 +622,9 @@ class Minion(object):
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
             for uri in (epub_uri, epull_uri):
-                break
+                if uri.startswith('tcp://'):
+                    # This check only applies to IPC sockets
+                    continue
                 # The socket path is limited to 107 characters on Solaris and
                 # Linux, and 103 characters on BSD-based systems.
                 # Let's fail at the lower level so no system checks are
@@ -632,7 +634,7 @@ class Minion(object):
                         'The socket path length is more that what ZMQ allows. '
                         'The length of {0!r} is more than 103 characters. '
                         'Either try to reduce the length of this setting\'s '
-                        'path or switch to TCP; On the config file set '
+                        'path or switch to TCP; In the configuration file set '
                         '"ipc_mode: tcp"'.format(
                             uri
                         )

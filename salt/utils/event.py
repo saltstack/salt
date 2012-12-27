@@ -91,7 +91,7 @@ class SaltEvent(object):
                     'The socket path length is more that what ZMQ allows. '
                     'The length of {0!r} is more than 103 characters. '
                     'Either try to reduce the length of this setting\'s '
-                    'path or switch to TCP; On the config file set '
+                    'path or switch to TCP; In the configuration file set '
                     '"ipc_mode: tcp"'.format(
                         uri
                     )
