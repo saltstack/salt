@@ -43,7 +43,7 @@ __salt__ = {
 log = logging.getLogger(__name__)
 
 has_wmi = False
-if sys.platform.startswith('win'):
+if salt.utils.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
@@ -551,7 +551,7 @@ def os_data():
     # ('Linux', 'MINIONNAME', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
-    if grains['kernel'] == 'Windows':
+    if salt.utils.is_windows():
         grains['osrelease'] = grains['kernelrelease']
         grains['osversion'] = grains['kernelrelease'] = version
         grains['os'] = 'Windows'
@@ -561,7 +561,7 @@ def os_data():
         grains.update(_windows_cpudata())
         grains.update(_ps(grains))
         return grains
-    elif grains['kernel'] == 'Linux':
+    elif salt.utils.is_linux():
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release

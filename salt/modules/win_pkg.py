@@ -13,8 +13,9 @@ try:
     import win32com.client
     import win32api
     import win32con
+    has_dependencies = True
 except ImportError:
-    pass
+    has_dependencies = False
 
 # Import python libs
 import logging
@@ -29,7 +30,9 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    return 'pkg' if __grains__['os'] == 'Windows' else False
+    if salt.utils.is_windows() and  has_dependencies:
+        return 'pkg'
+    return False
 
 
 def _list_removed(old, new):
