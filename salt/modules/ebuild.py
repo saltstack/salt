@@ -306,3 +306,28 @@ def purge(pkg):
 
     '''
     return remove(pkg)
+
+def depclean(pkg=None):
+    '''
+    Portage has a function to remove unused dependencies. If a package
+    is provided, it will only removed the package if no other package
+    depends on it.
+
+    Return a list containing the removed packages:
+
+    CLI Example::
+
+        salt '*' ebuild.depclean <package name>
+    '''
+    ret_pkgs = []
+    old_pkgs = list_pkgs()
+
+    cmd = 'emerge --depclean --quiet {0}'.format(pkg)
+    __salt__['cmd.retcode'](cmd)
+    new_pkgs = list_pkgs()
+
+    for pkg in old_pkgs:
+        if not pkg in new_pkgs:
+            ret_pkgs.append(pkg)
+
+    return ret_pkgs
