@@ -25,7 +25,7 @@ def __virtual__():
     # finding the path of the binary
     if salt.utils.which('sysbench'):
         return 'sysbench'
-    return None
+    return False
 
 
 def _parser(result):
