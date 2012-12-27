@@ -148,15 +148,44 @@ def wipefacls(*args):
     return True
 
 
+def modfacl(acl_type, acl_name, perms, *args):
+    '''
+    Add or modify a FACL for the specified file(s)
+    CLI Examples::
+
+        salt '*' acl.addfacl user myuser rwx /tmp/house/kitchen
+        salt '*' acl.addfacl default:group mygroup rx /tmp/house/kitchen
+        salt '*' acl.addfacl d:u myuser 7 /tmp/house/kitchen
+        salt '*' acl.addfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
+    '''
+    cmd = 'setfacl -m'
+
+    prefix = ''
+    if acl_type.startswith('d'):
+        prefix = 'd:'
+        acl_type = acl_type.replace('default:', '')
+        acl_type = acl_type.replace('d:', '')
+    if acl_type == 'user' or acl_type == 'u':
+        prefix += 'u'
+    elif acl_type == 'group' or acl_type == 'g':
+        prefix += 'g'
+    cmd = '{0} {1}:{2}:{3}'.format(cmd, prefix, acl_name, perms)
+
+    for dentry in args:
+        cmd += ' {0}'.format(dentry)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return True
+
+
 def delfacl(acl_type, acl_name, *args):
     '''
-    Remove specific FACLs from the specified file(s)
+    Remove specific FACL from the specified file(s)
     CLI Examples::
 
         salt '*' acl.delfacl user myuser /tmp/house/kitchen
-        salt '*' acl.delfacl default:group myuser /tmp/house/kitchen
+        salt '*' acl.delfacl default:group mygroup /tmp/house/kitchen
         salt '*' acl.delfacl d:u myuser /tmp/house/kitchen
-        salt '*' acl.delfacl u myuser /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.delfacl g myuser /tmp/house/kitchen /tmp/house/livingroom
     '''
     cmd = 'setfacl -x'
 
