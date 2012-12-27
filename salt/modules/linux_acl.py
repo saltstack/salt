@@ -32,9 +32,10 @@ def version():
 def getfacl(*args):
     '''
     Return information about the physical volume(s)
-    CLI Example::
+    CLI Examples::
 
         salt '*' acl.getfacl /tmp/house/kitchen
+        salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
     '''
     ret = {}
     cmd = 'getfacl -p'
@@ -130,4 +131,19 @@ def _parse_acl(acl, user, group):
     vals['octal'] = octal
 
     return vals
+
+
+def delfacl(*args):
+    '''
+    Return information about the physical volume(s)
+    CLI Examples::
+
+        salt '*' acl.delfacl /tmp/house/kitchen
+        salt '*' acl.delfacl /tmp/house/kitchen /tmp/house/livingroom
+    '''
+    cmd = 'setfacl -b'
+    for dentry in args:
+        cmd += ' {0}'.format(dentry)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return True
 
