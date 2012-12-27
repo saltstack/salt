@@ -573,5 +573,9 @@ def _parser():
     add_arg('--ulog-cprange', dest='ulog-cprange', action='append')
     add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
 
+    # Not in iptables man page
+    add_arg('--sports', '--source-ports', dest='source_ports', action='append')
+    add_arg('--dports', '--destination-ports', dest='destination_ports', action='append')
+
     return parser
 
