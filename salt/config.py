@@ -350,7 +350,7 @@ def master_config(path):
             'runner_dirs': [],
             'client_acl': {},
             'external_auth': {},
-            'token_expire': 720,
+            'token_expire': 43200,
             'file_buffer_size': 1048576,
             'file_ignore_regex': None,
             'file_ignore_glob': None,
