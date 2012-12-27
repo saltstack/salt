@@ -254,7 +254,7 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         try:
             has_newer = LooseVersion(avail) > LooseVersion(version)
         except AttributeError:
-            flog.debug(
+            log.debug(
                 'Error comparing versions' ' for "{0}" ({1} > {2})'.format(
                     name,
                     avail,
