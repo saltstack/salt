@@ -6,14 +6,14 @@
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
 init-hook="
-  exec 'aW1wb3J0IHN5cywgb3MKCmlmICdWSVJUVUFMX0VOVicgbm90IGluIG9zLmVudmlyb246CiAgICBz \
-  eXMuZXhpdCgwKQoKdmVfZGlyID0gb3MuZW52aXJvblsnVklSVFVBTF9FTlYnXQp2ZV9kaXIgaW4g \
-  c3lzLnBhdGggb3Igc3lzLnBhdGguaW5zZXJ0KDAsIHZlX2RpcikKYWN0aXZhdGVfdGhpcyA9IG9z \
-  LnBhdGguam9pbihvcy5wYXRoLmpvaW4odmVfZGlyLCAnYmluJyksICdhY3RpdmF0ZV90aGlzLnB5 \
-  JykKCiMgRml4IGZvciB3aW5kb3dzCmlmIG5vdCBvcy5wYXRoLmV4aXN0cyhhY3RpdmF0ZV90aGlz \
-  KToKICAgIGFjdGl2YXRlX3RoaXMgPSBvcy5wYXRoLmpvaW4ob3MucGF0aC5qb2luKHZlX2Rpciwg \
-  J1NjcmlwdHMnKSwgJ2FjdGl2YXRlX3RoaXMucHknKQoKZXhlY2ZpbGUoYWN0aXZhdGVfdGhpcywg \
-  ZGljdChfX2ZpbGVfXz1hY3RpdmF0ZV90aGlzKSkK'.decode('base64')"
+  exec 'aW1wb3J0IG9zLCBzeXMKCmlmICdWSVJUVUFMX0VOVicgaW4gb3MuZW52aXJvbjoKCiAgICB2ZV9k \
+  aXIgPSBvcy5lbnZpcm9uWydWSVJUVUFMX0VOViddCiAgICB2ZV9kaXIgaW4gc3lzLnBhdGggb3Ig \
+  c3lzLnBhdGguaW5zZXJ0KDAsIHZlX2RpcikKICAgIGFjdGl2YXRlX3RoaXMgPSBvcy5wYXRoLmpv \
+  aW4ob3MucGF0aC5qb2luKHZlX2RpciwgJ2JpbicpLCAnYWN0aXZhdGVfdGhpcy5weScpCgogICAg \
+  IyBGaXggZm9yIHdpbmRvd3MKICAgIGlmIG5vdCBvcy5wYXRoLmV4aXN0cyhhY3RpdmF0ZV90aGlz \
+  KToKICAgICAgICBhY3RpdmF0ZV90aGlzID0gb3MucGF0aC5qb2luKG9zLnBhdGguam9pbih2ZV9k \
+  aXIsICdTY3JpcHRzJyksICdhY3RpdmF0ZV90aGlzLnB5JykKCiAgICBleGVjZmlsZShhY3RpdmF0 \
+  ZV90aGlzLCBkaWN0KF9fZmlsZV9fPWFjdGl2YXRlX3RoaXMpKQo='.decode('base64')"
 
 # Profiled execution.
 profile=no
