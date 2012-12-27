@@ -667,9 +667,10 @@ class Login(LowDataAdapter):
         :status 406: requested Content-Type not available
         '''
         auth = salt.auth.LoadAuth(self.opts)
-        token = auth.mk_token(kwargs).get('token', False)
+        token = auth.mk_token(kwargs)
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
-        cherrypy.session['token'] = token
+        cherrypy.session['token'] = token['token']
+        cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
         raise cherrypy.HTTPRedirect('/', 302)
 
 class API(object):
