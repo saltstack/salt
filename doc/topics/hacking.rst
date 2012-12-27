@@ -90,8 +90,9 @@ Activate the virtualenv::
 
 Install Salt (and dependencies) into the virtualenv::
 
-    pip install pyzmq M2Crypto PyYAML pycrypto msgpack-python jinja2 psutil
-    pip install -e ./salt       # the path to the salt git clone from above
+    pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
+    pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil
+    pip install -e ./salt   # the path to the salt git clone from above
 
 .. note:: Installing M2Crypto
 
@@ -106,6 +107,9 @@ Install Salt (and dependencies) into the virtualenv::
     needs to be installed via apt:
 
         apt-get install python-m2crypto
+
+    This also means that you should use ``--system-site-packages`` when
+    creating the virtualenv, to pull in the M2Crypto installed using apt.
 
 
 .. note:: Important note for those developing using RedHat variants
@@ -148,8 +152,8 @@ Edit the master config file:
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  Uncomment and change the ``pidfile: /var/run/salt-minion.pid`` value to
-    point to ``/path/to/your/virtualenv/salt-minion.pid``.
+3.  Uncomment and change the ``pidfile: /var/run/salt-master.pid`` value to
+    point to ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
 
@@ -157,8 +161,8 @@ Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  Uncomment and change the ``pidfile: /var/run/salt-master.pid`` value to
-    point to ``/path/to/your/virtualenv/salt-master.pid``.
+2.  Uncomment and change the ``pidfile: /var/run/salt-minion.pid`` value to
+    point to ``/path/to/your/virtualenv/salt-minion.pid``.
 3.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
 4.  Uncomment and change the ``id:`` value to something descriptive like
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
@@ -186,6 +190,23 @@ Running the master and minion in debug mode can be helpful when developing. To
 do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
 If you would like to log to the console instead of to the log file, remove the
 ``-d``.
+
+Once the minion starts, you may see an error like the following::
+
+    zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
+
+This means the the path to the socket the minion is using is too long. This is
+a system limitation, so the only workaround is to reduce the length of this
+path. This can be done in a couple different ways:
+
+1.  Create your virtualenv in a path that is short enough.
+2.  Edit the :conf_minion:`sock_dir` minion config variable and reduce its
+    length. Remember that this path is relative to the value you set in
+    :conf_minion:`root_dir`.
+
+``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
+and 103 characters on BSD-based systems.
+
 
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
