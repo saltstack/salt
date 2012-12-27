@@ -5,7 +5,15 @@
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook="
+  exec 'aW1wb3J0IHN5cywgb3MKCmlmICdWSVJUVUFMX0VOVicgbm90IGluIG9zLmVudmlyb246CiAgICBz \
+  eXMuZXhpdCgwKQoKdmVfZGlyID0gb3MuZW52aXJvblsnVklSVFVBTF9FTlYnXQp2ZV9kaXIgaW4g \
+  c3lzLnBhdGggb3Igc3lzLnBhdGguaW5zZXJ0KDAsIHZlX2RpcikKYWN0aXZhdGVfdGhpcyA9IG9z \
+  LnBhdGguam9pbihvcy5wYXRoLmpvaW4odmVfZGlyLCAnYmluJyksICdhY3RpdmF0ZV90aGlzLnB5 \
+  JykKCiMgRml4IGZvciB3aW5kb3dzCmlmIG5vdCBvcy5wYXRoLmV4aXN0cyhhY3RpdmF0ZV90aGlz \
+  KToKICAgIGFjdGl2YXRlX3RoaXMgPSBvcy5wYXRoLmpvaW4ob3MucGF0aC5qb2luKHZlX2Rpciwg \
+  J1NjcmlwdHMnKSwgJ2FjdGl2YXRlX3RoaXMucHknKQoKZXhlY2ZpbGUoYWN0aXZhdGVfdGhpcywg \
+  ZGljdChfX2ZpbGVfXz1hY3RpdmF0ZV90aGlzKSkK'.decode('base64')"
 
 # Profiled execution.
 profile=no
