@@ -5,10 +5,11 @@ configuraiton option
 
 # Import python libs
 import os
+import hashlib
 
 # Import salt libs
 import salt.fileserver
-
+import salt.utils
 
 def _find_file(path, env='base'):
     '''
