@@ -8,7 +8,7 @@ import salt.utils
 
 def __virtual__():
     '''
-    Only load the module if lvm is installed
+    Only load the module if getfacl is installed
     '''
     if salt.utils.which('getfacl'):
         return 'acl'
@@ -17,11 +17,11 @@ def __virtual__():
 
 def version():
     '''
-    Return LVM version from lvm version
+    Return facl version from getfacl --version
 
     CLI Example::
 
-        salt '*' lvm.version
+        salt '*' acl.version
     '''
     cmd = 'getfacl --version'
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -31,7 +31,7 @@ def version():
 
 def getfacl(*args):
     '''
-    Return information about the physical volume(s)
+    Return (extremely verbose) map of FACLs on specified file(s)
     CLI Examples::
 
         salt '*' acl.getfacl /tmp/house/kitchen
@@ -133,15 +133,44 @@ def _parse_acl(acl, user, group):
     return vals
 
 
-def delfacl(*args):
+def wipefacls(*args):
     '''
-    Return information about the physical volume(s)
+    Remove all FACLs from the specified file(s)
     CLI Examples::
 
-        salt '*' acl.delfacl /tmp/house/kitchen
-        salt '*' acl.delfacl /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.wipefacls /tmp/house/kitchen
+        salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
     '''
     cmd = 'setfacl -b'
+    for dentry in args:
+        cmd += ' {0}'.format(dentry)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return True
+
+
+def delfacl(acl_type, acl_name, *args):
+    '''
+    Remove specific FACLs from the specified file(s)
+    CLI Examples::
+
+        salt '*' acl.delfacl user myuser /tmp/house/kitchen
+        salt '*' acl.delfacl default:group myuser /tmp/house/kitchen
+        salt '*' acl.delfacl d:u myuser /tmp/house/kitchen
+        salt '*' acl.delfacl u myuser /tmp/house/kitchen /tmp/house/livingroom
+    '''
+    cmd = 'setfacl -x'
+
+    prefix = ''
+    if acl_type.startswith('d'):
+        prefix = 'd:'
+        acl_type = acl_type.replace('default:', '')
+        acl_type = acl_type.replace('d:', '')
+    if acl_type == 'user' or acl_type == 'u':
+        prefix += 'u'
+    elif acl_type == 'group' or acl_type == 'g':
+        prefix += 'g'
+    cmd = '{0} {1}:{2}'.format(cmd, prefix, acl_name)
+
     for dentry in args:
         cmd += ' {0}'.format(dentry)
     out = __salt__['cmd.run'](cmd).splitlines()
