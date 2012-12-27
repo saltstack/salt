@@ -593,6 +593,17 @@ class Loader(object):
                                 # not supposed to load for some other reason.
                                 # Some modules might accidentally return None
                                 # and are improperly loaded
+                                if virtual is None:
+                                    log.warning(
+                                        '{0}.__virtual__() is wrongly '
+                                        'returning `None`. It should either '
+                                        'return `True` or `False`. If '
+                                        'you\'re the developer of the module '
+                                        '{1!r}, please fix this.'.format(
+                                            mod.__name__,
+                                            module_name
+                                        )
+                                    )
                                 continue
 
                             if module_name != virtual:
