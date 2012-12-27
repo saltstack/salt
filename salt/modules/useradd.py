@@ -12,7 +12,7 @@ import logging
 import copy
 
 # Import salt libs
-from salt._compat import string_types, callable
+from salt._compat import string_types, callable as _callable
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ def __virtual__():
         mod = sys.modules[__name__]
         for attr in dir(mod):
 
-            if callable(getattr(mod, attr)):
+            if _callable(getattr(mod, attr)):
                 if not attr in ('getent', 'info', 'list_groups', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
