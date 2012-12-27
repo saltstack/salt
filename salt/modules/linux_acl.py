@@ -2,9 +2,6 @@
 Support for Linux File Access Control Lists
 '''
 
-import sys
-import pprint
-
 # Import salt libs
 import salt.utils
 
@@ -70,7 +67,6 @@ def getfacl(*args):
             vals = _parse_acl(acl=line,
                               user=ret[dentry]['comments']['owner'],
                               group=ret[dentry]['comments']['group'])
-            pprint.pprint(vals)
             acl_type = vals['type']
             del(vals['type'])
             for entity in ('user', 'group'):
