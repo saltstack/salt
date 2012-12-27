@@ -576,13 +576,15 @@ class Loader(object):
             if virtual_enable:
                 # if virtual modules are enabled, we need to look for the
                 # __virtual__() function inside that module and run it.
-                # This function will return either a new name for the module
-                # or False. This allows us to have things like the pkg module
-                # working on all platforms under the name 'pkg'. It also allows
-                # for modules like augeas_cfg to be referred to as 'augeas',
-                # which would otherwise have namespace collisions. And finally
-                # it allows modules to return False if they are not intended
-                # to run on the given platform or are missing dependencies.
+                # This function will return either a new name for the module,
+                # an empty string(won't be loaded but you just need to check
+                # against the same python type, a string) or False.
+                # This allows us to have things like the pkg module working on
+                # all platforms under the name 'pkg'. It also allows for
+                # modules like augeas_cfg to be referred to as 'augeas', which
+                # would otherwise have namespace collisions. And finally it
+                # allows modules to return False if they are not intended to
+                # run on the given platform or are missing dependencies.
                 try:
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
