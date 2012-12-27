@@ -20,14 +20,14 @@ log = logging.getLogger(__name__)
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
+    and remove some of the functionality on OS X
     '''
     import sys
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-
             if _callable(getattr(mod, attr)):
-                if not attr in ('getent', 'info', 'list_groups', '__virtual__'):
+                if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
@@ -411,3 +411,13 @@ def list_groups(name):
             ugrp.add(group.gr_name)
 
     return sorted(list(ugrp))
+
+def list_users():
+    '''
+    Return a list of all users
+
+    CLI Example::
+
+        salt '*' user.list_users
+    '''
+    return sorted([user.pw_name for user in pwd.getpwall()])
