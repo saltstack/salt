@@ -33,19 +33,19 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     Returns an IPv4 netmask
     '''
     netmask = ''
-    for n in range(4):
-        if n:
+    for idx in range(4):
+        if idx:
             netmask += '.'
         if cidr_bits >= 8:
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '{0:d}'.format(256-(2**(8-cidr_bits)))
+            netmask += '{0:d}'.format(256 - (2 ** (8 - cidr_bits)))
             cidr_bits = 0
     return netmask
 
 
-def _number_of_set_bits_to_ipv4_netmask(set_bits):
+def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable-msg=C0103
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
 
@@ -54,6 +54,7 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):
     return _cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
 
+# pylint: disable-msg=C0103
 def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
@@ -65,6 +66,8 @@ def _number_of_set_bits(x):
     x += x >> 8
     x += x >> 16
     return x & 0x0000003f
+
+# pylint: enable-msg=C0103
 
 
 def _interfaces_ip(out):
@@ -82,15 +85,15 @@ def _interfaces_ip(out):
         '''
         brd = None
         if '/' in value:  # we have a CIDR in this address
-            ip, cidr = value.split('/')
+            ip, cidr = value.split('/')  # pylint: disable-msg=C0103
         else:
-            ip = value
+            ip = value  # pylint: disable-msg=C0103
             cidr = 32
 
         if type == 'inet':
             mask = _cidr_to_ipv4_netmask(int(cidr))
             if 'brd' in cols:
-                brd = cols[cols.index('brd')+1]
+                brd = cols[cols.index('brd') + 1]
         elif type == 'inet6':
             mask = cidr
         return (ip, mask, brd)
@@ -103,9 +106,9 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
-            if m:
-                iface, parent, attrs = m.groups()
+            match = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            if match:
+                iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):
                     data['up'] = True
                 else:
@@ -140,15 +143,15 @@ def _interfaces_ip(out):
                     else:
                         if 'secondary' not in data:
                             data['secondary'] = list()
-                        ip, mask, brd = parse_network(value, cols)
+                        ip_, mask, brd = parse_network(value, cols)
                         data['secondary'].append({
                             'type': type,
-                            'address': ip,
+                            'address': ip_,
                             'netmask': mask,
                             'broadcast': brd,
                             'label': iflabel,
                             })
-                        del ip, mask, brd
+                        del ip_, mask, brd
                 elif type.startswith('link'):
                     data['hwaddr'] = value
         if iface:
@@ -279,7 +282,8 @@ def subnets():
 
     for ipv4_info in ifaces.values():
         for ipv4 in ipv4_info.get('inet', []):
-            if ipv4['address'] == '127.0.0.1': continue
+            if ipv4['address'] == '127.0.0.1':
+                continue
             network = _calculate_subnet(ipv4['address'], ipv4['netmask'])
             subnets.append(network)
     return subnets
@@ -306,11 +310,12 @@ def in_subnet(cidr):
     netstart_leftbits = netstart_bin[0:netsize]
     for ip_addr in ip_addrs():
         if netsize == 32:
-            if netstart == ip_addr: return True
+            if netstart == ip_addr:
+                return True
         else:
             ip_leftbits = _ipv4_to_bits(ip_addr)[0:netsize]
-            if netstart_leftbits == ip_leftbits: return True
-
+            if netstart_leftbits == ip_leftbits:
+                return True
     return False
 
 
@@ -325,12 +330,12 @@ def ip_addrs(interface=None, include_loopback=False):
     if interface is None:
         target_ifaces = ifaces
     else:
-        target_ifaces = dict([(k,v) for k,v in ifaces.iteritems()
+        target_ifaces = dict([(k, v) for k, v in ifaces.iteritems()
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
     for ipv4_info in target_ifaces.values():
-        for ipv4 in ipv4_info.get('inet',[]):
+        for ipv4 in ipv4_info.get('inet', []):
             if include_loopback \
             or (not include_loopback and ipv4['address'] != '127.0.0.1'):
                 ret.append(ipv4['address'])
@@ -348,12 +353,12 @@ def ip_addrs6(interface=None, include_loopback=False):
     if interface is None:
         target_ifaces = ifaces
     else:
-        target_ifaces = dict([(k,v) for k,v in ifaces.iteritems()
+        target_ifaces = dict([(k, v) for k, v in ifaces.iteritems()
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
     for ipv6_info in target_ifaces.values():
-        for ipv6 in ipv6_info.get('inet6',[]):
+        for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback \
             or (not include_loopback and ipv6['address'] != '::1'):
                 ret.append(ipv6['address'])
