@@ -11,43 +11,49 @@ __version_info__ = (0, 11, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
 
-# If we can get a version from Git use that instead, otherwise carry on
-try:
-    from salt.utils import which
+def __get_version_info_from_git():
+    """
+    If we can get a version from Git use that instead, otherwise we carry on
+    """
+    try:
+        from salt.utils import which
 
-    git = which('git')
-    if git:
-        p = subprocess.Popen(
-            [git, 'describe'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-            cwd=os.path.abspath(os.path.dirname(__file__))
-        )
-        out, err = p.communicate()
-        if out:
-            parsed_version = '{0}'.format(out.strip().lstrip('v'))
-            parsed_version_info = tuple(
-                [int(i) for i in parsed_version.split('-', 1)[0].split('.')]
+        git = which('git')
+        if git:
+            process = subprocess.Popen(
+                [git, 'describe'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+                cwd=os.path.abspath(os.path.dirname(__file__))
             )
-            if parsed_version_info != __version_info__:
-                msg = ('In order to get the proper salt version with the git '
-                       'hash you need to update salt\'s local git tags. '
-                       'Something like: \'git fetch --tags\' or '
-                       '\'git fetch --tags upstream\' if you followed '
-                       'salt\'s contribute documentation. The version string '
-                       'WILL NOT include the git hash.')
-                from salt import log
-                if log.is_console_configured():
-                    import logging
-                    logging.getLogger(__name__).warning(msg)
+            out, _ = process.communicate()
+            if out:
+                parsed_version = '{0}'.format(out.strip().lstrip('v'))
+                parsed_version_info = tuple([
+                    int(i) for i in parsed_version.split('-', 1)[0].split('.')
+                ])
+                if parsed_version_info != __version_info__:
+                    msg = ('In order to get the proper salt version with the '
+                           'git hash you need to update salt\'s local git '
+                           'tags. Something like: \'git fetch --tags\' or '
+                           '\'git fetch --tags upstream\' if you followed '
+                           'salt\'s contribute documentation. The version '
+                           'string WILL NOT include the git hash.')
+                    from salt import log
+                    if log.is_console_configured():
+                        import logging
+                        logging.getLogger(__name__).warning(msg)
+                    else:
+                        sys.stderr.write('WARNING: {0}\n'.format(msg))
                 else:
-                    sys.stderr.write('WARNING: {0}\n'.format(msg))
-            else:
-                __version__ = parsed_version
-                __version_info__ = parsed_version_info
-except Exception:
-    pass
+                    __version__ = parsed_version
+                    __version_info__ = parsed_version_info
+    except Exception:
+        pass
+
+__get_version_info_from_git()
+del __get_version_info_from_git
 
 
 def versions_report():
