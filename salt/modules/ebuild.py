@@ -317,7 +317,7 @@ def depclean(pkg=None):
 
     CLI Example::
 
-        salt '*' ebuild.depclean <package name>
+        salt '*' pkg.depclean <package name>
     '''
     ret_pkgs = []
     old_pkgs = list_pkgs()
