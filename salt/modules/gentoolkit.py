@@ -3,16 +3,11 @@ Support for Gentoolkit
 
 '''
 
-def _has_gentoolkit():
-    if __salt__['pkg.version']('app-portage/gentoolkit'):
-        return True
-    return False
-
 def __virtual__():
     '''
     Only work on Gentoo systems with gentoolkit installed
     '''
-    if __grains__['os'] == 'Gentoo' and _has_gentoolkit():
+    if __grains__['os'] == 'Gentoo' and salt.utils.which('revdep-rebuild'):
         return 'gentoolkit'
     return False
 
