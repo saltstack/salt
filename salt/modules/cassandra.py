@@ -15,10 +15,10 @@ Cassandra NoSQL Database Module
 import logging
 log = logging.getLogger(__name__)
 
-has_pycassa = False
+HAS_PYCASSA = False
 try:
     from pycassa.system_manager import SystemManager
-    has_pycassa = True
+    HAS_PYCASSA = True
 except ImportError:
     pass
 
@@ -30,23 +30,23 @@ __outputter__ = {
   'ring': 'txt',
 }
 
-nt = ''
-host = ''
-thrift_port = ''
+NT = ''
+HOST = ''
+THRIFT_PORT = ''
 
 
 def __virtual__():
     '''
     Only load if pycassa is available and the system is configured
     '''
-    if not has_pycassa:
+    if not HAS_PYCASSA:
         return False
 
-    nt = __salt__['config.option']('cassandra.nodetool')
-    host = __salt__['config.option']('cassandra.host')
-    thrift_port = str(__salt__['config.option']('cassandra.thrift_port'))
+    NT = __salt__['config.option']('cassandra.nodetool')
+    HOST = __salt__['config.option']('cassandra.host')
+    THRIFT_PORT = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
 
-    if nt and host and thrift_port:
+    if NT and HOST and THRIFT_PORT:
         return 'cassandra'
     return False
 
@@ -56,14 +56,14 @@ def _nodetool(cmd):
     Internal cassandra nodetool wrapper. Some functions are not
     available via pycassa so we must rely on nodetool.
     '''
-    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nt, host, cmd))
+    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(NT, HOST, cmd))
 
 
 def _sys_mgr():
     '''
     Return a pycassa system manager connection object
     '''
-    return SystemManager('{0}:{1}'.format(host, thrift_port))
+    return SystemManager('{0}:{1}'.format(HOST, THRIFT_PORT))
 
 
 def compactionstats():
@@ -155,17 +155,17 @@ def column_families(keyspace=None):
         salt '*' cassandra.column_families <keyspace>
     '''
     sys = _sys_mgr()
-    ks = sys.list_keyspaces()
+    ksps = sys.list_keyspaces()
 
     if keyspace:
-        if keyspace in ks:
+        if keyspace in ksps:
             return sys.get_keyspace_column_families(keyspace).keys()
         else:
             return None
     else:
         ret = {}
-        for k in ks:
-            ret[k] = sys.get_keyspace_column_families(k).keys()
+        for kspace in ksps:
+            ret[kspace] = sys.get_keyspace_column_families(kspace).keys()
 
         return ret
 
