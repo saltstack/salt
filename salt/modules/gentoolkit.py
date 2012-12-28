@@ -3,6 +3,19 @@ Support for Gentoolkit
 
 '''
 
+def _has_gentoolkit():
+    if __salt__['pkg.version']('app-portage/gentoolkit'):
+        return True
+    return False
+
+def __virtual__():
+    '''
+    Only work on Gentoo systems with gentoolkit installed
+    '''
+    if __grains__['os'] == 'Gentoo' and _has_gentoolkit():
+        return 'gentoolkit'
+    return False
+
 def revdep_rebuild(lib=None):
     '''
     Fix up broken reverse dependencies
