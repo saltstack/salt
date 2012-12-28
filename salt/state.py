@@ -562,8 +562,8 @@ class State(object):
         module_refresh_path = os.path.join(
             self.opts['cachedir'],
             'module_refresh')
-        with salt.utils.fopen(module_refresh_path, 'w+') as f:
-            f.write('')
+        with salt.utils.fopen(module_refresh_path, 'w+') as ofile:
+            ofile.write('')
 
     def check_refresh(self, data, ret):
         '''
@@ -1789,14 +1789,14 @@ class BaseHighState(object):
                             #   'sls.to.include' <- same as {<env>: 'sls.to.include'}
                             #   {<env_key>: 'sls.to.include'}
                             #   {'_xenv': 'sls.to.resolve'}
-                            XENV_KEY = '_xenv'
+                            xenv_key = '_xenv'
 
                             if isinstance(inc_sls, dict):
                                 env_key, inc_sls = inc_sls.popitem()
                             else:
                                 env_key = env
 
-                            if env_key != XENV_KEY:
+                            if env_key != xenv_key:
                                 # Resolve inc_sls in the specified environment
                                 if env_key in matches and fnmatch.filter(self.avail[env_key], inc_sls):
                                     resolved_envs = [env_key]
@@ -1830,7 +1830,7 @@ class BaseHighState(object):
                                            'master in environment(s): {2} '
                                            ).format(env_key,
                                                     inc_sls,
-                                                    ', '.join(matches) if env_key == XENV_KEY else env_key)
+                                                    ', '.join(matches) if env_key == xenv_key else env_key)
                                 elif len(resolved_envs) > 1:
                                     msg = ('Ambiguous include: Specified SLS {0}: {1} is available on the salt master '
                                            'in multiple available environments: {2}'
@@ -1964,9 +1964,13 @@ class BaseHighState(object):
                     if state:
                         try:
                             highstate.update(state)
-                        except ValueError, e:
-                            errors.append(('Error when rendering state with '
-                            'contents: {0}').format(state))
+                        except ValueError:
+                            errors.append(
+                                'Error when rendering state with '
+                                'contents: {0}'.format(
+                                    state
+                                )
+                            )
                     if err:
                         errors += err
         # Clean out duplicate extend data
