@@ -23,8 +23,8 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    with salt.utils.fopen(filename) as fh:
-        for line in fh:
+    with salt.utils.fopen(filename) as ifile:
+        for line in ifile:
             comps = line.split()
             device = comps[2].split(':')
             ret[comps[4]] = {'mountid': comps[0],
@@ -45,8 +45,8 @@ def _active_mounts(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    with salt.utils.fopen(filename) as fh:
-        for line in fh:
+    with salt.utils.fopen(filename) as ifile:
+        for line in ifile:
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
                              'fstype': comps[2],
@@ -81,8 +81,8 @@ def fstab(config='/etc/fstab'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    with salt.utils.fopen(config) as f:
-        for line in f:
+    with salt.utils.fopen(config) as ifile:
+        for line in ifile:
             if line.startswith('#'):
                 # Commented
                 continue
@@ -115,8 +115,8 @@ def rm_fstab(name, config='/etc/fstab'):
     # The entry is present, get rid of it
     lines = []
     try:
-        with salt.utils.fopen(config, 'r') as fh:
-            for line in fh:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
                 if line.startswith('#'):
                     # Commented
                     lines.append(line)
@@ -139,8 +139,8 @@ def rm_fstab(name, config='/etc/fstab'):
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     try:
-        with salt.utils.fopen(config, 'w+') as fh:
-            fh.writelines(lines)
+        with salt.utils.fopen(config, 'w+') as ofile:
+            ofile.writelines(lines)
     except (IOError, OSError) as exc:
         msg = "Couldn't write to {0}: {1}"
         raise CommandExecutionError(msg.format(config, str(exc)))
@@ -175,8 +175,8 @@ def set_fstab(
         raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
-        with salt.utils.fopen(config, 'r') as fh:
-            for line in fh:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
                 if line.startswith('#'):
                     # Commented
                     lines.append(line)
@@ -228,9 +228,9 @@ def set_fstab(
 
     if change:
         try:
-            with salt.utils.fopen(config, 'w+') as fh:
+            with salt.utils.fopen(config, 'w+') as ofile:
                 # The line was changed, commit it!
-                fh.writelines(lines)
+                ofile.writelines(lines)
         except (IOError, OSError):
             msg = 'File not writable {0}'
             raise CommandExecutionError(msg.format(config))
@@ -248,12 +248,15 @@ def set_fstab(
                 pass_num)
         lines.append(newline)
         try:
-            with salt.utils.fopen(config, 'w+') as fh:
+            with salt.utils.fopen(config, 'w+') as ofile:
                 # The line was changed, commit it!
-                fh.writelines(lines)
+                ofile.writelines(lines)
         except (IOError, OSError):
-            msg = 'File not writable {0}'
-            raise CommandExecutionError(msg.format(config))
+            raise CommandExecutionError(
+                'File not writable {0}'.format(
+                    config
+                )
+            )
     if present and not change:
         # The right entry is already here
         return 'present'
