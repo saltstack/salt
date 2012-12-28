@@ -346,8 +346,8 @@ def _upstart_disable(name):
     Disable an Upstart service.
     '''
     override = '/etc/init/{0}.conf.override'.format(name)
-    with file(override, 'w') as fd:
-        fd.write('manual')
+    with file(override, 'w') as ofile:
+        ofile.write('manual')
     return _upstart_is_disabled(name)
 
 
