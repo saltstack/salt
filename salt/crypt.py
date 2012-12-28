@@ -14,21 +14,22 @@ import logging
 # Import third party libs
 from M2Crypto import RSA
 from Crypto.Cipher import AES
-try:
-    import win32api
-    import win32con
-    is_windows = True
-except ImportError:
-    is_windows = False
 
 # Import salt utils
 import salt.utils
 import salt.payload
 import salt.utils.verify
 import salt.version
-from salt.exceptions import AuthenticationError, SaltClientError, SaltReqTimeoutError
+from salt.exceptions import (
+    AuthenticationError, SaltClientError, SaltReqTimeoutError
+)
 
 log = logging.getLogger(__name__)
+
+
+if salt.utils.is_windows():
+    import win32api
+    import win32con
 
 
 def clean_old_key(rsa_path):
@@ -44,7 +45,7 @@ def clean_old_key(rsa_path):
     except (IOError, OSError):
         pass
     # Set write permission for minion.pem file - reverted after saving the key
-    if is_windows:
+    if salt.utils.is_windows():
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
     try:
         mkey.save_key(rsa_path, None)
@@ -54,7 +55,7 @@ def clean_old_key(rsa_path):
                  'releases may not be able to use this key').format(rsa_path)
                 )
     # Set read-only permission for minion.pem file
-    if is_windows:
+    if salt.utils.is_windows():
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
     return mkey
 
@@ -374,8 +375,8 @@ class Crypticle(object):
             log.warning('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         result = 0
-        for x, y in zip(mac_bytes, sig):
-            result |= ord(x) ^ ord(y)
+        for zipped_x, zipped_y in zip(mac_bytes, sig):
+            result |= ord(zipped_x) ^ ord(zipped_y)
         if result != 0:
             log.warning('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
