@@ -152,7 +152,7 @@ notes=FIXME,XXX,TODO
 max-line-length=80
 
 # Maximum number of lines in a module
-max-module-lines=1000
+max-module-lines=3000
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
@@ -219,7 +219,7 @@ int-import-graph=
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=5
+max-args=35
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
