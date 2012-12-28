@@ -3,10 +3,6 @@ Support for Gentoolkit
 
 '''
 
-__outputter__ = {
-    'revdep_rebuild':  'txt',
-}
-
 def revdep_rebuild(lib=None):
     '''
     Fix up broken reverse dependencies
@@ -23,4 +19,4 @@ def revdep_rebuild(lib=None):
     cmd = 'revdep-rebuild --quiet --no-progress'
     if lib is not None:
         cmd += ' --library={0}'.format(lib)
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.retcode'](cmd) == 0
