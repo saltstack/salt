@@ -224,9 +224,8 @@ def _parse_conf(conf_file=None, in_mem=False):
 
     rules = ''
     if conf_file:
-        f = open(conf_file, 'r')
-        rules = f.read()
-        f.close()
+        with salt.utils.fopen(conf_file, 'r') as ifile:
+            rules = ifile.read()
     elif in_mem:
         cmd = 'iptables-save'
         rules = __salt__['cmd.run'](cmd)
