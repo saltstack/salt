@@ -296,7 +296,8 @@ def remove(pkg):
 
 def purge(pkg):
     '''
-    Portage does not have a purge, this function calls remove
+    Portage does not have a purge, this function calls remove followed
+    by depclean to emulate a purge process
 
     Return a list containing the removed packages:
 
@@ -305,7 +306,7 @@ def purge(pkg):
         salt '*' pkg.purge <package name>
 
     '''
-    return remove(pkg)
+    return remove(pkg) + depclean()
 
 def depclean(pkg=None):
     '''
