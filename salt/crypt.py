@@ -15,7 +15,7 @@ import logging
 from M2Crypto import RSA
 from Crypto.Cipher import AES
 
-# Import salt utils
+# Import salt libs
 import salt.utils
 import salt.payload
 import salt.utils.verify
@@ -27,9 +27,11 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-if salt.utils.is_windows():
+try:
     import win32api
     import win32con
+except ImportError:
+    pass
 
 
 def clean_old_key(rsa_path):
