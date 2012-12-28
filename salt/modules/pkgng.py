@@ -29,18 +29,16 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
         *NOTE* not working right
     '''
     ret = {}
-    l = []
     if not os.path.isfile(file_name):
         return 'Unable to find {0} on file system'.format(file_name)
 
-    with salt.utils.fopen(file_name) as f:
-        for line in f:
-            if line.startswith("#") or line.startswith("\n"):
+    with salt.utils.fopen(file_name) as ifile:
+        for line in ifile:
+            if line.startswith('#') or line.startswith('\n'):
                 pass
             else:
-                k, v = line.split('\t')
-                ret[k] = v
-                l.append(line)
+                key, value = line.split('\t')
+                ret[key] = value
     ret['config_file'] = file_name
     return ret
 
@@ -60,7 +58,7 @@ def version():
 def available_version(name):
     '''
     The available version of the package in the repository
-   
+
     CLI Example::
         salt '*' pkgng.available_version <package name>
     '''
