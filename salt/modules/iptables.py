@@ -116,6 +116,20 @@ def set_policy(table='filter', chain=None, policy=None):
     return out
 
 
+def save(filename):
+    '''
+    Save the current in-memory rules to disk
+
+    CLI Example::
+
+        salt '*' iptables.save /etc/sysconfig/iptables
+    '''
+    os.makedirs(os.path.dirname(filename))
+    cmd = 'iptables-save > {0}'.format(filename)
+    out = __salt__['cmd.run'](cmd)
+    return out
+
+
 def append(table='filter', rule=None):
     '''
     Append a rule to the specified table/chain.
