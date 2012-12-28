@@ -57,7 +57,7 @@ def is_enabled():
     '''
     See if jail service is actually enabled on boot
     '''
-    cmd='service -e | grep jail'
+    cmd = 'service -e | grep jail'
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -97,8 +97,8 @@ def show_config(jail):
                         continue
                     if not line.startswith('jail_{0}_'.format(jail)):
                         continue
-                    k, v = line.split('=')
-                    ret[k.split('_', 2)[2]] = v.split('"')[1]
+                    key, value = line.split('=')
+                    ret[key.split('_', 2)[2]] = value.split('"')[1]
     return ret
 
 
@@ -114,9 +114,9 @@ def fstab(jail):
     ret = []
     config = show_config(jail)
     if 'fstab' in config:
-        fstab = config['fstab']
-        if os.access(fstab, os.R_OK):
-            with salt.utils.fopen(fstab, 'r') as _fp:
+        c_fstab = config['fstab']
+        if os.access(c_fstab, os.R_OK):
+            with salt.utils.fopen(c_fstab, 'r') as _fp:
                 for line in _fp:
                     line = line.strip()
                     if not line:
@@ -124,14 +124,17 @@ def fstab(jail):
                     if line.startswith('#'):
                         continue
                     try:
-                        dv, m, f, o, dm, p = line.split()
+                        device, mpoint, fstype, opts, dump, pas_ = line.split()
                     except ValueError:
                         # Gracefully continue on invalid lines
                         continue
                     ret.append({
-                        'device': dv, 'mountpoint': m,
-                        'fstype': f,  'options': o,
-                        'dump': dm,   'pass': p
+                        'device': device,
+                        'mountpoint': mpoint,
+                        'fstype': fstype,
+                        'options': opts,
+                        'dump': dump,
+                        'pass': pas_
                         })
     if not ret:
         ret = False
@@ -146,7 +149,7 @@ def status(jail):
 
         salt '*' jail.status <jail name>
     '''
-    cmd='jls | grep {0}'.format(jail)
+    cmd = 'jls | grep {0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -155,8 +158,8 @@ def sysctl():
     Dump all jail related kernel states (sysctl)
     '''
     ret = {}
-    sysctl=__salt__['cmd.run']('sysctl security.jail')
-    for s in sysctl.splitlines():
-        k, v = s.split(':', 1)
-        ret[k.strip()] = v.strip()
+    sysctl_jail = __salt__['cmd.run']('sysctl security.jail')
+    for line in sysctl_jail.splitlines():
+        key, value = line.split(':', 1)
+        ret[key.strip()] = value.strip()
     return ret
