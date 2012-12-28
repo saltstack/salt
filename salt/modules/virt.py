@@ -313,9 +313,13 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if source.hasAttribute('file') and target.hasAttribute('dev'):
+        if target.hasAttribute('dev'):
+            if source.hasAttribute('file'):
+                dtype = 'file'
+            elif source.hasAttribute('dev'):
+                dtype = 'dev'
             disks[target.getAttribute('dev')] = {
-                'file': source.getAttribute('file')}
+                'file': source.getAttribute(dtype)}
     for dev in disks:
         try:
             output = []
