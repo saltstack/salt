@@ -156,14 +156,14 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     Returns an IPv4 netmask
     '''
     netmask = ''
-    for n in range(4):
-        if n:
+    for idx in range(4):
+        if idx:
             netmask += '.'
         if cidr_bits >= 8:
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '{0:d}'.format(256-(2**(8-cidr_bits)))
+            netmask += '{0:d}'.format(256 - (2 ** (8 - cidr_bits)))
             cidr_bits = 0
     return netmask
 
@@ -186,9 +186,9 @@ def _interfaces_ipconfig(out):
             addr = None
             continue
         if iface:
-            k, v = line.split(',', 1)
-            key = k.strip(' .')
-            val = v.strip()
+            key, val = line.split(',', 1)
+            key = key.strip(' .')
+            val = val.strip()
             if addr and key in ('Subnet Mask'):
                 addr['netmask'] = val
             elif key in ('IP Address', 'IPv4 Address'):
@@ -210,7 +210,7 @@ def _interfaces_ipconfig(out):
             elif key in ('Media State'):
                 # XXX seen used for tunnel adaptors
                 # might be useful
-                iface['up'] = (v != 'Media disconnected')
+                iface['up'] = (val != 'Media disconnected')
 
 
 def interfaces():
