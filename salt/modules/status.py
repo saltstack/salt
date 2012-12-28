@@ -290,15 +290,18 @@ def diskusage(*args):
 
     if len(fstypes) > 0:
         # determine which mount points host the specified fstypes
-        p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
-                            for fstype in fstypes))
-        with salt.utils.fopen(procf, 'r') as fp:
-            for line in fp:
+        regex = re.compile(
+            '|'.join(
+                fnmatch.translate(fstype).format('(%s)') for fstype in fstypes
+            )
+        )
+        with salt.utils.fopen(procf, 'r') as ifile:
+            for line in ifile:
                 comps = line.split()
                 if len(comps) >= 3:
                     mntpt = comps[1]
                     fstype = comps[2]
-                    if p.match(fstype):
+                    if regex.match(fstype):
                         selected.add(mntpt)
 
     # query the filesystems disk usage
@@ -409,7 +412,7 @@ def netdev():
     return ret
 
 
-def w():
+def w():  # pylint: disable-msg=C0103
     '''
     Return a list of logged in users for this minion, using the w command
 
