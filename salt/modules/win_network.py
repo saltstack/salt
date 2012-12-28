@@ -215,5 +215,5 @@ def _interfaces_ipconfig(out):
 
 def interfaces():
     cmd = __salt__['cmd.run']('ipconfig /all')
-    ifaces = _ifconfig(cmd)
+    ifaces = _interfaces_ipconfig(cmd)
     return ifaces
