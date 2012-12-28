@@ -117,7 +117,7 @@ def check(device, minor):
     return out
 
 
-def cp(device, from_minor, to_minor):
+def cp(device, from_minor, to_minor):  # pylint: disable-msg=C0103
     '''
     partition.check device from_minor to_minor
 
@@ -252,12 +252,13 @@ def resize(device, minor, start, end):
 
         salt '*' partition.resize /dev/sda 3 200 850
     '''
-    cmd = 'parted -m -s {0} resize {1} {2} {3}'.format(device, minor, start, end)
-    out = __salt__['cmd.run'](cmd).splitlines()
-    return out
+    out = __salt__['cmd.run'](
+        'parted -m -s {0} resize {1} {2} {3}'.format(device, minor, start, end)
+    )
+    return out.splitlines()
 
 
-def rm(device, minor):
+def rm(device, minor):  # pylint: disable-msg=C0103
     '''
     partition.rm device minor
 
