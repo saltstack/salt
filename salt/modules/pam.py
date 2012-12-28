@@ -4,11 +4,9 @@ Support for pam
 
 # Import python libs
 import os
-import argparse
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import SaltException
 
 
 def __virtual__():
@@ -27,9 +25,8 @@ def _parse(contents=None, file_name=None):
     if contents:
         pass
     elif file_name and os.path.exists(file_name):
-        f = open(file_name, 'r')
-        contents = f.read()
-        f.close()
+        with salt.utils.fopen(file_name, 'r') as ifile:
+            contents = ifile.read()
     else:
         return False
 
@@ -68,9 +65,9 @@ def _parse(contents=None, file_name=None):
                       'arguments': arguments})
     return rules
 
+
 def read_file(file_name):
     '''
     This is just a test function, to make sure parsing works
     '''
     return _parse(file_name=file_name)
-
