@@ -147,7 +147,7 @@ def mkfs(device, minor, fs_type):
 
         salt '*' partition.mkfs 2 fat32
     '''
-    cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
+    cmd = 'parted -m -s {0} mklabel {1}'.format(device, fs_type)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
