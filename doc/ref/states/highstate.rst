@@ -338,7 +338,7 @@ components.
         [<overrides>]
 
 
-# standard declaration
+    # standard declaration
 
     <ID Declaration>:
       <State Declaration>:
@@ -352,7 +352,7 @@ components.
           - <Requisite Reference>
 
 
-# inline function and names
+    # inline function and names
 
     <ID Declaration>:
       <State Declaration>.<Function>:
@@ -368,7 +368,7 @@ components.
           - <Requisite Reference>
 
  
-# multiple states for single id
+    # multiple states for single id
 
     <ID Declaration>:
       <State Declaration>:

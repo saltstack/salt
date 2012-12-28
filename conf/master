@@ -143,6 +143,9 @@
 #   pam:
 #     fred:
 #       - test.*
+#
+# Time (in seconds) for a newly generated token to live. Default: 12 hours
+# token_expire: 43200
 
 #####    Master Module Management    #####
 ##########################################
@@ -248,6 +251,14 @@
 #file_ignore_glob:
 #  - '*.pyc'
 #  - '*/somefolder/*.bak'
+
+# File Server Backend
+# Salt supports a modular fileserver backend system, this system allows
+# the salt master to link directly to third party systems to gather and
+# manage the files. The defult and classic backend is "roots", be advised
+# that the file_roots configuration value will differ based on the underlying
+# fileserver backend
+#fileserver_backend: roots
 
 # Pillar Configurations:
 # The Salt Pillar, is a system that allows for the building of global data

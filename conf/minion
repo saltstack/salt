@@ -87,9 +87,9 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
-# When healing a dns_check is run, this is to make sure that the originally
-# resolved dns has not changed, if this is something that does not happen in
-# your environment then set this value to False.
+# When healing, a dns_check is run. This is to make sure that the originally
+# resolved dns has not changed. If this is something that does not happen in
+# your environment, set this value to False.
 #dns_check: True
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-

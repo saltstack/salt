@@ -50,9 +50,10 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         if has_windows_modules:
             return 'reg'
+        # TODO: This needs to be reworked after the module dependency docstring was changed to :depends
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 

@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     # TODO: This could work on windows with some love
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         return False
     return 'ssh'
 

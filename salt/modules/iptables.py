@@ -4,7 +4,7 @@ Support for iptables
 
 # Import python libs
 import os
-import argparse
+import sys
 
 # Import salt libs
 import salt.utils
@@ -237,7 +237,12 @@ def _parse_conf(conf_file=None, in_mem=False):
             ret[table][chain]['rules'] = []
         elif line.startswith('-A'):
             parser = _parser()
-            parsed_args = vars(parser.parse_args(line.split()))
+            parsed_args = []
+            if sys.version.startswith('2.6'):
+                (opts, args) = parser.parse_args(line.split())
+                parsed_args = vars(opts)
+            else:
+                parsed_args = vars(parser.parse_args(line.split()))
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:
@@ -253,311 +258,320 @@ def _parser():
     listed in the first section that I found them in. They will not all be used
     by all parts of the module; use them intelligently and appropriately.
     '''
-    parser = argparse.ArgumentParser()
+    add_arg = None
+    if sys.version.startswith('2.6'):
+        import optparse
+        parser = optparse.OptionParser()
+        add_arg = parser.add_option
+    else:
+        import argparse
+        parser = argparse.ArgumentParser()
+        add_arg = parser.add_argument
+
     # COMMANDS
-    parser.add_argument('-A', '--append', dest='append', action='append')
-    parser.add_argument('-D', '--delete', dest='delete', action='append')
-    parser.add_argument('-I', '--insert', dest='insert', action='append')
-    parser.add_argument('-R', '--replace', dest='replace', action='append')
-    parser.add_argument('-L', '--list', dest='list', action='append')
-    parser.add_argument('-F', '--flush', dest='flush', action='append')
-    parser.add_argument('-Z', '--zero', dest='zero', action='append')
-    parser.add_argument('-N', '--new-chain', dest='new-chain', action='append')
-    parser.add_argument('-X', '--delete-chain', dest='delete-chain', action='append')
-    parser.add_argument('-P', '--policy', dest='policy', action='append')
-    parser.add_argument('-E', '--rename-chain', dest='rename-chain', action='append')
+    add_arg('-A', '--append', dest='append', action='append')
+    add_arg('-D', '--delete', dest='delete', action='append')
+    add_arg('-I', '--insert', dest='insert', action='append')
+    add_arg('-R', '--replace', dest='replace', action='append')
+    add_arg('-L', '--list', dest='list', action='append')
+    add_arg('-F', '--flush', dest='flush', action='append')
+    add_arg('-Z', '--zero', dest='zero', action='append')
+    add_arg('-N', '--new-chain', dest='new-chain', action='append')
+    add_arg('-X', '--delete-chain', dest='delete-chain', action='append')
+    add_arg('-P', '--policy', dest='policy', action='append')
+    add_arg('-E', '--rename-chain', dest='rename-chain', action='append')
 
     # PARAMETERS
-    parser.add_argument('-p', '--protocol', dest='protocol', action='append')
-    parser.add_argument('-s', '--source', dest='source', action='append')
-    parser.add_argument('-d', '--destination', dest='destination', action='append')
-    parser.add_argument('-j', '--jump', dest='jump', action='append')
-    parser.add_argument('-g', '--goto', dest='goto', action='append')
-    parser.add_argument('-i', '--in-interface', dest='in-interface', action='append')
-    parser.add_argument('-o', '--out-interface', dest='out-interface', action='append')
-    parser.add_argument('-f', '--fragment', dest='fragment', action='append')
-    parser.add_argument('-c', '--set-counters', dest='set-counters', action='append')
+    add_arg('-p', '--protocol', dest='protocol', action='append')
+    add_arg('-s', '--source', dest='source', action='append')
+    add_arg('-d', '--destination', dest='destination', action='append')
+    add_arg('-j', '--jump', dest='jump', action='append')
+    add_arg('-g', '--goto', dest='goto', action='append')
+    add_arg('-i', '--in-interface', dest='in-interface', action='append')
+    add_arg('-o', '--out-interface', dest='out-interface', action='append')
+    add_arg('-f', '--fragment', dest='fragment', action='append')
+    add_arg('-c', '--set-counters', dest='set-counters', action='append')
 
     # MATCH EXTENSIONS
-    parser.add_argument('-m', '--match', dest='match', action='append')
+    add_arg('-m', '--match', dest='match', action='append')
     ## addrtype
-    parser.add_argument('--src-type', dest='src-type', action='append')
-    parser.add_argument('--dst-type', dest='dst-type', action='append')
-    parser.add_argument('--limit-iface-in', dest='limit-iface-in', action='append')
-    parser.add_argument('--limit-iface-out', dest='limit-iface-out', action='append')
+    add_arg('--src-type', dest='src-type', action='append')
+    add_arg('--dst-type', dest='dst-type', action='append')
+    add_arg('--limit-iface-in', dest='limit-iface-in', action='append')
+    add_arg('--limit-iface-out', dest='limit-iface-out', action='append')
     ## ah
-    parser.add_argument('--ahspi', dest='ahspi', action='append')
+    add_arg('--ahspi', dest='ahspi', action='append')
     ## cluster
-    parser.add_argument('--cluster-total-nodes', dest='cluster-total-nodes', action='append')
-    parser.add_argument('--cluster-local-node', dest='cluster-local-node', action='append')
-    parser.add_argument('--cluster-local-nodemask', dest='cluster-local-nodemask', action='append')
-    parser.add_argument('--cluster-hash-seed', dest='cluster-hash-seed', action='append')
-    parser.add_argument('--h-length', dest='h-length', action='append')
-    parser.add_argument('--mangle-mac-s', dest='mangle-mac-s', action='append')
-    parser.add_argument('--mangle-mac-d', dest='mangle-mac-d', action='append')
+    add_arg('--cluster-total-nodes', dest='cluster-total-nodes', action='append')
+    add_arg('--cluster-local-node', dest='cluster-local-node', action='append')
+    add_arg('--cluster-local-nodemask', dest='cluster-local-nodemask', action='append')
+    add_arg('--cluster-hash-seed', dest='cluster-hash-seed', action='append')
+    add_arg('--h-length', dest='h-length', action='append')
+    add_arg('--mangle-mac-s', dest='mangle-mac-s', action='append')
+    add_arg('--mangle-mac-d', dest='mangle-mac-d', action='append')
     ## comment
-    parser.add_argument('--comment', dest='comment', action='append')
+    add_arg('--comment', dest='comment', action='append')
     ## connbytes
-    parser.add_argument('--connbytes', dest='connbytes', action='append')
-    parser.add_argument('--connbytes-dir', dest='connbytes-dir', action='append')
-    parser.add_argument('--connbytes-mode', dest='connbytes-mode', action='append')
+    add_arg('--connbytes', dest='connbytes', action='append')
+    add_arg('--connbytes-dir', dest='connbytes-dir', action='append')
+    add_arg('--connbytes-mode', dest='connbytes-mode', action='append')
     ## connlimit
-    parser.add_argument('--connlimit-above', dest='connlimit-above', action='append')
-    parser.add_argument('--connlimit-mask', dest='connlimit-mask', action='append')
+    add_arg('--connlimit-above', dest='connlimit-above', action='append')
+    add_arg('--connlimit-mask', dest='connlimit-mask', action='append')
     ## connmark
-    parser.add_argument('--mark', dest='mark', action='append')
+    add_arg('--mark', dest='mark', action='append')
     ## conntrack
-    parser.add_argument('--ctstate', dest='ctstate', action='append')
-    parser.add_argument('--ctproto', dest='ctproto', action='append')
-    parser.add_argument('--ctorigsrc', dest='ctorigsrc', action='append')
-    parser.add_argument('--ctorigdst', dest='ctorigdst', action='append')
-    parser.add_argument('--ctreplsrc', dest='ctreplsrc', action='append')
-    parser.add_argument('--ctrepldst', dest='ctrepldst', action='append')
-    parser.add_argument('--ctorigsrcport', dest='ctorigsrcport', action='append')
-    parser.add_argument('--ctorigdstport', dest='ctorigdstport', action='append')
-    parser.add_argument('--ctreplsrcport', dest='ctreplsrcport', action='append')
-    parser.add_argument('--ctrepldstport', dest='ctrepldstport', action='append')
-    parser.add_argument('--ctstatus', dest='ctstatus', action='append')
-    parser.add_argument('--ctexpire', dest='ctexpire', action='append')
+    add_arg('--ctstate', dest='ctstate', action='append')
+    add_arg('--ctproto', dest='ctproto', action='append')
+    add_arg('--ctorigsrc', dest='ctorigsrc', action='append')
+    add_arg('--ctorigdst', dest='ctorigdst', action='append')
+    add_arg('--ctreplsrc', dest='ctreplsrc', action='append')
+    add_arg('--ctrepldst', dest='ctrepldst', action='append')
+    add_arg('--ctorigsrcport', dest='ctorigsrcport', action='append')
+    add_arg('--ctorigdstport', dest='ctorigdstport', action='append')
+    add_arg('--ctreplsrcport', dest='ctreplsrcport', action='append')
+    add_arg('--ctrepldstport', dest='ctrepldstport', action='append')
+    add_arg('--ctstatus', dest='ctstatus', action='append')
+    add_arg('--ctexpire', dest='ctexpire', action='append')
     ## dccp
-    parser.add_argument('--sport', '--source-port', dest='source_port', action='append')
-    parser.add_argument('--dport', '--destination-port', dest='destination_port', action='append')
-    parser.add_argument('--dccp-types', dest='dccp-types', action='append')
-    parser.add_argument('--dccp-option', dest='dccp-option', action='append')
+    add_arg('--sport', '--source-port', dest='source_port', action='append')
+    add_arg('--dport', '--destination-port', dest='destination_port', action='append')
+    add_arg('--dccp-types', dest='dccp-types', action='append')
+    add_arg('--dccp-option', dest='dccp-option', action='append')
     ## dscp
-    parser.add_argument('--dscp', dest='dscp', action='append')
-    parser.add_argument('--dscp-class', dest='dscp-class', action='append')
+    add_arg('--dscp', dest='dscp', action='append')
+    add_arg('--dscp-class', dest='dscp-class', action='append')
     ## ecn
-    parser.add_argument('--ecn-tcp-cwr', dest='ecn-tcp-cwr', action='append')
-    parser.add_argument('--ecn-tcp-ece', dest='ecn-tcp-ece', action='append')
-    parser.add_argument('--ecn-ip-ect', dest='ecn-ip-ect', action='append')
+    add_arg('--ecn-tcp-cwr', dest='ecn-tcp-cwr', action='append')
+    add_arg('--ecn-tcp-ece', dest='ecn-tcp-ece', action='append')
+    add_arg('--ecn-ip-ect', dest='ecn-ip-ect', action='append')
     ## esp
-    parser.add_argument('--espspi', dest='espspi', action='append')
+    add_arg('--espspi', dest='espspi', action='append')
     ## hashlimit
-    parser.add_argument('--hashlimit-upto', dest='hashlimit-upto', action='append')
-    parser.add_argument('--hashlimit-above', dest='hashlimit-above', action='append')
-    parser.add_argument('--hashlimit-burst', dest='hashlimit-burst', action='append')
-    parser.add_argument('--hashlimit-mode', dest='hashlimit-mode', action='append')
-    parser.add_argument('--hashlimit-srcmask', dest='hashlimit-srcmask', action='append')
-    parser.add_argument('--hashlimit-dstmask', dest='hashlimit-dstmask', action='append')
-    parser.add_argument('--hashlimit-name', dest='hashlimit-name', action='append')
-    parser.add_argument('--hashlimit-htable-size', dest='hashlimit-htable-size', action='append')
-    parser.add_argument('--hashlimit-htable-max', dest='hashlimit-htable-max', action='append')
-    parser.add_argument('--hashlimit-htable-expire', dest='hashlimit-htable-expire', action='append')
-    parser.add_argument('--hashlimit-htable-gcinterval', dest='hashlimit-htable-gcinterval', action='append')
+    add_arg('--hashlimit-upto', dest='hashlimit-upto', action='append')
+    add_arg('--hashlimit-above', dest='hashlimit-above', action='append')
+    add_arg('--hashlimit-burst', dest='hashlimit-burst', action='append')
+    add_arg('--hashlimit-mode', dest='hashlimit-mode', action='append')
+    add_arg('--hashlimit-srcmask', dest='hashlimit-srcmask', action='append')
+    add_arg('--hashlimit-dstmask', dest='hashlimit-dstmask', action='append')
+    add_arg('--hashlimit-name', dest='hashlimit-name', action='append')
+    add_arg('--hashlimit-htable-size', dest='hashlimit-htable-size', action='append')
+    add_arg('--hashlimit-htable-max', dest='hashlimit-htable-max', action='append')
+    add_arg('--hashlimit-htable-expire', dest='hashlimit-htable-expire', action='append')
+    add_arg('--hashlimit-htable-gcinterval', dest='hashlimit-htable-gcinterval', action='append')
     ## helper
-    parser.add_argument('--helper', dest='helper', action='append')
+    add_arg('--helper', dest='helper', action='append')
     ## icmp
-    parser.add_argument('--icmp-type', dest='icmp-type', action='append')
+    add_arg('--icmp-type', dest='icmp-type', action='append')
     ## iprange
-    parser.add_argument('--src-range', dest='src-range', action='append')
-    parser.add_argument('--dst-range', dest='dst-range', action='append')
+    add_arg('--src-range', dest='src-range', action='append')
+    add_arg('--dst-range', dest='dst-range', action='append')
     ## length
-    parser.add_argument('--length', dest='length', action='append')
+    add_arg('--length', dest='length', action='append')
     ## limit
-    parser.add_argument('--limit', dest='limit', action='append')
-    parser.add_argument('--limit-burst', dest='limit-burst', action='append')
+    add_arg('--limit', dest='limit', action='append')
+    add_arg('--limit-burst', dest='limit-burst', action='append')
     ## mac
-    parser.add_argument('--mac-source', dest='mac-source', action='append')
+    add_arg('--mac-source', dest='mac-source', action='append')
     ## multiport
-    parser.add_argument('--source-ports', dest='source-ports', action='append')
-    parser.add_argument('--destination-ports', dest='destination-ports', action='append')
-    parser.add_argument('--ports', dest='ports', action='append')
+    add_arg('--sports', '--source-ports', dest='source-ports', action='append')
+    add_arg('--dports', '--destination-ports', dest='destination-ports', action='append')
+    add_arg('--ports', dest='ports', action='append')
     ## owner
-    parser.add_argument('--uid-owner', dest='uid-owner', action='append')
-    parser.add_argument('--gid-owner', dest='gid-owner', action='append')
-    parser.add_argument('--socket-exists', dest='socket-exists', action='append')
+    add_arg('--uid-owner', dest='uid-owner', action='append')
+    add_arg('--gid-owner', dest='gid-owner', action='append')
+    add_arg('--socket-exists', dest='socket-exists', action='append')
     ## physdev
-    parser.add_argument('--physdev-in', dest='physdev-in', action='append')
-    parser.add_argument('--physdev-out', dest='physdev-out', action='append')
-    parser.add_argument('--physdev-is-in', dest='physdev-is-in', action='append')
-    parser.add_argument('--physdev-is-out', dest='physdev-is-out', action='append')
-    parser.add_argument('--physdev-is-bridged', dest='physdev-is-bridged', action='append')
+    add_arg('--physdev-in', dest='physdev-in', action='append')
+    add_arg('--physdev-out', dest='physdev-out', action='append')
+    add_arg('--physdev-is-in', dest='physdev-is-in', action='append')
+    add_arg('--physdev-is-out', dest='physdev-is-out', action='append')
+    add_arg('--physdev-is-bridged', dest='physdev-is-bridged', action='append')
     ## pkttype
-    parser.add_argument('--pkt-type', dest='pkt-type', action='append')
+    add_arg('--pkt-type', dest='pkt-type', action='append')
     ## policy
-    parser.add_argument('--dir', dest='dir', action='append')
-    parser.add_argument('--pol', dest='pol', action='append')
-    parser.add_argument('--strict', dest='strict', action='append')
-    parser.add_argument('--reqid', dest='reqid', action='append')
-    parser.add_argument('--spi', dest='spi', action='append')
-    parser.add_argument('--proto', dest='proto', action='append')
-    parser.add_argument('--mode', dest='mode', action='append')
-    parser.add_argument('--tunnel-src', dest='tunnel-src', action='append')
-    parser.add_argument('--tunnel-dst', dest='tunnel-dst', action='append')
-    parser.add_argument('--next', dest='next', action='append')
+    add_arg('--dir', dest='dir', action='append')
+    add_arg('--pol', dest='pol', action='append')
+    add_arg('--strict', dest='strict', action='append')
+    add_arg('--reqid', dest='reqid', action='append')
+    add_arg('--spi', dest='spi', action='append')
+    add_arg('--proto', dest='proto', action='append')
+    add_arg('--mode', dest='mode', action='append')
+    add_arg('--tunnel-src', dest='tunnel-src', action='append')
+    add_arg('--tunnel-dst', dest='tunnel-dst', action='append')
+    add_arg('--next', dest='next', action='append')
     ## quota
-    parser.add_argument('--quota', dest='quota', action='append')
+    add_arg('--quota', dest='quota', action='append')
     ## rateest
-    parser.add_argument('--rateest1', dest='rateest1', action='append')
-    parser.add_argument('--rateest2', dest='rateest2', action='append')
-    parser.add_argument('--rateest-delta', dest='rateest-delta', action='append')
-    parser.add_argument('--rateest1-bps', dest='rateest1-bps', action='append')
-    parser.add_argument('--rateest2-bps', dest='rateest2-bps', action='append')
-    parser.add_argument('--rateest1-pps', dest='rateest1-pps', action='append')
-    parser.add_argument('--rateest2-pps', dest='rateest2-pps', action='append')
-    parser.add_argument('--rateest1-lt', dest='rateest1-lt', action='append')
-    parser.add_argument('--rateest1-gt', dest='rateest1-gt', action='append')
-    parser.add_argument('--rateest1-eq', dest='rateest1-eq', action='append')
-    parser.add_argument('--rateest-name', dest='rateest-name', action='append')
-    parser.add_argument('--rateest-interval', dest='rateest-interval', action='append')
-    parser.add_argument('--rateest-ewma', dest='rateest-ewma', action='append')
+    add_arg('--rateest1', dest='rateest1', action='append')
+    add_arg('--rateest2', dest='rateest2', action='append')
+    add_arg('--rateest-delta', dest='rateest-delta', action='append')
+    add_arg('--rateest1-bps', dest='rateest1-bps', action='append')
+    add_arg('--rateest2-bps', dest='rateest2-bps', action='append')
+    add_arg('--rateest1-pps', dest='rateest1-pps', action='append')
+    add_arg('--rateest2-pps', dest='rateest2-pps', action='append')
+    add_arg('--rateest1-lt', dest='rateest1-lt', action='append')
+    add_arg('--rateest1-gt', dest='rateest1-gt', action='append')
+    add_arg('--rateest1-eq', dest='rateest1-eq', action='append')
+    add_arg('--rateest-name', dest='rateest-name', action='append')
+    add_arg('--rateest-interval', dest='rateest-interval', action='append')
+    add_arg('--rateest-ewma', dest='rateest-ewma', action='append')
     ## realm
-    parser.add_argument('--realm', dest='realm', action='append')
+    add_arg('--realm', dest='realm', action='append')
     ## recent
-    parser.add_argument('--set', dest='set', action='append')
-    parser.add_argument('--name', dest='name', action='append')
-    parser.add_argument('--rsource', dest='rsource', action='append')
-    parser.add_argument('--rdest', dest='rdest', action='append')
-    parser.add_argument('--rcheck', dest='rcheck', action='append')
-    parser.add_argument('--update', dest='update', action='append')
-    parser.add_argument('--remove', dest='remove', action='append')
-    parser.add_argument('--seconds', dest='seconds', action='append')
-    parser.add_argument('--hitcount', dest='hitcount', action='append')
-    parser.add_argument('--rttl', dest='rttl', action='append')
+    add_arg('--set', dest='set', action='append')
+    add_arg('--name', dest='name', action='append')
+    add_arg('--rsource', dest='rsource', action='append')
+    add_arg('--rdest', dest='rdest', action='append')
+    add_arg('--rcheck', dest='rcheck', action='append')
+    add_arg('--update', dest='update', action='append')
+    add_arg('--remove', dest='remove', action='append')
+    add_arg('--seconds', dest='seconds', action='append')
+    add_arg('--hitcount', dest='hitcount', action='append')
+    add_arg('--rttl', dest='rttl', action='append')
     ## sctp
-    parser.add_argument('--chunk-types', dest='chunk-types', action='append')
+    add_arg('--chunk-types', dest='chunk-types', action='append')
     ## set
-    parser.add_argument('--match-set', dest='match-set', action='append')
+    add_arg('--match-set', dest='match-set', action='append')
     ## socket
-    parser.add_argument('--transparent', dest='transparent', action='append')
+    add_arg('--transparent', dest='transparent', action='append')
     ## state
-    parser.add_argument('--state', dest='state', action='append')
+    add_arg('--state', dest='state', action='append')
     ## statistic
-    parser.add_argument('--probability', dest='probability', action='append')
-    parser.add_argument('--every', dest='every', action='append')
-    parser.add_argument('--packet', dest='packet', action='append')
+    add_arg('--probability', dest='probability', action='append')
+    add_arg('--every', dest='every', action='append')
+    add_arg('--packet', dest='packet', action='append')
     ## string
-    parser.add_argument('--algo', dest='algo', action='append')
-    parser.add_argument('--from', dest='from', action='append')
-    parser.add_argument('--to', dest='to', action='append')
-    parser.add_argument('--string', dest='string', action='append')
-    parser.add_argument('--hex-string', dest='hex-string', action='append')
+    add_arg('--algo', dest='algo', action='append')
+    add_arg('--from', dest='from', action='append')
+    add_arg('--to', dest='to', action='append')
+    add_arg('--string', dest='string', action='append')
+    add_arg('--hex-string', dest='hex-string', action='append')
     ## tcp
-    parser.add_argument('--tcp-flags', dest='tcp-flags', action='append')
-    parser.add_argument('--syn', dest='syn', action='append')
-    parser.add_argument('--tcp-option', dest='tcp-option', action='append')
+    add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    add_arg('--syn', dest='syn', action='append')
+    add_arg('--tcp-option', dest='tcp-option', action='append')
     ## tcpmss
-    parser.add_argument('--mss', dest='mss', action='append')
+    add_arg('--mss', dest='mss', action='append')
     ## time
-    parser.add_argument('--datestart', dest='datestart', action='append')
-    parser.add_argument('--datestop', dest='datestop', action='append')
-    parser.add_argument('--monthdays', dest='monthdays', action='append')
-    parser.add_argument('--weekdays', dest='weekdays', action='append')
-    parser.add_argument('--utc', dest='utc', action='append')
-    parser.add_argument('--localtz', dest='localtz', action='append')
+    add_arg('--datestart', dest='datestart', action='append')
+    add_arg('--datestop', dest='datestop', action='append')
+    add_arg('--monthdays', dest='monthdays', action='append')
+    add_arg('--weekdays', dest='weekdays', action='append')
+    add_arg('--utc', dest='utc', action='append')
+    add_arg('--localtz', dest='localtz', action='append')
     ## tos
-    parser.add_argument('--tos', dest='tos', action='append')
+    add_arg('--tos', dest='tos', action='append')
     ## ttl
-    parser.add_argument('--ttl-eq', dest='ttl-eq', action='append')
-    parser.add_argument('--ttl-gt', dest='ttl-gt', action='append')
-    parser.add_argument('--ttl-lt', dest='ttl-lt', action='append')
+    add_arg('--ttl-eq', dest='ttl-eq', action='append')
+    add_arg('--ttl-gt', dest='ttl-gt', action='append')
+    add_arg('--ttl-lt', dest='ttl-lt', action='append')
     ## u32
-    parser.add_argument('--u32', dest='u32', action='append')
+    add_arg('--u32', dest='u32', action='append')
 
     # CHECKSUM
-    parser.add_argument('--checksum-fill', dest='checksum-fill', action='append')
+    add_arg('--checksum-fill', dest='checksum-fill', action='append')
 
     # CLASSIFY
-    parser.add_argument('--set-class', dest='set-class', action='append')
+    add_arg('--set-class', dest='set-class', action='append')
 
     # CLUSTERIP
-    parser.add_argument('--new', dest='new', action='append')
-    parser.add_argument('--hashmode', dest='hashmode', action='append')
-    parser.add_argument('--clustermac', dest='clustermac', action='append')
-    parser.add_argument('--total-nodes', dest='total-nodes', action='append')
-    parser.add_argument('--local-node', dest='local-node', action='append')
-    parser.add_argument('--hash-init', dest='hash-init', action='append')
+    add_arg('--new', dest='new', action='append')
+    add_arg('--hashmode', dest='hashmode', action='append')
+    add_arg('--clustermac', dest='clustermac', action='append')
+    add_arg('--total-nodes', dest='total-nodes', action='append')
+    add_arg('--local-node', dest='local-node', action='append')
+    add_arg('--hash-init', dest='hash-init', action='append')
 
     # CONNMARK
-    parser.add_argument('--set-xmark', dest='set-xmark', action='append')
-    parser.add_argument('--save-mark', dest='save-mark', action='append')
-    parser.add_argument('--restore-mark', dest='restore-mark', action='append')
-    parser.add_argument('--and-mark', dest='and-mark', action='append')
-    parser.add_argument('--or-mark', dest='or-mark', action='append')
-    parser.add_argument('--xor-mark', dest='xor-mark', action='append')
-    parser.add_argument('--set-mark', dest='set-mark', action='append')
+    add_arg('--set-xmark', dest='set-xmark', action='append')
+    add_arg('--save-mark', dest='save-mark', action='append')
+    add_arg('--restore-mark', dest='restore-mark', action='append')
+    add_arg('--and-mark', dest='and-mark', action='append')
+    add_arg('--or-mark', dest='or-mark', action='append')
+    add_arg('--xor-mark', dest='xor-mark', action='append')
+    add_arg('--set-mark', dest='set-mark', action='append')
 
     # DNAT
-    parser.add_argument('--to-destination', dest='to-destination', action='append')
-    parser.add_argument('--random', dest='random', action='append')
-    parser.add_argument('--persistent', dest='persistent', action='append')
+    add_arg('--to-destination', dest='to-destination', action='append')
+    add_arg('--random', dest='random', action='append')
+    add_arg('--persistent', dest='persistent', action='append')
 
     # DSCP
-    parser.add_argument('--set-dscp', dest='set-dscp', action='append')
-    parser.add_argument('--set-dscp-class', dest='set-dscp-class', action='append')
+    add_arg('--set-dscp', dest='set-dscp', action='append')
+    add_arg('--set-dscp-class', dest='set-dscp-class', action='append')
 
     # ECN
-    parser.add_argument('--ecn-tcp-remove', dest='ecn-tcp-remove', action='append')
+    add_arg('--ecn-tcp-remove', dest='ecn-tcp-remove', action='append')
 
     # LOG
-    parser.add_argument('--log-level', dest='log-level', action='append')
-    parser.add_argument('--log-prefix', dest='log-prefix', action='append')
-    parser.add_argument('--log-tcp-sequence', dest='log-tcp-sequence', action='append')
-    parser.add_argument('--log-tcp-options', dest='log-tcp-options', action='append')
-    parser.add_argument('--log-ip-options', dest='log-ip-options', action='append')
-    parser.add_argument('--log-uid', dest='log-uid', action='append')
+    add_arg('--log-level', dest='log-level', action='append')
+    add_arg('--log-prefix', dest='log-prefix', action='append')
+    add_arg('--log-tcp-sequence', dest='log-tcp-sequence', action='append')
+    add_arg('--log-tcp-options', dest='log-tcp-options', action='append')
+    add_arg('--log-ip-options', dest='log-ip-options', action='append')
+    add_arg('--log-uid', dest='log-uid', action='append')
 
     # NFLOG
-    parser.add_argument('--nflog-group', dest='nflog-group', action='append')
-    parser.add_argument('--nflog-prefix', dest='nflog-prefix', action='append')
-    parser.add_argument('--nflog-range', dest='nflog-range', action='append')
-    parser.add_argument('--nflog-threshold', dest='nflog-threshold', action='append')
+    add_arg('--nflog-group', dest='nflog-group', action='append')
+    add_arg('--nflog-prefix', dest='nflog-prefix', action='append')
+    add_arg('--nflog-range', dest='nflog-range', action='append')
+    add_arg('--nflog-threshold', dest='nflog-threshold', action='append')
 
     # NFQUEUE
-    parser.add_argument('--queue-num', dest='queue-num', action='append')
-    parser.add_argument('--queue-balance', dest='queue-balance', action='append')
+    add_arg('--queue-num', dest='queue-num', action='append')
+    add_arg('--queue-balance', dest='queue-balance', action='append')
 
     # RATEEST
-    parser.add_argument('--rateest-ewmalog', dest='rateest-ewmalog', action='append')
+    add_arg('--rateest-ewmalog', dest='rateest-ewmalog', action='append')
 
     # REDIRECT
-    parser.add_argument('--to-ports', dest='to-ports', action='append')
+    add_arg('--to-ports', dest='to-ports', action='append')
 
     # REJECT
-    parser.add_argument('--reject-with', dest='reject-with', action='append')
+    add_arg('--reject-with', dest='reject-with', action='append')
 
     # SAME
-    parser.add_argument('--nodst', dest='nodst', action='append')
+    add_arg('--nodst', dest='nodst', action='append')
 
     # SECMARK
-    parser.add_argument('--selctx', dest='selctx', action='append')
+    add_arg('--selctx', dest='selctx', action='append')
 
     # SET
-    parser.add_argument('--add-set', dest='add-set', action='append')
-    parser.add_argument('--del-set', dest='del-set', action='append')
+    add_arg('--add-set', dest='add-set', action='append')
+    add_arg('--del-set', dest='del-set', action='append')
 
     # SNAT
-    parser.add_argument('--to-source', dest='to-source', action='append')
+    add_arg('--to-source', dest='to-source', action='append')
 
     # TCPMSS
-    parser.add_argument('--set-mss', dest='set-mss', action='append')
-    parser.add_argument('--clamp-mss-to-pmtu', dest='clamp-mss-to-pmtu', action='append')
+    add_arg('--set-mss', dest='set-mss', action='append')
+    add_arg('--clamp-mss-to-pmtu', dest='clamp-mss-to-pmtu', action='append')
 
     # TCPOPTSTRIP
-    parser.add_argument('--strip-options', dest='strip-options', action='append')
+    add_arg('--strip-options', dest='strip-options', action='append')
 
     # TOS
-    parser.add_argument('--set-tos', dest='set-tos', action='append')
-    parser.add_argument('--and-tos', dest='and-tos', action='append')
-    parser.add_argument('--or-tos', dest='or-tos', action='append')
-    parser.add_argument('--xor-tos', dest='xor-tos', action='append')
+    add_arg('--set-tos', dest='set-tos', action='append')
+    add_arg('--and-tos', dest='and-tos', action='append')
+    add_arg('--or-tos', dest='or-tos', action='append')
+    add_arg('--xor-tos', dest='xor-tos', action='append')
 
     # TPROXY
-    parser.add_argument('--on-port', dest='on-port', action='append')
-    parser.add_argument('--on-ip', dest='on-ip', action='append')
-    parser.add_argument('--tproxy-mark', dest='tproxy-mark', action='append')
+    add_arg('--on-port', dest='on-port', action='append')
+    add_arg('--on-ip', dest='on-ip', action='append')
+    add_arg('--tproxy-mark', dest='tproxy-mark', action='append')
 
     # TTL
-    parser.add_argument('--ttl-set', dest='ttl-set', action='append')
-    parser.add_argument('--ttl-dec', dest='ttl-dec', action='append')
-    parser.add_argument('--ttl-inc', dest='ttl-inc', action='append')
+    add_arg('--ttl-set', dest='ttl-set', action='append')
+    add_arg('--ttl-dec', dest='ttl-dec', action='append')
+    add_arg('--ttl-inc', dest='ttl-inc', action='append')
 
     # ULOG
-    parser.add_argument('--ulog-nlgroup', dest='ulog-nlgroup', action='append')
-    parser.add_argument('--ulog-prefix', dest='ulog-prefix', action='append')
-    parser.add_argument('--ulog-cprange', dest='ulog-cprange', action='append')
-    parser.add_argument('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
+    add_arg('--ulog-nlgroup', dest='ulog-nlgroup', action='append')
+    add_arg('--ulog-prefix', dest='ulog-prefix', action='append')
+    add_arg('--ulog-cprange', dest='ulog-cprange', action='append')
+    add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
 
     return parser
 
