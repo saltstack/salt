@@ -21,12 +21,12 @@ def _sd_booted():
         try:
             # This check does the same as sd_booted() from libsystemd-daemon:
             # http://www.freedesktop.org/software/systemd/man/sd_booted.html
-            a = os.stat('/sys/fs/cgroup')
-            b = os.stat('/sys/fs/cgroup/systemd')
+            cgroup_fs = os.stat('/sys/fs/cgroup')
+            cgroup_systemd = os.stat('/sys/fs/cgroup/systemd')
         except OSError:
             __context__['systemd.sd_booted'] = False
         else:
-            if a.st_dev != b.st_dev:
+            if cgroup_fs.st_dev != cgroup_systemd.st_dev:
                 __context__['systemd.sd_booted'] = True
             else:
                 __context__['systemd.sd_booted'] = False
