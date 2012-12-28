@@ -9,19 +9,18 @@ import os
 def __virtual__():
     return 'django'
 
+
 def _get_django_admin(bin_env):
     '''
     Return the django admin
     '''
     if not bin_env:
-        da = 'django-admin.py'
-    else:
-        # try to get django-admin.py bin from env
-        if os.path.exists(os.path.join(bin_env, 'bin', 'django-admin.py')):
-            da = os.path.join(bin_env, 'bin', 'django-admin.py')
-        else:
-            da = bin_env
-    return da
+        return 'django-admin.py'
+
+    # try to get django-admin.py bin from env
+    if os.path.exists(os.path.join(bin_env, 'bin', 'django-admin.py')):
+        return os.path.join(bin_env, 'bin', 'django-admin.py')
+    return bin_env
 
 
 def command(settings_module,
@@ -32,8 +31,8 @@ def command(settings_module,
     '''
     Run arbitrary django management command
     '''
-    da = _get_django_admin(bin_env)
-    cmd = '{0} {1} --settings={2}'.format(da, command, settings_module)
+    dja = _get_django_admin(bin_env)
+    cmd = '{0} {1} --settings={2}'.format(dja, command, settings_module)
 
     if pythonpath:
         cmd = '{0} --pythonpath={1}'.format(cmd, pythonpath)
@@ -125,9 +124,9 @@ def loaddata(settings_module,
         salt '*' django.loaddata settings.py <comma delimited list of fixtures>
 
     '''
-    da = _get_django_admin(bin_env)
+    dja = _get_django_admin(bin_env)
     cmd = '{0} loaddata --settings={1} {2}'.format(
-        da, settings_module, ' '.join(fixtures.split(',')))
+        dja, settings_module, ' '.join(fixtures.split(',')))
     if database:
         cmd = '{0} --database={1}'.format(cmd, database)
     if pythonpath:
