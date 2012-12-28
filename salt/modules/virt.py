@@ -87,6 +87,17 @@ def _libvirt_creds():
         user = "root"
     return {'user': user, 'group': group}
 
+def _get_migrate_command():
+    '''
+    Returns the command shared by the differnt migration types
+    '''
+    return 'virsh migrate --live --persistent --undefinesource '
+
+def _get_target(target, ssh):
+    proto = 'qemu'
+    if ssh:
+        proto += '+ssh'
+    return ' %s://%s/%s' %(proto, target, 'system')
 
 def list_vms():
     '''
@@ -607,7 +618,7 @@ def create_xml_path(path):
     return create_xml_str(salt.utils.fopen(path, 'r').read())
 
 
-def migrate_non_shared(vm_, target):
+def migrate_non_shared(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
@@ -615,15 +626,15 @@ def migrate_non_shared(vm_, target):
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-all ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
 
-def migrate_non_shared_inc(vm_, target):
+def migrate_non_shared_inc(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
@@ -631,15 +642,15 @@ def migrate_non_shared_inc(vm_, target):
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-inc ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
 
-def migrate(vm_, target):
+def migrate(vm_, target, ssh=False):
     '''
     Shared storage migration
 
@@ -647,13 +658,12 @@ def migrate(vm_, target):
 
         salt '*' virt.migrate <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
-
 
 def seed_non_shared_migrate(disks, force=False):
     '''
