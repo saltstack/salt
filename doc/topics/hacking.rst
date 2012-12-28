@@ -154,8 +154,7 @@ Edit the master config file:
     ``/path/to/your/virtualenv``.
 3.  If you are running version 0.11.1 or older, uncomment and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
-    ``/path/to/your/virtualenv/salt-master.pid``. This step is unnecessary if
-    you are running from a recent git checkout.
+    ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
 
@@ -165,8 +164,7 @@ Edit the minion config file:
     ``root_dir`` values as well as any port changes.
 2.  If you are running version 0.11.1 or older, uncomment and change the
     ``pidfile: /var/run/salt-minion.pid`` value to point to
-    ``/path/to/your/virtualenv/salt-minion.pid``. This step is unnecessary if
-    you are running from a recent git checkout.
+    ``/path/to/your/virtualenv/salt-minion.pid``.
 3.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
 4.  Uncomment and change the ``id:`` value to something descriptive like
     "saltdev". This isn't strictly necessary but it will serve as a reminder of

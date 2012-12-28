@@ -554,24 +554,21 @@ class AESFuncs(object):
                 self.opts,
                 states=False,
                 rend=False)
+        self.__setup_fileserver()
 
-    def __find_file(self, path, env='base'):
+    def __setup_fileserver(self):
         '''
-        Search the environment for the relative path
+        Set the local file objects from the file server interface
         '''
-        fnd = {'path': '',
-               'rel': ''}
-        if os.path.isabs(path):
-            return fnd
-        if env not in self.opts['file_roots']:
-            return fnd
-        for root in self.opts['file_roots'][env]:
-            full = os.path.join(root, path)
-            if os.path.isfile(full) and not self.__is_file_ignored(full):
-                fnd['path'] = full
-                fnd['rel'] = path
-                return fnd
-        return fnd
+        fsfuncs = salt.loader.fileserver(
+                self.opts,
+                self.opts.get('fileserver_backend', 'roots')
+                )
+        self._serve_file = fsfuncs['serve_file']
+        self._file_hash = fsfuncs['file_hash']
+        self._file_list = fsfuncs['file_list']
+        self._file_list_emptydirs = fsfuncs['file_list_emptydirs']
+        self._dir_list = fsfuncs['dir_list']
 
     def __verify_minion(self, id_, token):
         '''
@@ -601,25 +598,6 @@ class AESFuncs(object):
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
                   .format(id_))
-        return False
-
-    def __is_file_ignored(self, fn):
-        '''
-        If file_ignore_regex or file_ignore_glob were given in config,
-        compare the given file path against all of them and return True
-        on the first match.
-        '''
-        if self.opts['file_ignore_regex']:
-            for r in self.opts['file_ignore_regex']:
-                if re.search(r, fn):
-                    log.debug('File matching file_ignore_regex. Skipping: {0}'.format(fn))
-                    return True
-
-        if self.opts['file_ignore_glob']:
-            for g in self.opts['file_ignore_glob']:
-                if fnmatch.fnmatch(fn, g):
-                    log.debug('File matching file_ignore_glob. Skipping: {0}'.format(fn))
-                    return True
         return False
 
     def _ext_nodes(self, load):
@@ -677,94 +655,6 @@ class AESFuncs(object):
                         )
                 # If anything happens in the top generation, log it and move on
                 pass
-        return ret
-
-    def _serve_file(self, load):
-        '''
-        Return a chunk from a file based on the data received
-        '''
-        ret = {'data': '',
-               'dest': ''}
-        if 'path' not in load or 'loc' not in load or 'env' not in load:
-            return ret
-        fnd = self.__find_file(load['path'], load['env'])
-        if not fnd['path']:
-            return ret
-        ret['dest'] = fnd['rel']
-        gzip = load.get('gzip', None)
-
-        with salt.utils.fopen(fnd['path'], 'rb') as fp_:
-            fp_.seek(load['loc'])
-            data = fp_.read(self.opts['file_buffer_size'])
-            #if not data:
-            #    ret.update(self._file_hash(load))
-            if gzip and data:
-                data = salt.utils.gzip_util.compress(data, gzip)
-                ret['gzip'] = gzip
-            ret['data'] = data
-        return ret
-
-    def _file_hash(self, load):
-        '''
-        Return a file hash, the hash type is set in the master config file
-        '''
-        if 'path' not in load or 'env' not in load:
-            return ''
-        path = self.__find_file(load['path'], load['env'])['path']
-        if not path:
-            return {}
-        ret = {}
-        with salt.utils.fopen(path, 'rb') as fp_:
-            ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                    fp_.read()).hexdigest()
-        ret['hash_type'] = self.opts['hash_type']
-        return ret
-
-    def _file_list(self, load):
-        '''
-        Return a list of all files on the file server in a specified
-        environment
-        '''
-        ret = []
-        if load['env'] not in self.opts['file_roots']:
-            return ret
-
-        for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path, followlinks=True):
-                for fn in files:
-                    rel_fn = os.path.relpath(
-                                os.path.join(root, fn),
-                                path
-                            )
-                    if not self.__is_file_ignored(rel_fn):
-                        ret.append(rel_fn)
-        return ret
-
-    def _file_list_emptydirs(self, load):
-        '''
-        Return a list of all empty directories on the master
-        '''
-        ret = []
-        if load['env'] not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path, followlinks=True):
-                if len(dirs) == 0 and len(files) == 0:
-                    rel_fn = os.path.relpath(root, path)
-                    if not self.__is_file_ignored(rel_fn):
-                        ret.append(rel_fn)
-        return ret
-
-    def _dir_list(self, load):
-        '''
-        Return a list of all directories on the master
-        '''
-        ret = []
-        if load['env'] not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path, followlinks=True):
-                ret.append(os.path.relpath(root, path))
         return ret
 
     def _master_opts(self, load):
