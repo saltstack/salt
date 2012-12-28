@@ -7,6 +7,8 @@ import socket
 from string import ascii_letters, digits
 
 
+# pylint: disable-msg=C0103
+
 def sanitize_host(host):
     '''
     Sanitize host string.
