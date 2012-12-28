@@ -129,11 +129,11 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    a, b = 0, 1
+    fib_a, fib_b = 0, 1
     ret = [0]
-    while b < num:
-        ret.append(b)
-        a, b = b, a + b
+    while fib_b < num:
+        ret.append(fib_b)
+        fib_a, fib_b = fib_b, fib_a + fib_b
     return ret, time.time() - start
 
 
