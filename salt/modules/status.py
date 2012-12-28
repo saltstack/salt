@@ -18,7 +18,7 @@ __opts__ = {}
 # TODO: Make this module support windows hosts
 # TODO: Make this module support BSD hosts properly, this is very Linux specific
 def __virtual__():
-    if 'Windows' in __grains__['os']:
+    if salt.utils.is_windows():
         return False
     return 'status'
 
