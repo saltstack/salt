@@ -28,10 +28,10 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-_dflt_log_datefmt = '%H:%M:%S'
-_dflt_log_datefmt_logfile = '%Y-%m-%d %H:%M:%S'
-_dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-_dflt_log_fmt_logfile = (
+_DFLT_LOG_DATEFMT = '%H:%M:%S'
+_DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
+_DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
+_DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
@@ -92,21 +92,21 @@ def load_config(opts, path, env_var):
         if os.path.isfile(template):
             import salt.utils  # TODO: Need to re-import, need to find out why
             with salt.utils.fopen(path, 'w') as out:
-                with salt.utils.fopen(template, 'r') as f:
-                    f.readline()  # skip first line
-                    out.write(f.read())
+                with salt.utils.fopen(template, 'r') as ifile:
+                    ifile.readline()  # skip first line
+                    out.write(ifile.read())
 
     if os.path.isfile(path):
         try:
             opts.update(_read_conf_file(path))
             opts['conf_file'] = path
-        except Exception as e:
+        except Exception as err:
             import salt.log
             msg = 'Error parsing configuration file: {0} - {1}'
             if salt.log.is_console_configured():
-                log.warn(msg.format(path, e))
+                log.warn(msg.format(path, err))
             else:
-                print(msg.format(path, e))
+                print(msg.format(path, err))
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 
@@ -144,10 +144,10 @@ def include_config(include, opts, orig_path, verbose):
         for fn_ in glob.glob(path):
             try:
                 opts.update(_read_conf_file(fn_))
-            except Exception as e:
+            except Exception as err:
                 log.warn(
                     'Error parsing configuration file: {0} - {1}'.format(
-                        fn_, e
+                        fn_, err
                     )
                 )
     return opts
@@ -218,10 +218,10 @@ def minion_config(path, check_dns=True):
             'log_file': '/var/log/salt/minion',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': _dflt_log_datefmt,
-            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
-            'log_fmt_console': _dflt_log_fmt_console,
-            'log_fmt_logfile': _dflt_log_fmt_logfile,
+            'log_datefmt': _DFLT_LOG_DATEFMT,
+            'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
+            'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
+            'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
@@ -373,10 +373,10 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': _dflt_log_datefmt,
-            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
-            'log_fmt_console': _dflt_log_fmt_console,
-            'log_fmt_logfile': _dflt_log_fmt_logfile,
+            'log_datefmt': _DFLT_LOG_DATEFMT,
+            'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
+            'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
+            'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
@@ -436,12 +436,12 @@ def master_config(path):
             ignore_regex = opts['file_ignore_regex']
 
         opts['file_ignore_regex'] = []
-        for r in ignore_regex:
+        for regex in ignore_regex:
             try:
                 # Can't store compiled regex itself in opts (breaks
                 # serialization)
-                re.compile(r)
-                opts['file_ignore_regex'].append(r)
+                re.compile(regex)
+                opts['file_ignore_regex'].append(regex)
             except:
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: {0}'.format(
