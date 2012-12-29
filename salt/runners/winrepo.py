@@ -4,6 +4,7 @@ Runner to manage Windows software repo
 
 # Import python libs
 import os
+import os.path
 import yaml
 from pprint import pprint
 import msgpack
@@ -12,6 +13,7 @@ import msgpack
 import salt.output
 import salt.utils
 import logging
+import salt.minion
 
 log = logging.getLogger(__name__)
 
@@ -40,5 +42,24 @@ def genrepo():
                     ret.update(config)
     with salt.utils.fopen(os.path.join(repo, winrepo), 'w') as repo:
         repo.write(msgpack.dumps(ret))
+    salt.output.display_output(ret, 'pprint', __opts__)
+    return ret
+
+def update_git_repos():
+    '''
+    Checkout git repos containing Windows Software Package Definitions
+    '''
+    ret = {}
+    mminion = salt.minion.MasterMinion(__opts__)
+    repo = __opts__['win_repo']
+    gitrepos = __opts__['win_gitrepos']
+    for gitrepo in gitrepos:
+        if '/' in gitrepo:
+            targetname = gitrepo.split('/')[-1]
+        else:
+            targetname = gitrepo
+        gittarget = os.path.join(repo, targetname)
+        result = mminion.states['git.latest'](gitrepo, target=gittarget, force=True)
+        ret[result['name']] = result['result']
     salt.output.display_output(ret, 'pprint', __opts__)
     return ret
