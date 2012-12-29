@@ -50,6 +50,7 @@ def host_to_ip(host):
         ip = None
     return ip
 
+
 def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
@@ -63,3 +64,5 @@ def ip_to_host(ip):
     except Exception:
         hostname = None
     return hostname
+
+# pylint: enable-msg=C0103
