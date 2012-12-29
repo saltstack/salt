@@ -144,8 +144,8 @@ def _parse_interval(value):
         m = minute
         s = second
     '''
-    m = _INTERVAL_REGEX.match(value)
-    if m is None:
+    match = _INTERVAL_REGEX.match(value)
+    if match is None:
         raise ValueError('invalid time interval: "{0}"'.format(value))
 
     result = 0
@@ -155,8 +155,8 @@ def _parse_interval(value):
                              ('hour', 60 * 60),
                              ('day', 60 * 60 * 24),
                              ('week', 60 * 60 * 24 * 7)]:
-        if m.group(name) is not None:
-            result += float(m.group(name)) * multiplier
+        if match.group(name) is not None:
+            result += float(match.group(name)) * multiplier
             if resolution is None:
                 resolution = multiplier
 
@@ -221,12 +221,12 @@ class NameOption(Option):
     The option name is 'name', e.g. {'name' : '*.txt'}.
     '''
     def __init__(self, key, value):
-        self.re = re.compile(value.replace('.', '\\.')
-                                  .replace('?', '.?')
-                                  .replace('*', '.*') + '$')
+        self.regex = re.compile(value.replace('.', '\\.')
+                                     .replace('?', '.?')
+                                     .replace('*', '.*') + '$')
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class InameOption(Option):
@@ -236,13 +236,13 @@ class InameOption(Option):
     The option name is 'iname', e.g. {'iname' : '*.TXT'}.
     '''
     def __init__(self, key, value):
-        self.re = re.compile(value.replace('.', '\\.')
-                                  .replace('?', '.?')
-                                  .replace('*', '.*') + '$',
-                             re.IGNORECASE)
+        self.regex = re.compile(value.replace('.', '\\.')
+                                     .replace('?', '.?')
+                                     .replace('*', '.*') + '$',
+                                re.IGNORECASE)
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class RegexOption(Option):
@@ -252,12 +252,12 @@ class RegexOption(Option):
     '''
     def __init__(self, key, value):
         try:
-            self.re = re.compile(value)
+            self.regex = re.compile(value)
         except re.error:
             raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class IregexOption(Option):
@@ -267,12 +267,12 @@ class IregexOption(Option):
     '''
     def __init__(self, key, value):
         try:
-            self.re = re.compile(value, re.IGNORECASE)
+            self.regex = re.compile(value, re.IGNORECASE)
         except re.error:
             raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def match(self, dirname, filename, fstat):
-        return self.re.match(filename)
+        return self.regex.match(filename)
 
 
 class TypeOption(Option):
@@ -293,11 +293,11 @@ class TypeOption(Option):
         # remove whitespace and commas
         value = "".join(value.strip().replace(',', '').split())
         self.ftypes = set()
-        for ch in value:
+        for ftype in value:
             try:
-                self.ftypes.add(_FILE_TYPES[ch])
+                self.ftypes.add(_FILE_TYPES[ftype])
             except KeyError:
-                raise ValueError('invalid file type "{0}"'.format(ch))
+                raise ValueError('invalid file type "{0}"'.format(ftype))
 
     def requires(self):
         return _REQUIRES_STAT
@@ -410,7 +410,7 @@ class GrepOption(Option):
     '''
     def __init__(self, key, value):
         try:
-            self.re = re.compile(value)
+            self.regex = re.compile(value)
         except re.error:
             raise ValueError('invalid regular expression: "{0}"'.format(value))
 
@@ -420,10 +420,11 @@ class GrepOption(Option):
     def match(self, dirname, filename, fstat):
         if not stat.S_ISREG(fstat[stat.ST_MODE]):
             return None
-        with BufferedReader(os.path.join(dirname, filename), mode='rb') as br:
-            for chunk in br:
-                if self.re.search(chunk):
-                    return os.path.join(dirname, filename)
+        dfilename = os.path.join(dirname, filename)
+        with BufferedReader(dfilename, mode='rb') as bread:
+            for chunk in bread:
+                if self.regex.search(chunk):
+                    return dfilename
         return None
 
 
@@ -487,13 +488,13 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    with salt.utils.fopen(fullpath, 'rb') as f:
-                        buf = f.read(8192)
-                        h = hashlib.md5()
+                    with salt.utils.fopen(fullpath, 'rb') as ifile:
+                        buf = ifile.read(8192)
+                        md5hash = hashlib.md5()
                         while buf:
-                            h.update(buf)
-                            buf = f.read(8192)
-                    result.append(h.hexdigest())
+                            md5hash.update(buf)
+                            buf = ifile.read(8192)
+                    result.append(md5hash.hexdigest())
                 else:
                     result.append('')
 
@@ -571,11 +572,12 @@ def find(path, options):
     '''
     WRITEME
     '''
-    f = Finder(options)
-    for path in f.find(path):
+    finder = Finder(options)
+    for path in finder.find(path):
         yield path
 
-if __name__ == '__main__':
+
+def _main():
     if len(sys.argv) < 2:
         sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
         sys.exit(1)
@@ -587,10 +589,13 @@ if __name__ == '__main__':
         key, value = arg.split('=')
         criteria[key] = value
     try:
-        f = Finder(criteria)
+        finder = Finder(criteria)
     except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
         sys.exit(1)
 
-    for result in f.find(path):
+    for result in finder.find(path):
         print(result)
+
+if __name__ == '__main__':
+    _main()
