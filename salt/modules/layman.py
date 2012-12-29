@@ -3,6 +3,8 @@ Support for Layman
 
 '''
 
+import salt.utils
+
 __outputter__ = {
     'list_local':  'txt',
 }
@@ -64,4 +66,6 @@ def list_local():
         salt '*' layman.list_local
     '''
     cmd = 'layman --quietness=1 --list-local'
+    # TODO: This would probably be nicer if we return a list.
+    # Need to figure out how to easily get that list from layman.
     return __salt__['cmd.run'](cmd)
