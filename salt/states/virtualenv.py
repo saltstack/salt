@@ -8,23 +8,23 @@ Setup of Python virtualenv sandboxes.
 import logging
 import os
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
 
 
 def managed(name,
-        venv_bin='virtualenv',
-        requirements='',
-        no_site_packages=False,
-        system_site_packages=False,
-        distribute=False,
-        clear=False,
-        python='',
-        extra_search_dir='',
-        never_download=False,
-        prompt='',
-        __env__='base',
-        runas=None,
-        cwd=None):
+            venv_bin='virtualenv',
+            requirements='',
+            no_site_packages=False,
+            system_site_packages=False,
+            distribute=False,
+            clear=False,
+            python='',
+            extra_search_dir='',
+            never_download=False,
+            prompt='',
+            __env__='base',
+            runas=None,
+            cwd=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -64,7 +64,7 @@ def managed(name,
         # Check if the master version has changed.
         if __salt__['cp.hash_file'](requirements) != \
                 __salt__['cp.hash_file'](cached_requirements):
-                    cached_requirements = __salt__['cp.cache_file'](requirements)
+            cached_requirements = __salt__['cp.cache_file'](requirements)
         if not cached_requirements:
             ret.update({
                 'result': False,
@@ -143,4 +143,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed
+manage = managed  # pylint: disable-msg=C0103
