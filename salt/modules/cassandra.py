@@ -42,11 +42,11 @@ def __virtual__():
     if not HAS_PYCASSA:
         return False
 
-    NT = __salt__['config.option']('cassandra.nodetool')
-    HOST = __salt__['config.option']('cassandra.host')
-    THRIFT_PORT = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
+    nodetool = __salt__['config.option']('cassandra.nodetool')
+    host = __salt__['config.option']('cassandra.host')
+    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
 
-    if NT and HOST and THRIFT_PORT:
+    if nodetool and host and thrift_port:
         return 'cassandra'
     return False
 
