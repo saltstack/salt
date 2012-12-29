@@ -65,7 +65,7 @@ def list_local():
 
         salt '*' layman.list_local
     '''
-    cmd = 'layman --quietness=1 --list-local'
+    cmd = 'layman --quietness=1 --list-local --nocolor'
     # TODO: This would probably be nicer if we return a list.
     # Need to figure out how to easily get that list from layman.
     return __salt__['cmd.run'](cmd).split('\n')
