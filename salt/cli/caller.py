@@ -58,7 +58,7 @@ class Caller(object):
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(1)
         try:
-            args, kw = salt.minion.detect_kwargs(
+            args, kwargs = salt.minion.detect_kwargs(
                 self.minion.functions[fun], self.opts['arg'])
             sdata = {
                     'fun': fun,
@@ -67,7 +67,7 @@ class Caller(object):
                     'tgt': 'salt-call'}
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(self.serial.dumps(sdata))
-            ret['return'] = self.minion.functions[fun](*args, **kw)
+            ret['return'] = self.minion.functions[fun](*args, **kwargs)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
