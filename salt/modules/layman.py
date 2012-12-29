@@ -65,5 +65,5 @@ def list_local():
     '''
     cmd = 'layman --quietness=1 --list-local --nocolor'
     out = __salt__['cmd.run'](cmd).split('\n')
-    ret = [line.split()[1] for line in out.split('\n')]
+    ret = [line.split()[1] for line in out]
     return ret
