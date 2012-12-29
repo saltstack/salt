@@ -23,7 +23,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from salt._compat import StringIO
+from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError
 
 
@@ -185,19 +185,30 @@ def vm_info(vm_=None):
     return info
 
 
-def vm_state(vm_):
+def vm_state(vm_=None):
     '''
-    Return the status of the named VM.
+    Return list of all the vms and their state.
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
 
     CLI Example::
 
         salt '*' virt.vm_state <vm name>
     '''
-    state = ''
-    dom = _get_dom(vm_)
-    raw = dom.info()
-    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
-    return state
+    def _info(vm_):
+        state = ''
+        dom = _get_dom(vm_)
+        raw = dom.info()
+        state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+        return state
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
 
 
 def node_info():
@@ -230,7 +241,7 @@ def get_nics(vm_):
         salt '*' virt.get_nics <vm name>
     '''
     nics = {}
-    doc = minidom.parse(StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -270,7 +281,7 @@ def get_macs(vm_):
         salt '*' virt.get_macs <vm name>
     '''
     macs = []
-    doc = minidom.parse(StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -293,7 +304,7 @@ def get_graphics(vm_):
            'port': 'None',
            'type': 'vnc'}
     xml = get_xml(vm_)
-    ssock = StringIO(xml)
+    ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
@@ -312,7 +323,7 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
