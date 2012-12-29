@@ -156,7 +156,7 @@ if logging.getLoggerClass() is not Logging:
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
     # Set the root logger at the lowest level possible
-    root_logger = logging.getLogger()
+    root_logger = logging.getLogger()  # pylint: disable-msg=C0103
     # Add a Null logging handler until logging is configured(will be removed at
     # a later stage) so we stop getting:
     #   No handlers could be found for logger "foo"
@@ -164,7 +164,7 @@ if logging.getLoggerClass() is not Logging:
     root_logger.setLevel(GARBAGE)
 
 
-def getLogger(name):
+def getLogger(name):  # pylint: disable-msg=C0103
     return logging.getLogger(name)
 
 
