@@ -59,9 +59,9 @@ import re
 # Import third party libs
 try:
     import pymongo
-    has_pymongo = True
+    HAS_PYMONGO = True
 except ImportError:
-    has_pymongo = False
+    HAS_PYMONGO = False
 
 
 __opts__ = {'mongo.db': 'salt',
@@ -72,7 +72,7 @@ __opts__ = {'mongo.db': 'salt',
 
 
 def __virtual__():
-    if not has_pymongo:
+    if not HAS_PYMONGO:
         return False
     return 'mongo'
 
@@ -111,14 +111,14 @@ def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
     conn = pymongo.Connection(host, port)
 
     log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
-    db = conn[__opts__['mongo.db']]
+    mdb = conn[__opts__['mongo.db']]
 
     user = __opts__.get('mongo.user')
     password = __opts__.get('mongo.password')
 
     if user and password:
         log.debug('authenticating as \'{0}\''.format(user))
-        db.authenticate(user, password)
+        mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
     minion_id = __opts__['id']
@@ -132,7 +132,7 @@ def ext_pillar(pillar, collection='pillar', id_field='_id', re_pattern=None,
         )
     )
 
-    result = db[collection].find_one({id_field: minion_id}, fields=fields)
+    result = mdb[collection].find_one({id_field: minion_id}, fields=fields)
     if result:
         if fields:
             log.debug(
