@@ -16,13 +16,13 @@ import json
 # Import third party libs
 try:
     import redis
-    has_redis = True
+    HAS_REDIS = True
 except ImportError:
-    has_redis = False
+    HAS_REDIS = False
 
 
 def __virtual__():
-    if not has_redis:
+    if not HAS_REDIS:
         return False
     return 'redis'
 
