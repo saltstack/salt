@@ -117,7 +117,7 @@ def list_pkgs():
 
 def refresh_db():
     '''
-    Updates the portage tree (emerge --sync. Uses eix to sync if available
+    Updates the portage tree (emerge --sync). Uses eix-sync if available.
 
     CLI Example::
 
