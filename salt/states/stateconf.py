@@ -14,4 +14,4 @@ def _no_op(name, **kws):
     '''
     return dict(name=name, result=True, changes={}, comment='')
 
-set = context = _no_op
+set = context = _no_op  # pylint: disable-msg=C0103
