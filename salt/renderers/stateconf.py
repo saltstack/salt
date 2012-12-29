@@ -17,7 +17,6 @@
 #
 
 # Import python libs
-import sys
 import logging
 import re
 import getopt
@@ -29,7 +28,7 @@ from cStringIO import StringIO
 import salt.utils
 from salt.exceptions import SaltRenderError
 
-__all__ = [ 'render' ]
+__all__ = ['render']
 
 log = logging.getLogger(__name__)
 
@@ -78,15 +77,15 @@ Options(for this renderer):
 
 
 def render(template_file, env='', sls='', argline='', **kws):
-    NO_GOAL_STATE = False
-    IMPLICIT_REQUIRE = False
+    no_goal_state = False
+    implicit_require = False
 
     renderers = kws['renderers']
     opts, args = getopt.getopt(argline.split(), 'Go')
     argline = ' '.join(args) if args else 'yaml . jinja'
 
     if ('-G', '') in opts:
-        NO_GOAL_STATE = True
+        no_goal_state = True
 
     # Split on the first dot surrounded by spaces but not preceded by a
     # backslash. A backslash preceded dot will be replaced with just dot.
@@ -99,7 +98,7 @@ def render(template_file, env='', sls='', argline='', **kws):
         render_data = renderers[name]  # eg, the yaml renderer
         if ('-o', '') in opts:
             if name == 'yaml':
-                IMPLICIT_REQUIRE = True
+                implicit_require = True
                 rd_argline = '-o ' + rd_argline
             else:
                 raise SaltRenderError(
@@ -108,8 +107,8 @@ def render(template_file, env='', sls='', argline='', **kws):
                 )
         name, rt_argline = (args[1] + ' ').split(' ', 1)
         render_template = renderers[name]  # eg, the mako renderer
-    except KeyError, e:
-        raise SaltRenderError('Renderer: {0} is not available!'.format(e))
+    except KeyError, err:
+        raise SaltRenderError('Renderer: {0} is not available!'.format(err))
     except IndexError:
         raise INVALID_USAGE_ERROR
 
@@ -134,7 +133,7 @@ def render(template_file, env='', sls='', argline='', **kws):
             rewrite_single_shorthand_state_decl(data)
             rewrite_sls_includes_excludes(data, sls)
 
-            if not extract and IMPLICIT_REQUIRE:
+            if not extract and implicit_require:
                 sid = has_names_decls(data)
                 if sid:
                     raise SaltRenderError(
@@ -145,7 +144,7 @@ def render(template_file, env='', sls='', argline='', **kws):
                     )
                 add_implicit_requires(data)
 
-            if not extract and not NO_GOAL_STATE:
+            if not extract and not no_goal_state:
                 add_goal_state(data)
 
             rename_state_ids(data, sls)
@@ -153,8 +152,8 @@ def render(template_file, env='', sls='', argline='', **kws):
             if extract:
                 extract_state_confs(data)
 
-        except Exception, e:
-            if isinstance(e, SaltRenderError):
+        except Exception, err:
+            if isinstance(err, SaltRenderError):
                 raise
             log.exception(
                 'Error found while pre-processing the salt file, '
@@ -169,8 +168,8 @@ def render(template_file, env='', sls='', argline='', **kws):
         return data
 
     if isinstance(template_file, basestring):
-        with salt.utils.fopen(template_file, 'r') as f:
-            sls_templ = f.read()
+        with salt.utils.fopen(template_file, 'r') as ifile:
+            sls_templ = ifile.read()
     else:  # assume file-like
         sls_templ = template_file.read()
 
@@ -209,7 +208,8 @@ def has_names_decls(data):
         for _ in nvlist(args, ['names']):
             return sid
 
-def rewrite_single_shorthand_state_decl(data):
+
+def rewrite_single_shorthand_state_decl(data):  # pylint: disable-msg=C0103
     '''
     Rewrite all state declarations that look like this::
 
@@ -242,9 +242,9 @@ def rewrite_sls_includes_excludes(data, sls):
                 if each.startswith('.'):
                     includes[i] = sls + each[1:]
         elif sid == 'exclude':
-            for d in data[sid]:
-                if 'sls' in d and d['sls'].startswith('.'):
-                    d['sls'] = sls + d['sls'][1:]
+            for sdata in data[sid]:
+                if 'sls' in sdata and sdata['sls'].startswith('.'):
+                    sdata['sls'] = sls + sdata['sls'][1:]
 
 
 def _local_to_abs_sid(sid, sls):  # id must starts with '.'
@@ -336,8 +336,8 @@ def rename_state_ids(data, sls, is_extend=False):
                 for arg in args:
                     if isinstance(arg, dict) and iter(arg).next() == 'name':
                         break
-                else: # then no '- name: ...' is defined in the state args
-                    # add the sid without the leading dot as the name.
+                else:  # then no '- name: ...' is defined in the state args
+                       # add the sid without the leading dot as the name.
                     args.insert(0, dict(name=sid[1:]))
             data[newsid] = data[sid]
             del data[sid]
@@ -356,7 +356,7 @@ from itertools import chain
 #   explicit require_in/watch_in can only contain states after it
 def add_implicit_requires(data):
 
-    def T(sid, state):
+    def T(sid, state):  # pylint: disable-msg=C0103
         return '{0}:{1}'.format(sid, state_name(state))
 
     states_before = set()
@@ -471,11 +471,11 @@ def extract_state_confs(data, is_extend=False):
 
         to_dict = STATE_CONF_EXT if is_extend else STATE_CONF
         conf = to_dict.setdefault(state_id, Bunch())
-        for d in state_dict[key]:
-            if not isinstance(d, dict):
+        for sdk in state_dict[key]:
+            if not isinstance(sdk, dict):
                 continue
-            k, v = d.iteritems().next()
-            conf[k] = v
+            key, val = sdk.iteritems().next()
+            conf[key] = val
 
         if not is_extend and state_id in STATE_CONF_EXT:
             extend = STATE_CONF_EXT[state_id]
