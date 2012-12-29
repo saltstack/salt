@@ -123,8 +123,9 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'emerge --sync --quiet'
-    return __salt__['eix.sync']() or __salt__['cmd.retcode'](cmd) == 0
+    if 'eix.sync' in __salt__:
+        return __salt__['eix.sync']()
+    return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
 
 
 def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
