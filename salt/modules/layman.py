@@ -19,24 +19,41 @@ def add(overlay):
     installed overlays. Specify 'ALL' to add all overlays from the
     remote list.
 
+    Return a list of the new overlay(s) added:
+
     CLI Example::
 
         salt '*' layman.add <overlay name>
     '''
+    ret = list()
+    old_overlays = list_local()
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
-    return __salt__['cmd.retcode'](cmd) == 0
+    __salt__['cmd.retcode'](cmd)
+    new_overlays = list_local()
+
+    ret = [overlay for overlay in new_overlays if overlay not in old_overlays]
+    return ret
+
 
 def delete(overlay):
     '''
     Remove the given overlay from the your locally installed overlays.
     Specify 'ALL' to remove all overlays.
 
+    Return a list of the overlays(s) that were removed:
+
     CLI Example::
 
         salt '*' layman.delete <overlay name>
     '''
+    ret = list()
+    old_overlays = list_local()
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
-    return __salt__['cmd.retcode'](cmd) == 0
+    __salt__['cmd.retcode'](cmd)
+    new_overlays = list_local()
+
+    ret = [overlay for overlay in old_overlays if overlay not in new_overlays]
+    return ret
 
 def sync(overlay='ALL'):
     '''
