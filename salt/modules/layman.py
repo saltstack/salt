@@ -5,10 +5,6 @@ Support for Layman
 
 import salt.utils
 
-__outputter__ = {
-    'list_local':  'txt',
-}
-
 def __virtual__():
     '''
     Only work on Gentoo systems with layman installed
@@ -61,12 +57,13 @@ def list_local():
     '''
     List the locally installed overlays.
 
+    Return a list of installed overlays:
+
     CLI Example::
 
         salt '*' layman.list_local
     '''
     cmd = 'layman --quietness=1 --list-local --nocolor'
-    # TODO: This would probably be nicer if we return a list.
-    # Need to figure out how to easily get that list from layman.
-    return __salt__['cmd.run'](cmd).split('\n')
-
+    out = __salt__['cmd.run'](cmd).split('\n')
+    ret = [line.split()[1] for line in out.split('\n')]
+    return ret
