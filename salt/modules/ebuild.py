@@ -117,12 +117,14 @@ def list_pkgs():
 
 def refresh_db():
     '''
-    Updates the portage tree (emerge --sync)
+    Updates the portage tree (emerge --sync). Uses eix-sync if available.
 
     CLI Example::
 
         salt '*' pkg.refresh_db
     '''
+    if 'eix.sync' in __salt__:
+        return __salt__['eix.sync']()
     return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
 
 
