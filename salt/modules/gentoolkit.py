@@ -31,7 +31,8 @@ def revdep_rebuild(lib=None):
         cmd += ' --library={0}'.format(lib)
     return __salt__['cmd.retcode'](cmd) == 0
 
-def eclean_dist(destructive=False, pkg_names=False, size=False, time=False, restricted=False):
+def eclean_dist(destructive=False, pkg_names=False, size=None,
+                time=None, restricted=False):
     '''
     Clean obsolete portage sources
 
@@ -65,9 +66,9 @@ def eclean_dist(destructive=False, pkg_names=False, size=False, time=False, rest
         cmd += ' --destructive'
     if pkg_names:
         cmd += ' --package-names'
-    if size:
+    if size is not None:
         cmd += ' --size-limit={0}'.format(size)
-    if time:
+    if time is not None:
         cmd += ' --time-limit={0}'.format(time)
     if restricted:
         cmd += ' --fetch-restricted'
