@@ -24,9 +24,8 @@ def set_pidfile(pidfile, user):
     except IOError:
         pass
     log.debug(('Created pidfile: {0}').format(pidfile))
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            return True
+    if salt.utils.is_windows():
+        return True
     import pwd  # after confirming not running Windows
     #import grp
     try:
