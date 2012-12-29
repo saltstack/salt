@@ -956,11 +956,11 @@ def get_managed(
         sfn = __salt__['cp.cache_file'](source, env)
         if not os.path.exists(sfn):
             return sfn, {}, 'File "{0}" could not be found'.format(sfn)
-        if template in salt.utils.templates.template_registry:
+        if template in salt.utils.templates.TEMPLATE_REGISTRY:
             context_dict = defaults if defaults else {}
             if context:
                 context_dict.update(context)
-            data = salt.utils.templates.template_registry[template](
+            data = salt.utils.templates.TEMPLATE_REGISTRY[template](
                     sfn,
                     name=name,
                     source=source,
@@ -1204,10 +1204,11 @@ def check_file_meta(
         changes['group'] = group
     # Normalize the file mode
     smode = __salt__['config.manage_mode'](stats['mode'])
-    mode  = __salt__['config.manage_mode'](mode)
+    mode = __salt__['config.manage_mode'](mode)
     if not mode is None and mode != smode:
         changes['mode'] = mode
     return changes
+
 
 def get_diff(
         minionfile,
@@ -1240,6 +1241,7 @@ def get_diff(
         ret = 'Failed to copy file from master'
 
     return ret
+
 
 def manage_file(name,
         sfn,
@@ -1406,6 +1408,7 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' is in the correct state'
         __clean_tmp(sfn)
         return ret
+
 
 def makedirs(path, user=None, group=None, mode=None):
     '''

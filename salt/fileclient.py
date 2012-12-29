@@ -354,8 +354,8 @@ class Client(object):
         sfn = self.cache_file(url, env)
         if not os.path.exists(sfn):
             return ''
-        if template in salt.utils.templates.template_registry:
-            data = salt.utils.templates.template_registry[template](
+        if template in salt.utils.templates.TEMPLATE_REGISTRY:
+            data = salt.utils.templates.TEMPLATE_REGISTRY[template](
                     sfn,
                     **kwargs
                     )
@@ -366,9 +366,11 @@ class Client(object):
             return ''
         if not data['result']:
             # Failed to render the template
-            log.error('Failed to render template with error: {0}'.format(
-                data['data']
-                ))
+            log.error(
+                'Failed to render template with error: {0}'.format(
+                    data['data']
+                )
+            )
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache

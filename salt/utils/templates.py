@@ -20,7 +20,7 @@ import salt.utils
 import salt.exceptions
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class SaltTemplateRenderError(salt.exceptions.SaltException):
@@ -28,8 +28,8 @@ class SaltTemplateRenderError(salt.exceptions.SaltException):
 
 
 # FIXME: also in salt/template.py
-sls_encoding = 'utf-8'  # this one has no BOM.
-sls_encoder = codecs.getencoder(sls_encoding)
+SLS_ENCODING = 'utf-8'  # this one has no BOM.
+SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
 def wrap_tmpl_func(render_str):
@@ -45,7 +45,7 @@ def wrap_tmpl_func(render_str):
             if from_str:
                 tmplstr = tmplsrc
             else:
-                with codecs.open(tmplsrc, 'r', sls_encoding) as tmplsrc:
+                with codecs.open(tmplsrc, 'r', SLS_ENCODING) as tmplsrc:
                     tmplstr = tmplsrc.read()
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
@@ -60,7 +60,7 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False) as outf:
-                outf.write(sls_encoder(output)[0])
+                outf.write(SLS_ENCODER(output)[0])
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -134,7 +134,7 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
-def py(sfn, string=False, **kwargs):
+def py(sfn, string=False, **kwargs):  # pylint: disable-msg=C0103
     '''
     Render a template from a python source file
 
@@ -169,13 +169,13 @@ def py(sfn, string=False, **kwargs):
                 'data': trb}
 
 
-jinja = wrap_tmpl_func(render_jinja_tmpl)
-mako = wrap_tmpl_func(render_mako_tmpl)
-wempy = wrap_tmpl_func(render_wempy_tmpl)
+JINJA = wrap_tmpl_func(render_jinja_tmpl)
+MAKO = wrap_tmpl_func(render_mako_tmpl)
+WEMPY = wrap_tmpl_func(render_wempy_tmpl)
 
-template_registry = {
-    'jinja': jinja,
-    'mako': mako,
+TEMPLATE_REGISTRY = {
+    'jinja': JINJA,
+    'mako': MAKO,
     'py': py,
-    'wempy': wempy,
+    'wempy': WEMPY,
 }
