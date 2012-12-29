@@ -12,17 +12,17 @@ import time
 import random
 
 
-can_rename_open_file = False
+CAN_RENAME_OPEN_FILE = False
 if os.name == 'nt':  # pragma: no cover
-    _rename = lambda src, dst: False
-    _rename_atomic = lambda src, dst: False
+    _rename = lambda src, dst: False            # pylint: disable-msg=C0103
+    _rename_atomic = lambda src, dst: False     # pylint: disable-msg=C0103
 
     try:
         import ctypes
 
         _MOVEFILE_REPLACE_EXISTING = 0x1
         _MOVEFILE_WRITE_THROUGH = 0x8
-        _MoveFileEx = ctypes.windll.kernel32.MoveFileExW
+        _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable-msg=C0103
 
         def _rename(src, dst):
             if not isinstance(src, unicode):
@@ -32,42 +32,44 @@ if os.name == 'nt':  # pragma: no cover
             if _rename_atomic(src, dst):
                 return True
             retry = 0
-            rv = False
-            while not rv and retry < 100:
-                rv = _MoveFileEx(src, dst, _MOVEFILE_REPLACE_EXISTING |
-                                           _MOVEFILE_WRITE_THROUGH)
-                if not rv:
+            rval = False
+            while not rval and retry < 100:
+                rval = _MoveFileEx(src, dst, _MOVEFILE_REPLACE_EXISTING |
+                                             _MOVEFILE_WRITE_THROUGH)
+                if not rval:
                     time.sleep(0.001)
                     retry += 1
-            return rv
+            return rval
 
         # new in Vista and Windows Server 2008
+        # pylint: disable-msg=C0103
         _CreateTransaction = ctypes.windll.ktmw32.CreateTransaction
         _CommitTransaction = ctypes.windll.ktmw32.CommitTransaction
         _MoveFileTransacted = ctypes.windll.kernel32.MoveFileTransactedW
         _CloseHandle = ctypes.windll.kernel32.CloseHandle
-        can_rename_open_file = True
+        # pylint: enable-msg=C0103
+        CAN_RENAME_OPEN_FILE = True
 
         def _rename_atomic(src, dst):
-            ta = _CreateTransaction(None, 0, 0, 0, 0, 1000, 'Atomic rename')
-            if ta == -1:
+            tra = _CreateTransaction(None, 0, 0, 0, 0, 1000, 'Atomic rename')
+            if tra == -1:
                 return False
             try:
                 retry = 0
-                rv = False
-                while not rv and retry < 100:
-                    rv = _MoveFileTransacted(src, dst, None, None,
-                                             _MOVEFILE_REPLACE_EXISTING |
-                                             _MOVEFILE_WRITE_THROUGH, ta)
-                    if rv:
-                        rv = _CommitTransaction(ta)
+                rval = False
+                while not rval and retry < 100:
+                    rval = _MoveFileTransacted(src, dst, None, None,
+                                               _MOVEFILE_REPLACE_EXISTING |
+                                               _MOVEFILE_WRITE_THROUGH, tra)
+                    if rval:
+                        rval = _CommitTransaction(tra)
                         break
                     else:
                         time.sleep(0.001)
                         retry += 1
-                return rv
+                return rval
             finally:
-                _CloseHandle(ta)
+                _CloseHandle(tra)
     except Exception:
         pass
 
@@ -78,8 +80,8 @@ if os.name == 'nt':  # pragma: no cover
         # Fall back to "move away and replace"
         try:
             os.rename(src, dst)
-        except OSError, e:
-            if e.errno != errno.EEXIST:
+        except OSError, err:
+            if err.errno != errno.EEXIST:
                 raise
             old = '{0}-{1:08x}'.format(dst, random.randint(0, sys.maxint))
             os.rename(dst, old)
@@ -89,36 +91,36 @@ if os.name == 'nt':  # pragma: no cover
             except Exception:
                 pass
 else:
-    atomic_rename = os.rename
-    can_rename_open_file = True
+    atomic_rename = os.rename  # pylint: disable-msg=C0103
+    CAN_RENAME_OPEN_FILE = True
 
 
 class _AtomicWFile(object):
     '''
     Helper class for :func:`atomic_open`.
     '''
-    def __init__(self, f, tmp_filename, filename):
-        self._f = f
+    def __init__(self, fhanle, tmp_filename, filename):
+        self._fh = fhanle
         self._tmp_filename = tmp_filename
         self._filename = filename
 
     def __getattr__(self, attr):
-        return getattr(self._f, attr)
+        return getattr(self._fh, attr)
 
     def __enter__(self):
         return self
 
     def close(self):
-        if self._f.closed:
+        if self._fh.closed:
             return
-        self._f.close()
+        self._fh.close()
         atomic_rename(self._tmp_filename, self._filename)
 
-    def __exit__(self, exc_type, exc_value, tb):
+    def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is None:
             self.close()
         else:
-            self._f.close()
+            self._fh.close()
             try:
                 os.remove(self._tmp_filename)
             except OSError:
@@ -127,9 +129,9 @@ class _AtomicWFile(object):
     def __repr__(self):
         return '<{0} {1}{2}, mode {3}>'.format(
             self.__class__.__name__,
-            self._f.closed and 'closed ' or '',
+            self._fh.closed and 'closed ' or '',
             self._filename,
-            self._f.mode
+            self._fh.mode
         )
 
 
@@ -141,7 +143,7 @@ def atomic_open(filename, mode='w'):
     '''
     if mode in ('r', 'rb', 'r+', 'rb+', 'a', 'ab'):
         raise TypeError('Read or append modes don\'t work with atomic_open')
-    f = tempfile.NamedTemporaryFile(mode, prefix='.___atomic_write',
-                                    dir=os.path.dirname(filename),
-                                    delete=False)
-    return _AtomicWFile(f, f.name, filename)
+    ntf = tempfile.NamedTemporaryFile(mode, prefix='.___atomic_write',
+                                      dir=os.path.dirname(filename),
+                                      delete=False)
+    return _AtomicWFile(ntf, ntf.name, filename)
