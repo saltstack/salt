@@ -44,11 +44,11 @@ def __parse_aliases():
     ret = []
     if not os.path.isfile(afn):
         return ret
-    with salt.utils.fopen(afn, 'r') as f:
-        for line in f:
-            m = __ALIAS_RE.match(line)
-            if m:
-                ret.append(m.groups())
+    with salt.utils.fopen(afn, 'r') as ifile:
+        for line in ifile:
+            match = __ALIAS_RE.match(line)
+            if match:
+                ret.append(match.groups())
             else:
                 ret.append((None, None, line.strip()))
     return ret
@@ -66,9 +66,9 @@ def __write_aliases_file(lines):
 
     if not __opts__.get('integration.test', False):
         if os.path.isfile(afn):
-            st = os.stat(afn)
-            os.chmod(out.name, stat.S_IMODE(st.st_mode))
-            os.chown(out.name, st.st_uid, st.st_gid)
+            afn_st = os.stat(afn)
+            os.chmod(out.name, stat.S_IMODE(afn_st.st_mode))
+            os.chown(out.name, afn_st.st_uid, afn_st.st_gid)
         else:
             os.chmod(out.name, 0o644)
             os.chown(out.name, 0, 0)
