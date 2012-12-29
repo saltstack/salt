@@ -19,9 +19,9 @@ import logging
 # Import third party libs
 try:
     import pymongo
-    has_mongodb = True
+    HAS_MONGODB = True
 except ImportError:
-    has_mongodb = False
+    HAS_MONGODB = False
 
 log = logging.getLogger(__name__)
 
@@ -30,12 +30,13 @@ def __virtual__():
     '''
     Only load this module if pymongo is installed
     '''
-    if has_mongodb:
+    if HAS_MONGODB:
         return 'mongodb'
     else:
         return False
 
-def _connect(user=None, password=None, host=None, port=None, database="admin"):
+
+def _connect(user=None, password=None, host=None, port=None, database='admin'):
     '''
     Returns a tuple of (user, host, port) with config, pillar, or default
     values assigned to missing values.
@@ -51,14 +52,15 @@ def _connect(user=None, password=None, host=None, port=None, database="admin"):
 
     try:
         conn = pymongo.connection.Connection(host=host, port=port)
-        db = pymongo.database.Database(conn, database)
+        mdb = pymongo.database.Database(conn, database)
         if user and password:
-            db.authenticate(user, password)
+            mdb.authenticate(user, password)
     except pymongo.errors.PyMongoError:
-        log.error("Error connecting to database {0}".format(database.message))
+        log.error('Error connecting to database {0}'.format(database.message))
         return False
 
     return conn
+
 
 def db_list(user=None, password=None, host=None, port=None):
     '''
@@ -69,20 +71,23 @@ def db_list(user=None, password=None, host=None, port=None):
     try:
         log.info("Listing databases")
         return conn.database_names()
-    except pymongo.errors.PyMongoError as e:
-        log.error(e)
-        return e.message
+    except pymongo.errors.PyMongoError as err:
+        log.error(err)
+        return err.message
 
-def db_exists(name, user=None, password=None, host=None, port=None, database="admin"):
+
+def db_exists(name, user=None, password=None, host=None, port=None,
+              database='admin'):
     '''
     Checks if a database exists in Mongodb
     '''
     dbs = db_list(user, password, host, port)
-    for db in dbs:
-        if name == db:
+    for mdb in dbs:
+        if name == mdb:
             return True
 
     return False
+
 
 def db_remove(name, user=None, password=None, host=None, port=None):
     '''
@@ -91,37 +96,49 @@ def db_remove(name, user=None, password=None, host=None, port=None):
     conn = _connect(user, password, host, port)
 
     try:
-        log.info("Removing database {0}".format(name))
+        log.info('Removing database {0}'.format(name))
         conn.drop_database(name)
-    except pymongo.errors.PyMongoError as e:
-        log.error("Removing database {0} failed with error: {1}".format(
-            name, e.message))
-        return e.message
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Removing database {0} failed with error: {1}'.format(
+                name, err.message
+            )
+        )
+        return err.message
 
     return True
 
-def user_list(user=None, password=None, host=None, port=None, database="admin"):
+
+def user_list(user=None, password=None, host=None, port=None, database='admin'):
     '''
     List users of a Mongodb database
     '''
     conn = _connect(user, password, host, port)
 
     try:
-        log.info("Listing users")
-        db = pymongo.database.Database(conn, database)
+        log.info('Listing users')
+        mdb = pymongo.database.Database(conn, database)
 
         output = []
 
-        for user in db.system.users.find():
-            output.append([("user", user['user']), ("readOnly", user['readOnly'])])
-
+        for user in mdb.system.users.find():
+            output.append([
+                ('user', user['user']),
+                ('readOnly', user['readOnly'])
+            ])
         return output
 
-    except pymongo.errors.PyMongoError as e:
-        log.error("Listing users failed with error: {0}".format(e.message))
-        return e.message
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Listing users failed with error: {0}'.format(
+                err.message
+            )
+        )
+        return err.message
 
-def user_exists(name, user=None, password=None, host=None, port=None, database="admin"):
+
+def user_exists(name, user=None, password=None, host=None, port=None,
+                database='admin'):
     '''
     Checks if a user exists in Mongodb
     '''
@@ -132,36 +149,45 @@ def user_exists(name, user=None, password=None, host=None, port=None, database="
 
     return False
 
-def user_create(name, passwd, user=None, password=None, host=None, port=None, database="admin"):
+
+def user_create(name, passwd, user=None, password=None, host=None, port=None,
+                database='admin'):
     '''
     Create a Mongodb user
     '''
     conn = _connect(user, password, host, port)
 
     try:
-        log.info("Creating user {0}".format(name))
-        db = pymongo.database.Database(conn, database)
-        db.add_user(name, passwd)
-    except pymongo.errors.PyMongoError as e:
-        log.error("Creating database {0} failed with error: {1}".format(
-            name, e.message))
-        return e.message
-
+        log.info('Creating user {0}'.format(name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.add_user(name, passwd)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Creating database {0} failed with error: {1}'.format(
+                name, err.message
+            )
+        )
+        return err.message
     return True
 
-def user_remove(name, user=None, password=None, host=None, port=None, database="admin"):
+
+def user_remove(name, user=None, password=None, host=None, port=None,
+                database='admin'):
     '''
     Remove a Mongodb user
     '''
     conn = _connect(user, password, host, port)
 
     try:
-        log.info("Removing user {0}".format(name))
-        db = pymongo.database.Database(conn, database)
-        db.remove_user(name)
-    except pymongo.errors.PyMongoError as e:
-        log.error("Creating database {0} failed with error: {1}".format(
-            name, e.message))
-        return e.message
+        log.info('Removing user {0}'.format(name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.remove_user(name)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Creating database {0} failed with error: {1}'.format(
+                name, err.message
+            )
+        )
+        return err.message
 
     return True
