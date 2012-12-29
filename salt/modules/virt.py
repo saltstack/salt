@@ -173,6 +173,7 @@ def vm_info(vm_=None):
                 'cputime': int(raw[4]),
                 'disks': get_disks(vm_),
                 'graphics': get_graphics(vm_),
+                'nics': get_nics(vm_),
                 'maxMem': int(raw[1]),
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
