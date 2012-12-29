@@ -185,19 +185,30 @@ def vm_info(vm_=None):
     return info
 
 
-def vm_state(vm_):
+def vm_state(vm_=None):
     '''
-    Return the status of the named VM.
+    Return list of all the vms and their state.
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
 
     CLI Example::
 
         salt '*' virt.vm_state <vm name>
     '''
-    state = ''
-    dom = _get_dom(vm_)
-    raw = dom.info()
-    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
-    return state
+    def _info(vm_):
+        state = ''
+        dom = _get_dom(vm_)
+        raw = dom.info()
+        state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+        return state
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
 
 
 def node_info():
