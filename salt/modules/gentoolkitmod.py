@@ -94,7 +94,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     if size_limit is not 0:
         size_limit = parseSize(size_limit)
 
-    clean_size=None
+    clean_size=0
     engine = DistfilesSearch(lambda x: None)
     clean_me, saved, deprecated = engine.findDistfiles(
         destructive=destructive, package_names=package_names,
@@ -108,8 +108,8 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
 
     if clean_me:
         cleaner = CleanUp(_eclean_progress_controller)
-        clean_size = _pretty_size(cleaner.clean_dist(clean_me))
+        clean_size = cleaner.clean_dist(clean_me)
 
     ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
-           'total_cleaned': clean_size}
+           'total_cleaned': _pretty_size(clean_size)}
     return ret
