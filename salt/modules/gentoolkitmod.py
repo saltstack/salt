@@ -10,6 +10,7 @@ HAS_GENTOOLKIT = False
 # Import third party libs
 try:
     from gentoolkit.eclean.search import DistfilesSearch
+    from gentoolkit.eclean.clean import CleanUp
     from gentoolkit.eclean.cli import parseSize, parseTime
     HAS_GENTOOLKIT = True
 except ImportError:
@@ -41,6 +42,8 @@ def revdep_rebuild(lib=None):
         cmd += ' --library={0}'.format(lib)
     return __salt__['cmd.retcode'](cmd) == 0
 
+
+
 def eclean_dist(destructive=False, package_names=False, size_limit=0,
                 time_limit=0, fetch_restricted=False):
     '''
@@ -71,31 +74,45 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     CLI Example::
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
-
-    dfs = DistfilesSearch(lambda x: None)
-    search_kwargs = dict()
-    search_kwargs['destructive'] = destructive
-    search_kwargs['package_names'] = package_names
-    search_kwargs['fetch_restricted'] = fetch_restricted
     if time_limit is not 0:
-        search_kwargs['time_limit'] = parseTime(time_limit)
+        time_limit = parseTime(time_limit)
     if size_limit is not 0:
-        search_kwargs['size_limit'] = parseSize(size_limit)
-    cleaned, saved, deprecated  = dfs.findDistfiles(**search_kwargs)
+        size_limit = parseSize(size_limit)
 
-    ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated}
+    engine = DistfilesSearch(lambda x: None)
+    clean_me, saved, deprecated = engine.findDistfiles(
+        destructive=destructive, package_names=package_names,
+        size_limit=size_limit, time_limit=time_limit,
+        fetch_restricted=fetch_restricted)
 
-    cmd = 'eclean-dist --quiet --pretend'
-    if destructive:
-        cmd += ' --destructive'
-    if package_names:
-        cmd += ' --package-names'
-    if size_limit is not 0:
-        cmd += ' --size-limit={0}'.format(size_limit)
-    if time_limit is not 0:
-        cmd += ' --time-limit={0}'.format(time_limit)
-    if fetch_restricted:
-        cmd += ' --fetch-restricted'
-    if __salt__['cmd.retcode'](cmd) == 0:
-        return ret
-    return dict()
+    cleaned = list()
+    def _eclean_progress_controller(size, key, clean_list, file_type):
+        cleaned.appened([size, key])
+        return False
+
+    if clean_me:
+        cleaner = CleanUp(_eclean_progress_controller)
+        clean_size = cleaner.clean_dist(clean_me)
+
+    ret = dict()
+    ret['cleaned'] = cleaned
+    ret['saved'] = saved
+    ret['deprecated'] = deprecated
+    ret['total'] = clean_size
+
+    return ret
+
+    #cmd = 'eclean-dist --pretend'
+    #if destructive:
+    #    cmd += ' --destructive'
+    #if package_names:
+    #    cmd += ' --package-names'
+    #if size_limit is not 0:
+    #    cmd += ' --size-limit={0}'.format(size_limit)
+    #if time_limit is not 0:
+    #    cmd += ' --time-limit={0}'.format(time_limit)
+    #if fetch_restricted:
+    #    cmd += ' --fetch-restricted'
+    #if __salt__['cmd.retcode'](cmd) == 0:
+    #    return cleaned_dist
+    #return dict()
