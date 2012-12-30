@@ -42,7 +42,6 @@ class RunnerClient(object):
         Execute a runner with the given arguments
         '''
         self._verify_fun(fun)
-        # pylint: disable-msg=W0142
         return self.functions[fun](*arg)
 
     def low(self, fun, low):
