@@ -42,7 +42,13 @@ def revdep_rebuild(lib=None):
         cmd += ' --library={0}'.format(lib)
     return __salt__['cmd.retcode'](cmd) == 0
 
-
+def _pretty_size(size):
+    units = [' G', ' M', ' K', ' B']
+    while len(units) and size >= 1000:
+        size = size / 1024.0
+        units.pop()
+    sizestr = '{0}.1f{1}'.format(round(size,1), units[-1])
+    return sizestr
 
 def eclean_dist(destructive=False, package_names=False, size_limit=0,
                 time_limit=0, fetch_restricted=False):
@@ -87,7 +93,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
 
     cleaned = list()
     def _eclean_progress_controller(size, key, clean_list, file_type):
-        cleaned.appened([size, key])
+        cleaned.append([_pretty_size(size), key])
         return False
 
     if clean_me:
@@ -101,18 +107,3 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     ret['total'] = clean_size
 
     return ret
-
-    #cmd = 'eclean-dist --pretend'
-    #if destructive:
-    #    cmd += ' --destructive'
-    #if package_names:
-    #    cmd += ' --package-names'
-    #if size_limit is not 0:
-    #    cmd += ' --size-limit={0}'.format(size_limit)
-    #if time_limit is not 0:
-    #    cmd += ' --time-limit={0}'.format(time_limit)
-    #if fetch_restricted:
-    #    cmd += ' --fetch-restricted'
-    #if __salt__['cmd.retcode'](cmd) == 0:
-    #    return cleaned_dist
-    #return dict()
