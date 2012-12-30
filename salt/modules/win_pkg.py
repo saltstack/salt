@@ -21,6 +21,7 @@ except ImportError:
 import logging
 import msgpack
 import salt.utils
+from distutils.version import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +54,13 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    return _get_package_info(name)
+    ret = {}
+    pkginfo = _get_package_info(name)
+    if not pkginfo:
+        return ret
+    for key in _get_package_info(name):
+        ret[key] = pkginfo[key]['full_name']
+    return ret
 
 
 def upgrade_available(name):
@@ -307,12 +314,22 @@ def install(name=None, refresh=False, **kwargs):
         refresh_db()
     old = list_pkgs()
     pkginfo = _get_package_info(name)
-    cached_pkg = __salt__['cp.is_cached'](pkginfo['installer'])
-    if not cached_pkg:
-        # It's not cached. Cache it, mate.
-        cached_pkg = __salt__['cp.cache_file'](pkginfo['installer'])
+    for pkg in pkginfo.keys():
+        if pkginfo[pkg]['full_name'] in old:
+            return '{0} already installed'.format(pkginfo[pkg]['full_name'])
+    if kwargs.get('version') is not None:
+        version = kwargs['version']
+    else:
+        version = _get_latest_pkg_version(pkginfo)
+    if pkginfo[version]['installer'].startswith('salt:') or pkginfo[version]['installer'].startswith('http:') or pkginfo[version]['installer'].startswith('https:') or pkginfo[version]['installer'].startswith('ftp:'):
+        cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['installer'])
+        if not cached_pkg:
+            # It's not cached. Cache it, mate.
+            cached_pkg = __salt__['cp.cache_file'](pkginfo[version]['installer'])
+    else:
+        cached_pkg = pkginfo[version]['installer']
     cached_pkg = cached_pkg.replace('/', '\\')
-    cmd = '"' + str(cached_pkg) + '"' + str(pkginfo['install_flags'])
+    cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version]['install_flags'])
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
@@ -337,7 +354,7 @@ def upgrade():
     return {}
 
 
-def remove(name):
+def remove(name, version=None):
     '''
     Remove a single package
 
@@ -347,8 +364,27 @@ def remove(name):
 
         salt '*' pkg.remove <package name>
     '''
-    log.warning('pkg.remove not implemented on Windows yet')
-    return []
+    old = list_pkgs()
+    pkginfo = _get_package_info(name)
+    if not version:
+        version = _get_latest_pkg_version(pkginfo)
+
+    if pkginfo[version]['uninstaller'].startswith('salt:'):
+        cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['uninstaller'])
+        if not cached_pkg:
+            # It's not cached. Cache it, mate.
+            cached_pkg = __salt__['cp.cache_file'](pkginfo[version]['uninstaller'])
+    else:
+        cached_pkg = pkginfo[version]['uninstaller']
+    cached_pkg = cached_pkg.replace('/', '\\')
+    if not os.path.exists(os.path.expandvars(cached_pkg)) and '(x86)' in cached_pkg:
+        cached_pkg = cached_pkg.replace('(x86)', '')
+    cmd = '"' + str(os.path.expandvars(cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
+    if stderr:
+        log.error(stderr)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def purge(name):
@@ -362,8 +398,7 @@ def purge(name):
 
         salt '*' pkg.purge <package name>
     '''
-    log.warning('pkg.purge not implemented on Windows yet')
-    return []
+    return remove(name)
 
 def _get_package_info(name):
     '''
@@ -388,6 +423,20 @@ def _get_package_info(name):
     if name in repodata:
         return repodata[name]
     else:
-        return name, ' is not available.'
-    return name, ' is not available.'
+        return False #name, ' is not available.'
+    return False #name, ' is not available.'
 
+def _reverse_cmp_pkg_versions(pkg1, pkg2):
+    '''
+    Compare software package versions
+    '''
+    if LooseVersion(pkg1) > LooseVersion(pkg2):
+        return 1
+    else:
+        return -1
+
+def _get_latest_pkg_version(pkginfo):
+    if len(pkginfo) == 1:
+        return pkginfo.keys().pop()
+    pkgkeys = pkginfo.keys()
+    return sorted(pkgkeys, cmp=_reverse_cmp_pkg_versions).pop()
