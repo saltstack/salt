@@ -81,9 +81,11 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         search_kwargs['time_limit'] = parseTime(time_limit)
     if size_limit is not 0:
         search_kwargs['size_limit'] = parseSize(size_limit)
-    cleaned_dist = dfs.findDistfiles(**search_kwargs)
+    cleaned, saved, deprecated  = dfs.findDistfiles(**search_kwargs)
 
-    cmd = 'eclean-dist --pretend'
+    ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated}
+
+    cmd = 'eclean-dist --quiet --pretend'
     if destructive:
         cmd += ' --destructive'
     if package_names:
@@ -95,5 +97,5 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     if fetch_restricted:
         cmd += ' --fetch-restricted'
     if __salt__['cmd.retcode'](cmd) == 0:
-        return cleaned_dist
+        return ret
     return dict()
