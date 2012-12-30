@@ -71,17 +71,18 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     CLI Example::
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
-    if time_limit is not 0:
-        parsed_time_limit = parseTime(time_limit)
-    if size_limit is not 0:
-        parsed_size_limit = parseSize(size_limit)
 
     dfs = DistfilesSearch(lambda x: None)
-    cleaned_dist = dfs.findDistfiles(destructive=destructive,
-                                     package_names=package_names,
-                                     size_limit=parsed_size_limit,
-                                     time_limit=parsed_time_limit,
-                                     fetch_restricted=fetch_restricted)
+    search_kwargs = dict()
+    search_kwargs['destructive'] = destructive
+    search_kwargs['package_names'] = package_names
+    search_kwargs['fetch_restricted'] = fetch_restricted
+    if time_limit is not 0:
+        search_kwargs['time_limit'] = parseTime(time_limit)
+    if size_limit is not 0:
+        search_kwargs['size_limit'] = parseSize(size_limit)
+    cleaned_dist = dfs.findDistfiles(**search_kwargs)
+
     cmd = 'eclean-dist --pretend'
     if destructive:
         cmd += ' --destructive'
