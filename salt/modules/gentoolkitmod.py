@@ -94,18 +94,19 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         fetch_restricted=fetch_restricted)
 
     cleaned = list()
-    def _eclean_progress_controller(size, key, clean_list, file_type):
+    def _eclean_progress_controller(size, key, *args):
         cleaned.append([_pretty_size(size), key])
-        return False
+        return True
 
     if clean_me:
         cleaner = CleanUp(_eclean_progress_controller)
         clean_size = cleaner.clean_dist(clean_me)
 
-    ret = dict()
-    ret['cleaned'] = cleaned
-    ret['saved'] = saved
-    ret['deprecated'] = deprecated
-    ret['total'] = clean_size
+    ret = {
+           'cleaned': cleaned,
+           'saved': saved,
+           'deprecated': deprecated,
+           'total': _pretty_size(clean_size)
+          }
 
     return ret
