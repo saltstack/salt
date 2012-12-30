@@ -139,3 +139,30 @@ def lvdisplay(lvname=''):
             'Minor Device Number': comps[12],
             }
     return ret
+
+def lvcreate(lvname, vgname, size, pv=''):
+    '''
+    Create a new logical volume, with option for which physical volume to be used
+    CLI Examples::
+
+        salt '*' lvm.lvcreate new_volume_name vg_name 10G
+        salt '*' lvm.lvcreate new_volume_name vg_name 10G /dev/sdb
+    '''
+    ret = {}
+    cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(lvname, vgname, size, pv)
+    out = __salt__['cmd.run'](cmd)
+    return out
+
+def lvremove(lvname, vgname, force=False):
+    '''
+    Remove a given existing logical volume from a named existing volume group
+    CLI Examples::
+
+        salt '*' lvm.lvremove lvname vgname force=True
+    '''
+    forcearg = ''
+    if force:
+        forcearg = '-f'
+    cmd = 'lvremove {0} {1}/{2}'.format(forcearg, vgname, lvname)
+    out = __salt__['cmd.run'](cmd)
+    return out
