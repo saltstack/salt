@@ -5,10 +5,6 @@ Support for Layman
 
 import salt.utils
 
-__outputter__ = {
-    'list_local':  'txt',
-}
-
 def __virtual__():
     '''
     Only work on Gentoo systems with layman installed
@@ -23,24 +19,41 @@ def add(overlay):
     installed overlays. Specify 'ALL' to add all overlays from the
     remote list.
 
+    Return a list of the new overlay(s) added:
+
     CLI Example::
 
         salt '*' layman.add <overlay name>
     '''
+    ret = list()
+    old_overlays = list_local()
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
-    return __salt__['cmd.retcode'](cmd) == 0
+    __salt__['cmd.retcode'](cmd)
+    new_overlays = list_local()
+
+    ret = [overlay for overlay in new_overlays if overlay not in old_overlays]
+    return ret
+
 
 def delete(overlay):
     '''
     Remove the given overlay from the your locally installed overlays.
     Specify 'ALL' to remove all overlays.
 
+    Return a list of the overlays(s) that were removed:
+
     CLI Example::
 
         salt '*' layman.delete <overlay name>
     '''
+    ret = list()
+    old_overlays = list_local()
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
-    return __salt__['cmd.retcode'](cmd) == 0
+    __salt__['cmd.retcode'](cmd)
+    new_overlays = list_local()
+
+    ret = [overlay for overlay in old_overlays if overlay not in new_overlays]
+    return ret
 
 def sync(overlay='ALL'):
     '''
@@ -61,11 +74,13 @@ def list_local():
     '''
     List the locally installed overlays.
 
+    Return a list of installed overlays:
+
     CLI Example::
 
         salt '*' layman.list_local
     '''
-    cmd = 'layman --quietness=1 --list-local'
-    # TODO: This would probably be nicer if we return a list.
-    # Need to figure out how to easily get that list from layman.
-    return __salt__['cmd.run'](cmd)
+    cmd = 'layman --quietness=1 --list-local --nocolor'
+    out = __salt__['cmd.run'](cmd).split('\n')
+    ret = [line.split()[1] for line in out]
+    return ret
