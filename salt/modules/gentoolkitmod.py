@@ -79,6 +79,13 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         Protect fetch-restricted files. Only meaningful if used with
         destructive=True
 
+    Return a dict containing the cleaned, saved, and deprecated dists::
+
+        {'cleaned': {<dist file>: <size>},
+         'deprecated': {<package>: <dist file>},
+         'saved': {<package>: <dist file>},
+         'total_cleaned': <size>}
+
     CLI Example::
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
@@ -87,26 +94,22 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     if size_limit is not 0:
         size_limit = parseSize(size_limit)
 
+    clean_size=None
     engine = DistfilesSearch(lambda x: None)
     clean_me, saved, deprecated = engine.findDistfiles(
         destructive=destructive, package_names=package_names,
         size_limit=size_limit, time_limit=time_limit,
         fetch_restricted=fetch_restricted)
 
-    cleaned = list()
+    cleaned = dict()
     def _eclean_progress_controller(size, key, *args):
-        cleaned.append([_pretty_size(size), key])
+        cleaned[key] = _pretty_size(size)
         return True
 
     if clean_me:
         cleaner = CleanUp(_eclean_progress_controller)
-        clean_size = cleaner.clean_dist(clean_me)
+        clean_size = _pretty_size(cleaner.clean_dist(clean_me))
 
-    ret = {
-           'cleaned': cleaned,
-           'saved': saved,
-           'deprecated': deprecated,
-           'total': _pretty_size(clean_size)
-          }
-
+    ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
+           'total_cleaned': clean_size}
     return ret
