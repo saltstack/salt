@@ -61,23 +61,23 @@ def versions_report():
     Report on all of the versions for dependant software
     '''
     libs = (
-        ("Jinja2", "jinja2", "__version__"),
-        ("M2Crypto", "M2Crypto", "version"),
-        ("msgpack-python", "msgpack", "version"),
-        ("msgpack-pure", "msgpack_pure", "version"),
-        ("pycrypto", "Crypto", "__version__"),
-        ("PyYAML", "yaml", "__version__"),
-        ("PyZMQ", "zmq", "__version__"),
+        ('Jinja2', 'jinja2', '__version__'),
+        ('M2Crypto', 'M2Crypto', 'version'),
+        ('msgpack-python', 'msgpack', 'version'),
+        ('msgpack-pure', 'msgpack_pure', 'version'),
+        ('pycrypto', 'Crypto', '__version__'),
+        ('PyYAML', 'yaml', '__version__'),
+        ('PyZMQ', 'zmq', '__version__'),
     )
 
     padding = len(max([lib[0] for lib in libs], key=len)) + 1
 
     fmt = '{0:>{pad}}: {1}'
 
-    yield fmt.format("Salt", __version__, pad=padding)
+    yield fmt.format('Salt', __version__, pad=padding)
 
     yield fmt.format(
-        "Python", sys.version.rsplit('\n')[0].strip(), pad=padding
+        'Python', sys.version.rsplit('\n')[0].strip(), pad=padding
     )
 
     for name, imp, attr in libs:
@@ -88,7 +88,7 @@ def versions_report():
                 version = '.'.join(map(str, version))
             yield fmt.format(name, version, pad=padding)
         except ImportError:
-            yield fmt.format(name, "not installed", pad=padding)
+            yield fmt.format(name, 'not installed', pad=padding)
 
 
 if __name__ == '__main__':
