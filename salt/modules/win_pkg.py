@@ -20,6 +20,7 @@ except ImportError:
 # Import python libs
 import logging
 import msgpack
+import os
 import salt.utils
 from distutils.version import LooseVersion
 
