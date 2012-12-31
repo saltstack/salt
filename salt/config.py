@@ -405,7 +405,7 @@ def master_config(path):
             'default_include': 'master.d/*.conf',
             'win_repo': '/srv/salt/win/repo',
             'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.p',
-            'win_gitrepos': ['https://github.com/UtahDave/salt-winrepo.git'],
+            'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
     }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
