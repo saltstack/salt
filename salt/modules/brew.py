@@ -4,8 +4,6 @@ Homebrew for Mac OS X
 
 # Import salt libs
 import salt
-from salt.modules.yumpkg import _compare_versions
-
 
 def __virtual__():
     '''
@@ -102,9 +100,7 @@ def install(pkgs, refresh=False, skip_verify=False, **kwargs):
         __salt__['cmd.run'](cmd)
 
     new = list_pkgs(*pkgs)
-
-    return _compare_versions(old, new)
-
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 def list_upgrades():
     '''
