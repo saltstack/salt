@@ -39,6 +39,7 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.utils
+import salt.fileserver
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -165,7 +166,7 @@ class Master(SMaster):
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = time.time()
-        fileserver = salt.fileserver(self.opts)
+        fileserver = salt.fileserver.Fileserver(self.opts)
         while True:
             if self.opts['keep_jobs'] != 0:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
@@ -564,7 +565,7 @@ class AESFuncs(object):
         '''
         Set the local file objects from the file server interface
         '''
-        fs_ = salt.fileserver(self.opts)
+        fs_ = salt.fileserver.Fileserver(self.opts)
         self._serve_file = fs_.serve_file
         self._file_hash = fs_.file_hash
         self._file_list = fs_.file_list
