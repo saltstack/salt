@@ -409,3 +409,16 @@
 # https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 #
 # range_server: range:80
+
+
+#####     Windows Software Repo settings #####
+##############################################
+# Location of the repo on the master
+# win_repo: '/srv/salt/win/repo'
+#
+# Location of the master's repo cache file
+# win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+#
+# List of git repositories to include with the local repo
+# win_gitrepos:
+#   - 'https://github.com/saltstack/salt-winrepo.git' 
