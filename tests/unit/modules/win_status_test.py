@@ -16,12 +16,13 @@ pythoncom = new.module('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
 try:
-    from mock import Mock, patch, ANY
+    from mock import Mock, patch, ANY, call
     has_mock = True
 
     WMI = Mock()
     wmi.WMI = Mock(return_value=WMI)
     pythoncom.CoInitialize = Mock()
+    pythoncom.CoUninitialize = Mock()
 except ImportError:
     has_mock = False
 
@@ -100,13 +101,15 @@ class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
         unicode_str = u'\xc1'
         self.utf8str = unicode_str.encode('utf8')
+        pid = 100
         self.add_process(
+            pid=pid,
             user=unicode_str,
             user_domain=unicode_str,
             cmd=unicode_str,
             name=unicode_str)
         self.call_procs()
-        self.proc = self.result[100]
+        self.proc = self.result[pid]
 
     def test_process_cmd_is_utf8(self):
         self.assertEqual(self.proc['cmd'], self.utf8str)
@@ -148,6 +151,30 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
             self.call_procs()
         log.warning.assert_called_once_with(ANY)
         self.assertIn(str(self.expected_error_code), log.warning.call_args[0][0])
+
+
+class TestEmptyCommandLine(TestProcsBase):
+    def setUp(self):
+        self.expected_error_code = 8
+        pid = 100
+        self.add_process(pid=pid, cmd=None)
+        self.call_procs()
+        self.proc = self.result[pid]
+
+    def test_cmd_is_empty_string(self):
+        self.assertEqual(self.proc['cmd'], '')
+
+
+class TestProcsComInitialization(TestProcsBase):
+    def setUp(self):
+        call_count = 5
+        for _ in range(call_count):
+            self.call_procs()
+        self.expected_calls = [call()] * call_count
+
+    def test_initialize_and_unintialize_called(self):
+        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
+        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
 
 
 if __name__ == "__main__":
