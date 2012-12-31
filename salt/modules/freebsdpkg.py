@@ -164,7 +164,7 @@ def install(name=None, refresh=False, fromrepo=None,
                                                                   sources)
 
     # Support old "repo" argument
-    repo = kwargs.get('repo','')
+    repo = kwargs.get('repo', '')
     if not fromrepo and repo:
         fromrepo = repo
 
