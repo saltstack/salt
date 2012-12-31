@@ -630,6 +630,17 @@ def create_xml_path(path):
     return create_xml_str(salt.utils.fopen(path, 'r').read())
 
 
+def define_xml_str(xml):
+    '''
+    Define a domain based on the xml passed to the function
+
+    CLI Example::
+
+        salt '*' virt.define_xml_str <xml in string format>
+    '''
+    conn = __get_conn()
+    return conn.defineXML(xml) is not None
+
 def migrate_non_shared(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
