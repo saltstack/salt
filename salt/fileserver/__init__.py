@@ -52,7 +52,7 @@ class Fileserver(object):
         self.opts = opts
         self.servers = salt.loader.fileserver(opts, opts['fileserver_backend'])
 
-    def _gen_back(back):
+    def _gen_back(self, back):
         '''
         Return the backend list
         '''
@@ -62,7 +62,7 @@ class Fileserver(object):
             back = [back]
         return back
 
-    def update(back=None):
+    def update(self, back=None):
         '''
         Update all of the fileservers that support the update function or the
         named fileserver only.
@@ -73,7 +73,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 self.servers[fstr]()
 
-    def envs(back=None, sources=False):
+    def envs(self, back=None, sources=False):
         '''
         Return the environments for the named backend or all backends
         '''
@@ -91,7 +91,7 @@ class Fileserver(object):
             return ret
         return list(ret)
 
-    def init(back=None):
+    def init(self, back=None):
         '''
         Initialize the backend, only do so if the fs supports an init function
         '''
@@ -101,7 +101,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 self.servers[fstr]()
 
-    def find_file(path, env, back=None):
+    def find_file(self, path, env, back=None):
         '''
         Find the path and return the fnd structure, this structure is passed
         to other backend interfaces.
@@ -118,7 +118,7 @@ class Fileserver(object):
                     return fnd
         return fnd
 
-    def serve_file(load):
+    def serve_file(self, load):
         '''
         Serve up a chunk of a file
         '''
@@ -134,7 +134,7 @@ class Fileserver(object):
             return self.servers[fstr](load, fnd)
         return ret
 
-    def file_hash(load):
+    def file_hash(self, load):
         '''
         Return the hash of a given file
         '''
@@ -148,7 +148,7 @@ class Fileserver(object):
             return self.servers[fstr](load, fnd)
         return ''
 
-    def file_list(load):
+    def file_list(self, load):
         '''
         Return a list of files from the dominant environment
         '''
@@ -161,7 +161,7 @@ class Fileserver(object):
                 ret.update(self.servers[fstr](load))
         return sorted(ret)
 
-    def file_list_emptydirs(load):
+    def file_list_emptydirs(self, load):
         '''
         List all emptydirs in the given environment
         '''
@@ -174,7 +174,7 @@ class Fileserver(object):
                 ret.update(self.servers[fstr](load))
         return sorted(ret)
 
-    def dir_list(load):
+    def dir_list(self, load):
         '''
         List all directories in the given environment
         '''

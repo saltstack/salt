@@ -351,6 +351,7 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
+            'gitfs_remotes': [],
             'ext_pillar': [],
             'pillar_version': 2,
             'pillar_opts': True,
