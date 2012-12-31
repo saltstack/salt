@@ -178,9 +178,12 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
             time_limit = cli.parseTime(time_limit)
 
         clean_size=0
-        clean_me = search.findPackages(
-            destructive=destructive, package_names=package_names,
-            time_limit=time_limit, exclude=exclude, pkgdir=search.pkgdir)
+        # findPackages requires one arg, but does nothing with it.
+        # So we will just pass None in for the required arg
+        clean_me = search.findPackages(None, destructive=destructive,
+                                       package_names=package_names,
+                                       time_limit=time_limit, exclude=exclude,
+                                       pkgdir=search.pkgdir)
 
         cleaned = dict()
         def _eclean_progress_controller(size, key, *args):
