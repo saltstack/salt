@@ -165,10 +165,7 @@ class Master(SMaster):
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = time.time()
-        fileserver = salt.loader.fileserver(
-                self.opts,
-                self.opts.get('fileserver_backend', 'roots')
-                )
+        fileserver = salt.fileserver(self.opts)
         while True:
             if self.opts['keep_jobs'] != 0:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
@@ -191,8 +188,7 @@ class Master(SMaster):
                 now = time.time()
                 if now - last > self.opts['search_index_interval']:
                     search.index()
-            if 'update' in fileserver:
-                fileserver['update']()
+            fileserver.update()
             try:
                 time.sleep(60)
             except KeyboardInterrupt:
@@ -568,17 +564,13 @@ class AESFuncs(object):
         '''
         Set the local file objects from the file server interface
         '''
-        fsfuncs = salt.loader.fileserver(
-                self.opts,
-                self.opts.get('fileserver_backend', 'roots')
-                )
-        self._serve_file = fsfuncs['serve_file']
-        self._file_hash = fsfuncs['file_hash']
-        self._file_list = fsfuncs['file_list']
-        self._file_list_emptydirs = fsfuncs['file_list_emptydirs']
-        self._dir_list = fsfuncs['dir_list']
-        if self.opts['fileserver_backend'] != 'roots':
-            self._file_envs = fsfuncs['envs']
+        fs_ = salt.fileserver(self.opts)
+        self._serve_file = fs_.serve_file
+        self._file_hash = fs_.file_hash
+        self._file_list = fs_.file_list
+        self._file_list_emptydirs = fs_.file_list_emptydirs
+        self._dir_list = fs_.dir_list
+        self._file_envs = fs_.envs
 
     def __verify_minion(self, id_, token):
         '''
