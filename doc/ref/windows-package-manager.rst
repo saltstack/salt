@@ -59,8 +59,8 @@ Then update the repository cache file on your minions, exactly how it's done for
     $ salt \* pkg.refresh_db
 
 
-Install Windows Software on
-===========================
+Install Windows Software
+========================
 
 Now you can query the available version of Firefox using the Salt pkg module.
 
@@ -109,7 +109,7 @@ includes package definitions for open source software. This repo points to the
 http or ftp locations of the installer files. Anyone is welcome to send a pull
 request to this repo to add new package definitions. Browse the repo
 here: `https://github.com/saltstack/salt-winrepo
-<https://github.com/saltstack/salt-winrepo>` _ . 
+<https://github.com/saltstack/salt-winrepo>`_ . 
 
 Configure which git repos the master can search for package definitions by
 modifying or extending the ``win_gitrepos`` configuration option list in the
