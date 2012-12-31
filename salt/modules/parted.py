@@ -6,6 +6,12 @@ Some functions may not be available, depending on your version of parted.
 Check man 8 parted for more information, or the online docs at:
 
 http://www.gnu.org/software/parted/manual/html_chapter/parted_2.html
+
+In light of parted not directly supporting partition IDs, some of this module
+has been written to utilize sfdisk instead. For further information, please
+reference the man page for sfdisk::
+
+    man 8 sfdisk
 '''
 
 # Import python libs
@@ -130,6 +136,50 @@ def cp(device, from_minor, to_minor):  # pylint: disable-msg=C0103
         salt '*' partition.cp /dev/sda 2 3
     '''
     cmd = 'parted -m -s {0} cp {1} {2}'.format(device, from_minor, to_minor)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def get_id(device, minor):
+    '''
+    partition.get_id
+
+    Prints the system ID for the partition. Some typical values are::
+
+         b: FAT32 (vfat)
+         7: HPFS/NTFS
+        82: Linux Swap
+        83: Linux
+        8e: Linux LVM
+        fd: Linux RAID Auto
+
+    CLI Example::
+
+        salt '*' partition.get_id /dev/sda 1
+    '''
+    cmd = 'sfdisk --print-id {0} {1}'.format(device, minor)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def set_id(device, minor, system_id):
+    '''
+    partition.set_id
+
+    Sets the system ID for the partition. Some typical values are::
+
+         b: FAT32 (vfat)
+         7: HPFS/NTFS
+        82: Linux Swap
+        83: Linux
+        8e: Linux LVM
+        fd: Linux RAID Auto
+
+    CLI Example::
+
+        salt '*' partition.set_id /dev/sda 1 83
+    '''
+    cmd = 'sfdisk --change-id {0} {1} {2}'.format(device, minor, system_id)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
