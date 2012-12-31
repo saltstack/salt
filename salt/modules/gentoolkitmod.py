@@ -201,23 +201,24 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
     finally:
         return ret
 
-def _glsa_list_process_output(line):
+def _glsa_list_process_output(output):
     '''
-    Process a single output line from glsa_check_list
+    Process output from glsa_check_list into a dict
 
     Returns a dict containing the glsa id, description, status, and CVEs
     '''
     ret = dict()
-    try:
-        glsa_id, status, line = line.split(None, 2)
-        if 'CVE' in line:
-            desc, cves = line.rsplit(None, 1)
-        else:
-            desc = line
-            cves = ''
-        ret[glsa_id] = {'description': desc, 'status': status, 'CVEs': cves}
-    except ValueError:
-        pass
+    for line in output:
+        try:
+            glsa_id, status, desc = line.split(None, 2)
+            if 'CVE' in desc:
+                desc, cves = desc.rsplit(None, 1)
+            else:
+                cves = ''
+            ret[glsa_id] = {'description': desc, 'status': status,
+                            'CVEs': cves}
+        except ValueError:
+            pass
     return ret
 
 def glsa_check_list(glsa_list):
@@ -250,6 +251,5 @@ def glsa_check_list(glsa_list):
 
     ret = dict()
     out = __salt__['cmd.run'](cmd).split('\n')
-    for line in out:
-        ret.update(_glsa_list_process_output(line))
+    ret = _glsa_list_process_output(out)
     return ret
