@@ -12,9 +12,9 @@ __version__ = '.'.join(map(str, __version_info__))
 
 
 def __get_version_info_from_git():
-    """
+    '''
     If we can get a version from Git use that instead, otherwise we carry on
-    """
+    '''
     try:
         from salt.utils import which
 
@@ -57,6 +57,9 @@ del __get_version_info_from_git
 
 
 def versions_report():
+    '''
+    Report on all of the versions for dependant software
+    '''
     libs = (
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
