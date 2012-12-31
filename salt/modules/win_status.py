@@ -17,8 +17,9 @@ try:
     import wmi
     has_required_packages = True
 except ImportError:
-    log.exception('pywin32 and wmi python packages are required '
-                  'in order to use the status module.')
+    if salt.utils.is_windows():
+        log.exception('pywin32 and wmi python packages are required '
+                      'in order to use the status module.')
     has_required_packages = False
 
 
