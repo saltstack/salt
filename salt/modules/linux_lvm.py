@@ -140,16 +140,24 @@ def lvdisplay(lvname=''):
             }
     return ret
 
-def lvcreate(lvname, vgname, size, pv=''):
+def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
     '''
     Create a new logical volume, with option for which physical volume to be used
     CLI Examples::
 
-        salt '*' lvm.lvcreate new_volume_name vg_name 10G
-        salt '*' lvm.lvcreate new_volume_name vg_name 10G /dev/sdb
+        salt '*' lvm.lvcreate new_volume_name vg_name size=10G
+        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
     '''
+    if size and extents:
+        return 'Error: Please specify only size or extents'
+
     ret = {}
-    cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(lvname, vgname, size, pv)
+    if size:
+        cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(lvname, vgname, size, pv)
+    elif extents:
+        cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(lvname, vgname, extents, pv)
+    else:
+        return 'Error: Either size or extents must be specified'
     out = __salt__['cmd.run'](cmd)
     return out
 
