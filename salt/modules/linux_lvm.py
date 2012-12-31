@@ -87,6 +87,8 @@ def vgdisplay(vgname=''):
     cmd = 'vgdisplay -c {0}'.format(vgname)
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
+        if 'No volume groups found' in line:
+            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Volume Group Name': comps[0],
@@ -122,6 +124,8 @@ def lvdisplay(lvname=''):
     cmd = 'lvdisplay -c {0}'.format(lvname)
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
+        if 'No volume groups found' in line:
+            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Logical Volume Name': comps[0],
