@@ -20,9 +20,10 @@ import sys
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltReqTimeoutError
+from salt.exceptions import (
+    AuthenticationError, CommandExecutionError, CommandNotFoundError,
+    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit
+)
 import salt.client
 import salt.crypt
 import salt.loader
@@ -134,8 +135,10 @@ class MasterMinion(object):
             returners=True,
             states=True,
             rend=True,
-            matcher=True):
+            matcher=True,
+            whitelist=None):
         self.opts = opts
+        self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
         self.mk_returners = returners
@@ -148,7 +151,9 @@ class MasterMinion(object):
         '''
         Load all of the modules for the minion
         '''
-        self.functions = salt.loader.minion_mods(self.opts)
+        self.functions = salt.loader.minion_mods(
+                self.opts,
+                whitelist=self.whitelist)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
@@ -616,7 +621,24 @@ class Minion(object):
         else:
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
-
+            for uri in (epub_uri, epull_uri):
+                if uri.startswith('tcp://'):
+                    # This check only applies to IPC sockets
+                    continue
+                # The socket path is limited to 107 characters on Solaris and
+                # Linux, and 103 characters on BSD-based systems.
+                # Let's fail at the lower level so no system checks are
+                # required.
+                if len(uri) > 103:
+                    raise SaltSystemExit(
+                        'The socket path length is more that what ZMQ allows. '
+                        'The length of {0!r} is more than 103 characters. '
+                        'Either try to reduce the length of this setting\'s '
+                        'path or switch to TCP; In the configuration file set '
+                        '"ipc_mode: tcp"'.format(
+                            uri
+                        )
+                    )
         log.debug(
             '{0} PUB socket URI: {1}'.format(
                 self.__class__.__name__, epub_uri
@@ -652,6 +674,19 @@ class Minion(object):
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
+            )
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
@@ -697,24 +732,21 @@ class Minion(object):
     def destroy(self):
         if hasattr(self, 'poller'):
             for socket in self.poller.sockets.keys():
-                if not socket.closed:
+                if socket.closed is False:
                     socket.close()
                 self.poller.unregister(socket)
         if hasattr(self, 'epoller'):
             for socket in self.epoller.sockets.keys():
-                if not socket.closed:
+                if socket.closed is False:
                     socket.close()
                 self.epoller.unregister(socket)
-        if hasattr(self, 'epub_sock'):
-            if not self.epub_sock.closed:
-                self.epub_sock.close()
-        if hasattr(self, 'epull_sock'):
-            if not self.epull_sock.closed:
-                self.epull_sock.close()
-        if hasattr(self, 'socket'):
-            if not self.socket.closed:
-                self.socket.close()
-        if hasattr(self, 'context'):
+        if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
+            self.epub_sock.close()
+        if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
+            self.epull_sock.close()
+        if hasattr(self, 'socket') and self.socket.closed is False:
+            self.socket.close()
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
     def __del__(self):
@@ -732,7 +764,6 @@ class Syndic(salt.client.LocalClient, Minion):
         salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
-
 
     def _handle_aes(self, load):
         '''
@@ -986,11 +1017,12 @@ class Matcher(object):
                     # If an unknown matcher is called at any time, fail out
                     return False
                 results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
+                    str(
+                        getattr(self, '{0}_match'.format(matcher))(
+                            '@'.join(comps[1:])
+                        )
+                    )
+                )
             elif match in opers:
                 # We didn't match a target, so append a boolean operator
                 results.append(match)

@@ -52,7 +52,7 @@
 #pidfile: /var/run/salt-master.pid
 
 # The root directory prepended to these options: pki_dir, cachedir,
-# sock_dir, log_file, autosign_file, extension_modules
+# sock_dir, log_file, autosign_file, extension_modules, key_logfile, pidfile.
 #root_dir: /
 
 # Directory used to store public key data
@@ -143,6 +143,9 @@
 #   pam:
 #     fred:
 #       - test.*
+#
+# Time (in seconds) for a newly generated token to live. Default: 12 hours
+# token_expire: 43200
 
 #####    Master Module Management    #####
 ##########################################
@@ -249,6 +252,14 @@
 #  - '*.pyc'
 #  - '*/somefolder/*.bak'
 
+# File Server Backend
+# Salt supports a modular fileserver backend system, this system allows
+# the salt master to link directly to third party systems to gather and
+# manage the files. The defult and classic backend is "roots", be advised
+# that the file_roots configuration value will differ based on the underlying
+# fileserver backend
+#fileserver_backend: roots
+
 # Pillar Configurations:
 # The Salt Pillar, is a system that allows for the building of global data
 # that is refined based on minion. Basically, the pillar creates data that
@@ -332,7 +343,7 @@
 #####         Logging settings       #####
 ##########################################
 # The location of the master log file
-# This can be a path for the log file, or, this can be, since 0.10.6, a system
+# This can be a path for the log file, or, this can be, since 0.11.0, a system
 # logger address, for example:
 #	tcp://localhost:514/LOG_USER
 #	tcp://localhost/LOG_DAEMON
@@ -364,7 +375,8 @@
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen here:
 #	http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%Y-%m-%d %H:%M:%S'
+#log_datefmt: '%H:%M:%S'
+#log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen here:

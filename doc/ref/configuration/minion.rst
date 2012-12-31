@@ -58,6 +58,34 @@ The user to run the Salt processes
 
     user: root
 
+.. conf_minion:: pidfile
+
+``pidfile``
+-----------
+
+Default: ``/var/run/salt-minion.pid``
+
+The location of the daemon's process ID file
+
+.. code-block:: yaml
+
+    pidfie: /var/run/salt-minion.pid
+
+.. conf_minion:: root_dir
+
+``root_dir``
+------------
+
+Default: ``/``
+
+This directory is prepended to the following options: :conf_minion:`pki_dir`,
+:conf_minion:`cachedir`, :conf_minion:`log_file`, :conf_minion:`sock_dir`, and
+:conf_minion:`pidfile`.
+
+.. code-block:: yaml
+
+    root_dir: /
+
 .. conf_minion:: pki_dir
 
 ``pki_dir``
@@ -88,14 +116,29 @@ clusters.
 
     id: foo.bar.com
 
+.. conf_minion:: append_domain
+
+``append_domain``
+-----------------
+
+Default: ``None``
+
+Append a domain to a hostname in the event that it does not exist. This is
+useful for systems where ``socket.getfqdn()`` does not actually result in a
+FQDN (for instance, Solaris).
+
+.. code-block:: yaml
+
+    append_domain: foo.org
+
 .. conf_minion:: sub_timeout
 
 ``sub_timeout``
 ---------------
 
-The minion connection to the master may be interrupted, the minion will
+The minion connection to the master may be interrupted. The minion will
 verify the connection every so many seconds, to disable connection
-verification set this value to 0
+verification set this value to 0.
 
 .. code-block:: yaml
 
@@ -114,6 +157,48 @@ The location for minion cache data.
 
     cachedir: /var/cache/salt
 
+.. conf_minion:: verify_env
+
+``verify_env``
+--------------
+
+Default: ``True``
+
+Verify and set permissions on configuration directories at startup.
+
+.. code-block:: yaml
+
+    verify_env: True
+
+.. conf_minion:: cache_jobs
+
+``cache_jobs``
+--------------
+
+Default: ``False``
+
+The minion can locally cache the return data from jobs sent to it, this can be
+a good way to keep track of the minion side of the jobs the minion has
+executed. By default this feature is disabled, to enable set cache_jobs to
+``True``.
+
+.. code-block:: yaml
+
+    cache_jobs: False
+
+.. conf_minion:: sock_dir
+
+``sock_dir``
+--------------
+
+Default: ``/var/run/salt/minion``
+
+The directory where unix sockets will be kept.
+
+.. code-block:: yaml
+
+    sock_dir: /var/run/salt/minion
+
 .. conf_minion:: backup_mode
 
 ``backup_mode``
@@ -126,22 +211,6 @@ Backup files replaced by file.managed and file.recurse under cachedir.
 .. code-block:: yaml
 
     backup_mode: minion
-
-.. conf_minion:: cache_jobs
-
-``cache_jobs``
---------------
-
-Default: ``False``
-
-The minion can locally cache the return data from jobs sent to it, this
-can be a good way to keep track minion side of the jobs the minion has
-executed. By default this feature is disabled, to enable set cache_jobs
-to True
-
-.. code-block:: yaml
-
-    cache_jobs: False
 
 .. conf_minion:: acceptance_wait_time
 
@@ -156,6 +225,61 @@ master.
 .. code-block:: yaml
 
     acceptance_wait_time: 10
+
+.. conf_minion:: dns_check
+
+``dns_check``
+-------------
+
+Default: ``True``
+
+When healing, a dns_check is run. This is to make sure that the originally
+resolved dns has not changed. If this is something that does not happen in your
+environment, set this value to ``False``.
+
+.. code-block:: yaml
+
+    dns_check: True
+
+.. conf_minion:: ipc_mode
+
+``ipc_mode``
+-------------
+
+Default: ``ipc``
+
+Windows platforms lack posix IPC and must rely on slower TCP based inter-
+process communications. Set ipc_mode to ``tcp`` on such systems.
+
+.. code-block:: yaml
+
+    ipc_mode: ipc
+
+.. conf_minion:: tcp_pub_port
+
+``tcp_pub_port``
+----------------
+
+Default: ``4510``
+
+Publish port used when :conf_minion:`ipc_mode` is set to ``tcp``.
+
+.. code-block:: yaml
+
+    tcp_pub_port: 4510
+
+.. conf_minion:: tcp_pull_port
+
+``tcp_pull_port``
+-----------------
+
+Default: ``4511``
+
+Pull port used when :conf_minion:`ipc_mode` is set to ``tcp``.
+
+.. code-block:: yaml
+
+    tcp_pull_port: 4511
 
 Minion Module Management
 ------------------------
@@ -273,8 +397,15 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 Default: (empty)
 
 A module provider can be statically overwritten or extended for the minion via
-the providers option. This can be done on an individual basis in an SLS file or
-globally here in the minion config.
+the ``providers`` option. This can be done :doc:`on an individual basis in an
+SLS file <../states/providers>`, or globally here in the minion config, like
+below.
+
+.. code-block:: yaml
+
+    providers:
+      pkg: yumpkg5
+      service: systemd
 
 State Management Settings
 -------------------------

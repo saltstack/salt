@@ -1,8 +1,13 @@
+salt (0.11.1) unstable; urgency=low
+
+  * new Salt release
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 19 Dec 2012 23:27:14 -0700
+
 salt (0.11.0) unstable; urgency=low
 
   * add bash_completion and ufw support files
   * use shared package support files in pkg/
-  * ignore certain exit codes in upstart
 
  -- Sean Channel <pentabular@gmail.com>  Fri, 14 Dec 2012 10:52:35 -0700
 

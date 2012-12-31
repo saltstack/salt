@@ -25,6 +25,7 @@ except ImportError:
 import salt.utils
 import salt.payload
 import salt.utils.verify
+import salt.version
 from salt.exceptions import AuthenticationError, SaltClientError, SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
@@ -186,7 +187,7 @@ class Auth(object):
         os.remove(tmp_pub)
         return payload
 
-    def decrypt_aes(self, aes):
+    def decrypt_aes(self, payload, master_pub=True):
         '''
         This function is used to decrypt the aes seed phrase returned from
         the master server, the seed phrase is decrypted with the ssh rsa
@@ -197,38 +198,55 @@ class Auth(object):
         '''
         log.debug('Decrypting the current master AES key')
         key = self.get_keys()
-        return key.private_decrypt(aes, 4)
+        key_str = key.private_decrypt(payload['aes'], 4)
+        if 'sig' in payload:
+            m_path = os.path.join(self.opts['pki_dir'], self.mpub)
+            if os.path.exists(m_path):
+                try:
+                    mkey = RSA.load_pub_key(m_path)
+                except Exception:
+                    return '', ''
+                digest = hashlib.sha256(key_str).hexdigest()
+                m_digest = mkey.public_decrypt(payload['sig'], 5)
+                if not m_digest == digest:
+                    return '', ''
+        else:
+            return '', ''
+        if '_|-' in key_str:
+            return key_str.split('_|-')
+        else:
+            if 'token' in payload:
+                token = key.private_decrypt(payload['token'], 4)
+                return key_str, token
+            elif not master_pub:
+                return key_str, ''
+        return '', ''
 
-    def verify_master(self, master_pub, token):
+    def verify_master(self, payload):
         '''
-        Takes the master pubkey and compares it to the saved master pubkey,
-        the token is sign with the master private key and must be
-        verified successfully to verify that the master has been connected
-        to.  The token must verify as signature of the phrase 'salty bacon'
-        with the public key.
-
-        Returns a bool
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
-            if not master_pub == local_master_pub:
+            if not payload['pub_key'] == local_master_pub:
                 # This is not the last master we connected to
                 log.error('The master key has changed, the salt master could '
                           'have been subverted, verify salt master\'s public '
                           'key')
-                return False
+                return ''
             try:
-                if token and not self.decrypt_aes(token) == self.token:
+                aes, token = self.decrypt_aes(payload)
+                if not token == self.token:
                     log.error('The master failed to decrypt the random minion token')
-                    return False
+                    return ''
             except Exception:
                 log.error('The master failed to decrypt the random minion token')
-                return False
-            return True
+                return ''
+            return aes
         else:
-            salt.utils.fopen(m_pub_fn, 'w+').write(master_pub)
-            return True
+            salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+            aes, token = self.decrypt_aes(payload, False)
+            return aes
 
     def sign_in(self):
         '''
@@ -273,15 +291,16 @@ class Auth(object):
                         )
                     )
                     return 'retry'
-        if not self.verify_master(payload['pub_key'], payload['token']):
+        auth['aes'] = self.verify_master(payload)
+        if not auth['aes']:
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
                 'The master may need to be updated if it is a version of Salt '
-                'lower than 0.10.4, or\n'
+                'lower than {0}, or\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
                 'Salt Minion.\nThe master public key can be found '
-                'at:\n{0}'.format(m_pub_fn)
+                'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
             sys.exit(42)
         if self.opts.get('master_finger', False):
@@ -298,7 +317,6 @@ class Auth(object):
                         )
                     )
                 sys.exit(42)
-        auth['aes'] = self.decrypt_aes(payload['aes'])
         auth['publish_port'] = payload['publish_port']
         return auth
 

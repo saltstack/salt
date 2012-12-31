@@ -2,6 +2,14 @@
 Pkgutil support for Solaris
 '''
 
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is Solaris
+    '''
+    if __grains__['os'] == 'Solaris':
+        return 'pkgutil'
+    return False
+
 
 def _list_removed(old, new):
     '''

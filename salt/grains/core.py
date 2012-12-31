@@ -43,7 +43,7 @@ __salt__ = {
 log = logging.getLogger(__name__)
 
 has_wmi = False
-if sys.platform.startswith('win'):
+if salt.utils.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
@@ -98,6 +98,8 @@ def _linux_cpudata():
                     grains['cpu_model'] = val
                 elif key == 'flags':
                     grains['cpu_flags'] = val.split()
+                elif key == 'Features':
+                    grains['cpu_flags'] = val.split()
                 # ARM support - /proc/cpuinfo
                 #
                 # Processor       : ARMv6-compatible processor rev 7 (v6l)
@@ -121,6 +123,52 @@ def _linux_cpudata():
         grains['cpu_model'] = 'Unknown'
     if 'cpu_flags' not in grains:
         grains['cpu_flags'] = []
+    return grains
+
+
+def _linux_gpu_data():
+    """
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    """
+    # dominant gpu vendors to search for (MUST be lowercase for matching below)
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+
+    devs = []
+    try:
+        lspci_out = __salt__['cmd.run']('lspci -vmm')
+
+        cur_dev = {}
+        for line in lspci_out.splitlines():
+            # check for record-separating empty lines
+            if line == '':
+                if cur_dev.get('Class', '') == 'VGA compatible controller':
+                    devs.append(cur_dev)
+                # XXX; may also need to search for "3D controller"
+                cur_dev = {}
+                continue
+            key, val = line.split(':', 1)
+            cur_dev[key.strip()] = val.strip()
+    except OSError:
+        pass
+
+    gpus = []
+    for gpu in devs:
+        vendor_str_lower = gpu['Vendor'].lower()
+        # default vendor to 'unknown', overwrite if we match a known one
+        vendor = 'unknown'
+        for name in known_vendors:
+            # search for an 'expected' vendor name in the string
+            if name in vendor_str_lower:
+                vendor = name
+                break
+        gpus.append({'vendor': vendor, 'model': gpu['Device']})
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
     return grains
 
 
@@ -390,6 +438,7 @@ def _ps(osdata):
         grains['ps'] = 'ps -efH'
     return grains
 
+
 def _windows_platform_data(osdata):
     '''
     Use the platform module for as much as we can.
@@ -446,16 +495,22 @@ _REPLACE_LINUX_RE = re.compile(r'linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
-# Please see _supported_dists defined at the top of the file
+# Please see os_data() and _supported_dists.
+# If your system is not detecting properly it likely needs an entry here.
 _OS_NAME_MAP = {
     'redhatente': 'RedHat',
     'gentoobase': 'Gentoo',
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
+    'debiangnu/': 'Debian',
+    'fedoraremi': 'RedHat',
 }
 
 # Map the 'os' grain to the 'os_family' grain
+# These should always be capitalized entries as the lookup comes
+# post-_OS_NAME_MAP. If your system is having trouble with detection, please
+# make sure that the 'os' grain is capitalized and working correctly first.
 _OS_FAMILY_MAP = {
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
@@ -485,22 +540,18 @@ def os_data():
     '''
     Return grains pertaining to the operating system
     '''
-    grains = {}
-    try:
-        (grains['defaultlanguage'],
-         grains['defaultencoding']) = locale.getdefaultlocale()
-    except Exception:
-        # locale.getdefaultlocale can ValueError!! Catch anything else it
-        # might do, per #2205
-        grains['defaultlanguage'] = 'unknown'
-        grains['defaultencoding'] = 'unknown'
+    grains = {
+        'num_gpus': 0,
+        'gpus': [],
+    }
+
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04
     # ('Linux', 'MINIONNAME', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
-    if grains['kernel'] == 'Windows':
+    if salt.utils.is_windows():
         grains['osrelease'] = grains['kernelrelease']
         grains['osversion'] = grains['kernelrelease'] = version
         grains['os'] = 'Windows'
@@ -510,7 +561,7 @@ def os_data():
         grains.update(_windows_cpudata())
         grains.update(_ps(grains))
         return grains
-    elif grains['kernel'] == 'Linux':
+    elif salt.utils.is_linux():
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release
@@ -555,7 +606,7 @@ def os_data():
                                 grains['lsb_distrib_id'] = value.strip()
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
-                                              supported_dists=_supported_dists)
+            supported_dists=_supported_dists)
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -573,6 +624,7 @@ def os_data():
         # traditional short names that Salt has used.
         grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
+        grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
         if os.path.isfile('/etc/release'):
@@ -609,6 +661,24 @@ def os_data():
     grains.update(_ps(grains))
 
     return grains
+
+
+def locale_info():
+    '''
+    Provides
+        defaultlanguage
+        defaultencoding
+    '''
+    grains = {}
+    try:
+        (grains['defaultlanguage'], grains['defaultencoding']) = locale.getdefaultlocale()
+    except Exception:
+        # locale.getdefaultlocale can ValueError!! Catch anything else it
+        # might do, per #2205
+        grains['defaultlanguage'] = 'unknown'
+        grains['defaultencoding'] = 'unknown'
+    return grains
+
 
 
 def hostname():
@@ -790,3 +860,5 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+
+

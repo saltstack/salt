@@ -13,11 +13,16 @@ try:
     import win32com.client
     import win32api
     import win32con
+    has_dependencies = True
 except ImportError:
-    pass
+    has_dependencies = False
 
 # Import python libs
 import logging
+import msgpack
+import os
+import salt.utils
+from distutils.version import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +31,9 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    return 'pkg' if __grains__['os'] == 'Windows' else False
+    if salt.utils.is_windows() and  has_dependencies:
+        return 'pkg'
+    return False
 
 
 def _list_removed(old, new):
@@ -48,7 +55,13 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    return 'pkg.available_version not implemented on Windows yet'
+    ret = {}
+    pkginfo = _get_package_info(name)
+    if not pkginfo:
+        return ret
+    for key in _get_package_info(name):
+        ret[key] = pkginfo[key]['full_name']
+    return ret
 
 
 def upgrade_available(name):
@@ -272,8 +285,17 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    log.warning('pkg.refresh_db not implemented on Windows yet')
-    return {}
+    repocache = __opts__['win_repo_cachefile']
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
+        # It's not cached. Cache it, mate.
+        cached_repo = __salt__['cp.cache_file'](repocache)
+        return True
+    # Check if the master's cache file has changed
+    if __salt__['cp.hash_file'](repocache) !=\
+            __salt__['cp.hash_file'](cached_repo):
+                cached_repo = __salt__['cp.cache_file'](repocache)
+    return True
 
 
 def install(name=None, refresh=False, **kwargs):
@@ -289,8 +311,31 @@ def install(name=None, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    log.warning('pkg.install not implemented on Windows yet')
-    return {}
+    if refresh:
+        refresh_db()
+    old = list_pkgs()
+    pkginfo = _get_package_info(name)
+    for pkg in pkginfo.keys():
+        if pkginfo[pkg]['full_name'] in old:
+            return '{0} already installed'.format(pkginfo[pkg]['full_name'])
+    if kwargs.get('version') is not None:
+        version = kwargs['version']
+    else:
+        version = _get_latest_pkg_version(pkginfo)
+    if pkginfo[version]['installer'].startswith('salt:') or pkginfo[version]['installer'].startswith('http:') or pkginfo[version]['installer'].startswith('https:') or pkginfo[version]['installer'].startswith('ftp:'):
+        cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['installer'])
+        if not cached_pkg:
+            # It's not cached. Cache it, mate.
+            cached_pkg = __salt__['cp.cache_file'](pkginfo[version]['installer'])
+    else:
+        cached_pkg = pkginfo[version]['installer']
+    cached_pkg = cached_pkg.replace('/', '\\')
+    cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version]['install_flags'])
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
+    if stderr:
+        log.error(stderr)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():
@@ -310,7 +355,7 @@ def upgrade():
     return {}
 
 
-def remove(name):
+def remove(name, version=None):
     '''
     Remove a single package
 
@@ -320,8 +365,27 @@ def remove(name):
 
         salt '*' pkg.remove <package name>
     '''
-    log.warning('pkg.remove not implemented on Windows yet')
-    return []
+    old = list_pkgs()
+    pkginfo = _get_package_info(name)
+    if not version:
+        version = _get_latest_pkg_version(pkginfo)
+
+    if pkginfo[version]['uninstaller'].startswith('salt:'):
+        cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['uninstaller'])
+        if not cached_pkg:
+            # It's not cached. Cache it, mate.
+            cached_pkg = __salt__['cp.cache_file'](pkginfo[version]['uninstaller'])
+    else:
+        cached_pkg = pkginfo[version]['uninstaller']
+    cached_pkg = cached_pkg.replace('/', '\\')
+    if not os.path.exists(os.path.expandvars(cached_pkg)) and '(x86)' in cached_pkg:
+        cached_pkg = cached_pkg.replace('(x86)', '')
+    cmd = '"' + str(os.path.expandvars(cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
+    if stderr:
+        log.error(stderr)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def purge(name):
@@ -335,5 +399,45 @@ def purge(name):
 
         salt '*' pkg.purge <package name>
     '''
-    log.warning('pkg.purge not implemented on Windows yet')
-    return []
+    return remove(name)
+
+def _get_package_info(name):
+    '''
+    Return package info.
+    TODO: Add option for version
+    '''
+    repocache = __opts__['win_repo_cachefile']
+    cached_repo = __salt__['cp.is_cached'](repocache)
+    if not cached_repo:
+        __salt__['pkg.refresh_db']
+    try:
+        with salt.utils.fopen(cached_repo, 'r') as repofile:
+            try:
+                repodata = msgpack.loads(repofile.read()) or {}
+            except:
+                return 'Windows package repo not available'
+    except IOError as exc:
+        log.debug('Not able to read repo file')
+        return 'Windows package repo not available'
+    if not repodata:
+        return 'Windows package repo not available'
+    if name in repodata:
+        return repodata[name]
+    else:
+        return False #name, ' is not available.'
+    return False #name, ' is not available.'
+
+def _reverse_cmp_pkg_versions(pkg1, pkg2):
+    '''
+    Compare software package versions
+    '''
+    if LooseVersion(pkg1) > LooseVersion(pkg2):
+        return 1
+    else:
+        return -1
+
+def _get_latest_pkg_version(pkginfo):
+    if len(pkginfo) == 1:
+        return pkginfo.keys().pop()
+    pkgkeys = pkginfo.keys()
+    return sorted(pkgkeys, cmp=_reverse_cmp_pkg_versions).pop()

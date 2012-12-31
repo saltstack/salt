@@ -12,8 +12,8 @@ import json
 import salt.utils
 import salt.state
 import salt.payload
-from salt.utils.yaml import load as yaml_load
-from salt.utils.yaml import CustomLoader as YamlCustomLoader
+from salt.utils.yaml import load as _yaml_load
+from salt.utils.yaml import CustomLoader as _YamlCustomLoader
 from salt._compat import string_types
 
 
@@ -307,7 +307,7 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
 
     if kwval_as == 'yaml':
         def parse_kwval(value):
-            return yaml_load(value, YamlCustomLoader)
+            return _yaml_load(value, _YamlCustomLoader)
     elif kwval_as == 'json':
         def parse_kwval(value):
             return json.loads(value)

@@ -12,7 +12,7 @@ declarations are typically rather simple:
       pkg.installed
 '''
 
-# Import python ilbs
+# Import python libs
 import logging
 import os
 from distutils.version import LooseVersion
@@ -20,7 +20,7 @@ from distutils.version import LooseVersion
 # Import salt libs
 import salt.utils
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def __gen_rtag():
@@ -40,9 +40,8 @@ def installed(
         sources=None,
         **kwargs):
     '''
-    Verify that the package is installed, and only that it is installed. This
-    state will not upgrade an existing package and only verify that it is
-    installed
+    Verify that the package is installed, and that it is the correct version
+    (if specified).
 
     name
         The name of the package to be installed. This parameter is ignored if
@@ -115,7 +114,7 @@ def installed(
             return {'name': name,
                     'changes': {},
                     'result': False,
-                    'comment': 'Invalidly formatted "{0}" parameter. See ' \
+                    'comment': 'Invalidly formatted "{0}" parameter. See '
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
 
@@ -126,19 +125,20 @@ def installed(
             return {'name': name,
                     'changes': {},
                     'result': True,
-                    'comment': 'All specified packages are already ' \
+                    'comment': 'All specified packages are already '
                                'installed'.format(name)}
         else:
-            # Remove any targets that are already installed to avoid upgrading
             if pkgs:
                 pkgs = targets
             elif sources:
+                # Remove any targets that are already installed, to avoid
+                # upgrading them.
                 sources = [x for x in sources if x.keys()[0] in targets]
 
     else:
         targets = [name]
 
-        cver = old_pkgs.get(name,'')
+        cver = old_pkgs.get(name, '')
         if cver == version:
             # The package is installed and is the correct version
             return {'name': name,
@@ -146,12 +146,22 @@ def installed(
                     'result': True,
                     'comment': ('Package {0} is already installed and is the '
                                 'correct version').format(name)}
+
+        # if cver is not an empty string, the package is already installed
         elif cver:
             # The package is installed
             return {'name': name,
                     'changes': {},
                     'result': True,
                     'comment': 'Package {0} is already installed'.format(name)}
+
+    if not sources:
+        problems = __salt__['pkg_resource.check_targets'](targets)
+        if problems:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': ' '.join(problems)}
 
     if __opts__['test']:
         if len(targets) > 1:
@@ -244,13 +254,16 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         try:
             has_newer = LooseVersion(avail) > LooseVersion(version)
         except AttributeError:
-            logger.debug('Error comparing versions'
-                         ' for "{0}" ({1} > {2})'.format(name,
-                                                         avail,
-                                                         version)
-                         )
-            ret['comment'] = 'No version could be retrieved' \
-                             ' for "{0}"'.format(name)
+            log.debug(
+                'Error comparing versions' ' for "{0}" ({1} > {2})'.format(
+                    name,
+                    avail,
+                    version
+                )
+            )
+            ret['comment'] = 'No version could be retrieved for "{0}"'.format(
+                name
+            )
             return ret
 
     if has_newer:

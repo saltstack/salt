@@ -201,16 +201,13 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        if not '_|-' in line:
-            continue
-        name, version, rel = line.split('_|-')
-        pkgver = version
-        if rel:
-            pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    yb = yum.YumBase()
+    for p in yb.rpmdb:
+        pkgver = p.version
+        if p.release:
+            pkgver += '-{0}'.format(p.release)
+        __salt__['pkg_resource.add_pkg'](ret, p.name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
     if args:
         pkgs = ret
@@ -272,6 +269,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     skip_verify
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
 
+    version
+        Install a specific version of the package, e.g. 1.0.9. Ignored
+        if "pkgs" or "sources" is passed.
 
     Multiple Package Installation Options:
 
@@ -296,6 +296,11 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>']}
     '''
+
+    # This allows modules to specify the version in a kwarg, like the other package modules
+    if kwargs.get('version') and pkgs is None and sources is None:
+        name = '{0}-{1}'.format(name, kwargs.get('version'))
+
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
         refresh_db()

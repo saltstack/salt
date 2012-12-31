@@ -28,9 +28,12 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
-__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+_dflt_log_datefmt = '%H:%M:%S'
+_dflt_log_datefmt_logfile = '%Y-%m-%d %H:%M:%S'
+_dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
+_dflt_log_fmt_logfile = (
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+)
 
 
 def _validate_file_roots(file_roots):
@@ -215,9 +218,10 @@ def minion_config(path, check_dns=True):
             'log_file': '/var/log/salt/minion',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_datefmt': _dflt_log_datefmt,
+            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
+            'log_fmt_console': _dflt_log_fmt_console,
+            'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
@@ -233,6 +237,12 @@ def minion_config(path, check_dns=True):
             'update_restart_services': [],
             'retry_dns': 30,
             'recon_max': 5000,
+            'win_repo_cachefile': 'salt://win/repo/winrepo.p',
+            'pidfile': '/var/run/salt-minion.pid',
+            'tcp_keepalive': True,
+            'tcp_keepalive_idle': 300,
+            'tcp_keepalive_cnt': -1,
+            'tcp_keepalive_intvl': -1,
             }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -295,7 +305,7 @@ def minion_config(path, check_dns=True):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules'
+        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules', 'pidfile',
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -313,6 +323,7 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
+            'auth_mode': 1,
             'user': 'root',
             'worker_threads': 5,
             'sock_dir': '/var/run/salt/master',
@@ -339,10 +350,11 @@ def master_config(path):
             'runner_dirs': [],
             'client_acl': {},
             'external_auth': {},
-            'token_expire': 720,
+            'token_expire': 43200,
             'file_buffer_size': 1048576,
             'file_ignore_regex': None,
             'file_ignore_glob': None,
+            'fileserver_backend': 'roots',
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
@@ -361,9 +373,10 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
+            'log_datefmt': _dflt_log_datefmt,
+            'log_datefmt_logfile': _dflt_log_datefmt_logfile,
+            'log_fmt_console': _dflt_log_fmt_console,
+            'log_fmt_logfile': _dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
@@ -381,6 +394,9 @@ def master_config(path):
             'verify_env': True,
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
+            'win_repo': '/srv/salt/win/repo',
+            'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.p',
+            'win_gitrepos': ['https://github.com/UtahDave/salt-winrepo.git'],
     }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -402,7 +418,7 @@ def master_config(path):
             )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'pidfile',
                             'sock_dir', 'key_logfile', 'extension_modules',
                             'autosign_file', 'token_dir'])
 
@@ -416,23 +432,28 @@ def master_config(path):
         # If file_ignore_regex was given, make sure it's wrapped in a list.
         # Only keep valid regex entries for improved performance later on.
         if isinstance(opts['file_ignore_regex'], str):
-            ignore_regex = [ opts['file_ignore_regex'] ]
+            ignore_regex = [opts['file_ignore_regex']]
         elif isinstance(opts['file_ignore_regex'], list):
             ignore_regex = opts['file_ignore_regex']
 
         opts['file_ignore_regex'] = []
         for r in ignore_regex:
             try:
-                # Can't store compiled regex itself in opts (breaks serialization)
+                # Can't store compiled regex itself in opts (breaks
+                # serialization)
                 re.compile(r)
                 opts['file_ignore_regex'].append(r)
             except:
-                log.warning('Unable to parse file_ignore_regex. Skipping: {0}'.format(r))
+                log.warning(
+                    'Unable to parse file_ignore_regex. Skipping: {0}'.format(
+                        r
+                    )
+                )
 
     if opts['file_ignore_glob']:
         # If file_ignore_glob was given, make sure it's wrapped in a list.
         if isinstance(opts['file_ignore_glob'], str):
-            opts['file_ignore_glob'] = [ opts['file_ignore_glob'] ]
+            opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
     return opts
 

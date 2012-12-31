@@ -6,6 +6,7 @@ Module for gathering and managing network information
 import re
 
 # Import salt libs
+import salt.utils
 from salt.utils.socket_util import sanitize_host
 
 __outputter__ = {
@@ -19,7 +20,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         return 'network'
     return False
 
@@ -214,5 +215,5 @@ def _interfaces_ipconfig(out):
 
 def interfaces():
     cmd = __salt__['cmd.run']('ipconfig /all')
-    ifaces = _ifconfig(cmd)
+    ifaces = _interfaces_ipconfig(cmd)
     return ifaces

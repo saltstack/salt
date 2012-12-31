@@ -30,6 +30,9 @@ Full Table of Contents
     topics/projects/index
     topics/event/index
     topics/tests/*
+    topics/reactor/*
+    topics/style
+    topics/git/*
 
     ref/index
     ref/modules/*

@@ -235,7 +235,7 @@ def interfaces():
     if __salt__['cmd.has_exec']('ip'):
         cmd1 = __salt__['cmd.run']('ip link show')
         cmd2 = __salt__['cmd.run']('ip addr show')
-        ifaces = _interfaces_ip(cmd1 + cmd2)
+        ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
     elif __salt__['cmd.has_exec']('ifconfig'):
         cmd = __salt__['cmd.run']('ifconfig -a')
         ifaces = _interfaces_ifconfig(cmd)
@@ -314,33 +314,49 @@ def in_subnet(cidr):
     return False
 
 
-def ip_addrs(include_loopback=False):
+def ip_addrs(interface=None, include_loopback=False):
     '''
-    Returns a list of IPv4 addresses assigned to the host. (127.0.0.1 is
-    ignored, unless 'include_loopback=True' is indicated)
+    Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
+    ignored, unless 'include_loopback=True' is indicated. If 'interface' is
+    provided, then only IP addresses from that interface will be returned.
     '''
     ret = []
     ifaces = interfaces()
-    for ipv4_info in ifaces.values():
+    if interface is None:
+        target_ifaces = ifaces
+    else:
+        target_ifaces = dict([(k,v) for k,v in ifaces.iteritems()
+                              if k == interface])
+        if not target_ifaces:
+            log.error('Interface {0} not found.'.format(interface))
+    for ipv4_info in target_ifaces.values():
         for ipv4 in ipv4_info.get('inet',[]):
-            if ipv4['address'] != '127.0.0.1': ret.append(ipv4['address'])
-            else:
-                if include_loopback: ret.append(ipv4['address'])
+            if include_loopback \
+            or (not include_loopback and ipv4['address'] != '127.0.0.1'):
+                ret.append(ipv4['address'])
     return ret
 
 
-def ip_addrs6(include_loopback=False):
+def ip_addrs6(interface=None, include_loopback=False):
     '''
-    Returns a list of IPv6 addresses assigned to the host. (::1 is ignored,
-    unless 'include_loopback=True' is indicated)
+    Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
+    unless 'include_loopback=True' is indicated. If 'interface' is provided,
+    then only IP addresses from that interface will be returned.
     '''
     ret = []
     ifaces = interfaces()
-    for ipv6_info in ifaces.values():
+    if interface is None:
+        target_ifaces = ifaces
+    else:
+        target_ifaces = dict([(k,v) for k,v in ifaces.iteritems()
+                              if k == interface])
+        if not target_ifaces:
+            log.error('Interface {0} not found.'.format(interface))
+    for ipv6_info in target_ifaces.values():
         for ipv6 in ipv6_info.get('inet6',[]):
-            if ipv6['address'] != '::1': ret.append(ipv6['address'])
-            else:
-                if include_loopback: ret.append(ipv6['address'])
+            if include_loopback \
+            or (not include_loopback and ipv6['address'] != '::1'):
+                ret.append(ipv6['address'])
     return ret
 
 

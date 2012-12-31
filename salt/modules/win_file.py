@@ -35,7 +35,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         if has_windows_modules:
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))

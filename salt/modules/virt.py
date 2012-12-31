@@ -23,7 +23,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from salt._compat import StringIO
+from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError
 
 
@@ -87,6 +87,17 @@ def _libvirt_creds():
         user = "root"
     return {'user': user, 'group': group}
 
+def _get_migrate_command():
+    '''
+    Returns the command shared by the differnt migration types
+    '''
+    return 'virsh migrate --live --persistent --undefinesource '
+
+def _get_target(target, ssh):
+    proto = 'qemu'
+    if ssh:
+        proto += '+ssh'
+    return ' %s://%s/%s' %(proto, target, 'system')
 
 def list_vms():
     '''
@@ -162,6 +173,7 @@ def vm_info(vm_=None):
                 'cputime': int(raw[4]),
                 'disks': get_disks(vm_),
                 'graphics': get_graphics(vm_),
+                'nics': get_nics(vm_),
                 'maxMem': int(raw[1]),
                 'mem': int(raw[2]),
                 'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
@@ -174,19 +186,30 @@ def vm_info(vm_=None):
     return info
 
 
-def vm_state(vm_):
+def vm_state(vm_=None):
     '''
-    Return the status of the named VM.
+    Return list of all the vms and their state.
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
 
     CLI Example::
 
         salt '*' virt.vm_state <vm name>
     '''
-    state = ''
-    dom = _get_dom(vm_)
-    raw = dom.info()
-    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
-    return state
+    def _info(vm_):
+        state = ''
+        dom = _get_dom(vm_)
+        raw = dom.info()
+        state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+        return state
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
 
 
 def node_info():
@@ -219,7 +242,7 @@ def get_nics(vm_):
         salt '*' virt.get_nics <vm name>
     '''
     nics = {}
-    doc = minidom.parse(StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -259,7 +282,7 @@ def get_macs(vm_):
         salt '*' virt.get_macs <vm name>
     '''
     macs = []
-    doc = minidom.parse(StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -282,7 +305,7 @@ def get_graphics(vm_):
            'port': 'None',
            'type': 'vnc'}
     xml = get_xml(vm_)
-    ssock = StringIO(xml)
+    ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
@@ -301,7 +324,7 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO(get_xml(vm_)))
+    doc = minidom.parse(_StringIO(get_xml(vm_)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -313,15 +336,45 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if ('dev' in target.attributes) and ('file' in source.attributes):
+        if target.hasAttribute('dev'):
+            if source.hasAttribute('file'):
+                dtype = 'file'
+            elif source.hasAttribute('dev'):
+                dtype = 'dev'
             disks[target.getAttribute('dev')] = {
-                'file': source.getAttribute('file')}
+                'file': source.getAttribute(dtype)}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '
-                + disks[dev]['file'],
-                shell=True,
-                stdout=subprocess.PIPE).communicate()[0]))
+            output = []
+            qemu_output = subprocess.Popen(['qemu-img', 'info',
+                disks[dev]['file']],
+                shell=False,
+                stdout=subprocess.PIPE).communicate()[0]
+            snapshots = False
+            columns = None
+            lines =  qemu_output.strip().split('\n')
+            for line in lines:
+                if line.startswith('Snapshot list:'):
+                    snapshots = True
+                    continue
+                elif snapshots:
+                    if line.startswith('ID'): # Do not parse table headers
+                        line = line.replace('VM SIZE', 'VMSIZE')
+                        line = line.replace('VM CLOCK', 'TIME VMCLOCK')
+                        columns = re.split('\s+', line)
+                        columns = [c.lower() for c in columns]
+                        output.append('snapshots:')
+                        continue
+                    fields = re.split('\s+', line)
+                    for i, field in enumerate(fields):
+                        sep = ' '
+                        if i == 0:
+                            sep = '-'
+                        output.append('%s %s: "%s"' %(sep, columns[i], field))
+                    continue
+                output.append(line)
+            output = '\n'.join(output)
+            disks[dev].update(yaml.safe_load(output))
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
@@ -577,7 +630,7 @@ def create_xml_path(path):
     return create_xml_str(salt.utils.fopen(path, 'r').read())
 
 
-def migrate_non_shared(vm_, target):
+def migrate_non_shared(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
@@ -585,15 +638,15 @@ def migrate_non_shared(vm_, target):
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-all ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
 
-def migrate_non_shared_inc(vm_, target):
+def migrate_non_shared_inc(vm_, target, ssh=False):
     '''
     Attempt to execute non-shared storage "all" migration
 
@@ -601,15 +654,15 @@ def migrate_non_shared_inc(vm_, target):
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-inc ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
 
 
-def migrate(vm_, target):
+def migrate(vm_, target, ssh=False):
     '''
     Shared storage migration
 
@@ -617,13 +670,12 @@ def migrate(vm_, target):
 
         salt '*' virt.migrate <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = _get_migrate_command() + ' ' + vm_\
+        + _get_target(target, ssh)
 
     return subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
-
 
 def seed_non_shared_migrate(disks, force=False):
     '''

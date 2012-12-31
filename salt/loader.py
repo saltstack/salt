@@ -60,7 +60,7 @@ def _create_loader(
     return Loader(module_dirs, opts, tag)
 
 
-def minion_mods(opts, context=None):
+def minion_mods(opts, context=None, whitelist=None):
     '''
     Returns the minion modules
     '''
@@ -69,7 +69,12 @@ def minion_mods(opts, context=None):
         context = {}
     pack = {'name': '__context__',
             'value': context}
-    functions = load.apply_introspection(load.gen_functions(pack))
+    functions = load.apply_introspection(
+            load.gen_functions(
+                pack,
+                whitelist=whitelist
+                )
+            )
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -89,14 +94,14 @@ def raw_mod(opts, name, functions):
     return load.gen_module(name, functions)
 
 
-def returners(opts, functions):
+def returners(opts, functions, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def pillars(opts, functions):
@@ -117,12 +122,12 @@ def tops(opts):
     return load.filter_func('top')
 
 
-def wheels(opts):
+def wheels(opts, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
-    return load.gen_functions()
+    return load.gen_functions(whitelist=whitelist)
 
 
 def outputters(opts):
@@ -133,32 +138,44 @@ def outputters(opts):
     return load.filter_func('output')
 
 
-def auth(opts):
+def auth(opts, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
-    return load.gen_functions()
+    return load.gen_functions(whitelist=whitelist)
 
 
-def states(opts, functions):
+def fileserver(opts, backend='roots'):
+    '''
+    Returns the file server modules
+    '''
+    load = _create_loader(opts, 'fileserver', 'fileserver')
+    funcs = load.gen_functions(whitelist=[backend])
+    ret = {}
+    for func in funcs:
+        ret[func[func.index('.') + 1:]] = funcs[func]
+    return ret
+
+
+def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
-def search(opts, returners):
+def search(opts, returners, whitelist=None):
     '''
     Returns the state modules
     '''
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def render(opts, functions):
@@ -437,7 +454,7 @@ class Loader(object):
             mod.__salt__ = functions
         return funcs
 
-    def gen_functions(self, pack=None, virtual_enable=True):
+    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -571,21 +588,36 @@ class Loader(object):
             if virtual_enable:
                 # if virtual modules are enabled, we need to look for the
                 # __virtual__() function inside that module and run it.
-                # This function will return either a new name for the module
-                # or False. This allows us to have things like the pkg module
-                # working on all platforms under the name 'pkg'. It also allows
-                # for modules like augeas_cfg to be referred to as 'augeas',
-                # which would otherwise have namespace collisions. And finally
-                # it allows modules to return False if they are not intended
-                # to run on the given platform or are missing dependencies.
+                # This function will return either a new name for the module,
+                # an empty string(won't be loaded but you just need to check
+                # against the same python type, a string) or False.
+                # This allows us to have things like the pkg module working on
+                # all platforms under the name 'pkg'. It also allows for
+                # modules like augeas_cfg to be referred to as 'augeas', which
+                # would otherwise have namespace collisions. And finally it
+                # allows modules to return False if they are not intended to
+                # run on the given platform or are missing dependencies.
                 try:
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            if virtual is False:
-                                # if __virtual__() returns false then the
+                            if not virtual:
+                                # if __virtual__() evaluates to false then the
                                 # module wasn't meant for this platform or it's
                                 # not supposed to load for some other reason.
+                                # Some modules might accidentally return None
+                                # and are improperly loaded
+                                if virtual is None:
+                                    log.warning(
+                                        '{0}.__virtual__() is wrongly '
+                                        'returning `None`. It should either '
+                                        'return `True` or `False`. If '
+                                        'you\'re the developer of the module '
+                                        '{1!r}, please fix this.'.format(
+                                            mod.__name__,
+                                            module_name
+                                        )
+                                    )
                                 continue
 
                             if module_name != virtual:
@@ -602,6 +634,12 @@ class Loader(object):
                     # then log the information and continue to the next.
                     log.exception(('Failed to read the virtual function for '
                                    'module: {0}').format(module_name))
+                    continue
+
+            if whitelist:
+                # It a whitelist is defined then only load the module if it is
+                # in the whitelist
+                if module_name not in whitelist:
                     continue
 
             for attr in dir(mod):

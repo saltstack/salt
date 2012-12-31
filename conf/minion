@@ -24,7 +24,8 @@
 # Specify the location of the daemon process ID file
 #pidfile: /var/run/salt-minion.pid
 
-# The root directory prepended to these options: pki_dir, cachedir, log_file.
+# The root directory prepended to these options: pki_dir, cachedir, log_file,
+# sock_dir, pidfile.
 #root_dir: /
 
 # The directory to store the pki information in
@@ -86,9 +87,9 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
-# When healing a dns_check is run, this is to make sure that the originally
-# resolved dns has not changed, if this is something that does not happen in
-# your environment then set this value to False.
+# When healing, a dns_check is run. This is to make sure that the originally
+# resolved dns has not changed. If this is something that does not happen in
+# your environment, set this value to False.
 #dns_check: True
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
@@ -281,7 +282,7 @@
 ######         Logging settings       #####
 ###########################################
 # The location of the minion log file.
-# This can be a path for the log file, or, this can be, since 0.10.6, a system
+# This can be a path for the log file, or, this can be, since 0.11.0, a system
 # logger address, for example:
 #	tcp://localhost:514/LOG_USER
 #	tcp://localhost/LOG_DAEMON
@@ -311,7 +312,8 @@
 #
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen on http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%Y-%m-%d %H:%M:%S'
+#log_datefmt: '%H:%M:%S'
+#log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen on http://docs.python.org/library/logging.html#logrecord-attributes
@@ -360,3 +362,32 @@
 #
 # The list of services to restart after a successful update. Empty by default.
 #update_restart_services: []
+
+
+######      Keepalive settings        ######
+############################################
+# ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by
+# the OS. If connections between the minion and the master pass through
+# a state tracking device such as a firewall or VPN gateway, there is
+# the risk that it could tear down the connection the master and minion
+# without informing either party that their connection has been taken away.
+# Enabling TCP Keepalives prevents this from happening.
+#
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False) 
+# or leave to the OS defaults (-1), on linux, typically disabled. Default True, enabled.
+#tcp_keepalive: True
+#
+# How long before the first keepalive should be sent in seconds. Default 300
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds 
+# on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
+#tcp_keepalive_idle: 300
+#
+# How many lost probes are needed to consider the connection lost. Default -1
+# to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
+#tcp_keepalive_cnt: -1
+#
+# How often, in seconds, to send keepalives after the first one. Default -1 to 
+# use OS defaults, typically 75 seconds on Linux, see 
+# /proc/sys/net/ipv4/tcp_keepalive_intvl.
+#tcp_keepalive_intvl: -1
+

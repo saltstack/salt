@@ -6,7 +6,7 @@ Often servers need to be set up and configured in a specific order, and systems
 should only be set up if systems earlier in the sequence has been set up
 without any issues.
 
-The 0.10.6 release of Salt addresses this problem with a new layer in the state
+The 0.11.0 release of Salt addresses this problem with a new layer in the state
 system called the `Over State`. The concept of the `Over State` is managed on
 the master, a series of state executions is controlled from the master and
 executed in order. If an execution requires that another execution first run
@@ -49,7 +49,9 @@ will execute state.highstate on the matched minions, while the mysql stage
 will execute state.sls with the named sls files.
 
 Finally the all stage will execute state.highstate on all systems only if the
-mysql and webservers stages complete without issue.
+mysql and webservers stages complete without failures. The overstate system
+checks for any states that return a result of `False`, if the run has any
+`False` returns then the overstate will quit.
 
 Executing the Over State
 ========================

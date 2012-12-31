@@ -130,12 +130,12 @@ def latest(name,
         log.debug(
                 'target {0} is not found, "git clone" is required'.format(
                     target))
-
-        if __opts__['test']:
-            return _neutral_test(
-                    ret,
-                    'Repository {0} is about to be cloned to {1}'.format(
-                        name, target))
+        if 'test' in __opts__:
+            if __opts__['test']:
+                return _neutral_test(
+                        ret,
+                        'Repository {0} is about to be cloned to {1}'.format(
+                            name, target))
         try:
             # make the clone
             __salt__['git.clone'](target, name, user=runas)

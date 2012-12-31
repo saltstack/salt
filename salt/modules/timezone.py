@@ -80,7 +80,8 @@ def set_zone(timezone):
     if not os.path.exists(zonepath):
         return 'Zone does not exist: {0}'.format(zonepath)
 
-    os.unlink('/etc/localtime')
+    if os.path.exists('/etc/localtime'):
+        os.unlink('/etc/localtime')
     os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:

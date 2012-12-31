@@ -72,6 +72,16 @@ A simple returner is implemented here:
 This simple example of a returner set to send the data to a redis server
 serializes the data as json and sets it in redis.
 
+You can place your custom returners in a ``_returners`` directory within the
+:conf_master:`file_roots` specified by the master config file. These custom
+returners are distributed when `state.highstate`_ is run, or by executing the
+`saltutil.sync_returners`_ or `saltutil.sync_all`_ functions.
+
+.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
+.. _`saltutil.sync_returners`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_returners
+.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
+
+
 Examples
 --------
 

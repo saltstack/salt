@@ -9,10 +9,10 @@ try:
 except ImportError:
     pass
 import logging
-from copy import deepcopy
+import copy
 
 # Import salt libs
-from salt._compat import string_types, callable
+from salt._compat import string_types, callable as _callable
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +20,14 @@ log = logging.getLogger(__name__)
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
+    and remove some of the functionality on OS X
     '''
     import sys
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-
-            if callable(getattr(mod, attr)):
-                if not attr in ('getent', 'info', 'list_groups', '__virtual__'):
+            if _callable(getattr(mod, attr)):
+                if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
@@ -274,7 +274,7 @@ def chfullname(name, fullname):
     if not pre_info: return False
     if fullname == pre_info['fullname']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -297,7 +297,7 @@ def chroomnumber(name, roomnumber):
     if not pre_info: return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -320,7 +320,7 @@ def chworkphone(name, workphone):
     if not pre_info: return False
     if workphone == pre_info['workphone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -343,7 +343,7 @@ def chhomephone(name, homephone):
     if not pre_info: return False
     if homephone == pre_info['homephone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -411,3 +411,13 @@ def list_groups(name):
             ugrp.add(group.gr_name)
 
     return sorted(list(ugrp))
+
+def list_users():
+    '''
+    Return a list of all users
+
+    CLI Example::
+
+        salt '*' user.list_users
+    '''
+    return sorted([user.pw_name for user in pwd.getpwall()])

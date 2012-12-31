@@ -78,6 +78,25 @@ class SaltEvent(object):
                         sock_dir,
                         'minion_event_{0}_pull.ipc'.format(id_hash)
                         ))
+        for uri in (puburi, pulluri):
+            if uri.startswith('tcp://'):
+                # This check only applies to IPC sockets
+                continue
+            # The socket path is limited to 107 characters on Solaris and
+            # Linux, and 103 characters on BSD-based systems.
+            # Let's fail at the lower level so no system checks are
+            # required.
+            if len(uri) > 103:
+                raise SaltSystemExit(
+                    'The socket path length is more that what ZMQ allows. '
+                    'The length of {0!r} is more than 103 characters. '
+                    'Either try to reduce the length of this setting\'s '
+                    'path or switch to TCP; In the configuration file set '
+                    '"ipc_mode: tcp"'.format(
+                        uri
+                    )
+                )
+
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
         )
@@ -149,18 +168,26 @@ class SaltEvent(object):
         return True
 
     def destroy(self):
-        if self.cpub:
+        if self.cpub is True and self.sub.closed is False:
+            # Wait at most 2.5 secs to send any remaining messages in the
+            # socket or the context.term() bellow will hang indefinitely.
+            # See https://github.com/zeromq/pyzmq/issues/102
+            self.sub.setsockopt(zmq.LINGER, 2500)
             self.sub.close()
-        if self.cpush:
+        if self.cpush is True and self.push.closed is False:
+            self.push.setsockopt(zmq.LINGER, 2500)
             self.push.close()
         # If socket's are not unregistered from a poller, nothing which touches
         # that poller get's garbage collected. The Poller itself, it's
         # registered sockets and the Context
         for socket in self.poller.sockets.keys():
-            if not socket.closed:
+            if socket.closed is False:
+                # Should already be closed from above, but....
+                socket.setsockopt(zmq.LINGER, 2500)
                 socket.close()
             self.poller.unregister(socket)
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()
@@ -238,10 +265,15 @@ class EventPublisher(Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            self.epub_sock.close()
-            self.epull_sock.close()
+            if self.epub_sock.closed is False:
+                self.epub_sock.setsockopt(zmq.LINGER, 2500)
+                self.epub_sock.close()
+            if self.epull_sock.closed is False:
+                self.epull_sock.setsockopt(zmq.LINGER, 2500)
+                self.epull_sock.close()
         finally:
-            self.context.term()
+            if self.context.closed is False:
+                self.context.term()
 
 
 class Reactor(multiprocessing.Process, salt.state.Compiler):
@@ -366,4 +398,3 @@ class ReactWrap(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
         return wheel.master_call(**kwargs)
-

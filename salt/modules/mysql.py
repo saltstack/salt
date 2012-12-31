@@ -783,8 +783,8 @@ def grant_revoke(grant,
 
 def processlist():
     '''
-    Retrieves the processlist from the MySQL server via  
-    "SHOW FULL PROCESSLIST". 
+    Retrieves the processlist from the MySQL server via
+    "SHOW FULL PROCESSLIST".
 
     Returns: a list of dicts, with each dict representing a process:
         {'Command': 'Query',
@@ -801,18 +801,18 @@ def processlist():
 
     CLI Example:
         salt '*' mysql.processlist
-    
+
     '''
-    ret = [] 
-    hdr=("Id", "User", "Host", "db", "Command","Time", "State", 
+    ret = []
+    hdr=("Id", "User", "Host", "db", "Command","Time", "State",
          "Info", "Rows_sent", "Rows_examined", "Rows_read")
 
-    log.debug('processlist')
+    log.debug('MySQL Process List:\n{0}'.format(processlist()))
     db = connect()
     cur = db.cursor()
     cur.execute("SHOW FULL PROCESSLIST")
     for i in range(cur.rowcount):
-        row = cur.fetchone()        
+        row = cur.fetchone()
         r = {}
         for j in range(len(hdr)):
             try:
@@ -821,13 +821,13 @@ def processlist():
                 pass
 
         ret.append(r)
-            
+
     cur.close()
     return ret
 def __do_query_into_hash(conn, sqlStr):
     '''
     Perform the query that is passed to it (sqlStr).
-    
+
     Returns:
        results in a dict.
 
@@ -839,25 +839,25 @@ def __do_query_into_hash(conn, sqlStr):
 
     try:
         cursor = conn.cursor()
-    except Exception:
-        self.__log.error("%s: Can't get cursor for SQL->%s" % (mod, sqlStr))
+    except MySQLdb.MySQLError:
+        log.error("%s: Can't get cursor for SQL->%s" % (mod, sqlStr))
         cursor.close()
-        log.debug(('%s-->' % mod))        
+        log.debug(('%s-->' % mod))
         return rtnResults
 
     try:
         rs = cursor.execute(sqlStr)
-    except Exception:
+    except MySQLdb.MySQLError:
         log.error("%s: try to execute : SQL->%s" % (mod, sqlStr))
         cursor.close()
-        log.debug(('%s-->' % mod))        
+        log.debug(('%s-->' % mod))
         return rtnResults
 
     rs = cursor.fetchall()
 
     for rowData in rs:
         colCnt = 0
-        row = {}                
+        row = {}
         for colData in cursor.description:
             colName = colData[0]
             row[colName] = rowData[colCnt]
@@ -866,7 +866,7 @@ def __do_query_into_hash(conn, sqlStr):
         rtnResults.append(row)
 
     cursor.close()
-    log.debug(('%s-->' % mod))        
+    log.debug(('%s-->' % mod))
     return rtnResults
 
 def get_master_status():
@@ -893,10 +893,10 @@ def get_master_status():
     # check for if this minion is not a master
     if (len(rtnv) == 0):
         rtnv.append([])
-        
-    log.debug("%s-->%d" % (mod, len(rtnv[0])))        
+
+    log.debug("%s-->%d" % (mod, len(rtnv[0])))
     return rtnv[0]
- 
+
 def get_slave_status():
     '''
     Retrieves the slave status from the minion.
@@ -957,6 +957,6 @@ def get_slave_status():
     # check for if this minion is not a slave
     if (len(rtnv) == 0):
         rtnv.append([])
-        
-    log.debug("%s-->%d" % (mod, len(rtnv[0])))        
+
+    log.debug("%s-->%d" % (mod, len(rtnv[0])))
     return rtnv[0]
