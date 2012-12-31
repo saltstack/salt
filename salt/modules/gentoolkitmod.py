@@ -3,7 +3,7 @@ Support for Gentoolkit
 
 '''
 
-import salt.utils
+import os
 
 HAS_GENTOOLKIT = False
 
@@ -12,6 +12,8 @@ try:
     from gentoolkit.eclean.search import DistfilesSearch
     from gentoolkit.eclean.clean import CleanUp
     from gentoolkit.eclean.cli import parseSize, parseTime
+    from gentoolkit.eclean.exclude import (parseExcludeFile,
+                                           ParseExcludeFileException)
     HAS_GENTOOLKIT = True
 except ImportError:
     pass
@@ -52,8 +54,21 @@ def _pretty_size(size):
         units.pop()
     return '{0}{1}'.format(round(size,1), units[-1])
 
+def _parse_exclude(exclude_file):
+    '''
+    Parse an exclude file.
+
+    Return a dict as defined in gentoolkit.eclean.exclude.parseExcludeFile
+    '''
+    if os.path.isfile(exclude_file):
+        exclude = parseExcludeFile(exclude_file, lambda x: None)
+    else:
+        exclude = dict()
+    return exclude
+
 def eclean_dist(destructive=False, package_names=False, size_limit=0,
-                time_limit=0, fetch_restricted=False):
+                time_limit=0, fetch_restricted=False,
+                exclude_file='/etc/eclean/distfiles.exclude'):
     '''
     Clean obsolete portage sources
 
@@ -79,6 +94,11 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         Protect fetch-restricted files. Only meaningful if used with
         destructive=True
 
+    exclude_file
+        Path to exclusion file. Default is /etc/eclean/distfiles.exclude
+        This is the same default eclean-dist uses. Use None if this file
+        exists and you want to ignore.
+
     Return a dict containing the cleaned, saved, and deprecated dists::
 
         {'cleaned': {<dist file>: <size>},
@@ -89,27 +109,35 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     CLI Example::
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
-    if time_limit is not 0:
-        time_limit = parseTime(time_limit)
-    if size_limit is not 0:
-        size_limit = parseSize(size_limit)
+    try:
+        exclude = None
+        if exclude_file is not None:
+            exclude = _parse_exclude(exclude_file)
 
-    clean_size=0
-    engine = DistfilesSearch(lambda x: None)
-    clean_me, saved, deprecated = engine.findDistfiles(
-        destructive=destructive, package_names=package_names,
-        size_limit=size_limit, time_limit=time_limit,
-        fetch_restricted=fetch_restricted)
+        if time_limit is not 0:
+            time_limit = parseTime(time_limit)
+        if size_limit is not 0:
+            size_limit = parseSize(size_limit)
 
-    cleaned = dict()
-    def _eclean_progress_controller(size, key, *args):
-        cleaned[key] = _pretty_size(size)
-        return True
+        clean_size=0
+        engine = DistfilesSearch(lambda x: None)
+        clean_me, saved, deprecated = engine.findDistfiles(
+            destructive=destructive, package_names=package_names,
+            size_limit=size_limit, time_limit=time_limit,
+            fetch_restricted=fetch_restricted, exclude=exclude)
 
-    if clean_me:
-        cleaner = CleanUp(_eclean_progress_controller)
-        clean_size = cleaner.clean_dist(clean_me)
+        cleaned = dict()
+        def _eclean_progress_controller(size, key, *args):
+            cleaned[key] = _pretty_size(size)
+            return True
 
-    ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
-           'total_cleaned': _pretty_size(clean_size)}
-    return ret
+        if clean_me:
+            cleaner = CleanUp(_eclean_progress_controller)
+            clean_size = cleaner.clean_dist(clean_me)
+
+        ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
+               'total_cleaned': _pretty_size(clean_size)}
+    except ParseExcludeFileException as e:
+        ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
+    finally:
+        return ret
