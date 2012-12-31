@@ -250,7 +250,7 @@ def glsa_check_list(glsa_list):
     if isinstance(glsa_list, list):
         for glsa in glsa_list:
             cmd += glsa + ' '
-    elif glsa_list is 'all' or glsa_list is 'affected':
+    elif glsa_list == 'all' or glsa_list == 'affected':
         cmd += glsa_list
     else:
         # TODO: Should this return some type of error? or just fail quietly?
