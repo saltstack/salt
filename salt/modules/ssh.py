@@ -73,7 +73,7 @@ def _replace_auth_key(
         key,
         enc='ssh-rsa',
         comment='',
-        options=[],
+        options=None,
         config='.ssh/authorized_keys'):
     '''
     Replace an existing key
@@ -82,7 +82,7 @@ def _replace_auth_key(
                 key,
                 enc,
                 comment,
-                options)
+                options or [])
 
     lines = []
     uinfo = __salt__['user.info'](user)
@@ -391,7 +391,7 @@ def set_auth_key(
         key,
         enc='ssh-rsa',
         comment='',
-        options=[],
+        options=None,
         config='.ssh/authorized_keys'):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
@@ -415,7 +415,7 @@ def set_auth_key(
                 key,
                 enc,
                 comment,
-                options,
+                options or [],
                 config)
         return 'replace'
     elif status == 'exists':
