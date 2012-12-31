@@ -13,14 +13,13 @@ try:
     import win32com.client
     import win32api
     import win32con
-    has_dependencies = True
+    HAS_DEPENDENCIES = True
 except ImportError:
-    has_dependencies = False
+    HAS_DEPENDENCIES = False
 
 # Import python libs
 import logging
 import msgpack
-import os
 import salt.utils
 from distutils.version import LooseVersion
 
@@ -31,7 +30,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows() and  has_dependencies:
+    if salt.utils.is_windows() and  HAS_DEPENDENCIES:
         return 'pkg'
     return False
 

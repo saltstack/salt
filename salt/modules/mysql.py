@@ -28,9 +28,9 @@ import sys
 try:
     import MySQLdb
     import MySQLdb.cursors
-    has_mysqldb = True
+    HAS_MYSQLDB = True
 except ImportError:
-    has_mysqldb = False
+    HAS_MYSQLDB = False
 
 log = logging.getLogger(__name__)
 
@@ -42,14 +42,14 @@ def __virtual__():
     '''
     Only load this module if the mysql libraries exist
     '''
-    if has_mysqldb:
+    if HAS_MYSQLDB:
         return 'mysql'
     return False
 
 
 def __check_table(name, table):
-    db = connect()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    dbc = connect()
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
@@ -59,8 +59,8 @@ def __check_table(name, table):
 
 
 def __repair_table(name, table):
-    db = connect()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    dbc = connect()
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
@@ -70,8 +70,8 @@ def __repair_table(name, table):
 
 
 def __optimize_table(name, table):
-    db = connect()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    dbc = connect()
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
@@ -109,9 +109,9 @@ def connect(**kwargs):
     _connarg('unix_socket')
     _connarg('default_file', 'read_default_file')
 
-    db = MySQLdb.connect(**connargs)
-    db.autocommit(True)
-    return db
+    dbc = MySQLdb.connect(**connargs)
+    dbc.autocommit(True)
+    return dbc
 
 
 def query(database, query):
@@ -151,8 +151,8 @@ def query(database, query):
     # I don't think it handles multiple queries at once, so adding "commit"
     # might not work.
     ret = {}
-    db = connect(**{'db': database})
-    cur = db.cursor()
+    dbc = connect(**{'db': database})
+    cur = dbc.cursor()
     start = time.time()
     affected = cur.execute(query)
     log.debug('Using db: ' + database + ' to run query: ' + query)
@@ -186,10 +186,10 @@ def status():
         salt '*' mysql.status
     '''
     ret = {}
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     cur.execute('SHOW STATUS')
-    for i in range(cur.rowcount):
+    for _ in range(cur.rowcount):
         row = cur.fetchone()
         ret[row[0]] = row[1]
     return ret
@@ -204,8 +204,8 @@ def version():
 
         salt '*' mysql.version
     '''
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
     return row
@@ -222,8 +222,8 @@ def slave_lag():
 
         salt '*' mysql.slave_lag
     '''
-    db = connect()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    dbc = connect()
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     cur.execute('show slave status')
     results = cur.fetchone()
     if cur.rowcount == 0:
@@ -286,8 +286,8 @@ def db_list():
         salt '*' mysql.db_list
     '''
     ret = []
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     cur.execute('SHOW DATABASES')
     results = cur.fetchall()
     for dbs in results:
@@ -310,8 +310,8 @@ def db_tables(name):
         return False
 
     ret = []
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'SHOW TABLES IN {0}'.format(name)
     log.debug('Doing query: {0}'.format(query))
 
@@ -331,8 +331,8 @@ def db_exists(name):
 
         salt '*' mysql.db_exists 'dbname'
     '''
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'SHOW DATABASES LIKE \'{0}\''.format(name)
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
@@ -354,8 +354,8 @@ def db_create(name):
         return False
 
     # db doesnt exist, proceed
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'CREATE DATABASE `{0}`;'.format(name)
     log.debug('Query: {0}'.format(query))
     if cur.execute(query):
@@ -382,8 +382,8 @@ def db_remove(name):
         return False
 
     # db doesnt exist, proceed
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'DROP DATABASE `{0}`;'.format(name)
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
@@ -405,8 +405,8 @@ def user_list():
 
         salt '*' mysql.user_list
     '''
-    db = connect()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    dbc = connect()
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     cur.execute('SELECT User,Host FROM mysql.user')
     results = cur.fetchall()
     log.debug(results)
@@ -421,8 +421,8 @@ def user_exists(user, host='localhost'):
 
         salt '*' mysql.user_exists 'username' 'hostname'
     '''
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
              'Host = \'{1}\''.format(user, host))
     log.debug('Doing query: {0}'.format(query))
@@ -438,8 +438,8 @@ def user_info(user, host='localhost'):
 
         salt '*' mysql.user_info root localhost
     '''
-    db = connect()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    dbc = connect()
+    cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
              'Host = \'{1}\''.format(user, host))
     log.debug('Query: {0}'.format(query))
@@ -466,8 +466,8 @@ def user_create(user,
         log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
         return False
 
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
     if password is not None:
         query = query + ' IDENTIFIED BY \'{0}\''.format(password)
@@ -506,8 +506,8 @@ def user_chpass(user,
     elif password_hash is not None:
         password_sql = '"{0}"'.format(password_hash)
 
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
              'Host = \'{2}\';'.format(password_sql, user, host))
     log.debug('Query: {0}'.format(query))
@@ -535,8 +535,8 @@ def user_remove(user,
 
         salt '*' mysql.user_remove frank localhost
     '''
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Query: {0}'.format(query))
     cur.execute(query)
@@ -640,16 +640,16 @@ def __grant_generate(grant,
         grant = 'ALL PRIVILEGES'
 
     db_part = database.rpartition('.')
-    db = db_part[0]
+    dbc = db_part[0]
     table = db_part[2]
 
     if escape:
-        if db is not '*':
-            db = '`{0}`'.format(db)
+        if dbc is not '*':
+            dbc = '`{0}`'.format(dbc)
         if table is not '*':
             table = '`{0}`'.format(table)
     query = 'GRANT {0} ON {1}.{2} TO \'{3}\'@\'{4}\''.format(
-        grant, db, table, user, host
+        grant, dbc, table, user, host
     )
     if grant_option:
         query += ' WITH GRANT OPTION'
@@ -671,8 +671,8 @@ def user_grants(user,
         return False
 
     ret = []
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     query = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Doing query: {0}'.format(query))
 
@@ -722,8 +722,8 @@ def grant_add(grant,
         salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
 
     query = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug('Query: {0}'.format(query))
@@ -758,8 +758,8 @@ def grant_revoke(grant,
         salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
 
     if grant_option:
         grant += ', GRANT OPTION'
@@ -780,6 +780,7 @@ def grant_revoke(grant,
         'revoked'.format(grant, database, user)
     )
     return False
+
 
 def processlist():
     '''
@@ -804,70 +805,71 @@ def processlist():
 
     '''
     ret = []
-    hdr=("Id", "User", "Host", "db", "Command","Time", "State",
-         "Info", "Rows_sent", "Rows_examined", "Rows_read")
+    hdr = ('Id', 'User', 'Host', 'db', 'Command', 'Time', 'State',
+           'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
 
     log.debug('MySQL Process List:\n{0}'.format(processlist()))
-    db = connect()
-    cur = db.cursor()
+    dbc = connect()
+    cur = dbc.cursor()
     cur.execute("SHOW FULL PROCESSLIST")
-    for i in range(cur.rowcount):
+    for _ in range(cur.rowcount):
         row = cur.fetchone()
-        r = {}
-        for j in range(len(hdr)):
+        idx_r = {}
+        for idx_j in range(len(hdr)):
             try:
-                r[hdr[j]] = row[j]
+                idx_r[hdr[idx_j]] = row[idx_j]
             except KeyError:
                 pass
-
-        ret.append(r)
-
+        ret.append(idx_r)
     cur.close()
     return ret
-def __do_query_into_hash(conn, sqlStr):
+
+
+def __do_query_into_hash(conn, sql_str):
     '''
-    Perform the query that is passed to it (sqlStr).
+    Perform the query that is passed to it (sql_str).
 
     Returns:
        results in a dict.
 
     '''
     mod = sys._getframe().f_code.co_name
-    log.debug("%s<--(%s)" % (mod, sqlStr))
+    log.debug('{0}<--({1})'.format(mod, sql_str))
 
-    rtnResults = []
+    rtn_results = []
 
     try:
         cursor = conn.cursor()
     except MySQLdb.MySQLError:
-        log.error("%s: Can't get cursor for SQL->%s" % (mod, sqlStr))
+        log.error('{0}: Can\'t get cursor for SQL->{1}'.format(mod, sql_str))
         cursor.close()
-        log.debug(('%s-->' % mod))
-        return rtnResults
+        log.debug('{0}-->'.format(mod))
+        return rtn_results
 
     try:
-        rs = cursor.execute(sqlStr)
+        cursor.execute(sql_str)
     except MySQLdb.MySQLError:
-        log.error("%s: try to execute : SQL->%s" % (mod, sqlStr))
+        log.error('{0}: try to execute : SQL->{1}'.format(mod, sql_str))
         cursor.close()
-        log.debug(('%s-->' % mod))
-        return rtnResults
+        log.debug('{0}-->'.format(mod))
+        return rtn_results
 
-    rs = cursor.fetchall()
+    qrs = cursor.fetchall()
 
-    for rowData in rs:
-        colCnt = 0
+    for row_data in qrs:
+        col_cnt = 0
         row = {}
-        for colData in cursor.description:
-            colName = colData[0]
-            row[colName] = rowData[colCnt]
-            colCnt += 1
+        for col_data in cursor.description:
+            col_name = col_data[0]
+            row[col_name] = row_data[col_cnt]
+            col_cnt += 1
 
-        rtnResults.append(row)
+        rtn_results.append(row)
 
     cursor.close()
-    log.debug(('%s-->' % mod))
-    return rtnResults
+    log.debug('{0}-->'.format(mod))
+    return rtn_results
+
 
 def get_master_status():
     '''
@@ -884,8 +886,7 @@ def get_master_status():
 
     '''
     mod = sys._getframe().f_code.co_name
-    log.debug("%s<--" % (mod))
-
+    log.debug('{0}<--'.format(mod))
     conn = connect()
     rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
     conn.close()
@@ -894,8 +895,9 @@ def get_master_status():
     if (len(rtnv) == 0):
         rtnv.append([])
 
-    log.debug("%s-->%d" % (mod, len(rtnv[0])))
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv[0]
+
 
 def get_slave_status():
     '''
@@ -948,8 +950,7 @@ def get_slave_status():
 
     '''
     mod = sys._getframe().f_code.co_name
-    log.debug("%s<--" % (mod))
-
+    log.debug('{0}<--'.format(mod))
     conn = connect()
     rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
     conn.close()
@@ -958,5 +959,5 @@ def get_slave_status():
     if (len(rtnv) == 0):
         rtnv.append([])
 
-    log.debug("%s-->%d" % (mod, len(rtnv[0])))
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv[0]

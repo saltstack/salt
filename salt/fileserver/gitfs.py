@@ -2,17 +2,17 @@
 The backend for the git based file server system. This system allows for salt
 to directly reference a remote git repository as the source of truth for files.
 
-When using the git file server backend, 
+When using the git file server backend,
 '''
 
 # Import python libs
 import os
 import hashlib
 # Import third party libs
-has_git = False
+HAS_GIT = False
 try:
     import git
-    has_git = True
+    HAS_GIT = True
 except ImportError:
     pass
 
@@ -27,7 +27,7 @@ def __virtual__():
     '''
     if not isinstance(__opts__['file_roots'], list):
         return False
-    return 'git' if has_git else False
+    return 'git' if HAS_GIT else False
 
 
 def _check_ref(short, repo):
