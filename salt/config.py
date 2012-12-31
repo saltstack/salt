@@ -70,6 +70,10 @@ def _read_conf_file(path):
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
+        for key, value in conf_opts.copy().iteritems():
+            if isinstance(value, unicode):
+                # We do not want unicode settings
+                conf_opts[key] = value.encode('utf-8')
         return conf_opts
 
 
