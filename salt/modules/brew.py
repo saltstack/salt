@@ -100,7 +100,7 @@ def install(pkgs, refresh=False, skip_verify=False, **kwargs):
         __salt__['cmd.run'](cmd)
 
     new = list_pkgs(*pkgs)
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 def list_upgrades():
     '''
