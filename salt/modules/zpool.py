@@ -17,22 +17,23 @@ def __virtual__():
     enabled = ['FreeBSD', 'Solaris']
     return 'zpool' if __grains__['os'] in enabled else False
 
+
 def list_installed():
     '''
     returns a list of installed packages
     '''
     installed = []
     pkgs = __salt__['cmd.run']('pkg info')
-    for p in pkgs.splitlines():
-        installed.append(p)
+    for package in pkgs.splitlines():
+        installed.append(package)
     return installed
 
 
 def pool_exists(pool_name):
     '''Check if a zfs storage pool is active'''
     current_pools = zpool_list()
-    for p in current_pools['pools']:
-        if pool_name in p:
+    for pool in current_pools['pools']:
+        if pool_name in pool:
             return True
     return None
 
@@ -41,9 +42,8 @@ def zpool_list():
     '''list zpool's size and usage'''
 
     res = __salt__['cmd.run']('zpool list')
-    pool_list = [ l for l in res.splitlines() ]
-    return { 'pools' : pool_list }
-
+    pool_list = [l for l in res.splitlines()]
+    return {'pools': pool_list}
 
 
 def _check_mkfile():
@@ -70,16 +70,16 @@ def create_file_vdevice(size, *names):
     ret = {}
     # Insure mkfile is installed
     _check_mkfile()
-    l = []
+    dlist = []
     # Get file names to create
     for name in names:
         # check if file is present if not add it
         if os.path.isfile(name):
             ret[name] = "File: {0} already present".format(name)
         else:
-            l.append(name)
+            dlist.append(name)
 
-    devs = ' '.join(l)
+    devs = ' '.join(dlist)
     cmd = 'mkfile {0} {1}'.format(size, devs)
     __salt__['cmd.run'](cmd)
 
@@ -101,7 +101,7 @@ def zpool_create(pool_name, *disks):
         salt '*' zfs.zpool_create myzpool /disk1 /disk2
     '''
     ret = {}
-    l = []
+    dlist = []
 
     # Check if the pool_name is already being used
     if pool_exists(pool_name):
@@ -115,9 +115,9 @@ def zpool_create(pool_name, *disks):
             ret[disk] = "{0} not present on filesystem".format(disk)
             return ret
         else:
-            l.append(disk)
+            dlist.append(disk)
 
-    devs = ' '.join(l)
+    devs = ' '.join(dlist)
     cmd = "zpool create {0} {1}".format(pool_name, devs)
 
     # Create storage pool
@@ -210,7 +210,7 @@ def replace(pool_name, old, new):
     ret = {}
     # Make sure pools there
     if not pool_exists(pool_name):
-        ret['Error'] = '{0}: pool does not exists.'.formate(pool_name)
+        ret['Error'] = '{0}: pool does not exists.'.format(pool_name)
         return ret
 
     # make sure old, new disks are on filesystem
@@ -229,10 +229,7 @@ def replace(pool_name, old, new):
     res = zpool_status(name=pool_name)
     for line in res:
         if new in line:
-            ret['replaced'] = '{0} with {1}'.format(old,new)
+            ret['replaced'] = '{0} with {1}'.format(old, new)
             return ret
     ret['Error'] = 'Does not look like devies where swaped check status'
     return ret
-
-
-

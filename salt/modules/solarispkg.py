@@ -4,9 +4,13 @@ Package support for Solaris
 
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.utils
+
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -48,21 +52,21 @@ def _write_adminfile(kwargs):
     basedir = kwargs.get('basedir', 'default')
 
     # Make tempfile to hold the adminfile contents.
-    fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+    fd_, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
     # Write to file then close it.
-    os.write(fd, 'email={0}\n'.format(email))
-    os.write(fd, 'instance={0}\n'.format(instance))
-    os.write(fd, 'partial={0}\n'.format(partial))
-    os.write(fd, 'runlevel={0}\n'.format(runlevel))
-    os.write(fd, 'idepend={0}\n'.format(idepend))
-    os.write(fd, 'rdepend={0}\n'.format(rdepend))
-    os.write(fd, 'space={0}\n'.format(space))
-    os.write(fd, 'setuid={0}\n'.format(setuid))
-    os.write(fd, 'conflict={0}\n'.format(conflict))
-    os.write(fd, 'action={0}\n'.format(action))
-    os.write(fd, 'basedir={0}\n'.format(basedir))
-    os.close(fd)
+    os.write(fd_, 'email={0}\n'.format(email))
+    os.write(fd_, 'instance={0}\n'.format(instance))
+    os.write(fd_, 'partial={0}\n'.format(partial))
+    os.write(fd_, 'runlevel={0}\n'.format(runlevel))
+    os.write(fd_, 'idepend={0}\n'.format(idepend))
+    os.write(fd_, 'rdepend={0}\n'.format(rdepend))
+    os.write(fd_, 'space={0}\n'.format(space))
+    os.write(fd_, 'setuid={0}\n'.format(setuid))
+    os.write(fd_, 'conflict={0}\n'.format(conflict))
+    os.write(fd_, 'action={0}\n'.format(action))
+    os.write(fd_, 'basedir={0}\n'.format(basedir))
+    os.close(fd_)
 
     return adminfile
 
@@ -219,8 +223,8 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     "sources" parameter.
     '''
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](
-            name,kwargs.get('pkgs'),sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, kwargs.get('pkgs'), sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -235,14 +239,14 @@ def install(name=None, refresh=False, sources=None, **kwargs):
 
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
-    # Only makes sense in a global zone but works fine in non-globals. 
+    # Only makes sense in a global zone but works fine in non-globals.
     if kwargs.get('current_zone_only') == 'True':
         cmd += '-G '
 
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr','')
+        stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr', '')
         if stderr:
             log.error(stderr)
 
@@ -253,7 +257,7 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
 
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(name, **kwargs):
@@ -312,21 +316,21 @@ def remove(name, **kwargs):
         basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+        fd_, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
         # Write to file then close it.
-        os.write(fd, 'email={0}\n'.format(email))
-        os.write(fd, 'instance={0}\n'.format(instance))
-        os.write(fd, 'partial={0}\n'.format(partial))
-        os.write(fd, 'runlevel={0}\n'.format(runlevel))
-        os.write(fd, 'idepend={0}\n'.format(idepend))
-        os.write(fd, 'rdepend={0}\n'.format(rdepend))
-        os.write(fd, 'space={0}\n'.format(space))
-        os.write(fd, 'setuid={0}\n'.format(setuid))
-        os.write(fd, 'conflict={0}\n'.format(conflict))
-        os.write(fd, 'action={0}\n'.format(action))
-        os.write(fd, 'basedir={0}\n'.format(basedir))
-        os.close(fd)
+        os.write(fd_, 'email={0}\n'.format(email))
+        os.write(fd_, 'instance={0}\n'.format(instance))
+        os.write(fd_, 'partial={0}\n'.format(partial))
+        os.write(fd_, 'runlevel={0}\n'.format(runlevel))
+        os.write(fd_, 'idepend={0}\n'.format(idepend))
+        os.write(fd_, 'rdepend={0}\n'.format(rdepend))
+        os.write(fd_, 'space={0}\n'.format(space))
+        os.write(fd_, 'setuid={0}\n'.format(setuid))
+        os.write(fd_, 'conflict={0}\n'.format(conflict))
+        os.write(fd_, 'action={0}\n'.format(action))
+        os.write(fd_, 'basedir={0}\n'.format(basedir))
+        os.close(fd_)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()

@@ -22,9 +22,9 @@ from salt._compat import string_types
 # Import third party libs
 try:
     import esky
-    has_esky = True
+    HAS_ESKY = True
 except ImportError:
-    has_esky = False
+    HAS_ESKY = False
 
 log = logging.getLogger(__name__)
 
@@ -117,24 +117,24 @@ def _sync(form, env=None):
     #dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.fopen(mod_file, 'a+') as f:
-            f.write('')
+        with salt.utils.fopen(mod_file, 'a+') as ofile:
+            ofile.write('')
     return ret
 
 
 def _listdir_recursively(rootdir):
-    fileList = []
-    for root, subFolders, files in os.walk(rootdir):
+    file_list = []
+    for root, sub_folders, files in os.walk(rootdir):
         for file in files:
             relpath = os.path.relpath(root, rootdir).strip('.')
-            fileList.append(os.path.join(relpath, file))
-    return fileList
+            file_list.append(os.path.join(relpath, file))
+    return file_list
 
 
 def _list_emptydirs(rootdir):
     emptydirs = []
-    for root, subFolders, files in os.walk(rootdir):
-        if not files and not subFolders:
+    for root, sub_folders, files in os.walk(rootdir):
+        if not files and not sub_folders:
             emptydirs.append(root)
     return emptydirs
 
@@ -155,7 +155,7 @@ def update(version=None):
 
         salt '*' saltutil.update 0.10.3
     '''
-    if not has_esky:
+    if not HAS_ESKY:
         return 'Esky not available as import'
     if not getattr(sys, 'frozen', False):
         return 'Minion is not running an Esky build'
@@ -171,8 +171,8 @@ def update(version=None):
         app.fetch_version(version)
         app.install_version(version)
         app.cleanup()
-    except Exception as e:
-        return e
+    except Exception as err:
+        return err
     restarted = {}
     for service in __opts__['update_restart_services']:
         restarted[service] = __salt__['service.restart'](service)
@@ -279,8 +279,8 @@ def refresh_pillar():
     '''
     mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.fopen(mod_file, 'a+') as f:
-            f.write('pillar')
+        with salt.utils.fopen(mod_file, 'a+') as ofile:
+            ofile.write('pillar')
         return True
     except IOError:
         return False

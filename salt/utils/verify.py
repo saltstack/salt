@@ -144,10 +144,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                 if os.getuid() == 0:
                     os.chown(dir_, uid, gid)
                 os.umask(cumask)
-            except OSError as e:
+            except OSError as err:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
-                sys.stderr.write(msg.format(dir_, e))
-                sys.exit(e.errno)
+                sys.stderr.write(msg.format(dir_, err))
+                sys.exit(err.errno)
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
@@ -223,10 +223,10 @@ def check_user(user):
         return True
     import pwd  # after confirming not running Windows
     try:
-        p = pwd.getpwnam(user)
+        pwuser = pwd.getpwnam(user)
         try:
-            os.setgid(p.pw_gid)
-            os.setuid(p.pw_uid)
+            os.setgid(pwuser.pw_gid)
+            os.setuid(pwuser.pw_uid)
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
             msg = msg.format(user)
@@ -277,16 +277,16 @@ def check_path_traversal(path, user='root'):
     sure a user can read all parent directories of the minion's  key
     before trying to go and generate a new key and raising an IOError
     '''
-    for p in list_path_traversal(path):
-        if not os.access(p, os.R_OK):
-            msg = 'Could not access {0}.'.format(p)
+    for tpath in list_path_traversal(path):
+        if not os.access(tpath, os.R_OK):
+            msg = 'Could not access {0}.'.format(tpath)
             current_user = getpass.getuser()
             # Make the error message more intelligent based on how
             # the user invokes salt-call or whatever other script.
             if user != current_user:
                 msg += ' Try running as user {0}.'.format(user)
             else:
-                msg += ' Please give {0} read permissions.'.format(user, p)
+                msg += ' Please give {0} read permissions.'.format(user, tpath)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)

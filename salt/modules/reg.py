@@ -10,13 +10,13 @@ Manage the registry on Windows
 # Import third party libs
 try:
     import _winreg
-    has_windows_modules = True
+    HAS_WINDOWS_MODULES = True
 except ImportError:
     try:
         import winreg as _winreg
-        has_windows_modules = True
+        HAS_WINDOWS_MODULES = True
     except ImportError:
-        has_windows_modules = False
+        HAS_WINDOWS_MODULES = False
 
 # Import python libs
 import logging
@@ -51,9 +51,10 @@ def __virtual__():
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
-        if has_windows_modules:
+        if HAS_WINDOWS_MODULES:
             return 'reg'
-        # TODO: This needs to be reworked after the module dependency docstring was changed to :depends
+        # TODO: This needs to be reworked after the module dependency
+        # docstring was changed to :depends
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 

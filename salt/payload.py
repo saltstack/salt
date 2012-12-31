@@ -32,8 +32,8 @@ except ImportError:
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
-        log_format = '[%(levelname)-8s] %(message)s'
-        salt.log.setup_console_logger(log_format=log_format)
+        LOG_FORMAT = '[%(levelname)-8s] %(message)s'
+        salt.log.setup_console_logger(log_format=LOG_FORMAT)
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         sys.exit(1)
 

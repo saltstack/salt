@@ -27,7 +27,8 @@ class MinionService(Service):
         self.runflag = False
         self.log("Shutting down the Salt Minion")
 
-if __name__ == '__main__':
+
+def _main():
     servicename = 'salt-minion'
     try:
         status = win32serviceutil.QueryServiceStatus(servicename)
@@ -40,3 +41,7 @@ if __name__ == '__main__':
         win32serviceutil.StartService(servicename)
     else:
         win32serviceutil.StartService(servicename)
+
+
+if __name__ == '__main__':
+    _main()

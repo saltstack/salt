@@ -77,8 +77,8 @@ def fullversion():
                 continue
             ret[comps[0].strip().lower().replace(' ', '_')] = comps[1].strip()
         elif ' -D' in line:
-            cw = define_re.sub('', line)
-            ret['compiled_with'].append(cw)
+            cwith = define_re.sub('', line)
+            ret['compiled_with'].append(cwith)
     return ret
 
 

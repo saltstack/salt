@@ -32,8 +32,8 @@ def get_enabled():
     service = salt.utils.which('service')
     if not service:
         raise CommandNotFoundError
-    for s in __salt__['cmd.run']('{0} -e'.format(service)).splitlines():
-        ret.append(os.path.basename(s))
+    for svc in __salt__['cmd.run']('{0} -e'.format(service)).splitlines():
+        ret.append(os.path.basename(svc))
     return sorted(ret)
 
 
@@ -50,7 +50,10 @@ def get_disabled():
     return sorted(set(all_) - set(en_))
 
 
-def _switch(name, on, config='/etc/rc.conf', **kwargs):
+def _switch(name,                   # pylint: disable-msg=C0103
+            on,                     # pylint: disable-msg=C0103
+            config='/etc/rc.conf',
+            **kwargs):
     '''
     '''
     nlines = []
@@ -62,8 +65,8 @@ def _switch(name, on, config='/etc/rc.conf', **kwargs):
         val = "NO"
 
     if os.path.exists(config):
-        with salt.utils.fopen(config, 'r') as f:
-            for line in f:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
                 if not line.startswith('{0}_enable='.format(name)):
                     nlines.append(line)
                     continue
@@ -72,7 +75,8 @@ def _switch(name, on, config='/etc/rc.conf', **kwargs):
                 edited = True
     if not edited:
         nlines.append("{0}_enable=\"{1}\"\n".format(name, val))
-    with salt.utils.fopen(config, 'w') as f: f.writelines(nlines)
+    with salt.utils.fopen(config, 'w') as ofile:
+        ofile.writelines(nlines)
     return True
 
 
@@ -132,8 +136,8 @@ def get_all():
     service = salt.utils.which('service')
     if not service:
         raise CommandNotFoundError
-    for s in __salt__['cmd.run']('{0} -r'.format(service)).splitlines():
-        srv = os.path.basename(s)
+    for svc in __salt__['cmd.run']('{0} -r'.format(service)).splitlines():
+        srv = os.path.basename(svc)
         if not srv.isupper():
             ret.append(srv)
     return sorted(ret)

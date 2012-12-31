@@ -25,23 +25,23 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    m = re.match('^Name\s*:\s*(\S+)', line)
-                    if m:
-                        name = m.group(1)
+                    match = re.match('^Name\s*:\s*(\S+)', line)
+                    if match:
+                        name = match.group(1)
                         continue
                 if not version:
-                    m = re.match('^Version\s*:\s*(\S+)', line)
-                    if m:
-                        version = m.group(1)
+                    match = re.match('^Version\s*:\s*(\S+)', line)
+                    if match:
+                        version = match.group(1)
                         continue
                 if not rel:
-                    m = re.match('^Release\s*:\s*(\S+)', line)
-                    if m:
-                        rel = m.group(1)
+                    match = re.match('^Release\s*:\s*(\S+)', line)
+                    if match:
+                        rel = match.group(1)
                         continue
         if rel:
             version += '-{0}'.format(rel)
-        return name,version
+        return name, version
 
     def parse_pacman(path):
         name = ''
@@ -50,16 +50,16 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    m = re.match('^Name\s*:\s*(\S+)',line)
-                    if m:
-                        name = m.group(1)
+                    match = re.match('^Name\s*:\s*(\S+)', line)
+                    if match:
+                        name = match.group(1)
                         continue
                 if not version:
-                    m = re.match('^Version\s*:\s*(\S+)',line)
-                    if m:
-                        version = m.group(1)
+                    match = re.match('^Version\s*:\s*(\S+)', line)
+                    if match:
+                        version = match.group(1)
                         continue
-        return name,version
+        return name, version
 
     def parse_deb(path):
         name = ''
@@ -68,22 +68,22 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    m = re.match('^\s*Package\s*:\s*(\S+)',line)
-                    if m:
-                        name = m.group(1)
+                    match = re.match('^\s*Package\s*:\s*(\S+)',line)
+                    if match:
+                        name = match.group(1)
                         continue
                 if not version:
-                    m = re.match('^\s*Version\s*:\s*(\S+)',line)
-                    if m:
-                        version = m.group(1)
+                    match = re.match('^\s*Version\s*:\s*(\S+)',line)
+                    if match:
+                        version = match.group(1)
                         continue
-        return name,version
+        return name, version
 
-    if __grains__['os_family'] in ('Suse','RedHat','Mandriva'):
+    if __grains__['os_family'] in ('Suse', 'RedHat', 'Mandriva'):
         metaparser = parse_rpm
-    elif __grains__['os_family'] in ('Arch'):
+    elif __grains__['os_family'] in ('Arch',):
         metaparser = parse_pacman
-    elif __grains__['os_family'] in ('Debian'):
+    elif __grains__['os_family'] in ('Debian',):
         metaparser = parse_deb
     else:
         log.error('No metadata parser found for {0}'.format(path))
@@ -102,10 +102,10 @@ def pack_pkgs(pkgs):
     if isinstance(pkgs, basestring):
         try:
             pkgs = yaml.load(pkgs)
-        except yaml.parser.ParserError as e:
-            log.error(e)
+        except yaml.parser.ParserError as err:
+            log.error(err)
             return []
-    if not isinstance(pkgs,list) \
+    if not isinstance(pkgs, list) \
     or [x for x in pkgs if not isinstance(x, basestring)]:
         log.error('Invalid input: {0}'.format(pprint.pformat(pkgs)))
         log.error('Input must be a list of strings')
@@ -124,12 +124,12 @@ def pack_sources(sources):
     if isinstance(sources, basestring):
         try:
             sources = yaml.load(sources)
-        except yaml.parser.ParserError as e:
-            log.error(e)
+        except yaml.parser.ParserError as err:
+            log.error(err)
             return {}
     ret = {}
     for source in sources:
-        if (not isinstance(source,dict)) or len(source) != 1:
+        if (not isinstance(source, dict)) or len(source) != 1:
             log.error('Invalid input: {0}'.format(pprint.pformat(sources)))
             log.error('Input must be a list of 1-element dicts')
             return {}
@@ -144,8 +144,8 @@ def _verify_binary_pkg(srcinfo):
     what is expected.
     '''
     problems = []
-    for pkg_name,pkg_uri,pkg_path,pkg_type in srcinfo:
-        pkgmeta_name,pkgmeta_version = _parse_pkg_meta(pkg_path)
+    for pkg_name, pkg_uri, pkg_path, pkg_type in srcinfo:
+        pkgmeta_name, pkgmeta_version = _parse_pkg_meta(pkg_path)
         if not pkgmeta_name:
             if pkg_type == 'remote':
                 problems.append('Failed to cache {0}. Are you sure this '
@@ -206,21 +206,21 @@ def parse_targets(name=None, pkgs=None, sources=None):
             log.warning('Parameter "pkgs" ignored on Solaris hosts.')
         if not sources:
             log.error('"sources" option required with Solaris pkg installs')
-            return None,None
+            return None, None
 
     # "pkgs" is always ignored on Solaris.
     if pkgs and sources and __grains__['os_family'] != 'Solaris':
         log.error('Only one of "pkgs" and "sources" can be used.')
-        return None,None
+        return None, None
 
     elif pkgs and __grains__['os_family'] != 'Solaris':
         if name:
             log.warning('"name" parameter will be ignored in favor of "pkgs"')
         pkgs = pack_pkgs(pkgs)
         if not pkgs:
-            return None,None
+            return None, None
         else:
-            return pkgs,'repository'
+            return pkgs, 'repository'
 
     elif sources:
         # No need to warn for Solaris, warning taken care of above.
@@ -229,7 +229,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
                         '"sources".')
         sources = pack_sources(sources)
         if not sources:
-            return None,None
+            return None, None
 
         srcinfo = []
         for pkg_name,pkg_src in sources.iteritems():
@@ -245,25 +245,26 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
-        and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD', ):
+        and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
             problems = _verify_binary_pkg(srcinfo)
             # If any problems are found in the caching or metadata parsing done
             # in the above for loop, log each problem and return None,None,
             # which will keep package installation from proceeding.
             if problems:
-                for problem in problems: log.error(problem)
-                return None,None
+                for problem in problems:
+                    log.error(problem)
+                return None, None
 
         # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
         # the package path (3rd element of tuple).
         return [x[2] for x in srcinfo],'file'
 
     elif name and __grains__['os_family'] != 'Solaris':
-        return [name],'repository'
+        return [name], 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')
-        return None,None
+        return None, None
 
 
 def add_pkg(pkgs, name, version):
@@ -292,7 +293,7 @@ def sort_pkglist(pkgs):
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
     for key in pkgs.keys():
-        if isinstance(pkgs[key],list):
+        if isinstance(pkgs[key], list):
             pkgs[key].sort()
 
 

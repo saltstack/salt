@@ -81,22 +81,22 @@ class BufferedReader(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, tb):
+    def __exit__(self, exc_type, exc_value, traceback):
         pass
 
 
-if __name__ == '__main__':
+def _main():
     def timeit_string(fpath, max_size, chunk_size):
 
-        sf = BufferedReader(fpath, max_size, chunk_size)
-        for chunk in sf:
+        breader = BufferedReader(fpath, max_size, chunk_size)
+        for chunk in breader:
             chunk
         return
 
     def sizeof_fmt(num):
-        for x in ['bytes', 'KB', 'MB', 'GB']:
+        for unit in ['bytes', 'KB', 'MB', 'GB']:
             if num < 1024.0:
-                return '{0:3.1f}{1}'.format(num, x)
+                return '{0:3.1f}{1}'.format(num, unit)
             num /= 1024.0
         return '{0:3.1f}{1}'.format(num, 'TB')
 
@@ -116,16 +116,16 @@ if __name__ == '__main__':
 
         ffile.close()
 
-        TNUMBER = 1000
+        tnumber = 1000
 
         print('Running tests against a file with the size of {0}'.format(
             sizeof_fmt(os.stat(tpath).st_size))
         )
 
-        for idx, multiplier in enumerate([4, 8, 16, 32, 64, 128, 256]):
+        for multiplier in [4, 8, 16, 32, 64, 128, 256]:
             chunk_size = multiplier * 1024
             max_size = chunk_size * 5
-            t = timeit.Timer(
+            timer = timeit.Timer(
                 "timeit_string('{0}', {1:d}, {2:d})".format(
                     tpath, max_size, chunk_size
                 ), "from __main__ import timeit_string"
@@ -133,7 +133,11 @@ if __name__ == '__main__':
             print("timeit_string ({0: >7} chunks; max: {1: >7}):".format(
                 sizeof_fmt(chunk_size), sizeof_fmt(max_size))),
             print(u"{0: >6} \u00B5sec/pass".format(u"{0:0.2f}".format(
-                TNUMBER * t.timeit(number=TNUMBER) / TNUMBER
+                tnumber * timer.timeit(number=tnumber) / tnumber
             )))
 
         print
+
+
+if __name__ == '__main__':
+    _main()

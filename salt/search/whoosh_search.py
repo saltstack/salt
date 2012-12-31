@@ -9,13 +9,13 @@ import os
 import salt.search
 
 # Import third party libs
-has_whoosh = False
+HAS_WHOOSH = False
 try:
     import whoosh.index
     import whoosh.fields
     import whoosh.store
     import whoosh.qparser
-    has_whoosh = True
+    HAS_WHOOSH = True
 except ImportError:
     pass
 
@@ -24,7 +24,7 @@ def __virtual__():
     '''
     Only load if the whoosh libs are available
     '''
-    return 'whoosh' if has_whoosh else False
+    return 'whoosh' if HAS_WHOOSH else False
 
 
 def index():

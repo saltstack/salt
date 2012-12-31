@@ -20,9 +20,9 @@ from xml.dom import minidom
 import yaml
 try:
     import libvirt
-    has_libvirt = True
+    HAS_LIBVIRT = True
 except ImportError:
-    has_libvirt = False
+    HAS_LIBVIRT = False
 
 # Import salt libs
 import salt.utils
@@ -51,7 +51,7 @@ def __virtual__():
         return False
     if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
         return False
-    if not has_libvirt:
+    if not HAS_LIBVIRT:
         return False
     try:
         libvirt_conn = libvirt.open('qemu:///system')

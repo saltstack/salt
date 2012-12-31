@@ -9,6 +9,7 @@ import os
 import salt.utils
 
 
+# pylint: disable-msg=C0103
 def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file
@@ -34,8 +35,8 @@ def list_hosts():
     ret = {}
     if not os.path.isfile(hfn):
         return ret
-    with salt.utils.fopen(hfn) as f:
-        for line in f:
+    with salt.utils.fopen(hfn) as ifile:
+        for line in ifile:
             line = line.strip()
             if not line:
                 continue
@@ -128,8 +129,8 @@ def set_host(ip, alias):
             lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    with salt.utils.fopen(hfn, 'w+') as f:
-        f.writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as ofile:
+        ofile.writelines(lines)
     return True
 
 
@@ -164,8 +165,8 @@ def rm_host(ip, alias):
             else:
                 # Only an alias was removed
                 lines[ind] = '{0}\n'.format(newline)
-    with salt.utils.fopen(hfn, 'w+') as f:
-        f.writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as ofile:
+        ofile.writelines(lines)
     return True
 
 
@@ -206,6 +207,6 @@ def add_host(ip, alias):
             lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
-    with salt.utils.fopen(hfn, 'w+') as f:
-        f.writelines(lines)
+    with salt.utils.fopen(hfn, 'w+') as ofile:
+        ofile.writelines(lines)
     return True

@@ -20,8 +20,8 @@ from salt.template import check_render_pipe_str
 
 log = logging.getLogger(__name__)
 
-salt_base_path = os.path.dirname(salt.__file__)
-loaded_base_name = 'salt.loaded'
+SALT_BASE_PATH = os.path.dirname(salt.__file__)
+LOADED_BASE_NAME = 'salt.loaded'
 
 
 def _create_loader(
@@ -42,7 +42,7 @@ def _create_loader(
     if base_path:
         sys_types = os.path.join(base_path, ext_type)
     else:
-        sys_types = os.path.join(salt_base_path, ext_type)
+        sys_types = os.path.join(SALT_BASE_PATH, ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
     ext_type_types = []
@@ -53,10 +53,10 @@ def _create_loader(
             ext_type_types.extend(opts[ext_type_dirs])
 
     module_dirs = ext_type_types + [ext_types, sys_types]
-    _generate_module('{0}.int'.format(loaded_base_name))
-    _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
-    _generate_module('{0}.ext'.format(loaded_base_name))
-    _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
+    _generate_module('{0}.int'.format(LOADED_BASE_NAME))
+    _generate_module('{0}.int.{1}'.format(LOADED_BASE_NAME, tag))
+    _generate_module('{0}.ext'.format(LOADED_BASE_NAME))
+    _generate_module('{0}.ext.{1}'.format(LOADED_BASE_NAME, tag))
     return Loader(module_dirs, opts, tag)
 
 
@@ -233,7 +233,7 @@ def call(fun, **kwargs):
     '''
     args = kwargs.get('args', [])
     dirs = kwargs.get('dirs', [])
-    module_dirs = [os.path.join(salt_base_path, 'modules')] + dirs
+    module_dirs = [os.path.join(SALT_BASE_PATH, 'modules')] + dirs
     load = Loader(module_dirs)
     return load.call(fun, args)
 
@@ -259,7 +259,7 @@ def _generate_module(name):
 
 
 def _mod_type(module_path):
-    if module_path.startswith(salt_base_path):
+    if module_path.startswith(SALT_BASE_PATH):
         return 'int'
     return 'ext'
 
@@ -398,7 +398,7 @@ class Loader(object):
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
                     '{0}.{1}.{2}.{3}'.format(
-                        loaded_base_name, _mod_type(path), self.tag, name
+                        LOADED_BASE_NAME, _mod_type(path), self.tag, name
                     ), fn_, path, desc
                 )
         except ImportError as exc:
@@ -511,7 +511,7 @@ class Loader(object):
                     # cython_enabled is True. Continue...
                     mod = pyximport.load_module(
                         '{0}.{1}.{2}.{3}'.format(
-                            loaded_base_name,
+                            LOADED_BASE_NAME,
                             _mod_type(names[name]),
                             self.tag,
                             name
@@ -521,7 +521,7 @@ class Loader(object):
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
-                            loaded_base_name, _mod_type(path), self.tag, name
+                            LOADED_BASE_NAME, _mod_type(path), self.tag, name
                         ), fn_, path, desc
                     )
                     # reload all submodules if necessary
@@ -534,7 +534,7 @@ class Loader(object):
                     # removed during sync_modules)
                     for submodule in submodules:
                         try:
-                            smname = '{0}.{1}.{2}'.format(loaded_base_name, self.tag, name)
+                            smname = '{0}.{1}.{2}'.format(LOADED_BASE_NAME, self.tag, name)
                             smfile = os.path.splitext(submodule.__file__)[0] + ".py"
                             if submodule.__name__.startswith(smname) and os.path.isfile(smfile):
                                 reload(submodule)
