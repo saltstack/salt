@@ -391,3 +391,8 @@
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
 
+
+######      Windows Software settings ######
+############################################
+# Location of the repository cache file on the master
+# win_repo_cachefile: 'salt://win/repo/winrepo.p'
