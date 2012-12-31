@@ -61,6 +61,7 @@ Full Table of Contents
     ref/file_server/dynamic-modules
     ref/configuration/*
     ref/internals/index
+    ref/windows-package-manager
 
     ref/cli/index
     ref/cli/salt

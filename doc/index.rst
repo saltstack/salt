@@ -221,6 +221,13 @@ Salt is many splendid things.
     take advantage of automatic updates to keep your minions running your
     latest builds.
 
+:doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
+    Looking for an easy way to manage software on all your Windows machines? Do
+    you feel left out of all the package manager magic found in yum and apt?
+    Search no more! Salt has an integrated software package manager for your
+    Windows machines! Install software hosted on your master, somewhere on your
+    network, or anywhere http, https, and ftp work.
+
 Reference
 ---------
 
