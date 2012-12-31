@@ -43,14 +43,17 @@ def procs():
         salt '*' status.procs
     '''
     pythoncom.CoInitialize()  # need to call if not in main thread
-    wmi_obj = wmi.WMI()
-    processes = wmi_obj.win32_process()
+    try:
+        wmi_obj = wmi.WMI()
+        processes = wmi_obj.win32_process()
 
-    process_info = {}
-    for proc in processes:
-        process_info[proc.ProcessId] = _get_process_info(proc)
+        process_info = {}
+        for proc in processes:
+            process_info[proc.ProcessId] = _get_process_info(proc)
 
-    return process_info
+        return process_info
+    finally:
+        pythoncom.CoUninitialize()
 
 
 def _get_process_info(proc):
