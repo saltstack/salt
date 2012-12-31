@@ -139,25 +139,27 @@ class Logging(LOGGING_LOGGER_CLASS):
             pass
         return instance
 
+    # pylint: disable-msg=C0103
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
                    extra=None):
         # Let's try to make every logging message unicode
         if isinstance(msg, basestring) and not isinstance(msg, unicode):
             try:
-                return LoggingLoggerClass.makeRecord(
+                return LOGGING_LOGGER_CLASS.makeRecord(
                     self, name, level, fn, lno,
                     msg.decode('utf-8', 'replace'),
                     args, exc_info, func, extra
                 )
             except UnicodeDecodeError:
-                return LoggingLoggerClass.makeRecord(
+                return LOGGING_LOGGER_CLASS.makeRecord(
                     self, name, level, fn, lno,
                     msg.decode('utf-8', 'ignore'),
                     args, exc_info, func, extra
                 )
-        return LoggingLoggerClass.makeRecord(
+        return LOGGING_LOGGER_CLASS.makeRecord(
             self, name, level, fn, lno, msg, args, exc_info, func, extra
         )
+    # pylint: enable-msg=C0103
 
     def garbage(self, msg, *args, **kwargs):
         return LOGGING_LOGGER_CLASS.log(self, GARBAGE, msg, *args, **kwargs)
