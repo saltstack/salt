@@ -267,10 +267,10 @@ def upgrade(refresh=False):
                 continue
             else:
                 ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                             'new': new_pkgs[pkg]}
+                                 'new': new_pkgs[pkg]}
         else:
             ret_pkgs[pkg] = {'old': '',
-                         'new': new_pkgs[pkg]}
+                             'new': new_pkgs[pkg]}
 
     return ret_pkgs
 
