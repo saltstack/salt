@@ -31,6 +31,13 @@ def _find_file(path, env='base'):
     return fnd
 
 
+def envs():
+    '''
+    Return the file server environments
+    '''
+    return __opts__['file_roots'].keys()
+
+
 def serve_file(load):
     '''
     Return a chunk from a file based on the data received
