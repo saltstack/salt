@@ -158,14 +158,20 @@ class Master(SMaster):
 
     def _clear_old_jobs(self):
         '''
-        Clean out the old jobs
+        The clean old jobs function is the geenral passive maintinance process
+        controller for the Salt master. This is where any data that needs to
+        be cleanly maintained from the master is maintained.
         '''
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = time.time()
+        fileserver = salt.loader.fileserver(
+                self.opts,
+                self.opts.get('fileserver_backend', 'roots')
+                )
         while True:
             if self.opts['keep_jobs'] != 0:
-                cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
+                cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
 
                 for top in os.listdir(jid_root):
                     t_path = os.path.join(jid_root, top)
@@ -185,6 +191,8 @@ class Master(SMaster):
                 now = time.time()
                 if now - last > self.opts['search_index_interval']:
                     search.index()
+            if 'update' in fileserver:
+                fileserver['update']()
             try:
                 time.sleep(60)
             except KeyboardInterrupt:

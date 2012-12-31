@@ -36,19 +36,24 @@ _DFLT_LOG_FMT_LOGFILE = (
 )
 
 
-def _validate_file_roots(file_roots):
+def _validate_file_roots(opts):
     '''
     If the file_roots option has a key that is None then we will error out,
     just replace it with an empty list
     '''
-    if not isinstance(file_roots, dict):
-        log.warning('The file_roots parameter is not properly formatted,'
-                    ' using defaults')
-        return {'base': ['/srv/salt']}
-    for env, dirs in list(file_roots.items()):
-        if not isinstance(dirs, list) and not isinstance(dirs, tuple):
-            file_roots[env] = []
-    return file_roots
+    if opts['fileserver_backend'] == 'roots':
+        if not isinstance(opts['file_roots'], dict):
+            log.warning('The file_roots parameter is not properly formatted,'
+                        ' using defaults')
+            return {'base': ['/srv/salt']}
+        for env, dirs in list(opts['file_roots'].items()):
+            if not isinstance(dirs, list) and not isinstance(dirs, tuple):
+                opts['file_roots'][env] = []
+        return opts['file_roots']
+    else:
+        if not isinstance(opts['file_roots'], list):
+            return []
+    return opts['file_roots']
 
 
 def _append_domain(opts):
@@ -439,7 +444,7 @@ def master_config(path):
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
-    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    opts['file_roots'] = _validate_file_roots(opts)
 
     if opts['file_ignore_regex']:
         # If file_ignore_regex was given, make sure it's wrapped in a list.
