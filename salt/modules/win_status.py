@@ -4,27 +4,31 @@ These data can be useful for compiling into stats later.
 '''
 
 import logging
-import pythoncom
+import salt.utils
 
+
+log = logging.getLogger(__name__)
 
 try:
+    import pythoncom
     import wmi
-    has_wmi = True
+    has_required_packages = True
 except ImportError:
-    has_wmi = False
+    log.exception('pywin32 and wmi python packages are required '
+                  'in order to use the status module.')
+    has_required_packages = False
 
 
 __opts__ = {}
 
 
-log = logging.getLogger(__name__)
-
-
 def __virtual__():
-    if 'Windows' in __grains__['os'] and has_wmi:
+    '''
+    Only works on Windows systems
+    '''
+    if salt.utils.is_windows() and has_required_packages:
         return 'status'
-    else:
-        return False
+    return False
 
 
 def procs():
