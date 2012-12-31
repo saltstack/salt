@@ -149,7 +149,7 @@ class Logging(LoggingLoggerClass):
                     msg.decode('utf-8', 'replace'),
                     args, exc_info, func, extra
                 )
-            except UnicodeEncodeError:
+            except UnicodeDecodeError:
                 return LoggingLoggerClass.makeRecord(
                     self, name, level, fn, lno,
                     msg.decode('utf-8', 'ignore'),
