@@ -30,17 +30,17 @@ def __virtual__():
     return 'git' if HAS_GIT else False
 
 
-def _check_ref(short, repo):
+def _get_ref(repo, short):
     '''
     Return bool if the short ref is in the repo
     '''
     for ref in repo.refs:
         if isinstance(ref, git.TagReference):
             if short == os.path.basename(ref.name):
-                return True
+                return ref
         elif isinstance(ref, git.Head):
             if short == os.path.basename(ref.name):
-                return True
+                return ref
     return False
 
 
@@ -54,10 +54,10 @@ def init():
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
-        repo = git.Repo.init(rp_)
+        repo = git.Repo.init(rp_, bare=True)
         if not repo.remotes:
             repo.create_remote('origin', __opts__['file_roots'][ind])
-        repos.append(repo.remotes.origin)
+        repos.append(repo)
     return repos
 
 
@@ -67,6 +67,8 @@ def update():
     '''
     repos = init()
     for repo in repos:
+        origin = repo.remotes[0]
+        origin.fetch()
         for ref in repo.refs:
             if isinstance(ref, git.refs.remote.RemoteReference):
                 found = False
@@ -75,13 +77,11 @@ def update():
                     if os.path.basename(branch.name) == short:
                         # Found it, make sure it has the correct ref
                         if not branch.tracking_branch() is ref:
-                            branch.set_tracking_branch
+                            branch.set_tracking_branch(ref)
                 if not found:
-                    branch = repo.create_head('refs/heads/{0}'.format(short))
+                    branch = repo.create_head(short, ref)
                     branch.set_tracking_branch(ref)
 
-        origin = repo.remotes[0]
-        origin.fetch()
 
 
 def envs():
@@ -145,7 +145,7 @@ def _find_file(path, short='base'):
                     fnd['path'] = dest
                     return fnd
         with open(dest, 'w+') as fp_:
-            git.util.stream_copy(blob.data_stream, fp_)
+            blob.stream_data(fp_)
         with open(shadest, 'w+') as fp_:
             fp_.write(blob.hexsha)
         if os.path.isfile(md5dest):
@@ -221,7 +221,7 @@ def file_list(load):
         return ret
     repos = init()
     for repo in repos:
-        ref = _get_ref(repo, load[env])
+        ref = _get_ref(repo, load['env'])
         if not ref:
             continue
         tree = ref.commit.tree
@@ -241,7 +241,7 @@ def file_list_emptydirs(load):
         return ret
     repos = init()
     for repo in repos:
-        ref = _get_ref(repo, load[env])
+        ref = _get_ref(repo, load['env'])
         if not ref:
             continue
         tree = ref.commit.tree
@@ -262,7 +262,7 @@ def dir_list(load):
         return ret
     repos = init()
     for repo in repos:
-        ref = _get_ref(repo, load[env])
+        ref = _get_ref(repo, load['env'])
         if not ref:
             continue
         tree = ref.commit.tree
