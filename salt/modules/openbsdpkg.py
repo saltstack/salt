@@ -112,7 +112,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example, Install one package::
 
