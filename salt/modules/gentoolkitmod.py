@@ -9,11 +9,7 @@ HAS_GENTOOLKIT = False
 
 # Import third party libs
 try:
-    from gentoolkit.eclean.search import DistfilesSearch
-    from gentoolkit.eclean.clean import CleanUp
-    from gentoolkit.eclean.cli import parseSize, parseTime
-    from gentoolkit.eclean.exclude import (parseExcludeFile,
-                                           ParseExcludeFileException)
+    from gentoolkit.eclean import search, clean, cli, exclude as excludemod
     HAS_GENTOOLKIT = True
 except ImportError:
     pass
@@ -61,7 +57,7 @@ def _parse_exclude(exclude_file):
     Return a dict as defined in gentoolkit.eclean.exclude.parseExcludeFile
     '''
     if os.path.isfile(exclude_file):
-        exclude = parseExcludeFile(exclude_file, lambda x: None)
+        exclude = excludemod.parseExcludeFile(exclude_file, lambda x: None)
     else:
         exclude = dict()
     return exclude
@@ -115,12 +111,12 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
             exclude = _parse_exclude(exclude_file)
 
         if time_limit is not 0:
-            time_limit = parseTime(time_limit)
+            time_limit = cli.parseTime(time_limit)
         if size_limit is not 0:
-            size_limit = parseSize(size_limit)
+            size_limit = cli.parseSize(size_limit)
 
         clean_size=0
-        engine = DistfilesSearch(lambda x: None)
+        engine = search.DistfilesSearch(lambda x: None)
         clean_me, saved, deprecated = engine.findDistfiles(
             destructive=destructive, package_names=package_names,
             size_limit=size_limit, time_limit=time_limit,
@@ -132,12 +128,12 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
             return True
 
         if clean_me:
-            cleaner = CleanUp(_eclean_progress_controller)
+            cleaner = clean.CleanUp(_eclean_progress_controller)
             clean_size = cleaner.clean_dist(clean_me)
 
         ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
                'total_cleaned': _pretty_size(clean_size)}
-    except ParseExcludeFileException as e:
+    except excludemod.ParseExcludeFileException as e:
         ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
     finally:
         return ret
