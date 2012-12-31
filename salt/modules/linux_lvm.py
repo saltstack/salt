@@ -144,9 +144,65 @@ def lvdisplay(lvname=''):
             }
     return ret
 
+
+def pvcreate(devices, **kwargs):
+    '''
+    Set a physical device to be used as an LVM physical volume
+
+    CLI Examples::
+
+        salt mymachine lvm.pvcreate /dev/sdb1,/dev/sdb2
+        salt mymachine lvm.pvcreate /dev/sdb1 dataalignmentoffset=7s
+    '''
+    if not devices:
+        return 'Error: at least one device is required'
+
+    ret = {}
+    cmd = 'pvcreate'
+    for device in devices.split(','):
+        cmd += ' {0}'.format(device)
+    valid = ('metadatasize', 'dataalignment', 'dataalignmentoffset',
+             'pvmetadatacopies', 'metadatacopies', 'metadataignore',
+             'restorefile', 'norestorefile', 'labelsector',
+             'setphysicalvolumesize')
+    for var in kwargs.keys():
+        if kwargs[var] and var in valid:
+            cmd += ' --{0} {1}'.format(var, kwargs[var])
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out[0]
+
+
+def vgcreate(vgname, devices, **kwargs):
+    '''
+    Create an LVM volume group
+
+    CLI Examples::
+
+        salt mymachine lvm.vgcreate my_vg /dev/sdb1,/dev/sdb2
+        salt mymachine lvm.vgcreate my_vg /dev/sdb1 clustered=y
+    '''
+    if not vgname or not devices:
+        return 'Error: vgname and device(s) are both required'
+
+    ret = {}
+    cmd = 'vgcreate {0}'.format(vgname)
+    for device in devices.split(','):
+        cmd += ' {0}'.format(device)
+    valid = ('clustered', 'maxlogicalvolumes', 'maxphysicalvolumes',
+             'vgmetadatacopies', 'metadatacopies', 'physicalextentsize')
+    for var in kwargs.keys():
+        if kwargs[var] and var in valid:
+            cmd += ' --{0} {1}'.format(var, kwargs[var])
+    out = __salt__['cmd.run'](cmd).splitlines()
+    vgdata = vgdisplay(vgname)
+    vgdata['Output from vgcreate'] = out[0].strip()
+    return vgdata
+
+
 def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
     '''
     Create a new logical volume, with option for which physical volume to be used
+
     CLI Examples::
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
@@ -162,13 +218,32 @@ def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
         cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(lvname, vgname, extents, pv)
     else:
         return 'Error: Either size or extents must be specified'
+    out = __salt__['cmd.run'](cmd).splitlines()
+    lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
+    lvdata = lvdisplay(lvdev)
+    lvdata['Output from lvcreate'] = out[0].strip()
+    return lvdata
+
+
+def vgremove(vgname):
+    '''
+    Remove an LVM volume group
+
+    CLI Examples::
+
+        salt mymachine lvm.vgremove vgname
+        salt mymachine lvm.vgremove vgname force=True
+    '''
+    cmd = 'vgremove -f {0}'.format(vgname)
     out = __salt__['cmd.run'](cmd)
-    return out
+    return out.strip()
+
 
 def lvremove(lvname, vgname, force=False):
     '''
     Remove a given existing logical volume from a named existing volume group
-    CLI Examples::
+
+    CLI Example::
 
         salt '*' lvm.lvremove lvname vgname force=True
     '''
@@ -177,4 +252,4 @@ def lvremove(lvname, vgname, force=False):
         forcearg = '-f'
     cmd = 'lvremove {0} {1}/{2}'.format(forcearg, vgname, lvname)
     out = __salt__['cmd.run'](cmd)
-    return out
+    return out.strip()
