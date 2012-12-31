@@ -15,7 +15,7 @@ def get_auth_url():
     Try and get the url from the config, else return localhost
     '''
     try:
-        return __opts__['auth.keystone.url']
+        return __opts__['keystone.auth_url']
     except KeyError:
         return 'http://localhost:35357/v2.0'
 
