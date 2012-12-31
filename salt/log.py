@@ -139,6 +139,26 @@ class Logging(LoggingLoggerClass):
             pass
         return instance
 
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
+                   extra=None):
+        # Let's try to make every logging message unicode
+        if isinstance(msg, basestring) and not isinstance(msg, unicode):
+            try:
+                return LoggingLoggerClass.makeRecord(
+                    self, name, level, fn, lno,
+                    msg.decode('utf-8', 'replace'),
+                    args, exc_info, func, extra
+                )
+            except UnicodeEncodeError:
+                return LoggingLoggerClass.makeRecord(
+                    self, name, level, fn, lno,
+                    msg.decode('utf-8', 'ignore'),
+                    args, exc_info, func, extra
+                )
+        return LoggingLoggerClass.makeRecord(
+            self, name, level, fn, lno, msg, args, exc_info, func, extra
+        )
+
     def garbage(self, msg, *args, **kwargs):
         return LoggingLoggerClass.log(self, GARBAGE, msg, *args, **kwargs)
 
@@ -310,9 +330,13 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         handler = logging.handlers.SysLogHandler(**syslog_opts)
     else:
         try:
+            # Logfile logging is UTF-8 on purpose.
+            # Since salt uses yaml and yaml uses either UTF-8 or UTF-16, if a
+            # user is not using plain ascii, he's system should be ready to
+            # handle UTF-8.
             handler = getattr(
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler
-            )(log_path, 'a', 'utf-8', delay=0)
+            )(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
             sys.stderr.write(
                 'Failed to open log file, do you have permission to write to '
