@@ -137,3 +137,63 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
     finally:
         return ret
+
+def eclean_pkg(destructive=False, package_names=False, time_limit=0,
+               exclude_file='/etc/eclean/packages.exclude'):
+    '''
+    Clean obsolete portage sources
+
+    destructive
+        Only keep minimum for reinstallation
+
+    package_names
+        Protect all versions of installed packages. Only meaningful if used
+        with destructive=True
+
+    time_limit <time>
+        Don't delete distfiles files modified since <time>
+        <time> is an amount of time: "1y" is "one year", "2w" is
+        "two weeks", etc. Units are: y (years), m (months), w (weeks),
+        d (days) and h (hours).
+
+    exclude_file
+        Path to exclusion file. Default is /etc/eclean/packages.exclude
+        This is the same default eclean-pkg uses. Use None if this file
+        exists and you want to ignore.
+
+    Return a dict containing the cleaned binary packages::
+
+        {'cleaned': {<dist file>: <size>},
+         'total_cleaned': <size>}
+
+    CLI Example::
+        salt '*' gentoolkit.eclean_pkg destructive=True
+    '''
+    try:
+        exclude = None
+        if exclude_file is not None:
+            exclude = _parse_exclude(exclude_file)
+
+        if time_limit is not 0:
+            time_limit = cli.parseTime(time_limit)
+
+        clean_size=0
+        clean_me = search.findPackages(
+            destructive=destructive, package_names=package_names,
+            time_limit=time_limit, exclude=exclude, pkgdir=search.pkgdir)
+
+        cleaned = dict()
+        def _eclean_progress_controller(size, key, *args):
+            cleaned[key] = _pretty_size(size)
+            return True
+
+        if clean_me:
+            cleaner = clean.CleanUp(_eclean_progress_controller)
+            clean_size = cleaner.clean_pkgs(clean_me, search.pkgdir)
+
+        ret = {'cleaned': cleaned,
+               'total_cleaned': _pretty_size(clean_size)}
+    except excludemod.ParseExcludeFileException as e:
+        ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
+    finally:
+        return ret
