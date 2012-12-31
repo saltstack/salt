@@ -224,9 +224,9 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         return {}
 
     # Get repo options from the kwargs
-    disablerepo = kwargs.get('disablerepo','')
-    enablerepo = kwargs.get('enablerepo','')
-    repo = kwargs.get('repo','')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+    repo = kwargs.get('repo', '')
 
     # Support old "repo" argument
     if not fromrepo and repo:

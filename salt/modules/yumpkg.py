@@ -333,9 +333,9 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
     # Get repo options from the kwargs
-    disablerepo = kwargs.get('disablerepo','')
-    enablerepo = kwargs.get('enablerepo','')
-    repo = kwargs.get('repo','')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+    repo = kwargs.get('repo', '')
 
     # Support old "repo" argument
     if not fromrepo and repo:
@@ -394,7 +394,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         log.error('Install failed: {0}'.format(e))
 
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():
@@ -432,7 +432,7 @@ def upgrade():
         log.error('Upgrade failed: {0}'.format(e))
 
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(pkgs):

@@ -208,7 +208,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     if stderr:
         log.error(stderr)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():

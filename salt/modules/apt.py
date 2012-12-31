@@ -189,7 +189,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
                                                                   sources)
 
     # Support old "repo" argument
-    repo = kwargs.get('repo','')
+    repo = kwargs.get('repo', '')
     if not fromrepo and repo:
         fromrepo = repo
 
@@ -219,7 +219,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         )
 
     old = list_pkgs()
-    __salt__['cmd.run_all'](cmd).get('stderr', '')
+    __salt__['cmd.run_all'](cmd)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -283,7 +283,7 @@ def upgrade(refresh=True, **kwargs):
 
         [
             {'<package>':  {'old': '<old-version>',
-                        'new': '<new-version>']
+                            'new': '<new-version>'}
             }',
             ...
         ]
@@ -308,10 +308,10 @@ def upgrade(refresh=True, **kwargs):
                 continue
             else:
                 ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                             'new': new_pkgs[pkg]}
+                                 'new': new_pkgs[pkg]}
         else:
             ret_pkgs[pkg] = {'old': '',
-                         'new': new_pkgs[pkg]}
+                             'new': new_pkgs[pkg]}
 
     return ret_pkgs
 
