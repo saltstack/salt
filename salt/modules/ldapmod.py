@@ -41,9 +41,9 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 try:
     import ldap
     import ldap.modlist
-    has_ldap = True
+    HAS_LDAP = True
 except ImportError:
-    has_ldap = False
+    HAS_LDAP = False
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def __virtual__():
     Only load this module if the ldap config is set
     '''
     # These config items must be set in the minion config
-    if has_ldap:
+    if HAS_LDAP:
         return 'ldap'
     return False
 
@@ -83,10 +83,14 @@ def _connect(**kwargs):
     for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
         connargs[name] = _config(name, **kwargs)
 
-    return _LDAPConnection(**connargs).LDAP
+    return _LDAPConnection(**connargs).ldap
 
 
-def search(filter, dn=None, scope=None, attrs=None, **kwargs):
+def search(filter,      # pylint: disable-msg=C0103
+           dn=None,     # pylint: disable-msg=C0103
+           scope=None,
+           attrs=None,
+           **kwargs):
     '''
     Run an arbitrary LDAP query and return the results.
 
@@ -110,7 +114,7 @@ def search(filter, dn=None, scope=None, attrs=None, **kwargs):
 
     '''
     if not dn:
-        dn = _config('dn', 'basedn')
+        dn = _config('dn', 'basedn')  # pylint: disable-msg=C0103
     if not scope:
         scope = _config('scope')
     if attrs == '':  # Allow command line 'return all' attr override
@@ -119,9 +123,12 @@ def search(filter, dn=None, scope=None, attrs=None, **kwargs):
         attrs = _config('attrs')
     _ldap = _connect(**kwargs)
     start = time.time()
-    msg = 'Running LDAP search with filter:%s, dn:%s, scope:%s, attrs:%s' %\
-        (filter, dn, scope, attrs)
-    log.debug(msg)
+    log.debug(
+        'Running LDAP search with filter:{0}, dn:{1}, scope:{2}, '
+        'attrs:{3}'.format(
+            filter, dn, scope, attrs
+        )
+    )
     results = _ldap.search_s(dn, int(scope), filter, attrs)
     elapsed = (time.time() - start)
     if elapsed < 0.200:
@@ -152,13 +159,16 @@ class _LDAPConnection:
         self.bindpw = bindpw
         try:
             # TODO: Support ldaps:// and possibly ldapi://
-            self.LDAP = ldap.initialize('ldap://%s:%s' %
-                                        (self.server, self.port))
-            self.LDAP.protocol_version = 3  # ldap.VERSION3
+            self.ldap = ldap.initialize('ldap://{0}:{1}'.format(
+                self.server, self.port
+            ))
+            self.ldap.protocol_version = 3  # ldap.VERSION3
             if self.tls:
-                self.LDAP.start_tls_s()
-            self.LDAP.simple_bind_s(self.binddn, self.bindpw)
+                self.ldap.start_tls_s()
+            self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception:
-            msg = 'Failed to bind to LDAP server {0}:{1} as {2}'.format(
-                self.server, self.port, self.binddn)
-            raise CommandExecutionError(msg)
+            raise CommandExecutionError(
+                'Failed to bind to LDAP server {0}:{1} as {2}'.format(
+                    self.server, self.port, self.binddn
+                )
+            )

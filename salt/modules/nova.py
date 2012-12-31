@@ -13,10 +13,10 @@ Module for handling openstack nova calls.
 '''
 
 # Import third party libs
-has_nova = False
+HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
-    has_nova = True
+    HAS_NOVA = True
 except ImportError:
     pass
 
@@ -29,7 +29,7 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    if has_nova:
+    if HAS_NOVA:
         return 'nova'
     return False
 
@@ -45,10 +45,9 @@ def _auth():
     password = __salt__['config.option']('keystone.password')
     tenant = __salt__['config.option']('keystone.tenant')
     auth_url = __salt__['config.option']('keystone.auth_url')
-    nt = client.Client(
+    return client.Client(
         user, password, tenant, auth_url, service_type="compute"
     )
-    return nt
 
 
 def flavor_list():
@@ -59,9 +58,9 @@ def flavor_list():
 
         salt '*' nova.flavor_list
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for flavor in nt.flavors.list():
+    for flavor in nt_ks.flavors.list():
         links = {}
         for link in flavor.links:
             links[link['rel']] = link['href']
@@ -78,7 +77,11 @@ def flavor_list():
     return ret
 
 
-def flavor_create(name, id=0, ram=0, disk=0, vcpus=1):
+def flavor_create(name,      # pylint: disable-msg=C0103
+                  id=0,      # pylint: disable-msg=C0103
+                  ram=0,
+                  disk=0,
+                  vcpus=1):
     '''
     Add a flavor to nova (nova flavor-create). The following parameters are
     required:
@@ -93,8 +96,10 @@ def flavor_create(name, id=0, ram=0, disk=0, vcpus=1):
 
         salt '*' nova.flavor_create myflavor id=6 ram=4096 disk=10 vcpus=1
     '''
-    nt = _auth()
-    nt.flavors.create(name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus)
+    nt_ks = _auth()
+    nt_ks.flavors.create(
+        name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus
+    )
     return {'name': name,
             'id': id,
             'ram': ram,
@@ -102,7 +107,7 @@ def flavor_create(name, id=0, ram=0, disk=0, vcpus=1):
             'vcpus': vcpus}
 
 
-def flavor_delete(id):
+def flavor_delete(id):  # pylint: disable-msg=C0103
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
@@ -110,8 +115,8 @@ def flavor_delete(id):
 
         salt '*' nova.flavor_delete 7'
     '''
-    nt = _auth()
-    nt.flavors.delete(id)
+    nt_ks = _auth()
+    nt_ks.flavors.delete(id)
     return 'Flavor deleted: {0}'.format(id)
 
 
@@ -123,9 +128,9 @@ def keypair_list():
 
         salt '*' nova.keypair_list
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for keypair in nt.keypairs.list():
+    for keypair in nt_ks.keypairs.list():
         ret[keypair.name] = {
                 'name': keypair.name,
                 'fingerprint': keypair.fingerprint,
@@ -143,13 +148,13 @@ def keypair_add(name, pubfile=None, pubkey=None):
         salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAuGj4A7HcPLPl/etc== myuser@mybox'
     '''
-    nt = _auth()
+    nt_ks = _auth()
     if pubfile:
-        f = salt.utils.fopen(pubfile, 'r')
-        pubkey = f.read()
+        ifile = salt.utils.fopen(pubfile, 'r')
+        pubkey = ifile.read()
     if not pubkey:
         return False
-    nt.keypairs.create(name, public_key=pubkey)
+    nt_ks.keypairs.create(name, public_key=pubkey)
     ret = {'name': name, 'pubkey': pubkey}
     return ret
 
@@ -162,8 +167,8 @@ def keypair_delete(name):
 
         salt '*' nova.keypair_delete mykey'
     '''
-    nt = _auth()
-    nt.keypairs.delete(name)
+    nt_ks = _auth()
+    nt_ks.keypairs.delete(name)
     return 'Keypair deleted: {0}'.format(name)
 
 
@@ -177,9 +182,9 @@ def image_list(name=None):
         salt '*' nova.image_list
         salt '*' nova.image_list myimage
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for image in nt.images.list():
+    for image in nt_ks.images.list():
         links = {}
         for link in image.links:
             links[link['rel']] = link['href']
@@ -200,7 +205,7 @@ def image_list(name=None):
     return ret
 
 
-def image_meta_set(id=None, name=None, **kwargs):
+def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
@@ -209,18 +214,20 @@ def image_meta_set(id=None, name=None, **kwargs):
         salt '*' nova.image_meta_set id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
-    nt = _auth()
+    nt_ks = _auth()
     if name:
-        for image in nt.images.list():
+        for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id
+                id = image.id  # pylint: disable-msg=C0103
     if not id:
         return {'Error': 'A valid image name or id was not specified'}
-    nt.images.set_meta(id, kwargs)
+    nt_ks.images.set_meta(id, kwargs)
     return {id: kwargs}
 
 
-def image_meta_delete(id=None, name=None, keys=None):
+def image_meta_delete(id=None,     # pylint: disable-msg=C0103
+                      name=None,
+                      keys=None):
     '''
     Delete a key=value pair from the metadata for an image (nova image-meta set)
 
@@ -229,15 +236,15 @@ def image_meta_delete(id=None, name=None, keys=None):
         salt '*' nova.image_meta_delete id=6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
-    nt = _auth()
+    nt_ks = _auth()
     if name:
-        for image in nt.images.list():
+        for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id
+                id = image.id  # pylint: disable-msg=C0103
     pairs = keys.split(',')
     if not id:
         return {'Error': 'A valid image name or id was not specified'}
-    nt.images.delete_meta(id, pairs)
+    nt_ks.images.delete_meta(id, pairs)
     return {id: 'Deleted: {0}'.format(pairs)}
 
 
@@ -257,9 +264,9 @@ def server_list():
 
         salt '*' nova.show
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for item in nt.servers.list():
+    for item in nt_ks.servers.list():
         ret[item.name] = {
             'id': item.id,
             'name': item.name,
@@ -284,9 +291,9 @@ def server_show(server_id):
 
         salt '*' nova.show
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for item in nt.servers.list():
+    for item in nt_ks.servers.list():
         if item.id == server_id:
             ret[item.name] = {
                 'OS-DCF': {'diskConfig': item.__dict__['OS-DCF:diskConfig']},
@@ -329,8 +336,8 @@ def secgroup_create(name, description):
 
         salt '*' nova.secgroup_create mygroup 'This is my security group'
     '''
-    nt = _auth()
-    nt.security_groups.create(name, description)
+    nt_ks = _auth()
+    nt_ks.security_groups.create(name, description)
     ret = {'name': name, 'description': description}
     return ret
 
@@ -343,10 +350,10 @@ def secgroup_delete(name):
 
         salt '*' nova.secgroup_delete mygroup
     '''
-    nt = _auth()
-    for item in nt.security_groups.list():
+    nt_ks = _auth()
+    for item in nt_ks.security_groups.list():
         if item.name == name:
-            nt.security_groups.delete(item.id)
+            nt_ks.security_groups.delete(item.id)
             return {name: 'Deleted security group: {0}'.format(name)}
     return 'Security group not found: {0}'.format(name)
 
@@ -359,9 +366,9 @@ def secgroup_list():
 
         salt '*' nova.secgroup_list
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for item in nt.security_groups.list():
+    for item in nt_ks.security_groups.list():
         ret[item.name] = {
                 'name': item.name,
                 'description': item.description,
@@ -381,9 +388,9 @@ def _item_list():
 
         salt '*' nova.item_list
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = []
-    for item in nt.items.list():
+    for item in nt_ks.items.list():
         ret.append(item.__dict__)
         #ret[item.name] = {
         #        'name': item.name,

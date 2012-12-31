@@ -67,15 +67,16 @@ import json
 try:
     import psycopg2
     #import psycopg2.extras
-    has_postgres = True
+    HAS_POSTGRES = True
 except ImportError:
-    has_postgres = False
+    HAS_POSTGRES = False
 
 
 def __virtual__():
-    if not has_postgres:
+    if not HAS_POSTGRES:
         return False
     return 'postgres'
+
 
 def _get_conn():
     '''
@@ -88,9 +89,11 @@ def _get_conn():
             database=__salt__['config.option']('returner.postgres.db'),
             port=__salt__['config.option']('returner.postgres.port'))
 
+
 def _close_conn(conn):
     conn.commit()
     conn.close()
+
 
 def returner(ret):
     '''
@@ -101,8 +104,17 @@ def returner(ret):
     sql = '''INSERT INTO returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)'''
-    cur.execute(sql, (ret['fun'], ret['jid'], json.dumps(ret['return']), ret['id'], ret['success']))
+    cur.execute(
+        sql, (
+            ret['fun'],
+            ret['jid'],
+            json.dumps(ret['return']),
+            ret['id'],
+            ret['success']
+        )
+    )
     _close_conn(conn)
+
 
 def save_load(jid, load):
     '''
@@ -114,6 +126,7 @@ def save_load(jid, load):
 
     cur.execute(sql, (jid, json.dumps(load)))
     _close_conn(conn)
+
 
 def get_load(jid):
     '''
@@ -129,6 +142,7 @@ def get_load(jid):
         return json.loads(data)
     _close_conn(conn)
     return {}
+
 
 def get_jid(jid):
     '''
@@ -146,6 +160,7 @@ def get_jid(jid):
             ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
+
 
 def get_fun(fun):
     '''
@@ -170,6 +185,7 @@ def get_fun(fun):
     _close_conn(conn)
     return ret
 
+
 def get_jids():
     '''
     Return a list of all job ids
@@ -185,6 +201,7 @@ def get_jids():
         ret.append(jid[0])
     _close_conn(conn)
     return ret
+
 
 def get_minions():
     '''

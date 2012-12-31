@@ -61,7 +61,7 @@ def available_version(name):
             _cmd('pkg'), name)
         ).splitlines():
             if line.startswith('Version'):
-                fn, ver = line.split(':', 1)
+                _, ver = line.split(':', 1)
                 return ver.strip()
     return ''
 
@@ -249,14 +249,14 @@ def remove(name=None, pkgs=None):
     old = list_pkgs()
     args = []
 
-    for p in pkg_params:
-        ver = old.get(p, [])
+    for param in pkg_params:
+        ver = old.get(param, [])
         if not ver:
             continue
         if isinstance(ver, list):
-            args.extend(['{0}-{1}'.format(p, v) for v in ver])
+            args.extend(['{0}-{1}'.format(param, v) for v in ver])
         else:
-            args.append('{0}-{1}'.format(p, ver))
+            args.append('{0}-{1}'.format(param, ver))
 
     if not args:
         return {}

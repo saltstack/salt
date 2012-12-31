@@ -22,13 +22,13 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
     '''
     ret = []
     try:
-        file = salt.utils.fopen(maclist, 'r')
-        for mac in file:
-            wol(mac.strip(), bcast, destport)
-            print('Waking up {0}'.format(mac.strip()))
-            ret.append(mac)
-    except Exception as inst:
-        print('Failed to open the MAC file. Error: {0}'.format(inst))
+        with salt.utils.fopen(maclist, 'r') as ifile:
+            for mac in ifile:
+                wol(mac.strip(), bcast, destport)
+                print('Waking up {0}'.format(mac.strip()))
+                ret.append(mac)
+    except Exception as err:
+        print('Failed to open the MAC file. Error: {0}'.format(err))
         return []
     return ret
 
@@ -50,14 +50,14 @@ def wol(mac, bcast='255.255.255.255', destport=9):
         mac = mac.replace(sep, '')
     else:
         raise ValueError('Invalid MAC address')
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     dest = ('\\x' + mac[0:2]).decode('string_escape') + \
-            ('\\x' + mac[2:4]).decode('string_escape') + \
-            ('\\x' + mac[4:6]).decode('string_escape') + \
-            ('\\x' + mac[6:8]).decode('string_escape') + \
-            ('\\x' + mac[8:10]).decode('string_escape') + \
-            ('\\x' + mac[10:12]).decode('string_escape')
-    s.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
+           ('\\x' + mac[2:4]).decode('string_escape') + \
+           ('\\x' + mac[4:6]).decode('string_escape') + \
+           ('\\x' + mac[6:8]).decode('string_escape') + \
+           ('\\x' + mac[8:10]).decode('string_escape') + \
+           ('\\x' + mac[10:12]).decode('string_escape')
+    sock.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
     print('Sent magic packet to minion.')
     return True
