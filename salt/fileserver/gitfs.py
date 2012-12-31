@@ -92,7 +92,7 @@ def envs():
     repos = init()
     for repo in repos:
         for ref in repo.refs:
-            if isinstance(ref, git.refs.head.Head):
+            if isinstance(ref, git.Head) or isinstance(ref, git.Tag):
                 short = os.path.basename(ref.name)
                 ret.add(short)
     return list(ret)
