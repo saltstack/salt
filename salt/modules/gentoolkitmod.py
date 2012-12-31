@@ -200,3 +200,56 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
         ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
     finally:
         return ret
+
+def _glsa_list_process_output(line):
+    '''
+    Process a single output line from glsa_check_list
+
+    Returns a dict containing the glsa id, description, status, and CVEs
+    '''
+    ret = dict()
+    try:
+        glsa_id, status, line = line.split(None, 2)
+        if 'CVE' in line:
+            desc, cves = line.rsplit(None, 1)
+        else:
+            desc = line
+            cves = ''
+        ret[glsa_id] = {'description': desc, 'status': status, 'CVEs': cves}
+    except ValueError:
+        pass
+    return ret
+
+def glsa_check_list(glsa_list):
+    '''
+    List the status of Gentoo Linux Security Advisories
+
+    glsa_list
+         can contain an arbitrary number of GLSA ids, filenames
+         containing GLSAs or the special identifiers 'all' and 'affected'
+
+    Returns a dict containing glsa ids with a description, status, and CVEs::
+
+        {<glsa id>: {'description': <glsa description>,
+            'status': <glsa status>,
+            'CVEs': <list of CVEs>}}
+
+    CLI Example::
+
+        salt '*' gentoolkit.glsa_check_list 'affected'
+    '''
+    cmd = 'glsa-check --quiet --nocolor --cve --list '
+    if isinstance(glsa_list, list):
+        for glsa in glsa_list:
+            cmd += glsa
+    elif glsa_list is 'all' or glsa_list is 'affected':
+        cmd += glsa_list
+    else:
+        # TODO: Should this return some type of error? or just fail quietly?
+        return {}
+
+    ret = dict()
+    out = __salt__['cmd.run'](cmd).split('\n')
+    for line in out:
+        ret.update(_glsa_list_process_output(line))
+    return ret
