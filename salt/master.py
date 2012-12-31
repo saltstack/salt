@@ -577,6 +577,8 @@ class AESFuncs(object):
         self._file_list = fsfuncs['file_list']
         self._file_list_emptydirs = fsfuncs['file_list_emptydirs']
         self._dir_list = fsfuncs['dir_list']
+        if self.opts['fileserver_backend'] != 'roots':
+            self._file_envs = fsfuncs['envs']
 
     def __verify_minion(self, id_, token):
         '''
