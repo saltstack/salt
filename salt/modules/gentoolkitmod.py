@@ -211,6 +211,12 @@ def _glsa_list_process_output(output):
     for line in output:
         try:
             glsa_id, status, desc = line.split(None, 2)
+            if 'U' in status:
+                status += ' Not Affected'
+            elif 'N' in status:
+                status += ' Might be Affected'
+            elif 'A' in status:
+                status += ' Applied (injected)'
             if 'CVE' in desc:
                 desc, cves = desc.rsplit(None, 1)
             else:
