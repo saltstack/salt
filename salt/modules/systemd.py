@@ -184,6 +184,17 @@ def reload(name):
     return not __salt__['cmd.retcode'](_systemctl_cmd('reload', name))
 
 
+def force_reload(name):
+    '''
+    Force-reload the specified service with systemd
+
+    CLI Example::
+
+        salt '*' service.force_reload <service name>
+    '''
+    return not __salt__['cmd.retcode'](_systemctl_cmd('force-reload', name))
+
+
 # The unused sig argument is required to maintain consistency in the state
 # system
 def status(name, sig=None):
