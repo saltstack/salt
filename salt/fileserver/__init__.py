@@ -155,7 +155,7 @@ class Fileserver(object):
         ret = set()
         if 'env' not in load:
             return []
-        for fsb in self._get_back(None):
+        for fsb in self._gen_back(None):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -168,7 +168,7 @@ class Fileserver(object):
         ret = set()
         if 'env' not in load:
             return []
-        for fsb in self._get_back(None):
+        for fsb in self._gen_back(None):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -181,7 +181,7 @@ class Fileserver(object):
         ret = set()
         if 'env' not in load:
             return []
-        for fsb in self._get_back(None):
+        for fsb in self._gen_back(None):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
