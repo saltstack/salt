@@ -135,7 +135,7 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example, installing a datastream pkg that already exists on the
     minion::
