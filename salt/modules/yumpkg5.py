@@ -148,8 +148,8 @@ def refresh_db():
     return True
 
 
-def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
-            sources=None, **kwargs):
+def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
+            pkgs=None, sources=None, **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -167,12 +167,27 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     refresh
         Whether or not to clean the yum database before executing.
 
-    repo
-        Specify a package repository from which to install the package
-        (e.g., ``yum --enablerepo=somerepo``)
-
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
+
+    version
+        Install a specific version of the package, e.g. 1.0.9. Ignored
+        if "pkgs" or "sources" is passed.
+
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
 
 
     Multiple Package Installation Options:
@@ -196,7 +211,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
@@ -208,15 +223,34 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
+    # Get repo options from the kwargs
+    disablerepo = kwargs.get('disablerepo','')
+    enablerepo = kwargs.get('enablerepo','')
+    repo = kwargs.get('repo','')
+
+    # Support old "repo" argument
+    if not fromrepo and repo:
+        fromrepo = repo
+
+    if fromrepo:
+        log.info('Restricting install to repo \'{0}\''.format(fromrepo))
+        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
+    else:
+        repo_arg = ''
+        if disablerepo:
+            log.info('Disabling repo \'{0}\''.format(disablerepo))
+            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
+        if enablerepo:
+            log.info('Enabling repo \'{0}\''.format(enablerepo))
+            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+
     cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
-        repo='--enablerepo={0}'.format(repo) if repo else '',
+        repo=repo_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '',
         pkg=' '.join(pkg_params),
     )
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
-    if stderr:
-        log.error(stderr)
+    __salt__['cmd.run_all'](cmd)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -228,7 +262,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 

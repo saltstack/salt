@@ -34,7 +34,7 @@ def installed(
         name,
         version=None,
         refresh=False,
-        repo='',
+        fromrepo=None,
         skip_verify=False,
         pkgs=None,
         sources=None,
@@ -49,11 +49,14 @@ def installed(
         option can only be used to install packages from a software repository.
         To install a package file manually, use the "sources" option detailed
         below.
-    repo
-        Specify a non-default repository to install from
-    skip_verify : False
+
+    fromrepo
+        Specify a repository from which to install
+
+    skip_verify
         Skip the GPG verification check for the package to be installed
-    version : None
+
+    version
         Install a specific version of a package. This option is ignored if
         either "pkgs" or "sources" is used.
 
@@ -61,12 +64,12 @@ def installed(
 
         httpd:
           pkg.installed:
-            - repo: mycustomrepo
+            - fromrepo: mycustomrepo
             - skip_verify: True
             - version: 2.0.6~ubuntu3
 
 
-    Multiple Package Installation Options: (not supported in Windows, FreeBSD)
+    Multiple Package Installation Options: (not supported in Windows)
 
     pkgs
         A list of packages to install from a software repository.
@@ -178,7 +181,7 @@ def installed(
         changes = __salt__['pkg.install'](name,
                                           refresh=True,
                                           version=version,
-                                          repo=repo,
+                                          fromrepo=fromrepo,
                                           skip_verify=skip_verify,
                                           pkgs=pkgs,
                                           sources=sources,
@@ -188,7 +191,7 @@ def installed(
     else:
         changes = __salt__['pkg.install'](name,
                                           version=version,
-                                          repo=repo,
+                                          fromrepo=fromrepo,
                                           skip_verify=skip_verify,
                                           pkgs=pkgs,
                                           sources=sources,
@@ -223,7 +226,7 @@ def installed(
             'comment': comment}
 
 
-def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
+def latest(name, refresh=False, fromrepo=None, skip_verify=False, **kwargs):
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
@@ -233,9 +236,11 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
 
     name
         The name of the package to maintain at the latest available version
-    repo : (default)
-        Specify a non-default repository to install from
-    skip_verify : False
+
+    fromrepo
+        Specify a repository from which to install
+
+    skip_verify
         Skip the GPG verification check for the package to be installed
     '''
     rtag = __gen_rtag()
@@ -274,7 +279,7 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         if refresh or os.path.isfile(rtag):
             ret['changes'] = __salt__['pkg.install'](name,
                                                      refresh=True,
-                                                     repo=repo,
+                                                     fromrepo=fromrepo,
                                                      skip_verify=skip_verify,
                                                      **kwargs)
             if os.path.isfile(rtag):
@@ -282,7 +287,7 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
 
         else:
             ret['changes'] = __salt__['pkg.install'](name,
-                                                     repo=repo,
+                                                     fromrepo=fromrepo,
                                                      skip_verify=skip_verify,
                                                      **kwargs)
 

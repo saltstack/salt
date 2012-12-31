@@ -245,8 +245,8 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
-            sources=None, **kwargs):
+def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
+            pkgs=None, sources=None, **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -264,16 +264,28 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     refresh
         Whether or not to clean the yum database before executing.
 
-    repo
-        Specify a package repository to install from.
-        (e.g., ``yum --enablerepo=somerepo``)
-
     skip_verify
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
 
     version
         Install a specific version of the package, e.g. 1.0.9. Ignored
         if "pkgs" or "sources" is passed.
+
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
 
     Multiple Package Installation Options:
 
@@ -296,7 +308,7 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
 
     # This allows modules to specify the version in a kwarg, like the other
@@ -320,12 +332,33 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     setattr(yumbase.conf, 'assumeyes', True)
     setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
-    if repo:
-        log.info('Enabling repo \'{0}\''.format(repo))
-        yumbase.repos.enableRepo(repo)
+    # Get repo options from the kwargs
+    disablerepo = kwargs.get('disablerepo','')
+    enablerepo = kwargs.get('enablerepo','')
+    repo = kwargs.get('repo','')
 
-    for target in pkg_params:
-        try:
+    # Support old "repo" argument
+    if not fromrepo and repo:
+        fromrepo = repo
+
+    try:
+        if fromrepo:
+            log.info('Restricting install to repo \'{0}\''.format(fromrepo))
+            yumbase.repos.disableRepo('*')
+            yumbase.repos.enableRepo(fromrepo)
+        else:
+            if disablerepo:
+                log.info('Disabling repo \'{0}\''.format(disablerepo))
+                yumbase.repos.disableRepo(disablerepo)
+            if enablerepo:
+                log.info('Enabling repo \'{0}\''.format(enablerepo))
+                yumbase.repos.enableRepo(enablerepo)
+    except yum.Errors.RepoError as e:
+        log.error(e)
+        return {}
+
+    try:
+        for target in pkg_params:
             if pkg_type == 'file':
                 log.info(
                     'Selecting "{0}" for local installation'.format(target)
@@ -345,24 +378,23 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 if len(installed) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying downgrade')
                     yumbase.downgrade(pattern=target)
-        except Exception:
-            log.exception('Package "{0}" failed to install'.format(target))
-    # Resolve Deps before attempting install.  This needs to be improved by
-    # also tracking any deps that may get upgraded/installed during this
-    # process. For now only the version of the package(s) you request be
-    # installed is tracked.
-    log.info('Resolving dependencies')
-    yumbase.resolveDeps()
-    log.info('Processing transaction')
-    yumlogger = _YumErrorLogger()
-    yumbase.processTransaction(rpmDisplay=yumlogger)
-    yumlogger.log_accumulated_errors()
 
-    yumbase.closeRpmDB()
+        # Resolve Deps before attempting install. This needs to be improved by
+        # also tracking any deps that may get upgraded/installed during this
+        # process. For now only the version of the package(s) you request be
+        # installed is tracked.
+        log.info('Resolving dependencies')
+        yumbase.resolveDeps()
+        log.info('Processing transaction')
+        yumlogger = _YumErrorLogger()
+        yumbase.processTransaction(rpmDisplay=yumlogger)
+        yumlogger.log_accumulated_errors()
+        yumbase.closeRpmDB()
+    except Exception as e:
+        log.error('Install failed: {0}'.format(e))
 
     new = list_pkgs()
-
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def upgrade():
@@ -372,7 +404,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -384,42 +416,23 @@ def upgrade():
 
     old = list_pkgs()
 
-    # ideally we would look in the yum transaction and get info on all the
-    # packages that are going to be upgraded and only look up old/new version
-    # info on those packages.
-    yumbase.update()
-    log.info('Resolving dependencies')
-    yumbase.resolveDeps()
-    yumlogger = _YumErrorLogger()
-    log.info('Processing transaction')
-    yumbase.processTransaction(rpmDisplay=yumlogger)
-    yumlogger.log_accumulated_errors()
-    yumbase.closeRpmDB()
+    try:
+        # ideally we would look in the yum transaction and get info on all the
+        # packages that are going to be upgraded and only look up old/new
+        # version info on those packages.
+        yumbase.update()
+        log.info('Resolving dependencies')
+        yumbase.resolveDeps()
+        yumlogger = _YumErrorLogger()
+        log.info('Processing transaction')
+        yumbase.processTransaction(rpmDisplay=yumlogger)
+        yumlogger.log_accumulated_errors()
+        yumbase.closeRpmDB()
+    except Exception as e:
+        log.error('Upgrade failed: {0}'.format(e))
 
     new = list_pkgs()
-    return _compare_versions(old, new)
-
-
-def _compare_versions(old, new):
-    '''
-    Returns a dict that that displays old and new versions for a package after
-    install/upgrade of package.
-    '''
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old,new)
 
 
 def remove(pkgs):

@@ -179,7 +179,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
     pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                  pkgs,
@@ -218,7 +218,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 

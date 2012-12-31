@@ -69,7 +69,7 @@ def remove(pkgs):
     return __salt__['cmd.run'](cmd)
 
 
-def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
+def install(pkgs, refresh=False, skip_verify=False, **kwargs):
     '''
     Install the passed package(s) with ``brew install``
 
@@ -79,7 +79,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 

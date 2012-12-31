@@ -168,7 +168,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
 
     logging.debug('Called modules.pkg.install: {0}'.format(
@@ -210,7 +210,7 @@ def update(pkg, refresh=False):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -246,7 +246,7 @@ def upgrade(refresh=False):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
