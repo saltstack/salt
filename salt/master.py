@@ -585,15 +585,15 @@ class AESFuncs(object):
         pub = None
         try:
             pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError as e:
+        except RSA.RSAError as err:
             log.error('Unable to load temporary public key "{0}": {1}'
-                      .format(tmp_pub, e))
+                      .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
             if pub.public_decrypt(token, 5) == 'salt':
                 return True
-        except RSA.RSAError, e:
-            log.error('Unable to decrypt token: {0}'.format(e))
+        except RSA.RSAError, err:
+            log.error('Unable to decrypt token: {0}'.format(err))
 
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
@@ -1362,8 +1362,8 @@ class ClearFuncs(object):
         # and an empty request comes in
         try:
             pub = RSA.load_pub_key(pubfn)
-        except RSA.RSAError, e:
-            log.error('Corrupt public key "{0}": {1}'.format(pubfn, e))
+        except RSA.RSAError, err:
+            log.error('Corrupt public key "{0}": {1}'.format(pubfn, err))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 

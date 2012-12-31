@@ -24,17 +24,17 @@ __outputter__ = {
 # TODO: Refactor some of this module to remove the checks for binaries
 
 # Tested on OpenBSD 5.0
-bsd = ('OpenBSD', 'FreeBSD')
+BSD = ('OpenBSD', 'FreeBSD')
 
 # Known not to work
-bad = ('Windows',)
+BAD = ('Windows',)
 
 
 def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if __grains__['os'] in bad or not salt.utils.which('at'):
+    if __grains__['os'] in BAD or not salt.utils.which('at'):
         return False
     return 'at'
 
@@ -92,7 +92,7 @@ def atq(tag=None):
         if __grains__['os_family'] == 'RedHat':
             job, spec = line.split('\t')
             specs = spec.split()
-        elif __grains__['os'] in bsd:
+        elif __grains__['os'] in BSD:
             if line.startswith(' Rank'):
                 continue
             else:
@@ -120,7 +120,7 @@ def atq(tag=None):
             if tmp:
                 job_tag = tmp.groups()[0]
 
-        if __grains__['os'] in bsd:
+        if __grains__['os'] in BSD:
             job = str(job)
         else:
             job = int(job)
@@ -179,7 +179,7 @@ def atrm(*args):
     return ret
 
 
-def at(*args, **kwargs):
+def at(*args, **kwargs):  # pylint: disable-msg=C0103
     '''
     Add a job to the queue.
 
@@ -234,7 +234,7 @@ def at(*args, **kwargs):
 
     output = output.split()[1]
 
-    if __grains__['os'] in bsd:
+    if __grains__['os'] in BSD:
         return atq(str(output))
     else:
         return atq(int(output))

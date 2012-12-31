@@ -37,7 +37,7 @@ def _parse_yum(arg):
     '''
     cmd = 'yum -q {0}'.format(arg)
     out = __salt__['cmd.run_stdout'](cmd)
-    YumOut = namedtuple('YumOut', ('name', 'version', 'status'))
+    yum_out = namedtuple('YumOut', ('name', 'version', 'status'))
 
     results = []
 
@@ -46,7 +46,7 @@ def _parse_yum(arg):
             namearchstr, pkgver, pkgstatus = line.split()
             pkgname = namearchstr.rpartition('.')[0]
 
-            results.append(YumOut(pkgname, pkgver, pkgstatus))
+            results.append(yum_out(pkgname, pkgver, pkgstatus))
 
     return results
 
@@ -202,9 +202,9 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     if refresh is True or refresh == 'True':
         refresh_db()
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                 pkgs,
-                                                                 sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -214,11 +214,11 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
         pkg=' '.join(pkg_params),
     )
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():
@@ -283,4 +283,3 @@ def purge(pkg):
         salt '*' pkg.purge <package name>
     '''
     return remove(pkg)
-

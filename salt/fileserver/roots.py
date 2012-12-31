@@ -11,6 +11,7 @@ import hashlib
 import salt.fileserver
 import salt.utils
 
+
 def _find_file(path, env='base'):
     '''
     Search the environment for the relative path
@@ -82,9 +83,9 @@ def file_list(load):
 
     for path in __opts__['file_roots'][load['env']]:
         for root, dirs, files in os.walk(path, followlinks=True):
-            for fn in files:
+            for fname in files:
                 rel_fn = os.path.relpath(
-                            os.path.join(root, fn),
+                            os.path.join(root, fname),
                             path
                         )
                 if not salt.fileserver.is_file_ignored(__opts__, rel_fn):

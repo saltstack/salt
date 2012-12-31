@@ -70,9 +70,9 @@ class SaltCacheLoader(BaseLoader):
             raise TemplateNotFound(template)
         self.check_cache(template)
         filepath = path.join(self.searchpath, template)
-        with salt.utils.fopen(filepath, 'rb') as f:
+        with salt.utils.fopen(filepath, 'rb') as ifile:
             try:
-                contents = f.read().decode(self.encoding)
+                contents = ifile.read().decode(self.encoding)
             except IOError:
                 raise TemplateNotFound(template)
         mtime = path.getmtime(filepath)

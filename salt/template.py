@@ -14,17 +14,17 @@ import salt.utils
 from salt._compat import string_types
 
 
-def StringIO(s=None):  # cStringIO can't handle unicode
+def string_io(data=None):  # cStringIO can't handle unicode
     try:
-        return cStringIO(bytes(s))
+        return cStringIO(bytes(data))
     except UnicodeEncodeError:
-        return pyStringIO(s)
+        return pyStringIO(data)
 
 #FIXME: we should make the default encoding of a .sls file a configurable
 #       option in the config, and default it to 'utf-8'.
 #
-sls_encoding = 'utf-8'  # this one has no BOM.
-sls_encoder = codecs.getencoder(sls_encoding)
+SLS_ENCODING = 'utf-8'  # this one has no BOM.
+SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
 def compile_template(template, renderers, default, env='', sls='', **kwargs):
@@ -45,14 +45,14 @@ def compile_template(template, renderers, default, env='', sls='', **kwargs):
     # Get the list of render funcs in the render pipe line.
     render_pipe = template_shebang(template, renderers, default)
 
-    with codecs.open(template, encoding=sls_encoding) as f:
+    with codecs.open(template, encoding=SLS_ENCODING) as ifile:
         # data input to the first render function in the pipe
-        input_data = f.read()
+        input_data = ifile.read()
         if not input_data.strip():
             # Template is nothing but whitespace
             return {}
 
-    input_data = StringIO(input_data)
+    input_data = string_io(input_data)
     for render, argline in render_pipe:
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
@@ -73,8 +73,8 @@ def compile_template_str(template, renderers, default):
     derived from the template.
     '''
     fn_ = salt.utils.mkstemp()
-    with salt.utils.fopen(fn_, 'wb') as f:
-        f.write(sls_encoder(template)[0])
+    with salt.utils.fopen(fn_, 'wb') as ofile:
+        ofile.write(SLS_ENCODER(template)[0])
     return compile_template(fn_, renderers, default)
 
 
@@ -99,8 +99,8 @@ def template_shebang(template, renderers, default):
     render_pipe = []
 
     # Open up the first line of the sls template
-    with salt.utils.fopen(template, 'r') as f:
-        line = f.readline()
+    with salt.utils.fopen(template, 'r') as ifile:
+        line = ifile.readline()
 
         # Check if it starts with a shebang
         if line.startswith('#!'):
@@ -146,8 +146,8 @@ def check_render_pipe_str(pipestr, renderers):
     try:
         if parts[0] == pipestr and pipestr in OLD_STYLE_RENDERERS:
             parts = OLD_STYLE_RENDERERS[pipestr].split('|')
-        for p in parts:
-            name, argline = (p + ' ').split(' ', 1)
+        for part in parts:
+            name, argline = (part + ' ').split(' ', 1)
             results.append((renderers[name], argline.strip()))
         return results
     except KeyError:

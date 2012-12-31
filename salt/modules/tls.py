@@ -10,16 +10,18 @@ or use Self-Signed certificates.
         ca.cert_base_path: '/etc/pki'
 '''
 
+# pylint: disable-msg=C0103
+
 # Import python libs
 import os
 import time
 import logging
 import hashlib
 
-has_ssl = False
+HAS_SSL = False
 try:
     import OpenSSL
-    has_ssl = True
+    HAS_SSL = True
 except ImportError:
     pass
 
@@ -34,7 +36,7 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    if has_ssl:
+    if HAS_SSL:
         return 'tls'
     return False
 
@@ -71,8 +73,8 @@ def _new_serial(ca_name, CN):
     cachedir = __opts__['cachedir']
     log.debug('cachedir: {0}'.format(cachedir))
     serial_file = '{0}/{1}.serial'.format(cachedir, ca_name)
-    with salt.utils.fopen(serial_file, 'a+') as f:
-        f.write(str(hashnum))
+    with salt.utils.fopen(serial_file, 'a+') as ofile:
+        ofile.write(str(hashnum))
 
     return hashnum
 
@@ -109,8 +111,8 @@ def _write_cert_to_database(ca_name, cert):
             subject
             )
 
-    with salt.utils.fopen(index_file, 'a+') as f:
-        f.write(index_data)
+    with salt.utils.fopen(index_file, 'a+') as ofile:
+        ofile.write(index_data)
 
 
 def _ca_exists(ca_name):
@@ -639,8 +641,8 @@ def create_pkcs12(ca_name, CN, passphrase=''):
         _cert_base_path(),
         ca_name,
         CN
-        ), 'w') as f:
-        f.write(pkcs12.export(passphrase=passphrase))
+        ), 'w') as ofile:
+        ofile.write(pkcs12.export(passphrase=passphrase))
 
     return ('Created PKCS#12 Certificate for "{0}", located at '
             '"{1}/{2}/certs/{3}.p12"').format(

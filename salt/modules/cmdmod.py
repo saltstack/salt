@@ -88,13 +88,14 @@ def _chugid(runas):
 
 def _render_cmd(cmd, cwd, template):
     '''
-    If template is a valid template engine, process the cmd and cwd through that engine.
+    If template is a valid template engine, process the cmd and cwd through
+    that engine.
     '''
     if not template:
         return (cmd, cwd)
 
     # render the path as a template using path_template_engine as the engine
-    if template not in salt.utils.templates.template_registry:
+    if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
             'Attempted to render file paths with unavailable engine '
             '{0}'.format(template)
@@ -112,7 +113,7 @@ def _render_cmd(cmd, cwd, template):
         tmp_path_fn = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
-        data = salt.utils.templates.template_registry[template](
+        data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
@@ -414,7 +415,7 @@ def script(
     os.chmod(path, 320)
     os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
-            path +' '+ args if args else path,
+            path + ' ' + args if args else path,
             cwd=cwd,
             quiet=kwargs.get('quiet', False),
             runas=runas,
@@ -458,6 +459,7 @@ def script_retcode(
             template,
             retcode=True,
             **kwargs)['retcode']
+
 
 def which(cmd):
     '''

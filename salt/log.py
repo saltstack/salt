@@ -39,7 +39,7 @@ SORTED_LEVEL_NAMES = [
 ]
 
 # Store an instance of the current logging logger class
-LoggingLoggerClass = logging.getLoggerClass()
+LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 
@@ -72,17 +72,17 @@ if sys.version_info < (2, 7):
         def emit(self, record):
             pass
 
-        def createLock(self):
+        def createLock(self):  # pylint: disable-msg=C0103
             self.lock = None
 
     logging.NullHandler = NullHandler
 
 
 # Store a reference to the null logging handler
-LoggingNullHandler = logging.NullHandler()
+LOGGING_NULL_HANDLER = logging.NullHandler()
 
 
-class Logging(LoggingLoggerClass):
+class Logging(LOGGING_LOGGER_CLASS):
     def __new__(cls, logger_name, *args, **kwargs):
         # This makes module name padding increase to the biggest module name
         # so that logs keep readability.
@@ -98,7 +98,7 @@ class Logging(LoggingLoggerClass):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
-                if handler is LoggingNullHandler:
+                if handler is LOGGING_NULL_HANDLER:
                     continue
 
                 if not handler.lock:
@@ -160,10 +160,10 @@ class Logging(LoggingLoggerClass):
         )
 
     def garbage(self, msg, *args, **kwargs):
-        return LoggingLoggerClass.log(self, GARBAGE, msg, *args, **kwargs)
+        return LOGGING_LOGGER_CLASS.log(self, GARBAGE, msg, *args, **kwargs)
 
     def trace(self, msg, *args, **kwargs):
-        return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
+        return LOGGING_LOGGER_CLASS.log(self, TRACE, msg, *args, **kwargs)
 
 
 # Override the python's logging logger class as soon as this module is imported
@@ -176,15 +176,15 @@ if logging.getLoggerClass() is not Logging:
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
     # Set the root logger at the lowest level possible
-    rootLogger = logging.getLogger()
+    root_logger = logging.getLogger()  # pylint: disable-msg=C0103
     # Add a Null logging handler until logging is configured(will be removed at
     # a later stage) so we stop getting:
     #   No handlers could be found for logger "foo"
-    rootLogger.addHandler(LoggingNullHandler)
-    rootLogger.setLevel(GARBAGE)
+    root_logger.addHandler(LOGGING_NULL_HANDLER)
+    root_logger.setLevel(GARBAGE)
 
 
-def getLogger(name):
+def getLogger(name):  # pylint: disable-msg=C0103
     return logging.getLogger(name)
 
 
@@ -204,7 +204,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    rootLogger = logging.getLogger()
+    root_logger = logging.getLogger()
     handler = logging.StreamHandler()
 
     handler.setLevel(level)
@@ -218,7 +218,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    rootLogger.addHandler(handler)
+    root_logger.addHandler(handler)
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
@@ -258,7 +258,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     parsed_log_path = urlparse.urlparse(log_path)
 
-    rootLogger = logging.getLogger()
+    root_logger = logging.getLogger()
 
     if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
         syslog_opts = {
@@ -355,7 +355,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    rootLogger.addHandler(handler)
+    root_logger.addHandler(handler)
 
     global __LOGFILE_CONFIGURED
     __LOGFILE_CONFIGURED = True
@@ -375,12 +375,12 @@ def __remove_null_logging_handler():
         # In this case, the NullHandler has been removed, return!
         return
 
-    rootLogger = logging.getLogger()
-    global LoggingNullHandler
+    root_logger = logging.getLogger()
+    global LOGGING_NULL_HANDLER
 
-    for handler in rootLogger.handlers:
-        if handler is LoggingNullHandler:
-            rootLogger.removeHandler(LoggingNullHandler)
+    for handler in root_logger.handlers:
+        if handler is LOGGING_NULL_HANDLER:
+            root_logger.removeHandler(LOGGING_NULL_HANDLER)
             # Redefine the null handler to None so it can be garbage collected
-            LoggingNullHandler = None
+            LOGGING_NULL_HANDLER = None
             break

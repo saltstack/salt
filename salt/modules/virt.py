@@ -16,9 +16,9 @@ from xml.dom import minidom
 # Import third party libs
 try:
     import libvirt
-    has_libvirt = True
+    HAS_LIBVIRT = True
 except ImportError:
-    has_libvirt = False
+    HAS_LIBVIRT = False
 import yaml
 
 # Import salt libs
@@ -37,7 +37,7 @@ VIRT_STATE_NAME_MAP = {0: "running",
 
 
 def __virtual__():
-    if not has_libvirt:
+    if not HAS_LIBVIRT:
         return False
     return 'virt'
 
@@ -52,8 +52,12 @@ def __get_conn():
     try:
         conn = libvirt.open("qemu:///system")
     except Exception:
-        msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
-        raise CommandExecutionError(msg.format(__grains__['fqdn']))
+        raise CommandExecutionError(
+            'Sorry, {0} failed to open a connection to the hypervisor '
+            'software'.format(
+                __grains__['fqdn']
+            )
+        )
     return conn
 
 
@@ -352,13 +356,13 @@ def get_disks(vm_):
                 stdout=subprocess.PIPE).communicate()[0]
             snapshots = False
             columns = None
-            lines =  qemu_output.strip().split('\n')
+            lines = qemu_output.strip().split('\n')
             for line in lines:
                 if line.startswith('Snapshot list:'):
                     snapshots = True
                     continue
                 elif snapshots:
-                    if line.startswith('ID'): # Do not parse table headers
+                    if line.startswith('ID'):  # Do not parse table headers
                         line = line.replace('VM SIZE', 'VMSIZE')
                         line = line.replace('VM CLOCK', 'TIME VMCLOCK')
                         columns = re.split('\s+', line)
@@ -370,7 +374,11 @@ def get_disks(vm_):
                         sep = ' '
                         if i == 0:
                             sep = '-'
-                        output.append('%s %s: "%s"' %(sep, columns[i], field))
+                        output.append(
+                            '{0} {1}: "{2}"'.format(
+                                sep, columns[i], field
+                            )
+                        )
                     continue
                 output.append(line)
             output = '\n'.join(output)
@@ -698,7 +706,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for dev, data in disks.items():
+    for _, data in disks.items():
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
@@ -819,8 +827,8 @@ def is_kvm_hyper():
         if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
             return False
     except IOError:
-            # No /proc/modules? Are we on Windows? Or Solaris?
-            return False
+        # No /proc/modules? Are we on Windows? Or Solaris?
+        return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
 
 
@@ -836,14 +844,14 @@ def is_xen_hyper():
         if __grains__['virtual_subtype'] != 'Xen Dom0':
             return False
     except KeyError:
-            # virtual_subtype isn't set everywhere.
-            return False
+        # virtual_subtype isn't set everywhere.
+        return False
     try:
         if 'xen_' not in salt.utils.fopen('/proc/modules').read():
             return False
     except IOError:
-            # No /proc/modules? Are we on Windows? Or Solaris?
-            return False
+        # No /proc/modules? Are we on Windows? Or Solaris?
+        return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
 
 

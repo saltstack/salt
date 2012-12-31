@@ -4,7 +4,7 @@ Return data to a mongodb server
 Required python modules: pymongo
 
 
-This returner will send data from the minions to a MongoDB server. To 
+This returner will send data from the minions to a MongoDB server. To
 configure the settings for your MongoDB server, add the following lines
 to the minion config files::
 
@@ -25,26 +25,26 @@ import logging
 # Import third party libs
 try:
     import pymongo
-    has_pymongo = True
+    HAS_PYMONGO = True
 except ImportError:
-    has_pymongo = False
+    HAS_PYMONGO = False
 
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not has_pymongo:
+    if not HAS_PYMONGO:
         return False
     return 'mongo'
 
 
-def _remove_dots(d):
+def _remove_dots(src):
     output = {}
-    for k, v in d.iteritems():
-        if isinstance(v, dict):
-            v = _remove_dots(v)
-        output[k.replace('.', '-')] = v
+    for key, val in src.iteritems():
+        if isinstance(val, dict):
+            val = _remove_dots(val)
+        output[key.replace('.', '-')] = val
     return output
 
 
@@ -55,22 +55,22 @@ def _get_conn():
     conn = pymongo.Connection(
             __salt__['config.option']('mongo.host'),
             __salt__['config.option']('mongo.port'))
-    db = conn[__salt__['config.option']('mongo.db')]
+    mdb = conn[__salt__['config.option']('mongo.db')]
 
     user = __salt__['config.option']('mongo.user')
     password = __salt__['config.option']('mongo.password')
 
     if user and password:
-        db.authenticate(user, password)
-    return conn, db
+        mdb.authenticate(user, password)
+    return conn, mdb
 
 
 def returner(ret):
     '''
     Return data to a mongodb server
     '''
-    conn, db = _get_conn()
-    col = db[ret['id']]
+    conn, mdb = _get_conn()
+    col = mdb[ret['id']]
 
     if isinstance(ret['return'], dict):
         back = _remove_dots(ret['return'])
@@ -88,8 +88,8 @@ def save_load(jid, load):
     '''
     Save the load for a given job id
     '''
-    conn, db = _get_conn()
-    col = db[jid]
+    conn, mdb = _get_conn()
+    col = mdb[jid]
     col.insert(load)
 
 
@@ -97,18 +97,18 @@ def get_load(jid):
     '''
     Returnt he load asociated with a given job id
     '''
-    conn, db = _get_conn()
-    return db[jid].find_one()
+    conn, mdb = _get_conn()
+    return mdb[jid].find_one()
 
 
 def get_jid(jid):
     '''
     Return the return information associated with a jid
     '''
-    conn, db = _get_conn()
+    conn, mdb = _get_conn()
     ret = {}
-    for collection in db.collection_names():
-        rdata = db[collection].find_one({jid: {'$exists': 'true'}})
+    for collection in mdb.collection_names():
+        rdata = mdb[collection].find_one({jid: {'$exists': 'true'}})
         if rdata:
             ret[collection] = rdata
     return ret
@@ -118,10 +118,10 @@ def get_fun(fun):
     '''
     Return the most recent jobs that have executed the named function
     '''
-    conn, db = _get_conn()
+    conn, mdb = _get_conn()
     ret = {}
-    for collection in db.collection_names():
-        rdata = db[collection].find_one({'fun': fun})
+    for collection in mdb.collection_names():
+        rdata = mdb[collection].find_one({'fun': fun})
         if rdata:
             ret[collection] = rdata
     return ret
@@ -131,9 +131,9 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    conn, db = _get_conn()
+    conn, mdb = _get_conn()
     ret = []
-    for name in db.collection_names():
+    for name in mdb.collection_names():
         if len(name) == 20:
             try:
                 int(name)
@@ -148,9 +148,9 @@ def get_jids():
     '''
     Return a list of job ids
     '''
-    conn, db = _get_conn()
+    conn, mdb = _get_conn()
     ret = []
-    for name in db.collection_names():
+    for name in mdb.collection_names():
         if len(name) == 20:
             try:
                 int(name)

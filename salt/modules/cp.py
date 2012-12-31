@@ -55,7 +55,7 @@ def _render_filenames(path, dest, env, template):
         return (path, dest)
 
     # render the path as a template using path_template_engine as the engine
-    if template not in salt.utils.templates.template_registry:
+    if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
             'Attempted to render file paths with unavailable engine '
             '{0}'.format(template)
@@ -73,7 +73,7 @@ def _render_filenames(path, dest, env, template):
         tmp_path_fn = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
-        data = salt.utils.templates.template_registry[template](
+        data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
@@ -213,8 +213,11 @@ def cache_file(path, env='base'):
     _mk_client()
     result = __context__['cp.fileclient'].cache_file(path, env)
     if not result:
-        log.error('Unable to cache file "{0}" from env '
-                  '"{1}".'.format(path,env))
+        log.error(
+            'Unable to cache file "{0}" from env "{1}".'.format(
+                path, env
+            )
+        )
     return result
 
 

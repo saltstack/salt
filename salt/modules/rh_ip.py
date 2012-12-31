@@ -21,7 +21,9 @@ from salt.modules import __path__ as saltmodpath
 log = logging.getLogger(__name__)
 
 # Set up template environment
-env = jinja2.Environment(loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip'))
+ENV = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip')
+)
 
 
 def __virtual__():
@@ -265,7 +267,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:
+                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -297,16 +299,16 @@ def _parse_settings_bond_1(opts, iface, bond_def):
     '''
     bond = {'mode': '1'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['integer'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -338,7 +340,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:
+                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -380,16 +382,16 @@ def _parse_settings_bond_3(opts, iface, bond_def):
     '''
     bond = {'mode': '3'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['interger'])
+                _raise_error_iface(iface, binding, ['interger'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -416,24 +418,24 @@ def _parse_settings_bond_4(opts, iface, bond_def):
 
     bond = {'mode': '4'}
 
-    for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate', 'ad_select']:
-        if bo in opts:
-            if bo == 'lacp_rate':
-                if opts[bo] == 'fast':
-                    opts.update({bo: '1'})
-                if opts[bo] == 'slow':
-                    opts.update({bo: '0'})
+    for binding in ['miimon', 'downdelay', 'updelay', 'lacp_rate', 'ad_select']:
+        if binding in opts:
+            if binding == 'lacp_rate':
+                if opts[binding] == 'fast':
+                    opts.update({binding: '1'})
+                if opts[binding] == 'slow':
+                    opts.update({binding: '0'})
                 valid = ['fast', '1', 'slow', '0']
             else:
                 valid = ['integer']
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, valid)
+                _raise_error_iface(iface, binding, valid)
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -467,16 +469,16 @@ def _parse_settings_bond_5(opts, iface, bond_def):
     '''
     bond = {'mode': '5'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['integer'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -503,16 +505,16 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     '''
     bond = {'mode': '6'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['integer'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -657,7 +659,7 @@ def _parse_network_settings(opts, current):
         if opts['networking'] in _CONFIG_TRUE:
             result['networking'] = 'yes'
         elif opts['networking'] in _CONFIG_FALSE:
-                result['networking'] = 'no'
+            result['networking'] = 'no'
     else:
         _raise_error_network('networking', valid)
 
@@ -678,7 +680,7 @@ def _parse_network_settings(opts, current):
             if opts['nozeroconf'] in _CONFIG_TRUE:
                 result['nozeroconf'] = 'true'
             elif opts['nozeroconf'] in _CONFIG_FALSE:
-                    result['nozeroconf'] = 'false'
+                result['nozeroconf'] = 'false'
         else:
             _raise_error_network('nozeroconf', valid)
 
@@ -763,7 +765,7 @@ def build_bond(iface, settings):
 
     opts = _parse_settings_bond(settings, iface)
     try:
-        template = env.get_template('conf.jinja')
+        template = ENV.get_template('conf.jinja')
     except TemplateNotFound:
         log.error('Could not load template conf.jinja')
         return ''
@@ -818,9 +820,13 @@ def build_interface(iface, iface_type, enabled, settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
-            template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
+            template = ENV.get_template('rh{0}_eth.jinja'.format(rh_major))
         except TemplateNotFound:
-            log.error('Could not load template rh{0}_eth.jinja'.format(rh_major))
+            log.error(
+                'Could not load template rh{0}_eth.jinja'.format(
+                    rh_major
+                )
+            )
             return ''
         ifcfg = template.render(opts)
 
@@ -871,7 +877,7 @@ def get_interface(iface):
     return _read_file(path)
 
 
-def up(iface, iface_type, opts):
+def up(iface, iface_type, opts):  # pylint: disable-msg=C0103
     '''
     Start up a network interface
 
@@ -931,7 +937,7 @@ def build_network_settings(settings):
     # Build settings
     opts = _parse_network_settings(settings, current_network_settings)
     try:
-        template = env.get_template('network.jinja')
+        template = ENV.get_template('network.jinja')
     except TemplateNotFound:
         log.error('Could not load template network.jinja')
         return ''

@@ -391,13 +391,13 @@ def _get_upgradable():
 
     upgrades = rexp.findall(out)
 
-    r = {}
+    ret = {}
     for line in upgrades:
         name = _get(line, 'name')
         version = _get(line, 'version')
-        r[name] = version
+        ret[name] = version
 
-    return r
+    return ret
 
 
 def list_upgrades():
@@ -408,8 +408,7 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    r = _get_upgradable()
-    return r
+    return _get_upgradable()
 
 
 def upgrade_available(name):
@@ -420,5 +419,4 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    r = name in _get_upgradable()
-    return r
+    return name in _get_upgradable()

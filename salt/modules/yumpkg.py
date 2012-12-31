@@ -7,17 +7,16 @@ Support for YUM
 '''
 
 # Import python libs
-import re
 import logging
 
 # Import third party libs
 try:
     import yum
-    import rpm
+    import rpm  # XXX: Is this import really needed. It's not used.
     from rpmUtils.arch import getBaseArch
-    has_yumdeps = True
+    HAS_YUMDEPS = True
 except (ImportError, AttributeError):
-    has_yumdeps = False
+    HAS_YUMDEPS = False
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    if not has_yumdeps:
+    if not HAS_YUMDEPS:
         return False
 
     # Work only on RHEL/Fedora based distros with python 2.6 or greater
@@ -44,6 +43,7 @@ def __virtual__():
             if os_major_release >= 6:
                 return 'pkg'
     return False
+
 
 class _YumErrorLogger(object):
     '''
@@ -109,13 +109,13 @@ def list_upgrades(*args):
     '''
     pkgs = list_pkgs()
 
-    yb = yum.YumBase()
+    yumbase = yum.YumBase()
     versions_list = {}
     for pkgtype in ['updates']:
-        pl = yb.doPackageLists(pkgtype)
+        pkglist = yumbase.doPackageLists(pkgtype)
         for pkg in pkgs:
             exactmatch, matched, unmatched = yum.packages.parsePackages(
-                pl, [pkg]
+                pkglist, [pkg]
             )
             for pkg in exactmatch:
                 if pkg.arch == getBaseArch() or pkg.arch == 'noarch':
@@ -133,15 +133,17 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    yb = yum.YumBase()
+    yumbase = yum.YumBase()
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exact match only.
     versions_list = []
     for pkgtype in ['available', 'updates']:
 
-        pl = yb.doPackageLists(pkgtype)
-        exactmatch, matched, unmatched = yum.packages.parsePackages(pl, [name])
+        pkglist = yumbase.doPackageLists(pkgtype)
+        exactmatch, matched, unmatched = yum.packages.parsePackages(
+            pkglist, [name]
+        )
         # build a list of available packages from either available or updates
         # this will result in a double match for a package that is already
         # installed.  Maybe we should just return the value if we get a hit
@@ -202,12 +204,12 @@ def list_pkgs(*args):
         salt '*' pkg.list_pkgs
     '''
     ret = {}
-    yb = yum.YumBase()
-    for p in yb.rpmdb:
-        pkgver = p.version
-        if p.release:
-            pkgver += '-{0}'.format(p.release)
-        __salt__['pkg_resource.add_pkg'](ret, p.name, pkgver)
+    yumbase = yum.YumBase()
+    for package in yumbase.rpmdb:
+        pkgver = package.version
+        if package.release:
+            pkgver += '-{0}'.format(package.release)
+        __salt__['pkg_resource.add_pkg'](ret, package.name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
     if args:
         pkgs = ret
@@ -227,8 +229,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    yb = yum.YumBase()
-    yb.cleanMetadata()
+    yumbase = yum.YumBase()
+    yumbase.cleanMetadata()
     return True
 
 
@@ -297,7 +299,8 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                        'new': '<new-version>']}
     '''
 
-    # This allows modules to specify the version in a kwarg, like the other package modules
+    # This allows modules to specify the version in a kwarg, like the other
+    # package modules
     if kwargs.get('version') and pkgs is None and sources is None:
         name = '{0}-{1}'.format(name, kwargs.get('version'))
 
@@ -305,21 +308,21 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     if refresh is True or refresh == 'True':
         refresh_db()
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                 pkgs,
-                                                                 sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
     old = list_pkgs()
 
-    yb = yum.YumBase()
-    setattr(yb.conf, 'assumeyes', True)
-    setattr(yb.conf, 'gpgcheck', not skip_verify)
+    yumbase = yum.YumBase()
+    setattr(yumbase.conf, 'assumeyes', True)
+    setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
     if repo:
         log.info('Enabling repo \'{0}\''.format(repo))
-        yb.repos.enableRepo(repo)
+        yumbase.repos.enableRepo(repo)
 
     for target in pkg_params:
         try:
@@ -327,21 +330,21 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
                 log.info(
                     'Selecting "{0}" for local installation'.format(target)
                 )
-                a = yb.installLocal(target)
+                installed = yumbase.installLocal(target)
                 # if yum didn't install anything, maybe its a downgrade?
-                log.debug('Added {0} transactions'.format(len(a)))
-                if len(a) == 0 and target not in old.keys():
+                log.debug('Added {0} transactions'.format(len(installed)))
+                if len(installed) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    yb.downgradeLocal(target)
+                    yumbase.downgradeLocal(target)
             else:
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
-                a = yb.install(pattern=target)
+                installed = yumbase.install(pattern=target)
                 # if yum didn't install anything, maybe its a downgrade?
-                log.debug('Added {0} transactions'.format(len(a)))
-                if len(a) == 0 and target not in old.keys():
+                log.debug('Added {0} transactions'.format(len(installed)))
+                if len(installed) == 0 and target not in old.keys():
                     log.info('Upgrade failed, trying downgrade')
-                    yb.downgrade(pattern=target)
+                    yumbase.downgrade(pattern=target)
         except Exception:
             log.exception('Package "{0}" failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved by
@@ -349,17 +352,17 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
     # process. For now only the version of the package(s) you request be
     # installed is tracked.
     log.info('Resolving dependencies')
-    yb.resolveDeps()
+    yumbase.resolveDeps()
     log.info('Processing transaction')
     yumlogger = _YumErrorLogger()
-    yb.processTransaction(rpmDisplay=yumlogger)
+    yumbase.processTransaction(rpmDisplay=yumlogger)
     yumlogger.log_accumulated_errors()
 
-    yb.closeRpmDB()
+    yumbase.closeRpmDB()
 
     new = list_pkgs()
 
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():
@@ -376,22 +379,22 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
 
-    yb = yum.YumBase()
-    setattr(yb.conf, 'assumeyes', True)
+    yumbase = yum.YumBase()
+    setattr(yumbase.conf, 'assumeyes', True)
 
     old = list_pkgs()
 
     # ideally we would look in the yum transaction and get info on all the
     # packages that are going to be upgraded and only look up old/new version
     # info on those packages.
-    yb.update()
+    yumbase.update()
     log.info('Resolving dependencies')
-    yb.resolveDeps()
+    yumbase.resolveDeps()
     yumlogger = _YumErrorLogger()
     log.info('Processing transaction')
-    yb.processTransaction(rpmDisplay=yumlogger)
+    yumbase.processTransaction(rpmDisplay=yumlogger)
     yumlogger.log_accumulated_errors()
-    yb.closeRpmDB()
+    yumbase.closeRpmDB()
 
     new = list_pkgs()
     return _compare_versions(old, new)
@@ -430,22 +433,22 @@ def remove(pkgs):
         salt '*' pkg.remove <package,package,package>
     '''
 
-    yb = yum.YumBase()
-    setattr(yb.conf, 'assumeyes', True)
+    yumbase = yum.YumBase()
+    setattr(yumbase.conf, 'assumeyes', True)
     pkgs = pkgs.split(',')
     old = list_pkgs(*pkgs)
 
     # same comments as in upgrade for remove.
     for pkg in pkgs:
-        yb.remove(name=pkg)
+        yumbase.remove(name=pkg)
 
     log.info('Resolving dependencies')
-    yb.resolveDeps()
+    yumbase.resolveDeps()
     yumlogger = _YumErrorLogger()
     log.info('Processing transaction')
-    yb.processTransaction(rpmDisplay=yumlogger)
+    yumbase.processTransaction(rpmDisplay=yumlogger)
     yumlogger.log_accumulated_errors()
-    yb.closeRpmDB()
+    yumbase.closeRpmDB()
 
     new = list_pkgs(*pkgs)
 
@@ -524,8 +527,8 @@ def grouplist():
         salt '*' pkg.grouplist
     '''
     ret = {'installed': [], 'available': [], 'available languages': {}}
-    yb = yum.YumBase()
-    (installed, available) = yb.doGroupLists()
+    yumbase = yum.YumBase()
+    (installed, available) = yumbase.doGroupLists()
     for group in installed:
         ret['installed'].append(group.name)
     for group in available:
@@ -546,13 +549,12 @@ def groupinfo(groupname):
 
         salt '*' pkg.groupinfo 'Perl Support'
     '''
-    yb = yum.YumBase()
-    (installed, available) = yb.doGroupLists()
+    yumbase = yum.YumBase()
+    (installed, available) = yumbase.doGroupLists()
     for group in installed + available:
         if group.name == groupname:
-            return {'manditory packages': group.mandatory_packages,
-                   'optional packages': group.optional_packages,
-                   'default packages': group.default_packages,
-                   'conditional packages': group.conditional_packages,
-                   'description': group.description}
-
+            return {'mandatory packages': group.mandatory_packages,
+                    'optional packages': group.optional_packages,
+                    'default packages': group.default_packages,
+                    'conditional packages': group.conditional_packages,
+                    'description': group.description}

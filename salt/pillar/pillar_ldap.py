@@ -20,9 +20,9 @@ from jinja2 import Environment, FileSystemLoader
 try:
     import ldap
     import ldap.modlist
-    has_ldap = True
+    HAS_LDAP = True
 except ImportError:
-    has_ldap = False
+    HAS_LDAP = False
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ def __virtual__():
     '''
     Only return if ldap module is installed
     '''
-    if has_ldap:
+    if HAS_LDAP:
         return 'pillar_ldap'
     else:
         return False
@@ -93,16 +93,16 @@ def _result_to_dict(data, result, conf):
         if key in attrs:
             for item in result.get(key):
                 if '=' in item:
-                    k, v = item.split('=', 1)
-                    data[k] = v
+                    skey, sval = item.split('=', 1)
+                    data[skey] = sval
         elif key in lists:
             for item in result.get(key):
                 if '=' in item:
-                    k, v = item.split('=', 1)
-                    if not k in data:
-                        data[k] = [v]
+                    skey, sval = item.split('=', 1)
+                    if skey not in data:
+                        data[skey] = [sval]
                     else:
-                        data[k].append(v)
+                        data[skey].append(sval)
     print 'Returning data {0}'.format(data)
     return data
 
@@ -118,10 +118,10 @@ def _do_search(conf):
         connargs[name] = _config(name, conf)
     # Build search args
     try:
-        filter = conf['filter']
+        _filter = conf['filter']
     except KeyError:
         raise SaltInvocationError('missing filter')
-    dn = _config('dn', conf)
+    _dn = _config('dn', conf)
     scope = _config('scope', conf)
     _lists = _config('lists', conf) or []
     _attrs = _config('attrs', conf) or []
@@ -130,16 +130,22 @@ def _do_search(conf):
         attrs = None
     # Perform the search
     try:
-        result = __salt__['ldap.search'](filter, dn, scope, attrs,
+        result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results'][0][1]
-        msg = 'LDAP search returned no results for filter {0}'.format(filter)
-        log.debug(msg)
+        log.debug(
+            'LDAP search returned no results for filter {0}'.format(
+                _filter
+            )
+        )
     except IndexError:  # we got no results for this search
         result = {}
     except Exception:
         trace = traceback.format_exc()
-        msg = 'Failed to retrieve pillar data from LDAP: {0}'.format(trace)
-        log.critical(msg)
+        log.critical(
+            'Failed to retrieve pillar data from LDAP: {0}'.format(
+                trace
+            )
+        )
         return {}
     return result
 
@@ -154,13 +160,13 @@ def ext_pillar(pillar, config_file):
             config = _render_template(config_file) or {}
             opts = yaml.safe_load(config) or {}
             opts['conf_file'] = config_file
-        except Exception as e:
+        except Exception as err:
             import salt.log
             msg = 'Error parsing configuration file: {0} - {1}'
             if salt.log.is_console_configured():
-                log.warn(msg.format(config_file, e))
+                log.warn(msg.format(config_file, err))
             else:
-                print(msg.format(config_file, e))
+                print(msg.format(config_file, err))
     else:
         log.debug('Missing configuration file: {0}'.format(config_file))
 

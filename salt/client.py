@@ -45,10 +45,10 @@ from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
 # Try to import range from https://github.com/ytoolshed/range
-has_range = False
+HAS_RANGE = False
 try:
     import seco.range
-    has_range = True
+    HAS_RANGE = True
 except ImportError:
     pass
 
@@ -96,8 +96,8 @@ class LocalClient(object):
         salt.utils.verify.check_path_traversal(self.opts['cachedir'], key_user)
 
         try:
-            with salt.utils.fopen(keyfile, 'r') as KEY:
-                return KEY.read()
+            with salt.utils.fopen(keyfile, 'r') as key:
+                return key.read()
         except (OSError, IOError):
             # Fall back to eauth
             return ''
@@ -125,8 +125,8 @@ class LocalClient(object):
         range = seco.range.Range(self.opts['range_server'])
         try:
             return range.expand(tgt)
-        except seco.range.RangeException as e:
-            print(("Range server exception: {0}".format(e)))
+        except seco.range.RangeException as err:
+            print("Range server exception: {0}".format(err))
             return []
 
     def _get_timeout(self, timeout):
@@ -943,7 +943,7 @@ class LocalClient(object):
 
         # Convert a range expression to a list of nodes and change expression
         # form to list
-        if expr_form == 'range' and has_range:
+        if expr_form == 'range' and HAS_RANGE:
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 
@@ -1067,5 +1067,5 @@ class Caller(object):
         Call a single salt function
         '''
         func = self.sminion.functions[fun]
-        args, kw = salt.minion.detect_kwargs(func, args, kwargs)
-        return func(*args, **kw)
+        args, kwargs = salt.minion.detect_kwargs(func, args, kwargs)
+        return func(*args, **kwargs)

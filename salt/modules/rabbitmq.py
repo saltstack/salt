@@ -41,16 +41,16 @@ def list_users(runas=None):
 
         salt '*' rabbitmq.list_users
     '''
-    d = {}
+    ret = {}
     res = __salt__['cmd.run']('rabbitmqctl list_users')
     for line in res.splitlines():
         if '...' not in line or line == '\n':
-            s = line.split('\t')
-            if len(s) < 2:
+            parts = line.split('\t')
+            if len(parts) < 2:
                 continue
-            user, properties = s[0], s[1]
-            d[user] = properties
-    return d
+            user, properties = parts[0], parts[1]
+            ret[user] = properties
+    return ret
 
 
 def list_vhosts(runas=None):

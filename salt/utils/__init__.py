@@ -24,10 +24,10 @@ from calendar import month_abbr as months
 
 try:
     import fcntl
-    has_fcntl = True
+    HAS_FNCTL = True
 except ImportError:
     # fcntl is not available on windows
-    has_fcntl = False
+    HAS_FNCTL = False
 
 # Import salt libs
 import salt.minion
@@ -202,8 +202,8 @@ def daemonize_if(opts, **kwargs):
     daemonize()
     sdata = {'pid': os.getpid()}
     sdata.update(data)
-    with salt.utils.fopen(fn_, 'w+') as f:
-        f.write(serial.dumps(sdata))
+    with salt.utils.fopen(fn_, 'w+') as ofile:
+        ofile.write(serial.dumps(sdata))
 
 
 def profile_func(filename=None):
@@ -638,7 +638,7 @@ def istextfile(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     '''
-    PY3 = sys.version_info[0] == 3
+    PY3 = sys.version_info[0] == 3  # pylint: disable-msg=C0103
     int2byte = (lambda x: bytes((x,))) if PY3 else chr
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
@@ -720,11 +720,11 @@ def memoize(func):
     '''
     cache = {}
 
-    def _m(*args):
+    def _memoize(*args):
         if args not in cache:
             cache[args] = func(*args)
         return cache[args]
-    return _m
+    return _memoize
 
 
 def fopen(*args, **kwargs):
@@ -738,13 +738,13 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
-    if has_fcntl:
+    if HAS_FNCTL:
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable-msg=C0103
         except AttributeError:
-            FD_CLOEXEC = 1
+            FD_CLOEXEC = 1                  # pylint: disable-msg=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
@@ -768,7 +768,7 @@ def mkstemp(*args, **kwargs):
 
 def clean_kwargs(**kwargs):
     '''
-    Clean out the __pub* keys from the kwargs dict passed into the execution 
+    Clean out the __pub* keys from the kwargs dict passed into the execution
     module functions. The __pub* keys are useful for tracking what was used to
     invoke the function call, but they may not be desierable to have if
     passing the kwargs forward wholesale.
@@ -779,12 +779,14 @@ def clean_kwargs(**kwargs):
             ret[key] = val
     return ret
 
+
 @memoize
 def is_windows():
     '''
     Simple function to return if a host is Windows or not
     '''
     return sys.platform.startswith('win')
+
 
 @memoize
 def is_linux():

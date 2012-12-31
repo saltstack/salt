@@ -22,7 +22,12 @@ def _gem(command, ruby=None, runas=None):
         return False
 
 
-def install(gems, ruby=None, runas=None, version=None, rdoc=False, ri=False):
+def install(gems,           # pylint: disable-msg=C0103
+            ruby=None,
+            runas=None,
+            version=None,
+            rdoc=False,
+            ri=False):      # pylint: disable-msg=C0103
     '''
     Installs one or several gems.
 
@@ -48,7 +53,9 @@ def install(gems, ruby=None, runas=None, version=None, rdoc=False, ri=False):
     if not ri:
         options += ' --no-ri'
 
-    return _gem('install {gems} {options}'.format(gems=gems, options=options), ruby, runas=runas)
+    return _gem('install {gems} {options}'.format(gems=gems, options=options),
+                ruby,
+                runas=runas)
 
 
 def uninstall(gems, ruby=None, runas=None):
@@ -112,10 +119,10 @@ def list(prefix='', ruby=None, runas=None):
     if isinstance(stdout, str):
         lines = stdout.splitlines()
     for line in lines:
-        m = re.match('^([^ ]+) \((.+)\)', line)
-        if m:
-            gem = m.group(1)
-            versions = m.group(2).split(', ')
+        match = re.match('^([^ ]+) \((.+)\)', line)
+        if match:
+            gem = match.group(1)
+            versions = match.group(2).split(', ')
             gems[gem] = versions
     return gems
 
