@@ -25,7 +25,7 @@ def __virtual__():
     '''
     Only load if gitpython is available
     '''
-    if not isinstance(__opts__['file_roots'], list):
+    if not isinstance(__opts__['gitfs_remotes'], list):
         return False
     return 'git' if HAS_GIT else False
 
@@ -50,13 +50,13 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     repos = []
-    for ind in range(len(__opts__['file_roots'])):
+    for ind in range(len(__opts__['gitfs_remotes'])):
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
         repo = git.Repo.init(rp_, bare=True)
         if not repo.remotes:
-            repo.create_remote('origin', __opts__['file_roots'][ind])
+            repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
         repos.append(repo)
     return repos
 
