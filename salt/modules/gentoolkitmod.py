@@ -219,8 +219,9 @@ def _glsa_list_process_output(output):
                 status += ' Applied (injected)'
             if 'CVE' in desc:
                 desc, cves = desc.rsplit(None, 1)
+                cves = cves.split(',')
             else:
-                cves = ''
+                cves = list()
             ret[glsa_id] = {'description': desc, 'status': status,
                             'CVEs': cves}
         except ValueError:
@@ -239,7 +240,7 @@ def glsa_check_list(glsa_list):
 
         {<glsa id>: {'description': <glsa description>,
             'status': <glsa status>,
-            'CVEs': <list of CVEs>}}
+            'CVEs': [<list of CVEs>]}}
 
     CLI Example::
 
