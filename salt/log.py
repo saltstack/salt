@@ -142,7 +142,7 @@ class Logging(LoggingLoggerClass):
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
                    extra=None):
         # Let's try to make every logging message unicode
-        if not isinstance(msg, unicode):
+        if isinstance(msg, basestring) and not isinstance(msg, unicode):
             try:
                 return LoggingLoggerClass.makeRecord(
                     self, name, level, fn, lno,
