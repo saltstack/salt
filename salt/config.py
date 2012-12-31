@@ -417,10 +417,19 @@ def master_config(path):
             os.path.join(opts['cachedir'], 'extmods')
             )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'pidfile',
-                            'sock_dir', 'key_logfile', 'extension_modules',
-                            'autosign_file', 'token_dir'])
+    prepend_root_dirs = [
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'autosign_file', 'token_dir'
+    ]
+
+    # These can be set to syslog, so, not actual paths on the system
+    for config_key in ('log_file', 'key_logfile'):
+        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+            prepend_root_dirs.append(config_key)
+
+    prepend_root_dir(opts, prepend_root_dirs)
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
