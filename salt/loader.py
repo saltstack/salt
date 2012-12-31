@@ -151,8 +151,7 @@ def fileserver(opts, backends):
     Returns the file server modules
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
-    funcs = load.gen_functions(whitelist=backends)
-    ret = {}
+    ret = load.gen_functions(whitelist=backends)
     return ret
 
 
