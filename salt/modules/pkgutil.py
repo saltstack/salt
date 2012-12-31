@@ -121,7 +121,7 @@ def upgrade(refresh=True, **kwargs):
     new = _get_pkgs()
 
     # Return a list of the new package installed.
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def list_pkgs():
@@ -205,7 +205,7 @@ def install(name, refresh=False, version=None, **kwargs):
     new = _get_pkgs()
 
     # Return a list of the new package installed.
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(name, **kwargs):
