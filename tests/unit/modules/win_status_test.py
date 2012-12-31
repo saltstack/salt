@@ -150,6 +150,18 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
         self.assertIn(str(self.expected_error_code), log.warning.call_args[0][0])
 
 
+class TestEmptyCommandLine(TestProcsBase):
+    def setUp(self):
+        self.expected_error_code = 8
+        pid = 100
+        self.add_process(pid=pid, cmd=None)
+        self.call_procs()
+        self.proc = self.result[pid]
+
+    def test_cmd_is_empty_string(self):
+        self.assertEqual(self.proc['cmd'], '')
+
+
 if __name__ == "__main__":
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(TestProcsCount)
