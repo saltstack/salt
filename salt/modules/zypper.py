@@ -170,7 +170,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
@@ -198,7 +198,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
