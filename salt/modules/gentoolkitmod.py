@@ -141,7 +141,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
 def eclean_pkg(destructive=False, package_names=False, time_limit=0,
                exclude_file='/etc/eclean/packages.exclude'):
     '''
-    Clean obsolete portage sources
+    Clean obsolete binary packages
 
     destructive
         Only keep minimum for reinstallation
