@@ -2,7 +2,6 @@
 Support for YUM
 
 :depends:   - yum Python module
-            - rpm Python module
             - rpmUtils Python module
 '''
 
@@ -12,7 +11,6 @@ import logging
 # Import third party libs
 try:
     import yum
-    import rpm  # XXX: Is this import really needed. It's not used.
     from rpmUtils.arch import getBaseArch
     HAS_YUMDEPS = True
 except (ImportError, AttributeError):
@@ -29,19 +27,22 @@ def __virtual__():
         return False
 
     # Work only on RHEL/Fedora based distros with python 2.6 or greater
+    # TODO: Someone decide if we can just test os_family and pythonversion
     os_grain = __grains__['os']
     os_family = __grains__['os_family']
-    os_major_release = int(__grains__['osrelease'].split('.')[0])
+    try:
+        os_major = int(__grains__['osrelease'].split('.')[0])
+    except ValueError:
+        os_major = 0
 
-    # Fedora <= 10 used Python 2.5 and below
-    if os_grain == 'Fedora' and os_major_release >= 11:
+    if os_grain == 'Amazon':
         return 'pkg'
-    elif os_grain == 'Amazon':
+    elif os_grain == 'Fedora':
+        # Fedora <= 10 used Python 2.5 and below
+        if os_major >= 11:
+            return 'pkg'
+    elif os_family == 'RedHat' and os_major >= 6:
         return 'pkg'
-    else:
-        if os_family == 'RedHat' and os_grain != 'Fedora':
-            if os_major_release >= 6:
-                return 'pkg'
     return False
 
 
