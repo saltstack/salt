@@ -159,7 +159,7 @@ def _find_file(path, short='base'):
     return fnd
 
 
-def serve_file(load):
+def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
@@ -167,7 +167,6 @@ def serve_file(load):
            'dest': ''}
     if 'path' not in load or 'loc' not in load or 'env' not in load:
         return ret
-    fnd = _find_file(load['path'], load['env'])
     if not fnd['path']:
         return ret
     ret['dest'] = fnd['rel']
@@ -182,7 +181,7 @@ def serve_file(load):
     return ret
 
 
-def file_hash(load):
+def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
@@ -192,7 +191,7 @@ def file_hash(load):
     short = load['env']
     if short == 'base':
         short = 'master'
-    path = _find_file(load['path'], short)['path']
+    path = fnd['path']
     hashdest = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',
