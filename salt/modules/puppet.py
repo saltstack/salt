@@ -2,14 +2,11 @@
 Execute puppet routines
 '''
 
-# Import python libs
-import re
-
 # Import salt libs
 from salt import utils
 
 __outputter__ = {
-    'run':  'txt',
+    'run': 'txt',
     'noop': 'txt',
     'fact': 'txt',
     'facts': None,
@@ -25,11 +22,13 @@ def _check_puppet():
     # minion was started, and that would be rubbish
     utils.check_or_die('puppet')
 
+
 def _check_facter():
     '''
     Checks if facter is installed
     '''
     utils.check_or_die('facter')
+
 
 def _format_fact(output):
     try:
@@ -39,6 +38,7 @@ def _format_fact(output):
         fact = None
         value = None
     return (fact, value)
+
 
 class _Puppet(object):
     '''
@@ -64,22 +64,28 @@ class _Puppet(object):
         Format the command string to executed using cmd.run_all.
         '''
 
-        cmd = 'puppet {subcmd} --vardir {vardir} --confdir {confdir}'.format(**self.__dict__)
+        cmd = 'puppet {subcmd} --vardir {vardir} --confdir {confdir}'.format(
+            **self.__dict__
+        )
 
         args = ' '.join(self.subcmd_args)
-        args += ''.join([' --{0}'.format(k) for k in self.args])  # single spaces
-        args += ''.join([' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()])
+        args += ''.join(
+            [' --{0}'.format(k) for k in self.args]  # single spaces
+        )
+        args += ''.join([
+            ' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()]
+        )
 
         return '{0} {1}'.format(cmd, args)
 
-    def arguments(self, args=[]):
+    def arguments(self, args=None):
         '''
-        Read in arguments for the current subcommand. These are added to the cmd
-        line without '--' appended. Any others are redirected as standard options
-        with the double hyphen prefixed.
+        Read in arguments for the current subcommand. These are added to the
+        cmd line without '--' appended. Any others are redirected as standard
+        options with the double hyphen prefixed.
         '''
         # permits deleting elements rather than using slices
-        args = list(args)
+        args = args and list(args) or []
 
         # match against all known/supported subcmds
         if self.subcmd == 'apply':
@@ -89,10 +95,14 @@ class _Puppet(object):
 
         if self.subcmd == 'agent':
             # no arguments are required
-            args.extend(['onetime', 'verbose', 'ignorecache', 'no-daemonize', 'no-usecacheonfailure', 'no-splay', 'show_diff'])
+            args.extend([
+                'onetime', 'verbose', 'ignorecache', 'no-daemonize',
+                'no-usecacheonfailure', 'no-splay', 'show_diff'
+            ])
 
         # finally do this after subcmd has been matched for all remaining args
         self.args = args
+
 
 def run(*args, **kwargs):
     '''
@@ -119,8 +129,8 @@ def run(*args, **kwargs):
 
     if args:
         # based on puppet documentation action must come first. making the same
-        # assertion. need to ensure the list of supported cmds here matches those
-        # defined in _Puppet.arguments()
+        # assertion. need to ensure the list of supported cmds here matches
+        # those defined in _Puppet.arguments()
         if args[0] in ['agent', 'apply']:
             puppet.subcmd = args[0]
             puppet.arguments(args[1:])
@@ -131,6 +141,7 @@ def run(*args, **kwargs):
     puppet.kwargs.update(utils.clean_kwargs(**kwargs))
 
     return __salt__['cmd.run_all'](repr(puppet))
+
 
 def noop(*args, **kwargs):
     '''
@@ -149,6 +160,7 @@ def noop(*args, **kwargs):
     '''
     args += ('noop',)
     return run(*args, **kwargs)
+
 
 def facts():
     '''
@@ -174,6 +186,7 @@ def facts():
             continue
         ret[fact] = value
     return ret
+
 
 def fact(name):
     '''
