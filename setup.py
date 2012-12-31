@@ -12,6 +12,11 @@ from distutils.cmd import Command
 from distutils.command.clean import clean
 from distutils.sysconfig import get_python_lib, PREFIX
 
+# Change to salt source's directory prior to running any command
+setup_dirname = os.path.dirname(__file__)
+if setup_dirname != '':
+    os.chdir(setup_dirname)
+
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
 # This ensures consistent behavior but allows for advanced usage with
 # virtualenv, buildout, and others.
