@@ -101,13 +101,15 @@ class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
         unicode_str = u'\xc1'
         self.utf8str = unicode_str.encode('utf8')
+        pid = 100
         self.add_process(
+            pid=pid,
             user=unicode_str,
             user_domain=unicode_str,
             cmd=unicode_str,
             name=unicode_str)
         self.call_procs()
-        self.proc = self.result[100]
+        self.proc = self.result[pid]
 
     def test_process_cmd_is_utf8(self):
         self.assertEqual(self.proc['cmd'], self.utf8str)
