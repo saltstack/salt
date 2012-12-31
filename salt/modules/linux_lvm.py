@@ -239,7 +239,7 @@ def vgremove(vgname):
     return out.strip()
 
 
-def lvremove(lvname, vgname, force=False):
+def lvremove(lvname, vgname):
     '''
     Remove a given existing logical volume from a named existing volume group
 
@@ -247,9 +247,6 @@ def lvremove(lvname, vgname, force=False):
 
         salt '*' lvm.lvremove lvname vgname force=True
     '''
-    forcearg = ''
-    if force:
-        forcearg = '-f'
-    cmd = 'lvremove {0} {1}/{2}'.format(forcearg, vgname, lvname)
+    cmd = 'lvremove -f {0}/{1}'.format(vgname, lvname)
     out = __salt__['cmd.run'](cmd)
     return out.strip()
