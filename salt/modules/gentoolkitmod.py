@@ -242,7 +242,7 @@ def glsa_check_list(glsa_list):
     cmd = 'glsa-check --quiet --nocolor --cve --list '
     if isinstance(glsa_list, list):
         for glsa in glsa_list:
-            cmd += glsa
+            cmd += glsa + ' '
     elif glsa_list is 'all' or glsa_list is 'affected':
         cmd += glsa_list
     else:
