@@ -146,15 +146,13 @@ def auth(opts, whitelist=None):
     return load.gen_functions(whitelist=whitelist)
 
 
-def fileserver(opts, backend='roots'):
+def fileserver(opts, backends):
     '''
     Returns the file server modules
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
-    funcs = load.gen_functions(whitelist=[backend])
+    funcs = load.gen_functions(whitelist=backends)
     ret = {}
-    for func in funcs:
-        ret[func[func.index('.') + 1:]] = funcs[func]
     return ret
 
 
