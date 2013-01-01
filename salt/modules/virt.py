@@ -341,12 +341,19 @@ def get_disks(vm_):
         else:
             continue
         if target.hasAttribute('dev'):
+            qemu_target = ''
             if source.hasAttribute('file'):
-                dtype = 'file'
+                qemu_target = source.getAttribute('file')
             elif source.hasAttribute('dev'):
-                dtype = 'dev'
-            disks[target.getAttribute('dev')] = {
-                'file': source.getAttribute(dtype)}
+                qemu_target = source.getAttribute('dev')
+            elif source.hasAttribute('protocol') and \
+                    source.hasAttribute('name'): # For rbd network
+                qemu_target = '%s:%s' %(
+                        source.getAttribute('protocol'),
+                        source.getAttribute('name'))
+            if qemu_target:
+                disks[target.getAttribute('dev')] = {\
+                    'file': qemu_target}
     for dev in disks:
         try:
             output = []
