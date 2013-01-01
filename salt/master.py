@@ -664,7 +664,14 @@ class AESFuncs(object):
         '''
         Return the master options to the minion
         '''
-        return self.opts
+        mopts = dict(self.opts)
+        file_roots = dict(mopts['file_roots'])
+        envs = self._file_envs()
+        for env in file_roots:
+            if not env in envs:
+                file_roots[env] = []
+        mopts['file_roots'] = file_roots
+        return mopts
 
     def _pillar(self, load):
         '''
