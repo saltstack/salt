@@ -255,10 +255,30 @@
 # File Server Backend
 # Salt supports a modular fileserver backend system, this system allows
 # the salt master to link directly to third party systems to gather and
-# manage the files. The defult and classic backend is "roots", be advised
-# that the file_roots configuration value will differ based on the underlying
-# fileserver backend
-#fileserver_backend: roots
+# manage the files available to minions. Multiple backends can be
+# configured and will be searched for the requested file in the order in which
+# they are defined here. The defult setting only enables the standard backend
+# "roots" which uses the "file_roots" option.
+# To enable the git backend change the option to look like this:
+# fileserver_backend:
+#   - git
+# To use multiple backends list them in the order they are searched:
+# fileserver_backend:
+#   - git
+#   - roots
+#fileserver_backend: 
+#   - roots
+#
+# Git fileserver backend configuration
+# When using the git fileserver backend at least one git remote needs to be
+# defined. The user running the salt master will need read access to the repo.
+# gitfs_remotes:
+#   - git://github.com/saltstack/salt-states.git
+#   - git://github.com/saltstack/prod-states.git
+# The repos will be searched in order to find the file requested by a client
+# and the first repo to have the file will return it.
+# When using the git backend branches and tags are translated into salt
+# environments.
 
 # Pillar Configurations:
 # The Salt Pillar, is a system that allows for the building of global data
