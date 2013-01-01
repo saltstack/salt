@@ -130,6 +130,7 @@ def update():
                         # Found it, make sure it has the correct ref
                         if not branch.tracking_branch() is ref:
                             branch.set_tracking_branch(ref)
+                            found = True
                 if not found:
                     branch = repo.create_head(short, ref)
                     branch.set_tracking_branch(ref)
