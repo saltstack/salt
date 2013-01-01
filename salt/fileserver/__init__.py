@@ -141,10 +141,11 @@ class Fileserver(object):
         if 'path' not in load or 'env' not in load:
             return ''
         fnd = self.find_file(load['path'], load['env'])
+        print fnd
         if not fnd.get('back'):
             return ''
         fstr = '{0}.file_hash'.format(fnd['back'])
-        if fstr is self.servers:
+        if fstr in self.servers:
             return self.servers[fstr](load, fnd)
         return ''
 
