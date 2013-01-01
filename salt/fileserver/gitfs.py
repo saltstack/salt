@@ -7,7 +7,9 @@ When using the git file server backend,
 
 # Import python libs
 import os
+import time
 import hashlib
+
 # Import third party libs
 HAS_GIT = False
 try:
@@ -44,6 +46,48 @@ def _get_ref(repo, short):
     return False
 
 
+def _wait_lock(lk_fn, dest):
+    '''
+    if the write lock is there check to see if the file is acctually being
+    written, if there is no change in the file size after a short sleep then
+    remove the lock and move forward.
+    '''
+    if not os.path.isfile(lk_fn):
+        return False
+    if not os.path.isfile(dest):
+        # The dest is not here, sleep for a bit, if the dest is not here yet
+        # kill the lockfile and start the write
+        time.sleep(1)
+        if not os.path.isfile(dest):
+            try:
+                os.remove(lk_fn)
+            except (OSError, IOError):
+                pass
+            return False
+    # There is a lock file, the dest is there, stat the dest, sleep and check
+    # that the dest is being written, if it is not being written kill the lock
+    # file and continue. Also check if the lock file is gone.
+    s_count = 0
+    s_size = os.stat(dest).st_size
+    while True:
+        time.sleep(1)
+        if not os.path.isfile(lk_fn):
+            return False
+        size = os.stat(dest).st_size
+        if size == s_size:
+            s_count += 1
+            if s_count >= 3:
+                # The file is not being written to, kill the lock and proceed
+                try:
+                    os.remove(lk_fn)
+                except (OSError, IOError):
+                    pass
+                return False
+        else:
+            s_size = size
+    return False
+
+
 def init():
     '''
     Return the git repo object for this session
@@ -65,10 +109,18 @@ def update():
     '''
     Execute a git pull on all of the repos
     '''
+    pid = os.getpid()
     repos = init()
     for repo in repos:
         origin = repo.remotes[0]
+        lk_fn = os.path.join(repo.working_dir, 'update.lk')
+        with open(lk_fn, 'w+') as fp_:
+            fp_.write(str(pid))
         origin.fetch()
+        try:
+            os.remove(lk_fn)
+        except (OSError, IOError):
+            pass
         for ref in repo.refs:
             if isinstance(ref, git.refs.remote.RemoteReference):
                 found = False
@@ -93,6 +145,8 @@ def envs():
         for ref in repo.refs:
             if isinstance(ref, git.Head) or isinstance(ref, git.Tag):
                 short = os.path.basename(ref.name)
+                if short == 'master':
+                    short = 'base'
                 ret.add(short)
     return list(ret)
 
@@ -102,10 +156,10 @@ def find_file(path, short='base'):
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
     '''
-    if os.path.isabs(path):
-        return fnd
     fnd = {'path': '',
            'rel': ''}
+    if os.path.isabs(path):
+        return fnd
     if short == 'base':
         short = 'master'
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', short, path)
@@ -119,6 +173,11 @@ def find_file(path, short='base'):
             'gitfs/hash',
             short,
             '{0}.md5'.format(path))
+    lk_fn = os.path.join(
+            __opts__['cachedir'],
+            'gitfs/hash',
+            short,
+            '{0}.lk'.format(path))
     destdir = os.path.dirname(dest)
     shadir = os.path.dirname(shadest)
     if not os.path.isdir(destdir):
@@ -136,6 +195,7 @@ def find_file(path, short='base'):
             blob = tree/path
         except KeyError:
             continue
+        _wait_lock(lk_fn, dest)
         if os.path.isfile(shadest) and os.path.isfile(dest):
             with open(shadest, 'r') as fp_:
                 sha = fp_.read()
@@ -143,10 +203,16 @@ def find_file(path, short='base'):
                     fnd['rel'] = path
                     fnd['path'] = dest
                     return fnd
+        with open(lk_fn, 'w+') as fp_:
+            fp_.write('')
         with open(dest, 'w+') as fp_:
             blob.stream_data(fp_)
         with open(shadest, 'w+') as fp_:
             fp_.write(blob.hexsha)
+        try:
+            os.remove(lk_fn)
+        except (OSError, IOError):
+            pass
         if os.path.isfile(md5dest):
             try:
                 os.remove(md5dest)
@@ -217,6 +283,8 @@ def file_list(load):
     ret = []
     if 'env' not in load:
         return ret
+    if load['env'] == 'base':
+        load['env'] = 'master'
     repos = init()
     for repo in repos:
         ref = _get_ref(repo, load['env'])
@@ -237,6 +305,8 @@ def file_list_emptydirs(load):
     ret = []
     if 'env' not in load:
         return ret
+    if load['env'] == 'base':
+        load['env'] = 'master'
     repos = init()
     for repo in repos:
         ref = _get_ref(repo, load['env'])
@@ -258,6 +328,8 @@ def dir_list(load):
     ret = []
     if 'env' not in load:
         return ret
+    if load['env'] == 'base':
+        load['env'] = 'master'
     repos = init()
     for repo in repos:
         ref = _get_ref(repo, load['env'])
