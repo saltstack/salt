@@ -83,7 +83,6 @@ def update():
                     branch.set_tracking_branch(ref)
 
 
-
 def envs():
     '''
     Return a list of refs that can be used as environments
@@ -98,7 +97,7 @@ def envs():
     return list(ret)
 
 
-def _find_file(path, short='base'):
+def find_file(path, short='base'):
     '''
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
