@@ -94,7 +94,7 @@ def present(
         enc='ssh-rsa',
         comment='',
         source='',
-        options=[],
+        options=None,
         config='.ssh/authorized_keys',
         **kwargs):
     '''
@@ -135,7 +135,7 @@ def present(
                 name,
                 enc,
                 comment,
-                options,
+                options or [],
                 source,
                 config,
                 kwargs.get('__env__', 'base')
@@ -174,7 +174,7 @@ def present(
                 name,
                 enc,
                 comment,
-                options,
+                options or [],
                 config)
 
     if data == 'replace':
