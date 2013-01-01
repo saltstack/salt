@@ -68,12 +68,12 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match('^\s*Package\s*:\s*(\S+)',line)
+                    match = re.match('^\s*Package\s*:\s*(\S+)', line)
                     if match:
                         name = match.group(1)
                         continue
                 if not version:
-                    match = re.match('^\s*Version\s*:\s*(\S+)',line)
+                    match = re.match('^\s*Version\s*:\s*(\S+)', line)
                     if match:
                         version = match.group(1)
                         continue
@@ -87,7 +87,7 @@ def _parse_pkg_meta(path):
         metaparser = parse_deb
     else:
         log.error('No metadata parser found for {0}'.format(path))
-        return '',''
+        return '', ''
 
     return metaparser(path)
 
@@ -161,11 +161,11 @@ def _verify_binary_pkg(srcinfo):
         elif pkg_name != pkgmeta_name:
             problems.append('Package file {0} (Name: {1}) does not '
                             'match the specified package name '
-                            '({2}).'.format(pkg_uri,pkgmeta_name,pkg_name))
+                            '({2}).'.format(pkg_uri, pkgmeta_name, pkg_name))
     return problems
 
 
-def check_targets(targets=[]):
+def check_targets(targets=None):
     '''
     Examines target package names to make sure they were formatted properly.
     Returns a list of problems encountered.
@@ -175,7 +175,7 @@ def check_targets(targets=[]):
     # properly submitted as category/pkgname. For any package that does not
     # follow this format, offer matches from the portage tree.
     if __grains__['os_family'] == 'Gentoo':
-        for pkg in targets:
+        for pkg in (targets or []):
             if '/' not in pkg:
                 matches = __salt__['pkg.porttree_matches'](pkg)
                 if matches:
@@ -232,7 +232,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
             return None, None
 
         srcinfo = []
-        for pkg_name,pkg_src in sources.iteritems():
+        for pkg_name, pkg_src in sources.iteritems():
             if __salt__['config.valid_fileproto'](pkg_src):
                 # Cache package from remote source (salt master, http, ftp)
                 srcinfo.append((pkg_name,
@@ -241,7 +241,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
                                'remote'))
             else:
                 # Package file local to the minion
-                srcinfo.append((pkg_name,pkg_src,pkg_src,'local'))
+                srcinfo.append((pkg_name, pkg_src, pkg_src, 'local'))
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
@@ -257,7 +257,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
         # the package path (3rd element of tuple).
-        return [x[2] for x in srcinfo],'file'
+        return [x[2] for x in srcinfo], 'file'
 
     elif name and __grains__['os_family'] != 'Solaris':
         return [name], 'repository'
@@ -297,13 +297,13 @@ def sort_pkglist(pkgs):
             pkgs[key].sort()
 
 
-def find_changes(old={}, new={}):
+def find_changes(old=None, new=None):
     '''
     Compare before and after results from pkg.list_pkgs() to determine what
     changes were made to the packages installed on the minion.
     '''
     pkgs = {}
-    for npkg in set(new.keys()).union(old.keys()):
+    for npkg in set((new or {}).keys()).union((old or {}).keys()):
         if npkg not in old:
             # the package is freshly installed
             pkgs[npkg] = {'old': '',
