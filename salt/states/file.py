@@ -171,7 +171,8 @@ def _clean_dir(root, keep, exclude_pat):
         for name in files:
             nfn = os.path.join(roots, name)
             if not nfn in real_keep:
-                #-- check if this is a part of exclude_pat(only). No need to check include_pat
+                # -- check if this is a part of exclude_pat(only). No need to
+                # check include_pat
                 if not _check_include_exclude(nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
@@ -180,7 +181,8 @@ def _clean_dir(root, keep, exclude_pat):
         for name in dirs:
             nfn = os.path.join(roots, name)
             if not nfn in real_keep:
-                #-- check if this is a part of exclude_pat(only). No need to check include_pat
+                # -- check if this is a part of exclude_pat(only). No need to
+                # check include_pat
                 if not _check_include_exclude(nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
@@ -203,7 +205,7 @@ def _get_recurse_dest(prefix, fn_, source, env):
     local_roots = []
     if __opts__['file_client'] == 'local':
         local_roots = __opts__['file_roots'][env]
-        local_roots.sort(key=lambda p: len(p), reverse=True)
+        local_roots.sort(key=len, reverse=True)
 
     srcpath = source[7:]  # the path after "salt://"
 
@@ -321,20 +323,21 @@ def _symlink_check(name, target, force):
     Check the symlink function
     '''
     if not os.path.exists(name):
-        comment = 'Symlink {0} to {1} is set for creation'.format(name, target)
-        return None, comment
+        return None, 'Symlink {0} to {1} is set for creation'.format(
+            name, target
+        )
     if os.path.islink(name):
         if not os.readlink(name) == target:
-            comment = 'Link {0} target is set to be changed to {1}'.format(
-                    name, target)
-            return None, comment
+            return None, 'Link {0} target is set to be changed to {1}'.format(
+                name, target
+            )
         else:
             return True, 'The symlink {0} is present'.format(name)
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
                           'make way for a new symlink targeting {1}').format(
-                                  name, target)
+                              name, target)
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name))
 
@@ -424,9 +427,12 @@ def symlink(
                     group=group,
                     mode=mode)
         else:
-            return _error(ret,
-                          ('Directory {0} for symlink is not present'
-                           ) .format(os.path.dirname(name)))
+            return _error(
+                ret,
+                'Directory {0} for symlink is not present'.format(
+                    os.path.dirname(name)
+                )
+            )
     if os.path.islink(name):
         # The link exists, verify that it matches the target
         if not os.readlink(name) == target:
@@ -471,8 +477,9 @@ def absent(name):
            'result': True,
            'comment': ''}
     if not os.path.isabs(name):
-        return _error(ret, ('Specified file {0} is not an absolute'
-                          ' path').format(name))
+        return _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name)
+        )
     if os.path.isfile(name) or os.path.islink(name):
         if __opts__['test']:
             ret['result'] = None
@@ -524,19 +531,19 @@ def exists(name):
 
 
 def managed(name,
-        source=None,
-        source_hash='',
-        user=None,
-        group=None,
-        mode=None,
-        template=None,
-        makedirs=False,
-        context=None,
-        replace=True,
-        defaults=None,
-        env=None,
-        backup='',
-        **kwargs):
+            source=None,
+            source_hash='',
+            user=None,
+            group=None,
+            mode=None,
+            template=None,
+            makedirs=False,
+            context=None,
+            replace=True,
+            defaults=None,
+            env=None,
+            backup='',
+            **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
     the salt master and potentially run through a templating system.
@@ -702,14 +709,14 @@ def managed(name,
 
 
 def directory(name,
-        user=None,
-        group=None,
-        recurse=None,
-        mode=None,
-        makedirs=False,
-        clean=False,
-        require=None,
-        exclude_pat=None):
+              user=None,
+              group=None,
+              recurse=None,
+              mode=None,
+              makedirs=False,
+              clean=False,
+              require=None,
+              exclude_pat=None):
     '''
     Ensure that a named directory is present and has the right perms
 
@@ -1104,8 +1111,9 @@ def recurse(name,
         # it is either a normal file or an empty dir(if include_empty==true).
 
         dest = _get_recurse_dest(name, fn_, source, env)
-        #- Check if it is to be excluded. Match only trailing part of the path after base directory
-        if not _check_include_exclude(dest[len(name)+1:], include_pat, exclude_pat):
+        #- Check if it is to be excluded. Match only trailing part of the path
+        # after base directory
+        if not _check_include_exclude(dest[len(name) + 1:], include_pat, exclude_pat):
             continue
         dirname = os.path.dirname(dest)
         keep.add(dest)
@@ -1129,7 +1137,8 @@ def recurse(name,
         removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             if __opts__['test']:
-                if ret['result']: ret['result'] = None
+                if ret['result']:
+                    ret['result'] = None
                 add_comment('removed', removed)
             else:
                 ret['changes']['removed'] = removed
@@ -1492,8 +1501,12 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
     return ret
 
 
-def patch(name, source=None, hash=None, options='',
-        dry_run_first=True, env='base'):
+def patch(name,
+          source=None,
+          hash=None,
+          options='',
+          dry_run_first=True,
+          env='base'):
     '''
     Apply a patch to a file. Note: a suitable ``patch`` executable must be
     available on the minion when using this state function.
@@ -1566,7 +1579,9 @@ def patch(name, source=None, hash=None, options='',
     if ret['result'] and not __salt__['file.check_hash'](name, hash):
         ret.update(
             result=False,
-            comment='File {0} hash mismatch after patch was applied'.format(name)
+            comment='File {0} hash mismatch after patch was applied'.format(
+                name
+            )
         )
     return ret
 

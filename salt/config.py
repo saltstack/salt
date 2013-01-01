@@ -41,18 +41,13 @@ def _validate_file_roots(opts):
     If the file_roots option has a key that is None then we will error out,
     just replace it with an empty list
     '''
-    if opts['fileserver_backend'] == 'roots':
-        if not isinstance(opts['file_roots'], dict):
-            log.warning('The file_roots parameter is not properly formatted,'
-                        ' using defaults')
-            return {'base': ['/srv/salt']}
-        for env, dirs in list(opts['file_roots'].items()):
-            if not isinstance(dirs, list) and not isinstance(dirs, tuple):
-                opts['file_roots'][env] = []
-        return opts['file_roots']
-    else:
-        if not isinstance(opts['file_roots'], list):
-            return []
+    if not isinstance(opts['file_roots'], dict):
+        log.warning('The file_roots parameter is not properly formatted,'
+                    ' using defaults')
+        return {'base': ['/srv/salt']}
+    for env, dirs in list(opts['file_roots'].items()):
+        if not isinstance(dirs, list) and not isinstance(dirs, tuple):
+            opts['file_roots'][env] = []
     return opts['file_roots']
 
 
@@ -351,8 +346,8 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
+            'gitfs_remotes': [],
             'ext_pillar': [],
-            # NOTE: pillar version changed to 2 by default in 0.10.6
             'pillar_version': 2,
             'pillar_opts': True,
             'syndic_master': '',
@@ -363,7 +358,7 @@ def master_config(path):
             'file_buffer_size': 1048576,
             'file_ignore_regex': None,
             'file_ignore_glob': None,
-            'fileserver_backend': 'roots',
+            'fileserver_backend': ['roots'],
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,

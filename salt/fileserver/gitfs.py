@@ -25,7 +25,7 @@ def __virtual__():
     '''
     Only load if gitpython is available
     '''
-    if not isinstance(__opts__['file_roots'], list):
+    if not isinstance(__opts__['gitfs_remotes'], list):
         return False
     return 'git' if HAS_GIT else False
 
@@ -50,13 +50,13 @@ def init():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     repos = []
-    for ind in range(len(__opts__['file_roots'])):
+    for ind in range(len(__opts__['gitfs_remotes'])):
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
         repo = git.Repo.init(rp_, bare=True)
         if not repo.remotes:
-            repo.create_remote('origin', __opts__['file_roots'][ind])
+            repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
         repos.append(repo)
     return repos
 
@@ -83,7 +83,6 @@ def update():
                     branch.set_tracking_branch(ref)
 
 
-
 def envs():
     '''
     Return a list of refs that can be used as environments
@@ -98,7 +97,7 @@ def envs():
     return list(ret)
 
 
-def _find_file(path, short='base'):
+def find_file(path, short='base'):
     '''
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
@@ -159,7 +158,7 @@ def _find_file(path, short='base'):
     return fnd
 
 
-def serve_file(load):
+def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
@@ -167,7 +166,6 @@ def serve_file(load):
            'dest': ''}
     if 'path' not in load or 'loc' not in load or 'env' not in load:
         return ret
-    fnd = _find_file(load['path'], load['env'])
     if not fnd['path']:
         return ret
     ret['dest'] = fnd['rel']
@@ -182,7 +180,7 @@ def serve_file(load):
     return ret
 
 
-def file_hash(load):
+def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
@@ -192,7 +190,7 @@ def file_hash(load):
     short = load['env']
     if short == 'base':
         short = 'master'
-    path = _find_file(load['path'], short)['path']
+    path = fnd['path']
     hashdest = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',
