@@ -130,7 +130,7 @@ class Fileserver(object):
         if not fnd.get('back'):
             return ret
         fstr = '{0}.serve_file'.format(fnd['back'])
-        if fstr is self.servers:
+        if fstr in self.servers:
             return self.servers[fstr](load, fnd)
         return ret
 
