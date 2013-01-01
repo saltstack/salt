@@ -6,7 +6,7 @@ The Salt Windows Software Repository provides a package manager and software
 repository similar to what is provided by yum and apt on Linux.
 
 By default, the Windows software repository is found at ``/srv/salt/win/repo``
-Each piece of software should have it's own directory which contains the
+Each piece of software should have its own directory which contains the
 installers and a package definition file. This package definition file is a
 yaml file named ``init.sls``.
 
