@@ -666,6 +666,7 @@ class AESFuncs(object):
         '''
         mopts = dict(self.opts)
         file_roots = dict(mopts['file_roots'])
+        file_roots = {}
         envs = self._file_envs()
         for env in envs:
             if not env in file_roots:
