@@ -1,8 +1,8 @@
 '''
-Management of languages/locales
-==============================+
+Management of timezones
+=======================
 
-The locale can be managed for the system:
+The timezone can be managed for the system:
 
 .. code-block:: yaml
 
@@ -14,7 +14,7 @@ The locale can be managed for the system:
 
 def __virtual__():
     '''
-    Only load if the locale module is available in __salt__
+    Only load if the timezone module is available in __salt__
     '''
     return 'timezone' if 'timezone.get_zone' in __salt__ else False
 
