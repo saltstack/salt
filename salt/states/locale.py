@@ -31,13 +31,13 @@ def system(name):
            'comment': ''}
     if __salt__['locale.get_locale']() == name:
         ret['result'] = True
-        ret['comment'] = 'System layout {0} already set'.format(name)
+        ret['comment'] = 'System locale {0} already set'.format(name)
         return ret
     if __opts__['test']:
-        ret['comment'] = 'System layout {0} needs to be set'.format(name)
+        ret['comment'] = 'System locale {0} needs to be set'.format(name)
         return ret
     if __salt__['locale.set_locale'](name):
-        ret['changes'] = {'layout': name}
+        ret['changes'] = {'locale': name}
         ret['result'] = True
         ret['comment'] = 'Set system locale {0}'.format(name)
         return ret
