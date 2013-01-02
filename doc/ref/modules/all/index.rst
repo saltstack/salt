@@ -63,6 +63,7 @@ Full list of builtin execution modules
     kmod
     kvm_hyper
     launchctl
+    layman
     ldapmod
     linux_sysctl
     locale
