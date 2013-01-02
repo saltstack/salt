@@ -39,6 +39,7 @@ Full list of builtin execution modules
     disk
     djangomod
     ebuild
+    eix
     event
     extfs
     file
