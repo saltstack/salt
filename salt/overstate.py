@@ -170,12 +170,12 @@ class OverState(object):
                     for comp in self.over:
                         rname = comp.keys()[0]
                         if req == rname:
-                            stage = comp[rname]
-                            v_stage = self.verify_stage(rname, stage)
+                            rstage = comp[rname]
+                            v_stage = self.verify_stage(rname, rstage)
                             if isinstance(v_stage, list):
                                 yield {rname: v_stage}
                             else:
-                                yield self.call_stage(rname, stage)
+                                yield self.call_stage(rname, rstage)
         if req_fail[name]:
             yield req_fail
         else:
