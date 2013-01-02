@@ -6,7 +6,7 @@ The locale can be managed for the system:
 
 .. code-block:: yaml
 
-    us:
+    en_US.UTF-8:
       locale.system
 '''
 
