@@ -18,6 +18,13 @@ Or it can be managed for XOrg:
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the mysql module is available in __salt__
+    '''
+    return 'keyboard' if 'keyboard.get_sys' in __salt__ else False
+
+
 def system(name):
     '''
     Set the keyboard layout for the system
