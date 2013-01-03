@@ -194,7 +194,6 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         fromrepo = repo
 
     if kwargs.get('env'):
-        print kwargs.get('env')
         os.environ.update(kwargs.get('env'))
 
     if pkg_params is None or len(pkg_params) == 0:
