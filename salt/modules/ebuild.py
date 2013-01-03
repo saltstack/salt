@@ -221,7 +221,7 @@ def update(pkg, refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'emerge --update --quiet {0}'.format(pkg)
+    cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(pkg)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
