@@ -9,9 +9,13 @@ One issue exists, since the name argument is present in the state call and is
 present in many modules, this argument will need to be replaced in the sls
 data with the argument m_name.
 '''
+# Import python libs
+
+import datetime
 
 # Import salt libs
 import salt.state
+import salt.loader
 
 
 def wait(name, **kwargs):
@@ -36,6 +40,9 @@ def run(name, **kwargs):
 
     ``name``
         The module function to execute
+
+    ``returner``
+        Specify the returner to send the return of the module execution to
 
     ``**kwargs``
         Pass any arguments needed to execute the function
@@ -115,6 +122,15 @@ def run(name, **kwargs):
     else:
         ret['changes']['ret'] = mret
 
+    if 'returner' in kwargs:
+        ret_ret = {
+                'id': __opts__['id'],
+                'ret': mret,
+                'fun': name,
+                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+        returners = salt.loader.returners(__opts__, __salt__)
+        if kwargs['returner'] in returners:
+            returners[kwargs]()
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
     return ret
