@@ -6,6 +6,7 @@ Support for YUM
 '''
 
 # Import python libs
+import os
 import logging
 
 # Import third party libs
@@ -572,3 +573,57 @@ def groupinfo(groupname):
                     'default packages': group.default_packages,
                     'conditional packages': group.conditional_packages,
                     'description': group.description}
+
+
+def list_repos(basedir='/etc/yum.repos.d'):
+    '''
+    Lists all repos in basedir (default: /etc/yum.repos.d/)
+
+    CLI Example::
+
+        salt '*' pkg.list_repos
+    '''
+    repos = []
+    repofiles = []
+    for repofile in os.listdir(basedir):
+        repopath = '{0}/{1}'.format(basedir, repofile)
+        if not repofile.endswith('.repo'):
+            continue
+        header, filerepos = _parse_repo_file(repopath)
+        for reponame in filerepos.keys():
+            repo = filerepos[reponame]
+            repo['file'] = repopath
+            repos.append({reponame: repo})
+    return repos
+
+
+def _parse_repo_file(filename):
+    rfile = open(filename, 'r')
+    repos = {}
+    header = ''
+    repo = ''
+    for line in rfile:
+        if line.startswith('['):
+            repo = line.replace('[', '').replace(']', '')
+            repos[repo] = {}
+
+        # Even though these are essentially uselss, I want to allow the user
+        # to maintain their own comments, etc
+        if not line:
+            if not repo:
+                header += line
+        if line.startswith('#'):
+            if not repo:
+                header += line
+            else:
+                if not 'comments' in repos[repo].keys():
+                    repos[repo]['comments'] = []
+                repos[repo]['comments'].append(line.strip())
+            continue
+
+        # These are the actual configuration lines that matter
+        if '=' in line:
+            comps = line.strip().split('=')
+            repos[repo][comps[0].strip()] = '='.join(comps[1:])
+
+    return (header, repos)
