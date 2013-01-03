@@ -11,6 +11,11 @@ Setting a Github pull request
 
 This is the preferred method for contributions, simply create a Github
 fork, commit your changes to the fork, and then open up a pull request.
+If you want to make our life really easier, please also enable Travis-CI on 
+your fork. Salt is already configured, all you need to do is follow the first 
+two(2) steps on their `Getting Started Doc`_.
+
+.. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
 
 Posting patches to the mailing list
 -----------------------------------
