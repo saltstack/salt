@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
 Directly call a salt command in the modules, does not require a running salt
 minion to run.
