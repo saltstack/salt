@@ -1205,7 +1205,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # Look for the pattern before attempting the edit
     if not __salt__['file.contains_regex'](name, before):
         # Pattern not found; try to guess why
-        if __salt__['file.contains_regex'](name, after):
+        if __salt__['file.contains'](name, after):
             ret['comment'] = 'Edit already performed'
             ret['result'] = True
             return ret
@@ -1225,7 +1225,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         nlines = fp_.readlines()
 
     # check the result
-    ret['result'] = __salt__['file.contains_regex'](name, after)
+    ret['result'] = __salt__['file.contains'](name, after)
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (

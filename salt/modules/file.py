@@ -637,10 +637,11 @@ def contains(path, text):
     if not os.path.exists(path):
         return False
 
+    stripped_text = test.strip()
     try:
         with BufferedReader(path) as breader:
             for chunk in breader:
-                if text.strip() == chunk.strip():
+                if stripped_text in chunk:
                     return True
         return False
     except (IOError, OSError):
