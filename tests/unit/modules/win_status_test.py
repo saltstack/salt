@@ -2,8 +2,10 @@ import new
 import sys
 import os
 
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+if __name__ == '__main__':
+    sys.path.insert(
+        0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    )
 
 from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
@@ -16,9 +18,14 @@ pythoncom = new.module('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
 try:
-    from mock import Mock, patch, ANY, call
+    from mock import Mock, patch
     has_mock = True
-
+    try:
+        from mock import call, ANY
+        wrong_version = False
+    except ImportError:
+        wrong_version = True
+        raise
     WMI = Mock()
     wmi.WMI = Mock(return_value=WMI)
     pythoncom.CoInitialize = Mock()
@@ -26,10 +33,13 @@ try:
 except ImportError:
     has_mock = False
 
-
 import salt.modules.win_status as status
 
-@skipIf(has_mock is False, "mock python module is unavailable")
+
+@skipIf(has_mock is False,
+        wrong_version and
+        "you need to upgrade your mock version to >= 0.8.0" or
+        "mock python module is unavailable")
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
