@@ -193,6 +193,9 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     if not fromrepo and repo:
         fromrepo = repo
 
+    if kwargs.get('env'):
+        os.environ.update(kwargs.get('env'))
+
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -237,6 +240,9 @@ def remove(pkg):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
+    if kwargs.get('env'):
+        os.environ.update(kwargs.get('env'))
+
     cmd = 'apt-get -q -y remove {0}'.format(pkg)
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
@@ -260,6 +266,9 @@ def purge(pkg):
     '''
     ret_pkgs = []
     old_pkgs = list_pkgs()
+
+    if kwargs.get('env'):
+        os.environ.update(kwargs.get('env'))
 
     # Remove inital package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)

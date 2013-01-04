@@ -212,9 +212,10 @@ def _run(cmd,
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
-    # If all we want is the return code then don't block on gathering input.
+    # Setting stdout to None seems to cause the Process to fail.
+    # See bug #2640 for more info
     if retcode:
-        kwargs['stdout'] = None
+        #kwargs['stdout'] = None
         kwargs['stderr'] = None
 
     # This is where the magic happens

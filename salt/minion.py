@@ -934,6 +934,28 @@ class Matcher(object):
                     )
                 )
 
+    def data_match(self, tgt):
+        '''
+        Match based on the local data store on the minion
+        '''
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            return False
+        val = self.functions['data.getval'](comps[0])
+        if val is None:
+            # The value is not defined
+            return False
+        if isinstance(val, list):
+            # We are matching a single component to a single list member
+            for member in val:
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            val,
+            comps[1],
+            ))
+
     def exsel_match(self, tgt):
         '''
         Runs a function and return the exit code

@@ -28,7 +28,7 @@ def list_avail():
 
     CLI Example::
 
-        salt '*' timezone.list_avail
+        salt '*' locale.list_avail
     '''
     cmd = 'locale -a'
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -41,7 +41,7 @@ def get_locale():
 
     CLI Example::
 
-        salt '*' timezone.get_locale
+        salt '*' locale.get_locale
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
@@ -61,7 +61,7 @@ def set_locale(locale):
 
     CLI Example::
 
-        salt '*' timezone.set_locale 'en_US.UTF-8'
+        salt '*' locale.set_locale 'en_US.UTF-8'
     '''
     if 'Arch' in __grains__['os_family']:
         __salt__['file.sed']('/etc/rc.conf', '^LOCALE=.*', 'LOCALE="{0}"'.format(locale))

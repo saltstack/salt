@@ -127,6 +127,7 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
+    timezone = get_zone()
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
     if not os.path.exists(zonepath):
         return 'Zone does not exist: {0}'.format(zonepath)
@@ -135,7 +136,7 @@ def set_hwclock(clock):
     os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(timezone))
+        __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(clock))
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:

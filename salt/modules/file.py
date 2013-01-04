@@ -637,10 +637,11 @@ def contains(path, text):
     if not os.path.exists(path):
         return False
 
+    stripped_text = text.strip()
     try:
         with BufferedReader(path) as breader:
             for chunk in breader:
-                if text.strip() == chunk.strip():
+                if stripped_text in chunk:
                     return True
         return False
     except (IOError, OSError):
@@ -981,8 +982,7 @@ def get_managed(
 
         if data['result']:
             sfn = data['data']
-            with salt.utils.fopen(sfn, 'r') as source:
-                hsum = hashlib.md5(source.read()).hexdigest()
+            hsum = get_hash(sfn)
             source_sum = {'hash_type': 'md5',
                           'hsum': hsum}
         else:
@@ -1266,10 +1266,7 @@ def manage_file(name,
     if os.path.isfile(name):
         # Only test the checksums on files with managed contents
         if source:
-            name_sum = ''
-            hash_func = getattr(hashlib, source_sum['hash_type'])
-            with salt.utils.fopen(name, 'rb') as namefile:
-                name_sum = hash_func(namefile.read()).hexdigest()
+            name_sum = get_hash(name, source_sum['hash_type'])
 
         # Check if file needs to be replaced
         if source and source_sum['hsum'] != name_sum:
@@ -1341,9 +1338,7 @@ def manage_file(name,
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if urlparse(source).scheme != 'salt':
-                hash_func = getattr(hashlib, source_sum['hash_type'])
-                with salt.utils.fopen(sfn, 'rb') as dlfile:
-                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                dl_sum = get_hash(name, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
                                       'not match real sum of {2}'

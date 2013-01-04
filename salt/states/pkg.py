@@ -151,7 +151,7 @@ def installed(
                                 'correct version').format(name)}
 
         # if cver is not an empty string, the package is already installed
-        elif cver:
+        elif cver and version is None:
             # The package is installed
             return {'name': name,
                     'changes': {},
