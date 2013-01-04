@@ -577,7 +577,7 @@ def groupinfo(groupname):
 
 def list_repos(basedir='/etc/yum.repos.d'):
     '''
-    Lists all repos in basedir (default: /etc/yum.repos.d/)
+    Lists all repos in <basedir> (default: /etc/yum.repos.d/).
 
     CLI Example::
 
@@ -597,6 +597,64 @@ def list_repos(basedir='/etc/yum.repos.d'):
     return repos
 
 
+def del_repo(repo, basedir='/etc/yum.repos.d'):
+    '''
+    Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
+
+    If the .repo file that the repo exists in does not contain any other repo
+    configuration, the file itself will be deleted.
+
+    CLI Examples::
+
+        salt '*' pkg.del_repo myrepo
+        salt '*' pkg.del_repo myrepo basedir=/path/to/dir
+    '''
+    repos = list_repos(basedir)
+
+    if not repo in repos.keys():
+        return 'Error: the {0} repo does not exist in {1}'.format(repo, basedir)
+
+    # Find out what file the repo lives in
+    repofile = ''
+    for arepo in repos.keys():
+        if arepo == repo:
+            repofile = repos[arepo]['file']
+
+    # See if the repo is the only one in the file
+    onlyrepo = True
+    for arepo in repos.keys():
+        if arepo == repo:
+            continue
+        if repos[arepo]['file'] == repofile:
+            onlyrepo = False
+
+    # If this is the only repo in the file, delete the file itself
+    if onlyrepo:
+        os.remove(repofile)
+        return 'File {0} containing repo {1} has been removed'.format(
+                                                            repofile, repo)
+
+    # There must be other repos in this file, write the file with them
+    header, filerepos = _parse_repo_file(repofile)
+    content = header
+    for stanza in filerepos.keys():
+        if stanza == repo:
+            continue
+        comments = ''
+        if 'comments' in filerepos[stanza].keys():
+            comments = '\n'.join(filerepos[stanza]['comments'])
+            del filerepos[stanza]['comments']
+        content += '\n[{0}]'.format(stanza)
+        for line in filerepos[stanza].keys():
+            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+        content += '\n{0}\n'.format(comments)
+    fileout = open(repofile, 'w')
+    fileout.write(content)
+    fileout.close()
+
+    return 'Repo {0} has been remooved from {1}'.format(repo, repofile)
+
+
 def mod_repo(repo, basedir=None, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
@@ -606,11 +664,27 @@ def mod_repo(repo, basedir=None, **kwargs):
         name (a human-readable name for the repo)
         baseurl or mirrorlist (the url for yum to reference)
 
+    Key/Value pairs may also be removed from a repo's configuration by setting
+    a key to a blank value. Bear in mind that a name cannot be deleted, and a
+    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+
     CLI Examples::
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
-        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 gpgcheck=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
+        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
     '''
+    # Build a list of keys to be deleted
+    todelete = []
+    for key in kwargs.keys():
+        if not kwargs[key]:
+            del kwargs[key]
+            todelete.append(key)
+
+    # Fail if the user tried to delete the name
+    if 'name' in todelete:
+        return 'Error: The repo name cannot be deleted'
+
     # Give the user the ability to change the basedir
     repos = {}
     if basedir:
@@ -638,6 +712,21 @@ def mod_repo(repo, basedir=None, **kwargs):
         # The repo does exist, open its file
         repofile = repos[repo]['file']
         header, filerepos = _parse_repo_file(repofile)
+
+    # Error out if they tried to delete baseurl or mirrorlist improperly
+    if 'baseurl' in todelete:
+        if 'mirrorlist' not in kwargs and 'mirrorlist' \
+                        not in filerepos[repo].keys():
+            return 'Error: Cannot delete baseurl without specifying mirrorlist'
+    if 'mirrorlist' in todelete:
+        if 'baseurl' not in kwargs and 'baseurl' \
+                        not in filerepos[repo].keys():
+            return 'Error: Cannot delete mirrorlist without specifying baseurl'
+
+    # Delete anything in the todelete list
+    for key in todelete:
+        if key in filerepos[repo].keys():
+            del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
     filerepos[repo].update(kwargs)
