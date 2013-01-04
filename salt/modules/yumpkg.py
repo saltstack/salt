@@ -577,7 +577,7 @@ def groupinfo(groupname):
 
 def list_repos(basedir='/etc/yum.repos.d'):
     '''
-    Lists all repos in basedir (default: /etc/yum.repos.d/)
+    Lists all repos in <basedir> (default: /etc/yum.repos.d/).
 
     CLI Example::
 
@@ -595,6 +595,64 @@ def list_repos(basedir='/etc/yum.repos.d'):
             repo['file'] = repopath
             repos[reponame] = repo
     return repos
+
+
+def del_repo(repo, basedir='/etc/yum.repos.d'):
+    '''
+    Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
+
+    If the .repo file that the repo exists in does not contain any other repo
+    configuration, the file itself will be deleted.
+
+    CLI Examples::
+
+        salt '*' pkg.del_repo myrepo
+        salt '*' pkg.del_repo myrepo basedir=/path/to/dir
+    '''
+    repos = list_repos(basedir)
+
+    if not repo in repos.keys():
+        return 'Error: the {0} repo does not exist in {1}'.format(repo, basedir)
+
+    # Find out what file the repo lives in
+    repofile = ''
+    for arepo in repos.keys():
+        if arepo == repo:
+            repofile = repos[arepo]['file']
+
+    # See if the repo is the only one in the file
+    onlyrepo = True
+    for arepo in repos.keys():
+        if arepo == repo:
+            continue
+        if repos[arepo]['file'] == repofile:
+            onlyrepo = False
+
+    # If this is the only repo in the file, delete the file itself
+    if onlyrepo:
+        os.remove(repofile)
+        return 'File {0} containing repo {1} has been removed'.format(
+                                                            repofile, repo)
+
+    # There must be other repos in this file, write the file with them
+    header, filerepos = _parse_repo_file(repofile)
+    content = header
+    for stanza in filerepos.keys():
+        if stanza == repo:
+            continue
+        comments = ''
+        if 'comments' in filerepos[stanza].keys():
+            comments = '\n'.join(filerepos[stanza]['comments'])
+            del filerepos[stanza]['comments']
+        content += '\n[{0}]'.format(stanza)
+        for line in filerepos[stanza].keys():
+            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+        content += '\n{0}\n'.format(comments)
+    fileout = open(repofile, 'w')
+    fileout.write(content)
+    fileout.close()
+
+    return 'Repo {0} has been remooved from {1}'.format(repo, repofile)
 
 
 def mod_repo(repo, basedir=None, **kwargs):
