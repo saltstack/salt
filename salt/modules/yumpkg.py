@@ -606,11 +606,27 @@ def mod_repo(repo, basedir=None, **kwargs):
         name (a human-readable name for the repo)
         baseurl or mirrorlist (the url for yum to reference)
 
+    Key/Value pairs may also be removed from a repo's configuration by setting
+    a key to a blank value. Bear in mind that a name cannot be deleted, and a
+    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+
     CLI Examples::
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
-        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 gpgcheck=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
+        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
     '''
+    # Build a list of keys to be deleted
+    todelete = []
+    for key in kwargs.keys():
+        if not kwargs[key]:
+            del kwargs[key]
+            todelete.append(key)
+
+    # Fail if the user tried to delete the name
+    if 'name' in todelete:
+        return 'Error: The repo name cannot be deleted'
+
     # Give the user the ability to change the basedir
     repos = {}
     if basedir:
@@ -638,6 +654,21 @@ def mod_repo(repo, basedir=None, **kwargs):
         # The repo does exist, open its file
         repofile = repos[repo]['file']
         header, filerepos = _parse_repo_file(repofile)
+
+    # Error out if they tried to delete baseurl or mirrorlist improperly
+    if 'baseurl' in todelete:
+        if 'mirrorlist' not in kwargs and 'mirrorlist' \
+                        not in filerepos[repo].keys():
+            return 'Error: Cannot delete baseurl without specifying mirrorlist'
+    if 'mirrorlist' in todelete:
+        if 'baseurl' not in kwargs and 'baseurl' \
+                        not in filerepos[repo].keys():
+            return 'Error: Cannot delete mirrorlist without specifying baseurl'
+
+    # Delete anything in the todelete list
+    for key in todelete:
+        if key in filerepos[repo].keys():
+            del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
     filerepos[repo].update(kwargs)
