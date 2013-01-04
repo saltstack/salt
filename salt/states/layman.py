@@ -33,6 +33,8 @@ def present(name):
         ret['comment'] = 'Overlay {0} already present'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Overlay {0} is set to be added'.format(name)
+        ret['result'] = None
+        return ret
     else:
         # Attempt to add the overlay
         changes = __salt__['layman.add'](name)
@@ -65,6 +67,8 @@ def absent(name):
         ret['comment'] = 'Overlay {0} already absent'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Overlay {0} is set to be deleted'.format(name)
+        ret['result'] = None
+        return ret
     else:
         # Attempt to delete the overlay
         changes = __salt__['layman.delete'](name)
