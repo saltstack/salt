@@ -181,6 +181,11 @@ if logging.getLoggerClass() is not Logging:
     #   No handlers could be found for logger "foo"
     logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
 
+    if sys.version_info >= (2, 7):
+        # Python versions >= 2.7 allow warning to be redirected to the logging
+        # system. Let's enable it.
+        logging.captureWarnings(True)
+
 
 def getLogger(name):  # pylint: disable-msg=C0103
     return logging.getLogger(name)
