@@ -48,17 +48,14 @@ __LOGFILE_CONFIGURED = False
 
 
 def is_console_configured():
-    global __CONSOLE_CONFIGURED
     return __CONSOLE_CONFIGURED
 
 
 def is_logfile_configured():
-    global __LOGFILE_CONFIGURED
     return __LOGFILE_CONFIGURED
 
 
 def is_logging_configured():
-    global __CONSOLE_CONFIGURED, __LOGFILE_CONFIGURED
     return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
 
 
@@ -170,20 +167,19 @@ class Logging(LOGGING_LOGGER_CLASS):
 
 # Override the python's logging logger class as soon as this module is imported
 if logging.getLoggerClass() is not Logging:
-    '''
-    Replace the default system logger with a version that includes trace()
-    and garbage() methods.
-    '''
+    # Replace the default system logger with a version that includes trace()
+    # and garbage() methods.
     logging.setLoggerClass(Logging)
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
+
     # Set the root logger at the lowest level possible
-    root_logger = logging.getLogger()  # pylint: disable-msg=C0103
+    logging.getLogger().setLevel(GARBAGE)
+
     # Add a Null logging handler until logging is configured(will be removed at
     # a later stage) so we stop getting:
     #   No handlers could be found for logger "foo"
-    root_logger.addHandler(LOGGING_NULL_HANDLER)
-    root_logger.setLevel(GARBAGE)
+    logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
 
 
 def getLogger(name):  # pylint: disable-msg=C0103
@@ -206,9 +202,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    root_logger = logging.getLogger()
-    handler = logging.StreamHandler()
-
+    handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(level)
 
     # Set the default console formatter config
@@ -220,7 +214,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
+    logging.getLogger().addHandler(handler)
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
