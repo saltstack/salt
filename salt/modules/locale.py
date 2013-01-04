@@ -72,6 +72,7 @@ def set_locale(locale):
     elif 'Debian' in __grains__['os_family']:
         __salt__['file.sed']('/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale))
     elif 'Gentoo' in __grains__['os_family']:
-        return __salt__['cmd.retcode']('eselect --brief locale set {0}'.format(locale))
+        cmd = 'eselect --brief locale set {0}'.format(locale)
+        return __salt__['cmd.retcode'](cmd) == 0
 
     return True
