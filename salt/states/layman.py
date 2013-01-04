@@ -10,6 +10,12 @@ A state module to manage Gentoo package overlays via layman
         layman.present
 '''
 
+def __virtual__():
+    '''
+    Only load if the layman module is available in __salt__
+    '''
+    return 'layman' if 'layman.add' in __salt__ else False
+
 def present(name):
     '''
     Verify that the overlay is present
