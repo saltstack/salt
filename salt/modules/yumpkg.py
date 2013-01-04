@@ -583,7 +583,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
 
         salt '*' pkg.list_repos
     '''
-    repos = []
+    repos = {}
     repofiles = []
     for repofile in os.listdir(basedir):
         repopath = '{0}/{1}'.format(basedir, repofile)
@@ -593,18 +593,82 @@ def list_repos(basedir='/etc/yum.repos.d'):
         for reponame in filerepos.keys():
             repo = filerepos[reponame]
             repo['file'] = repopath
-            repos.append({reponame: repo})
+            repos[reponame] = repo
     return repos
 
 
+def mod_repo(repo, basedir=None, **kwargs):
+    '''
+    Modify one or more values for a repo. If the repo does not exist, it will
+    be created, so long as the following values are specified::
+
+        repo (name by which the yum refers to the repo)
+        name (a human-readable name for the repo)
+        baseurl or mirrorlist (the url for yum to reference)
+
+    CLI Examples::
+
+        salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 gpgcheck=1
+    '''
+    # Give the user the ability to change the basedir
+    repos = {}
+    if basedir:
+        repos = list_repos(basedir)
+    else:
+        repos = list_repos()
+        basedir = '/etc/yum.repos.d'
+
+    repofile = ''
+    header = ''
+    filerepos = {}
+    if not repo in repos.keys():
+        # If the repo doesn't exist, create it in a new file
+        repofile = '{0}/{1}.repo'.format(basedir, repo)
+
+        if 'name' not in kwargs:
+            return ('Error: The repo does not exist and needs to be created, '
+                    'but a name was not given')
+
+        if 'baseurl' not in kwargs and 'mirrorlist' not in kwargs:
+            return ('Error: The repo does not exist and needs to be created, '
+                    'but either a baseurl or a mirrorlist needs to be given')
+        filerepos[repo] = {}
+    else:
+        # The repo does exist, open its file
+        repofile = repos[repo]['file']
+        header, filerepos = _parse_repo_file(repofile)
+
+    # Old file or new, write out the repos(s)
+    filerepos[repo].update(kwargs)
+    content = header
+    for stanza in filerepos.keys():
+        comments = ''
+        if 'comments' in filerepos[stanza].keys():
+            comments = '\n'.join(filerepos[stanza]['comments'])
+            del filerepos[stanza]['comments']
+        content += '\n[{0}]'.format(stanza)
+        for line in filerepos[stanza].keys():
+            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+        content += '\n{0}\n'.format(comments)
+    fileout = open(repofile, 'w')
+    fileout.write(content)
+    fileout.close()
+
+    return {repofile: filerepos}
+
+
 def _parse_repo_file(filename):
+    '''
+    Turn a single repo file into a dict
+    '''
     rfile = open(filename, 'r')
     repos = {}
     header = ''
     repo = ''
     for line in rfile:
         if line.startswith('['):
-            repo = line.replace('[', '').replace(']', '')
+            repo = line.strip().replace('[', '').replace(']', '')
             repos[repo] = {}
 
         # Even though these are essentially uselss, I want to allow the user
@@ -627,3 +691,4 @@ def _parse_repo_file(filename):
             repos[repo][comps[0].strip()] = '='.join(comps[1:])
 
     return (header, repos)
+
