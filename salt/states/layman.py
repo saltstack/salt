@@ -31,6 +31,8 @@ def present(name):
     # Overlay already present
     if name in __salt__['layman.list_local']():
         ret['comment'] = 'Overlay {0} already present'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Overlay {0} is set to be added'.format(name)
     else:
         # Attempt to add the overlay
         changes = __salt__['layman.add'](name)
@@ -61,6 +63,8 @@ def absent(name):
     # Overlay is already absent
     if name not in __salt__['layman.list_local']():
         ret['comment'] = 'Overlay {0} already absent'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Overlay {0} is set to be deleted'.format(name)
     else:
         # Attempt to delete the overlay
         changes = __salt__['layman.delete'](name)
