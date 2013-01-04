@@ -20,6 +20,7 @@ Full list of builtin state modules
     hg
     host
     kmod
+    layman
     module
     mongodb_database
     mongodb_user
