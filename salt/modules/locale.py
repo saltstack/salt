@@ -52,6 +52,7 @@ def get_locale():
         cmd = 'grep LANG /etc/default/locale | grep -vE "^#"'
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale show'
+        return __salt__['cmd.run'](cmd).strip()
     out = __salt__['cmd.run'](cmd).split('=')
     ret = out[1].replace('"', '')
     return ret
