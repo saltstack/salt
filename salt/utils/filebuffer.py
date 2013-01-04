@@ -33,8 +33,8 @@ class BufferedReader(object):
             br = [1, 2, 3]
 
         2 - next chunk(pop chunk_size from the left, append chunk_size to the
-            right):
-                br = [2, 3, 4]
+        right):
+            br = [2, 3, 4]
 
 
     :type  path: str
