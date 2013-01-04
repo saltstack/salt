@@ -72,7 +72,7 @@ class BufferedReader(object):
 
     def next(self):
         '''
-        Return the next iteration by pop'ing `chunk_size` from the left and
+        Return the next iteration by popping `chunk_size` from the left and
         appending `chunk_size` to the right if there's info on the file left
         to be read.
         '''
