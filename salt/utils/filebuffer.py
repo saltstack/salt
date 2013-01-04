@@ -27,6 +27,16 @@ class BufferedReader(object):
     X configurable bytes in memory which can be used to, for example,
     do regex search/matching on more than a single line.
 
+    So, **an imaginary, non accurate**, example could be:
+
+        1 - Initiate the BufferedReader filing it to max_in_men:
+            br = [1, 2, 3]
+
+        2 - next chunk(pop chunk_size from the left, append chunk_size to the
+            right):
+                br = [2, 3, 4]
+
+
     :type  path: str
     :param path: The file path to be read
 
@@ -61,6 +71,11 @@ class BufferedReader(object):
         return self
 
     def next(self):
+        '''
+        Return the next iteration by pop'ing `chunk_size` from the left and
+        appending `chunk_size` to the right if there's info on the file left
+        to be read.
+        '''
         if self.__buffered is None:
             multiplier = self.__max_in_mem / self.__chunk_size
             self.__buffered = ""
