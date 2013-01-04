@@ -7,12 +7,12 @@ A state module to manage Gentoo package overlays via layman
 .. code-block:: yaml
 
     sunrise:
-        layman.added
+        layman.present
 '''
 
-def added(name):
+def present(name):
     '''
-    Verify that the overlay has been added.
+    Verify that the overlay is present
 
     name
         The name of the overlay to add
@@ -22,9 +22,9 @@ def added(name):
            'name': name,
            'result': True}
 
-    # Overlay already added
+    # Overlay already present
     if name in __salt__['layman.list_local']():
-        ret['comment'] = 'Overlay {0} already added'.format(name)
+        ret['comment'] = 'Overlay {0} already present'.format(name)
     else:
         # Attempt to add the overlay
         changes = __salt__['layman.add'](name)
@@ -40,9 +40,9 @@ def added(name):
 
     return ret
 
-def deleted(name):
+def absent(name):
     '''
-    Verify that the overlay has been removed.
+    Verify that the overlay is absent
 
     name
         The name of the overlay to delete
@@ -52,9 +52,9 @@ def deleted(name):
            'name': name,
            'result': True}
 
-    # Overlay already added
+    # Overlay is already absent
     if name not in __salt__['layman.list_local']():
-        ret['comment'] = 'Overlay {0} already deleted'.format(name)
+        ret['comment'] = 'Overlay {0} already absent'.format(name)
     else:
         # Attempt to delete the overlay
         changes = __salt__['layman.delete'](name)
