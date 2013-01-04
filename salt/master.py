@@ -810,10 +810,11 @@ class AESFuncs(object):
                 fp_.write('')
         except (IOError, OSError):
             log.error(
-                    ('Failed to commit the write tag for the syndic return,'
-                    ' are permissions correct in the cache dir:'
-                    ' {0}?').format(self.opts['cachedir'])
-                    )
+                ('Failed to commit the write tag for the syndic return,'
+                 ' are permissions correct in the cache dir:'
+                 ' {0}?').format(self.opts['cachedir']
+                )
+            )
             return False
 
         # Format individual return loads
