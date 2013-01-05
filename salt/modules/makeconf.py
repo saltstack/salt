@@ -71,6 +71,58 @@ def set_var(var, value):
     new_value = get_var(var)
     return {var: {'old': old_value, 'new': new_value}}
 
+def append_var(var, value):
+    '''
+    Add to or create a new variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_var 'LINGUAS' 'en'
+    '''
+    makeconf = _get_makeconf()
+
+    old_value = get_var(var)
+
+    # If var already in file, add to its value
+    if old_value is not None:
+        appended_value = '{0} {1}'.format(old_value, value)
+        __salt__['file.sed'](makeconf, '^{0}=.*'.format(var),
+                             '{0}="{1}"'.format(var, appended_value))
+    else:
+        _add_var(var, value)
+
+    new_value = get_var(var)
+    return {var: {'old': old_value, 'new': new_value}}
+
+def trim_var(var, value):
+    '''
+    Remove a value from a variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_var 'LINGUAS' 'en'
+    '''
+    makeconf = _get_makeconf()
+
+    old_value = get_var(var)
+
+    # If var in file, trim value from its value
+    if old_value is not None:
+        __salt__['file.sed'](makeconf, value, '', limit=var)
+
+    new_value = get_var(var)
+    return {var: {'old': old_value, 'new': new_value}}
+
 def get_var(var):
     '''
     Get the value of a variable in the make.conf
