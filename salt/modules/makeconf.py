@@ -135,8 +135,8 @@ def get_var(var):
         salt '*' makeconf.get_var 'LINGUAS'
     '''
     makeconf = _get_makeconf()
-    cmd = 'grep "{0}" {1} | grep -vE "^#"'.format(var, makeconf)
-    out = __salt__['cmd.run'](cmd).split('=')
+    cmd = 'grep "^{0}" {1} | grep -vE "^#"'.format(var, makeconf)
+    out = __salt__['cmd.run'](cmd).split('=', 1)
     try:
         ret = out[1].replace('"', '')
         return ret
@@ -154,6 +154,8 @@ def var_contains(var, value):
         salt '*' makeconf.var_contains 'LINGUAS' 'en'
     '''
     setval = get_var(var)
+    # Remove any escaping that was needed to past through salt
+    value = value.replace('\\', '')
     if setval is None:
         return False
     return value in setval.split()
