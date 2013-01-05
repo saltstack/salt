@@ -291,7 +291,7 @@ def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
         salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=(),
+    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
                   template=template, rstrip=rstrip)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
     return stdout
