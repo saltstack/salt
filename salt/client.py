@@ -71,7 +71,7 @@ class LocalClient(object):
     '''
     def __init__(self, c_path='/etc/salt/master', mopts=None):
         if mopts:
-            self.opts - mopts
+            self.opts = mopts
         else:
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
