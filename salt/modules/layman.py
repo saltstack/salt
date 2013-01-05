@@ -82,5 +82,5 @@ def list_local():
     '''
     cmd = 'layman --quietness=1 --list-local --nocolor'
     out = __salt__['cmd.run'](cmd).split('\n')
-    ret = [line.split()[1] for line in out]
+    ret = [line.split()[1] for line in out if len(line.split()) > 2]
     return ret
