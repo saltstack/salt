@@ -229,3 +229,363 @@ def cflags_contains(value):
         salt '*' makeconf.cflags_contains '\-pipe'
     '''
     return var_contains('CFLAGS', value)
+
+def set_cxxflags(value):
+    '''
+    Set the CXXFLAGS variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_cxxflags '\-march=native \-O2 \-pipe'
+    '''
+    return set_var('CXXFLAGS', value)
+
+def get_cxxflags():
+    '''
+    Get the value of CXXFLAGS variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_cxxflags
+    '''
+    return get_var('CXXFLAGS')
+
+def append_cxxflags(value):
+    '''
+    Add to or create a new CXXFLAGS in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_cxxflags '\-pipe'
+    '''
+    return append_var('CXXFLAGS', value)
+
+def trim_cxxflags(value):
+    '''
+    Remove a value from CXXFLAGS variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_cxxflags '\-pipe'
+    '''
+    return trim_cxxflags('CXXFLAGS', value)
+
+def cxxflags_contains(value):
+    '''
+    Verify if CXXFLAGS variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.cxxflags_contains '\-pipe'
+    '''
+    return var_contains('CXXFLAGS', value)
+
+def set_chost(value):
+    '''
+    Set the CHOST variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_chost 'x86_64-pc-linux-gnu'
+    '''
+    return set_var('CHOST', value)
+
+def get_chost():
+    '''
+    Get the value of CHOST variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_chost
+    '''
+    return get_var('CHOST')
+
+def chost_contains(value):
+    '''
+    Verify if CHOST variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.chost_contains 'x86_64-pc-linux-gnu'
+    '''
+    return var_contains('CHOST', value)
+
+def set_makeopts(value):
+    '''
+    Set the MAKEOPTS variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_makeopts '\-j3'
+    '''
+    return set_var('MAKEOPTS', value)
+
+def get_makeopts():
+    '''
+    Get the value of MAKEOPTS variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_makeopts
+    '''
+    return get_var('MAKEOPTS')
+
+def append_makeopts(value):
+    '''
+    Add to or create a new MAKEOPTS in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_makeopts '\-j3'
+    '''
+    return append_var('MAKEOPTS', value)
+
+def trim_makeopts(value):
+    '''
+    Remove a value from MAKEOPTS variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_makeopts '\-j3'
+    '''
+    return trim_makeopts('MAKEOPTS', value)
+
+def makeopts_contains(value):
+    '''
+    Verify if MAKEOPTS variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.makeopts_contains '\-j3'
+    '''
+    return var_contains('MAKEOPTS', value)
+
+def set_emerge_default_opts(value):
+    '''
+    Set the EMERGE_DEFAULT_OPTS variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_emerge_default_opts '\-\-jobs'
+    '''
+    return set_var('EMERGE_DEFAULT_OPTS', value)
+
+def get_emerge_default_opts():
+    '''
+    Get the value of EMERGE_DEFAULT_OPTS variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_emerge_default_opts
+    '''
+    return get_var('EMERGE_DEFAULT_OPTS')
+
+def append_emerge_default_opts(value):
+    '''
+    Add to or create a new EMERGE_DEFAULT_OPTS in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_emerge_default_opts '\-\-jobs'
+    '''
+    return append_var('EMERGE_DEFAULT_OPTS', value)
+
+def trim_emerge_default_opts(value):
+    '''
+    Remove a value from EMERGE_DEFAULT_OPTS variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_emerge_default_opts '\-\-jobs'
+    '''
+    return trim_emerge_default_opts('EMERGE_DEFAULT_OPTS', value)
+
+def emerge_default_opts_contains(value):
+    '''
+    Verify if EMERGE_DEFAULT_OPTS variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.emerge_default_opts_contains '\-\-jobs'
+    '''
+    return var_contains('EMERGE_DEFAULT_OPTS', value)
+
+def set_gentoo_mirrors(value):
+    '''
+    Set the GENTOO_MIRRORS variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_gentoo_mirrors 'http://distfiles.gentoo.org'
+    '''
+    return set_var('GENTOO_MIRRORS', value)
+
+def get_gentoo_mirrors():
+    '''
+    Get the value of GENTOO_MIRRORS variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_gentoo_mirrors
+    '''
+    return get_var('GENTOO_MIRRORS')
+
+def append_gentoo_mirrors(value):
+    '''
+    Add to or create a new GENTOO_MIRRORS in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_gentoo_mirrors 'http://distfiles.gentoo.org'
+    '''
+    return append_var('GENTOO_MIRRORS', value)
+
+def trim_gentoo_mirrors(value):
+    '''
+    Remove a value from GENTOO_MIRRORS variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_gentoo_mirrors 'http://distfiles.gentoo.org'
+    '''
+    return trim_gentoo_mirrors('GENTOO_MIRRORS', value)
+
+def gentoo_mirrors_contains(value):
+    '''
+    Verify if GENTOO_MIRRORS variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.gentoo_mirrors_contains 'http://distfiles.gentoo.org'
+    '''
+    return var_contains('GENTOO_MIRRORS', value)
+
+def set_sync(value):
+    '''
+    Set the SYNC variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_sync 'rsync://rsync.namerica.gentoo.org/gentoo-portage'
+    '''
+    return set_var('SYNC', value)
+
+def get_sync():
+    '''
+    Get the value of SYNC variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_sync
+    '''
+    return get_var('SYNC')
+
+def sync_contains(value):
+    '''
+    Verify if SYNC variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.sync_contains 'rsync://rsync.namerica.gentoo.org/gentoo-portage'
+    '''
+    return var_contains('SYNC', value)
