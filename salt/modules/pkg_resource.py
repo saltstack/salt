@@ -8,7 +8,7 @@ import re
 import yaml
 import pprint
 import logging
-import distutils
+import distutils.version
 
 log = logging.getLogger(__name__)
 
@@ -322,18 +322,21 @@ def find_changes(old=None, new=None):
 
 def compare(pkg1='', pkg2=''):
     '''
-    Compares two version strings using distutils.LooseVersion. This is a
-    fallback for providers which don't have a version comparison utility built
-    into them.  Return -1 if version1 < version2, 0 if version1 == version2,
-    and 1 if version1 > version2. Return None if there was a problem making the
-    comparison.
+    Compares two version strings using distutils.version.LooseVersion. This is
+    a fallback for providers which don't have a version comparison utility
+    built into them.  Return -1 if version1 < version2, 0 if version1 ==
+    version2, and 1 if version1 > version2. Return None if there was a problem
+    making the comparison.
     '''
     try:
-        if distutils.LooseVersion(pkg1) < distutils.LooseVersion(pkg2):
+        if distutils.version.LooseVersion(pkg1) < \
+           distutils.version.LooseVersion(pkg2):
             return -1
-        elif distutils.LooseVersion(pkg1) == distutils.LooseVersion(pkg2):
+        elif distutils.version.LooseVersion(pkg1) == \
+             distutils.version.LooseVersion(pkg2):
             return 0
-        elif distutils.LooseVersion(pkg1) > distutils.LooseVersion(pkg2):
+        elif distutils.version.LooseVersion(pkg1) > \
+             distutils.version.LooseVersion(pkg2):
             return 1
     except Exception as e:
         log.exception(e)
