@@ -15,7 +15,6 @@ declarations are typically rather simple:
 # Import python libs
 import logging
 import os
-from distutils.version import LooseVersion
 
 # Import salt libs
 import salt.utils
@@ -204,7 +203,7 @@ def installed(
         if len(targets) > 1:
             failed = [x for x in targets if x not in installed]
             comment = 'The following packages failed to install: ' \
-                      '{0}'.format(', '.join(failed))
+                      '{0}'.format(', '.join(sorted(failed)))
         else:
             comment = 'Package {0} failed to install'.format(targets[0])
 
@@ -216,7 +215,7 @@ def installed(
     # Success!
     if len(targets) > 1:
         comment = 'The following pacakages were installed: ' \
-                  '{0}'.format(', '.join(targets))
+                  '{0}'.format(', '.join(sorted(targets)))
     else:
         comment = 'Package {0} installed'.format(targets[0])
 
@@ -226,7 +225,13 @@ def installed(
             'comment': comment}
 
 
-def latest(name, refresh=False, fromrepo=None, skip_verify=False, **kwargs):
+def latest(
+        name,
+        refresh=False,
+        fromrepo=None,
+        skip_verify=False,
+        pkgs=None,
+        **kwargs):
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
@@ -235,74 +240,178 @@ def latest(name, refresh=False, fromrepo=None, skip_verify=False, **kwargs):
     available.
 
     name
-        The name of the package to maintain at the latest available version
+        The name of the package to maintain at the latest available version.
+        This parameter is ignored if "pkgs" is used.
 
     fromrepo
         Specify a repository from which to install
 
     skip_verify
         Skip the GPG verification check for the package to be installed
+
+
+    Multiple Package Installation Options: (currently supported for apt only)
+
+    pkgs
+        A list of packages to maintain at the latest available version.
+
+    Usage::
+
+        mypkgs:
+          pkg.latest:
+            - pkgs:
+              - foo
+              - bar
+              - baz
     '''
     rtag = __gen_rtag()
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    version = __salt__['pkg.version'](name)
-    avail = __salt__['pkg.available_version'](name)
-
-    if not version:
-        # Net yet installed
-        has_newer = True
-    elif not avail:
-        # Already at latest
-        has_newer = False
+    if kwargs.get('sources'):
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'The "sources" parameter is not supported.'}
+    elif pkgs:
+        desired_pkgs = __salt__['pkg_resource.pack_pkgs'](pkgs)
+        if not desired_pkgs:
+            # Badly-formatted SLS
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'Invalidly formatted "pkgs" parameter. See '
+                               'minion log.'}
     else:
-        try:
-            has_newer = LooseVersion(avail) > LooseVersion(version)
-        except AttributeError:
-            log.debug(
-                'Error comparing versions' ' for "{0}" ({1} > {2})'.format(
-                    name,
-                    avail,
-                    version
-                )
-            )
-            ret['comment'] = 'No version could be retrieved for "{0}"'.format(
-                name
-            )
-            return ret
+        desired_pkgs = [name]
 
-    if has_newer:
+    cur = __salt__['pkg.version'](*desired_pkgs)
+    avail = __salt__['pkg.available_version'](*desired_pkgs)
+
+    # Repack the cur/avail data if only a single package is being checked
+    if isinstance(cur, basestring):
+        cur = {desired_pkgs[0]: cur}
+    if isinstance(avail, basestring):
+        avail = {desired_pkgs[0]: avail}
+
+    targets = {}
+    problems = []
+    for pkg in desired_pkgs:
+        if not avail[pkg]:
+            if not cur[pkg]:
+                msg = 'No information found for "{0}".'.format(pkg)
+                log.error(msg)
+                problems.append(msg)
+            else:
+                msg = 'Unable to find newest version for "{0}".'.format(pkg)
+                log.error(msg)
+                problems.append(msg)
+        else:
+            if not cur[pkg]:
+                # Not yet installed 
+                targets[pkg] = avail[pkg]
+            else:
+                try:
+                    if __salt__['pkg.compare'](avail[pkg], cur[pkg]) == 1:
+                        targets[pkg] = avail[pkg]
+                except AttributeError:
+                    msg = 'Unable to compare versions for "{0}" ' \
+                          '({1} > {2})'.format(name, avail, version)
+                    log.error(msg)
+                    problems.append(msg)
+
+    if problems:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': ' '.join(problems)}
+
+    if targets:
         if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Package {0} is set to be upgraded'.format(name)
-            return ret
+            to_be_upgraded = ', '.join(sorted(targets.keys()))
+            return {'name': name,
+                    'changes': {},
+                    'result': None,
+                    'comment': 'The following packages are set to be '
+                               'upgraded: {0}'.format(to_be_upgraded)}
+
+        # Build updated list of pkgs to exclude non-targeted ones
+        targeted_pkgs = targets.keys() if pkgs else None
+
         if refresh or os.path.isfile(rtag):
-            ret['changes'] = __salt__['pkg.install'](name,
-                                                     refresh=True,
-                                                     fromrepo=fromrepo,
-                                                     skip_verify=skip_verify,
-                                                     **kwargs)
+            changes = __salt__['pkg.install'](name,
+                                              refresh=True,
+                                              fromrepo=fromrepo,
+                                              skip_verify=skip_verify,
+                                              pkgs=targeted_pkgs,
+                                              **kwargs)
             if os.path.isfile(rtag):
                 os.remove(rtag)
 
         else:
-            ret['changes'] = __salt__['pkg.install'](name,
-                                                     fromrepo=fromrepo,
-                                                     skip_verify=skip_verify,
-                                                     **kwargs)
+            changes = __salt__['pkg.install'](name,
+                                              fromrepo=fromrepo,
+                                              skip_verify=skip_verify,
+                                              pkgs=targeted_pkgs,
+                                              **kwargs)
 
-        if ret['changes']:
-            ret['comment'] = 'Package {0} upgraded to latest'.format(name)
-            ret['result'] = True
+        # Find up-to-date packages
+        if not pkgs:
+            # There couldn't have been any up-to-date packages if this
+            # state only targeted a single package and was allowed to
+            # proceed to the install step.
+            up_to_date = []
         else:
-            ret['comment'] = 'Package {0} failed to install'.format(name)
-            ret['result'] = False
-            return ret
-    else:
-        ret['comment'] = 'Package {0} already at latest'.format(name)
-        ret['result'] = True
+            up_to_date = [x for x in pkgs if x not in targets]
 
-    return ret
+        if changes:
+            # Find failed and successful updates
+            failed = [x for x in targets if changes[x]['new'] != targets[x]]
+            successful = [x for x in targets if x not in failed]
+
+            comments = []
+            if failed:
+                msg = 'The following package(s) failed to update: ' \
+                      '{0}.'.format(', '.join(sorted(failed)))
+                comments.append(msg)
+            if successful:
+                msg = 'The following package(s) were successfully updated: ' \
+                      '{0}.'.format(', '.join(sorted(successful)))
+                comments.append(msg)
+            if up_to_date:
+                msg = 'The following package(s) were already up-to-date: ' \
+                      '{0}.'.format(', '.join(sorted(up_to_date)))
+                comments.append(msg)
+
+            return {'name': name,
+                    'changes': changes,
+                    'result': False if failed else True,
+                    'comment': ' '.join(comments)}
+        else:
+            if len(targets) > 1:
+                comment = 'All targeted packages failed to update: ' \
+                          '{0}'.format(', '.join(sorted(targets.keys())))
+            else:
+                comment = 'Package {0} failed to ' \
+                          'update'.format(targets.keys()[0])
+            if up_to_date:
+                comment += '. The following package(s) were already ' \
+                           'up-to-date: ' \
+                           '{0}'.format(', '.join(sorted(up_to_date)))
+            return {'name': name,
+                    'changes': changes,
+                    'result': False,
+                    'comment': comment}
+    else:
+        if len(desired_pkgs) > 1:
+            comment = 'All packages are up-to-date ' \
+                      '({0}).'.format(', '.join(sorted(desired_pkgs)))
+        else:
+            comment = 'Package {0} is already ' \
+                      'up-to-date.'.format(desired_pkgs[0])
+
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': comment}
 
 
 def removed(name):
