@@ -68,6 +68,7 @@ Full list of builtin execution modules
     ldapmod
     linux_sysctl
     locale
+    makeconf
     mdadm
     mongodb
     monit
