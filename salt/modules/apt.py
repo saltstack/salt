@@ -43,7 +43,17 @@ def __init__(opts):
         os.environ.update(env_vars)
 
 
-def available_version(name):
+def _pkgname_without_arch(name):
+    '''
+    Check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit
+    machine is ':i386')
+    '''
+    if name.find(':') >= 0:
+        return name.split(':')[0]
+    return name
+
+
+def available_version(*names):
     '''
     Return the latest version of the named package available for upgrade or
     installation via the available apt repository
@@ -51,38 +61,47 @@ def available_version(name):
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3>
     '''
-    version = ''
-    cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
+    if len(names) == 0:
+        return ''
+    else:
+        ret = {}
+        for name in names:
+            cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
+            version = __salt__['cmd.run_stdout'](cmd).split()
+            if len(version) >= 2:
+                version = version[-1]
+            else:
+                version = ''
+            ret[name] = version
+        # Return a string if only one package name passed
+        if len(ret) == 1:
+            return ret[names[0]]
+        return ret
 
-    out = __salt__['cmd.run_stdout'](cmd)
 
-    version_list = out.split()
-
-    if len(version_list) >= 2:
-        version = version_list[-1]
-
-    return version
-
-
-def version(name):
+def version(*names):
     '''
     Returns a string representing the package version or an empty string if not
-    installed
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3>
     '''
-    pkgs = list_pkgs(name)
-    # check for ':arch' appended to pkg name (i.e. 32 bit installed on 64 bit
-    # machine is ':i386')
-    if name.find(':') >= 0:
-        name = name.split(':')[0]
-    if name in pkgs:
-        return pkgs[name]
-    else:
+    pkgs = list_pkgs()
+    if len(names) == 0:
         return ''
+    elif len(names) == 1:
+        return pkgs.get(_pkgname_without_arch(names[0]), '')
+    else:
+        ret = {}
+        for name in names:
+            ret[name] = pkgs.get(_pkgname_without_arch(name), '')
+        return ret
 
 
 def refresh_db():
@@ -178,7 +197,8 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     # from killing the apt and hence hosing the dpkg database
     salt.utils.daemonize_if(__opts__, **kwargs)
 
-    if refresh:
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
         refresh_db()
 
     if debconf:
@@ -433,3 +453,24 @@ def upgrade_available(name):
         salt '*' pkg.upgrade_available <package name>
     '''
     return name in _get_upgradable()
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
+    '''
+    try:
+        for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
+            cmd = 'dpkg --compare-versions "{0}" {1} ' \
+                  '"{2}"'.format(version1, oper, version2)
+            if __salt__['cmd.retcode'](cmd) == 0:
+                return ret
+    except Exception as e:
+        log.error(e)
+    return None
