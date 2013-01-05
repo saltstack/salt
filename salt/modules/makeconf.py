@@ -142,3 +142,88 @@ def get_var(var):
         return ret
     except IndexError:
         return None
+
+def var_contains(var, value):
+    '''
+    Verify if variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.var_contains 'LINGUAS' 'en'
+    '''
+    setval = get_var(var)
+    if setval is None:
+        return False
+    return value in setval.split()
+
+def set_cflags(value):
+    '''
+    Set the CFLAGS variable
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.set_cflags '\-march=native \-O2 \-pipe'
+    '''
+    return set_var('CFLAGS', value)
+
+def get_cflags():
+    '''
+    Get the value of CFLAGS variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_cflags
+    '''
+    return get_var('CFLAGS')
+
+def append_cflags(value):
+    '''
+    Add to or create a new CFLAGS in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_cflags '\-pipe'
+    '''
+    return append_var('CFLAGS', value)
+
+def trim_cflags(value):
+    '''
+    Remove a value from CFLAGS variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_cflags '\-pipe'
+    '''
+    return trim_cflags('CFLAGS', value)
+
+def cflags_contains(value):
+    '''
+    Verify if CFLAGS variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.cflags_contains '\-pipe'
+    '''
+    return var_contains('CFLAGS', value)
