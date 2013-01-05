@@ -13,6 +13,18 @@ def __virtual__():
         return 'layman'
     return False
 
+def _get_makeconf():
+    '''
+    Find the correct make.conf. Gentoo recently moved the make.conf
+    but still supports the old location, using the old location first
+    '''
+    old_conf = '/etc/make.conf'
+    new_conf = '/etc/portage/make.conf'
+    if __salt__['file.file_exists'](old_conf):
+        return old_conf
+    elif __salt__['file.file_exists'](new_conf):
+        return new_conf
+
 def add(overlay):
     '''
     Add the given overlay from the caced remote list to your locally
@@ -30,6 +42,15 @@ def add(overlay):
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
     __salt__['cmd.retcode'](cmd)
     new_overlays = list_local()
+
+    # If we did not have any overlays before and we sucessfully added
+    # a new one. We need to ensure the make.conf is sourcing layman's
+    # make.conf so emerge can see the overlays
+    if len(old_overlays == 0) and len(new_overlays > 0):
+        srcline = 'source /var/lib/layman/make.conf'
+        makeconf = _get_makeconf()
+        if not __salt__['file.contains'](makeconf, layman):
+            __salt__['file.append'](makeconf, srcline)
 
     ret = [overlay for overlay in new_overlays if overlay not in old_overlays]
     return ret
@@ -51,6 +72,14 @@ def delete(overlay):
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
     __salt__['cmd.retcode'](cmd)
     new_overlays = list_local()
+
+    # If we now have no overlays added, We need to ensure that the make.conf
+    # does not source layman's make.conf, as it will break emerge
+    if len(new_overlays == 0):
+        srcline = 'source /var/lib/layman/make.conf'
+        makeconf = _get_makeconf()
+        if __salt__['file.contains'](makeconf, layman):
+            __salt__['file.sed'](makeconf, srcline, '')
 
     ret = [overlay for overlay in old_overlays if overlay not in new_overlays]
     return ret
