@@ -57,27 +57,29 @@ Required python modules: MySQLdb
 
 # Import python libs
 from contextlib import contextmanager
-import json, sys
+import sys
+import json
 
 # Import third party libs
 try:
-    import MySQLdb 
-    has_mysql = True
+    import MySQLdb
+    HAS_MYSQL = True
 except ImportError:
-    has_mysql = False
+    HAS_MYSQL = False
 
 
 def __virtual__():
-    if not has_mysql:
+    if not HAS_MYSQL:
         return False
     return 'mysql'
+
 
 @contextmanager
 def _get_serv(commit=False):
     '''
     Return a mysql cursor
     '''
-    conn =  MySQLdb.connect(
+    conn = MySQLdb.connect(
             host=__salt__['config.option']('mysql.host'),
             user=__salt__['config.option']('mysql.user'),
             passwd=__salt__['config.option']('mysql.pass'),
@@ -110,8 +112,8 @@ def returner(ret):
         sql = '''INSERT INTO `salt`.`salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
-        cur.execute(sql, (ret['fun'], ret['jid'], 
-                            str(ret['return']), ret['id'], 
+        cur.execute(sql, (ret['fun'], ret['jid'],
+                            str(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))
 
 
@@ -120,7 +122,7 @@ def save_load(jid, load):
     Save the load to the specified jid id
     '''
     with _get_serv(commit=True) as cur:
-        
+
         sql = '''INSERT INTO `salt`.`jids`
                (`jid`, `load`)
                 VALUES (%s, %s)'''
@@ -152,7 +154,7 @@ def get_jid(jid):
 
         sql = '''SELECT id, full_ret FROM `salt`.`salt_returns`
                 WHERE `jid` = %s'''
-        
+
         cur.execute(sql, (jid,))
         data = cur.fetchall()
         ret = {}
@@ -170,12 +172,12 @@ def get_fun(fun):
 
         sql = '''SELECT s.id,s.jid, s.full_ret
                 FROM `salt`.`salt_returns` s
-                JOIN ( SELECT MAX(`jid`) as jid 
+                JOIN ( SELECT MAX(`jid`) as jid
                     from `salt`.`salt_returns` GROUP BY fun, id) max
                 ON s.jid = max.jid
                 WHERE s.fun = %s
                 '''
-        
+
         cur.execute(sql, (fun,))
         data = cur.fetchall()
 
@@ -184,6 +186,7 @@ def get_fun(fun):
             for minion, jid, full_ret in data:
                 ret[minion] = json.loads(full_ret)
         return ret
+
 
 def get_jids():
     '''
@@ -202,14 +205,13 @@ def get_jids():
         return ret
 
 
-
 def get_minions():
     '''
     Return a list of minions
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''SELECT DISTINCT id 
+        sql = '''SELECT DISTINCT id
                 FROM `salt`.`salt_returns`'''
 
         cur.execute(sql)

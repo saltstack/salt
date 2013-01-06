@@ -244,8 +244,8 @@ def _http_request(url, request_timeout=None):
         else:
             data = json.load(url_open(url, timeout=request_timeout))
         return _get_return_dict(True, data, [])
-    except Exception as e:
-        return _get_return_dict(False, {}, ["{0} : {1}".format(url, e)])
+    except Exception as err:
+        return _get_return_dict(False, {}, ["{0} : {1}".format(url, err)])
 
 
 def _replication_request(command, host=None, core_name=None, params=None):
@@ -332,9 +332,9 @@ def _merge_options(options):
     defaults = __salt__['config.option']('solr.dih.import_options')
     if isinstance(options, dict):
         defaults.update(options)
-    for k, v in defaults.items():
-        if isinstance(v, bool):
-            defaults[k] = str(v).lower()
+    for key, val in defaults.items():
+        if isinstance(val, bool):
+            defaults[key] = str(val).lower()
     return defaults
 
 
@@ -411,15 +411,15 @@ def _find_value(ret_dict, key, path=None):
         path = "{0}:{1}".format(path, key)
 
     ret = []
-    for k, v in ret_dict.items():
-        if k == key:
-            ret.append({path: v})
-        if isinstance(v, list):
-            for x in v:
-                if isinstance(x, dict):
-                    ret = ret + _find_value(x, key, path)
-        if isinstance(v, dict):
-            ret = ret + _find_value(v, key, path)
+    for ikey, val in ret_dict.items():
+        if ikey == key:
+            ret.append({path: val})
+        if isinstance(val, list):
+            for item in val:
+                if isinstance(item, dict):
+                    ret = ret + _find_value(item, key, path)
+        if isinstance(val, dict):
+            ret = ret + _find_value(val, key, path)
     return ret
 
 
@@ -692,8 +692,13 @@ def match_index_versions(host=None, core_name=None):
     ret = _get_return_dict()
     success = True
     if _is_master() and _get_none_or_value(host) is None:
-        e = ['solr.match_index_versions can only be called by "slave" minions']
-        return ret.update({'success': False, 'errors': e})
+        return ret.update({
+            'success': False,
+            'errors': [
+                'solr.match_index_versions can only be called by '
+                '"slave" minions'
+            ]
+        })
     # get the default return dict
 
     def _match(ret, success, resp, core):
@@ -722,8 +727,9 @@ def match_index_versions(host=None, core_name=None):
                 #check the index versions
                 if versions['master'] != versions['slave']:
                     success = False
-                    err = "Master and Slave index versions do not match."
-                    resp['errors'].append(err)
+                    resp['errors'].append(
+                        'Master and Slave index versions do not match.'
+                    )
                 data = versions if core is None else {core: {'data': versions}}
             ret = _update_return_dict(ret, success, data,
                                         resp['errors'], resp['warnings'])
@@ -810,7 +816,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
         salt '*' solr.backup music
     '''
     path = __opts__['solr.backup_path']
-    numBackups = __opts__['solr.num_backups']
+    num_backups = __opts__['solr.num_backups']
     if path is not None:
         if not path.endswith(os.path.sep):
             path += os.path.sep
@@ -823,7 +829,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
             if path is not None:
                 path = path + name if append_core_to_path else path
                 params.append("&location={0}".format(path + name))
-            params.append("&numberToKeep={0}".format(numBackups))
+            params.append("&numberToKeep={0}".format(num_backups))
             resp = _replication_request('backup', host=host, core_name=name,
                                         params=params)
             if not resp['success']:
@@ -838,7 +844,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
                 path += core_name
         if path is not None:
             params = ["location={0}".format(path)]
-        params.append("&numberToKeep={0}".format(numBackups))
+        params.append("&numberToKeep={0}".format(num_backups))
         resp = _replication_request('backup', host=host, core_name=core_name,
                                     params=params)
         return resp
@@ -1172,8 +1178,8 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
-    for k, v in options.items():
-        params.append("&{0}={1}".format(k, v))
+    for key, val in options.items():
+        params.append('&{0}={1}'.format(key, val))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
     return _http_request(url)
@@ -1224,8 +1230,8 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=delta-import']
-    for k, v in options.items():
-        params.append("{0}={1}".format(k, v))
+    for key, val in options.items():
+        params.append("{0}={1}".format(key, val))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
     return _http_request(url)

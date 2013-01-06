@@ -110,13 +110,13 @@ def parse_config(config_file=None):
         config_file = _config_file()
     ret = {}
     if _check_config_exists(config_file):
-        with salt.utils.fopen(config_file) as f:
-            for line in f:
-                k, y = line.split('=')
-                ret[k] = y
+        with salt.utils.fopen(config_file) as ifile:
+            for line in ifile:
+                key, val = line.split('=')
+                ret[key] = val
         return ret
-    else:
-        return 'Could not find {0} on file system'.format(config_file)
+
+    return 'Could not find {0} on file system'.format(config_file)
 
 
 def version():

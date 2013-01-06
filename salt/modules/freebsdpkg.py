@@ -61,7 +61,7 @@ def available_version(name):
             _cmd('pkg'), name)
         ).splitlines():
             if line.startswith('Version'):
-                fn, ver = line.split(':', 1)
+                _, ver = line.split(':', 1)
                 return ver.strip()
     return ''
 
@@ -116,23 +116,24 @@ def list_pkgs():
     return ret
 
 
-def install(name=None, refresh=False, repo=None,
+def install(name=None, refresh=False, fromrepo=None,
             pkgs=None, sources=None, **kwargs):
     '''
     Install the passed package
 
-    name : None
+    name
         The name of the package to be installed.
 
-    refresh : False
+    refresh
         Whether or not to refresh the package database before installing.
 
-    repo : None
+    fromrepo
         Specify a package repository to install from.
+
 
     Multiple Package Installation Options:
 
-    pkgs : None
+    pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list.
 
@@ -140,7 +141,7 @@ def install(name=None, refresh=False, repo=None,
 
             salt '*' pkg.install pkgs='["foo","bar"]'
 
-    sources : None
+    sources
         A list of packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
         or local path to the package.
@@ -152,7 +153,7 @@ def install(name=None, refresh=False, repo=None,
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -161,6 +162,12 @@ def install(name=None, refresh=False, repo=None,
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
                                                                   sources)
+
+    # Support old "repo" argument
+    repo = kwargs.get('repo', '')
+    if not fromrepo and repo:
+        fromrepo = repo
+
     if not pkg_params:
         return {}
 
@@ -168,12 +175,14 @@ def install(name=None, refresh=False, repo=None,
     args = []
     if _check_pkgng():
         cmd = _cmd('pkg')
-        if repo:
-            env.append(('PACKAGESITE', repo))
+        if fromrepo:
+            log.info('Setting PACKAGESITE={0}'.format(fromrepo))
+            env.append(('PACKAGESITE', fromrepo))
     else:
         cmd = _cmd('pkg_add')
-        if repo:
-            env.append(('PACKAGEROOT', repo))
+        if fromrepo:
+            log.info('Setting PACKAGEROOT={0}'.format(fromrepo))
+            env.append(('PACKAGEROOT', fromrepo))
 
     if pkg_type == 'file':
         if _check_pkgng():
@@ -204,7 +213,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -249,14 +258,14 @@ def remove(name=None, pkgs=None):
     old = list_pkgs()
     args = []
 
-    for p in pkg_params:
-        ver = old.get(p, [])
+    for param in pkg_params:
+        ver = old.get(param, [])
         if not ver:
             continue
         if isinstance(ver, list):
-            args.extend(['{0}-{1}'.format(p, v) for v in ver])
+            args.extend(['{0}-{1}'.format(param, v) for v in ver])
         else:
-            args.append('{0}-{1}'.format(p, ver))
+            args.append('{0}-{1}'.format(param, ver))
 
     if not args:
         return {}
@@ -301,3 +310,16 @@ def rehash():
     shell = __salt__['cmd.run']('echo $SHELL').split('/')
     if shell[len(shell) - 1] in ['csh', 'tcsh']:
         __salt__['cmd.run']('rehash')
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)
