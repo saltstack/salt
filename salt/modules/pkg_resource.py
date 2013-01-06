@@ -208,6 +208,8 @@ def parse_targets(name=None, pkgs=None, sources=None):
         if not sources:
             log.error('"sources" option required with Solaris pkg installs')
             return None, None
+    elif __grains__['os'] == 'MacOS' and sources:
+        log.warning('Parameter "sources" ignored on MacOS hosts.')
 
     # "pkgs" is always ignored on Solaris.
     if pkgs and sources and __grains__['os_family'] != 'Solaris':
@@ -223,7 +225,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         else:
             return pkgs, 'repository'
 
-    elif sources:
+    elif sources and __grains__['os'] != 'MacOS':
         # No need to warn for Solaris, warning taken care of above.
         if name and __grains__['os_family'] != 'Solaris':
             log.warning('"name" parameter will be ignored in favor of '
