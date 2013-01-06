@@ -37,6 +37,8 @@ def get_zone():
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
         return open('/etc/timezone','r').read()
+    elif 'Gentoo' in __grains__['os_family']:
+        return open('/etc/timezone','r').read()
     out = __salt__['cmd.run'](cmd).split('=')
     ret = out[1].replace('"', '')
     return ret
@@ -90,6 +92,8 @@ def set_zone(timezone):
         __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         open('/etc/timezone', 'w').write(timezone)
+    elif 'Gentoo' in __grains__['os_family']:
+        open('/etc/timezone', 'w').write(timezone)
 
     return True
 
@@ -117,6 +121,10 @@ def get_hwclock():
             return 'UTC'
         else:
             return 'localtime'
+    elif 'Gentoo' in __grains__['os_family']:
+        cmd = 'grep "^clock=" /etc/conf.d/hwclock | grep -vE "^#"'
+        out = __salt__['cmd.run'](cmd).split('=')
+        return out[1].replace('"', '')
 
 
 def set_hwclock(clock):
@@ -127,6 +135,7 @@ def set_hwclock(clock):
 
         salt '*' timezone.set_hwclock UTC
     '''
+    timezone = get_zone()
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
     if not os.path.exists(zonepath):
         return 'Zone does not exist: {0}'.format(zonepath)
@@ -135,7 +144,7 @@ def set_hwclock(clock):
     os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(timezone))
+        __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(clock))
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
@@ -143,6 +152,8 @@ def set_hwclock(clock):
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
         elif clock == 'localtime':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=no')
+    elif 'Gentoo' in __grains__['os_family']:
+        __salt__['file.sed']('/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
 
     return True
 

@@ -350,8 +350,8 @@ class Minion(object):
             ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kw = detect_kwargs(func, data['arg'], data)
-                ret['return'] = func(*args, **kw)
+                args, kwargs = detect_kwargs(func, data['arg'], data)
+                ret['return'] = func(*args, **kwargs)
                 ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
@@ -423,8 +423,8 @@ class Minion(object):
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kw = detect_kwargs(func, data['arg'][ind], data)
-                ret['return'][data['fun'][ind]] = func(*args, **kw)
+                args, kwargs = detect_kwargs(func, data['arg'][ind], data)
+                ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
@@ -560,8 +560,8 @@ class Minion(object):
         '''
         fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
         if os.path.isfile(fn_):
-            with salt.utils.fopen(fn_, 'r+') as f:
-                data = f.read()
+            with salt.utils.fopen(fn_, 'r+') as ifile:
+                data = ifile.read()
                 if 'pillar' in data:
                     self.opts['pillar'] = salt.pillar.get_pillar(
                         self.opts,
@@ -933,6 +933,28 @@ class Matcher(object):
                     str(self.opts['grains'][comps[0]]).lower()
                     )
                 )
+
+    def data_match(self, tgt):
+        '''
+        Match based on the local data store on the minion
+        '''
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            return False
+        val = self.functions['data.getval'](comps[0])
+        if val is None:
+            # The value is not defined
+            return False
+        if isinstance(val, list):
+            # We are matching a single component to a single list member
+            for member in val:
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            val,
+            comps[1],
+            ))
 
     def exsel_match(self, tgt):
         '''

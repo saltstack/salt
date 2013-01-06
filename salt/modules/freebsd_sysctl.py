@@ -109,29 +109,29 @@ def persist(name, value, config='/etc/sysctl.conf'):
     edited = False
     value = str(value)
 
-    with salt.utils.fopen(config, 'r') as f:
-        for l in f:
-            if not l.startswith('{0}='.format(name)):
-                nlines.append(l)
+    with salt.utils.fopen(config, 'r') as ifile:
+        for line in ifile:
+            if not line.startswith('{0}='.format(name)):
+                nlines.append(line)
                 continue
             else:
-                k, rest = l.split('=', 1)
+                key, rest = line.split('=', 1)
                 if rest.startswith('"'):
-                    z, v, rest = rest.split('"', 2)
+                    _, rest_v, rest = rest.split('"', 2)
                 elif rest.startswith('\''):
-                    z, v, rest = rest.split('\'', 2)
+                    _, rest_v, rest = rest.split('\'', 2)
                 else:
-                    v = rest.split()[0]
-                    rest = rest[len(v):]
-                if v == value:
+                    rest_v = rest.split()[0]
+                    rest = rest[len(rest_v):]
+                if rest_v == value:
                     return 'Already set'
-                new_line = _formatfor(k, value, config, rest)
+                new_line = _formatfor(key, value, config, rest)
                 nlines.append(new_line)
                 edited = True
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
-    with salt.utils.fopen(config, 'w+') as f:
-        f.writelines(nlines)
+    with salt.utils.fopen(config, 'w+') as ofile:
+        ofile.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)
     return 'Updated'

@@ -439,7 +439,7 @@ Example:
 
     file_roots:
       base:
-        - /srv/salt/
+        - /srv/salt
       dev:
         - /srv/salt/dev/services
         - /srv/salt/dev/states

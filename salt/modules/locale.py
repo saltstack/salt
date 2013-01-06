@@ -28,7 +28,7 @@ def list_avail():
 
     CLI Example::
 
-        salt '*' timezone.list_avail
+        salt '*' locale.list_avail
     '''
     cmd = 'locale -a'
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -41,7 +41,7 @@ def get_locale():
 
     CLI Example::
 
-        salt '*' timezone.get_locale
+        salt '*' locale.get_locale
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
@@ -50,6 +50,9 @@ def get_locale():
         cmd = 'grep LANG /etc/sysconfig/i18n | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
         cmd = 'grep LANG /etc/default/locale | grep -vE "^#"'
+    elif 'Gentoo' in __grains__['os_family']:
+        cmd = 'eselect --brief locale show'
+        return __salt__['cmd.run'](cmd).strip()
     out = __salt__['cmd.run'](cmd).split('=')
     ret = out[1].replace('"', '')
     return ret
@@ -61,7 +64,7 @@ def set_locale(locale):
 
     CLI Example::
 
-        salt '*' timezone.set_locale 'en_US.UTF-8'
+        salt '*' locale.set_locale 'en_US.UTF-8'
     '''
     if 'Arch' in __grains__['os_family']:
         __salt__['file.sed']('/etc/rc.conf', '^LOCALE=.*', 'LOCALE="{0}"'.format(locale))
@@ -69,5 +72,8 @@ def set_locale(locale):
         __salt__['file.sed']('/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale))
     elif 'Debian' in __grains__['os_family']:
         __salt__['file.sed']('/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale))
+    elif 'Gentoo' in __grains__['os_family']:
+        cmd = 'eselect --brief locale set {0}'.format(locale)
+        return __salt__['cmd.retcode'](cmd) == 0
 
     return True

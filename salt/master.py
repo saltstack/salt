@@ -39,6 +39,7 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.utils
+import salt.fileserver
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -158,14 +159,17 @@ class Master(SMaster):
 
     def _clear_old_jobs(self):
         '''
-        Clean out the old jobs
+        The clean old jobs function is the geenral passive maintinance process
+        controller for the Salt master. This is where any data that needs to
+        be cleanly maintained from the master is maintained.
         '''
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = time.time()
+        fileserver = salt.fileserver.Fileserver(self.opts)
         while True:
             if self.opts['keep_jobs'] != 0:
-                cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
+                cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
 
                 for top in os.listdir(jid_root):
                     t_path = os.path.join(jid_root, top)
@@ -185,6 +189,7 @@ class Master(SMaster):
                 now = time.time()
                 if now - last > self.opts['search_index_interval']:
                     search.index()
+            fileserver.update()
             try:
                 time.sleep(60)
             except KeyboardInterrupt:
@@ -560,15 +565,13 @@ class AESFuncs(object):
         '''
         Set the local file objects from the file server interface
         '''
-        fsfuncs = salt.loader.fileserver(
-                self.opts,
-                self.opts.get('fileserver_backend', 'roots')
-                )
-        self._serve_file = fsfuncs['serve_file']
-        self._file_hash = fsfuncs['file_hash']
-        self._file_list = fsfuncs['file_list']
-        self._file_list_emptydirs = fsfuncs['file_list_emptydirs']
-        self._dir_list = fsfuncs['dir_list']
+        fs_ = salt.fileserver.Fileserver(self.opts)
+        self._serve_file = fs_.serve_file
+        self._file_hash = fs_.file_hash
+        self._file_list = fs_.file_list
+        self._file_list_emptydirs = fs_.file_list_emptydirs
+        self._dir_list = fs_.dir_list
+        self._file_envs = fs_.envs
 
     def __verify_minion(self, id_, token):
         '''
@@ -585,15 +588,15 @@ class AESFuncs(object):
         pub = None
         try:
             pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError as e:
+        except RSA.RSAError as err:
             log.error('Unable to load temporary public key "{0}": {1}'
-                      .format(tmp_pub, e))
+                      .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
             if pub.public_decrypt(token, 5) == 'salt':
                 return True
-        except RSA.RSAError, e:
-            log.error('Unable to decrypt token: {0}'.format(e))
+        except RSA.RSAError, err:
+            log.error('Unable to decrypt token: {0}'.format(err))
 
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
@@ -661,7 +664,15 @@ class AESFuncs(object):
         '''
         Return the master options to the minion
         '''
-        return self.opts
+        mopts = dict(self.opts)
+        file_roots = dict(mopts['file_roots'])
+        file_roots = {}
+        envs = self._file_envs()
+        for env in envs:
+            if not env in file_roots:
+                file_roots[env] = []
+        mopts['file_roots'] = file_roots
+        return mopts
 
     def _pillar(self, load):
         '''
@@ -799,10 +810,11 @@ class AESFuncs(object):
                 fp_.write('')
         except (IOError, OSError):
             log.error(
-                    ('Failed to commit the write tag for the syndic return,'
-                    ' are permissions correct in the cache dir:'
-                    ' {0}?').format(self.opts['cachedir'])
-                    )
+                ('Failed to commit the write tag for the syndic return,'
+                 ' are permissions correct in the cache dir:'
+                 ' {0}?').format(self.opts['cachedir']
+                )
+            )
             return False
 
         # Format individual return loads
@@ -1362,8 +1374,8 @@ class ClearFuncs(object):
         # and an empty request comes in
         try:
             pub = RSA.load_pub_key(pubfn)
-        except RSA.RSAError, e:
-            log.error('Corrupt public key "{0}": {1}'.format(pubfn, e))
+        except RSA.RSAError, err:
+            log.error('Corrupt public key "{0}": {1}'.format(pubfn, err))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 

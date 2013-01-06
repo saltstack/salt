@@ -13,9 +13,9 @@ try:
     import win32com.client
     import win32api
     import win32con
-    has_dependencies = True
+    HAS_DEPENDENCIES = True
 except ImportError:
-    has_dependencies = False
+    HAS_DEPENDENCIES = False
 
 # Import python libs
 import logging
@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows() and  has_dependencies:
+    if salt.utils.is_windows() and  HAS_DEPENDENCIES:
         return 'pkg'
     return False
 
@@ -305,7 +305,7 @@ def install(name=None, refresh=False, **kwargs):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -345,7 +345,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -441,3 +441,16 @@ def _get_latest_pkg_version(pkginfo):
         return pkginfo.keys().pop()
     pkgkeys = pkginfo.keys()
     return sorted(pkgkeys, cmp=_reverse_cmp_pkg_versions).pop()
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)

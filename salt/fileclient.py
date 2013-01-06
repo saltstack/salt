@@ -354,8 +354,8 @@ class Client(object):
         sfn = self.cache_file(url, env)
         if not os.path.exists(sfn):
             return ''
-        if template in salt.utils.templates.template_registry:
-            data = salt.utils.templates.template_registry[template](
+        if template in salt.utils.templates.TEMPLATE_REGISTRY:
+            data = salt.utils.templates.TEMPLATE_REGISTRY[template](
                     sfn,
                     **kwargs
                     )
@@ -366,9 +366,11 @@ class Client(object):
             return ''
         if not data['result']:
             # Failed to render the template
-            log.error('Failed to render template with error: {0}'.format(
-                data['data']
-                ))
+            log.error(
+                'Failed to render template with error: {0}'.format(
+                    data['data']
+                )
+            )
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache
@@ -433,12 +435,12 @@ class LocalClient(Client):
             return ret
         for path in self.opts['file_roots'][env]:
             for root, dirs, files in os.walk(path, followlinks=True):
-                for fn in files:
+                for fname in files:
                     ret.append(
                         os.path.relpath(
                             os.path.join(
                                 root,
-                                fn
+                                fname
                                 ),
                             path
                             )
@@ -485,17 +487,17 @@ class LocalClient(Client):
                 log.warning(err.format(path))
                 return ret
             else:
-                with salt.utils.fopen(path, 'rb') as f:
-                    ret['hsum'] = hashlib.md5(f.read()).hexdigest()
+                with salt.utils.fopen(path, 'rb') as ifile:
+                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
         path = self._find_file(path, env)['path']
         if not path:
             return {}
         ret = {}
-        with salt.utils.fopen(path, 'rb') as f:
+        with salt.utils.fopen(path, 'rb') as ifile:
             ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                f.read()).hexdigest()
+                ifile.read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
         return ret
 
@@ -603,8 +605,8 @@ class RemoteClient(Client):
                     with self._cache_loc(data['dest'], env) as cache_dest:
                         dest = cache_dest
                         if not os.path.exists(cache_dest):
-                            with salt.utils.fopen(cache_dest, 'wb+') as f:
-                                f.write(data['data'])
+                            with salt.utils.fopen(cache_dest, 'wb+') as ofile:
+                                ofile.write(data['data'])
                 if 'hsum' in data and d_tries < 3:
                     # Master has prompted a file verification, if the
                     # verification fails, redownload the file. Try 3 times
@@ -700,8 +702,8 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
-                with salt.utils.fopen(path, 'rb') as f:
-                    ret['hsum'] = hashlib.md5(f.read()).hexdigest()
+                with salt.utils.fopen(path, 'rb') as ifile:
+                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
         load = {'path': path,

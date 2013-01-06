@@ -12,22 +12,22 @@ import time
 # Import third party libs
 try:
     import psutil
-    has_psutil = True
+    HAS_PSUTIL = True
 except ImportError:
-    has_psutil = False
+    HAS_PSUTIL = False
 
 
 def __virtual__():
-    if not has_psutil:
+    if not HAS_PSUTIL:
         return False
 
     # The python 2.6 version of psutil lacks several functions
     # used in this salt module so instead of spaghetti  string
-    # code to try to bring sanity to everything,  disable  it.
+    # code to try to bring sanity to everything, disable it.
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
         return False
-
     return "ps"
+
 
 def top(num_processes=5, interval=3):
     '''
@@ -44,31 +44,31 @@ def top(num_processes=5, interval=3):
     result = []
     start_usage = {}
     for pid in psutil.get_pid_list():
-        p = psutil.Process(pid)
-        user, sys = p.get_cpu_times()
-        start_usage[p] = user + sys
+        process = psutil.Process(pid)
+        user, system = process.get_cpu_times()
+        start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for p, start in start_usage.items():
-        user, sys = p.get_cpu_times()
-        now = user + sys
+    for process, start in start_usage.items():
+        user, system = process.get_cpu_times()
+        now = user + system
         diff = now - start
-        usage.add((diff, p))
+        usage.add((diff, process))
 
-    for i, (diff, p) in enumerate(reversed(sorted(usage))):
-        if num_processes and i >= num_processes:
+    for idx, (diff, process) in enumerate(reversed(sorted(usage))):
+        if num_processes and idx >= num_processes:
             break
-        if len(p.cmdline) == 0:
-            cmdline = [p.name]
+        if len(process.cmdline) == 0:
+            cmdline = [process.name]
         else:
-            cmdline = p.cmdline
+            cmdline = process.cmdline
         info = {'cmd': cmdline,
-                'pid': p.pid,
-                'create_time': p.create_time}
-        for k, v in p.get_cpu_times()._asdict().items():
-            info['cpu.' + k] = v
-        for k, v in p.get_memory_info()._asdict().items():
-            info['mem.' + k] = v
+                'pid': process.pid,
+                'create_time': process.create_time}
+        for key, value in process.get_cpu_times()._asdict().items():
+            info['cpu.{0}'.format(key)] = value
+        for key, value in process.get_memory_info()._asdict().items():
+            info['mem.{0}'.format(key)] = value
         result.append(info)
 
     return result
@@ -253,6 +253,7 @@ def boot_time():
     '''
     return psutil.BOOT_TIME
 
+
 def network_io_counters():
     '''
     Return network I/O statisitics.
@@ -262,6 +263,7 @@ def network_io_counters():
         salt '*' ps.network_io_counters
     '''
     return dict(psutil.network_io_counters()._asdict())
+
 
 def disk_io_counters():
     '''

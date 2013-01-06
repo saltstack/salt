@@ -71,17 +71,20 @@ class _LDAPConnection:
         self.binddn = binddn
         self.bindpw = bindpw
         try:
-            self.LDAP = ldap.initialize('ldap://%s:%s' %
-                                        (self.server, self.port))
-            self.LDAP.protocol_version = 3  # ldap.VERSION3
-            self.LDAP.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
+            self.ldap = ldap.initialize(
+                'ldap://{0}:{1}'.format(self.server, self.port)
+            )
+            self.ldap.protocol_version = 3  # ldap.VERSION3
+            self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
             if self.tls:
-                self.LDAP.start_tls_s()
-            self.LDAP.simple_bind_s(self.binddn, self.bindpw)
+                self.ldap.start_tls_s()
+            self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception:
-            msg = 'Failed to bind to LDAP server %s:%s as %s' % \
-                (self.server, self.port, self.binddn)
-            raise CommandExecutionError(msg)
+            raise CommandExecutionError(
+                'Failed to bind to LDAP server {0}:{1} as {2}'.format(
+                    self.server, self.port, self.binddn
+                )
+            )
 
 
 def auth(username, password):
@@ -96,11 +99,14 @@ def auth(username, password):
     for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
         connargs[name] = _config(name)
     # Initial connection with config basedn and bindpw
-    _ldap = _LDAPConnection(**connargs).LDAP
+    _ldap = _LDAPConnection(**connargs).ldap
     # Search for user dn
-    msg = 'Running LDAP user dn search with filter:%s, dn:%s, scope:%s' %\
-        (filter, basedn, scope)
-    log.debug(msg)
+    log.debug(
+        'Running LDAP user dn search with filter:{0}, dn:{1}, '
+        'scope:{2}'.format(
+            filter, basedn, scope
+        )
+    )
     result = _ldap.search_s(basedn, int(scope), filter)
     if len(result) < 1:
         log.warn('Unable to find user {0}'.format(username))
@@ -115,10 +121,13 @@ def auth(username, password):
     # Attempt bind with user dn and password
     log.debug('Attempting LDAP bind with user dn: {0}'.format(authdn))
     try:
-        _LDAPConnection(**connargs).LDAP
+        _LDAPConnection(**connargs).ldap
     except:
         log.warn('Failed to authenticate user dn via LDAP: {0}'.format(authdn))
         return False
-    msg = 'Successfully authenticated user dn via LDAP: {0}'.format(authdn)
-    log.debug(msg)
+    log.debug(
+        'Successfully authenticated user dn via LDAP: {0}'.format(
+            authdn
+        )
+    )
     return True

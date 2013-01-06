@@ -12,12 +12,12 @@ import logging
 
 log = logging.getLogger(__name__)
 
-has_portage = False
+HAS_PORTAGE = False
 
 # Import third party libs
 try:
     import portage
-    has_portage = True
+    HAS_PORTAGE = True
 except ImportError:
     import os
     import sys
@@ -26,7 +26,7 @@ except ImportError:
             # In a virtualenv, the portage python path needs to be manually added
             sys.path.insert(0, '/usr/lib/portage/pym')
             import portage
-            has_portage = True
+            HAS_PORTAGE = True
         except ImportError:
             pass
 
@@ -35,7 +35,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    return 'pkg' if (has_portage and __grains__['os'] == 'Gentoo') else False
+    return 'pkg' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo') else False
 
 
 def _vartree():
@@ -55,7 +55,7 @@ def _cpv_to_name(cpv):
 def _cpv_to_version(cpv):
     if cpv == '':
         return ''
-    return str(cpv[len(_cpv_to_name(cpv)+'-'):])
+    return str(cpv[len(_cpv_to_name(cpv) + '-'):])
 
 
 def available_version(name):
@@ -168,25 +168,25 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
 
     logging.debug('Called modules.pkg.install: {0}'.format(
         {
-            'name' : name,
-            'refresh' : refresh,
-            'pkgs' : pkgs,
-            'sources' : sources,
-            'kwargs' : kwargs
+            'name': name,
+            'refresh': refresh,
+            'pkgs': pkgs,
+            'sources': sources,
+            'kwargs': kwargs
         }
     ))
     # Catch both boolean input from state and string input from CLI
     if refresh is True or refresh == 'True':
         refresh_db()
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                 pkgs,
-                                                                 sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -194,13 +194,13 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     else:
         emerge_opts = ''
 
-    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts,' '.join(pkg_params))
+    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(pkg_params))
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def update(pkg, refresh=False):
@@ -210,7 +210,7 @@ def update(pkg, refresh=False):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -221,7 +221,7 @@ def update(pkg, refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'emerge --update --quiet {0}'.format(pkg)
+    cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(pkg)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
@@ -238,6 +238,7 @@ def update(pkg, refresh=False):
 
     return ret_pkgs
 
+
 def upgrade(refresh=False):
     '''
     Run a full system upgrade (emerge --update world)
@@ -245,7 +246,7 @@ def upgrade(refresh=False):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -266,12 +267,13 @@ def upgrade(refresh=False):
                 continue
             else:
                 ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                             'new': new_pkgs[pkg]}
+                                 'new': new_pkgs[pkg]}
         else:
             ret_pkgs[pkg] = {'old': '',
-                         'new': new_pkgs[pkg]}
+                             'new': new_pkgs[pkg]}
 
     return ret_pkgs
+
 
 def remove(pkg):
     '''
@@ -296,6 +298,7 @@ def remove(pkg):
 
     return ret_pkgs
 
+
 def purge(pkg):
     '''
     Portage does not have a purge, this function calls remove followed
@@ -309,6 +312,7 @@ def purge(pkg):
 
     '''
     return remove(pkg) + depclean()
+
 
 def depclean(pkg=None):
     '''
@@ -334,3 +338,16 @@ def depclean(pkg=None):
             ret_pkgs.append(pkg)
 
     return ret_pkgs
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)

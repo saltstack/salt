@@ -42,13 +42,13 @@ __salt__ = {
 
 log = logging.getLogger(__name__)
 
-has_wmi = False
+HAS_WMI = False
 if salt.utils.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
         import wmi
-        has_wmi = True
+        HAS_WMI = True
     except ImportError:
         log.exception("Unable to import Python wmi module, some core grains "
                       "will be missing")
@@ -211,8 +211,8 @@ def _bsd_cpudata(osdata):
                         start = line.find('<')
                         end = line.find('>')
                         if start > 0 and end > 0:
-                            f = line[start + 1:end].split(',')
-                            grains['cpu_flags'].extend(f)
+                            flag = line[start + 1:end].split(',')
+                            grains['cpu_flags'].extend(flag)
     try:
         grains['num_cpus'] = int(grains['num_cpus'])
     except ValueError:
@@ -250,8 +250,8 @@ def _memdata(osdata):
         meminfo = '/proc/meminfo'
 
         if os.path.isfile(meminfo):
-            with salt.utils.fopen(meminfo, 'r') as f:
-                for line in f:
+            with salt.utils.fopen(meminfo, 'r') as ifile:
+                for line in ifile:
                     comps = line.rstrip('\n').split(':')
                     if not len(comps) > 1:
                         continue
@@ -268,7 +268,7 @@ def _memdata(osdata):
             comps = line.split(' ')
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
-    elif osdata['kernel'] == 'Windows' and has_wmi:
+    elif osdata['kernel'] == 'Windows' and HAS_WMI:
         wmi_c = wmi.WMI()
         # this is a list of each stick of ram in a system
         # WMI returns it as the string value of the number of bytes
@@ -452,7 +452,7 @@ def _windows_platform_data(osdata):
     #    timezone
     #    windowsdomain
 
-    if not has_wmi:
+    if not HAS_WMI:
         return {}
 
     wmi_c = wmi.WMI()
@@ -571,8 +571,8 @@ def os_data():
         except ImportError:
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
-                with salt.utils.fopen('/etc/lsb-release') as f:
-                    for line in f:
+                with salt.utils.fopen('/etc/lsb-release') as ifile:
+                    for line in ifile:
                         # Matches any possible format:
                         #     DISTRIB_ID="Ubuntu"
                         #     DISTRIB_ID='Mageia'
@@ -587,9 +587,9 @@ def os_data():
                             grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
             elif os.path.isfile('/etc/os-release'):
                 # Arch ARM linux
-                with salt.utils.fopen('/etc/os-release') as f:
+                with salt.utils.fopen('/etc/os-release') as ifile:
                     # Imitate lsb-release
-                    for line in f:
+                    for line in ifile:
                         # NAME="Arch Linux ARM"
                         # ID=archarm
                         # ID_LIKE=arch
@@ -678,7 +678,6 @@ def locale_info():
         grains['defaultlanguage'] = 'unknown'
         grains['defaultencoding'] = 'unknown'
     return grains
-
 
 
 def hostname():
@@ -860,5 +859,3 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
-
-

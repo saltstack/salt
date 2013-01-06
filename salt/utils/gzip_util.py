@@ -47,15 +47,15 @@ def compress(data, compresslevel=9):
     '''
     Returns the data compressed at gzip level compression.
     '''
-    buffer = StringIO.StringIO()
-    with open_fileobj(buffer, 'wb', compresslevel) as gz:
-        gz.write(data)
-    compressed = buffer.getvalue()
+    buf = StringIO.StringIO()
+    with open_fileobj(buf, 'wb', compresslevel) as ogz:
+        ogz.write(data)
+    compressed = buf.getvalue()
     return compressed
 
 
 def uncompress(data):
-    buffer = StringIO.StringIO(data)
-    with open_fileobj(buffer, 'rb') as gz:
-        unc = gz.read()
+    buf = StringIO.StringIO(data)
+    with open_fileobj(buf, 'rb') as igz:
+        unc = igz.read()
         return unc

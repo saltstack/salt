@@ -90,9 +90,11 @@ def list(runas=None):
     rubies = []
 
     for line in _rvm('list', '', runas=runas).splitlines():
-        m = re.match('^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
-        if m:
-            rubies.append([m.group(2), m.group(3), m.group(1) == '*'])
+        match = re.match('^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
+        if match:
+            rubies.append([
+                match.group(2), match.group(3), match.group(1) == '*'
+            ])
     return rubies
 
 
@@ -178,9 +180,9 @@ def gemset_list(ruby='default', runas=None):
     '''
     gemsets = []
     for line in _rvm_do(ruby, 'rvm gemset list', runas=runas).splitlines():
-        m = re.match('^   ([^ ]+)', line)
-        if m:
-            gemsets.append(m.group(1))
+        match = re.match('^   ([^ ]+)', line)
+        if match:
+            gemsets.append(match.group(1))
     return gemsets
 
 
@@ -238,17 +240,17 @@ def gemset_list_all(runas=None):
     gemsets = {}
     current_ruby = None
     for line in _rvm_do('default', 'rvm gemset list_all', runas=runas).splitlines():
-        m = re.match('^gemsets for ([^ ]+)', line)
-        if m:
-            current_ruby = m.group(1)
+        match = re.match('^gemsets for ([^ ]+)', line)
+        if match:
+            current_ruby = match.group(1)
             gemsets[current_ruby] = []
-        m = re.match('^   ([^ ]+)', line)
-        if m:
-            gemsets[current_ruby].append(m.group(1))
+        match = re.match('^   ([^ ]+)', line)
+        if match:
+            gemsets[current_ruby].append(match.group(1))
     return gemsets
 
 
-def do(ruby, command, runas=None):
+def do(ruby, command, runas=None):  # pylint: disable-msg=C0103
     '''
     Execute a command in an RVM controlled environment.
 

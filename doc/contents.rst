@@ -56,11 +56,10 @@ Full Table of Contents
     ref/clientacl
     ref/syndic
     ref/python-api
-    ref/file_server/index
-    ref/file_server/file_roots
-    ref/file_server/dynamic-modules
+    ref/file_server/*
     ref/configuration/*
     ref/internals/index
+    ref/windows-package-manager
 
     ref/cli/index
     ref/cli/salt

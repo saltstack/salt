@@ -24,7 +24,7 @@ def down():
     return ret
 
 
-def up():
+def up():  # pylint: disable-msg=C0103
     '''
     Print a list of all of the minions that are up
     '''

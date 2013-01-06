@@ -39,6 +39,7 @@ Full list of builtin execution modules
     disk
     djangomod
     ebuild
+    eix
     event
     extfs
     file
@@ -48,6 +49,7 @@ Full list of builtin execution modules
     freebsdservice
     freebsd_sysctl
     gem
+    gentoolkitmod
     gentoo_service
     git
     glance
@@ -62,9 +64,11 @@ Full list of builtin execution modules
     kmod
     kvm_hyper
     launchctl
+    layman
     ldapmod
     linux_sysctl
     locale
+    makeconf
     mdadm
     mongodb
     monit

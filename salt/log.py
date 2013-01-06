@@ -39,7 +39,7 @@ SORTED_LEVEL_NAMES = [
 ]
 
 # Store an instance of the current logging logger class
-LoggingLoggerClass = logging.getLoggerClass()
+LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 
@@ -48,17 +48,14 @@ __LOGFILE_CONFIGURED = False
 
 
 def is_console_configured():
-    global __CONSOLE_CONFIGURED
     return __CONSOLE_CONFIGURED
 
 
 def is_logfile_configured():
-    global __LOGFILE_CONFIGURED
     return __LOGFILE_CONFIGURED
 
 
 def is_logging_configured():
-    global __CONSOLE_CONFIGURED, __LOGFILE_CONFIGURED
     return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
 
 
@@ -72,17 +69,17 @@ if sys.version_info < (2, 7):
         def emit(self, record):
             pass
 
-        def createLock(self):
+        def createLock(self):  # pylint: disable-msg=C0103
             self.lock = None
 
     logging.NullHandler = NullHandler
 
 
 # Store a reference to the null logging handler
-LoggingNullHandler = logging.NullHandler()
+LOGGING_NULL_HANDLER = logging.NullHandler()
 
 
-class Logging(LoggingLoggerClass):
+class Logging(LOGGING_LOGGER_CLASS):
     def __new__(cls, logger_name, *args, **kwargs):
         # This makes module name padding increase to the biggest module name
         # so that logs keep readability.
@@ -98,7 +95,7 @@ class Logging(LoggingLoggerClass):
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
-                if handler is LoggingNullHandler:
+                if handler is LOGGING_NULL_HANDLER:
                     continue
 
                 if not handler.lock:
@@ -139,32 +136,58 @@ class Logging(LoggingLoggerClass):
             pass
         return instance
 
+    # pylint: disable-msg=C0103
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
+                   extra=None):
+        # Let's try to make every logging message unicode
+        if isinstance(msg, basestring) and not isinstance(msg, unicode):
+            try:
+                return LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno,
+                    msg.decode('utf-8', 'replace'),
+                    args, exc_info, func, extra
+                )
+            except UnicodeDecodeError:
+                return LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno,
+                    msg.decode('utf-8', 'ignore'),
+                    args, exc_info, func, extra
+                )
+        return LOGGING_LOGGER_CLASS.makeRecord(
+            self, name, level, fn, lno, msg, args, exc_info, func, extra
+        )
+    # pylint: enable-msg=C0103
+
     def garbage(self, msg, *args, **kwargs):
-        return LoggingLoggerClass.log(self, GARBAGE, msg, *args, **kwargs)
+        return LOGGING_LOGGER_CLASS.log(self, GARBAGE, msg, *args, **kwargs)
 
     def trace(self, msg, *args, **kwargs):
-        return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
+        return LOGGING_LOGGER_CLASS.log(self, TRACE, msg, *args, **kwargs)
 
 
 # Override the python's logging logger class as soon as this module is imported
 if logging.getLoggerClass() is not Logging:
-    '''
-    Replace the default system logger with a version that includes trace()
-    and garbage() methods.
-    '''
+    # Replace the default system logger with a version that includes trace()
+    # and garbage() methods.
     logging.setLoggerClass(Logging)
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
+
     # Set the root logger at the lowest level possible
-    rootLogger = logging.getLogger()
+    logging.getLogger().setLevel(GARBAGE)
+
     # Add a Null logging handler until logging is configured(will be removed at
     # a later stage) so we stop getting:
     #   No handlers could be found for logger "foo"
-    rootLogger.addHandler(LoggingNullHandler)
-    rootLogger.setLevel(GARBAGE)
+    logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
+
+    if sys.version_info >= (2, 7):
+        # Python versions >= 2.7 allow warning to be redirected to the logging
+        # system. Let's enable it.
+        logging.captureWarnings(True)
 
 
-def getLogger(name):
+def getLogger(name):  # pylint: disable-msg=C0103
     return logging.getLogger(name)
 
 
@@ -184,9 +207,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    rootLogger = logging.getLogger()
-    handler = logging.StreamHandler()
-
+    handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(level)
 
     # Set the default console formatter config
@@ -198,7 +219,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    rootLogger.addHandler(handler)
+    logging.getLogger().addHandler(handler)
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
@@ -238,7 +259,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     parsed_log_path = urlparse.urlparse(log_path)
 
-    rootLogger = logging.getLogger()
+    root_logger = logging.getLogger()
 
     if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
         syslog_opts = {
@@ -310,9 +331,13 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         handler = logging.handlers.SysLogHandler(**syslog_opts)
     else:
         try:
+            # Logfile logging is UTF-8 on purpose.
+            # Since salt uses yaml and yaml uses either UTF-8 or UTF-16, if a
+            # user is not using plain ascii, he's system should be ready to
+            # handle UTF-8.
             handler = getattr(
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler
-            )(log_path, 'a', 'utf-8', delay=0)
+            )(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
             sys.stderr.write(
                 'Failed to open log file, do you have permission to write to '
@@ -331,7 +356,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    rootLogger.addHandler(handler)
+    root_logger.addHandler(handler)
 
     global __LOGFILE_CONFIGURED
     __LOGFILE_CONFIGURED = True
@@ -351,12 +376,12 @@ def __remove_null_logging_handler():
         # In this case, the NullHandler has been removed, return!
         return
 
-    rootLogger = logging.getLogger()
-    global LoggingNullHandler
+    root_logger = logging.getLogger()
+    global LOGGING_NULL_HANDLER
 
-    for handler in rootLogger.handlers:
-        if handler is LoggingNullHandler:
-            rootLogger.removeHandler(LoggingNullHandler)
+    for handler in root_logger.handlers:
+        if handler is LOGGING_NULL_HANDLER:
+            root_logger.removeHandler(LOGGING_NULL_HANDLER)
             # Redefine the null handler to None so it can be garbage collected
-            LoggingNullHandler = None
+            LOGGING_NULL_HANDLER = None
             break

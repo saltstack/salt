@@ -33,10 +33,13 @@ class SaltCP(object):
             data = fp_.read()
         return {fn_: data}
 
-    def _recurse_dir(self, fn_, files={}):
+    def _recurse_dir(self, fn_, files=None):
         '''
         Recursively pull files from a directory
         '''
+        if files is None:
+            files = {}
+
         for base in os.listdir(fn_):
             path = os.path.join(fn_, base)
             if os.path.isdir(path):

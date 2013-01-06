@@ -134,8 +134,8 @@ def db_exists(name, user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     databases = db_list(user=user, host=host, port=port, runas=runas)
-    for db in databases:
-        if name == dict(db).get('Name'):
+    for database in databases:
+        if name == dict(database).get('Name'):
             return True
 
     return False
@@ -191,9 +191,9 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for k, v in with_args.iteritems():
-        if v is not None:
-            with_chunks += [k, '=', v]
+    for key, value in with_args.iteritems():
+        if value is not None:
+            with_chunks += [key, '=', value]
     # Build a final query
     if with_chunks:
         with_chunks.insert(0, ' WITH')

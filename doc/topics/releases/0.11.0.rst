@@ -23,7 +23,7 @@ OverState
 ---------
 
 The overstate system is a simple way to manage rolling state executions across
-many minions. The overstate allows for a state to depend on the succesful
+many minions. The overstate allows for a state to depend on the successful
 completion of another state.
 
 Reactor System
