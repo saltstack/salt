@@ -325,13 +325,28 @@ def latest(
                 'comment': ' '.join(problems)}
 
     if targets:
+        # Find up-to-date packages
+        if not pkgs:
+            # There couldn't have been any up-to-date packages if this state
+            # only targeted a single package and is being allowed to proceed to
+            # the install step.
+            up_to_date = []
+        else:
+            up_to_date = [x for x in pkgs if x not in targets]
+
         if __opts__['test']:
             to_be_upgraded = ', '.join(sorted(targets.keys()))
+            comment = 'The following packages are set to be upgraded: ' \
+                      '{0}.'.format(to_be_upgraded)
+            if up_to_date:
+                comment += ' The following packages are already ' \
+                           'up-to-date: ' \
+                           '{0}.'.format(', '.join(sorted(up_to_date)))
+
             return {'name': name,
                     'changes': {},
                     'result': None,
-                    'comment': 'The following packages are set to be '
-                               'upgraded: {0}'.format(to_be_upgraded)}
+                    'comment': comment}
 
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = targets.keys() if pkgs else None
@@ -353,15 +368,6 @@ def latest(
                                               pkgs=targeted_pkgs,
                                               **kwargs)
 
-        # Find up-to-date packages
-        if not pkgs:
-            # There couldn't have been any up-to-date packages if this
-            # state only targeted a single package and was allowed to
-            # proceed to the install step.
-            up_to_date = []
-        else:
-            up_to_date = [x for x in pkgs if x not in targets]
-
         if changes:
             # Find failed and successful updates
             failed = [x for x in targets if changes[x]['new'] != targets[x]]
@@ -369,15 +375,15 @@ def latest(
 
             comments = []
             if failed:
-                msg = 'The following package(s) failed to update: ' \
+                msg = 'The following packages failed to update: ' \
                       '{0}.'.format(', '.join(sorted(failed)))
                 comments.append(msg)
             if successful:
-                msg = 'The following package(s) were successfully updated: ' \
+                msg = 'The following packages were successfully updated: ' \
                       '{0}.'.format(', '.join(sorted(successful)))
                 comments.append(msg)
             if up_to_date:
-                msg = 'The following package(s) were already up-to-date: ' \
+                msg = 'The following packages were already up-to-date: ' \
                       '{0}.'.format(', '.join(sorted(up_to_date)))
                 comments.append(msg)
 
@@ -388,12 +394,12 @@ def latest(
         else:
             if len(targets) > 1:
                 comment = 'All targeted packages failed to update: ' \
-                          '{0}'.format(', '.join(sorted(targets.keys())))
+                          '({0}).'.format(', '.join(sorted(targets.keys())))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update'.format(targets.keys()[0])
+                          'update.'.format(targets.keys()[0])
             if up_to_date:
-                comment += '. The following package(s) were already ' \
+                comment += ' The following packages were already ' \
                            'up-to-date: ' \
                            '{0}'.format(', '.join(sorted(up_to_date)))
             return {'name': name,

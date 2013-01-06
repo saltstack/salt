@@ -56,7 +56,7 @@ def _pkgname_without_arch(name):
 def available_version(*names):
     '''
     Return the latest version of the named package available for upgrade or
-    installation via the available apt repository
+    installation
 
     CLI Example::
 
@@ -76,7 +76,7 @@ def available_version(*names):
                 version = ''
             ret[name] = version
         # Return a string if only one package name passed
-        if len(ret) == 1:
+        if len(names) == 1:
             return ret[names[0]]
         return ret
 
