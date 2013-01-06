@@ -107,6 +107,9 @@ def setval(key, val):
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     with open(gfn, 'w+') as fp_:
         fp_.write(cstr)
+    fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
+    with open(fn_, 'w+') as fp_:
+        fp_.write('')
 
 
 def ls():  # pylint: disable-msg=C0103
