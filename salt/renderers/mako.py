@@ -15,7 +15,7 @@ def render(template_file, env='', sls='', context=None, tmplpath=None, **kws):
 
     :rtype: string
     '''
-    tmp_data = salt.utils.templates.mako(template_file, to_str=True,
+    tmp_data = salt.utils.templates.MAKO(template_file, to_str=True,
                     salt=__salt__,
                     grains=__grains__,
                     opts=__opts__,

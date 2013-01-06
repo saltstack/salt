@@ -12,7 +12,7 @@ import logging
 import copy
 
 # Import salt libs
-from salt._compat import string_types, callable as _callable
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -23,10 +23,11 @@ def __virtual__():
     and remove some of the functionality on OS X
     '''
     import sys
+    from salt._compat import callable
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-            if _callable(getattr(mod, attr)):
+            if callable(getattr(mod, attr)):
                 if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
