@@ -250,7 +250,9 @@ def latest(
         Skip the GPG verification check for the package to be installed
 
 
-    Multiple Package Installation Options: (currently supported for apt only)
+    Multiple Package Installation Options:
+
+    (Currently supported for: apt, pacman, yumpkg5)
 
     pkgs
         A list of packages to maintain at the latest available version.
