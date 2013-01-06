@@ -27,15 +27,27 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3>
     '''
-    return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
+    if len(names) == 0:
+        return ''
+    else:
+        ret = {}
+        for name in names:
+            cmd = 'pacman -Sp --print-format "%v" {0}'.format(name)
+            ret[name] = __salt__['cmd.run_stdout'](cmd).strip()
+        # Return a string if only one package name passed
+        if len(names) == 1:
+            return ret[names[0]]
+        return ret
 
 
 def upgrade_available(name):
@@ -70,19 +82,27 @@ def list_upgrades():
     return upgrades
 
 
-def version(name):
+def version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3>
     '''
     pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
-    else:
+    if len(names) == 0:
         return ''
+    elif len(names) == 1:
+        return pkgs.get(names[0], '')
+    else:
+        ret = {}
+        for name in names:
+            ret[name] = pkgs.get(name, '')
+        return ret
 
 
 def list_pkgs():
