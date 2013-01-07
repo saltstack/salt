@@ -613,6 +613,8 @@ def get_repo(repo, basedir='/etc/yum.repos.d'):
     for arepo in repos.keys():
         if arepo == repo:
             repofile = repos[arepo]['file']
+    if not repofile:
+        raise Exception('repo {0} was not found in {1}'.format(repo, basedir))
 
     # Return just one repo
     header, filerepos = _parse_repo_file(repofile)
