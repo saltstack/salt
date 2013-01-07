@@ -597,6 +597,30 @@ def list_repos(basedir='/etc/yum.repos.d'):
     return repos
 
 
+def get_repo(repo, basedir='/etc/yum.repos.d'):
+    '''
+    Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
+
+    CLI Examples::
+
+        salt '*' pkg.get_repo myrepo
+        salt '*' pkg.get_repo myrepo basedir=/path/to/dir
+    '''
+    repos = list_repos(basedir)
+
+    # Find out what file the repo lives in
+    repofile = ''
+    for arepo in repos.keys():
+        if arepo == repo:
+            repofile = repos[arepo]['file']
+    if not repofile:
+        raise Exception('repo {0} was not found in {1}'.format(repo, basedir))
+
+    # Return just one repo
+    header, filerepos = _parse_repo_file(repofile)
+    return filerepos[repo]
+
+
 def del_repo(repo, basedir='/etc/yum.repos.d'):
     '''
     Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
