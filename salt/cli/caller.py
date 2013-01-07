@@ -122,8 +122,15 @@ class Caller(object):
         '''
         Execute the salt call logic
         '''
+
         ret = self.call()
+        out = ret['return']
+        # If the type of return is not a dict we wrap the return data
+        # This will ensure that --local and local functions will return the
+        # same data structure as publish commands.
+        if type(ret['return']) != type({}):
+            out = {'local': ret['return']}
         salt.output.display_output(
-                {'local': ret['return']},
+                out,
                 ret.get('out', 'pprint'),
                 self.opts)
