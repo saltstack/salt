@@ -258,7 +258,7 @@ def user_list(user=None, host=None, port=None, runas=None):
             host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 11]
+    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 12]
     log.debug(lines)
     header = [x.strip() for x in lines[0].split("|")]
     for line in lines[1:]:
