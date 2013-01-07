@@ -52,18 +52,18 @@ def versions():
         1: 'Minion newer than master',
     }
 
-    sorted_minions = {}
+    version_status = {}
 
     master_version = distutils.version.StrictVersion(salt.__version__)
     for minion in minions:
         minion_version = distutils.version.StrictVersion(minions[minion])
         ver_diff = cmp(minion_version, master_version)
 
-        if ver_diff not in sorted_minions:
-            sorted_minions[ver_diff] = []
-        sorted_minions[ver_diff].append(minion)
+        if ver_diff not in version_status:
+            version_status[ver_diff] = []
+        version_status[ver_diff].append(minion)
 
-    for key in sorted_minions:
+    for key in version_status:
         print labels[key]
-        for minion in sorted(sorted_minions[key]):
+        for minion in sorted(version_status[key]):
             print '\t', minion
