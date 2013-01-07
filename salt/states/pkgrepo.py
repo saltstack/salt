@@ -24,8 +24,7 @@ def __virtual__():
     return 'pkgrepo' if 'pkg.mod_repo' in __salt__ else False
 
 
-def managed(name,
-            **kwargs):
+def managed(name, **kwargs):
     '''
     This function manages the configuration on a system that points to the
     repositories for the system's package manager.
