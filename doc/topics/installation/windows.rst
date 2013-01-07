@@ -15,7 +15,10 @@ Windows Installer
 =================
 
 A Salt Minion Windows installer can be found here:
-http://saltstack.org/static/downloads/Salt-Minion-0.11.1-Setup-amd64.exe
+
+.. admonition:: Download here
+
+    http://saltstack.org/static/downloads/Salt-Minion-0.11.1-Setup-amd64.exe
 
 This installer has been tested on Windows 7 64bit and Windows Server 2008R2
 64bit. Please file a bug report on our github repo if issues for other
@@ -43,6 +46,16 @@ installer:
 .. code-block:: bash
 
     Salt-Minion-0.11.1-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname
+
+Installer Source
+================
+
+The Salt Windows installer is built with the open-source NSIS compiler. The
+source for the installer is found in the pkg directory of the Salt repo here:
+https://github.com/saltstack/salt/blob/develop/pkg/windows/installer/Salt-Minion-Setup.nsi
+
+The NSIS installer can be found here: http://nsis.sourceforge.net/Main_Page
+
 
 Installation from source
 ========================
