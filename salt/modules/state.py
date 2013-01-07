@@ -259,17 +259,17 @@ def show_top():
     st_ = salt.state.HighState(__opts__)
     return st_.get_top()
 
-
-def show_masterstate():
-    '''
-    Display the data gathered from the master compiled state
-
-    CLI Example::
-
-        salt '*' state.show_masterstate
-    '''
-    st_ = salt.state.RemoteHighState(__opts__, __grains__)
-    return st_.compile_master()
+# Just commenting out, someday I will get this working
+#def show_masterstate():
+#    '''
+#    Display the data gathered from the master compiled state
+#
+#    CLI Example::
+#
+#        salt '*' state.show_masterstate
+#    '''
+#    st_ = salt.state.RemoteHighState(__opts__, __grains__)
+#    return st_.compile_master()
 
 
 def single(fun, name, test=None, kwval_as='yaml', **kwargs):
