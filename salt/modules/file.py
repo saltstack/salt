@@ -1282,7 +1282,6 @@ def manage_file(name,
                     tmp_fh = open(tmp_file, 'w').write(dlfile.read())
                     dl_sum = get_hash(tmp_file, source_sum['hash_type'])
                     os.remove(tmp_file)
-                    #dl_sum = hash_func(dlfile.read()).hexdigest()
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
                                       'not match real sum of {2}'
