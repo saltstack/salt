@@ -378,6 +378,15 @@
 #
 # Make sure you have a properly configured syslog or you won't get any warnings
 #
+# If you're thinking on doing remote logging you might also be thinking that
+# you could point salt's logging to the remote syslog. **Please Don't!**
+# An issue has been reported when doing this over TCP when the logged lines
+# get concatenated. See #3061.
+#
+# The preferred way to do remote logging is setup a local syslog, point
+# salt's logging to the local syslog(unix socket is much faster) and then
+# have the local syslog forward the log messages to the remote syslog.
+#
 #log_file: /var/log/salt/master
 #key_logfile: /var/log/salt/key
 #
