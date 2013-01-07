@@ -101,8 +101,8 @@ def db_list(user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
-    query = """SELECT datname as "Name", pga.rolname as "Owner", """
-    """pg_encoding_to_char(encoding) as "Encoding", datcollate as "Collate", datctype as "Ctype", """
+    query = """SELECT datname as "Name", pga.rolname as "Owner", """ \
+    """pg_encoding_to_char(encoding) as "Encoding", datcollate as "Collate", datctype as "Ctype", """ \
     """datacl as "Access privileges" FROM pg_database pgd, pg_authid pga WHERE pga.oid = pgd.datdba"""
 
     cmd = _psql_cmd('-c', query,
@@ -258,7 +258,7 @@ def user_list(user=None, host=None, port=None, runas=None):
             host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 11]
+    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 12]
     log.debug(lines)
     header = [x.strip() for x in lines[0].split("|")]
     for line in lines[1:]:
