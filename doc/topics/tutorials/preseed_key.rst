@@ -17,7 +17,7 @@ Pick a name for the key, such as the minion's id.
 
 2. Add the public key to the accepted minion folder:: 
 
-    root@saltmaster# cp key_name.pub /etc/salt/pki/minions/[minion_id]
+    root@saltmaster# cp key_name.pub /etc/salt/pki/master/minions/[minion_id]
 
 It is necessary that the public key file has the same name as your minion id. 
 This is how Salt matches minions with their keys. Also note that the pki folder 
@@ -40,8 +40,8 @@ cloud-init script. If you are handing them off to a team of developers for provi
 
 You will want to place the minion keys before starting the salt-minion daemon::
 
-    /etc/salt/pki/minion.pem
-    /etc/salt/pki/minion.pub
+    /etc/salt/pki/minion/minion.pem
+    /etc/salt/pki/minion/minion.pub
 
 Once in place, you should be able to start salt-minion and run 
 ``salt-call state.highstate`` or any other salt commands that require master 
