@@ -100,3 +100,40 @@ def managed(name, **kwargs):
     ret['comment'] = 'Failed to configure repo {0}'.format(name)
     return ret
 
+
+def absent(name):
+    '''
+    This function deletes the specified repo on the system, if it exists. It
+    is essentially a wrapper around pkg.del_repo.
+
+    name
+        The name of the package repo, as it would be referred to when running
+        the regular package manager commands.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+    repo = {}
+    try:
+        repo = __salt__['pkg.get_repo'](name)
+    except:
+        pass
+    if not repo:
+        ret['comment'] = 'Package repo {0} is absent'.format(name)
+        ret['result'] = True
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Package repo {0} needs to be removed'.format(name)
+        return ret
+    __salt__['pkg.del_repo'](repo=name)
+    repos = __salt__['pkg.list_repos']()
+    if name not in repos.keys():
+        ret['changes'] = {'repo': name}
+        ret['result'] = True
+        ret['comment'] = 'Removed package repo {0}'.format(name)
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'Failed to remove repo {0}'.format(name)
+    return ret
+
