@@ -1028,8 +1028,9 @@ class Matcher(object):
                'S': 'ipcidr',
                'E': 'pcre'}
         results = []
-        opers = ['and', 'or', 'not']
-        for match in tgt.split():
+        opers = ['and', 'or', 'not', '(', ')']
+        tokens = re.findall(r'[^\s()]+|[()]', tgt)
+        for match in tokens:
             # Try to match tokens from the compound target, first by using
             # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
@@ -1046,7 +1047,7 @@ class Matcher(object):
                     )
                 )
             elif match in opers:
-                # We didn't match a target, so append a boolean operator
+                # We didn't match a target, so append a boolean operator or subexpression
                 results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob
