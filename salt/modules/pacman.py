@@ -30,7 +30,8 @@ def _list_removed(old, new):
 def available_version(*names):
     '''
     Return the latest version of the named package available for upgrade or
-    installation
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 

@@ -42,12 +42,12 @@ def _parse_yum(arg):
     results = []
 
     for line in out.splitlines():
-        if len(line.split()) == 3:
-            namearchstr, pkgver, pkgstatus = line.split()
-            pkgname = namearchstr.rpartition('.')[0]
-
-            results.append(yum_out(pkgname, pkgver, pkgstatus))
-
+        if not line.startswith('Loaded plugin'):
+            line = line.split()
+            if len(line) == 3:
+                namearchstr, pkgver, pkgstatus = line
+                pkgname = namearchstr.rpartition('.')[0]
+                results.append(yum_out(pkgname, pkgver, pkgstatus))
     return results
 
 
@@ -62,16 +62,34 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
-    out = _parse_yum('list update {0}'.format(name))
-    return out[0].version if out else ''
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+    # Get updates for specified package(s)
+    updates = _parse_yum('list updates {0}'.format(' '.join(names)))
+    for pkg in updates:
+        ret[pkg.name] = pkg.version
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def upgrade_available(name):
@@ -85,19 +103,27 @@ def upgrade_available(name):
     return available_version(name) != ''
 
 
-def version(name):
+def version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    out = _parse_yum('list installed {0}'.format(name))
-    if out:
-        return out[0].version
-    else:
+    if len(names) == 0:
         return ''
+    ret = {}
+    pkgs = list_pkgs()
+    for name in names:
+        ret[name] = pkgs.get(name,'')
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def list_pkgs():
@@ -110,8 +136,8 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
         name, version, rel = line.split('_|-')
         pkgver = version
