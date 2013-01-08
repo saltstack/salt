@@ -217,7 +217,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
 
-    if not logging.Logger.manager.loggerDict:
+    if len(logging.root.handlers) == 0:
         # No configuration to the logging system has been done so far.
         # Set the root logger at the lowest level possible
         logging.getLogger().setLevel(GARBAGE)
