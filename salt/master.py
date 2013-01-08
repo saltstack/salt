@@ -866,6 +866,7 @@ class AESFuncs(object):
         # Prepare the runner object
         opts = {'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
+                'id': clear_load['id'],
                 'doc': False,
                 'conf_file': self.opts['conf_file']}
         opts.update(self.opts)
