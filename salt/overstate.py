@@ -90,6 +90,8 @@ class OverState(object):
         if not running:
             return False
         for host in running:
+            if not isinstance(running[host], dict):
+                return False
             for tag, ret in running[host].items():
                 if not 'result' in ret:
                     return False
