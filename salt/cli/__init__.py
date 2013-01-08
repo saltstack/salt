@@ -223,9 +223,14 @@ class SaltCall(parsers.SaltCallOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
-            verify_files(
-                [self.config['log_file']],
-                self.config['user'])
+            if (not self.config['log_file'].startswith('tcp://') or
+                not self.config['log_file'].startswith('udp://') or
+                not self.config['log_file'].startswith('file://')):
+                # Logfile is not using Syslog, verify
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user']
+                )
 
         if self.options.local:
             self.config['file_client'] = 'local'
