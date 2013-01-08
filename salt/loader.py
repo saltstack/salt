@@ -71,12 +71,10 @@ def minion_mods(opts, context=None, whitelist=None):
             'value': context}
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
-    functions = load.apply_introspection(
-            load.gen_functions(
-                pack,
-                whitelist=whitelist
+    functions = load.gen_functions(
+                    pack,
+                    whitelist=whitelist
                 )
-            )
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -316,16 +314,6 @@ class Loader(object):
                 continue
             mod_opts[key] = val
         return mod_opts
-
-    def get_docs(self, funcs, module=''):
-        '''
-        Return a dict containing all of the doc strings in the functions dict
-        '''
-        docs = {}
-        for fun in funcs:
-            if fun.startswith(module):
-                docs[fun] = funcs[fun].__doc__
-        return docs
 
     def call(self, fun, arg=list()):
         '''
@@ -682,35 +670,6 @@ class Loader(object):
             outp = mod.__outputter__
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
-
-    def apply_introspection(self, funcs):
-        '''
-        Pass in a function object returned from get_functions to load in
-        introspection functions.
-        '''
-        funcs['sys.list_functions'] = lambda module='': self.list_funcs(funcs, module)
-        funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
-        funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
-        funcs['sys.reload_modules'] = lambda: True
-        return funcs
-
-    def list_funcs(self, funcs, module=''):
-        '''
-        List the functions.  Optionally, specify a module to list from.
-        '''
-        return sorted(f for f in funcs if f.startswith(module + '.')) if module else sorted(funcs)
-
-    def list_modules(self, funcs):
-        '''
-        List the modules
-        '''
-        modules = set()
-        for key in funcs:
-            comps = key.split('.')
-            if len(comps) < 2:
-                continue
-            modules.add(comps[0])
-        return sorted(list(modules))
 
     def filter_func(self, name, pack=None):
         '''
