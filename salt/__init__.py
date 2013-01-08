@@ -15,6 +15,7 @@ from salt.utils import migrations
 try:
     from salt.utils import parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
+    from salt.utils.verify import verify_files
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
@@ -41,7 +42,6 @@ class Master(parsers.MasterOptionParser):
                     self.config['cachedir'],
                     os.path.join(self.config['cachedir'], 'jobs'),
                     os.path.join(self.config['cachedir'], 'proc'),
-                    os.path.dirname(self.config['log_file']),
                     self.config['sock_dir'],
                     self.config['token_dir'],
                 ],
@@ -49,6 +49,9 @@ class Master(parsers.MasterOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
@@ -90,12 +93,14 @@ class Minion(parsers.MinionOptionParser):
                     self.config['cachedir'],
                     self.config['sock_dir'],
                     self.config['extension_modules'],
-                    os.path.dirname(self.config['log_file']),
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
@@ -139,12 +144,14 @@ class Syndic(parsers.SyndicOptionParser):
                     self.config['cachedir'],
                     self.config['sock_dir'],
                     self.config['extension_modules'],
-                    os.path.dirname(self.config['log_file']),
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 

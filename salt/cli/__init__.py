@@ -218,12 +218,14 @@ class SaltCall(parsers.SaltCallOptionParser):
             verify_env([
                     self.config['pki_dir'],
                     self.config['cachedir'],
-                    os.path.dirname(self.config['log_file'])
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
+            verify_files(
+                [self.config['log_file']],
+                self.config['user'])
 
         if self.options.local:
             self.config['file_client'] = 'local'

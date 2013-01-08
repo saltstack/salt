@@ -112,6 +112,39 @@ def verify_socket(interface, pub_port, ret_port):
     return result
 
 
+def verify_files(files, user):
+    '''
+    Verify that the named files exist and are owned by the named user
+    '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
+    import pwd  # after confirming not running Windows
+    import grp
+    try:
+        pwnam = pwd.getpwnam(user)
+        uid = pwnam[2]
+        gid = pwnam[3]
+        groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+
+    except KeyError:
+        err = ('Failed to prepare the Salt environment for user '
+               '{0}. The user is not available.\n').format(user)
+        sys.stderr.write(err)
+        sys.exit(2)
+    for fn_ in files:
+        dirname = os.path.dirname(fn_)
+        if not os.path.isdir(dirname):
+            verify_env([dirname], user)
+        if not os.path.isfile(fn_):
+            with salt.utils.fopen(fn_, 'w+') as fp_:
+                fp_.write('')
+        stats = os.stat(fn_)
+        if not uid == stats.st_uid:
+            os.chown(fn_, uid, -1)
+    return True
+
+
 def verify_env(dirs, user, permissive=False, pki_dir=''):
     '''
     Verify that the named directories are in place and that the environment
