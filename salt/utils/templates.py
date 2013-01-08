@@ -85,11 +85,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(context, os.path.dirname(tmplpath))
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
+    env_args = {'extensions': ['jinja2.ext.with_'], 'loader': loader}
     if opts.get('allow_undefined', False):
-        jinja_env = jinja2.Environment(loader=loader)
+        jinja_env = jinja2.Environment(**env_args)
     else:
         jinja_env = jinja2.Environment(
-                        loader=loader, undefined=jinja2.StrictUndefined)
+                        undefined=jinja2.StrictUndefined,**env_args)
     try:
         output = jinja_env.from_string(tmplstr).render(**context)
     except jinja2.exceptions.TemplateSyntaxError, exc:
