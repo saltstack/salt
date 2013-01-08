@@ -136,7 +136,7 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         if not os.path.isdir(dirname):
-            verify_env([dirname], user)
+            os.makedirs(dirname)
         if not os.path.isfile(fn_):
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write('')
