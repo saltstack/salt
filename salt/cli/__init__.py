@@ -17,7 +17,7 @@ import salt.auth
 import salt.key
 
 from salt.utils import parsers
-from salt.utils.verify import verify_env
+from salt.utils.verify import verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
