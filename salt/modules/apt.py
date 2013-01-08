@@ -56,7 +56,8 @@ def _pkgname_without_arch(name):
 def available_version(*names):
     '''
     Return the latest version of the named package available for upgrade or
-    installation
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
