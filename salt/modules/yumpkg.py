@@ -127,41 +127,44 @@ def list_upgrades(*args):
     return versions_list
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
     yumbase = yum.YumBase()
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exact match only.
-    versions_list = []
     for pkgtype in ['available', 'updates']:
-
         pkglist = yumbase.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(
-            pkglist, [name]
+            pkglist, names
         )
-        # build a list of available packages from either available or updates
-        # this will result in a double match for a package that is already
-        # installed.  Maybe we should just return the value if we get a hit
-        # on available, and only iterate though updates if we don't..
         for pkg in exactmatch:
-            if pkg.arch == getBaseArch() or pkg.arch == 'noarch':
-                versions_list.append('-'.join([pkg.version, pkg.release]))
+            if pkg.name in ret \
+            and (pkg.arch == getBaseArch() or pkg.arch == 'noarch'):
+                ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
-    if len(versions_list) == 0:
-        # if versions_list is empty return empty string.  It may make sense
-        # to also check if a package is installed and on latest version
-        # already and return a message saying 'up to date' or something along
-        # those lines.
-        return ''
-    # remove the duplicate items from the list and return the first one
-    return list(set(versions_list))[0]
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def upgrade_available(name):
@@ -172,30 +175,33 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return available_version(name)
+    return available_version(name) != ''
 
 
-def version(name):
+def version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    pkgs = list_pkgs(name)
-
-    # check for '.arch' appended to pkg name (i.e. 32 bit installed on 64 bit
-    # machine is '.i386')
-    if name.find('.') >= 0:
-        name = name.split('.')[0]
-    if name in pkgs:
-        return pkgs[name]
-    else:
+    if len(names) == 0:
         return ''
+    ret = {}
+    pkgs = list_pkgs()
+    for name in names:
+        ret[name] = pkgs.get(name,'')
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
-def list_pkgs(*args):
+def list_pkgs():
     '''
     List the packages currently installed in a dict::
 
@@ -205,20 +211,19 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
+    # Note that this function parses the output from the rpm command, rather
+    # than using the yum module. This is intentional, and is done for
+    # performance reasons. This function is used a lot in package operations,
+    # and using yum here adds unnecessary overhead.
     ret = {}
-    yumbase = yum.YumBase()
-    for package in yumbase.rpmdb:
-        pkgver = package.version
-        if package.release:
-            pkgver += '-{0}'.format(package.release)
-        __salt__['pkg_resource.add_pkg'](ret, package.name, pkgver)
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        name, version, rel = line.split('_|-')
+        pkgver = version
+        if rel:
+            pkgver += '-{0}'.format(rel)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
-    if args:
-        pkgs = ret
-        ret = {}
-        for pkg in pkgs.keys():
-            if pkg in args:
-                ret[pkg] = pkgs[pkg]
     return ret
 
 
