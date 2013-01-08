@@ -12,13 +12,6 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-__outputter__ = {
-    'upgrade_available': 'txt',
-    'available_version': 'txt',
-    'list_upgrades': 'txt',
-    'install': 'yaml',
-}
-
 
 def __virtual__():
     '''
@@ -59,27 +52,38 @@ def available_version(*names):
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
+
     CLI Example::
 
         salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package1> <package2> <package3>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
         return ''
-    else:
-        ret = {}
-        for name in names:
-            cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
-            version = __salt__['cmd.run_stdout'](cmd).split()
-            if len(version) >= 2:
-                version = version[-1]
-            else:
-                version = ''
-            ret[name] = version
-        # Return a string if only one package name passed
-        if len(names) == 1:
-            return ret[names[0]]
-        return ret
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+    pkgs = list_pkgs()
+    for name in names:
+        cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
+        candidate = __salt__['cmd.run_stdout'](cmd).split()
+        if len(candidate) >= 2:
+            candidate = candidate[-1]
+        else:
+            candidate = ''
+
+        installed = pkgs.get(name, '')
+        if candidate:
+            if not installed or compare(installed, candidate) == -1:
+                ret[name] = candidate
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def version(*names):
@@ -91,7 +95,7 @@ def version(*names):
     CLI Example::
 
         salt '*' pkg.version <package name>
-        salt '*' pkg.version <package1> <package2> <package3>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     pkgs = list_pkgs()
     if len(names) == 0:
@@ -453,7 +457,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return name in _get_upgradable()
+    return available_version(name) != ''
 
 
 def compare(version1='', version2=''):
