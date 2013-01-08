@@ -49,21 +49,27 @@ class Master(parsers.MasterOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user'])
+                if (not self.config['log_file'].startswith('tcp://') or
+                    not self.config['log_file'].startswith('udp://') or
+                    not self.config['log_file'].startswith('file://')):
+                    # Logfile is not using Syslog, verify
+                    verify_files(
+                        [self.config['log_file']],
+                        self.config['user']
+                    )
         except OSError as err:
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
         logging.getLogger(__name__).warn('Setting up the Salt Master')
 
-        # Late import so logging works correctly
         if not verify_socket(self.config['interface'],
                              self.config['publish_port'],
                              self.config['ret_port']):
             self.exit(4, 'The ports are not available to bind\n')
         migrations.migrate_paths(self.config)
+
+        # Late import so logging works correctly
         import salt.master
         master = salt.master.Master(self.config)
         self.daemonize_if_required()
@@ -98,6 +104,14 @@ class Minion(parsers.MinionOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
+                if (not self.config['log_file'].startswith('tcp://') or
+                    not self.config['log_file'].startswith('udp://') or
+                    not self.config['log_file'].startswith('file://')):
+                    # Logfile is not using Syslog, verify
+                    verify_files(
+                        [self.config['log_file']],
+                        self.config['user']
+                    )
                 verify_files(
                     [self.config['log_file']],
                     self.config['user'])
@@ -149,9 +163,14 @@ class Syndic(parsers.SyndicOptionParser):
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
                 )
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user'])
+                if (not self.config['log_file'].startswith('tcp://') or
+                    not self.config['log_file'].startswith('udp://') or
+                    not self.config['log_file'].startswith('file://')):
+                    # Logfile is not using Syslog, verify
+                    verify_files(
+                        [self.config['log_file']],
+                        self.config['user']
+                    )
         except OSError as err:
             sys.exit(err.errno)
 
