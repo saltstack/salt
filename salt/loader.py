@@ -69,6 +69,8 @@ def minion_mods(opts, context=None, whitelist=None):
         context = {}
     pack = {'name': '__context__',
             'value': context}
+    if not whitelist:
+        whitelist = opts.get('whitelist_modules', None)
     functions = load.apply_introspection(
             load.gen_functions(
                 pack,

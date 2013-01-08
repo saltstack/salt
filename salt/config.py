@@ -207,6 +207,7 @@ def minion_config(path, check_dns=True):
             'external_nodes': '',
             'disable_modules': [],
             'disable_returners': [],
+            'whitelist_modules': [],
             'module_dirs': [],
             'returner_dirs': [],
             'states_dirs': [],
