@@ -22,6 +22,7 @@ else:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -141,7 +142,10 @@ def verify_files(files, user):
                 fp_.write('')
         stats = os.stat(fn_)
         if not uid == stats.st_uid:
-            os.chown(fn_, uid, -1)
+            try:
+                os.chown(fn_, uid, -1)
+            except OSError:
+                pass
     return True
 
 
