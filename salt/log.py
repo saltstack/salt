@@ -260,7 +260,13 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    handler = logging.StreamHandler(sys.stderr)
+    handler = None
+    for handler in logging.root.handlers:
+        if handler.stream is sys.stderr:
+            # There's already a logging handler outputting to sys.stderr
+            break
+    else:
+        handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(level)
 
     # Set the default console formatter config
