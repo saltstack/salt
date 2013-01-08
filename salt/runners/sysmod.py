@@ -9,6 +9,14 @@ import itertools
 import salt.client
 import salt.output
 
+
+def __virtual__():
+    '''
+    Rename to sys
+    '''
+    return 'sys'
+
+
 def doc():
     '''
     Collect all the sys.doc output from each minion and return the aggregate
