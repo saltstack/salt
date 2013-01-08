@@ -211,18 +211,13 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    # Note that this function parses the output from the rpm command, rather
-    # than using the yum module. This is intentional, and is done for
-    # performance reasons. This function is used a lot in package operations,
-    # and using yum here adds unnecessary overhead.
     ret = {}
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
-        pkgver = version
-        if rel:
-            pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+    yb = yum.YumBase()
+    for p in yb.rpmdb:
+        pkgver = p.version
+        if p.release:
+            pkgver += '-{0}'.format(p.release)
+        __salt__['pkg_resource.add_pkg'](ret, p.name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
@@ -456,7 +451,7 @@ def remove(pkgs):
     yumbase = yum.YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
     pkgs = pkgs.split(',')
-    old = list_pkgs(*pkgs)
+    old = version(*pkgs)
 
     # same comments as in upgrade for remove.
     for pkg in pkgs:
@@ -470,7 +465,7 @@ def remove(pkgs):
     yumlogger.log_accumulated_errors()
     yumbase.closeRpmDB()
 
-    new = list_pkgs(*pkgs)
+    new = version(*pkgs)
 
     return _list_removed(old, new)
 
