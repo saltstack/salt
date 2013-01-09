@@ -28,9 +28,6 @@ set_file
         - name: ferm
         - data:
             'ferm/enable': {'type': 'boolean', 'value': True}
-
-Please take note that everything under -data: needs to have two levels of
-indentation because of the way YAML renders the data.
 '''
 
 from salt._compat import string_types
@@ -41,7 +38,7 @@ def __virtual__():
     '''
     return 'debconf' if __grains__['os'] in ['Debian', 'Ubuntu'] else False
 
-def set_file(name, source, test=False):
+def set_file(name, source):
     '''
     Set debconf selections from a file
 
@@ -61,7 +58,8 @@ def set_file(name, source, test=False):
            'result': True,
            'comment': ''}
 
-    if test:
+    if __opts__['test']:
+        ret['result'] = None
         ret['comment'] = 'Debconf selections were set.'
         return ret
 
@@ -73,7 +71,7 @@ def set_file(name, source, test=False):
 
     return ret
 
-def set(name, data, test=False):
+def set(name, data):
     '''
     Set debconf selections
 
@@ -121,15 +119,17 @@ def set(name, data, test=False):
                 ret['comment'] = 'Unchanged answers: '
             ret['comment'] += ('{0} ').format(key)
         else:
-            if not test:
+            if __opts__['test']:
+                ret['result'] = None
+                ret['changes'][key] = ('New value: {0}').format(args['value'])
+                return ret
+            else:
                 if __salt__['debconf.set'](name, key, args['type'], args['value']):
                     ret['changes'][key] = ('{0}').format(args['value'])
                 else:
                     ret['result'] = False
                     ret['comment'] = 'Some settings failed to be applied.'
                     ret['changes'][key] = 'Failed to set!'
-            else:
-                ret['changes'][key] = ('New value: {0}').format(args['value'])
 
     if not ret['changes']:
         ret['comment'] = 'All specified answers are already set'
