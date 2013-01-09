@@ -24,6 +24,10 @@
 #AWS.keyname: default
 #AWS.securitygroup: default
 #AWS.private_key: /root/test.pem
+# Specify whether to use public or private IP for deploy script
+# private_ips or public_ips
+#AWS.ssh_interface: public_ips
+
 #
 # Linode takes the single api_key
 #LINODE.apikey: <Linode api key>
