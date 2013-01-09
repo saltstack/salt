@@ -32,7 +32,7 @@ any user on the same system as the master with the `-a` option:
 
     $ salt -a pam web\* test.ping
 
-The system will ask the user for the credentials required buy the
+The system will ask the user for the credentials required by the
 authentication system and then publish the command.
 
 Tokens
