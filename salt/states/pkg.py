@@ -368,7 +368,7 @@ def latest(
                 comments.append(msg)
             if successful:
                 msg = 'The following packages were successfully ' \
-                      'installed/updated: ' \
+                      'installed/upgraded: ' \
                       '{0}.'.format(', '.join(sorted(successful)))
                 comments.append(msg)
             if up_to_date:
