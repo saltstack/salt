@@ -117,7 +117,9 @@ def set_password(name, password):
     '''
     Set the password for a named user. The password must be a properly defined
     hash, the password hash can be generated with this command:
-    ``openssl passwd -1 <plaintext password>``
+    ``python -c "import crypt, getpass, pwd; print crypt.crypt('password', '\$6\$SALTsalt\$')"``
+    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
+    different hashing algorithm this needs to be changed accordingly
 
     CLI Example::
 
