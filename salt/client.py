@@ -149,13 +149,14 @@ class LocalClient(object):
         '''
         Return the information about a given job
         '''
-        return self.cmd(
+        jinfo = self.cmd(
                 tgt,
                 'saltutil.find_job',
                 [jid],
                 2,
                 tgt_type,
                 **kwargs)
+        return jinfo
 
     def _check_pub_data(self, pub_data):
         '''
@@ -628,9 +629,7 @@ class LocalClient(object):
             raw = self.event.get_event(timeout, jid)
             if not raw is None:
                 found.add(raw['id'])
-                ret[raw['id']] = {'ret': raw['return']}
-                if 'out' in raw:
-                    ret[raw['id']]['out'] = raw['out']
+                ret[raw['id']] = raw['return']
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
