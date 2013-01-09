@@ -505,6 +505,7 @@ _OS_NAME_MAP = {
     'debian': 'Debian',
     'debiangnu/': 'Debian',
     'fedoraremi': 'RedHat',
+    'amazonami': 'RedHat',
 }
 
 # Map the 'os' grain to the 'os_family' grain
