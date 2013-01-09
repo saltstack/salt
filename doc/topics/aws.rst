@@ -28,7 +28,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
     AWS.availability_zone: ap-southeast-1b
 
     # Specify whether to use public or private IP for deploy script
-    AWS.ssh_interface: public
+    AWS.ssh_interface: public_ips
 
     # Configure which user to use to run the deploy script
     AWS.ssh_username: ec2-user
