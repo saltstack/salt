@@ -1010,6 +1010,16 @@ def recurse(name,
     if env is None:
         env = kwargs.get('__env__', 'base')
 
+    # Verify the source exists.
+    _src_proto, _src_path = source.split('://', 1)
+    
+    if _src_path not in __salt__['cp.list_master_dirs'](env):
+        ret['result'] = False
+        ret['comment'] = (
+                'The source: {0} does not exist on the master'.format(source)
+                )
+        return ret
+
     # Verify the target directory
     if not os.path.isdir(name):
         if os.path.exists(name):
