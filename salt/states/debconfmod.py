@@ -36,7 +36,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if not __grains__['os_family'] == 'Debian':
+    if __grains__['os_family'] != 'Debian':
         return False
 
     return 'debconf'
@@ -46,7 +46,7 @@ def set_file(name, source):
     Set debconf selections from a file
 
     .. code-block:: yaml
-        <state_name>:
+        <state_id>:
           debconf.set_file:
             - source: salt://pathto/pkg.selections
 
@@ -76,14 +76,14 @@ def set(name, data):
     Set debconf selections
 
     .. code-block:: yaml
-        <state_name>:
+        <state_id>:
           debconf.set:
             - name: <name>
             - data:
                 <question>: {'type': <type>, 'value': <value>}
                 <question>: {'type': <type>, 'value': <value>}
 
-        <state_name>:
+        <state_id>:
           debconf.set:
             - name: <name>
             - data:
@@ -91,7 +91,7 @@ def set(name, data):
                 <question>: {'type': <type>, 'value': <value>}
 
     name:
-        The name of package to set answers for.
+        The package name to set answers for.
 
     data:
         A set of questions/answers for debconf. Note that everything under
