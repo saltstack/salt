@@ -93,8 +93,8 @@ is run from another AWS instance, the private IP should be used.
 
 AWS instances may not allow remote access to the root user by default. Instead,
 another user must be used to run the deploy script using sudo. Some common
-usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu instances)
-and bitnami (for images provided by Bitnami).
+usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu instances),
+admin (official Debian) and bitnami (for images provided by Bitnami).
 
 .. code-block:: yaml
 
@@ -110,6 +110,7 @@ file:
     AWS.ssh_username:
       - ec2-user
       - ubuntu
+      - admin
       - bitnami
 
 Multiple security groups can also be specified in the same fashion:
