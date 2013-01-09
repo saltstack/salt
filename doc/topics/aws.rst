@@ -28,6 +28,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
     AWS.availability_zone: ap-southeast-1b
 
     # Specify whether to use public or private IP for deploy script
+    # private_ips or public_ips
     AWS.ssh_interface: public_ips
 
     # Configure which user to use to run the deploy script
@@ -89,7 +90,8 @@ is run from another AWS instance, the private IP should be used.
 .. code-block:: yaml
 
     # Specify whether to use public or private IP for deploy script
-    AWS.ssh_interface: public
+    # private_ips or public_ips
+    AWS.ssh_interface: public_ip
 
 AWS instances may not allow remote access to the root user by default. Instead,
 another user must be used to run the deploy script using sudo. Some common
