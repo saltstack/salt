@@ -598,11 +598,17 @@ class LocalClient(object):
                 break
             time.sleep(0.01)
 
-    def get_returns(self, jid, minions, timeout=None):
+    def get_returns(
+            self,
+            jid,
+            minions,
+            timeout=None,
+            tgt='*',
+            tgt_type='glob'):
         '''
-        This method starts off a watcher looking at the return data for
-        a specified jid
+        Get the returns for the command line interface via the event system
         '''
+        minions = set(minions)
         if timeout is None:
             timeout = self.opts['timeout']
         jid_dir = salt.utils.jid_dir(
@@ -610,49 +616,37 @@ class LocalClient(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        start = 999999999999
-        gstart = int(time.time())
+        start = int(time.time())
+        found = set()
         ret = {}
         wtag = os.path.join(jid_dir, 'wtag*')
-        # If jid == 0, there is no payload
-        if int(jid) == 0:
-            return ret
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
         # Wait for the hosts to check in
         while True:
-            for fn_ in os.listdir(jid_dir):
-                if fn_.startswith('.'):
-                    continue
-                if fn_ not in ret:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            ret[fn_] = self.serial.load(
-                                    salt.utils.fopen(retp, 'r')
-                                    )
-                        except Exception:
-                            pass
-            if ret and start == 999999999999:
-                start = int(time.time())
+            raw = self.event.get_event(timeout, jid)
+            if not raw is None:
+                found.add(raw['id'])
+                ret[raw['id']] = {'ret': raw['return']}
+                if 'out' in raw:
+                    ret[raw['id']]['out'] = raw['out']
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
+                continue
+            # Then event system timeout was reached and nothing was returned
+            if len(found.intersection(minions)) >= len(minions):
+                # All minions have returned, break out of the loop
+                break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(set(ret.keys()).intersection(minions)) >= len(minions):
-                # All Minions have returned
-                return ret
             if int(time.time()) > start + timeout:
-                # The timeout has been reached
-                return ret
-            if int(time.time()) > gstart + timeout and not ret:
-                # No minions have replied within the specified global timeout,
-                # return an empty dict
-                return ret
-            time.sleep(0.02)
+                break
+            time.sleep(0.01)
+        return ret
 
     def get_full_returns(self, jid, minions, timeout=None):
         '''
