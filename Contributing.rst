@@ -5,15 +5,16 @@ A bug is a *demonstrable problem* that is caused by the code in the repository.
 
 Please read the following guidelines before you `report an issue`_
 
-1. **Use the GitHub issue search** — check if the issue has already been reported. If it has been, 
-   please comment on the existing issue.
+1. **Use the GitHub issue search** â check if the issue has already been reported. If it has 
+   been, please comment on the existing issue.
 
-2. **Check if the issue has been fixed** — the latest `develop` branch may already contain a fix.
+2. **Check if the issue has been fixed** â the latest `develop` branch may already contain a
+   fix.
 
-3. **Isolate the demonstrable problem** — make sure that the code in the project's repository is 
-   *definitely* responsible for the issue.
+3. **Isolate the demonstrable problem** â make sure that the code in the project's repository
+   is *definitely* responsible for the issue.
 
-4. **Include a reproducible example** — Provide the steps which led you to the problem.
+4. **Include a reproducible example** â Provide the steps which led you to the problem.
 
 Please try to be as detailed as possible in your report too. What is your environment? What steps 
 will reproduce the issue? What Operating System? What would you expect to be the outcome? All these 
