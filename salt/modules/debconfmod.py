@@ -34,7 +34,7 @@ def __virtual__():
     if salt.utils.which('debconf-get-selections') is None:
         log.error('The package debconf-utils is missing')
         return False
-    if not __grains__['os_family'] == 'Debian':
+    if __grains__['os_family'] != 'Debian':
         return False
 
     return 'debconf'
