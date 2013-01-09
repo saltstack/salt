@@ -36,7 +36,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'debconf' if __grains__['os'] in ['Debian', 'Ubuntu'] else False
+    if not __grains__['os_family'] == 'Debian':
+        return False
+
+    return 'debconf'
 
 def set_file(name, source):
     '''
@@ -122,7 +125,6 @@ def set(name, data):
             if __opts__['test']:
                 ret['result'] = None
                 ret['changes'][key] = ('New value: {0}').format(args['value'])
-                return ret
             else:
                 if __salt__['debconf.set'](name, key, args['type'], args['value']):
                     ret['changes'][key] = ('{0}').format(args['value'])
