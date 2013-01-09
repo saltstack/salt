@@ -20,7 +20,7 @@ def over(env='base', os_fn=None):
             print('Stage execution results:')
             for key, val in stage.items():
                 salt.output.display_output(
-                        {key: val},
+                        {'local': {key: val}},
                         'highstate',
                         opts=__opts__)
         elif isinstance(stage, list):
