@@ -138,6 +138,12 @@ def ssh_username(vm_):
         usernames = [username]
     if not 'ec2-user' in usernames:
         usernames.append('ec2-user')
+    if not 'ubuntu' in usernames:
+        usernames.append('ubuntu')
+    if not 'admin' in usernames:
+        usernames.append('admin')
+    if not 'bitnami' in usernames:
+        usernames.append('bitnami')
     if not 'root' in usernames:
         usernames.append('root')
     return usernames
