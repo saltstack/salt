@@ -34,34 +34,6 @@ except ImportError:
     pass
 
 
-def clean_old_key(rsa_path):
-    '''
-    Read in an old m2crypto key and save it back in the clear so
-    pycrypto can handle it
-    '''
-    def foo_pass(self, data=''):
-        return 'foo'
-    mkey = RSA.load_key(rsa_path, callback=foo_pass)
-    try:
-        os.remove(rsa_path)
-    except (IOError, OSError):
-        pass
-    # Set write permission for minion.pem file - reverted after saving the key
-    if salt.utils.is_windows():
-        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
-    try:
-        mkey.save_key(rsa_path, None)
-    except IOError:
-        log.error(
-                ('Failed to update old RSA format for key {0}, future '
-                 'releases may not be able to use this key').format(rsa_path)
-                )
-    # Set read-only permission for minion.pem file
-    if salt.utils.is_windows():
-        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
-    return mkey
-
-
 def gen_keys(keydir, keyname, keysize):
     '''
     Generate a keypair for use with salt
@@ -96,13 +68,7 @@ class MasterKeys(dict):
         Returns a key objects for the master
         '''
         if os.path.exists(self.rsa_path):
-            try:
-                key = RSA.load_key(self.rsa_path)
-            except Exception:
-                # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a pass phrase
-                key = clean_old_key(self.rsa_path)
-
+            key = RSA.load_key(self.rsa_path)
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
@@ -153,12 +119,7 @@ class Auth(object):
         salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
-            try:
-                key = RSA.load_key(self.rsa_path)
-            except Exception:
-                # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a pass phrase
-                key = clean_old_key(self.rsa_path)
+            key = RSA.load_key(self.rsa_path)
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
