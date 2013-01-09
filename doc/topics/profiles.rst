@@ -2,7 +2,7 @@ VM Profiles
 ===========
 
 Salt cloud designates virtual machines inside the profile configuration file.
-The profile configuration file defaults to ``/etc/salt/cloud.vm`` and is a
+The profile configuration file defaults to ``/etc/salt/cloud.profiles`` and is a
 yaml configuration. The syntax for declaring profiles is simple:
 
 .. code-block:: yaml
@@ -38,11 +38,19 @@ Larger Example
 
 .. code-block:: yaml
 
-    base_aws:
+    rhel_aws:
       provider: aws
       image: ami-e565ba8c
       size: Micro Instance
       script: RHEL6
+      minion:
+          cheese: edam
+
+    ubuntu_aws:
+      provider: aws
+      image: ami-7e2da54e
+      size: Micro Instance
+      script: Ubuntu
       minion:
           cheese: edam
 
