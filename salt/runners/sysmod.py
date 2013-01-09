@@ -22,10 +22,33 @@ def doc():
     Collect all the sys.doc output from each minion and return the aggregate
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
-    all_docs = client.cmd('*', 'sys.doc', timeout=__opts__['timeout'])
+    docs = {}
+    for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
+        docs.update(ret)
 
     i = itertools.chain.from_iterable([i.items() for i in all_docs.values()])
     ret = dict(list(i))
 
     salt.output.display_output(ret, '', __opts__)
     return ret
+
+# Still need to modify some of the backend for auth checks to make this work
+def __list_functions(user=None):
+    '''
+    List all of the functions, optionally pass in a user to evaluate
+    permissions on
+    '''
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    funcs = {}
+    gener = client.cmd_iter(
+            '*',
+            'sys.list_functions',
+            timeout=__opts__['timeout'])
+    for ret in gener:
+        funcs.update(ret)
+    if not user:
+        salt.output.display_output(funcs, '', __opts__)
+        return funcs
+    for key, val __opts__['external_auth']:
+        if user in val:
+            pass
