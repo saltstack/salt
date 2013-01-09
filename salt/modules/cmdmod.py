@@ -413,8 +413,9 @@ def script(
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
         shutil.copyfile(fn_, path)
-    os.chmod(path, 320)
-    os.chown(path, __salt__['file.user_to_uid'](runas), -1)
+    if not salt.utils.is_windows():
+        os.chmod(path, 320)
+        os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
             path + ' ' + args if args else path,
             cwd=cwd,
