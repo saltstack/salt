@@ -268,7 +268,8 @@ def running(name, enable=None, sig=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            return _enable(name, False, **kwargs)
+            ret = _enable(name, False, **kwargs)
+            ret['result'] = False
         elif enable is False:
             return _disable(name, False, **kwargs)
         else:
