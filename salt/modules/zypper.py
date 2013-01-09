@@ -34,51 +34,86 @@ def _list_removed(old, new):
     return pkgs
 
 
-def _available_versions():
+def list_updates():
     '''
-    The available versions of packages
+    List packages with updates. Returns a dict of pkg/version pairs.
     '''
-    cmd = 'zypper packages -i'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run_stdout']('zypper list-updates').splitlines()
     for line in out:
         if not line:
             continue
         if '|' not in line:
             continue
-        comps = []
-        for comp in line.split('|'):
-            comps.append(comp.strip())
-        if comps[0] == 'v':
-            ret[comps[2]] = comps[3]
+        try:
+            status, repo, name, cur, avail, arch = \
+            [x.strip() for x in line.split('|')]
+        except ValueError, IndexError:
+            continue
+        if status == 'v':
+            ret[name] = avail
     return ret
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    Return the available version of a given package
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
-    avail = _available_versions()
-    return avail.get(name, '')
+    if len(names) == 0:
+        return ''
+    ret = {}
+    updates = list_updates()
+    for name in names:
+        ret[name] = updates.get(name, '')
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
-def version(name):
+def upgrade_available(name):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return available_version(name) != ''
+
+
+def version(*names):
+    '''
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
-    else:
+    if len(names) == 0:
         return ''
+    elif len(names) == 1:
+        return pkgs.get(names[0], '')
+    else:
+        ret = {}
+        for name in names:
+            ret[name] = pkgs.get(name, '')
+        return ret
 
 
 def list_pkgs():
@@ -184,7 +219,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
 
     cmd = 'zypper -n install -l {0}'.format(' '.join(pkg_params))
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
+    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
     new = list_pkgs()
