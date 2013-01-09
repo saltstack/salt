@@ -302,23 +302,8 @@ def latest(
                 msg = 'No information found for "{0}".'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-            else:
-                msg = 'Unable to find newest version for "{0}".'.format(pkg)
-                log.error(msg)
-                problems.append(msg)
         else:
-            if not cur[pkg]:
-                # Not yet installed 
-                targets[pkg] = avail[pkg]
-            else:
-                try:
-                    if __salt__['pkg.compare'](avail[pkg], cur[pkg]) == 1:
-                        targets[pkg] = avail[pkg]
-                except AttributeError:
-                    msg = 'Unable to compare versions for "{0}" ' \
-                          '({1} > {2})'.format(name, avail, version)
-                    log.error(msg)
-                    problems.append(msg)
+            targets[pkg] = avail[pkg]
 
     if problems:
         return {'name': name,
@@ -338,7 +323,8 @@ def latest(
 
         if __opts__['test']:
             to_be_upgraded = ', '.join(sorted(targets.keys()))
-            comment = 'The following packages are set to be upgraded: ' \
+            comment = 'The following packages are set to be ' \
+                      'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)
             if up_to_date:
                 comment += ' The following packages are already ' \
@@ -381,7 +367,8 @@ def latest(
                       '{0}.'.format(', '.join(sorted(failed)))
                 comments.append(msg)
             if successful:
-                msg = 'The following packages were successfully updated: ' \
+                msg = 'The following packages were successfully ' \
+                      'installed/updated: ' \
                       '{0}.'.format(', '.join(sorted(successful)))
                 comments.append(msg)
             if up_to_date:
