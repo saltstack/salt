@@ -46,12 +46,9 @@ def set_file(name, source):
     Set debconf selections from a file
 
     .. code-block:: yaml
-        <name>:
+        <state_name>:
           debconf.set_file:
             - source: salt://pathto/pkg.selections
-
-    name:
-        The name of the state to be executed
 
     source:
         The location of the file containing the package selections
@@ -79,14 +76,14 @@ def set(name, data):
     Set debconf selections
 
     .. code-block:: yaml
-        <name>:
+        <state_name>:
           debconf.set:
             - name: <name>
             - data:
                 <question>: {'type': <type>, 'value': <value>}
                 <question>: {'type': <type>, 'value': <value>}
 
-        <name>:
+        <state_name>:
           debconf.set:
             - name: <name>
             - data:
@@ -94,11 +91,11 @@ def set(name, data):
                 <question>: {'type': <type>, 'value': <value>}
 
     name:
-        The name of the state to be executed
+        The name of package to set answers for.
 
-    package:
-        The name of the package debconf selections are being set for
-        If not present, will default to the state name
+    data:
+        A set of questions/answers for debconf. Note that everything under
+	this must be indented twice.
 
     question:
         The question the is being pre-answered
