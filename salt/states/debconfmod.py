@@ -28,6 +28,9 @@ set_file
         - name: ferm
         - data:
             'ferm/enable': {'type': 'boolean', 'value': True}
+
+Please take note that everything under -data: needs to have two levels of
+indentation because of the way YAML renders the data.
 '''
 
 from salt._compat import string_types
