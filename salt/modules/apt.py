@@ -31,6 +31,7 @@ def __init__(opts):
             'APT_LISTBUGS_FRONTEND': 'none',
             'APT_LISTCHANGES_FRONTEND': 'none',
             'DEBIAN_FRONTEND': 'noninteractive',
+            'UCF_FORCE_CONFFOLD': '1',
         }
         # Export these puppies so they persist
         os.environ.update(env_vars)
