@@ -58,26 +58,70 @@ def _cpv_to_version(cpv):
     return str(cpv[len(_cpv_to_name(cpv) + '-'):])
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
-    return _cpv_to_version(_porttree().dep_bestmatch(name))
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+        installed = _cpv_to_version(_vartree().dep_bestmatch(name))
+        avail = _cpv_to_version(_porttree().dep_bestmatch(name))
+        if avail:
+            if not installed or compare(installed, avail) == -1:
+                ret[name] = avail
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
-def version(name):
+def upgrade_available(name):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return available_version(name) != ''
+
+
+def version(*names):
+    '''
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return _cpv_to_version(_vartree().dep_bestmatch(name))
+    if len(names) == 0:
+        return ''
+    ret = {}
+    for name in names:
+        ret[name] = _cpv_to_version(_vartree().dep_bestmatch(name))
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def porttree_matches(name):
