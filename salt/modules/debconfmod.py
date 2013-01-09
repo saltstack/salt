@@ -3,11 +3,14 @@ Support for Debconf
 '''
 
 # Import python libs
+import logging
 import os
 import re
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def _unpack_lines(out):
@@ -25,10 +28,16 @@ def _unpack_lines(out):
 
 def __virtual__():
     '''
-    Confirm this module is on a Debian based system
+    Confirm this module is on a Debian based system and that debconf-utils
+    is installed.
     '''
-    return 'debconf' if __grains__['os'] in ['Debian', 'Ubuntu'] else False
+    if salt.utils.which('debconf-get-selections') is None:
+        log.error('The package debconf-utils is missing')
+        return False
+    if __grains__['os_family'] != 'Debian':
+        return False
 
+    return 'debconf'
 
 def get_selections(fetchempty=True):
     '''
