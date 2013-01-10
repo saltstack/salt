@@ -13,6 +13,13 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is FreeBSD
+    '''
+    return 'pkg' if __grains__['os'] == 'FreeBSD' else False
+
+
 def _check_pkgng():
     '''
     Looks to see if pkgng is being used by checking if database exists
@@ -39,13 +46,6 @@ def search(pkg_name):
                                                           ))
         res = [x for x in res.splitlines()]
         return {"Results": res}
-
-
-def __virtual__():
-    '''
-    Set the virtual pkg module if the os is FreeBSD
-    '''
-    return 'pkg' if __grains__['os'] == 'FreeBSD' else False
 
 
 def available_version(name):
