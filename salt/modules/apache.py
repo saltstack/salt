@@ -8,15 +8,6 @@ import re
 # Import salt libs
 import salt.utils
 
-__outputter__ = {
-    'signal': 'txt',
-    'version': 'txt',
-    'vhosts': 'yaml',
-    'modules': 'yaml',
-    'servermods': 'yaml',
-    'fullversion': 'yaml',
-}
-
 
 def __virtual__():
     '''
