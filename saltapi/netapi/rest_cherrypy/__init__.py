@@ -108,11 +108,13 @@ def salt_auth_tool():
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
 
-# Be conservative in what you send; maps Content-Type to Salt outputters
-ct_out_map = {
-    'application/json': json.dumps,
-    'application/x-yaml': yaml.dump,
-}
+# Be conservative in what you send
+# Maps Content-Type to serialization functions; this is a tuple of tuples to
+# preserve order
+ct_out_map = (
+    ('application/json', json.dumps),
+    ('application/x-yaml', yaml.dump),
+)
 
 def hypermedia_handler(*args, **kwargs):
     '''
@@ -124,7 +126,7 @@ def hypermedia_handler(*args, **kwargs):
     :param kwargs: Pass kwargs through to the main handler
     '''
     try:
-        cherrypy.response.processors = ct_out_map # handlers may modify this
+        cherrypy.response.processors = dict(ct_out_map) # handlers may modify this
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
     except salt.exceptions.EauthAuthenticationError:
         raise cherrypy.InternalRedirect('/login')
@@ -143,11 +145,17 @@ def hypermedia_handler(*args, **kwargs):
             'message': '{0}'.format(exc) if cherrypy.config['debug']
                     else "An unexpected error occurred"}
 
-    content_types = cherrypy.response.processors
-    best = cherrypy.lib.cptools.accept(content_types.keys()) # raises 406
-    cherrypy.response.headers['Content-Type'] = best
+    # raises 406 if requested content-type is not supported
+    try:
+        best = cherrypy.lib.cptools.accept([i for (i, _) in ct_out_map])
+    except cherrypy.CherryPyException as e:
+        if e.status == 406:
+            best = ct_out_map[0][0]
+        else:
+            raise
 
-    out = content_types[best]
+    cherrypy.response.headers['Content-Type'] = best
+    out = cherrypy.response.processors[best]
     return out(ret)
 
 def hypermedia_out():
