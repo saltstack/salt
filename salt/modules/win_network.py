@@ -9,12 +9,6 @@ import re
 import salt.utils
 from salt.utils.socket_util import sanitize_host
 
-__outputter__ = {
-    'dig':     'txt',
-    'ping':    'txt',
-    'netstat': 'txt',
-}
-
 
 def __virtual__():
     '''
