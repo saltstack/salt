@@ -49,6 +49,6 @@ def __list_functions(user=None):
     if not user:
         salt.output.display_output(funcs, '', __opts__)
         return funcs
-    for key, val __opts__['external_auth']:
+    for key, val in __opts__['external_auth']:
         if user in val:
             pass
