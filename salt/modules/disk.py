@@ -20,6 +20,7 @@ def __virtual__():
         return False
     return 'disk'
 
+
 def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
@@ -56,6 +57,7 @@ def usage(args=None):
             log.warn("Problem parsing disk usage information")
             ret = {}
     return ret
+
 
 def inodeusage(args=None):
     '''
