@@ -603,9 +603,7 @@ class LocalClient(object):
             self,
             jid,
             minions,
-            timeout=None,
-            tgt='*',
-            tgt_type='glob'):
+            timeout=None):
         '''
         Get the returns for the command line interface via the event system
         '''
