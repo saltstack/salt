@@ -62,10 +62,17 @@ def info(name):
     except KeyError:
         return {}
     else:
-        return {'name': grinfo.gr_name,
-                'passwd': grinfo.gr_passwd,
-                'gid': grinfo.gr_gid,
-                'members': grinfo.gr_mem}
+        return _format_info(grinfo)
+
+
+def _format_info(data):
+    '''
+    Return formatted information in a pretty way.
+    '''
+    return {'name': data.gr_name,
+            'passwd': data.gr_passwd,
+            'gid': data.gr_gid,
+            'members': data.gr_mem}
 
 
 def getent():
@@ -76,9 +83,14 @@ def getent():
 
         salt '*' group.getent
     '''
+    if 'groupadd_getent' in __context__:
+      return __context__['groupadd_getent']
+
     ret = []
     for grinfo in grp.getgrall():
-        ret.append(info(grinfo.gr_name))
+        ret.append(_format_info(grinfo))
+    __context__['groupadd_getent'] = ret
+
     return ret
 
 
