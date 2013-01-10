@@ -12,11 +12,6 @@ from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
 
 
-__outputter__ = {
-    'assign': 'txt',
-    'get': 'txt',
-}
-
 # TODO: Add unpersist() to remove either a sysctl or sysctl/value combo from
 # the config
 
