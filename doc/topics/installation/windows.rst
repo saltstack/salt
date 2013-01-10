@@ -35,6 +35,8 @@ Windows service.
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64
 redistributable.
 
+Make sure that the minion config file has the line `ipc_mode: tcp`
+
 Silent Installer option
 =======================
 
@@ -139,6 +141,7 @@ Install on Windows XP 32bit
 
         master: ipaddress or hostname of your salt-master
         master_port: 4506
+        ipc_mode: tcp
         root_dir: c:\
         pki_dir: /etc/salt/pki
         cachedir: /var/cache/salt
