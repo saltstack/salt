@@ -12,6 +12,15 @@ LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
+def __virtual__():
+    '''
+    Only work on systems that have been booted with systemd
+    '''
+    if __grains__['kernel'] == 'Linux' and _sd_booted():
+        return 'service'
+    return False
+
+
 def _sd_booted():
     '''
     Return True if the system was booted with systemd, False otherwise.
@@ -32,15 +41,6 @@ def _sd_booted():
                 __context__['systemd.sd_booted'] = False
 
     return __context__['systemd.sd_booted']
-
-
-def __virtual__():
-    '''
-    Only work on systems that have been booted with systemd
-    '''
-    if __grains__['kernel'] == 'Linux' and _sd_booted():
-        return 'service'
-    return False
 
 
 def _canonical_unit_name(name):
