@@ -295,9 +295,9 @@ class TestDaemon(object):
         self._clean()
 
     def pre_setup_minions(self):
-        """
+        '''
         Subclass this method for additional minion setups.
-        """
+        '''
 
     def setup_minions(self):
         # Wait for minions to connect back
