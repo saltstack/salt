@@ -44,12 +44,6 @@ def __virtual__():
     return 'file'
 
 
-__outputter__ = {
-    'touch':  'txt',
-    'append': 'txt',
-}
-
-
 def __clean_tmp(sfn):
     '''
     Clean out a template temp file
