@@ -46,7 +46,7 @@ def add(overlay):
     # If we did not have any overlays before and we sucessfully added
     # a new one. We need to ensure the make.conf is sourcing layman's
     # make.conf so emerge can see the overlays
-    if len(old_overlays == 0) and len(new_overlays > 0):
+    if len(old_overlays) == 0 and len(new_overlays) > 0:
         srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
         if not __salt__['file.contains'](makeconf, layman):
@@ -75,7 +75,7 @@ def delete(overlay):
 
     # If we now have no overlays added, We need to ensure that the make.conf
     # does not source layman's make.conf, as it will break emerge
-    if len(new_overlays == 0):
+    if len(new_overlays) == 0:
         srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
         if __salt__['file.contains'](makeconf, layman):
