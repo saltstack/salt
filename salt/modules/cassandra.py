@@ -22,14 +22,6 @@ try:
 except ImportError:
     pass
 
-__outputter__ = {
-  'compactionstats': 'txt',
-  'tpstats': 'txt',
-  'netstats': 'txt',
-  'info': 'txt',
-  'ring': 'txt',
-}
-
 NT = ''
 HOST = ''
 THRIFT_PORT = ''
