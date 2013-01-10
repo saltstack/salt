@@ -392,7 +392,8 @@ def _format_info(data):
     # Put GECOS info into a list
     gecos_field = data.pw_gecos.split(',', 3)
     # Assign empty strings for any unspecified GECOS fields
-    while len(gecos_field) < 4: gecos_field.append('')
+    while len(gecos_field) < 4:
+        gecos_field.append('')
 
     return {'gid': data.pw_gid,
             'groups': list_groups(data.pw_name,),
