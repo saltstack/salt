@@ -7,10 +7,11 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 
 
-__outputter__ = {
-    'assign': 'txt',
-    'get': 'txt',
-}
+def __virtual__():
+    '''
+    Only run on Linux systems
+    '''
+    return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
 
 
 def _formatfor(name, value, config, tail=''):
@@ -18,13 +19,6 @@ def _formatfor(name, value, config, tail=''):
         return '{0}="{1}"{2}'.format(name, value, tail)
     else:
         return '{0}={1}{2}'.format(name, value, tail)
-
-
-def __virtual__():
-    '''
-    Only run on Linux systems
-    '''
-    return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
 
 
 def show():
