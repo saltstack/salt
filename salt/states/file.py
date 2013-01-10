@@ -1086,6 +1086,8 @@ def recurse(name,
         merge_ret(path, _ret)
 
     def manage_directory(path):
+        if os.path.basename(path) == '..':
+            return
         if clean and os.path.exists(path) and not os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
