@@ -13,19 +13,6 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def _unpack_lines(out):
-    '''
-    Unpack the debconf lines
-    '''
-    rexp = ('(?ms)'
-            '^(?P<package>[^#]\S+)[\t ]+'
-            '(?P<question>\S+)[\t ]+'
-            '(?P<type>\S+)[\t ]+'
-            '(?P<value>[^\n]*)$')
-    lines = re.findall(rexp, out)
-    return lines
-
-
 def __virtual__():
     '''
     Confirm this module is on a Debian based system and that debconf-utils
@@ -38,6 +25,20 @@ def __virtual__():
         return False
 
     return 'debconf'
+
+
+def _unpack_lines(out):
+    '''
+    Unpack the debconf lines
+    '''
+    rexp = ('(?ms)'
+            '^(?P<package>[^#]\S+)[\t ]+'
+            '(?P<question>\S+)[\t ]+'
+            '(?P<type>\S+)[\t ]+'
+            '(?P<value>[^\n]*)$')
+    lines = re.findall(rexp, out)
+    return lines
+
 
 def get_selections(fetchempty=True):
     '''
