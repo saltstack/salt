@@ -117,7 +117,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         Print the output from a single return to the terminal
         '''
         # Handle special case commands
-        if self.config['fun'] == 'sys.doc':
+        if self.config['fun'] == 'sys.doc' and not isinstance(ret, Exception):
             self._print_docs(ret)
         else:
             # Determine the proper output method and run it
