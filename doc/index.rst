@@ -252,5 +252,8 @@ More information about the project
 :doc:`Community </topics/community>`
     How you can get involved.
 
+:doc:`Salt Development </topics/development/index>`
+    Information for Hacking on Salt
+
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states
