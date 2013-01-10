@@ -11,6 +11,9 @@ __pillar__ = {}
 
 
 def _pecl(command):
+    '''
+    Execute the command passed with pecl
+    '''
     cmdline = 'pecl {0}'.format(command)
 
     ret = __salt__['cmd.run_all'](cmdline)
