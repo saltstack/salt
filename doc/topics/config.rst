@@ -42,10 +42,10 @@ A number of configuration options are required for Amazon AWS:
 .. code-block:: yaml
 
     AWS.id: HJGRYCILJLKJYG
-    AWSAWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-    AWSAWS.keyname: test
-    AWSAWS.securitygroup: quick-start
-    AWSAWS.private_key: /root/test.pem
+    AWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+    AWS.keyname: test
+    AWS.securitygroup: quick-start
+    AWS.private_key: /root/test.pem
 
 Linode
 ------
