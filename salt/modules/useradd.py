@@ -12,7 +12,7 @@ import logging
 import copy
 
 # Import salt libs
-from salt._compat import string_types
+from salt._compat import string_types, callable as _callable
 
 log = logging.getLogger(__name__)
 
@@ -23,11 +23,10 @@ def __virtual__():
     and remove some of the functionality on OS X
     '''
     import sys
-    from salt._compat import callable
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-            if callable(getattr(mod, attr)):
+            if _callable(getattr(mod, attr)):
                 if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
@@ -155,9 +154,14 @@ def getent():
 
         salt '*' user.getent
     '''
+    if 'useradd_getent' in __context__:
+      return __context__['useradd_getent']
+
     ret = []
     for data in pwd.getpwall():
-        ret.append(info(data.pw_name))
+        ret.append(_format_info(data))
+    __context__['useradd_getent'] = ret
+
     return ret
 
 
@@ -365,21 +369,6 @@ def info(name):
     ret = {}
     try:
         data = pwd.getpwnam(name)
-        ret['gid'] = data.pw_gid
-        ret['groups'] = list_groups(name)
-        ret['home'] = data.pw_dir
-        ret['name'] = data.pw_name
-        ret['passwd'] = data.pw_passwd
-        ret['shell'] = data.pw_shell
-        ret['uid'] = data.pw_uid
-        # Put GECOS info into a list
-        gecos_field = data.pw_gecos.split(',', 3)
-        # Assign empty strings for any unspecified GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
-        ret['fullname'] = gecos_field[0]
-        ret['roomnumber'] = gecos_field[1]
-        ret['workphone'] = gecos_field[2]
-        ret['homephone'] = gecos_field[3]
     except KeyError:
         ret['gid'] = ''
         ret['groups'] = ''
@@ -392,7 +381,31 @@ def info(name):
         ret['roomnumber'] = ''
         ret['workphone'] = ''
         ret['homephone'] = ''
-    return ret
+        return ret
+    else:
+        return _format_info(data)
+
+def _format_info(data):
+    '''
+    Return user information in a pretty way
+    '''
+    # Put GECOS info into a list
+    gecos_field = data.pw_gecos.split(',', 3)
+    # Assign empty strings for any unspecified GECOS fields
+    while len(gecos_field) < 4: gecos_field.append('')
+
+    log.error('x')
+    return {'gid': data.pw_gid,
+            'groups': list_groups(data.pw_name,),
+            'home': data.pw_dir,
+            'name': data.pw_name,
+            'passwd': data.pw_passwd,
+            'shell': data.pw_shell,
+            'uid': data.pw_uid,
+            'fullname': gecos_field[0],
+            'roomnumber': gecos_field[1],
+            'workphone': gecos_field[2],
+            'homephone': gecos_field[3]}
 
 
 def list_groups(name):
