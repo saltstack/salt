@@ -94,32 +94,67 @@ def list_pkgs():
     return pkg
 
 
-def version(name):
+def available_version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
-    CLI Example::
-
-        salt '*' pkg.version <package name>
-    '''
-    cmd = '/usr/bin/pkgparam {0} VERSION 2> /dev/null'.format(name)
-    namever = __salt__['cmd.run'](cmd)
-    if namever:
-        return namever
-    return ''
-
-
-def available_version(name):
-    '''
-    The available version of the package in the repository On Solaris with the
-    pkg module this always returns the version that is installed since pkgadd
-    does not have the concept of a repository.
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
+
+    NOTE: As package repositories are not presently supported for Solaris
+    pkgadd, this function will always return an empty string for a given
+    package.
     '''
-    return version(name)
+    if len(names) == 0:
+        return ''
+    for name in names:
+        ret[name] = ''
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return available_version(name) != ''
+
+
+def version(*names):
+    '''
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    CLI Example::
+
+        salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
+    '''
+    pkgs = list_pkgs()
+    if len(names) == 0:
+        return ''
+    elif len(names) == 1:
+        return pkgs.get(names[0], '')
+    else:
+        ret = {}
+        for name in names:
+            ret[name] = pkgs.get(name, '')
+        return ret
 
 
 def install(name=None, refresh=False, sources=None, **kwargs):
