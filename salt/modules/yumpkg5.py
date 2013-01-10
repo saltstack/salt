@@ -4,7 +4,7 @@ Support for YUM
 
 # Import python libs
 import logging
-from collections import namedtuple
+import collections
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def _parse_yum(arg):
     '''
     cmd = 'yum -q {0}'.format(arg)
     out = __salt__['cmd.run_stdout'](cmd)
-    yum_out = namedtuple('YumOut', ('name', 'version', 'status'))
+    yum_out = collections.namedtuple('YumOut', ('name', 'version', 'status'))
 
     results = []
 
