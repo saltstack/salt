@@ -28,10 +28,6 @@ except ImportError:
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Set up the default outputters
-__outputter__ = {
-    'run': 'txt',
-}
 
 DEFAULT_SHELL = shell_grain()['shell']
 
