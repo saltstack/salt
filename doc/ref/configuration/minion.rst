@@ -538,9 +538,37 @@ Minion Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/var/log/salt/minion`
+Default: /var/log/salt/minion
 
-The location of the minion log file
+This can be a path for the log file, or, this can be, since 0.11.0, a system
+logger address, for example:
+
+.. code-block:: yaml
+
+	tcp://localhost:514/LOG_USER
+	tcp://localhost/LOG_DAEMON
+	udp://localhost:5145/LOG_KERN
+	udp://localhost
+	file:///dev/log
+	file:///dev/log/LOG_SYSLOG
+	file:///dev/log/LOG_DAEMON
+
+The above examples are self explanatory, but:
+
+.. code-block:: yaml
+
+	<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+
+Make sure you have a properly configured syslog or you won't get any warnings.
+
+If you're thinking on doing remote logging you might also be thinking that
+you could point salt's logging to the remote syslog. **Please Don't!**
+An issue has been reported when doing this over TCP when the logged lines
+get concatenated. See #3061.
+
+The preferred way to do remote logging is setup a local syslog, point
+salt's logging to the local syslog(unix socket is much faster) and then
+have the local syslog forward the log messages to the remote syslog.
 
 .. code-block:: yaml
 
@@ -553,12 +581,82 @@ The location of the minion log file
 
 Default: ``warning``
 
-The level of messages to send to the log file.
-One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+The level of messages to send to the console.
+One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 .. code-block:: yaml
 
     log_level: warning
+
+.. conf_minion:: log_level_logfile
+
+``log_level_logfile``
+---------------------
+
+Default: ``warning``
+
+The level of messages to send to the log file.
+One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+
+.. code-block:: yaml
+
+    log_level_logfile: warning
+
+.. conf_minion:: log_datefmt
+
+``log_datefmt``
+---------------
+
+Default: ``%H:%M:%S``
+
+The date and time format used in console log messages. Allowed date/time formating
+can be seen on http://docs.python.org/library/time.html#time.strftime
+
+.. code-block:: yaml
+
+    log_datefmt: '%H:%M:%S'
+
+.. conf_minion:: log_datefmt_logfile
+
+``log_datefmt_logfile``
+-----------------------
+
+Default: ``%Y-%m-%d %H:%M:%S``
+
+The date and time format used in log file messages. Allowed date/time formating
+can be seen on http://docs.python.org/library/time.html#time.strftime
+
+.. code-block:: yaml
+
+    log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
+
+.. conf_minion:: log_fmt_console
+
+``log_fmt_console``
+-------------------
+
+Default: ``[%(levelname)-8s] %(message)s``
+
+The format of the console logging messages. Allowed formatting options can
+be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+
+.. code-block:: yaml
+
+    log_fmt_console: '[%(levelname)-8s] %(message)s'
+
+.. conf_minion:: log_fmt_logfile
+
+``log_fmt_logfile``
+-------------------
+
+Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+
+The format of the log file logging messages. Allowed formatting options can
+be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+
+.. code-block:: yaml
+
+    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 .. conf_minion:: log_granular_levels
 
@@ -568,8 +666,8 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 Default: ``{}``
 
 Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the Salt library at the 'warning' level, but, you
-still wish to have 'salt.modules' at the 'debug' level:
+For example, if you want to have the salt library at the 'warning' level,
+but you still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml
 
