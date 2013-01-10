@@ -8,11 +8,6 @@ import logging
 # Import salt libs
 from salt.utils.socket_util import sanitize_host
 
-__outputter__ = {
-    'dig':     'txt',
-    'ping':    'txt',
-    'netstat': 'txt',
-}
 
 log = logging.getLogger(__name__)
 
