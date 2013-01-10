@@ -394,7 +394,6 @@ def _format_info(data):
     # Assign empty strings for any unspecified GECOS fields
     while len(gecos_field) < 4: gecos_field.append('')
 
-    log.error('x')
     return {'gid': data.pw_gid,
             'groups': list_groups(data.pw_name,),
             'home': data.pw_dir,
@@ -417,10 +416,19 @@ def list_groups(name):
         salt '*' user.list_groups foo
     '''
     ugrp = set()
+
     # Add the primary user's group
     ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+
+    # If we already grabbed the group list, it's overkill to grab it again
+    if 'useradd_getgrall' in __context__:
+        groups = __context__['useradd_getgrall']
+    else:
+        groups = grp.getgrall()
+        __context__['useradd_getgrall'] = groups
+
     # Now, all other groups the user belongs to
-    for group in grp.getgrall():
+    for group in groups:
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
 
