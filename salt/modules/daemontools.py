@@ -11,9 +11,6 @@ service state via provider interface:
 import os
 import re
 
-__outputter__ = {
-    'get_all': 'yaml',
-}
 
 if os.path.exists('/service'):
     SERVICE_DIR = "/service"
