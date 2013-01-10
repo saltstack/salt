@@ -12,12 +12,6 @@ try:
 except ImportError:
     pass
 
-__outputter__ = {
-    'ls': 'yaml',
-    'get': 'yaml',
-    'match': 'yaml',
-}
-
 
 def __virtual__():
     '''
