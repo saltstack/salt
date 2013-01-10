@@ -391,9 +391,6 @@ def _format_info(data):
     '''
     # Put GECOS info into a list
     gecos_field = data.pw_gecos.split(',', 3)
-    # Assign empty strings for any unspecified GECOS fields
-    while len(gecos_field) < 4:
-        gecos_field.append('')
 
     return {'gid': data.pw_gid,
             'groups': list_groups(data.pw_name,),
@@ -402,10 +399,10 @@ def _format_info(data):
             'passwd': data.pw_passwd,
             'shell': data.pw_shell,
             'uid': data.pw_uid,
-            'fullname': gecos_field[0],
-            'roomnumber': gecos_field[1],
-            'workphone': gecos_field[2],
-            'homephone': gecos_field[3]}
+            'fullname': gecos_field.get(0, ''),
+            'roomnumber': gecos_field.get(1, ''),
+            'workphone': gecos_field.get(2, ''),
+            'homephone': gecos_field.get(3, '')}
 
 
 def list_groups(name):
