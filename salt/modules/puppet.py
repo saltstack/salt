@@ -3,14 +3,16 @@ Execute puppet routines
 '''
 
 # Import salt libs
-from salt import utils
+import salt.utils
 
-__outputter__ = {
-    'run': 'txt',
-    'noop': 'txt',
-    'fact': 'txt',
-    'facts': None,
-}
+
+def __virtual__():
+    '''
+    Only load if puppet is installed
+    '''
+    if salt.utils.which('facter'):
+        return 'puppet'
+    return False
 
 
 def _check_puppet():
@@ -20,14 +22,14 @@ def _check_puppet():
     # I thought about making this a virtual module, but then I realized that I
     # would require the minion to restart if puppet was installed after the
     # minion was started, and that would be rubbish
-    utils.check_or_die('puppet')
+    salt.utils.check_or_die('puppet')
 
 
 def _check_facter():
     '''
     Checks if facter is installed
     '''
-    utils.check_or_die('facter')
+    salt.utils.check_or_die('facter')
 
 
 def _format_fact(output):
@@ -138,7 +140,7 @@ def run(*args, **kwargs):
         # args will exist as an empty list even if none have been provided
         puppet.arguments(args)
 
-    puppet.kwargs.update(utils.clean_kwargs(**kwargs))
+    puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
     return __salt__['cmd.run_all'](repr(puppet))
 
