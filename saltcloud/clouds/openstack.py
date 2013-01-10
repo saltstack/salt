@@ -246,11 +246,16 @@ def create(vm_):
         'script': deploy_script.script,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
-        'start_action': __opts__['start_action']
+        'start_action': __opts__['start_action'],
+        'minion_pem': vm_['priv_key'],
+        'minion_pub': vm_['pub_key'],
     }
 
+    deployargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
     if 'ssh_username' in vm_:
+        deployargs['deploy_command'] = 'sudo /tmp/deploy.sh'
         deployargs['username'] = vm_['ssh_username']
+        deployargs['tty'] = True
     else:
         deployargs['username'] = 'root'
     log.debug('Using {0} as SSH username'.format(deployargs['username']))

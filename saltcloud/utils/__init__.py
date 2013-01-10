@@ -274,7 +274,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 sftp_file(sftp, host, '/tmp/minion.pub', minion_pub)
             if minion_conf:
                 sftp_file(sftp, host, '/tmp/minion', minion_conf)
-            sftp_file(sftp, host, '/tmp/deploy.sh', script)
+            if script:
+                sftp_file(sftp, host, '/tmp/deploy.sh', script)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
@@ -292,11 +293,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Starting new process to wait for salt-minion')
                 process.start()
 
-            log.debug('Executing /tmp/deploy.sh')
-            root_cmd(deploy_command, tty, sudo, **kwargs)
-            log.debug('Executed /tmp/deploy.sh')
-            ssh.exec_command('rm /tmp/deploy.sh')
-            log.debug('Removed /tmp/deploy.sh')
+            if script:
+                log.debug('Executing /tmp/deploy.sh')
+                if 'bootstrap-salt-minion' in script:
+                    deploy_command += ' -c /tmp/'
+                root_cmd(deploy_command, tty, sudo, **kwargs)
+                log.debug('Executed /tmp/deploy.sh')
+                ssh.exec_command('rm /tmp/deploy.sh')
+                log.debug('Removed /tmp/deploy.sh')
             if minion_pub:
                 ssh.exec_command('rm /tmp/minion.pub')
                 log.debug('Removed /tmp/minion.pub')

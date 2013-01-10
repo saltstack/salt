@@ -232,21 +232,25 @@ def create(vm_):
                 username = user
                 break
     if __opts__['deploy'] is True:
-        deploy_command = 'bash /tmp/deploy.sh'
+        deploy_kwargs = {
+            'host': ip_address,
+            'username': username,
+            'key_filename': __opts__['AWS.private_key'],
+            'deploy_command': 'bash /tmp/deploy.sh',
+            'tty': True,
+            'script': deploy_script.script,
+            'name': vm_['name'],
+            'sudo': True,
+            'start_action': __opts__['start_action'],
+            'conf_file': __opts__['conf_file'],
+            'sock_dir': __opts__['sock_dir'],
+            'minion_pem': vm_['priv_key'],
+            'minion_pub': vm_['pub_key'],
+            }
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
         if username == 'root':
-            deploy_command = '/tmp/deploy.sh'
-        deployed = saltcloud.utils.deploy_script(
-            host=ip_address,
-            username=username,
-            key_filename=__opts__['AWS.private_key'],
-            deploy_command=deploy_command,
-            tty=True,
-            script=deploy_script.script,
-            name=vm_['name'],
-            sudo=True,
-            start_action=__opts__['start_action'],
-            conf_file=__opts__['conf_file'],
-            sock_dir=__opts__['sock_dir'])
+            deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
+        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:
