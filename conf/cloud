@@ -1,4 +1,4 @@
-# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/cloud
+# this file should be installed at: /etc/salt/cloud 
 #####          VM Defaults           #####
 ##########################################
 # Set the default cloud provider, this can still be overridden on a per vm
