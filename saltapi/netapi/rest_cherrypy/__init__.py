@@ -56,7 +56,6 @@ import cherrypy
 import cherrypy.wsgiserver as wsgiserver
 import cherrypy.wsgiserver.ssl_builtin
 
-import jinja2
 import yaml
 
 # Import Salt libs
@@ -68,12 +67,6 @@ import salt.output
 import saltapi
 
 logger = salt.log.logging.getLogger(__name__)
-
-TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), 'tmpl')
-
-jenv = jinja2.Environment(loader=jinja2.FileSystemLoader([
-    TEMPLATES_DIR,
-]))
 
 def __virtual__():
     if 'port' in __opts__.get(__name__.rsplit('.')[-1], {}):
@@ -125,6 +118,20 @@ def hypermedia_handler(*args, **kwargs):
     :param args: Pass args through to the main handler
     :param kwargs: Pass kwargs through to the main handler
     '''
+    # If we're being asked for HTML, try to serve index.html from the 'static'
+    # directory; this is useful (as a random, non-specific example) for
+    # bootstrapping the salt-ui app
+    try:
+        best = cherrypy.lib.cptools.accept('text/html',
+                *[i for (i, _) in ct_out_map])
+    except cherrypy.CherryPyException as e:
+        if not e.status == 406:
+            raise
+    else:
+        index = os.path.join(cherrypy.config.get('static', ''), 'index.html')
+        if 'html' in best and os.path.exists(index):
+            return cherrypy.lib.static.serve_file(index)
+
     try:
         cherrypy.response.processors = dict(ct_out_map) # handlers may modify this
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
@@ -138,21 +145,14 @@ def hypermedia_handler(*args, **kwargs):
                 exc_info=True)
 
         cherrypy.response.status = 500
-        cherrypy.response._tmpl = '500.html'
 
         ret = {
             'status': cherrypy.response.status,
             'message': '{0}'.format(exc) if cherrypy.config['debug']
                     else "An unexpected error occurred"}
 
-    # raises 406 if requested content-type is not supported
-    try:
-        best = cherrypy.lib.cptools.accept([i for (i, _) in ct_out_map])
-    except cherrypy.CherryPyException as e:
-        if e.status == 406:
-            best = ct_out_map[0][0]
-        else:
-            raise
+    # Raises 406 if requested content-type is not supported
+    best = cherrypy.lib.cptools.accept([i for (i, _) in ct_out_map])
 
     cherrypy.response.headers['Content-Type'] = best
     out = cherrypy.response.processors[best]
@@ -252,15 +252,10 @@ class LowDataAdapter(object):
     The primary purpose of this handler is to provide a RESTful API to execute
     Salt client commands and return the response as a data structure.
 
-    In addition, there is enough functionality to bootstrap the single-page
-    browser app (which will then utilize the REST API via ajax calls) when the
-    request is intiated from a browser (asks for HTML).
-
     :param opts: A dictionary of options from Salt's master config (e.g.
         Salt's, ``__opts__``)
     '''
     exposed = True
-    tmpl = 'index.html'
 
     _cp_config = {
         'tools.sessions.on': True,
@@ -278,17 +273,6 @@ class LowDataAdapter(object):
     def __init__(self, opts):
         self.opts = opts
         self.api = saltapi.APIClient(opts)
-
-    def fmt_tmpl(self, data):
-        '''
-        Allow certain methods in the handler to be able accept requests for
-        HTML, then render and return HTML (run through Jinja templates).
-
-        This is intended to allow bootstrapping the web app.
-        '''
-        cherrypy.response.processors['text/html'] = 'raw'
-        tmpl = jenv.get_template(self.tmpl)
-        return tmpl.render(data)
 
     def exec_lowstate(self):
         '''
@@ -334,8 +318,6 @@ class LowDataAdapter(object):
         :status 401: authentication required
         :status 406: requested Content-Type not available
         '''
-        cherrypy.response.processors['text/html'] = self.fmt_tmpl
-
         return {
             'status': cherrypy.response.status,
             'message': "Welcome",
@@ -592,7 +574,6 @@ class Login(LowDataAdapter):
     :mailheader:`X-Auth-Token` header with valid and active session id.
     '''
     exposed = True
-    tmpl = 'login.html'
 
     def GET(self):
         '''
@@ -622,8 +603,6 @@ class Login(LowDataAdapter):
         :status 401: authentication required
         :status 406: requested Content-Type not available
         '''
-        cherrypy.response.processors['text/html'] = self.fmt_tmpl
-
         cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
@@ -727,7 +706,7 @@ class API(object):
                 'tools.gzip.on': True,
 
                 'tools.staticdir.on': True,
-                'tools.staticdir.dir': apiopts.pop('static', TEMPLATES_DIR),
+                'tools.staticdir.dir': apiopts.pop('static', ''),
             },
         }
 
