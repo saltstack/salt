@@ -6,19 +6,6 @@ Module for running arbitrary tests
 import time
 
 
-# Load the outputters for the module
-__outputter__ = {
-    'echo': 'txt',
-    'ping': 'txt',
-    'fib': 'yaml',
-    'version': 'txt',
-    'collatz': 'yaml',
-    'conf_test': 'txt',
-    'get_opts': 'yaml',
-    'outputter': 'txt',
-}
-
-
 def echo(text):
     '''
     Return a string - used for testing the connection
