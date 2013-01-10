@@ -252,7 +252,8 @@ def latest(
 
     Multiple Package Installation Options:
 
-    (Currently supported for: apt, pacman, yumpkg5)
+    (Not yet supported for: Windows, FreeBSD, OpenBSD, MacOS, and Solaris
+    pkgutil)
 
     pkgs
         A list of packages to maintain at the latest available version.
