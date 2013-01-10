@@ -5,12 +5,21 @@ Subversion SCM
 # Import python libs
 import re
 import shlex
-from subprocess import list2cmdline
+import subprocess
 
 # Import salt libs
 from salt import utils, exceptions
 
 _INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
+
+
+def __virtual__():
+    '''
+    Only load if svn is installed
+    '''
+    if utils.which('svn'):
+        return 'svn'
+    return False
 
 
 def _check_svn():
@@ -45,7 +54,7 @@ def _run_svn(cmd, cwd, user, username, opts, **kwargs):
     if username:
         opts += ('--username', username)
     if opts:
-        cmd += list2cmdline(opts)
+        cmd += subprocess.list2cmdline(opts)
 
     result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, **kwargs)
 
