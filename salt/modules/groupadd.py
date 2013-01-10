@@ -78,7 +78,10 @@ def getent():
     '''
     ret = []
     for grinfo in grp.getgrall():
-        ret.append(info(grinfo.gr_name))
+        ret.append({'name': grinfo.gr_name,
+                    'passwd': grinfo.gr_passwd,
+                    'gid': grinfo.gr_gid,
+                    'members': grinfo.gr_mem})
     return ret
 
 
