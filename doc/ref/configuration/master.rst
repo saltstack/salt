@@ -651,7 +651,7 @@ Master Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/var/log/salt/master`
+Default: /var/log/salt/master
 
 This can be a path for the log file, or, this can be, since 0.11.0, a system
 logger address, for example:
