@@ -13,13 +13,6 @@ import datetime
 # Import salt libs
 import salt.utils
 
-__outputter__ = {
-    'atc': 'txt',
-    'at': 'yaml',
-    'atq': 'yaml',
-    'atrm': 'yaml',
-}
-
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries
 
