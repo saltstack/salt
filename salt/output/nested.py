@@ -42,7 +42,8 @@ class NestDisplay(object):
             for ind in ret:
                 out = self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
-            for key, val in ret.items():
+            for key in sorted(ret):
+                val = ret[key]
                 out += '{0}{1}{2}{3}{4}:\n'.format(
                         self.colors['CYAN'],
                         ' ' * indent,
