@@ -66,7 +66,8 @@ def install(pkgs=None,
             no_download=False,
             install_options=None,
             runas=None,
-            cwd=None):
+            cwd=None,
+            __env__='base'):
     '''
     Install packages with pip
 
@@ -181,10 +182,10 @@ def install(pkgs=None,
         if requirements.startswith('salt://'):
             # If being called from state.virtualenv, the requirements file
             # should already be cached, let's try to use that one
-            req = __salt__['cp.is_cached'](requirements)
+            req = __salt__['cp.is_cached'](requirements, __env__)
             if not req:
                 # It's not cached, let's cache it.
-                req = __salt__['cp.cache_file'](requirements)
+                req = __salt__['cp.cache_file'](requirements, __env__)
 
             if not req:
                 return {
@@ -336,7 +337,8 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               runas=None,
-              cwd=None):
+              cwd=None,
+              __env__='base'):
     '''
     Uninstall packages with pip
 
@@ -390,7 +392,7 @@ def uninstall(pkgs=None,
     treq = None
     if requirements:
         if requirements.startswith('salt://'):
-            req = __salt__['cp.cache_file'](requirements)
+            req = __salt__['cp.cache_file'](requirements, __env__)
             treq = salt.utils.mkstemp()
             shutil.copyfile(req, treq)
         cmd = '{cmd} --requirements "{requirements}" '.format(
