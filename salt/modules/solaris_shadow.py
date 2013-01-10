@@ -17,7 +17,6 @@ def __virtual__():
     '''
     Only work on posix-like systems
     '''
-
     return 'shadow' if __grains__['kernel'] == 'SunOS' else False
 
 
