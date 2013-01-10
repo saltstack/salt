@@ -211,9 +211,9 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     if refresh is True or refresh == 'True':
         refresh_db()
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                 pkgs,
-                                                                 sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
