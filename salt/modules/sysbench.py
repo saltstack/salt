@@ -8,15 +8,6 @@ CPU, Memory, FileI/O, Threads and Mutex.
 import re
 import salt.utils
 
-__outputter__ = {
-    'ping': 'txt',
-    'cpu': 'yaml',
-    'threads': 'yaml',
-    'mutex': 'yaml',
-    'memory': 'yaml',
-    'fileio': 'yaml'
-}
-
 
 def __virtual__():
     '''
