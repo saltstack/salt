@@ -13,6 +13,7 @@ def __virtual__():
         return 'eix'
     return False
 
+
 def sync():
     '''
     Sync portage/overlay trees and update the eix database
@@ -23,6 +24,7 @@ def sync():
     '''
     cmd = 'eix-sync -q'
     return __salt__['cmd.retcode'](cmd) == 0
+
 
 def update():
     '''
