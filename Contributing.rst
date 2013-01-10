@@ -1,27 +1,56 @@
 Reporting issues
 ================
 
+The Salt issue tracker is used for feature requests and bug reports.
+
+Bugs:
+-----
+
 A bug is a *demonstrable problem* that is caused by the code in the repository.
 
 Please read the following guidelines before you `report an issue`_
 
-1. **Use the GitHub issue search** â check if the issue has already been reported. If it has 
-   been, please comment on the existing issue.
+1. **Use the GitHub issue search** Ã¢ÂÂ check if the issue has
+   already been reported. If it has been, please comment on the existing issue.
 
-2. **Check if the issue has been fixed** â the latest `develop` branch may already contain a
-   fix.
+2. **Check if the issue has been fixed** Ã¢ÂÂ the latest `develop`
+   branch may already contain a fix. Please try to reproduce the bug against
+   the latest git head or the latest release.
 
-3. **Isolate the demonstrable problem** â make sure that the code in the project's repository
-   is *definitely* responsible for the issue.
+3. **Isolate the demonstrable problem** Ã¢ÂÂ make sure that the
+   code in the project's repository is *definitely* responsible for the issue.
 
-4. **Include a reproducible example** â Provide the steps which led you to the problem.
+4. **Include a reproducible example** Ã¢ÂÂ Provide the steps which
+   led you to the problem.
 
-Please try to be as detailed as possible in your report too. What is your environment? What steps 
-will reproduce the issue? What Operating System? What would you expect to be the outcome? All these 
-details will help people to assess and fix any potential bugs.
+Please try to be as detailed as possible in your report too. What is your
+environment? What steps will reproduce the issue? What Operating System? What
+would you expect to be the outcome? All these details will help people to
+assess and fix any potential bugs.
 
 **Including the output of** ``salt --versions-report`` **will always help.**
 
+Valid bugs will be categorized for the next release and worked on as quickly
+as resources can be reasonably allocated
+
+Features:
+---------
+
+Salt is always working to be more powerful. Feature additions and requests are
+welcomed. When requesting a feature it will be categorized for a release or
+placed under "Approved for Future Release".
+
+If a new feature is desired, the fastest way to get it into Salt is to
+contribute the code. Before starting on a new feature an issue should be filed
+for it. The one requesting the feature will be able to then discuss the feature
+with the Salt team and discover the best way to get the feature into Salt and
+if the feature makes sense.
+
+It is extremely common that the desired feature has already been completed,
+look for it in the docs, ask about it first in IRC, and on the mailing list
+before filing the request. It is also common that the problem which would be
+solved by the new feature can be easily solved another way, which is a great
+reason to ask first.
 
 Fixing issues
 =============
@@ -41,4 +70,3 @@ salt's code.
 .. _`Developing Salt`: http://docs.saltstack.org/en/latest/topics/community.html#developing-salt
 .. _`pull request`: http://docs.saltstack.org/en/latest/topics/community.html#setting-a-github-pull-request
 
-.. vim: fenc=utf-8 spell spl=en cc=100 tw=99 fo=want sts=2 sw=2 et
