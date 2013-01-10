@@ -3,6 +3,15 @@ Module for gathering and managing information about MooseFS
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the mfs commands are installed
+    '''
+    if salt.utils.which('mfsgetgoal'):
+        return 'moosefs'
+    return False
+
+
 def dirinfo(path, opts=None):
     '''
     Return information on a directory located on the Moose
