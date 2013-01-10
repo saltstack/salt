@@ -295,6 +295,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             if script:
                 log.debug('Executing /tmp/deploy.sh')
+                if 'bootstrap-salt-minion' in script:
+                    deploy_command += ' -c /tmp/'
                 root_cmd(deploy_command, tty, sudo, **kwargs)
                 log.debug('Executed /tmp/deploy.sh')
                 ssh.exec_command('rm /tmp/deploy.sh')
