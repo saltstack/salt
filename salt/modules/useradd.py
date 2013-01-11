@@ -404,10 +404,10 @@ def _format_info(data):
             'passwd': data.pw_passwd,
             'shell': data.pw_shell,
             'uid': data.pw_uid,
-            'fullname': gecos_field.get[0],
-            'roomnumber': gecos_field.get[1],
-            'workphone': gecos_field.get[2],
-            'homephone': gecos_field.get[3]}
+            'fullname': gecos_field[0],
+            'roomnumber': gecos_field[1],
+            'workphone': gecos_field[2],
+            'homephone': gecos_field[3]}
 
 
 def list_groups(name):
