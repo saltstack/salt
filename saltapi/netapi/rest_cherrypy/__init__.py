@@ -13,8 +13,13 @@ A hypermedia REST API for Salt using the CherryPy framework
     ssl_key
         Required when ``debug`` is ``False``
     static
-        A filesystem path to where the static JavaScript/CSS/image assets are
-        stored. These assets are currently in the `salt-ui`_ sister project.
+        A filesystem path to static HTML/JavaScript/CSS/image assets.
+        If this directory contains a ``index.html`` file, it will be served at
+        the root URL when HTML is requested by a client via the ``Accept``
+        header.
+
+        This directory may point to a clone of the `salt-ui`_ project to
+        bootstrap a graphical interface for interacting with Salt.
 
     For example:
 
