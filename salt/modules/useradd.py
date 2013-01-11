@@ -27,8 +27,7 @@ def __virtual__():
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-           if callable(getattr(mod, attr)):
-            if _callable(getattr(mod, attr)):
+            if callable(getattr(mod, attr)):
                 if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
