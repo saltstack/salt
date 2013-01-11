@@ -79,6 +79,7 @@ def remove_var(var):
 
         {'<variable>': {'old': '<old-value>',
                         'new': '<new-value>'}}
+
     CLI Example::
 
         salt '*' makeconf.remove_var 'LINGUAS'
