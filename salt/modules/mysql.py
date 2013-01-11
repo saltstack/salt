@@ -903,8 +903,9 @@ def get_slave_status():
     '''
     Retrieves the slave status from the minion.
 
-    Returns:
-    {'host.domain.com': {'Connect_Retry': 60,
+    Returns::
+
+        {'host.domain.com': {'Connect_Retry': 60,
                        'Exec_Master_Log_Pos': 107,
                        'Last_Errno': 0,
                        'Last_Error': '',
@@ -945,7 +946,8 @@ def get_slave_status():
                        'Until_Log_File': '',
                        'Until_Log_Pos': 0}}
 
-    CLI Example:
+    CLI Example::
+
         salt '*' mysql.get_slave_status
 
     '''
