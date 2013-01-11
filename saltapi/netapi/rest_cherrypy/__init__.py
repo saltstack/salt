@@ -484,7 +484,8 @@ class Minions(LowDataAdapter):
         :status 401: authentication required
         :status 406: requested :mailheader:`Content-Type` not available
         '''
-        cherrypy.request.lowstate[0]['client'] = 'local_async'
+        for chunk in cherrypy.request.lowstate:
+            chunk['client'] = 'local_async'
         job_data = next(self.exec_lowstate(), {})
         raise cherrypy.HTTPRedirect('/jobs/{jid}'.format(**job_data), 302)
 
