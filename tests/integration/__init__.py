@@ -454,7 +454,7 @@ class TestDaemon(object):
 
     def __client_job_running(self, targets, jid):
         running = self.client.cmd(
-            ','.join(targets), 'saltutil.running', expr_form='list'
+            list(targets), 'saltutil.running', expr_form='list'
         )
         return [
             k for (k, v) in running.iteritems() if v and v[0]['jid'] == jid
@@ -527,7 +527,7 @@ class TestDaemon(object):
         )
         syncing = set(targets)
         jid_info = self.client.run_job(
-            ','.join(targets), 'saltutil.sync_modules',
+            list(targets), 'saltutil.sync_modules',
             expr_form='list',
             timeout=9999999999999999,
         )
@@ -540,12 +540,19 @@ class TestDaemon(object):
             raise SystemExit()
 
         while syncing:
-            rdata = self.client.get_returns(jid_info['jid'], syncing, 1)
+            rdata = self.client.get_full_returns(jid_info['jid'], syncing, 1)
             if rdata:
                 for name, output in rdata.iteritems():
+                    if not output['ret']:
+                        # Already synced!?
+                        syncing.remove(name)
+                        continue
+
                     print(
                         '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
-                        '{1}'.format(name, ', '.join(output), **self.colors)
+                        '{1}'.format(
+                            name, ', '.join(output['ret']), **self.colors
+                        )
                     )
                     # Synced!
                     try:
