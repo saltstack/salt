@@ -132,5 +132,5 @@ class Caller(object):
             out = {'local': ret['return']}
         salt.output.display_output(
                 out,
-                ret.get('out', 'pprint'),
+                ret.get('out', 'nested'),
                 self.opts)
