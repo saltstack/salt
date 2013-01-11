@@ -12,7 +12,7 @@ Example master configuration file
 =================================
 
 .. literalinclude:: ../../../conf/master
-    :language: ini
+    :language: yaml
     :linenos:
 
 .. _configuration-examples-minion:
@@ -21,5 +21,5 @@ Example minion configuration file
 =================================
 
 .. literalinclude:: ../../../conf/minion
-    :language: ini
+    :language: yaml
     :linenos:
