@@ -540,39 +540,22 @@ Minion Logging Settings
 
 Default: /var/log/salt/minion
 
-This can be a path for the log file, or, this can be, since 0.11.0, a system
-logger address, for example:
-
-.. code-block:: yaml
-
-	tcp://localhost:514/LOG_USER
-	tcp://localhost/LOG_DAEMON
-	udp://localhost:5145/LOG_KERN
-	udp://localhost
-	file:///dev/log
-	file:///dev/log/LOG_SYSLOG
-	file:///dev/log/LOG_DAEMON
-
-The above examples are self explanatory, but:
-
-.. code-block:: yaml
-
-	<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-
-Make sure you have a properly configured syslog or you won't get any warnings.
-
-If you're thinking on doing remote logging you might also be thinking that
-you could point salt's logging to the remote syslog. **Please Don't!**
-An issue has been reported when doing this over TCP when the logged lines
-get concatenated. See #3061.
-
-The preferred way to do remote logging is setup a local syslog, point
-salt's logging to the local syslog(unix socket is much faster) and then
-have the local syslog forward the log messages to the remote syslog.
+The minion log can be sent to a regular file, local path name, or network location.
+Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
+with rsyslogd(8) configured for network logging.  The format for remote addresses is:
+``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.  Examples:
 
 .. code-block:: yaml
 
     log_file: /var/log/salt/minion
+
+.. code-block:: yaml
+
+    log_file: file:///dev/log
+
+.. code-block:: yaml
+
+    log_file: udp://loghost:10514
 
 .. conf_minion:: log_level
 
@@ -665,9 +648,9 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 
 Default: ``{}``
 
-Logger levels can be used to tweak specific loggers logging levels.
-For example, if you want to have the salt library at the 'warning' level,
-but you still wish to have 'salt.modules' at the 'debug' level:
+This can be used to control logging levels more specificically.  This
+example sets the main salt library at the 'warning' level, but sets 
+'salt.modules' to log at the 'debug' level:
 
 .. code-block:: yaml
 
