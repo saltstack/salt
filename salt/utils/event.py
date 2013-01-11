@@ -130,18 +130,21 @@ class SaltEvent(object):
         if not self.cpub:
             self.connect_pub()
         self.sub.setsockopt(zmq.SUBSCRIBE, tag)
-        while True:
-            socks = dict(self.poller.poll(wait))
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-                data = self.serial.loads(raw[20:])
-                if full:
-                    ret = {'data': data,
-                           'tag': raw[:20].rstrip('|')}
-                    return ret
-                return data
-            else:
+        try:
+            while True:
+                socks = dict(self.poller.poll(wait))
+                if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                    raw = self.sub.recv()
+                    data = self.serial.loads(raw[20:])
+                    if full:
+                        ret = {'data': data,
+                               'tag': raw[:20].rstrip('|')}
+                        return ret
+                    return data
                 return None
+        finally:
+            # No sense in keeping subscribed to this event
+            self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
 
     def iter_events(self, tag='', full=False):
         '''
@@ -200,6 +203,13 @@ class MasterEvent(SaltEvent):
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
         self.connect_pub()
+
+
+class LocalClientEvent(MasterEvent):
+    '''
+    This class is just used to differentiate who is handling the events,
+    specially on logs, but it's the same as MasterEvent.
+    '''
 
 
 class MinionEvent(SaltEvent):
