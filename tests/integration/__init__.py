@@ -239,25 +239,28 @@ class TestDaemon(object):
         self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
         self.syndic_process.start()
 
-        #if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
-        #    try:
-        #        import yaml
-        #        os.makedirs('/tmp/salttest/conf')
-        #    except OSError:
-        #        pass
-        #    self.master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
-        #    self.minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
-        #    open('/tmp/salttest/conf/master', 'w').write(
-        #        yaml.dump(self.master_opts)
-        #    )
-        #    open('/tmp/salttest/conf/minion', 'w').write(
-        #        yaml.dump(self.minion_opts)
-        #    )
+        if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
+            from copy import deepcopy
+            try:
+                import yaml
+                os.makedirs('/tmp/salttest/conf')
+            except OSError:
+                pass
+            master_opts = deepcopy(self.master_opts)
+            minion_opts = deepcopy(self.minion_opts)
+            master_opts.pop('conf_file', None)
+            master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
 
-        # Let's create a local client to ping and sync minions
-        self.client = salt.client.LocalClient(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
-        )
+            minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
+            minion_opts.pop('conf_file', None)
+            minion_opts.pop('grains', None)
+            minion_opts.pop('pillar', None)
+            open('/tmp/salttest/conf/master', 'w').write(
+                yaml.dump(master_opts)
+            )
+            open('/tmp/salttest/conf/minion', 'w').write(
+                yaml.dump(minion_opts)
+            )
 
         self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
@@ -281,6 +284,20 @@ class TestDaemon(object):
             return self
         finally:
             self.post_setup_minions()
+
+    @property
+    def client(self):
+        '''
+        Return a local client which will be used for example to ping and sync
+        the test minions.
+
+        This client is defined as a class attribute because it's creation needs
+        to be deferred to a latter stage. If created it on `__enter__` like it
+        previously was, it would not receive the master events.
+        '''
+        return salt.client.LocalClient(
+            mopts=self.master_opts
+        )
 
     def __exit__(self, type, value, traceback):
         '''
@@ -470,7 +487,7 @@ class TestDaemon(object):
             sys.stdout.flush()
 
             responses = self.client.cmd(
-                ','.join(expected_connections), 'test.ping', expr_form='list',
+                list(expected_connections), 'test.ping', expr_form='list',
             )
             for target in responses:
                 if target not in expected_connections:
