@@ -17,6 +17,7 @@ set_file
     Set debconf selections from a file
 
 .. code-block:: yaml
+
     nullmailer-debconf:
       debconf.set:
         - name: nullmailer
@@ -46,6 +47,7 @@ def set_file(name, source):
     Set debconf selections from a file
 
     .. code-block:: yaml
+
         <state_id>:
           debconf.set_file:
             - source: salt://pathto/pkg.selections
@@ -76,6 +78,7 @@ def set(name, data):
     Set debconf selections
 
     .. code-block:: yaml
+
         <state_id>:
           debconf.set:
             - name: <name>
