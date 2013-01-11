@@ -4,7 +4,7 @@ Support for Portage
 :optdepends:    - portage Python adapter
 
 For now all package names *MUST* include the package category,
-i.e. :code:`'vim'` will not work, :code:`'app-editors/vim'` will.
+i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 '''
 
 # Import python libs
