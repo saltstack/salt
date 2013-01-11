@@ -14,6 +14,7 @@ import traceback
 
 # Import third party libs
 import jinja2
+import jinja2.ext
 
 # Import salt libs
 import salt.utils
@@ -85,7 +86,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(context, os.path.dirname(tmplpath))
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
-    env_args = {'extensions': ['jinja2.ext.with_'], 'loader': loader}
+    env_args = {'extensions': [], 'loader': loader}
+    if hasattr(jinja2.ext, 'with_'):
+        env_args['extensions'].append('jinja2.ext.with_')
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
     else:
