@@ -10,6 +10,8 @@ Full list of builtin wheel modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    auth
     config
     file_roots
     key
+    pillar_roots

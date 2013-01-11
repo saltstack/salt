@@ -10,7 +10,12 @@ Full list of runner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cache
     jobs
     launchd
     manage
     network
+    search
+    state
+    sysmod
+    winrepo

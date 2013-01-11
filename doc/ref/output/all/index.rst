@@ -10,9 +10,12 @@ Full list of builtin output modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    grains
     highstate
     json_out
     key
+    nested
+    overstatestage
     pprint_out
     raw
     txt

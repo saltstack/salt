@@ -10,6 +10,7 @@ Full list of builtin pillar modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cmd_json
     cmd_yaml
     hiera
     mongo
