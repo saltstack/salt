@@ -74,6 +74,10 @@
 # Set the default outputter used by the salt command. The default is "nested"
 #output: nested
 
+# By default output is colored, to disable colored output set the color value
+# to False
+#color: True
+
 # Set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/master
 
