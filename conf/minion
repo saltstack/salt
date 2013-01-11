@@ -288,7 +288,7 @@
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
 #	log_file: /var/log/salt/minion
 #	log_file: file:///dev/log
-#	log_file: udp://localhost:5145
+#	log_file: udp://loghost:10514
 #
 #log_file: /var/log/salt/minion
 #key_logfile: /var/log/salt/key
