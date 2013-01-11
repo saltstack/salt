@@ -103,7 +103,7 @@ def salt_auth_tool():
 
 # Be conservative in what you send
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
-# preserve order
+# preserve order of preference.
 ct_out_map = (
     ('application/json', json.dumps),
     ('application/x-yaml', yaml.dump),
@@ -132,6 +132,9 @@ def hypermedia_handler(*args, **kwargs):
         if 'html' in best and os.path.exists(index):
             return cherrypy.lib.static.serve_file(index)
 
+    # Execute the real handler. Handle or pass-through any errors we know how
+    # to handle (auth & HTTP errors). Reformat any errors we don't know how to
+    # handle as a data structure.
     try:
         cherrypy.response.processors = dict(ct_out_map) # handlers may modify this
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
@@ -154,6 +157,7 @@ def hypermedia_handler(*args, **kwargs):
     # Raises 406 if requested content-type is not supported
     best = cherrypy.lib.cptools.accept([i for (i, _) in ct_out_map])
 
+    # Transform the output from the handler into the requested output format
     cherrypy.response.headers['Content-Type'] = best
     out = cherrypy.response.processors[best]
     return out(ret)
