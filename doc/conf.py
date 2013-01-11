@@ -50,6 +50,8 @@ MOCK_MODULES = [
     'cherrypy.wsgiserver',
     'cherrypy.wsgiserver.ssl_builtin',
 
+    'yaml',
+
     # salt libs
     'salt',
     'salt.auth',
