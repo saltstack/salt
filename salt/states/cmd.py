@@ -439,6 +439,7 @@ def script(name,
     '''
     Download a script from a remote source and execute it. The name can be the
     source or the source value can be defined.
+
     source
         The source script being downloaded to the minion, this source script is
         hosted on the salt master server.  If the file is located on the master

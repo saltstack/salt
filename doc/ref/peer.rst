@@ -92,7 +92,7 @@ to the manage and jobs runner functions.
         - jobs.*
 
 Using Peer Communication
-=======================
+========================
 
 The publish module was created to manage peer communication. The publish module
 comes with a number of functions to execute peer communication in different
