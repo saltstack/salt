@@ -426,8 +426,6 @@ class Minions(LowDataAdapter):
                 - ms-3:
                     grains.items:
                       ...
-                    sys.doc:
-                      ...
 
         :param mid: (optional) a minion id
         :status 200: success
@@ -435,8 +433,7 @@ class Minions(LowDataAdapter):
         :status 406: requested Content-Type not available
         '''
         cherrypy.request.lowstate = [{
-            'client': 'local', 'tgt': mid or '*',
-            'fun': ['grains.items', 'sys.doc'], 'arg': [[], []],
+            'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
         }]
         return {
             'return': list(self.exec_lowstate()),
