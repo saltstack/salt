@@ -71,6 +71,9 @@
 # seconds
 #timeout: 5
 
+# Set the default outputter used by the salt command. The default is "nested"
+#output: nested
+
 # Set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/master
 
