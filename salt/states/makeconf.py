@@ -152,3 +152,43 @@ def present(name, value=None, contains=None, excludes=None):
 
     # Now finally return
     return ret
+
+def absent(name):
+    '''
+    Verify that the variable is not in the make.conf.
+
+    name
+        The variable name. This will automatically be converted to all Upper
+        Case since variables in make.conf are Upper Case
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    # Make name all Uppers since make.conf uses all Upper vars
+    upper_name = name.upper()
+
+    old_value = __salt__['makeconf.get_var'](upper_name)
+
+    if old_value is None:
+        msg = 'Variable {0} is already absent from make.conf'
+        ret['comment'] = msg.format(name)
+    else:
+        if __opts__['test']:
+            msg = 'Variable {0} is set to be removed from make.conf'
+            ret['comment'] = msg.format(name)
+            ret['result'] = None
+        else:
+            __salt__['makeconf.remove_var'](upper_name)
+
+            new_value = __salt__['makeconf.get_var'](upper_name)
+            if new_value is not None:
+                msg = 'Variable {0} failed to be removed from make.conf'
+                ret['comment'] = msg.format(name)
+                ret['result'] = False
+            else:
+                msg = 'Variable {0} was removed from make.conf'
+                ret['comment'] = msg.format(name)
+                ret['result'] = True
+    return ret
