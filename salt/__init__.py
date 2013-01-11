@@ -94,11 +94,15 @@ class Minion(parsers.MinionOptionParser):
 
         try:
             if self.config['verify_env']:
+                confd = os.path.join(
+                        os.path.dirname(self.config['conf_file']),
+                        'minion.d')
                 verify_env([
                     self.config['pki_dir'],
                     self.config['cachedir'],
                     self.config['sock_dir'],
                     self.config['extension_modules'],
+                    confd,
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
