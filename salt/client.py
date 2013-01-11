@@ -77,7 +77,7 @@ class LocalClient(object):
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.LocalClientEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
@@ -163,9 +163,10 @@ class LocalClient(object):
         Common checks on the pub_data data structure returned from running pub
         '''
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
-            raise EauthAuthenticationError(err)
+            raise EauthAuthenticationError(
+                'Failed to authenticate, is this user permitted to execute '
+                'commands?'
+            )
 
         # Failed to connect to the master and send the pub
         if not 'jid' in pub_data or pub_data['jid'] == '0':
