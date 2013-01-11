@@ -122,8 +122,8 @@ def hypermedia_handler(*args, **kwargs):
     # directory; this is useful (as a random, non-specific example) for
     # bootstrapping the salt-ui app
     try:
-        best = cherrypy.lib.cptools.accept('text/html',
-                *[i for (i, _) in ct_out_map])
+        best = cherrypy.lib.cptools.accept(
+                ['text/html'] + [i for (i, _) in ct_out_map])
     except cherrypy.CherryPyException as e:
         if not e.status == 406:
             raise
