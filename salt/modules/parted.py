@@ -208,7 +208,7 @@ def mklabel(device, label_type):
 
     Create a new disklabel (partition table) of label_type.
     Type should be one of "aix", "amiga", "bsd", "dvh", "gpt", "loop", "mac",
-        "msdos", "pc98", or "sun".
+    "msdos", "pc98", or "sun".
 
     CLI Example::
 
