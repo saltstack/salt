@@ -69,6 +69,10 @@
 # set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/minion
 
+# Set the default outputter used by the salt-call command. The default is
+# "nested"
+#output: nested
+
 # Backup files that are replaced by file.managed and file.recurse under
 # 'cachedir'/file_backups relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
