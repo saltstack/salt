@@ -72,6 +72,10 @@
 # Set the default outputter used by the salt-call command. The default is
 # "nested"
 #output: nested
+#
+# By default output is colored, to disable colored output set the color value
+# to False
+#color: True
 
 # Backup files that are replaced by file.managed and file.recurse under
 # 'cachedir'/file_backups relative to their original location and appended
