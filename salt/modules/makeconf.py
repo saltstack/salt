@@ -71,6 +71,29 @@ def set_var(var, value):
     new_value = get_var(var)
     return {var: {'old': old_value, 'new': new_value}}
 
+def remove_var(var):
+    '''
+    Remove a variable from the make.conf
+
+    Return a dict containing the new value for the variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+    CLI Example::
+
+        salt '*' makeconf.remove_var 'LINGUAS'
+    '''
+    makeconf = _get_makeconf()
+
+    old_value = get_var(var)
+
+    # If var is in file
+    if old_value is not None:
+        __salt__['file.sed'](makeconf, '^{0}=.*'.format(var), '')
+
+    new_value = get_var(var)
+    return {var: {'old': old_value, 'new': new_value}}
+
 def append_var(var, value):
     '''
     Add to or create a new variable in the make.conf
