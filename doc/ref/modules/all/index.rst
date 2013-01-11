@@ -18,6 +18,7 @@ Full list of builtin execution modules
     :template: autosummary.rst.tmpl
 
     aliases
+    alternatives
     apache
     apt
     archive
@@ -66,6 +67,8 @@ Full list of builtin execution modules
     launchctl
     layman
     ldapmod
+    linux_acl
+    linux_lvm
     linux_sysctl
     locale
     makeconf
@@ -120,6 +123,8 @@ Full list of builtin execution modules
     status
     supervisord
     svn
+    sysbench
+    sysmod
     systemd
     test
     timezone
@@ -136,6 +141,7 @@ Full list of builtin execution modules
     win_pkg
     win_service
     win_shadow
+    win_status
     win_useradd
     yumpkg5
     yumpkg

@@ -10,8 +10,12 @@ Full list of builtin returner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    local
     cassandra_return
+    local
+    mongo_future_return
     mongo_return
-    redis_return
     mysql
+    postgres
+    redis_return
+    smtp_return
+    syslog_return
