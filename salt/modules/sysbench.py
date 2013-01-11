@@ -186,12 +186,13 @@ def fileio():
     '''
     This tests for the file read and write operations
     Various modes of operations are
-        sequential write
-        sequential rewrite
-        sequential read
-        random read
-        random write
-        random read and write
+
+    * sequential write
+    * sequential rewrite
+    * sequential read
+    * random read
+    * random write
+    * random read and write
 
     The test works with 32 files with each file being 1Gb in size
     The test consumes a lot of time. Be patient!
