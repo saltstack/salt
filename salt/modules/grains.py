@@ -5,6 +5,7 @@ Control aspects of the grains data
 # Import python libs
 import math
 import os
+import yaml
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -13,6 +14,7 @@ __grains__ = {}
 __outputter__ = {
     'ls': 'grains',
     'items': 'grains',
+    'setval': 'grains',
 }
 
 
@@ -84,6 +86,10 @@ def item(key=None, sanitize=False):
 def setval(key, val):
     '''
     Set a grains value in the grains config file
+
+    CLI Example::
+
+        salt '*' grains.setval key val
     '''
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
@@ -100,8 +106,8 @@ def setval(key, val):
         with open(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
-            except Exception:
-                pass
+            except Exception, e:
+                return 'Unable to read existing grains file: %s' %e
     grains[key] = val
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     with open(gfn, 'w+') as fp_:
@@ -109,6 +115,8 @@ def setval(key, val):
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     with open(fn_, 'w+') as fp_:
         fp_.write('')
+    # Return the grain we just set to confirm everything was OK
+    return {key: val}
 
 
 def ls():  # pylint: disable-msg=C0103
