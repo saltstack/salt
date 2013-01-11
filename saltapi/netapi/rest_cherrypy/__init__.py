@@ -128,7 +128,7 @@ def hypermedia_handler(*args, **kwargs):
         if not e.status == 406:
             raise
     else:
-        index = os.path.join(cherrypy.config.get('static', ''), 'index.html')
+        index = os.path.join(cherrypy.config['static'], 'index.html')
         if 'html' in best and os.path.exists(index):
             return cherrypy.lib.static.serve_file(index)
 
@@ -702,6 +702,7 @@ class API(object):
                 'server.socket_host': '0.0.0.0',
                 'server.socket_port': apiopts.pop('port', 8000),
                 'debug': apiopts.pop('debug', False),
+                'static': apiopts.get('static', ''),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
