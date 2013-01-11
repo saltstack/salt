@@ -19,8 +19,9 @@ def __virtual__():
     is installed.
     '''
     if salt.utils.which('debconf-get-selections') is None:
-        log.error('The package debconf-utils is missing')
+        log.warning('The package debconf-utils is missing')
         return False
+
     if __grains__['os_family'] != 'Debian':
         return False
 
@@ -84,6 +85,7 @@ def show(name):
     result = selections.get(name)
     return result
 
+
 def _set_file(path):
     '''
     Execute the set selections command for debconf
@@ -91,6 +93,7 @@ def _set_file(path):
     cmd = 'debconf-set-selections {0}'.format(path)
 
     __salt__['cmd.run_stdout'](cmd)
+
 
 def set(package, question, type, value, *extra):
     '''
@@ -115,6 +118,7 @@ def set(package, question, type, value, *extra):
     os.unlink(fname)
 
     return True
+
 
 def set_file(path):
     '''
