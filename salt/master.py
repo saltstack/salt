@@ -189,7 +189,12 @@ class Master(SMaster):
                 now = time.time()
                 if now - last > self.opts['search_index_interval']:
                     search.index()
-            fileserver.update()
+            try:
+                fileserver.update()
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occured in file server update'.format(exc)
+                    )
             try:
                 time.sleep(60)
             except KeyboardInterrupt:
