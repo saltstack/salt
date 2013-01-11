@@ -40,11 +40,14 @@ def managed(name, **kwargs):
         file in /etc/yum.repos.d/. On yum-based systems, this is required.
 
     baseurl
-    mirrorlist
         On yum-based systems, baseurl refers to a direct URL to be used for
-        this yum repo, and mirrorlist refers to a URL which contains a
-        collection of baseurls to choose from. On yum-based systems, one of
-        these is required.
+        this yum repo.
+        One of baseurl or mirrorlist is required.
+
+    mirrorlist
+        a URL which contains a collection of baseurls to choose from. On
+        yum-based systems.
+        One of baseurl or mirrorlist is required.
 
     comments
         Sometimes you want to supply additional information, but not as
