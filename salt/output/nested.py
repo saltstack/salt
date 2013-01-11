@@ -1,5 +1,5 @@
 '''
-Recursively display netsted data
+Recursively display nested data, this is the default outputter. 
 '''
 
 # Import salt libs
