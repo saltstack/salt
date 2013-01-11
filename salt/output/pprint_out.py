@@ -1,5 +1,5 @@
 '''
-The python pretty print system is the default outputter. This outputter
+The python pretty print system was the default outputter. This outputter
 simply passed the data passed into it through the pprint module.
 '''
 
