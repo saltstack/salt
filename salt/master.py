@@ -721,10 +721,18 @@ class AESFuncs(object):
         Receive an event from the minion and fire it on the master event
         interface
         '''
-        if 'id' not in load or 'tag' not in load or 'data' not in load:
+        if 'id' not in load:
             return False
-        tag = load['tag']
-        return self.event.fire_event(load, tag)
+        if not 'events' in load:
+            if 'tag' not in load or 'data' not in load:
+                return False
+        if 'events' in load:
+            for event in events:
+                self.event.fire_event(event, event['tag'])
+        else:
+            tag = load['tag']
+            self.event.fire_event(load, tag)
+        return True
 
     def _return(self, load):
         '''
