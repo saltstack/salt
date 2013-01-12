@@ -782,11 +782,18 @@ class Syndic(salt.client.LocalClient, Minion):
             return
         data['to'] = int(data['to']) - 1
         if 'user' in data:
-            log.debug(('User {0[user]} Executing syndic command {0[fun]} with '
-                'jid {0[jid]}'.format(data)))
+            log.debug(
+                'User {0[user]} Executing syndic command {0[fun]} with '
+                'jid {0[jid]}'.format(
+                    data
+                )
+            )
         else:
-            log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
-                .format(data)))
+            log.debug(
+                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(
+                    data
+                )
+            )
         log.debug('Command details: {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -797,11 +804,11 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
-                target=lambda: self.syndic_cmd(data)
+                target=self.syndic_cmd, args=(data,)
             ).start()
         else:
             threading.Thread(
-                target=lambda: self.syndic_cmd(data)
+                target=self.syndic_cmd, args=(data,)
             ).start()
 
     def syndic_cmd(self, data):

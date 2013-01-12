@@ -1621,12 +1621,18 @@ class ClearFuncs(object):
             load['to'] = clear_load['to']
 
         if 'user' in clear_load:
-            log.info(('User {user} Published command {fun} with jid'
-                      ' {jid}').format(**clear_load))
+            log.info(
+                'User {user} Published command {fun} with jid {jid}'.format(
+                    **clear_load
+                )
+            )
             load['user'] = clear_load['user']
         else:
-            log.info(('Published command {fun} with jid'
-                      ' {jid}').format(**clear_load))
+            log.info(
+                'Published command {fun} with jid {jid}'.format(
+                    **clear_load
+                )
+            )
         log.debug('Published command details {0}'.format(load))
 
         payload['load'] = self.crypticle.dumps(load)
