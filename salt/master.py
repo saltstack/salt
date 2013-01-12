@@ -481,13 +481,10 @@ class MWorker(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
+        # Changes here create a zeromq condition, check with thatch45 before
+        # making and zeromq changes
         except KeyboardInterrupt:
-            if socket.closed is False:
-                socket.setsockopt(zmq.LINGER, 2500)
-                socket.close()
-        finally:
-            if context.closed is False:
-                context.term()
+            socket.close()
 
     def _handle_payload(self, payload):
         '''
