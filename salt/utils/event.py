@@ -451,4 +451,4 @@ class StateFire(object):
         for tag in sorted(
                 running,
                 key=lambda k: data[host][k].get('__run_num__', 0)):
-
+            pass
