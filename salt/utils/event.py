@@ -416,10 +416,13 @@ class StateFire(object):
     for each returned chunk that is not "green"
     This object is made to only run on a minion
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, auth=None):
         self.opts = opts
         self.event = SaltEvent(opts, 'minion')
-        self.auth = salt.crypt.SAuth(self.opts)
+        if not auth:
+            self.auth = salt.crypt.SAuth(self.opts)
+        else:
+            self.auth = auth
 
     def fire_master(self, data, tag):
         '''
@@ -448,7 +451,24 @@ class StateFire(object):
         By default yellows and reds fire events on the master and minion, but
         this can be configured.
         '''
-        for tag in sorted(
+        load = {'id': self.opts['id'],
+                'events': [],
+                'cmd': '_minion_event'}
+        for stag in sorted(
                 running,
-                key=lambda k: data[host][k].get('__run_num__', 0)):
+                key=lambda k: running[k].get('__run_num__', 0)):
+            if running[stag]['result'] and not running[stag]['changes']:
+                continue
+            tag = 'state_{0}_{1}'.format(
+                    str(running[stag]['result']),
+                    'True' if running[stag]['changes'] else 'False')
+            load['events'].append(
+                    {'tag': tag,
+                     'data': running[stag]}
+                    )
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.auth.crypticle.dumps(load))
+        except:
             pass
+        return True
