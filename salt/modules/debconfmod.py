@@ -18,11 +18,11 @@ def __virtual__():
     Confirm this module is on a Debian based system and that debconf-utils
     is installed.
     '''
-    if salt.utils.which('debconf-get-selections') is None:
-        log.warning('The package debconf-utils is missing')
+    if __grains__['os_family'] != 'Debian':
         return False
 
-    if __grains__['os_family'] != 'Debian':
+    if salt.utils.which('debconf-get-selections') is None:
+        log.warning('The package debconf-utils is missing')
         return False
 
     return 'debconf'
