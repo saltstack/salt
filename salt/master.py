@@ -334,10 +334,10 @@ class Publisher(multiprocessing.Process):
 
         except KeyboardInterrupt:
             if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 2500)
+                pub_sock.setsockopt(zmq.LINGER, 1)
                 pub_sock.close()
             if pull_sock.closed is False:
-                pull_sock.setsockopt(zmq.LINGER, 2500)
+                pull_sock.setsockopt(zmq.LINGER, 1)
                 pull_sock.close()
         finally:
             if context.closed is False:
@@ -424,10 +424,10 @@ class ReqServer(object):
 
     def destroy(self):
         if self.clients.closed is False:
-            self.clients.setsockopt(zmq.LINGER, 2500)
+            self.clients.setsockopt(zmq.LINGER, 1)
             self.clients.close()
         if self.workers.closed is False:
-            self.workers.setsockopt(zmq.LINGER, 2500)
+            self.workers.setsockopt(zmq.LINGER, 1)
             self.workers.close()
         if self.context.closed is False:
             self.context.term()
@@ -1017,7 +1017,7 @@ class AESFuncs(object):
                 )
             finally:
                 if pub_sock.closed is False:
-                    pub_sock.setsockopt(zmq.LINGER, 2500)
+                    pub_sock.setsockopt(zmq.LINGER, 1)
                     pub_sock.close()
                 if context.closed is False:
                     context.term()
@@ -1035,7 +1035,7 @@ class AESFuncs(object):
                 return ret
             finally:
                 if pub_sock.closed is False:
-                    pub_sock.setsockopt(zmq.LINGER, 2500)
+                    pub_sock.setsockopt(zmq.LINGER, 1)
                     pub_sock.close()
                 if context.closed is False:
                     context.term()
@@ -1652,7 +1652,7 @@ class ClearFuncs(object):
             }
         finally:
             if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 2500)
+                pub_sock.setsockopt(zmq.LINGER, 1)
                 pub_sock.close()
             if context.closed is False:
                 context.term()
