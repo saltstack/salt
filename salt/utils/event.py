@@ -408,3 +408,47 @@ class ReactWrap(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
         return wheel.master_call(**kwargs)
+
+
+class StateFire(object):
+    '''
+    Evaluate the data from a state run and fire events on the master and minion
+    for each returned chunk that is not "green"
+    This object is made to only run on a minion
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.event = SaltEvent(opts, 'minion')
+        self.auth = salt.crypt.SAuth(self.opts)
+
+    def fire_master(self, data, tag):
+        '''
+        Fire an event off on the master server
+
+        CLI Example::
+
+            salt '*' event.fire_master 'stuff to be in the event' 'tag'
+        '''
+        load = {'id': self.opts['id'],
+                'tag': tag,
+                'data': data,
+                'cmd': '_minion_event'}
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.auth.crypticle.dumps(load))
+        except:
+            pass
+        return True
+
+    def fire_running(self, running):
+        '''
+        Pass in a state "running" dict, this is the return dict from a state
+        call. The dict will be processesd and fire events.
+
+        By default yellows and reds fire events on the master and minion, but
+        this can be configured.
+        '''
+        for tag in sorted(
+                running,
+                key=lambda k: data[host][k].get('__run_num__', 0)):
+
