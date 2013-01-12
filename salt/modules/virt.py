@@ -257,6 +257,8 @@ def get_nics(vm_):
                     nic['mac'] = v_node.getAttribute('address')
                 if v_node.tagName == "model":
                     nic['model'] = v_node.getAttribute('type')
+                if v_node.tagName == "target":
+                    nic['target'] = v_node.getAttribute('dev')
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
@@ -871,3 +873,168 @@ def is_hyper():
         salt '*' virt.is_hyper
     '''
     return is_xen_hyper() or is_kvm_hyper()
+
+def vm_cputime(vm_=None):
+    '''
+    Return cputime used by the vms on this hyper in a
+    list of dicts::
+
+        [
+            'your-vm': {
+                'cputime' <int>
+                'cputime_percent' <float>
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
+
+    CLI Example::
+
+        salt '*' virt.vm_cputime
+    '''
+    host_cpus = __get_conn().getInfo()[2]
+    def _info(vm_):
+        dom = _get_dom(vm_)
+        raw = dom.info()
+        vcpus = int(raw[3])
+        cputime = int(raw[4])
+        cputime_percent = 0
+        if cputime:
+            # Divide by vcpus to always return a number between 0 and 100
+            cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
+        return {
+                'cputime': int(raw[4]),
+                'cputime_percent': '%.0f' %cputime_percent
+               }
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
+
+def vm_netstats(vm_=None):
+    '''
+    Return combined network counters used by the vms on this hyper in a
+    list of dicts::
+
+        [
+            'your-vm': {
+                'rx_bytes'   : 0,
+                'rx_packets' : 0,
+                'rx_errs'    : 0,
+                'rx_drop'    : 0,
+                'tx_bytes'   : 0,
+                'tx_packets' : 0,
+                'tx_errs'    : 0,
+                'tx_drop'    : 0
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
+
+    CLI Example::
+
+        salt '*' virt.vm_netstats
+    '''
+    host_cpus = __get_conn().getInfo()[2]
+    def _info(vm_):
+        dom = _get_dom(vm_)
+        nics = get_nics(vm_)
+        ret = {
+                'rx_bytes'   : 0,
+                'rx_packets' : 0,
+                'rx_errs'    : 0,
+                'rx_drop'    : 0,
+                'tx_bytes'   : 0,
+                'tx_packets' : 0,
+                'tx_errs'    : 0,
+                'tx_drop'    : 0
+               }
+        for mac, attrs in nics.items():
+            dev = attrs['target']
+            stats = dom.interfaceStats(dev)
+            ret['rx_bytes'] += stats[0]
+            ret['rx_packets'] += stats[1]
+            ret['rx_errs'] += stats[2]
+            ret['rx_drop'] += stats[3]
+            ret['tx_bytes'] += stats[4]
+            ret['tx_packets'] += stats[5]
+            ret['tx_errs'] += stats[6]
+            ret['tx_drop'] += stats[7]
+
+        return ret
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+    return info
+
+def vm_diskstats(vm_=None):
+    '''
+    Return disk usage counters used by the vms on this hyper in a
+    list of dicts::
+
+        [
+            'your-vm': {
+                'rd_req'   : 0,
+                'rd_bytes' : 0,
+                'wr_req'   : 0,
+                'wr_bytes' : 0,
+                'errs'     : 0
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
+
+    CLI Example::
+
+        salt '*' virt.vm_blockstats
+    '''
+    def get_disk_devs(vm_):
+        doc = minidom.parse(_StringIO(get_xml(vm_)))
+        disks = []
+        for elem in doc.getElementsByTagName('disk'):
+            targets = elem.getElementsByTagName('target')
+            target = targets[0]
+            disks.append(target.getAttribute('dev'))
+        return disks
+
+    def _info(vm_):
+        dom = _get_dom(vm_)
+        # Do not use get_disks, since it uses qemu-img and is very slow
+        # and unsuitable for any sort of real time statistics
+        disks = get_disk_devs(vm_)
+        ret = {
+                'rd_req'   : 0,
+                'rd_bytes' : 0,
+                'wr_req'   : 0,
+                'wr_bytes' : 0,
+                'errs'     : 0
+               }
+        for disk in disks:
+            stats = dom.blockStats(disk)
+            ret['rd_req']   += stats[0]
+            ret['rd_bytes'] += stats[1]
+            ret['wr_req']   += stats[2]
+            ret['wr_bytes'] += stats[3]
+            ret['errs']     += stats[4]
+
+        return ret
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        # Can not run function blockStats on inactive VMs
+        for vm_ in list_active_vms():
+            info[vm_] = _info(vm_)
+    return info
