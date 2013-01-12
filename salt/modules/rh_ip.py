@@ -796,7 +796,10 @@ def build_interface(iface, iface_type, enabled, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
-    rh_major = __grains__['osrelease'][:1]
+    if __grains__['os'] == 'Fedora':
+        rh_major = '6'
+    else:
+        rh_major = __grains__['osrelease'][:1]
 
     iface = iface.lower()
     iface_type = iface_type.lower()
