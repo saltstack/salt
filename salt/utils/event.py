@@ -175,10 +175,10 @@ class SaltEvent(object):
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() bellow will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            self.sub.setsockopt(zmq.LINGER, 2500)
+            self.sub.setsockopt(zmq.LINGER, 1)
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
-            self.push.setsockopt(zmq.LINGER, 2500)
+            self.push.setsockopt(zmq.LINGER, 1)
             self.push.close()
         # If socket's are not unregistered from a poller, nothing which touches
         # that poller get's garbage collected. The Poller itself, it's
@@ -186,7 +186,7 @@ class SaltEvent(object):
         for socket in self.poller.sockets.keys():
             if socket.closed is False:
                 # Should already be closed from above, but....
-                socket.setsockopt(zmq.LINGER, 2500)
+                socket.setsockopt(zmq.LINGER, 1)
                 socket.close()
             self.poller.unregister(socket)
         if self.context.closed is False:
@@ -276,10 +276,10 @@ class EventPublisher(Process):
                     raise exc
         except KeyboardInterrupt:
             if self.epub_sock.closed is False:
-                self.epub_sock.setsockopt(zmq.LINGER, 2500)
+                self.epub_sock.setsockopt(zmq.LINGER, 1)
                 self.epub_sock.close()
             if self.epull_sock.closed is False:
-                self.epull_sock.setsockopt(zmq.LINGER, 2500)
+                self.epull_sock.setsockopt(zmq.LINGER, 1)
                 self.epull_sock.close()
         finally:
             if self.context.closed is False:
