@@ -482,7 +482,7 @@ class MWorker(multiprocessing.Process):
                         continue
                     raise exc
         # Changes here create a zeromq condition, check with thatch45 before
-        # making and zeromq changes
+        # making any zeromq changes
         except KeyboardInterrupt:
             socket.close()
 
