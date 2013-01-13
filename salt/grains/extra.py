@@ -17,6 +17,8 @@ def config():
     '''
     Return the grains set in the grains file
     '''
+    if not 'conf_file' in __opts__:
+        return {}
     if os.path.isdir(__opts__['conf_file']):
         gfn = os.path.join(
                 __opts__['conf_file'],
