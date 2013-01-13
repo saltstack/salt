@@ -93,6 +93,23 @@ a simple protocol described below:
     Note that if the ``cmd.wait`` state also specfies ``stateful: true``
     it can then be watched by some other states as well.
 
+``cmd.wait`` is not restricted to watching only cmd states. For example
+it can also watch a git state for changes
+
+.. code-block:: yaml
+
+    # Watch for changes to a git repo and rebuild the project on updates
+    my-project:
+      git.latest:
+        - name: git@github.com/repo/foo
+        - target: /opt/foo
+        - rev: master
+      cmd.wait:
+        - name: make install
+        - cwd: /opt/foo
+        - watch:
+          - git: my-project
+
 
 '''
 
