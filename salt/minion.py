@@ -753,7 +753,7 @@ class Minion(object):
         self.destroy()
 
 
-class Syndic(salt.client.LocalClient, Minion):
+class Syndic(Minion):
     '''
     Make a Syndic minion, this minion will use the minion keys on the
     master to authenticate with a higher level master.
@@ -761,7 +761,7 @@ class Syndic(salt.client.LocalClient, Minion):
     def __init__(self, opts):
         self._syndic = True
         Minion.__init__(self, opts)
-        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
+        self.local = salt.client.LocalClient(opts['_minion_conf_file'])
         opts.update(self.opts)
         self.opts = opts
 
@@ -812,7 +812,7 @@ class Syndic(salt.client.LocalClient, Minion):
         if 'tgt_type' not in data:
             data['tgt_type'] = 'glob'
         # Send out the publication
-        pub_data = self.pub(
+        pub_data = self.local.pub(
                 data['tgt'],
                 data['fun'],
                 data['arg'],
@@ -822,11 +822,13 @@ class Syndic(salt.client.LocalClient, Minion):
                 data['to']
                 )
         # Gather the return data
-        ret = self.get_returns(
+        ret = self.local.get_full_returns(
                 pub_data['jid'],
                 pub_data['minions'],
                 data['to']
                 )
+        for minion in ret:
+            ret[minion] = ret[minion]['ret']
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         # Return the publication data up the pipe
