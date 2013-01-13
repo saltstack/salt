@@ -599,7 +599,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=500, kwarg=kwargs
+            minion_tgt, function, arg, timeout=30, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
@@ -663,7 +663,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=5 * 60)
+        orig = self.client.cmd('minion', function, arg, timeout=30)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
