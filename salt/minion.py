@@ -761,7 +761,7 @@ class Syndic(Minion):
     def __init__(self, opts):
         self._syndic = True
         Minion.__init__(self, opts)
-        self.local = salt.client.LocalClient(opts['_minion_conf_file'])
+        self.local = salt.client.LocalClient(opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
 
