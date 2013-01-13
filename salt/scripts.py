@@ -16,7 +16,7 @@ def salt_master():
     Start the salt-master.
     '''
     master = salt.Master()
-    master.start()
+    master.run()
 
 
 def salt_minion():
@@ -26,7 +26,7 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
     minion = salt.Minion()
-    minion.start()
+    minion.run()
 
 
 def salt_syndic():
@@ -36,7 +36,7 @@ def salt_syndic():
     pid = os.getpid()
     try:
         syndic = salt.Syndic()
-        syndic.start()
+        syndic.run()
     except KeyboardInterrupt:
         os.kill(pid, 15)
 
