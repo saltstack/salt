@@ -26,7 +26,7 @@ class Sls(object):
 
     def extend(self, *states):
         for s in states:
-            self.extends.append(self.all_decls.pop(state.id))
+            self.extends.append(self.all_decls.pop(s._id))
         
     def state(self, id=None):
         if not id:
@@ -38,37 +38,44 @@ class Sls(object):
             self.decls.append(s)
             return s
 
-    def to_highstate(self):
+    def to_highstate(self, slsmod):
+        # generate a state that uses the stateconf.set state, which
+        # is a no-op state, to hold a reference to the sls module
+        # containing the DSL statements. This is to prevent the module
+        # from being GC'ed, so that objects defined in it will be
+        # available while salt is executing the states.
+        self.state().stateconf.set(slsmod=slsmod)
+
         highstate = Dict()
         highstate['include'] = self.includes[:]
         highstate['extend'] = extend = Dict()
         for ext in self.extends:
-            extend[ext.id] = ext
+            extend[ext._id] = ext
         for decl in self.decls:
-            highstate[decl.id] = decl._repr()
+            highstate[decl._id] = decl._repr()
         return highstate
 
 
 class StateDeclaration(object):
 
     def __init__(self, id=None):
-        self.id = id
-        self.mods = []
+        self._id = id
+        self._mods = []
 
     def __getattr__(self, name):
-        for m in self.mods:
-            if m.name == name:
+        for m in self._mods:
+            if m._name == name:
                 return m
         else:
-            m = StateModule(name, self.id)
-            self.mods.append(m)
+            m = StateModule(name, self._id)
+            self._mods.append(m)
             return m
 
     def __str__(self):
-        return self.id
+        return self._id
 
     def __iter__(self):
-        return iter(self.mods)
+        return iter(self._mods)
 
     def _repr(self):
         return dict(m._repr() for m in self)
@@ -77,33 +84,33 @@ class StateDeclaration(object):
 class StateModule(object):
 
     def __init__(self, name, parent_decl):
-        self.state_id = parent_decl
-        self.name = name
-        self.func = None
+        self._state_id = parent_decl
+        self._name = name
+        self._func = None
 
     def __getattr__(self, name):
-        if self.func:
-            if name == self.func.name:
-                return self.func
+        if self._func:
+            if name == self._func.name:
+                return self._func
             else:
-                return getattr(self.func, name)
-        self.func = f = StateFunction(name)
+                return getattr(self._func, name)
+        self._func = f = StateFunction(name)
         return f
 
     def __call__(self, name, *args, **kws):
         return getattr(self, name).configure(args, kws)
 
     def __str__(self):
-        return self.name
+        return self._name
 
     def _repr(self):
-        return (self.name, [self.func.name]+self.func.args)
+        return (self._name, [self._func.name]+self._func.args)
 
 
 
 def _generate_requsite_method(t):
-    def req(self, ref, mod=None):
-        self.reference(t, ref, mod)
+    def req(self, mod, ref=None):
+        self.reference(t, mod, ref)
         return self
     return req
 
@@ -120,20 +127,26 @@ class StateFunction(object):
     def configure(self, args, kws):
         args = list(args)
         if args:
+            first = args[0]
+            if self.name == 'call' and callable(first):
+                args[0] = first.__name__
+                kws = dict(func=first, args=args[1:], kws=kws)
+                del args[1:]
+
             args[0] = dict(name=args[0])
+
         for k, v in kws.iteritems():
             args.append({k: v})
+
         self.args.extend(args)
         return self
 
-    def reference(self, req_type, ref, mod):
-        if isinstance(ref, StateModule):
-            mod = ref.name
-            ref = ref.state_id
-        elif ref and mod:
-            ref = str(ref)
-            mod = str(mod)
-        self.args.append({req_type: [{mod: ref}]})
+    def reference(self, req_type, mod, ref):
+        if isinstance(mod, StateModule):
+            ref = mod._state_id
+        elif not (mod and ref):
+            raise ValueError("Invalid argument(s) to a requisite expression!")
+        self.args.append({req_type: [{str(mod): str(ref)}]})
         return self
 
     ns = locals()
