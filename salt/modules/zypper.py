@@ -34,9 +34,13 @@ def _list_removed(old, new):
     return pkgs
 
 
-def list_updates():
+def list_upgrades():
     '''
-    List packages with updates. Returns a dict of pkg/version pairs.
+    List all available package upgrades on this system
+
+    CLI Example::
+
+        salt '*' pkg.list_upgrades
     '''
     ret = {}
     out = __salt__['cmd.run_stdout']('zypper list-updates').splitlines()
@@ -47,12 +51,15 @@ def list_updates():
             continue
         try:
             status, repo, name, cur, avail, arch = \
-            [x.strip() for x in line.split('|')]
+                [x.strip() for x in line.split('|')]
         except ValueError, IndexError:
             continue
         if status == 'v':
             ret[name] = avail
     return ret
+
+# Provide a list_updates function for those used to using zypper list-updates
+list_updates = list_upgrades
 
 
 def available_version(*names):
@@ -72,7 +79,7 @@ def available_version(*names):
     if len(names) == 0:
         return ''
     ret = {}
-    updates = list_updates()
+    updates = list_upgrades()
     for name in names:
         ret[name] = updates.get(name, '')
 
