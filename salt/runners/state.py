@@ -19,10 +19,16 @@ def over(env='base', os_fn=None):
             # This is highstate data
             print('Stage execution results:')
             for key, val in stage.items():
-                salt.output.display_output(
-                        {'local': {key: val}},
-                        'highstate',
-                        opts=__opts__)
+                if '_|-' in key:
+                    salt.output.display_output(
+                            {'error': {key: val}},
+                            'highstate',
+                            opts=__opts__)
+                else:
+                    salt.output.display_output(
+                            {key: val},
+                            'highstate',
+                            opts=__opts__)
         elif isinstance(stage, list):
             # This is a stage
             if stage_num == 0:
@@ -32,6 +38,7 @@ def over(env='base', os_fn=None):
             salt.output.display_output(stage, 'overstatestage', opts=__opts__)
             stage_num += 1
     return overstate.over_run
+
 
 def show_stages(env='base', os_fn=None):
     '''
