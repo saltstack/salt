@@ -16,6 +16,7 @@ sys.modules['wmi'] = wmi
 
 pythoncom = new.module('pythoncom')
 sys.modules['pythoncom'] = pythoncom
+wrong_version = True
 
 try:
     from mock import Mock, patch
