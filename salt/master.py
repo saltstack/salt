@@ -334,10 +334,10 @@ class Publisher(multiprocessing.Process):
 
         except KeyboardInterrupt:
             if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 2500)
+                pub_sock.setsockopt(zmq.LINGER, 1)
                 pub_sock.close()
             if pull_sock.closed is False:
-                pull_sock.setsockopt(zmq.LINGER, 2500)
+                pull_sock.setsockopt(zmq.LINGER, 1)
                 pull_sock.close()
         finally:
             if context.closed is False:
@@ -424,10 +424,10 @@ class ReqServer(object):
 
     def destroy(self):
         if self.clients.closed is False:
-            self.clients.setsockopt(zmq.LINGER, 2500)
+            self.clients.setsockopt(zmq.LINGER, 1)
             self.clients.close()
         if self.workers.closed is False:
-            self.workers.setsockopt(zmq.LINGER, 2500)
+            self.workers.setsockopt(zmq.LINGER, 1)
             self.workers.close()
         if self.context.closed is False:
             self.context.term()
@@ -482,7 +482,7 @@ class MWorker(multiprocessing.Process):
                         continue
                     raise exc
         # Changes here create a zeromq condition, check with thatch45 before
-        # making and zeromq changes
+        # making any zeromq changes
         except KeyboardInterrupt:
             socket.close()
 
@@ -721,10 +721,18 @@ class AESFuncs(object):
         Receive an event from the minion and fire it on the master event
         interface
         '''
-        if 'id' not in load or 'tag' not in load or 'data' not in load:
+        if 'id' not in load:
             return False
-        tag = load['tag']
-        return self.event.fire_event(load, tag)
+        if not 'events' in load:
+            if 'tag' not in load or 'data' not in load:
+                return False
+        if 'events' in load:
+            for event in events:
+                self.event.fire_event(event, event['tag'])
+        else:
+            tag = load['tag']
+            self.event.fire_event(load, tag)
+        return True
 
     def _return(self, load):
         '''
@@ -822,7 +830,6 @@ class AESFuncs(object):
             return False
 
         # Format individual return loads
-        self.event.fire_event({'syndic': load['return'].keys()}, load['jid'])
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
@@ -1017,7 +1024,7 @@ class AESFuncs(object):
                 )
             finally:
                 if pub_sock.closed is False:
-                    pub_sock.setsockopt(zmq.LINGER, 2500)
+                    pub_sock.setsockopt(zmq.LINGER, 1)
                     pub_sock.close()
                 if context.closed is False:
                     context.term()
@@ -1035,7 +1042,7 @@ class AESFuncs(object):
                 return ret
             finally:
                 if pub_sock.closed is False:
-                    pub_sock.setsockopt(zmq.LINGER, 2500)
+                    pub_sock.setsockopt(zmq.LINGER, 1)
                     pub_sock.close()
                 if context.closed is False:
                     context.term()
@@ -1621,12 +1628,18 @@ class ClearFuncs(object):
             load['to'] = clear_load['to']
 
         if 'user' in clear_load:
-            log.info(('User {user} Published command {fun} with jid'
-                      ' {jid}').format(**clear_load))
+            log.info(
+                'User {user} Published command {fun} with jid {jid}'.format(
+                    **clear_load
+                )
+            )
             load['user'] = clear_load['user']
         else:
-            log.info(('Published command {fun} with jid'
-                      ' {jid}').format(**clear_load))
+            log.info(
+                'Published command {fun} with jid {jid}'.format(
+                    **clear_load
+                )
+            )
         log.debug('Published command details {0}'.format(load))
 
         payload['load'] = self.crypticle.dumps(load)
@@ -1652,7 +1665,7 @@ class ClearFuncs(object):
             }
         finally:
             if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 2500)
+                pub_sock.setsockopt(zmq.LINGER, 1)
                 pub_sock.close()
             if context.closed is False:
                 context.term()

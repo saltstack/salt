@@ -753,7 +753,7 @@ class Minion(object):
         self.destroy()
 
 
-class Syndic(salt.client.LocalClient, Minion):
+class Syndic(Minion):
     '''
     Make a Syndic minion, this minion will use the minion keys on the
     master to authenticate with a higher level master.
@@ -761,7 +761,7 @@ class Syndic(salt.client.LocalClient, Minion):
     def __init__(self, opts):
         self._syndic = True
         Minion.__init__(self, opts)
-        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
+        self.local = salt.client.LocalClient(opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
 
@@ -782,11 +782,18 @@ class Syndic(salt.client.LocalClient, Minion):
             return
         data['to'] = int(data['to']) - 1
         if 'user' in data:
-            log.debug(('User {0[user]} Executing syndic command {0[fun]} with '
-                'jid {0[jid]}'.format(data)))
+            log.debug(
+                'User {0[user]} Executing syndic command {0[fun]} with '
+                'jid {0[jid]}'.format(
+                    data
+                )
+            )
         else:
-            log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
-                .format(data)))
+            log.debug(
+                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(
+                    data
+                )
+            )
         log.debug('Command details: {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -797,11 +804,11 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
-                target=lambda: self.syndic_cmd(data)
+                target=self.syndic_cmd, args=(data,)
             ).start()
         else:
             threading.Thread(
-                target=lambda: self.syndic_cmd(data)
+                target=self.syndic_cmd, args=(data,)
             ).start()
 
     def syndic_cmd(self, data):
@@ -812,7 +819,7 @@ class Syndic(salt.client.LocalClient, Minion):
         if 'tgt_type' not in data:
             data['tgt_type'] = 'glob'
         # Send out the publication
-        pub_data = self.pub(
+        pub_data = self.local.pub(
                 data['tgt'],
                 data['fun'],
                 data['arg'],
@@ -822,11 +829,13 @@ class Syndic(salt.client.LocalClient, Minion):
                 data['to']
                 )
         # Gather the return data
-        ret = self.get_returns(
+        ret = self.local.get_full_returns(
                 pub_data['jid'],
                 pub_data['minions'],
                 data['to']
                 )
+        for minion in ret:
+            ret[minion] = ret[minion]['ret']
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         # Return the publication data up the pipe
