@@ -830,7 +830,6 @@ class AESFuncs(object):
             return False
 
         # Format individual return loads
-        self.event.fire_event({'syndic': load['return'].keys()}, load['jid'])
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
