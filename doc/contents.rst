@@ -22,7 +22,7 @@ Full Table of Contents
     topics/tutorials/standalone_minion
     topics/pillar/index
     topics/master_tops/index
-    topics/jobs/index
+    topics/jobs/*
     topics/nonroot
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
