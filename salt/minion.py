@@ -29,7 +29,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
-import salt.utils.scedule
+import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
