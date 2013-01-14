@@ -67,8 +67,13 @@ class Schedule(object):
         else:
             ret['return'] = self.functions[func]()
         if 'returner' in data:
-            if data['returner'] in self.returners:
-                self.returners[data['returner']](ret)
+            if isinstance(data['returner'], str):
+                if data['returner'] in self.returners:
+                    self.returners[data['returner']](ret)
+            elif isinstance(data['returner'], list):
+                for returner in data['returner']:
+                    if data['returner'] in self.returners:
+                        self.returners[data['returner']](ret)
 
     def eval(self):
         '''
