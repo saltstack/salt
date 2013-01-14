@@ -196,7 +196,7 @@ class Master(SMaster):
                     'Exception {0} occured in file server update'.format(exc)
                     )
             try:
-                time.sleep(60)
+                time.sleep(int(self.opts['loop_interval']))
             except KeyboardInterrupt:
                 break
 
