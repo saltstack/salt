@@ -156,7 +156,7 @@ def _run(cmd,
         if not os.access(cwd, os.R_OK):
             cwd = '/'
 
-    if not sys.platform.startswith('win'):
+    if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
@@ -191,6 +191,15 @@ def _run(cmd,
             )
         )
 
+    if not env:
+        env = {}
+
+    if not salt.utils.is_windows():
+        # Default to C!
+        # Salt only knows how to parse English words
+        # Don't override if the user has passed LC_ALL
+        env.setdefault('LC_ALL', 'C')
+
     run_env = os.environ
     run_env.update(env)
     kwargs = {'cwd': cwd,
@@ -202,7 +211,7 @@ def _run(cmd,
     if runas:
         kwargs['preexec_fn'] = partial(_chugid, runas)
 
-    if not sys.platform.startswith('win'):
+    if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
         kwargs['executable'] = shell
