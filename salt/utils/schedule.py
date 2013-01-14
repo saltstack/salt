@@ -1,11 +1,11 @@
 '''
-Sceduling routines are located here. To activate the sceduler make the scedule
+Sceduling routines are located here. To activate the scheduler make the schedule
 option available to the master or minion configurations (master config file or
 for the minion via config or pillar)
 
 code-block:: yaml
 
-    scedule:
+    schedule:
       state.sls:
         seconds: 3600
         args:
@@ -13,7 +13,7 @@ code-block:: yaml
         kwargs:
           test: True
 
-This will scedule the command: state.sls httpd test=True every 3600 seconds 
+This will schedule the command: state.sls httpd test=True every 3600 seconds 
 (every hour)
 '''
 
@@ -26,7 +26,7 @@ import threading
 
 class Schedule(object):
     '''
-    Create a Scedule object, pass in the opts and the functions dict to use 
+    Create a Schedule object, pass in the opts and the functions dict to use 
     '''
     def __init__(self, opts, functions, returners=None, intervals=None):
         self.opts = opts
@@ -42,7 +42,7 @@ class Schedule(object):
 
     def option(self, opt):
         '''
-        Return the scedule data structure
+        Return the schedule data structure
         '''
         if 'config.option' in self.functions:
             return self.functions['config.option'](opt, {})
@@ -72,10 +72,10 @@ class Schedule(object):
 
     def eval(self):
         '''
-        Evaluate and execute the scedule
+        Evaluate and execute the schedule
         '''
-        scedule = self.option('scedule')
-        for func, data in scedule.items():
+        schedule = self.option('schedule')
+        for func, data in schedule.items():
             if func not in self.functions:
                 continue
             # Add up how many seconds between now and then
