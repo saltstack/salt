@@ -705,6 +705,7 @@ class Minion(object):
 
         while True:
             try:
+                self.schedule.eval()
                 socks = dict(self.poller.poll(60000))
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
@@ -722,7 +723,6 @@ class Minion(object):
                         self.epub_sock.send(package)
                     except Exception:
                         pass
-                self.schedule.eval()
             except Exception:
                 log.critical(traceback.format_exc())
 
