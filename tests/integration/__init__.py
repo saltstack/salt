@@ -11,6 +11,7 @@ import shutil
 import tempfile
 import time
 import signal
+import subprocess
 from hashlib import md5
 from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
@@ -592,14 +593,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90,
+                     **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=90, kwarg=kwargs
+            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
@@ -861,11 +863,48 @@ class ShellCaseCommonTestsMixIn(object):
 
     def test_version_includes_binary_name(self):
         if getattr(self, '_call_binary_', None) is None:
-            self.skipTest("'_call_binary_' not defined.")
+            self.skipTest('\'_call_binary_\' not defined.')
 
-        out = '\n'.join(self.run_script(self._call_binary_, "--version"))
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         self.assertIn(self._call_binary_, out)
         self.assertIn(salt.__version__, out)
+
+    def test_salt_with_git_version(self):
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest('\'_call_binary_\' not defined.')
+        from salt.utils import which
+        from salt.version import __version_info__
+        git = which('git')
+        if not git:
+            self.skipTest('The git binary is not available')
+
+        # Let's get the output of git describe
+        process = subprocess.Popen(
+            [git, 'describe'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=os.path.abspath(os.path.dirname(salt.__file__))
+        )
+        out, _ = process.communicate()
+        if not out:
+            self.skipTest('Failed to get the output of \'git describe\'')
+
+        parsed_version = '{0}'.format(out.strip().lstrip('v'))
+        parsed_version_info = tuple([
+            int(i) for i in parsed_version.split('-', 1)[0].split('.')
+        ])
+        if parsed_version_info != __version_info__:
+            self.skipTest(
+                'In order to get the proper salt version with the '
+                'git hash you need to update salt\'s local git '
+                'tags. Something like: \'git fetch --tags\' or '
+                '\'git fetch --tags upstream\' if you followed '
+                'salt\'s contribute documentation. The version '
+                'string WILL NOT include the git hash.'
+            )
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
+        self.assertIn(parsed_version, out)
 
 
 class SaltReturnAssertsMixIn(object):
@@ -929,31 +968,46 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not True. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not True. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertSaltFalseReturn(self, ret):
         try:
             self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not False. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not False. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertSaltNoneReturn(self, ret):
         try:
             self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not None. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not None. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertInSaltComment(self, ret, in_comment):
         return self.assertIn(
