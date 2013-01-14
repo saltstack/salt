@@ -1,0 +1,28 @@
+=========================
+Salt 0.12.0 Release Notes
+=========================
+
+Another feature release of Salt is here! Some exciting additions are included
+with more ways to make salt modular and even easier management of the salt
+file server.
+
+Major Features
+==============
+
+Modular Fileserver Backend
+--------------------------
+
+The new modular fieserver backend allows for any external system to be used
+as a salt file server. The main benifit here is that it is now possible to
+tell the master to directly use a git remote location, or many git remote
+locations directly, automatically mapping git branches and tags to salt
+environments.
+
+Windows is First Class!
+-----------------------
+
+New Default Outputter
+---------------------
+
+Set Grains Remotely
+-------------------
