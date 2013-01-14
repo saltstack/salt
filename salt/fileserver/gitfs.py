@@ -100,8 +100,12 @@ def init():
             os.makedirs(rp_)
         repo = git.Repo.init(rp_, bare=True)
         if not repo.remotes:
-            repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
-        repos.append(repo)
+            try:
+                repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
+            except Exception:
+                pass
+        if repo.remotes:
+            repos.append(repo)
     return repos
 
 
