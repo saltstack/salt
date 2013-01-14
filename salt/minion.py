@@ -176,6 +176,7 @@ class Minion(object):
         '''
         # Late setup the of the opts grains, so we can log from the grains
         # module
+        self.intervals = {}
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.authenticate()
@@ -190,7 +191,6 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        self.__processing = []
 
     def __prep_mod_opts(self):
         '''
@@ -313,7 +313,6 @@ class Minion(object):
             process = threading.Thread(
                 target=target, args=(instance, self.opts, data)
             )
-        self.__processing.append(process)
         process.start()
 
     @classmethod
@@ -575,16 +574,6 @@ class Minion(object):
                 pass
             self.functions, self.returners = self.__load_modules()
 
-    def cleanup_processes(self):
-        for process in self.__processing[:]:
-            if process.is_alive():
-                continue
-            process.join(0.025)
-            if isinstance(process, multiprocessing.Process):
-                process.terminate()
-            self.__processing.pop(self.__processing.index(process))
-            del(process)
-
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
@@ -713,12 +702,11 @@ class Minion(object):
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
                 time.sleep(0.05)
-                # This next call(multiprocessing.active_children()) is
-                # intentional, from docs, "Calling this has the side affect of
-                # “joining” any processes which have already finished."
+                # Clean up the minion processes which have been executed and
+                # have finished
                 multiprocessing.active_children()
+                # Check if modules and grains need to be refreshed
                 self.passive_refresh()
-                self.cleanup_processes()
                 # Check the event system
                 if self.epoller.poll(1):
                     try:
