@@ -191,7 +191,7 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        self.scedule = salt.utils.schedule.Schedule(
+        self.schedule = salt.utils.schedule.Schedule(
                 self.opts,
                 self.functions,
                 self.returners)
@@ -296,8 +296,8 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
-                self.scedule.functions = self.functions
-                self.scedule.returners = self.returners
+                self.schedule.functions = self.functions
+                self.schedule.returners = self.returners
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -579,8 +579,8 @@ class Minion(object):
             except OSError:
                 pass
             self.functions, self.returners = self.__load_modules()
-            self.scedule.functions = self.functions
-            self.scedule.returners = self.returners
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def tune_in(self):
         '''
@@ -722,7 +722,7 @@ class Minion(object):
                         self.epub_sock.send(package)
                     except Exception:
                         pass
-                self.scedule.eval()
+                self.schedule.eval()
             except Exception:
                 log.critical(traceback.format_exc())
 
