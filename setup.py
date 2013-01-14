@@ -29,7 +29,14 @@ if 'USE_SETUPTOOLS' in os.environ:
         with_setuptools = False
 
 if with_setuptools is False:
+    import warnings
     from distutils.core import setup
+    warnings.filterwarnings(
+        'ignore',
+        'Unknown distribution option: \'(install_requires|zip_safe)\'',
+        UserWarning,
+        'distutils.dist'
+    )
 
 try:
     # Add the esky bdist target if the module is available
