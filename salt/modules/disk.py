@@ -30,11 +30,11 @@ def usage(args=None):
         salt '*' disk.usage
     '''
     if __grains__['kernel'] == 'Linux':
-        cmd = 'df -P'
+        cmd = 'LANG=C df -P'
     elif __grains__['kernel'] == 'OpenBSD':
-        cmd = 'df -kP'
+        cmd = 'LANG=C df -kP'
     else:
-        cmd = 'df'
+        cmd = 'LANG=C df'
     if args:
         cmd = cmd + ' -' + args
     ret = {}
@@ -67,7 +67,7 @@ def inodeusage(args=None):
 
         salt '*' disk.inodeusage
     '''
-    cmd = 'df -i'
+    cmd = 'LANG=C df -i'
     if args is not None:
         cmd = cmd + ' -' + args
     ret = {}
