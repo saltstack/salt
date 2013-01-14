@@ -63,8 +63,7 @@ class Schedule(object):
                         **data['kwargs'])
             else:
                 ret['return'] = self.functions[func](
-                        *data['args'],
-                        **data['kwargs'])
+                        *data['args'])
         else:
             ret['return'] = self.functions[func]()
         if 'returner' in data:
@@ -78,7 +77,7 @@ class Schedule(object):
         schedule = self.option('schedule')
         if not isinstance(schedule, dict):
             return
-        for job, data in ind.items():
+        for job, data in schedule.items():
             if 'function' in data:
                 func = data['function']
             elif 'func' in data:
