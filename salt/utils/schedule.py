@@ -6,12 +6,13 @@ for the minion via config or pillar)
 code-block:: yaml
 
     schedule:
-      - state.sls:
-          seconds: 3600
-          args:
-            - httpd
-          kwargs:
-            test: True
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
 
 This will schedule the command: state.sls httpd test=True every 3600 seconds 
 (every hour)
@@ -75,29 +76,35 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self.option('schedule')
-        for ind in schedule:
-            if not isinstance(ind, dict):
+        if not isinstance(schedule, dict):
+            return
+        for job, data in ind.items():
+            if 'function' in data:
+                func = data['function']
+            elif 'func' in data:
+                func = data['func']
+            elif 'fun' in data:
+                func = data['fun']
+            if func not in self.functions:
                 continue
-            for func, data in ind.items():
-                if func not in self.functions:
-                    continue
-                # Add up how many seconds between now and then
-                seconds = 0
-                seconds += int(data.get('seconds', 0))
-                seconds += int(data.get('minutes', 0)) * 60
-                seconds += int(data.get('hours', 0)) * 3600
-                seconds += int(data.get('days', 0)) * 86400
-                now = int(time.time())
-                run = False
-                if func in self.intervals:
-                    if now - self.intervals[func] > seconds:
-                        run = True
-                else:
+            # Add up how many seconds between now and then
+            seconds = 0
+            seconds += int(data.get('seconds', 0))
+            seconds += int(data.get('minutes', 0)) * 60
+            seconds += int(data.get('hours', 0)) * 3600
+            seconds += int(data.get('days', 0)) * 86400
+            now = int(time.time())
+            run = False
+            if job in self.intervals:
+                if now - self.intervals[job] > seconds:
                     run = True
-                if not run:
-                    continue
-                if self.opts['multiprocessing']:
-                    thread_cls = multiprocessing.Process
-                else:
-                    thread_cls = threading.Thread
-                thread_cls(target=self.handle_func, args=(func, data)).start()
+            else:
+                run = True
+            if not run:
+                continue
+            if self.opts['multiprocessing']:
+                thread_cls = multiprocessing.Process
+            else:
+                thread_cls = threading.Thread
+            thread_cls(target=self.handle_func, args=(func, data)).start()
+            self.intervals[job] = int(time.time())
