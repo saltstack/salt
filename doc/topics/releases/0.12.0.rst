@@ -20,6 +20,27 @@ automatically mapping git branches and tags to salt environments.
 Windows is First Class!
 -----------------------
 
+A new Salt Windows installer is now available! Much work has been put in to
+improve Windows support. With this much easier method of getting Salt on your
+Windows machines, we hope even more development and progress will occur. Please
+file bug reports on the Salt github repo issue tracker so we can continue
+improving.
+
+One thing that is missing on Windows that Salt uses extensively is a software
+package manager and a software package repository. The Salt pkg state allows
+sys admins to install software across their infrastructure and across operating
+systems. Software on Windows can now be managed in the same way. The SaltStack
+team built a package manager that interfaces with the standard Salt pkg module
+to allow for installing and removing software on Windows. In addition, a
+software package repository has been built on top of the Salt fileserver. A
+small yaml file provides the information necessary for the package manager to
+install and remove software.
+
+An interesting feature of the new Salt Windows software package repository is
+that one or more remote git repositories can supplement the master's local
+repository. The repository can point to software on the master's fileserver or
+on an http, https, or ftp server.
+
 New Default Outputter
 ---------------------
 
