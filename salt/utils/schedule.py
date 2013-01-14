@@ -45,7 +45,7 @@ class Schedule(object):
         Return the scedule data structure
         '''
         if 'config.option' in self.functions:
-            return self.functions['config.option'](opt)
+            return self.functions['config.option'](opt, {})
         return self.opts.get(opt, {})
 
     def handle_func(self, func, data):
