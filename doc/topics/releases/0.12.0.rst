@@ -54,6 +54,36 @@ If the result of the new nested outputter is not desired any other outputter
 can be used via the --out option, or the output option can be set in the master
 and minion configs to change the default outputter.
 
+Internal Scheduler
+------------------
+
+The internal Salt scheduler is a new capability which allows for functions to
+be executed at given intervals on the minion, and for runners to be executed
+at given intervals on the master. The scheduler allows for sequences
+such as executing state runs (locally on the minion or remotely via an
+overstate) or continually gathering system data to be run at given intervals.
+
+The configuration is simple, add the schedule option to the master or minion
+config and specify jobs to run, this in the master config will execute the
+state.over runner every 60 minutes:
+
+.. code-block:: yaml
+
+    schedule:
+      overstate:
+        function: state.over
+        minutes: 60
+
+This example for the minion configuration will execute a highstate every 30
+minutes:
+
+.. code-block:: yaml
+
+    schedule:
+      highstate:
+        function: state.highstate
+        minutes: 30
+
 Set Grains Remotely
 -------------------
 
