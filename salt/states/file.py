@@ -611,6 +611,11 @@ def managed(name,
     backup
         Overrides the default backup mode for this specific file
     '''
+    # Convert owner to user, since other config management tools use owner,
+    # no need to punish 
+    if 'owner' in kwargs:
+        if user is None:
+            user = kwargs['owner']
     # Initial set up
     mode = __salt__['config.manage_mode'](mode)
     ret = {'changes': {},
