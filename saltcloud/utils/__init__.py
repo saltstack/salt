@@ -340,7 +340,7 @@ def sftp_file(transport, host, dest_path, contents):
     tmpfile = open(tmppath, 'w')
     tmpfile.write(contents)
     tmpfile.close()
-    log.debug('Uploading /tmp/deploy.sh to {0}'.format(host))
+    log.debug('Uploading {0} to {1}'.format(dest_path, host))
     transport.put(tmppath, dest_path)
     os.remove(tmppath)
 
