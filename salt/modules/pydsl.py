@@ -30,7 +30,8 @@ class Sls(object):
         
     def state(self, id=None):
         if not id:
-            id = str(_uuid())
+            id = '.'+str(_uuid()) 
+            # adds a leading dot to make use of stateconf's namespace feature.
         try:
             return self.all_decls[id]
         except KeyError:
@@ -47,8 +48,10 @@ class Sls(object):
         self.state().stateconf.set(slsmod=slsmod)
 
         highstate = Dict()
-        highstate['include'] = self.includes[:]
-        highstate['extend'] = extend = Dict()
+        if self.includes:
+            highstate['include'] = self.includes[:]
+        if self.extends:
+            highstate['extend'] = extend = Dict()
         for ext in self.extends:
             extend[ext._id] = ext
         for decl in self.decls:
@@ -94,7 +97,7 @@ class StateModule(object):
                 return self._func
             else:
                 return getattr(self._func, name)
-        self._func = f = StateFunction(name)
+        self._func = f = StateFunction(name, self._name)
         return f
 
     def __call__(self, name, *args, **kws):
@@ -116,7 +119,8 @@ def _generate_requsite_method(t):
 
 class StateFunction(object):
     
-    def __init__(self, name):
+    def __init__(self, name, parent_mod):
+        self.mod_name = parent_mod
         self.name = name
         self.args = []
 
@@ -128,7 +132,7 @@ class StateFunction(object):
         args = list(args)
         if args:
             first = args[0]
-            if self.name == 'call' and callable(first):
+            if self.mod_name == 'cmd' and self.name == 'call' and callable(first):
                 args[0] = first.__name__
                 kws = dict(func=first, args=args[1:], kws=kws)
                 del args[1:]
