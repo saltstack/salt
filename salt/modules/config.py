@@ -87,10 +87,10 @@ def option(
         if value in __opts__:
             return __opts__[value]
     if not omit_master:
-        elif value in __pillar__.get('master', {}):
+        if value in __pillar__.get('master', {}):
             return __pillar__['master'][value]
     if not omit_pillar:
-        elif value in __pillar__:
+        if value in __pillar__:
             return __pillar__[value]
     elif value in DEFAULTS:
         return DEFAULTS[value]
