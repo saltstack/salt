@@ -53,7 +53,7 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
-        ret = {'id': self.opts['id'],
+        ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
         if 'args' in data:
