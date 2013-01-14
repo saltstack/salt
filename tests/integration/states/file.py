@@ -504,14 +504,17 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ]
         template = '\n'.join(template_lines)
         try:
-            ret = self.run_function('state.template_str', [template])
-
+            ret = self.run_function(
+                'state.template_str', [template], timeout=120
+            )
             self.assertSaltTrueReturn(ret)
             self.assertNotInSaltComment(ret, 'Pattern already commented')
             self.assertInSaltComment(ret, 'Commented lines successfully')
 
             # This next time, it is already commented.
-            ret = self.run_function('state.template_str', [template])
+            ret = self.run_function(
+                'state.template_str', [template], timeout=120
+            )
 
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(ret, 'Pattern already commented')

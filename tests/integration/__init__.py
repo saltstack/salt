@@ -593,14 +593,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90,
+                     **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=90, kwarg=kwargs
+            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
@@ -967,31 +968,46 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not True. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not True. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertSaltFalseReturn(self, ret):
         try:
             self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not False. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not False. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertSaltNoneReturn(self, ret):
         try:
             self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not None. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not None. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertInSaltComment(self, ret, in_comment):
         return self.assertIn(
