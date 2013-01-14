@@ -22,11 +22,13 @@ def doc():
     Collect all the sys.doc output from each minion and return the aggregate
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
+
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        docs.update(ret)
+        for k,v in ret.items():
+            docs.update(v)
 
-    i = itertools.chain.from_iterable([i.items() for i in all_docs.values()])
+    i = itertools.chain.from_iterable([i.items() for i in docs.values()])
     ret = dict(list(i))
 
     salt.output.display_output(ret, '', __opts__)
