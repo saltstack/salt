@@ -706,7 +706,9 @@ class Minion(object):
         while True:
             try:
                 self.schedule.eval()
-                socks = dict(self.poller.poll(60000))
+                socks = dict(self.poller.poll(
+                    self.opts['loop_interval'] * 1000)
+                    )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
