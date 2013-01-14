@@ -40,6 +40,7 @@ class Schedule(object):
             self.returners = returners
         else:
             self.returners = {}
+        self.schedule_returner = self.option('schedule_returner')
 
     def option(self, opt):
         '''
@@ -66,14 +67,24 @@ class Schedule(object):
                         *data['args'])
         else:
             ret['return'] = self.functions[func]()
-        if 'returner' in data:
+        if 'returner' in data or self.schedule_returner:
+            rets = []
             if isinstance(data['returner'], str):
-                if data['returner'] in self.returners:
-                    self.returners[data['returner']](ret)
+                rets.append(data['returner'])
             elif isinstance(data['returner'], list):
                 for returner in data['returner']:
-                    if data['returner'] in self.returners:
-                        self.returners[data['returner']](ret)
+                    if not returner in rets:
+                        rets.append(returner)
+            if isinstance(self.schedule_returner, list):
+                for returner in self.schedule_returner:
+                    if not returner in rets:
+                        rets.append(returner)
+            if isinstance(self.schedule_returner, str):
+                if not self.schedule_returner in rets;
+                    rets.append(self.schedule_returner)
+            for returner in rets:
+                if returner in self.returners:
+                    self.returners[returner](ret)
 
     def eval(self):
         '''
