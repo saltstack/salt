@@ -36,7 +36,7 @@ def salt_syndic():
     pid = os.getpid()
     try:
         syndic = salt.Syndic()
-        syndic.run()
+        syndic.start()
     except KeyboardInterrupt:
         os.kill(pid, 15)
 
