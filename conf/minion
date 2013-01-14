@@ -95,6 +95,12 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time: 10
 
+# The loop_interval sets how long in seconds the minion will wait between
+# evaluating the scheduler and running cleanup tasks. This defaults to a
+# sane 60 seconds, but if the minion scheduler needs to be evaluated more
+# often lower this value
+#loop_interval: 60
+
 # When healing, a dns_check is run. This is to make sure that the originally
 # resolved dns has not changed. If this is something that does not happen in
 # your environment, set this value to False.
