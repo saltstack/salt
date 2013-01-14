@@ -29,6 +29,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils.scedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -176,7 +177,6 @@ class Minion(object):
         '''
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        self.intervals = {}
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.authenticate()
@@ -191,6 +191,10 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
+        self.scedule = salt.utils.schedule.Schedule(
+                self.opts,
+                self.functions,
+                self.returners)
 
     def __prep_mod_opts(self):
         '''
@@ -292,6 +296,8 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
+                self.scedule.functions = self.functions
+                self.scedule.returners = self.returners
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -573,6 +579,8 @@ class Minion(object):
             except OSError:
                 pass
             self.functions, self.returners = self.__load_modules()
+            self.scedule.functions = self.functions
+            self.scedule.returners = self.returners
 
     def tune_in(self):
         '''
@@ -714,6 +722,7 @@ class Minion(object):
                         self.epub_sock.send(package)
                     except Exception:
                         pass
+                self.scedule.eval()
             except Exception:
                 log.critical(traceback.format_exc())
 
@@ -1044,7 +1053,8 @@ class Matcher(object):
                     )
                 )
             elif match in opers:
-                # We didn't match a target, so append a boolean operator or subexpression
+                # We didn't match a target, so append a boolean operator or
+                # subexpression
                 results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob
