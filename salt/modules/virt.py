@@ -882,7 +882,7 @@ def vm_cputime(vm_=None):
         [
             'your-vm': {
                 'cputime' <int>
-                'cputime_percent' <float>
+                'cputime_percent' <int>
                 },
             ...
             ]
@@ -906,7 +906,7 @@ def vm_cputime(vm_=None):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
                 'cputime': int(raw[4]),
-                'cputime_percent': '%.0f' %cputime_percent
+                'cputime_percent': int('%.0f' %cputime_percent)
                }
     info = {}
     if vm_:
@@ -957,16 +957,17 @@ def vm_netstats(vm_=None):
                 'tx_drop'    : 0
                }
         for mac, attrs in nics.items():
-            dev = attrs['target']
-            stats = dom.interfaceStats(dev)
-            ret['rx_bytes'] += stats[0]
-            ret['rx_packets'] += stats[1]
-            ret['rx_errs'] += stats[2]
-            ret['rx_drop'] += stats[3]
-            ret['tx_bytes'] += stats[4]
-            ret['tx_packets'] += stats[5]
-            ret['tx_errs'] += stats[6]
-            ret['tx_drop'] += stats[7]
+            if 'target' in attrs:
+                dev = attrs['target']
+                stats = dom.interfaceStats(dev)
+                ret['rx_bytes'] += stats[0]
+                ret['rx_packets'] += stats[1]
+                ret['rx_errs'] += stats[2]
+                ret['rx_drop'] += stats[3]
+                ret['tx_bytes'] += stats[4]
+                ret['tx_packets'] += stats[5]
+                ret['tx_errs'] += stats[6]
+                ret['tx_drop'] += stats[7]
 
         return ret
     info = {}

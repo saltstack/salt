@@ -387,7 +387,8 @@ def symlink(
         makedirs=False,
         user=None,
         group=None,
-        mode=None):
+        mode=None,
+        **kwargs):
     '''
     Create a symlink
 
@@ -407,6 +408,9 @@ def symlink(
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
     '''
+    if 'owner' in kwargs:
+        if user is None:
+            user = kwargs['owner']
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -611,6 +615,12 @@ def managed(name,
     backup
         Overrides the default backup mode for this specific file
     '''
+    # Convert owner to user, since other config management tools use owner,
+    # no need to punish people coming from other systems.
+    # PLEASE DO NOT DOCUMENT THIS! WE USE USER, NOT OWNER!!!!
+    if 'owner' in kwargs:
+        if user is None:
+            user = kwargs['owner']
     # Initial set up
     mode = __salt__['config.manage_mode'](mode)
     ret = {'changes': {},
@@ -716,7 +726,8 @@ def directory(name,
               makedirs=False,
               clean=False,
               require=None,
-              exclude_pat=None):
+              exclude_pat=None,
+              **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
 
@@ -755,6 +766,9 @@ def directory(name,
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
     '''
+    if 'owner' in kwargs:
+        if user is None:
+            user = kwargs['owner']
     mode = __salt__['config.manage_mode'](mode)
     ret = {'name': name,
            'changes': {},
@@ -986,6 +1000,9 @@ def recurse(name,
           - exclude: APPDATA*               :: glob matches APPDATA.01, APPDATA.02,.. for exclusion
           - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion
     '''
+    if 'owner' in kwargs:
+        if user is None:
+            user = kwargs['owner']
     ret = {'name': name,
            'changes': {},
            'result': True,

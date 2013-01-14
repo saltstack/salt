@@ -29,6 +29,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -190,7 +191,10 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        self.__processing = []
+        self.schedule = salt.utils.schedule.Schedule(
+                self.opts,
+                self.functions,
+                self.returners)
 
     def __prep_mod_opts(self):
         '''
@@ -292,6 +296,8 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
+                self.schedule.functions = self.functions
+                self.schedule.returners = self.returners
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -313,7 +319,6 @@ class Minion(object):
             process = threading.Thread(
                 target=target, args=(instance, self.opts, data)
             )
-        self.__processing.append(process)
         process.start()
 
     @classmethod
@@ -574,16 +579,8 @@ class Minion(object):
             except OSError:
                 pass
             self.functions, self.returners = self.__load_modules()
-
-    def cleanup_processes(self):
-        for process in self.__processing[:]:
-            if process.is_alive():
-                continue
-            process.join(0.025)
-            if isinstance(process, multiprocessing.Process):
-                process.terminate()
-            self.__processing.pop(self.__processing.index(process))
-            del(process)
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def tune_in(self):
         '''
@@ -708,17 +705,19 @@ class Minion(object):
 
         while True:
             try:
-                socks = dict(self.poller.poll(60000))
+                self.schedule.eval()
+                socks = dict(self.poller.poll(
+                    self.opts['loop_interval'] * 1000)
+                    )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
                 time.sleep(0.05)
-                # This next call(multiprocessing.active_children()) is
-                # intentional, from docs, "Calling this has the side affect of
-                # “joining” any processes which have already finished."
+                # Clean up the minion processes which have been executed and
+                # have finished
                 multiprocessing.active_children()
+                # Check if modules and grains need to be refreshed
                 self.passive_refresh()
-                self.cleanup_processes()
                 # Check the event system
                 if self.epoller.poll(1):
                     try:
@@ -1056,7 +1055,8 @@ class Matcher(object):
                     )
                 )
             elif match in opers:
-                # We didn't match a target, so append a boolean operator or subexpression
+                # We didn't match a target, so append a boolean operator or
+                # subexpression
                 results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob

@@ -167,6 +167,8 @@ class Master(SMaster):
         search = salt.search.Search(self.opts)
         last = time.time()
         fileserver = salt.fileserver.Fileserver(self.opts)
+        runners = salt.loader.runner(self.opts)
+        schedule = salt.utils.schedule.Schedule(self.opts, runners)
         while True:
             if self.opts['keep_jobs'] != 0:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
@@ -196,7 +198,13 @@ class Master(SMaster):
                     'Exception {0} occured in file server update'.format(exc)
                     )
             try:
-                time.sleep(60)
+                schedule.eval()
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occured in scheduled job'.format(exc)
+                    )
+            try:
+                time.sleep(int(self.opts['loop_interval']))
             except KeyboardInterrupt:
                 break
 
