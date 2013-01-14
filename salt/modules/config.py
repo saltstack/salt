@@ -74,16 +74,24 @@ def valid_fileproto(uri):
         return False
 
 
-def option(value, default=''):
+def option(
+        value,
+        default='',
+        omit_opts=False,
+        omit_master=False,
+        omit_pillar=False):
     '''
     Pass in a generic option and receive the value that will be assigned
     '''
-    if value in __opts__:
-        return __opts__[value]
-    elif value in __pillar__.get('master', {}):
-        return __pillar__['master'][value]
-    elif value in __pillar__:
-        return __pillar__[value]
+    if not omit_opts:
+        if value in __opts__:
+            return __opts__[value]
+    if not omit_master:
+        elif value in __pillar__.get('master', {}):
+            return __pillar__['master'][value]
+    if not omit_pillar:
+        elif value in __pillar__:
+            return __pillar__[value]
     elif value in DEFAULTS:
         return DEFAULTS[value]
     return default
