@@ -16,7 +16,7 @@ def salt_master():
     Start the salt-master.
     '''
     master = salt.Master()
-    master.run()
+    master.start()
 
 
 def salt_minion():
@@ -26,7 +26,7 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
     minion = salt.Minion()
-    minion.run()
+    minion.start()
 
 
 def salt_syndic():

@@ -7,8 +7,8 @@ import os
 import sys
 import logging
 
-# Import salt libs, the try block bypasses an issue at build time so that
-# modules don't cause the build to fail
+# Import salt libs, the try block below bypasses an issue at build time so
+# that modules don't cause the build to fail
 from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
 
@@ -29,9 +29,13 @@ class Master(parsers.MasterOptionParser):
     Creates a master server
     '''
 
-    def run(self):
+    def prepare(self):
         '''
-        Run the sequence to start a salt master server
+        Run the preparation sequence required to start a salt master server.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
         '''
         self.parse_args()
 
@@ -79,25 +83,27 @@ class Master(parsers.MasterOptionParser):
         self.master = salt.master.Master(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
-        if check_user(self.config['user']):
-            try:
-                self.start()
-            except salt.master.MasterExit:
-                self.stop()
-            finally:
-                sys.exit()
 
     def start(self):
         '''
-        Start the actual master. If sub-classed, don't **ever** forget to run:
+        Start the actual master.
+
+        If sub-classed, don't **ever** forget to run:
 
             super(YourSubClass, self).start()
 
-        NOTE: Run your start-up code before calling `super()`.
+        NOTE: Run any required code before calling `super()`.
         '''
-        self.master.start()
+        self.prepare()
+        if check_user(self.config['user']):
+            try:
+                self.master.start()
+            except salt.master.MasterExit:
+                self.shutdown()
+            finally:
+                sys.exit()
 
-    def stop(self):
+    def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
@@ -108,9 +114,13 @@ class Minion(parsers.MinionOptionParser):
     Create a minion server
     '''
 
-    def run(self):
+    def prepare(self):
         '''
-        Execute this method to start up a minion.
+        Run the preparation sequence required to start a salt minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
         '''
         self.parse_args()
 
@@ -160,28 +170,30 @@ class Minion(parsers.MinionOptionParser):
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
-        try:
-            self.minion = salt.minion.Minion(self.config)
-            self.set_pidfile()
-            if check_user(self.config['user']):
-                self.start()
-        except KeyboardInterrupt:
-            log.warn('Stopping the Salt Minion')
-            self.stop()
-        finally:
-            raise SystemExit('\nExiting on Ctrl-c')
+        self.minion = salt.minion.Minion(self.config)
+        self.set_pidfile()
 
     def start(self):
         '''
-        Start the actual minion. If sub-classed, don't **ever** forget to run:
+        Start the actual minion.
+
+        If sub-classed, don't **ever** forget to run:
 
             super(YourSubClass, self).start()
 
-        NOTE: Run your start-up code before calling `super()`.
+        NOTE: Run any required code before calling `super()`.
         '''
-        self.minion.tune_in()
+        self.prepare()
+        try:
+            if check_user(self.config['user']):
+                self.minion.tune_in()
+        except KeyboardInterrupt:
+            logger.warn('Stopping the Salt Minion')
+            self.shutdown()
+        finally:
+            raise SystemExit('\nExiting on Ctrl-c')
 
-    def stop(self):
+    def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
@@ -192,9 +204,13 @@ class Syndic(parsers.SyndicOptionParser):
     Create a syndic server
     '''
 
-    def run(self):
+    def prepare(self):
         '''
-        Execute this method to start up a syndic.
+        Run the preparation sequence required to start a salt syndic minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
         '''
         self.parse_args()
         try:
@@ -231,29 +247,30 @@ class Syndic(parsers.SyndicOptionParser):
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()
+        self.syndic = salt.minion.Syndic(self.config)
         self.set_pidfile()
-
-        if check_user(self.config['user']):
-            try:
-                self.syndic = salt.minion.Syndic(self.config)
-                self.start()
-            except KeyboardInterrupt:
-                log.warn('Stopping the Salt Syndic Minion')
-                self.stop()
-            finally:
-                raise SystemExit('\nExiting on Ctrl-c')
 
     def start(self):
         '''
-        Start the actual syndic. If sub-classed, don't **ever** forget to run:
+        Start the actual syndic.
+
+        If sub-classed, don't **ever** forget to run:
 
             super(YourSubClass, self).start()
 
-        NOTE: Run your start-up code before calling `super()`.
+        NOTE: Run any required code before calling `super()`.
         '''
-        self.syndic.tune_in()
+        self.prepare()
+        if check_user(self.config['user']):
+            try:
+                self.syndic.tune_in()
+            except KeyboardInterrupt:
+                logger.warn('Stopping the Salt Syndic Minion')
+                self.shutdown()
+            finally:
+                raise SystemExit('\nExiting on Ctrl-c')
 
-    def stop(self):
+    def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
