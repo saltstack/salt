@@ -11,7 +11,7 @@ __version_info__ = (0, 11, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
 
-def __get_version_info_from_git():
+def __get_version_info_from_git(version, version_info):
     '''
     If we can get a version from Git use that instead, otherwise we carry on
     '''
@@ -19,40 +19,51 @@ def __get_version_info_from_git():
         from salt.utils import which
 
         git = which('git')
-        if git:
-            process = subprocess.Popen(
-                [git, 'describe'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=os.path.abspath(os.path.dirname(__file__))
-            )
-            out, _ = process.communicate()
-            if out:
-                parsed_version = '{0}'.format(out.strip().lstrip('v'))
-                parsed_version_info = tuple([
-                    int(i) for i in parsed_version.split('-', 1)[0].split('.')
-                ])
-                if parsed_version_info != __version_info__:
-                    msg = ('In order to get the proper salt version with the '
-                           'git hash you need to update salt\'s local git '
-                           'tags. Something like: \'git fetch --tags\' or '
-                           '\'git fetch --tags upstream\' if you followed '
-                           'salt\'s contribute documentation. The version '
-                           'string WILL NOT include the git hash.')
-                    from salt import log
-                    if log.is_console_configured():
-                        import logging
-                        logging.getLogger(__name__).warning(msg)
-                    else:
-                        sys.stderr.write('WARNING: {0}\n'.format(msg))
-                else:
-                    __version__ = parsed_version
-                    __version_info__ = parsed_version_info
-    except Exception:
-        pass
+        if not git:
+            return version, version_info
 
-__get_version_info_from_git()
+        process = subprocess.Popen(
+            [git, 'describe'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=os.path.abspath(os.path.dirname(__file__))
+        )
+        out, _ = process.communicate()
+        if out:
+            parsed_version = '{0}'.format(out.strip().lstrip('v'))
+            parsed_version_info = tuple([
+                int(i) for i in parsed_version.split('-', 1)[0].split('.')
+            ])
+            if parsed_version_info != version_info:
+                msg = ('In order to get the proper salt version with the '
+                       'git hash you need to update salt\'s local git '
+                       'tags. Something like: \'git fetch --tags\' or '
+                       '\'git fetch --tags upstream\' if you followed '
+                       'salt\'s contribute documentation. The version '
+                       'string WILL NOT include the git hash.')
+                from salt import log
+                if log.is_console_configured():
+                    import logging
+                    logging.getLogger(__name__).warning(msg)
+                else:
+                    sys.stderr.write('WARNING: {0}\n'.format(msg))
+                return version, version_info
+            return parsed_version, parsed_version_info
+    except OSError, err:
+        if not hasattr(err, 'child_traceback'):
+            # This is not an exception thrown within the Popen created child.
+            # Let's raise it so it can be catch by the developers
+            raise
+        # Popen child exceptions are not raised
+        return version, version_info
+
+
+# Get version information from git if available
+__version__, __version_info__ = __get_version_info_from_git(
+    __version__, __version_info__
+)
+# This function has executed once, we're done with it. Delete it!
 del __get_version_info_from_git
 
 

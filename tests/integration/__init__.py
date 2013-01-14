@@ -11,6 +11,7 @@ import shutil
 import tempfile
 import time
 import signal
+import subprocess
 from hashlib import md5
 from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
@@ -861,11 +862,48 @@ class ShellCaseCommonTestsMixIn(object):
 
     def test_version_includes_binary_name(self):
         if getattr(self, '_call_binary_', None) is None:
-            self.skipTest("'_call_binary_' not defined.")
+            self.skipTest('\'_call_binary_\' not defined.')
 
-        out = '\n'.join(self.run_script(self._call_binary_, "--version"))
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         self.assertIn(self._call_binary_, out)
         self.assertIn(salt.__version__, out)
+
+    def test_salt_with_git_version(self):
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest('\'_call_binary_\' not defined.')
+        from salt.utils import which
+        from salt.version import __version_info__
+        git = which('git')
+        if not git:
+            self.skipTest('The git binary is not available')
+
+        # Let's get the output of git describe
+        process = subprocess.Popen(
+            [git, 'describe'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=os.path.abspath(os.path.dirname(salt.__file__))
+        )
+        out, _ = process.communicate()
+        if not out:
+            self.skipTest('Failed to get the output of \'git describe\'')
+
+        parsed_version = '{0}'.format(out.strip().lstrip('v'))
+        parsed_version_info = tuple([
+            int(i) for i in parsed_version.split('-', 1)[0].split('.')
+        ])
+        if parsed_version_info != __version_info__:
+            self.skipTest(
+                'In order to get the proper salt version with the '
+                'git hash you need to update salt\'s local git '
+                'tags. Something like: \'git fetch --tags\' or '
+                '\'git fetch --tags upstream\' if you followed '
+                'salt\'s contribute documentation. The version '
+                'string WILL NOT include the git hash.'
+            )
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
+        self.assertIn(parsed_version, out)
 
 
 class SaltReturnAssertsMixIn(object):
