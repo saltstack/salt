@@ -84,6 +84,8 @@ class Schedule(object):
                 func = data['func']
             elif 'fun' in data:
                 func = data['fun']
+            else:
+                func = None
             if func not in self.functions:
                 continue
             # Add up how many seconds between now and then
@@ -101,7 +103,7 @@ class Schedule(object):
                 run = True
             if not run:
                 continue
-            if self.opts['multiprocessing']:
+            if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
             else:
                 thread_cls = threading.Thread
