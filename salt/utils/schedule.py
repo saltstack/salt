@@ -6,12 +6,12 @@ for the minion via config or pillar)
 code-block:: yaml
 
     schedule:
-      state.sls:
-        seconds: 3600
-        args:
-          - httpd
-        kwargs:
-          test: True
+      - state.sls:
+          seconds: 3600
+          args:
+            - httpd
+          kwargs:
+            test: True
 
 This will schedule the command: state.sls httpd test=True every 3600 seconds 
 (every hour)
@@ -75,26 +75,29 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self.option('schedule')
-        for func, data in schedule.items():
-            if func not in self.functions:
+        for ind in schedule:
+            if not isinstance(ind, dict):
                 continue
-            # Add up how many seconds between now and then
-            seconds = 0
-            seconds += int(data.get('seconds', 0))
-            seconds += int(data.get('minutes', 0)) * 60
-            seconds += int(data.get('hours', 0)) * 3600
-            seconds += int(data.get('days', 0)) * 86400
-            now = int(time.time())
-            run = False
-            if func in self.intervals:
-                if now - self.intervals[func] > seconds:
+            for func, data in ind.items():
+                if func not in self.functions:
+                    continue
+                # Add up how many seconds between now and then
+                seconds = 0
+                seconds += int(data.get('seconds', 0))
+                seconds += int(data.get('minutes', 0)) * 60
+                seconds += int(data.get('hours', 0)) * 3600
+                seconds += int(data.get('days', 0)) * 86400
+                now = int(time.time())
+                run = False
+                if func in self.intervals:
+                    if now - self.intervals[func] > seconds:
+                        run = True
+                else:
                     run = True
-            else:
-                run = True
-            if not run:
-                continue
-            if self.opts['multiprocessing']:
-                thread_cls = multiprocessing.Process
-            else:
-                thread_cls = threading.Thread
-            thread_cls(target=self.handle_func, args=(func, data)).start()
+                if not run:
+                    continue
+                if self.opts['multiprocessing']:
+                    thread_cls = multiprocessing.Process
+                else:
+                    thread_cls = threading.Thread
+                thread_cls(target=self.handle_func, args=(func, data)).start()
