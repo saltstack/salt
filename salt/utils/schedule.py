@@ -80,7 +80,7 @@ class Schedule(object):
                     if not returner in rets:
                         rets.append(returner)
             if isinstance(self.schedule_returner, str):
-                if not self.schedule_returner in rets;
+                if not self.schedule_returner in rets:
                     rets.append(self.schedule_returner)
             for returner in rets:
                 if returner in self.returners:
