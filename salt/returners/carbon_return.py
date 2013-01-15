@@ -8,7 +8,7 @@ Add the following configuration to your minion configuration files::
 
 '''
 
-import syslog
+# Import python libs
 import pickle
 import socket
 import logging
@@ -58,7 +58,9 @@ def returner(ret):
             metrics.append((metric_base + '.' + _formatHostname(name) + '.' + key, val, timestamp))
 
     def send_picklemetrics(metrics):
-        ''' Uses pickle protocol to send data '''
+        '''
+        Uses pickle protocol to send data
+        '''
         metrics = [(metric_name, (timestamp, value)) for (metric_name, timestamp, value) in metrics]
         data = pickle.dumps(metrics, protocol=-1)
         struct_format = '!I'
@@ -69,11 +71,13 @@ def returner(ret):
             if sent_bytes == 0: 
                 log.error('Bytes sent 0, Connection reset?')
                 return
-            logging.debug("Sent %d bytes to carbon" % sent_bytes)
+            logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
 
     def send_textmetrics(metrics):
-        ''' Use text protorocol to send metric over socket '''
+        '''
+        Use text protorocol to send metric over socket
+        '''
         data = []
         for metric in metrics:
             metric = '{0} {1} {2}'.format(metric[0], metric[1], metric[2])
@@ -85,7 +89,7 @@ def returner(ret):
             if sent_bytes == 0: 
                 log.error('Bytes sent 0, Connection reset?')
                 return
-            logging.debug("Sent %d bytes to carbon" % sent_bytes)
+            logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
 
 
@@ -95,8 +99,3 @@ def returner(ret):
     # Shut down and close socket
     carbon_sock.shutdown(socket.SHUT_RDWR)
     carbon_sock.close()
-
-
-
-
-
