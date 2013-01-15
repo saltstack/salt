@@ -127,9 +127,10 @@ def install(name=None, pkgs=None, **kwargs):
 
         salt '*' pkg.install 'package package package'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs,
-                                                                  sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name,
+            pkgs,
+            kwargs.get('sources', {}))
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
