@@ -209,12 +209,6 @@ class Compiler(object):
                             comps[0]: [comps[1]]
                         }
                         continue
-
-                    errors.append(
-                        'Name {0} in template {1} is not a dictionary'.format(
-                            name, template
-                        )
-                    )
                     continue
             skeys = set()
             for key in sorted(high[name]):
@@ -237,12 +231,6 @@ class Compiler(object):
                     #   file.comment:
                     #     - regex: ^requirepass
                     if comps[0] in skeys:
-                        errors.append(
-                            'Name \'{0}\' in template \'{1}\' contains '
-                            'multiple state decs of the same type'.format(
-                                name, template
-                            )
-                        )
                         continue
                     high[name][comps[0]] = high[name].pop(key)
                     high[name][comps[0]].append(comps[1])
