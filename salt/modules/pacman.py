@@ -58,7 +58,7 @@ def available_version(*names):
             # return data.
             if name in names:
                 ret[name] = version
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             pass
 
     # Return a string if only one package name passed
