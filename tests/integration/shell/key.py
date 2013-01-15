@@ -38,10 +38,10 @@ class KeyTest(integration.ShellCase,
         test salt-key -L --json-out
         '''
         data = self.run_key('-L --json-out')
-        if version.__version_info__ < (0, 10, 8):
+        if version.__version_info__ >= (0, 12):
             self.assertEqual(
-                "WARNING: The option --json-out is deprecated. Please "
-                "consider using '--out json' instead.",
+                'The option --json-out was deprecated. Please use '
+                ''\'--out json\' instead.'
                 data[0]
             )
 
@@ -56,7 +56,7 @@ class KeyTest(integration.ShellCase,
             '        "sub_minion"',
             '    ]',
             '}',
-            ]
+        ]
         self.assertEqual(data, expect)
 
     def test_list_yaml_out(self):
@@ -64,10 +64,11 @@ class KeyTest(integration.ShellCase,
         test salt-key -L --yaml-out
         '''
         data = self.run_key('-L --yaml-out')
-        if version.__version_info__ < (0, 10, 8):
+        if version.__version_info__ >= (0, 12):
             self.assertEqual(
-                "WARNING: The option --yaml-out is deprecated. Please "
-                "consider using '--out yaml' instead.",
+                self.assertEqual(
+                'The option --yaml-out was deprecated. Please use '
+                ''\'--out yaml\' instead.'
                 data[0]
             )
 
@@ -87,10 +88,11 @@ class KeyTest(integration.ShellCase,
         test salt-key -L --raw-out
         '''
         data = self.run_key('-L --raw-out')
-        if version.__version_info__ < (0, 10, 8):
+        if version.__version_info__ >= (0, 12):
             self.assertEqual(
-                "WARNING: The option --raw-out is deprecated. Please "
-                "consider using '--out raw' instead.",
+                self.assertEqual(
+                'The option --raw-out was deprecated. Please use '
+                ''\'--out raw\' instead.'
                 data[0]
             )
 
