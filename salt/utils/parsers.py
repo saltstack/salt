@@ -158,19 +158,9 @@ class OptionParser(optparse.OptionParser):
         self.exit()
 
 
-class DeprecatedConfigMessage(object):
-    _mixin_prio_ = -10
-
-    def print_config_warning(self, *args, **kwargs):
-        self.error(
-            'The "-c/--config" option is deprecated. You should now use '
-            '-c/--config-dir to point to a directory which holds all of '
-            'salt\'s configuration files.\n'
-        )
-
-
-class ConfigDirMixIn(DeprecatedConfigMessage):
+class ConfigDirMixIn(object):
     __metaclass__ = MixInMeta
+    _mixin_prio_ = -10
 
     def _mixin_setup(self):
         self.add_option(
@@ -224,10 +214,7 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                         self.config[option.dest] = value
 
     def process_config_dir(self):
-        if os.path.isfile(self.options.config_dir):
-            # XXX: Remove deprecation warning in next release
-            self.print_config_warning()
-        elif not os.path.isdir(self.options.config_dir):
+        if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
                 "WARNING: \"{0}\" directory does not exist.\n".format(
@@ -246,29 +233,6 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
 
     def get_config_file_path(self, configfile):
         return os.path.join(self.options.config_dir, configfile)
-
-
-class DeprecatedMasterMinionMixIn(DeprecatedConfigMessage):
-    __metaclass__ = MixInMeta
-
-    def _mixin_setup(self):
-        # XXX: Remove deprecated option in next release
-        self.add_option(
-            '--config', action="callback", callback=self.print_config_warning,
-            help='DEPRECATED. Please use -c/--config-dir from now on.'
-        )
-
-
-class DeprecatedSyndicOptionsMixIn(DeprecatedConfigMessage):
-    __metaclass__ = MixInMeta
-
-    def _mixin_setup(self):
-        # XXX: Remove deprecated option in next release
-        self.add_option(
-            '--master-config', '--minion-config',
-            action="callback", callback=self.print_config_warning,
-            help='DEPRECATED. Please use -c/--config-dir from now on.'
-        )
 
 
 class LogLevelMixIn(object):
@@ -676,8 +640,7 @@ class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
 
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
-                         DeprecatedMasterMinionMixIn, RunUserMixin,
-                         DaemonMixIn, PidfileMixin):
+                         RunUserMixin, DaemonMixIn, PidfileMixin):
 
     __metaclass__ = OptionParserMeta
 
@@ -697,9 +660,8 @@ class MinionOptionParser(MasterOptionParser):
         return config.minion_config(self.get_config_file_path('minion'))
 
 
-class SyndicOptionParser(OptionParser, DeprecatedSyndicOptionsMixIn,
-                         ConfigDirMixIn, LogLevelMixIn, RunUserMixin,
-                         DaemonMixIn, PidfileMixin):
+class SyndicOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
+                         RunUserMixin, DaemonMixIn, PidfileMixin):
 
     __metaclass__ = OptionParserMeta
 
