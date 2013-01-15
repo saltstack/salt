@@ -32,7 +32,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 submodules=True
@@ -70,7 +70,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 submodules=True
@@ -88,7 +88,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/mozilla/zamboni.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-states'.format(self.__domain),
                 target=name,
                 submodules=True
             )
