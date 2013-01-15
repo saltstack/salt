@@ -135,6 +135,9 @@ class SaltEvent(object):
                 socks = dict(self.poller.poll(wait))
                 if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                     raw = self.sub.recv()
+                    # Double check the tag
+                    if tag != raw[:20].rstrip('|'):
+                        continue
                     data = self.serial.loads(raw[20:])
                     if full:
                         ret = {'data': data,
