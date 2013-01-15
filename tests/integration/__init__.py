@@ -624,8 +624,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         Run the state.single command and return the state return structure
         '''
-        print function
-        print kwargs
         return self.run_function('state.single', [function], **kwargs)
 
     @property
