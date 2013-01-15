@@ -942,7 +942,6 @@ def vm_netstats(vm_=None):
 
         salt '*' virt.vm_netstats
     '''
-    host_cpus = __get_conn().getInfo()[2]
     def _info(vm_):
         dom = _get_dom(vm_)
         nics = get_nics(vm_)
