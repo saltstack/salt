@@ -591,7 +591,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90,
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=30,
                      **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -663,7 +663,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=90)
+        orig = self.client.cmd('minion', function, arg, timeout=30)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
@@ -838,26 +838,6 @@ class ShellCase(TestCase):
 
 
 class ShellCaseCommonTestsMixIn(object):
-
-    def test_deprecated_config(self):
-        """
-        test for the --config deprecation warning
-
-        Once --config is fully deprecated, this test can be removed
-
-        """
-
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest("'_call_binary_' not defined.")
-
-        cfgfile = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
-        out, err = self.run_script(
-            self._call_binary_,
-            '--config {0}'.format(cfgfile),
-            catch_stderr=True
-        )
-        self.assertIn('Usage: {0}'.format(self._call_binary_), '\n'.join(err))
-        self.assertIn('deprecated', '\n'.join(err))
 
     def test_version_includes_binary_name(self):
         if getattr(self, '_call_binary_', None) is None:
