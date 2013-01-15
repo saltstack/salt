@@ -1272,8 +1272,7 @@ def manage_file(name,
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if urlparse(source).scheme != 'salt':
-                with salt.utils.fopen(sfn, 'rb') as dlfile:
-                    dl_sum = get_hash(sfn, source_sum['hash_type'])
+                dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
                                       'not match real sum of {2}'
