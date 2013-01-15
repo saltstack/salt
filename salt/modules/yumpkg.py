@@ -584,7 +584,6 @@ def list_repos(basedir='/etc/yum.repos.d'):
         salt '*' pkg.list_repos
     '''
     repos = {}
-    repofiles = []
     for repofile in os.listdir(basedir):
         repopath = '{0}/{1}'.format(basedir, repofile)
         if not repofile.endswith('.repo'):
