@@ -46,11 +46,8 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
-if os.environ.has_key('TMPDIR'):
-    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    SYS_TMP_DIR = os.environ['TMPDIR']
-else:
-    SYS_TMP_DIR = tempfile.gettempdir()
+# Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
