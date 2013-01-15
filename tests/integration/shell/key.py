@@ -37,7 +37,7 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --json-out
         '''
-        data = self.run_key('-L --json-out',  catch_stderr=True)
+        data = self.run_key('-L --json-out', catch_stderr=True)
         if version.__version_info__ >= (0, 12):
             self.assertIn(
                 'salt-key: error: The option --json-out was deprecated. '
@@ -63,7 +63,7 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --yaml-out
         '''
-        data = self.run_key('-L --yaml-out',  catch_stderr=True)
+        data = self.run_key('-L --yaml-out', catch_stderr=True)
         if version.__version_info__ >= (0, 12):
             self.assertIn(
                 'salt-key: error: The option --yaml-out was deprecated. '
@@ -86,7 +86,7 @@ class KeyTest(integration.ShellCase,
         '''
         test salt-key -L --raw-out
         '''
-        data = self.run_key('-L --raw-out',  catch_stderr=True)
+        data = self.run_key('-L --raw-out', catch_stderr=True)
         if version.__version_info__ >= (0, 12):
             self.assertIn(
                 'salt-key: error: The option --raw-out was deprecated. '
