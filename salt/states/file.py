@@ -1280,6 +1280,8 @@ def comment(name, regex, char='#', backup='.bak'):
         this pattern will be wrapped in parenthesis and will move any
         preceding/trailing ``^`` or ``$`` characters outside the parenthesis
         (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
+        Note that you _need_ the leading ^, otherwise each time you run highstate,
+        another comment char will be inserted.
     char : ``#``
         The character to be inserted at the beginning of a line in order to
         comment it out
