@@ -157,7 +157,6 @@ def pvcreate(devices, **kwargs):
     if not devices:
         return 'Error: at least one device is required'
 
-    ret = {}
     cmd = 'pvcreate'
     for device in devices.split(','):
         cmd += ' {0}'.format(device)
@@ -184,7 +183,6 @@ def vgcreate(vgname, devices, **kwargs):
     if not vgname or not devices:
         return 'Error: vgname and device(s) are both required'
 
-    ret = {}
     cmd = 'vgcreate {0}'.format(vgname)
     for device in devices.split(','):
         cmd += ' {0}'.format(device)
@@ -211,7 +209,6 @@ def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
     if size and extents:
         return 'Error: Please specify only size or extents'
 
-    ret = {}
     if size:
         cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(lvname, vgname, size, pv)
     elif extents:
