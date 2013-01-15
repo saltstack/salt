@@ -11,7 +11,6 @@ the deployment of states over groups of servers.
 # 6. append data to running
 
 # Import python libs
-import sys
 import os
 
 # Import salt libs
