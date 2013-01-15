@@ -462,7 +462,7 @@ def master_config(path):
             except:
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: {0}'.format(
-                        r
+                        regex
                     )
                 )
 
