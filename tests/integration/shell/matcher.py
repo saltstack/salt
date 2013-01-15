@@ -1,5 +1,4 @@
 # Import python libs
-import re
 import sys
 import yaml
 
