@@ -32,7 +32,7 @@ class SaltCacheLoader(BaseLoader):
         if opts.get('file_client', 'remote') == 'local':
             self.searchpath = opts['file_roots'][env]
         else:
-            self.searchpath = path.join(opts['cachedir'], 'files', env)
+            self.searchpath = [path.join(opts['cachedir'], 'files', env)]
         log.debug('Jinja search path: \'{0}\''.format(self.searchpath))
         self._file_client = None
         self.cached = []
@@ -68,18 +68,23 @@ class SaltCacheLoader(BaseLoader):
                 'prohibited'.format(template)
             )
             raise TemplateNotFound(template)
-        self.check_cache(template)
-        filepath = path.join(self.searchpath, template)
-        with salt.utils.fopen(filepath, 'rb') as ifile:
-            try:
-                contents = ifile.read().decode(self.encoding)
-            except IOError:
-                raise TemplateNotFound(template)
-        mtime = path.getmtime(filepath)
 
-        def uptodate():
+        self.check_cache(template)
+        for spath in self.searchpath:
+            filepath = path.join(spath, template)
             try:
-                return path.getmtime(filepath) == mtime
-            except OSError:
-                return False
-        return contents, filepath, uptodate
+                with salt.utils.fopen(filepath, 'rb') as ifile:
+                    contents = ifile.read().decode(self.encoding)
+                    mtime = path.getmtime(filepath)
+
+                    def uptodate():
+                        try:
+                            return path.getmtime(filepath) == mtime
+                        except OSError:
+                            return False
+                    return contents, filepath, uptodate
+            except IOError:
+                # there is no file under current path
+                continue
+        # there is no template file within searchpaths
+        raise TemplateNotFound(template)
