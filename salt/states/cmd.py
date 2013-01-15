@@ -123,7 +123,6 @@ import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.state
 
 log = logging.getLogger(__name__)
 
