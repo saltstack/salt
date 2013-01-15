@@ -129,11 +129,10 @@ def hypermedia_handler(*args, **kwargs):
     try:
         best = cherrypy.lib.cptools.accept(
                 ['text/html'] + [i for (i, _) in ct_out_map])
-    except cherrypy.CherryPyException as e:
-        if not e.status == 406:
-            raise
-    else:
         index = os.path.join(cherrypy.config['static'], 'index.html')
+    except (AttributeError, cherrypy.CherryPyException):
+        pass
+    else:
         if 'html' in best and os.path.exists(index):
             return cherrypy.lib.static.serve_file(index)
 
@@ -714,7 +713,7 @@ class API(object):
                 'server.socket_host': '0.0.0.0',
                 'server.socket_port': apiopts.pop('port', 8000),
                 'debug': apiopts.pop('debug', False),
-                'static': apiopts.get('static', ''),
+                'static': apiopts.get('static'),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
@@ -722,8 +721,8 @@ class API(object):
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
 
-                'tools.staticdir.on': True,
-                'tools.staticdir.dir': apiopts.pop('static', ''),
+                'tools.staticdir.on': True if 'static' in apiopts else False,
+                'tools.staticdir.dir': apiopts.get('static'),
             },
         }
 
