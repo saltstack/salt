@@ -735,7 +735,7 @@ class AESFuncs(object):
             if 'tag' not in load or 'data' not in load:
                 return False
         if 'events' in load:
-            for event in events:
+            for event in load['events']:
                 self.event.fire_event(event, event['tag'])
         else:
             tag = load['tag']
