@@ -3,8 +3,9 @@ Set up the version of Salt
 '''
 
 # Import python libs
-import sys
 import os
+import sys
+import warnings
 import subprocess
 
 __version_info__ = (0, 12, 0)
@@ -38,18 +39,21 @@ def __get_version_info_from_git(version, version_info):
             int(i) for i in parsed_version.split('-', 1)[0].split('.')
         ])
         if parsed_version_info != version_info:
-            msg = ('In order to get the proper salt version with the '
-                   'git hash you need to update salt\'s local git '
-                   'tags. Something like: \'git fetch --tags\' or '
-                   '\'git fetch --tags upstream\' if you followed '
-                   'salt\'s contribute documentation. The version '
-                   'string WILL NOT include the git hash.')
-            from salt import log
-            if log.is_console_configured():
-                import logging
-                logging.getLogger(__name__).warning(msg)
-            else:
-                sys.stderr.write('WARNING: {0}\n'.format(msg))
+            warnings.filterwarnings(
+                'module',
+                category=UserWarning,
+                module='salt.version'
+            )
+            warnings.warn(
+                'In order to get the proper salt version with the '
+                'git hash you need to update salt\'s local git '
+                'tags. Something like: \'git fetch --tags\' or '
+                '\'git fetch --tags upstream\' if you followed '
+                'salt\'s contribute documentation. The version '
+                'string WILL NOT include the git hash.',
+                UserWarning,
+                stacklevel=2
+            )
             return version, version_info
         return parsed_version, parsed_version_info
     except OSError, err:
@@ -62,9 +66,8 @@ def __get_version_info_from_git(version, version_info):
 
 
 # Get version information from git if available
-__version__, __version_info__ = __get_version_info_from_git(
-    __version__, __version_info__
-)
+__version__, __version_info__ = \
+    __get_version_info_from_git(__version__, __version_info__)
 # This function has executed once, we're done with it. Delete it!
 del __get_version_info_from_git
 
