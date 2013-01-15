@@ -227,11 +227,6 @@ if logging.getLoggerClass() is not SaltLoggingClass:
         #   No handlers could be found for logger "foo"
         logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
 
-    if sys.version_info >= (2, 7):
-        # Python versions >= 2.7 allow warnings to be redirected to the logging
-        # system. Let's enable it.
-        logging.captureWarnings(True)
-
 
 def getLogger(name):  # pylint: disable-msg=C0103
     '''
@@ -456,3 +451,8 @@ def __remove_null_logging_handler():
             # Redefine the null handler to None so it can be garbage collected
             LOGGING_NULL_HANDLER = None
             break
+
+    if sys.version_info >= (2, 7):
+        # Python versions >= 2.7 allow warnings to be redirected to the logging
+        # system now that it's configured. Let's enable it.
+        logging.captureWarnings(True)
