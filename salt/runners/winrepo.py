@@ -4,9 +4,9 @@ Runner to manage Windows software repo
 
 # Import python libs
 import os
-import os.path
+
+# Import third party libs
 import yaml
-from pprint import pprint
 import msgpack
 
 # Import salt libs
