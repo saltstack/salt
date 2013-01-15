@@ -80,36 +80,6 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
-    def test_latest_recursive(self):
-        '''
-        git.latest
-        '''
-        name = os.path.join(integration.TMP, 'salt_repo')
-        try:
-            ret = self.run_state(
-                'git.latest',
-                name='https://{0}/saltstack/salt-states'.format(self.__domain),
-                target=name,
-                submodules=True
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(
-                # with git 1.7.9.5, it's not a directory, it's a file with the
-                # contents:
-                #   gitdir: /tmp/salt-tests-tmpdir/salt_repo/.git/modules/vendor/modules/js/receiptverifier
-                #
-                # let's change it to exists!?!?!?
-                #
-                #os.path.isdir(
-                os.path.exists(
-                    os.path.join(
-                        name, 'vendor', 'js', 'receiptverifier', '.git'
-                    )
-                )
-            )
-        finally:
-            shutil.rmtree(name, ignore_errors=True)
-
     def test_present(self):
         '''
         git.present
