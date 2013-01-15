@@ -1005,6 +1005,8 @@ class AESFuncs(object):
             timeout = clear_load['timeout']
         # Encrypt!
         payload['load'] = self.crypticle.dumps(load)
+        # Set the subscriber to the the jid before publishing the command
+        self.local.event.sub.setsockopt(zmq.SUBSCRIBE, load['jid'])
         # Connect to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
