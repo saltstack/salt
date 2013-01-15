@@ -40,7 +40,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
-        out = self.run_call('-l quiet --text-out test.fib 3')
+        out = self.run_call('-l quiet --out txt test.fib 3')
         if version.__version_info__ < (0, 12):
             expect = [
                 "WARNING: The option --text-out is deprecated. Please "
