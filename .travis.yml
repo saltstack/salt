@@ -6,7 +6,7 @@ python:
 
 before_install:
   - sudo apt-get update && sudo apt-get install git swig supervisor rabbitmq-server ruby
-  - git describe | git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream
+  - git describe || git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2 ordereddict; fi"
 
