@@ -130,7 +130,7 @@ def run(name, **kwargs):
                 'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
-            returners[kwargs]()
+            returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
     return ret
