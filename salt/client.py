@@ -632,7 +632,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
-            if not raw is None:
+            if raw is not None and 'return' in raw:
                 found.add(raw['id'])
                 ret[raw['id']] = raw['return']
                 if len(found.intersection(minions)) >= len(minions):
