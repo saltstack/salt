@@ -882,11 +882,16 @@ class ShellCaseCommonTestsMixIn(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
-            cwd=os.path.abspath(os.path.dirname(salt.__file__))
+            cwd=CODE_DIR
         )
-        out, _ = process.communicate()
+        out, err = process.communicate()
         if not out:
-            self.skipTest('Failed to get the output of \'git describe\'')
+            self.skipTest(
+                'Failed to get the output of \'git describe\'. '
+                'Error: {0!r}'.format(
+                    err
+                )
+            )
 
         parsed_version = '{0}'.format(out.strip().lstrip('v'))
         parsed_version_info = tuple([
