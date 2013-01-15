@@ -30,7 +30,7 @@ import salt.payload
 import salt.loader
 import salt.state
 from salt._compat import string_types
-
+from salt.exceptions import SaltSystemExit
 log = logging.getLogger(__name__)
 
 
