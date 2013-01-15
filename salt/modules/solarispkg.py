@@ -112,6 +112,7 @@ def available_version(*names):
     pkgadd, this function will always return an empty string for a given
     package.
     '''
+    ret = {}
     if len(names) == 0:
         return ''
     for name in names:
