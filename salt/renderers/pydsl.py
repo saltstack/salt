@@ -14,6 +14,7 @@ def render(template, env='', sls='', tmplpath=None, **kws):
 
     dsl_sls = __salt__['pydsl.sls'](sls)
     mod.__dict__.update(
+        __pydsl__=dsl_sls,
         include=dsl_sls.include,
         extend=dsl_sls.extend,
         state=dsl_sls.state,
