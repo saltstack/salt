@@ -894,7 +894,14 @@ class ShellCaseCommonTestsMixIn(object):
         parsed_version_info = tuple([
             int(i) for i in parsed_version.split('-', 1)[0].split('.')
         ])
-        if parsed_version_info != __version_info__:
+        if parsed_version_info and parsed_version_info > __version_info__:
+            self.skipTest(
+                'We\'re likely about to release a new version. '
+                'This test would fail. {0!r} > {1!r}'.format(
+                    parsed_version_info, __version_info__
+                )
+            )
+        elif parsed_version_info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '
