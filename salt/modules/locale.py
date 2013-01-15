@@ -3,7 +3,6 @@ Module for managing locales on posix-like systems.
 '''
 
 # Import python libs
-import os
 import logging
 
 log = logging.getLogger(__name__)
