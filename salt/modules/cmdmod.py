@@ -10,7 +10,6 @@ import logging
 import os
 import shutil
 import subprocess
-import sys
 from functools import partial
 
 # Import salt libs
