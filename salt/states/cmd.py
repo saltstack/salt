@@ -594,7 +594,8 @@ def call(name, func, args=(), kws=None,
         kws = {}
     result = func(*args, **kws)
     if isinstance(result, dict):
-        return result 
+        ret.update(result)
+        return ret
     elif isinstance(result, basestring) and stateful:
         return _reinterpreted_state(result)
     else:
