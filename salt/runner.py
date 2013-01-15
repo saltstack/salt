@@ -3,7 +3,6 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-import sys
 import inspect
 
 # Import salt libs
@@ -47,7 +46,7 @@ class RunnerClient(object):
         self._verify_fun(fun)
         aspec = inspect.getargspec(self.functions[fun])
         if aspec[2]:
-            return self.functions[fun](*arg, **kwargs)
+            return self.functions[fun](*arg, **kwarg)
         else:
             return self.functions[fun](*arg)
 
