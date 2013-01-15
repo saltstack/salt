@@ -9,6 +9,7 @@ i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 
 # Import python libs
 import logging
+import re
 
 log = logging.getLogger(__name__)
 
@@ -88,6 +89,47 @@ def available_version(*names):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
+
+def _get_upgradable():
+    '''
+    Utility function to get upgradable packages
+
+    Sample return data:
+    { 'pkgname': '1.2.3-45', ... }
+    '''
+
+    cmd = 'emerge --pretend --update --newuse --deep --with-bdeps=y world'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    rexp = re.compile('(?m)^\[.+\] '
+                      '([^ ]+/[^ ]+)'    # Package string
+                      '-'
+                      '([0-9]+[^ ]+)'          # Version
+                      '.*$')
+    keys = ['name', 'version']
+    _get = lambda l, k: l[keys.index(k)]
+
+    upgrades = rexp.findall(out)
+
+    ret = {}
+    for line in upgrades:
+        name = _get(line, 'name')
+        version = _get(line, 'version')
+        ret[name] = version
+
+    return ret
+
+
+def list_upgrades():
+    '''
+    List all available package upgrades.
+
+    CLI Example::
+
+        salt '*' pkg.list_upgrades
+    '''
+    return _get_upgradable()
 
 
 def upgrade_available(name):
