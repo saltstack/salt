@@ -120,6 +120,7 @@ import copy
 import json
 import shlex
 import logging
+import sys
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
@@ -563,6 +564,48 @@ def script(name,
 
     finally:
         os.setegid(pgid)
+
+
+def call(name, func, args=(), kws=None,
+         onlyif=None,
+         unless=None,
+         stateful=False,
+         **kwargs):
+    '''
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    cmd_kwargs = {'cwd': kwargs.get('cwd'),
+                  'runas': kwargs.get('user'),
+                  'shell': kwargs.get('shell') or __grains__['shell'],
+                  'env': kwargs.get('env')}
+    pgid = os.getegid()
+    try:
+        cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None, None)
+        if isinstance(cret, dict):
+            ret.update(cret)
+            return ret
+    finally:
+        os.setegid(pgid)
+    if not kws:
+        kws = {}
+    result = func(*args, **kws)
+    if isinstance(result, dict):
+        ret.update(result)
+        return ret
+    elif isinstance(result, basestring) and stateful:
+        return _reinterpreted_state(result)
+    else:
+        # result must be json serializable else we get an error
+        ret['changes'] = {'retval': result}
+        ret['result'] = True if result is None else bool(result)
+        if isinstance(result, basestring):
+            ret['comment'] = result
+        return ret
+            
 
 
 def mod_watch(name, **kwargs):
