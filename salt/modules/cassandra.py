@@ -18,6 +18,12 @@ log = logging.getLogger(__name__)
 HAS_PYCASSA = False
 try:
     from pycassa.system_manager import SystemManager
+
+    # Verify that Cassandra and nodetool are actually installed
+    nodetool = __salt__['config.option']('cassandra.nodetool')
+    host = __salt__['config.option']('cassandra.host')
+    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
+
     HAS_PYCASSA = True
 except ImportError:
     pass
@@ -33,10 +39,6 @@ def __virtual__():
     '''
     if not HAS_PYCASSA:
         return False
-
-    nodetool = __salt__['config.option']('cassandra.nodetool')
-    host = __salt__['config.option']('cassandra.host')
-    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
 
     if nodetool and host and thrift_port:
         return 'cassandra'
