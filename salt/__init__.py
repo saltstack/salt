@@ -7,9 +7,9 @@ import os
 import sys
 import logging
 
-# Import salt libs, the try block bypasses an issue at build time so that
-# modules don't cause the build to fail
-from salt.version import __version__
+# Import salt libs, the try block below bypasses an issue at build time so
+# that modules don't cause the build to fail
+from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
 
 try:
@@ -21,33 +21,42 @@ except ImportError as e:
         raise
 
 
+logger = logging.getLogger(__name__)
+
+
 class Master(parsers.MasterOptionParser):
     '''
     Creates a master server
     '''
 
-    def start(self):
+    def prepare(self):
         '''
-        Run the sequence to start a salt master server
+        Run the preparation sequence required to start a salt master server.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
         '''
         self.parse_args()
 
         try:
             if self.config['verify_env']:
-                verify_env([
-                    self.config['pki_dir'],
-                    os.path.join(self.config['pki_dir'], 'minions'),
-                    os.path.join(self.config['pki_dir'], 'minions_pre'),
-                    os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                    self.config['cachedir'],
-                    os.path.join(self.config['cachedir'], 'jobs'),
-                    os.path.join(self.config['cachedir'], 'proc'),
-                    self.config['sock_dir'],
-                    self.config['token_dir'],
-                ],
-                self.config['user'],
-                permissive=self.config['permissive_pki_access'],
-                pki_dir=self.config['pki_dir'],
+                verify_env(
+                    [
+                        self.config['pki_dir'],
+                        os.path.join(self.config['pki_dir'], 'minions'),
+                        os.path.join(self.config['pki_dir'], 'minions_pre'),
+                        os.path.join(self.config['pki_dir'],
+                                     'minions_rejected'),
+                        self.config['cachedir'],
+                        os.path.join(self.config['cachedir'], 'jobs'),
+                        os.path.join(self.config['cachedir'], 'proc'),
+                        self.config['sock_dir'],
+                        self.config['token_dir'],
+                    ],
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir'],
                 )
                 if (not self.config['log_file'].startswith('tcp://') or
                     not self.config['log_file'].startswith('udp://') or
@@ -61,7 +70,7 @@ class Master(parsers.MasterOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logging.getLogger(__name__).warn('Setting up the Salt Master')
+        logger.warn('Setting up the Salt Master')
 
         if not verify_socket(self.config['interface'],
                              self.config['publish_port'],
@@ -71,14 +80,33 @@ class Master(parsers.MasterOptionParser):
 
         # Late import so logging works correctly
         import salt.master
-        master = salt.master.Master(self.config)
+        self.master = salt.master.Master(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
+
+    def start(self):
+        '''
+        Start the actual master.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        self.prepare()
         if check_user(self.config['user']):
             try:
-                master.start()
+                self.master.start()
             except salt.master.MasterExit:
+                self.shutdown()
+            finally:
                 sys.exit()
+
+    def shutdown(self):
+        '''
+        If sub-classed, run any shutdown operations on this method.
+        '''
 
 
 class Minion(parsers.MinionOptionParser):
@@ -86,27 +114,33 @@ class Minion(parsers.MinionOptionParser):
     Create a minion server
     '''
 
-    def start(self):
+    def prepare(self):
         '''
-        Execute this method to start up a minion.
+        Run the preparation sequence required to start a salt minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
         '''
         self.parse_args()
 
         try:
             if self.config['verify_env']:
                 confd = os.path.join(
-                        os.path.dirname(self.config['conf_file']),
-                        'minion.d')
-                verify_env([
-                    self.config['pki_dir'],
-                    self.config['cachedir'],
-                    self.config['sock_dir'],
-                    self.config['extension_modules'],
-                    confd,
-                ],
-                self.config['user'],
-                permissive=self.config['permissive_pki_access'],
-                pki_dir=self.config['pki_dir'],
+                    os.path.dirname(self.config['conf_file']),
+                    'minion.d'
+                )
+                verify_env(
+                    [
+                        self.config['pki_dir'],
+                        self.config['cachedir'],
+                        self.config['sock_dir'],
+                        self.config['extension_modules'],
+                        confd,
+                    ],
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir'],
                 )
                 if (not self.config['log_file'].startswith('tcp://') or
                     not self.config['log_file'].startswith('udp://') or
@@ -123,9 +157,10 @@ class Minion(parsers.MinionOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        log = logging.getLogger(__name__)
-        log.warn(
-            'Setting up the Salt Minion "{0}"'.format( self.config['id'])
+        logger.warn(
+            'Setting up the Salt Minion "{0}"'.format(
+                self.config['id']
+            )
         )
         migrations.migrate_paths(self.config)
         # Late import so logging works correctly
@@ -135,14 +170,33 @@ class Minion(parsers.MinionOptionParser):
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
+        self.minion = salt.minion.Minion(self.config)
+        self.set_pidfile()
+
+    def start(self):
+        '''
+        Start the actual minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        self.prepare()
         try:
-            minion = salt.minion.Minion(self.config)
-            self.set_pidfile()
             if check_user(self.config['user']):
-                minion.tune_in()
+                self.minion.tune_in()
         except KeyboardInterrupt:
-            log.warn('Stopping the Salt Minion')
+            logger.warn('Stopping the Salt Minion')
+            self.shutdown()
+        finally:
             raise SystemExit('\nExiting on Ctrl-c')
+
+    def shutdown(self):
+        '''
+        If sub-classed, run any shutdown operations on this method.
+        '''
 
 
 class Syndic(parsers.SyndicOptionParser):
@@ -150,22 +204,27 @@ class Syndic(parsers.SyndicOptionParser):
     Create a syndic server
     '''
 
-    def start(self):
+    def prepare(self):
         '''
-        Execute this method to start up a syndic.
+        Run the preparation sequence required to start a salt syndic minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
         '''
         self.parse_args()
         try:
             if self.config['verify_env']:
-                verify_env([
-                    self.config['pki_dir'],
-                    self.config['cachedir'],
-                    self.config['sock_dir'],
-                    self.config['extension_modules'],
-                ],
-                self.config['user'],
-                permissive=self.config['permissive_pki_access'],
-                pki_dir=self.config['pki_dir'],
+                verify_env(
+                    [
+                        self.config['pki_dir'],
+                        self.config['cachedir'],
+                        self.config['sock_dir'],
+                        self.config['extension_modules'],
+                    ],
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir'],
                 )
                 if (not self.config['log_file'].startswith('tcp://') or
                     not self.config['log_file'].startswith('udp://') or
@@ -179,8 +238,7 @@ class Syndic(parsers.SyndicOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        log = logging.getLogger(__name__)
-        log.warn(
+        logger.warn(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
             )
@@ -189,12 +247,30 @@ class Syndic(parsers.SyndicOptionParser):
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()
+        self.syndic = salt.minion.Syndic(self.config)
         self.set_pidfile()
 
+    def start(self):
+        '''
+        Start the actual syndic.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        self.prepare()
         if check_user(self.config['user']):
             try:
-                syndic = salt.minion.Syndic(self.config)
-                syndic.tune_in()
+                self.syndic.tune_in()
             except KeyboardInterrupt:
-                log.warn('Stopping the Salt Syndic Minion')
+                logger.warn('Stopping the Salt Syndic Minion')
+                self.shutdown()
+            finally:
                 raise SystemExit('\nExiting on Ctrl-c')
+
+    def shutdown(self):
+        '''
+        If sub-classed, run any shutdown operations on this method.
+        '''
