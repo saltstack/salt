@@ -632,7 +632,7 @@ class OutputOptionsMixIn(object):
                         # XXX: CLEAN THIS CODE WHEN 0.13 is about to come out
                         self.error(
                             'The option {0} was deprecated. Please use '
-                            ''\'--out {1}\' instead.'.format(
+                            '\'--out {1}\' instead.'.format(
                                 opt.get_opt_string(),
                                 opt.dest.split('_', 1)[0]
                             )
