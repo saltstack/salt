@@ -33,24 +33,16 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def test_default_output(self):
         out = self.run_call('-l quiet test.fib 3')
 
-        expect = ['local: !!python/tuple',
-                  '- - 0',
-                  '  - 1',
-                  '  - 1',
-                  '  - 2']
+        expect = ['local:',
+                  '    - 0',
+                  '    - 1',
+                  '    - 1']
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
-        out = self.run_call('-l quiet --text-out test.fib 3')
-        if version.__version_info__ < (0, 12):
-            expect = [
-                "WARNING: The option --text-out is deprecated. Please "
-                "consider using '--out text' instead."
-            ]
-        else:
-            expect = []
+        out = self.run_call('-l quiet --out txt test.fib 3')
 
-        expect += [
+        expect = [
             'local: ([0, 1, 1, 2]'
         ]
 
@@ -102,7 +94,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
         )
         try:
-            self.assertIn('local: foo', ret)
+            self.assertIn('local:', ret)
         except AssertionError:
             if os.path.isfile(minion_config_file):
                 os.unlink(minion_config_file)
@@ -157,7 +149,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             timeout=15
         )
         try:
-            self.assertIn('local: foo', ret)
+            self.assertIn('local:', ret)
         except AssertionError:
             if os.path.isfile(minion_config_file):
                 os.unlink(minion_config_file)
@@ -179,7 +171,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             timeout=15
         )
         try:
-            self.assertIn('local: foo', ret)
+            self.assertIn('local:', ret)
         finally:
             if os.path.isfile(minion_config_file):
                 os.unlink(minion_config_file)

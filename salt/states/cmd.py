@@ -32,7 +32,7 @@ syslog if there is no disk space:
 
 Note that when executing a command or script, the state(ie, changed or not) of
 the command is unknown to Salt's state system. Therefore, by default, the
-``cmd`` state assumes that any command execution results in a changed state. 
+``cmd`` state assumes that any command execution results in a changed state.
 
 This means that if a ``cmd`` state is watched by another state then the
 state that's watching will always be executed due to the `changed` state in
@@ -48,7 +48,7 @@ a simple protocol described below:
     must be a string of key=value pairs delimited by spaces(no spaces on the
     sides of ``=``).
 
-    If it's JSON then it must be a JSON object(ie, {}). 
+    If it's JSON then it must be a JSON object(ie, {}).
     If it's key=value pairs then quoting may be used to include spaces.
     (Python's shlex module is used to parse the key=value string)
 
@@ -82,7 +82,7 @@ a simple protocol described below:
             - name: /path/to/myscript
             - cwd: /
             - stateful: true
-        
+
         Run only if myscript changed something:
           cmd.wait:
             - name: echo hello
@@ -92,6 +92,23 @@ a simple protocol described below:
 
     Note that if the ``cmd.wait`` state also specfies ``stateful: true``
     it can then be watched by some other states as well.
+
+``cmd.wait`` is not restricted to watching only cmd states. For example
+it can also watch a git state for changes
+
+.. code-block:: yaml
+
+    # Watch for changes to a git repo and rebuild the project on updates
+    my-project:
+      git.latest:
+        - name: git@github.com/repo/foo
+        - target: /opt/foo
+        - rev: master
+      cmd.wait:
+        - name: make install
+        - cwd: /opt/foo
+        - watch:
+          - git: my-project
 
 
 '''
@@ -103,10 +120,10 @@ import copy
 import json
 import shlex
 import logging
+import sys
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.state
 
 log = logging.getLogger(__name__)
 
@@ -122,49 +139,49 @@ def _reinterpreted_state(state):
     out = ret.get('stdout')
     if not out:
         if ret.get('stderr'):
-            state['comment'] = ret['stderr'] 
+            state['comment'] = ret['stderr']
         return state
 
     is_json = False
     try:
-        d = json.loads(out)
-        if not isinstance(d, dict):
+        data = json.loads(out)
+        if not isinstance(data, dict):
             return _failout(state,
                        'script JSON output must be a JSON object(ie, {})!')
         is_json = True
     except Exception:
         idx = out.rstrip().rfind('\n')
         if idx != -1:
-            out = out[idx+1:]
-        d = {}
+            out = out[idx + 1:]
+        data = {}
         try:
             for item in shlex.split(out):
-                k, v = item.split('=')
-                d[k] = v
+                key, val = item.split('=')
+                data[key] = val
         except ValueError:
             return _failout(state,
                 'Failed parsing script output! '
                 'Stdout must be JSON or a line of name=value pairs.')
 
-    changed = _is_true(d.get('changed', 'no'))
-    
-    if 'comment' in d:
-        state['comment'] = d['comment']
-        del d['comment']
+    changed = _is_true(data.get('changed', 'no'))
+
+    if 'comment' in data:
+        state['comment'] = data['comment']
+        del data['comment']
 
     if changed:
-        for k in ret:
-            d.setdefault(k, ret[k])
+        for key in ret:
+            data.setdefault(key, ret[key])
 
         # if stdout is the state output in json, don't show it.
         # otherwise it contains the one line name=value pairs, strip it.
-        d['stdout'] = '' if is_json else d.get('stdout', '')[:idx]
-        state['changes'] = d
+        data['stdout'] = '' if is_json else data.get('stdout', '')[:idx]
+        state['changes'] = data
 
     #FIXME: if it's not changed but there's stdout and/or stderr then those
     #       won't be shown as the function output. (though, they will be shown
     #       inside INFO logs).
-    return state        
+    return state
 
 
 def _failout(state, msg):
@@ -173,12 +190,12 @@ def _failout(state, msg):
     return state
 
 
-def _is_true(v):
-    if v and str(v).lower() in ('true', 'yes', '1'):
+def _is_true(val):
+    if val and str(val).lower() in ('true', 'yes', '1'):
         return True
-    elif str(v).lower() in ('false', 'no', '0'):
+    elif str(val).lower() in ('false', 'no', '0'):
         return False
-    raise ValueError('Failed parsing boolean value: {0}'.format(v))
+    raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
 def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
@@ -248,7 +265,7 @@ def wait(name,
 
     shell
         The shell to use for execution, defaults to /bin/sh
-    
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -274,18 +291,18 @@ def wait_script(name,
     '''
     Download a script from a remote source and execute it only if a watch
     statement calls it.
-    
+
     source
         The source script being downloaded to the minion, this source script is
-        hosted on the salt master server.  If the file is located on the master 
-        in the directory named spam, and is called eggs, the source string is 
+        hosted on the salt master server.  If the file is located on the master
+        in the directory named spam, and is called eggs, the source string is
         salt://spam/eggs
-    
+
     template
         If this setting is applied then the named templating engine will be
         used to render the downloaded file, currently jinja, mako, and wempy
         are supported
-    
+
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -310,11 +327,11 @@ def wait_script(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
-    
+
     env
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
-    
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -362,7 +379,7 @@ def run(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
-    
+
     env
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
@@ -384,8 +401,8 @@ def run(name,
         _env = {}
         for var in env.split():
             try:
-                k, v = var.split('=')
-                _env[k] = v
+                key, val = var.split('=')
+                _env[key] = val
             except ValueError:
                 ret['comment'] = 'Invalid enviromental var: "{0}"'.format(var)
                 return ret
@@ -408,8 +425,8 @@ def run(name,
         if not __opts__['test']:
             try:
                 cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
-            except CommandExecutionError as e:
-                ret['comment'] = str(e)
+            except CommandExecutionError as err:
+                ret['comment'] = str(err)
                 return ret
 
             ret['changes'] = cmd_all
@@ -439,17 +456,18 @@ def script(name,
     '''
     Download a script from a remote source and execute it. The name can be the
     source or the source value can be defined.
+
     source
         The source script being downloaded to the minion, this source script is
-        hosted on the salt master server.  If the file is located on the master 
-        in the directory named spam, and is called eggs, the source string is 
+        hosted on the salt master server.  If the file is located on the master
+        in the directory named spam, and is called eggs, the source string is
         salt://spam/eggs
-    
+
     template
         If this setting is applied then the named templating engine will be
         used to render the downloaded file, currently jinja, mako, and wempy
         are supported
-    
+
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -474,11 +492,11 @@ def script(name,
 
     shell
         The shell to use for execution, defaults to the shell grain
-    
+
     env
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
-    
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -532,8 +550,8 @@ def script(name,
         # Wow, we passed the test, run this sucker!
         try:
             cmd_all = __salt__['cmd.script'](source, **cmd_kwargs)
-        except CommandExecutionError as e:
-            ret['comment'] = str(e)
+        except CommandExecutionError as err:
+            ret['comment'] = str(err)
             return ret
 
         ret['changes'] = cmd_all
@@ -546,6 +564,49 @@ def script(name,
 
     finally:
         os.setegid(pgid)
+
+
+def call(name, func, args=(), kws=None,
+         onlyif=None,
+         unless=None,
+         stateful=False,
+         **kwargs):
+    '''
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    cmd_kwargs = {'cwd': kwargs.get('cwd'),
+                  'runas': kwargs.get('user'),
+                  'shell': kwargs.get('shell') or __grains__['shell'],
+                  'env': kwargs.get('env')}
+    pgid = os.getegid()
+    try:
+        cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None, None)
+        if isinstance(cret, dict):
+            ret.update(cret)
+            return ret
+    finally:
+        os.setegid(pgid)
+    if not kws:
+        kws = {}
+    result = func(*args, **kws)
+    if isinstance(result, dict):
+        ret.update(result)
+        return ret
+    elif isinstance(result, basestring) and stateful:
+        return _reinterpreted_state(result)
+    else:
+        # result must be json serializable else we get an error
+        ret['changes'] = {'retval': result}
+        ret['result'] = True if result is None else bool(result)
+        if isinstance(result, basestring):
+            ret['comment'] = result
+        return ret
+            
+
 
 def mod_watch(name, **kwargs):
     '''
@@ -570,4 +631,3 @@ def mod_watch(name, **kwargs):
                            kwargs['sfun']
                            ),
             'result': False}
-

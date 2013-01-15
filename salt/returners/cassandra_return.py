@@ -20,9 +20,9 @@ import logging
 # Import third party libs
 try:
     import pycassa
-    has_pycassa = True
+    HAS_PYCASSA = True
 except ImportError:
-    has_pycassa = False
+    HAS_PYCASSA = False
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ __opts__ = {'cassandra.servers': ['localhost:9160'],
 
 
 def __virtual__():
-    if not has_pycassa:
+    if not HAS_PYCASSA:
         return False
     return 'cassandra'
 
@@ -48,8 +48,8 @@ def returner(ret):
 
     pool = pycassa.ConnectionPool(__opts__['cassandra.keyspace'],
                                   __opts__['cassandra.servers'])
-    cf = pycassa.ColumnFamily(pool, __opts__['cassandra.column_family'],
-                              write_consistency_level=consistency_level)
+    ccf = pycassa.ColumnFamily(pool, __opts__['cassandra.column_family'],
+                               write_consistency_level=consistency_level)
 
     columns = {'fun': ret['fun'],
                'id': ret['id']}
@@ -60,4 +60,4 @@ def returner(ret):
         columns['return'] = str(ret['return'])
 
     log.debug(columns)
-    cf.insert(ret['jid'], columns)
+    ccf.insert(ret['jid'], columns)

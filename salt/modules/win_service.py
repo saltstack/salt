@@ -4,16 +4,17 @@ Windows Service module.
 
 # Import python libs
 import time
+import salt.utils
 
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         return 'service'
-    else:
-        return False
+    return False
+
 
 def get_enabled():
     '''
@@ -40,6 +41,7 @@ def get_enabled():
             if 'AUTO_START' in line:
                 ret.add(service)
     return sorted(ret)
+
 
 def get_disabled():
     '''
@@ -69,6 +71,7 @@ def get_disabled():
                 ret.add(service)
     return sorted(ret)
 
+
 def get_all():
     '''
     Return all installed services
@@ -78,6 +81,7 @@ def get_all():
         salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
+
 
 def start(name):
     '''
@@ -143,6 +147,7 @@ def status(name, sig=None):
             return getsid(name)
     return ''
 
+
 def getsid(name):
     '''
     Return the sid for this windows service
@@ -160,6 +165,7 @@ def getsid(name):
                 return comps[1].strip()
             else:
                 return None
+
 
 def enable(name, **kwargs):
     '''
@@ -194,6 +200,7 @@ def enabled(name):
         salt '*' service.enabled <service name>
     '''
     return name in get_enabled()
+
 
 def disabled(name):
     '''

@@ -8,23 +8,23 @@ Setup of Python virtualenv sandboxes.
 import logging
 import os
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
 
 
 def managed(name,
-        venv_bin='virtualenv',
-        requirements='',
-        no_site_packages=False,
-        system_site_packages=False,
-        distribute=False,
-        clear=False,
-        python='',
-        extra_search_dir='',
-        never_download=False,
-        prompt='',
-        __env__='base',
-        runas=None,
-        cwd=None):
+            venv_bin='virtualenv',
+            requirements='',
+            no_site_packages=False,
+            system_site_packages=False,
+            distribute=False,
+            clear=False,
+            python='',
+            extra_search_dir='',
+            never_download=False,
+            prompt='',
+            __env__='base',
+            runas=None,
+            cwd=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -41,7 +41,7 @@ def managed(name,
     .. code-block:: yaml
 
         /var/www/myvirtualenv.com:
-          virtualenv.manage:
+          virtualenv.managed:
             - no_site_packages: True
             - requirements: salt://REQUIREMENTS.txt
     '''
@@ -57,14 +57,14 @@ def managed(name,
 
     # Bail out early if the specified requirements file can't be found
     if requirements and requirements.startswith('salt://'):
-        cached_requirements = __salt__['cp.is_cached'](requirements)
+        cached_requirements = __salt__['cp.is_cached'](requirements, __env__)
         if not cached_requirements:
             # It's not cached, let's cache it.
-            cached_requirements = __salt__['cp.cache_file'](requirements)
+            cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
         # Check if the master version has changed.
-        if __salt__['cp.hash_file'](requirements) != \
-                __salt__['cp.hash_file'](cached_requirements):
-                    cached_requirements = __salt__['cp.cache_file'](requirements)
+        if __salt__['cp.hash_file'](requirements, __env__) != \
+                __salt__['cp.hash_file'](cached_requirements, __env__):
+            cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
         if not cached_requirements:
             ret.update({
                 'result': False,
@@ -124,7 +124,7 @@ def managed(name,
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name))
         _ret = __salt__['pip.install'](
-            requirements=requirements, bin_env=name, runas=runas, cwd=cwd
+            requirements=requirements, bin_env=name, runas=runas, cwd=cwd, __env__=__env__
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
@@ -143,4 +143,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed
+manage = managed  # pylint: disable-msg=C0103

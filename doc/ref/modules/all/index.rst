@@ -18,6 +18,7 @@ Full list of builtin execution modules
     :template: autosummary.rst.tmpl
 
     aliases
+    alternatives
     apache
     apt
     archive
@@ -39,6 +40,7 @@ Full list of builtin execution modules
     disk
     djangomod
     ebuild
+    eix
     event
     extfs
     file
@@ -48,6 +50,7 @@ Full list of builtin execution modules
     freebsdservice
     freebsd_sysctl
     gem
+    gentoolkitmod
     gentoo_service
     git
     glance
@@ -62,9 +65,13 @@ Full list of builtin execution modules
     kmod
     kvm_hyper
     launchctl
+    layman
     ldapmod
+    linux_acl
+    linux_lvm
     linux_sysctl
     locale
+    makeconf
     mdadm
     mongodb
     monit
@@ -116,6 +123,8 @@ Full list of builtin execution modules
     status
     supervisord
     svn
+    sysbench
+    sysmod
     systemd
     test
     timezone
@@ -132,6 +141,7 @@ Full list of builtin execution modules
     win_pkg
     win_service
     win_shadow
+    win_status
     win_useradd
     yumpkg5
     yumpkg

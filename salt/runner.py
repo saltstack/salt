@@ -3,7 +3,7 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-import sys
+import inspect
 
 # Import salt libs
 import salt.loader
@@ -37,13 +37,18 @@ class RunnerClient(object):
 
         return dict(ret)
 
-    def cmd(self, fun, arg):
+    def cmd(self, fun, arg, kwarg=None):
         '''
         Execute a runner with the given arguments
         '''
+        if not isinstance(kwarg, dict):
+            kwarg = {}
         self._verify_fun(fun)
-        # pylint: disable-msg=W0142
-        return self.functions[fun](*arg)
+        aspec = inspect.getargspec(self.functions[fun])
+        if aspec[2]:
+            return self.functions[fun](*arg, **kwarg)
+        else:
+            return self.functions[fun](*arg)
 
     def low(self, fun, low):
         '''
@@ -77,7 +82,7 @@ class Runner(RunnerClient):
         else:
             try:
                 return super(Runner, self).cmd(
-                        self.opts['fun'], self.opts['arg'])
+                        self.opts['fun'], self.opts['arg'], self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 print ret

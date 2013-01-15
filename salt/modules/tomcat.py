@@ -6,6 +6,14 @@ Support for Tomcat
 import glob
 
 
+def __virtual__():
+    '''
+    Only load tomcat if it is installed
+    '''
+    if __catalina_home():
+        return 'tomcat'
+    return False
+
 def __catalina_home():
     '''
     Tomcat paths differ depending on packaging

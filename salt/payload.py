@@ -23,7 +23,7 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3])) is None:
+    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
@@ -32,8 +32,8 @@ except ImportError:
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
-        log_format = '[%(levelname)-8s] %(message)s'
-        salt.log.setup_console_logger(log_format=log_format)
+        LOG_FORMAT = '[%(levelname)-8s] %(message)s'
+        salt.log.setup_console_logger(log_format=LOG_FORMAT)
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         sys.exit(1)
 
@@ -171,12 +171,15 @@ class SREQ(object):
 
     def destroy(self):
         for socket in self.poller.sockets.keys():
-            if not socket.closed:
+            if socket.closed is False:
+                socket.setsockopt(zmq.LINGER, 1)
                 socket.close()
             self.poller.unregister(socket)
-        if not self.socket.closed:
+        if self.socket.closed is False:
+            self.socket.setsockopt(zmq.LINGER, 1)
             self.socket.close()
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()

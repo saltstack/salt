@@ -216,9 +216,9 @@ def present(
     # Log a warning for all groups specified in both "groups" and
     # "optional_groups" lists.
     if groups and optional_groups:
-        for x in set(groups).intersection(optional_groups):
+        for isected in set(groups).intersection(optional_groups):
             log.warning('Group "{0}" specified in both groups and '
-                        'optional_groups for user {1}'.format(x, name))
+                        'optional_groups for user {1}'.format(isected, name))
 
     if fullname is None:
         fullname = ''

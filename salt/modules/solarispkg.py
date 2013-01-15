@@ -4,9 +4,13 @@ Package support for Solaris
 
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.utils
+
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -48,21 +52,21 @@ def _write_adminfile(kwargs):
     basedir = kwargs.get('basedir', 'default')
 
     # Make tempfile to hold the adminfile contents.
-    fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+    fd_, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
     # Write to file then close it.
-    os.write(fd, 'email={0}\n'.format(email))
-    os.write(fd, 'instance={0}\n'.format(instance))
-    os.write(fd, 'partial={0}\n'.format(partial))
-    os.write(fd, 'runlevel={0}\n'.format(runlevel))
-    os.write(fd, 'idepend={0}\n'.format(idepend))
-    os.write(fd, 'rdepend={0}\n'.format(rdepend))
-    os.write(fd, 'space={0}\n'.format(space))
-    os.write(fd, 'setuid={0}\n'.format(setuid))
-    os.write(fd, 'conflict={0}\n'.format(conflict))
-    os.write(fd, 'action={0}\n'.format(action))
-    os.write(fd, 'basedir={0}\n'.format(basedir))
-    os.close(fd)
+    os.write(fd_, 'email={0}\n'.format(email))
+    os.write(fd_, 'instance={0}\n'.format(instance))
+    os.write(fd_, 'partial={0}\n'.format(partial))
+    os.write(fd_, 'runlevel={0}\n'.format(runlevel))
+    os.write(fd_, 'idepend={0}\n'.format(idepend))
+    os.write(fd_, 'rdepend={0}\n'.format(rdepend))
+    os.write(fd_, 'space={0}\n'.format(space))
+    os.write(fd_, 'setuid={0}\n'.format(setuid))
+    os.write(fd_, 'conflict={0}\n'.format(conflict))
+    os.write(fd_, 'action={0}\n'.format(action))
+    os.write(fd_, 'basedir={0}\n'.format(basedir))
+    os.close(fd_)
 
     return adminfile
 
@@ -90,32 +94,68 @@ def list_pkgs():
     return pkg
 
 
-def version(name):
+def available_version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
-    CLI Example::
-
-        salt '*' pkg.version <package name>
-    '''
-    cmd = '/usr/bin/pkgparam {0} VERSION 2> /dev/null'.format(name)
-    namever = __salt__['cmd.run'](cmd)
-    if namever:
-        return namever
-    return ''
-
-
-def available_version(name):
-    '''
-    The available version of the package in the repository On Solaris with the
-    pkg module this always returns the version that is installed since pkgadd
-    does not have the concept of a repository.
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
+
+    NOTE: As package repositories are not presently supported for Solaris
+    pkgadd, this function will always return an empty string for a given
+    package.
     '''
-    return version(name)
+    ret = {}
+    if len(names) == 0:
+        return ''
+    for name in names:
+        ret[name] = ''
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return available_version(name) != ''
+
+
+def version(*names):
+    '''
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    CLI Example::
+
+        salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
+    '''
+    pkgs = list_pkgs()
+    if len(names) == 0:
+        return ''
+    elif len(names) == 1:
+        return pkgs.get(names[0], '')
+    else:
+        ret = {}
+        for name in names:
+            ret[name] = pkgs.get(name, '')
+        return ret
 
 
 def install(name=None, refresh=False, sources=None, **kwargs):
@@ -131,7 +171,7 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example, installing a datastream pkg that already exists on the
     minion::
@@ -219,8 +259,8 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     "sources" parameter.
     '''
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](
-            name,kwargs.get('pkgs'),sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, kwargs.get('pkgs'), sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -235,14 +275,14 @@ def install(name=None, refresh=False, sources=None, **kwargs):
 
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
-    # Only makes sense in a global zone but works fine in non-globals. 
+    # Only makes sense in a global zone but works fine in non-globals.
     if kwargs.get('current_zone_only') == 'True':
         cmd += '-G '
 
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr','')
+        stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr', '')
         if stderr:
             log.error(stderr)
 
@@ -253,7 +293,7 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
 
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(name, **kwargs):
@@ -312,21 +352,21 @@ def remove(name, **kwargs):
         basedir = kwargs.get('basedir', 'default')
 
         # Make tempfile to hold the adminfile contents.
-        fd, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
+        fd_, adminfile = salt.utils.mkstemp(prefix="salt-", close_fd=False)
 
         # Write to file then close it.
-        os.write(fd, 'email={0}\n'.format(email))
-        os.write(fd, 'instance={0}\n'.format(instance))
-        os.write(fd, 'partial={0}\n'.format(partial))
-        os.write(fd, 'runlevel={0}\n'.format(runlevel))
-        os.write(fd, 'idepend={0}\n'.format(idepend))
-        os.write(fd, 'rdepend={0}\n'.format(rdepend))
-        os.write(fd, 'space={0}\n'.format(space))
-        os.write(fd, 'setuid={0}\n'.format(setuid))
-        os.write(fd, 'conflict={0}\n'.format(conflict))
-        os.write(fd, 'action={0}\n'.format(action))
-        os.write(fd, 'basedir={0}\n'.format(basedir))
-        os.close(fd)
+        os.write(fd_, 'email={0}\n'.format(email))
+        os.write(fd_, 'instance={0}\n'.format(instance))
+        os.write(fd_, 'partial={0}\n'.format(partial))
+        os.write(fd_, 'runlevel={0}\n'.format(runlevel))
+        os.write(fd_, 'idepend={0}\n'.format(idepend))
+        os.write(fd_, 'rdepend={0}\n'.format(rdepend))
+        os.write(fd_, 'space={0}\n'.format(space))
+        os.write(fd_, 'setuid={0}\n'.format(setuid))
+        os.write(fd_, 'conflict={0}\n'.format(conflict))
+        os.write(fd_, 'action={0}\n'.format(action))
+        os.write(fd_, 'basedir={0}\n'.format(basedir))
+        os.close(fd_)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
@@ -358,3 +398,16 @@ def purge(name, **kwargs):
         salt '*' pkg.purge <package name>
     '''
     return remove(name, **kwargs)
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)

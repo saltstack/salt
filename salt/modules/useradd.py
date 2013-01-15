@@ -9,10 +9,10 @@ try:
 except ImportError:
     pass
 import logging
-from copy import deepcopy
+import copy
 
 # Import salt libs
-from salt._compat import string_types, callable
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +20,15 @@ log = logging.getLogger(__name__)
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
+    and remove some of the functionality on OS X
     '''
     import sys
+    from salt._compat import callable
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-
             if callable(getattr(mod, attr)):
-                if not attr in ('getent', 'info', 'list_groups', '__virtual__'):
+                if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
@@ -41,7 +42,8 @@ def _get_gecos(name):
         return {}
     else:
         # Assign empty strings for any unspecified trailing GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
+        while len(gecos_field) < 4:
+            gecos_field.append('')
         return {'fullname': str(gecos_field[0]),
                 'roomnumber': str(gecos_field[1]),
                 'workphone': str(gecos_field[2]),
@@ -154,9 +156,14 @@ def getent():
 
         salt '*' user.getent
     '''
+    if 'useradd_getent' in __context__:
+      return __context__['useradd_getent']
+
     ret = []
     for data in pwd.getpwall():
-        ret.append(info(data.pw_name))
+        ret.append(_format_info(data))
+    __context__['useradd_getent'] = ret
+
     return ret
 
 
@@ -274,7 +281,7 @@ def chfullname(name, fullname):
     if not pre_info: return False
     if fullname == pre_info['fullname']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -297,7 +304,7 @@ def chroomnumber(name, roomnumber):
     if not pre_info: return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -320,7 +327,7 @@ def chworkphone(name, workphone):
     if not pre_info: return False
     if workphone == pre_info['workphone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -343,7 +350,7 @@ def chhomephone(name, homephone):
     if not pre_info: return False
     if homephone == pre_info['homephone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -364,21 +371,6 @@ def info(name):
     ret = {}
     try:
         data = pwd.getpwnam(name)
-        ret['gid'] = data.pw_gid
-        ret['groups'] = list_groups(name)
-        ret['home'] = data.pw_dir
-        ret['name'] = data.pw_name
-        ret['passwd'] = data.pw_passwd
-        ret['shell'] = data.pw_shell
-        ret['uid'] = data.pw_uid
-        # Put GECOS info into a list
-        gecos_field = data.pw_gecos.split(',', 3)
-        # Assign empty strings for any unspecified GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
-        ret['fullname'] = gecos_field[0]
-        ret['roomnumber'] = gecos_field[1]
-        ret['workphone'] = gecos_field[2]
-        ret['homephone'] = gecos_field[3]
     except KeyError:
         ret['gid'] = ''
         ret['groups'] = ''
@@ -391,7 +383,31 @@ def info(name):
         ret['roomnumber'] = ''
         ret['workphone'] = ''
         ret['homephone'] = ''
-    return ret
+        return ret
+    else:
+        return _format_info(data)
+
+def _format_info(data):
+    '''
+    Return user information in a pretty way
+    '''
+    # Put GECOS info into a list
+    gecos_field = data.pw_gecos.split(',', 3)
+    # Make sure our list has at least four elements
+    while len(gecos_field) < 4:
+        gecos_field.append('')
+
+    return {'gid': data.pw_gid,
+            'groups': list_groups(data.pw_name,),
+            'home': data.pw_dir,
+            'name': data.pw_name,
+            'passwd': data.pw_passwd,
+            'shell': data.pw_shell,
+            'uid': data.pw_uid,
+            'fullname': gecos_field[0],
+            'roomnumber': gecos_field[1],
+            'workphone': gecos_field[2],
+            'homephone': gecos_field[3]}
 
 
 def list_groups(name):
@@ -403,11 +419,30 @@ def list_groups(name):
         salt '*' user.list_groups foo
     '''
     ugrp = set()
+
     # Add the primary user's group
     ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+
+    # If we already grabbed the group list, it's overkill to grab it again
+    if 'useradd_getgrall' in __context__:
+        groups = __context__['useradd_getgrall']
+    else:
+        groups = grp.getgrall()
+        __context__['useradd_getgrall'] = groups
+
     # Now, all other groups the user belongs to
-    for group in grp.getgrall():
+    for group in groups:
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
 
     return sorted(list(ugrp))
+
+def list_users():
+    '''
+    Return a list of all users
+
+    CLI Example::
+
+        salt '*' user.list_users
+    '''
+    return sorted([user.pw_name for user in pwd.getpwall()])

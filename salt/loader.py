@@ -20,8 +20,8 @@ from salt.template import check_render_pipe_str
 
 log = logging.getLogger(__name__)
 
-salt_base_path = os.path.dirname(salt.__file__)
-loaded_base_name = 'salt.loaded'
+SALT_BASE_PATH = os.path.dirname(salt.__file__)
+LOADED_BASE_NAME = 'salt.loaded'
 
 
 def _create_loader(
@@ -42,7 +42,7 @@ def _create_loader(
     if base_path:
         sys_types = os.path.join(base_path, ext_type)
     else:
-        sys_types = os.path.join(salt_base_path, ext_type)
+        sys_types = os.path.join(SALT_BASE_PATH, ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
     ext_type_types = []
@@ -53,14 +53,14 @@ def _create_loader(
             ext_type_types.extend(opts[ext_type_dirs])
 
     module_dirs = ext_type_types + [ext_types, sys_types]
-    _generate_module('{0}.int'.format(loaded_base_name))
-    _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
-    _generate_module('{0}.ext'.format(loaded_base_name))
-    _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
+    _generate_module('{0}.int'.format(LOADED_BASE_NAME))
+    _generate_module('{0}.int.{1}'.format(LOADED_BASE_NAME, tag))
+    _generate_module('{0}.ext'.format(LOADED_BASE_NAME))
+    _generate_module('{0}.ext.{1}'.format(LOADED_BASE_NAME, tag))
     return Loader(module_dirs, opts, tag)
 
 
-def minion_mods(opts, context=None):
+def minion_mods(opts, context=None, whitelist=None):
     '''
     Returns the minion modules
     '''
@@ -69,7 +69,12 @@ def minion_mods(opts, context=None):
         context = {}
     pack = {'name': '__context__',
             'value': context}
-    functions = load.apply_introspection(load.gen_functions(pack))
+    if not whitelist:
+        whitelist = opts.get('whitelist_modules', None)
+    functions = load.gen_functions(
+                    pack,
+                    whitelist=whitelist
+                )
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -89,14 +94,14 @@ def raw_mod(opts, name, functions):
     return load.gen_module(name, functions)
 
 
-def returners(opts, functions):
+def returners(opts, functions, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def pillars(opts, functions):
@@ -117,12 +122,12 @@ def tops(opts):
     return load.filter_func('top')
 
 
-def wheels(opts):
+def wheels(opts, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
-    return load.gen_functions()
+    return load.gen_functions(whitelist=whitelist)
 
 
 def outputters(opts):
@@ -133,32 +138,41 @@ def outputters(opts):
     return load.filter_func('output')
 
 
-def auth(opts):
+def auth(opts, whitelist=None):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
-    return load.gen_functions()
+    return load.gen_functions(whitelist=whitelist)
 
 
-def states(opts, functions):
+def fileserver(opts, backends):
+    '''
+    Returns the file server modules
+    '''
+    load = _create_loader(opts, 'fileserver', 'fileserver')
+    ret = load.gen_functions(whitelist=backends)
+    return ret
+
+
+def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
-def search(opts, returners):
+def search(opts, returners, whitelist=None):
     '''
     Returns the state modules
     '''
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
-    return load.gen_functions(pack)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def render(opts, functions):
@@ -216,7 +230,7 @@ def call(fun, **kwargs):
     '''
     args = kwargs.get('args', [])
     dirs = kwargs.get('dirs', [])
-    module_dirs = [os.path.join(salt_base_path, 'modules')] + dirs
+    module_dirs = [os.path.join(SALT_BASE_PATH, 'modules')] + dirs
     load = Loader(module_dirs)
     return load.call(fun, args)
 
@@ -242,7 +256,7 @@ def _generate_module(name):
 
 
 def _mod_type(module_path):
-    if module_path.startswith(salt_base_path):
+    if module_path.startswith(SALT_BASE_PATH):
         return 'int'
     return 'ext'
 
@@ -300,16 +314,6 @@ class Loader(object):
                 continue
             mod_opts[key] = val
         return mod_opts
-
-    def get_docs(self, funcs, module=''):
-        '''
-        Return a dict containing all of the doc strings in the functions dict
-        '''
-        docs = {}
-        for fun in funcs:
-            if fun.startswith(module):
-                docs[fun] = funcs[fun].__doc__
-        return docs
 
     def call(self, fun, arg=list()):
         '''
@@ -381,7 +385,7 @@ class Loader(object):
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
                     '{0}.{1}.{2}.{3}'.format(
-                        loaded_base_name, _mod_type(path), self.tag, name
+                        LOADED_BASE_NAME, _mod_type(path), self.tag, name
                     ), fn_, path, desc
                 )
         except ImportError as exc:
@@ -437,7 +441,7 @@ class Loader(object):
             mod.__salt__ = functions
         return funcs
 
-    def gen_functions(self, pack=None, virtual_enable=True):
+    def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -494,7 +498,7 @@ class Loader(object):
                     # cython_enabled is True. Continue...
                     mod = pyximport.load_module(
                         '{0}.{1}.{2}.{3}'.format(
-                            loaded_base_name,
+                            LOADED_BASE_NAME,
                             _mod_type(names[name]),
                             self.tag,
                             name
@@ -504,7 +508,7 @@ class Loader(object):
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
-                            loaded_base_name, _mod_type(path), self.tag, name
+                            LOADED_BASE_NAME, _mod_type(path), self.tag, name
                         ), fn_, path, desc
                     )
                     # reload all submodules if necessary
@@ -517,7 +521,7 @@ class Loader(object):
                     # removed during sync_modules)
                     for submodule in submodules:
                         try:
-                            smname = '{0}.{1}.{2}'.format(loaded_base_name, self.tag, name)
+                            smname = '{0}.{1}.{2}'.format(LOADED_BASE_NAME, self.tag, name)
                             smfile = os.path.splitext(submodule.__file__)[0] + ".py"
                             if submodule.__name__.startswith(smname) and os.path.isfile(smfile):
                                 reload(submodule)
@@ -571,21 +575,36 @@ class Loader(object):
             if virtual_enable:
                 # if virtual modules are enabled, we need to look for the
                 # __virtual__() function inside that module and run it.
-                # This function will return either a new name for the module
-                # or False. This allows us to have things like the pkg module
-                # working on all platforms under the name 'pkg'. It also allows
-                # for modules like augeas_cfg to be referred to as 'augeas',
-                # which would otherwise have namespace collisions. And finally
-                # it allows modules to return False if they are not intended
-                # to run on the given platform or are missing dependencies.
+                # This function will return either a new name for the module,
+                # an empty string(won't be loaded but you just need to check
+                # against the same python type, a string) or False.
+                # This allows us to have things like the pkg module working on
+                # all platforms under the name 'pkg'. It also allows for
+                # modules like augeas_cfg to be referred to as 'augeas', which
+                # would otherwise have namespace collisions. And finally it
+                # allows modules to return False if they are not intended to
+                # run on the given platform or are missing dependencies.
                 try:
                     if hasattr(mod, '__virtual__'):
                         if callable(mod.__virtual__):
                             virtual = mod.__virtual__()
-                            if virtual is False:
-                                # if __virtual__() returns false then the
+                            if not virtual:
+                                # if __virtual__() evaluates to false then the
                                 # module wasn't meant for this platform or it's
                                 # not supposed to load for some other reason.
+                                # Some modules might accidentally return None
+                                # and are improperly loaded
+                                if virtual is None:
+                                    log.warning(
+                                        '{0}.__virtual__() is wrongly '
+                                        'returning `None`. It should either '
+                                        'return `True` or `False`. If '
+                                        'you\'re the developer of the module '
+                                        '{1!r}, please fix this.'.format(
+                                            mod.__name__,
+                                            module_name
+                                        )
+                                    )
                                 continue
 
                             if module_name != virtual:
@@ -602,6 +621,12 @@ class Loader(object):
                     # then log the information and continue to the next.
                     log.exception(('Failed to read the virtual function for '
                                    'module: {0}').format(module_name))
+                    continue
+
+            if whitelist:
+                # It a whitelist is defined then only load the module if it is
+                # in the whitelist
+                if module_name not in whitelist:
                     continue
 
             for attr in dir(mod):
@@ -645,35 +670,6 @@ class Loader(object):
             outp = mod.__outputter__
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
-
-    def apply_introspection(self, funcs):
-        '''
-        Pass in a function object returned from get_functions to load in
-        introspection functions.
-        '''
-        funcs['sys.list_functions'] = lambda module='': self.list_funcs(funcs, module)
-        funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
-        funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
-        funcs['sys.reload_modules'] = lambda: True
-        return funcs
-
-    def list_funcs(self, funcs, module=''):
-        '''
-        List the functions.  Optionally, specify a module to list from.
-        '''
-        return sorted(f for f in funcs if f.startswith(module + '.')) if module else sorted(funcs)
-
-    def list_modules(self, funcs):
-        '''
-        List the modules
-        '''
-        modules = set()
-        for key in funcs:
-            comps = key.split('.')
-            if len(comps) < 2:
-                continue
-            modules.add(comps[0])
-        return sorted(list(modules))
 
     def filter_func(self, name, pack=None):
         '''

@@ -140,15 +140,19 @@ fi
             os.unlink(testfile)
 
         # Create the file
-        ret = self.run_function('state.sls', mods='issue-1879')
+        ret = self.run_function('state.sls', mods='issue-1879', timeout=120)
         self.assertSaltTrueReturn(ret)
 
         # The first append
-        ret = self.run_function('state.sls', mods='issue-1879.step-1')
+        ret = self.run_function(
+            'state.sls', mods='issue-1879.step-1', timeout=120
+        )
         self.assertSaltTrueReturn(ret)
 
         # The second append
-        ret = self.run_function('state.sls', mods='issue-1879.step-2')
+        ret = self.run_function(
+            'state.sls', mods='issue-1879.step-2', timeout=120
+        )
         self.assertSaltTrueReturn(ret)
 
         # Does it match?
@@ -158,10 +162,14 @@ fi
                 salt.utils.fopen(testfile, 'r').read()
             )
             # Make sure we don't re-append existing text
-            ret = self.run_function('state.sls', mods='issue-1879.step-1')
+            ret = self.run_function(
+                'state.sls', mods='issue-1879.step-1', timeout=120
+            )
             self.assertSaltTrueReturn(ret)
 
-            ret = self.run_function('state.sls', mods='issue-1879.step-2')
+            ret = self.run_function(
+                'state.sls', mods='issue-1879.step-2', timeout=120
+            )
             self.assertSaltTrueReturn(ret)
             self.assertMultiLineEqual(
                 contents,
@@ -222,7 +230,8 @@ fi
 
         try:
             ret = self.run_function(
-                'state.sls', mods='issue-2068-template-str-no-dot'
+                'state.sls', mods='issue-2068-template-str-no-dot',
+                timeout=120
             )
             self.assertSaltTrueReturn(ret)
         finally:
@@ -238,7 +247,9 @@ fi
 
         template = salt.utils.fopen(template_path, 'r').read()
         try:
-            ret = self.run_function('state.template_str', [template])
+            ret = self.run_function(
+                'state.template_str', [template], timeout=120
+            )
             self.assertSaltTrueReturn(ret)
 
             self.assertTrue(
@@ -250,7 +261,9 @@ fi
 
         # Now using state.template
         try:
-            ret = self.run_function('state.template', [template_path])
+            ret = self.run_function(
+                'state.template', [template_path], timeout=120
+            )
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(venv_dir):
@@ -259,7 +272,7 @@ fi
         # Now the problematic #2068 including dot's
         try:
             ret = self.run_function(
-                'state.sls', mods='issue-2068-template-str'
+                'state.sls', mods='issue-2068-template-str', timeout=120
             )
             self.assertSaltTrueReturn(ret)
         finally:
@@ -275,7 +288,9 @@ fi
 
         template = salt.utils.fopen(template_path, 'r').read()
         try:
-            ret = self.run_function('state.template_str', [template])
+            ret = self.run_function(
+                'state.template_str', [template], timeout=120
+            )
             self.assertSaltTrueReturn(ret)
 
             self.assertTrue(
@@ -287,7 +302,9 @@ fi
 
         # Now using state.template
         try:
-            ret = self.run_function('state.template', [template_path])
+            ret = self.run_function(
+                'state.template', [template_path], timeout=120
+            )
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(venv_dir):

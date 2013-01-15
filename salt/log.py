@@ -39,7 +39,7 @@ SORTED_LEVEL_NAMES = [
 ]
 
 # Store an instance of the current logging logger class
-LoggingLoggerClass = logging.getLoggerClass()
+LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 
@@ -48,17 +48,14 @@ __LOGFILE_CONFIGURED = False
 
 
 def is_console_configured():
-    global __CONSOLE_CONFIGURED
     return __CONSOLE_CONFIGURED
 
 
 def is_logfile_configured():
-    global __LOGFILE_CONFIGURED
     return __LOGFILE_CONFIGURED
 
 
 def is_logging_configured():
-    global __CONSOLE_CONFIGURED, __LOGFILE_CONFIGURED
     return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
 
 
@@ -72,34 +69,84 @@ if sys.version_info < (2, 7):
         def emit(self, record):
             pass
 
-        def createLock(self):
+        def createLock(self):  # pylint: disable-msg=C0103
             self.lock = None
 
     logging.NullHandler = NullHandler
 
 
 # Store a reference to the null logging handler
-LoggingNullHandler = logging.NullHandler()
+LOGGING_NULL_HANDLER = logging.NullHandler()
 
 
-class Logging(LoggingLoggerClass):
-    def __new__(cls, logger_name, *args, **kwargs):
-        global MAX_LOGGER_MODNAME_LENGTH
-        # This makes module name padding increase to the biggest module name
-        # so that logs keep readability.
-        #
-        # This code will only run when a new logger is created, ie:
-        #
-        #    logging.getLogger(__name__)
-        #
-        instance = super(Logging, cls).__new__(cls)
+class LoggingTraceMixIn(object):
+    '''
+    Simple mix-in class to add a trace method to python's logging.
+    '''
+
+    def trace(self, msg, *args, **kwargs):
+        self.log(TRACE, msg, *args, **kwargs)
+
+
+class LoggingGarbageMixIn(object):
+    '''
+    Simple mix-in class to add a garbage method to python's logging.
+    '''
+
+    def garbage(self, msg, *args, **kwargs):
+        self.log(GARBAGE, msg, *args, **kwargs)
+
+
+class LoggingMixInMeta(type):
+    '''
+    This class is called whenever a new instance of ``SaltLoggingClass`` is
+    created.
+
+    What this class does is check if any of the bases have a `trace()` or a
+    `garbage()` method defined, if they don't we add the respective mix-ins to
+    the bases.
+    '''
+    def __new__(mcs, name, bases, attrs):
+        include_trace = include_garbage = True
+        bases = list(bases)
+        if name == 'SaltLoggingClass':
+            for base in bases:
+                if hasattr(base, 'trace'):
+                    include_trace = False
+                if hasattr(base, 'garbage'):
+                    include_garbage = False
+        if include_trace:
+            bases.append(LoggingTraceMixIn)
+        if include_garbage:
+            bases.append(LoggingGarbageMixIn)
+        return super(LoggingMixInMeta, mcs).__new__(
+            mcs, name, tuple(bases), attrs
+        )
+
+
+class SaltLoggingClass(LOGGING_LOGGER_CLASS):
+    __metaclass__ = LoggingMixInMeta
+
+    def __new__(mcs, logger_name):
+        '''
+        We override `__new__` in our logging logger class in order to provide
+        some additional features like expand the module name padding if length
+        is being used, and also some Unicode fixes.
+
+        This code overhead will only be executed when the class is
+        instantiated, ie:
+
+            logging.getLogger(__name__)
+
+        '''
+        instance = super(SaltLoggingClass, mcs).__new__(mcs)
 
         try:
             max_logger_length = len(max(
                 logging.Logger.manager.loggerDict.keys(), key=len
             ))
             for handler in logging.getLogger().handlers:
-                if handler is LoggingNullHandler:
+                if handler is LOGGING_NULL_HANDLER:
                     continue
 
                 if not handler.lock:
@@ -140,32 +187,55 @@ class Logging(LoggingLoggerClass):
             pass
         return instance
 
-    def garbage(self, msg, *args, **kwargs):
-        return LoggingLoggerClass.log(self, GARBAGE, msg, *args, **kwargs)
-
-    def trace(self, msg, *args, **kwargs):
-        return LoggingLoggerClass.log(self, TRACE, msg, *args, **kwargs)
+    # pylint: disable-msg=C0103
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
+                   extra=None):
+        # Let's try to make every logging message unicode
+        if isinstance(msg, basestring) and not isinstance(msg, unicode):
+            try:
+                return LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno,
+                    msg.decode('utf-8', 'replace'),
+                    args, exc_info, func, extra
+                )
+            except UnicodeDecodeError:
+                return LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno,
+                    msg.decode('utf-8', 'ignore'),
+                    args, exc_info, func, extra
+                )
+        return LOGGING_LOGGER_CLASS.makeRecord(
+            self, name, level, fn, lno, msg, args, exc_info, func, extra
+        )
+    # pylint: enable-msg=C0103
 
 
 # Override the python's logging logger class as soon as this module is imported
-if logging.getLoggerClass() is not Logging:
-    '''
-    Replace the default system logger with a version that includes trace()
-    and garbage() methods.
-    '''
-    logging.setLoggerClass(Logging)
+if logging.getLoggerClass() is not SaltLoggingClass:
+
+    logging.setLoggerClass(SaltLoggingClass)
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
-    # Set the root logger at the lowest level possible
-    rootLogger = logging.getLogger()
-    # Add a Null logging handler until logging is configured(will be removed at
-    # a later stage) so we stop getting:
-    #   No handlers could be found for logger "foo"
-    rootLogger.addHandler(LoggingNullHandler)
-    rootLogger.setLevel(GARBAGE)
+
+    if len(logging.root.handlers) == 0:
+        # No configuration to the logging system has been done so far.
+        # Set the root logger at the lowest level possible
+        logging.getLogger().setLevel(GARBAGE)
+
+        # Add a Null logging handler until logging is configured(will be
+        # removed at a later stage) so we stop getting:
+        #   No handlers could be found for logger "foo"
+        logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
 
 
-def getLogger(name):
+def getLogger(name):  # pylint: disable-msg=C0103
+    '''
+    This function is just a helper, an alias to:
+        logging.getLogger(name)
+
+    Although you might find it useful, there's no reason why you should not be
+    using the aliased method.
+    '''
     return logging.getLogger(name)
 
 
@@ -185,9 +255,13 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    rootLogger = logging.getLogger()
-    handler = logging.StreamHandler()
-
+    handler = None
+    for handler in logging.root.handlers:
+        if handler.stream is sys.stderr:
+            # There's already a logging handler outputting to sys.stderr
+            break
+    else:
+        handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(level)
 
     # Set the default console formatter config
@@ -199,7 +273,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    rootLogger.addHandler(handler)
+    logging.getLogger().addHandler(handler)
 
     global __CONSOLE_CONFIGURED
     __CONSOLE_CONFIGURED = True
@@ -223,6 +297,14 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     The above examples are self explanatory, but:
         <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
 
+    If you're thinking on doing remote logging you might also be thinking that
+    you could point salt's logging to the remote syslog. **Please Don't!**
+    An issue has been reported when doing this over TCP when the logged lines
+    get concatenated. See #3061.
+
+    The preferred way to do remote logging is setup a local syslog, point
+    salt's logging to the local syslog(unix socket is much faster) and then
+    have the local syslog forward the log messages to the remote syslog.
     '''
 
     if is_logfile_configured():
@@ -239,7 +321,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     parsed_log_path = urlparse.urlparse(log_path)
 
-    rootLogger = logging.getLogger()
+    root_logger = logging.getLogger()
 
     if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
         syslog_opts = {
@@ -311,9 +393,13 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         handler = logging.handlers.SysLogHandler(**syslog_opts)
     else:
         try:
+            # Logfile logging is UTF-8 on purpose.
+            # Since salt uses yaml and yaml uses either UTF-8 or UTF-16, if a
+            # user is not using plain ascii, he's system should be ready to
+            # handle UTF-8.
             handler = getattr(
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler
-            )(log_path, 'a', 'utf-8', delay=0)
+            )(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
             sys.stderr.write(
                 'Failed to open log file, do you have permission to write to '
@@ -332,7 +418,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
-    rootLogger.addHandler(handler)
+    root_logger.addHandler(handler)
 
     global __LOGFILE_CONFIGURED
     __LOGFILE_CONFIGURED = True
@@ -348,16 +434,25 @@ def set_logger_level(logger_name, log_level='error'):
 
 
 def __remove_null_logging_handler():
+    '''
+    This function will run once logging has been configured. It just removes
+    the NullHandler from the logging handlers.
+    '''
     if is_logfile_configured():
         # In this case, the NullHandler has been removed, return!
         return
 
-    rootLogger = logging.getLogger()
-    global LoggingNullHandler
+    root_logger = logging.getLogger()
+    global LOGGING_NULL_HANDLER
 
-    for handler in rootLogger.handlers:
-        if handler is LoggingNullHandler:
-            rootLogger.removeHandler(LoggingNullHandler)
+    for handler in root_logger.handlers:
+        if handler is LOGGING_NULL_HANDLER:
+            root_logger.removeHandler(LOGGING_NULL_HANDLER)
             # Redefine the null handler to None so it can be garbage collected
-            LoggingNullHandler = None
+            LOGGING_NULL_HANDLER = None
             break
+
+    if sys.version_info >= (2, 7):
+        # Python versions >= 2.7 allow warnings to be redirected to the logging
+        # system now that it's configured. Let's enable it.
+        logging.captureWarnings(True)

@@ -20,14 +20,16 @@ import sys
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltReqTimeoutError
+from salt.exceptions import (
+    AuthenticationError, CommandExecutionError, CommandNotFoundError,
+    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit
+)
 import salt.client
 import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils.schedule
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -134,8 +136,10 @@ class MasterMinion(object):
             returners=True,
             states=True,
             rend=True,
-            matcher=True):
+            matcher=True,
+            whitelist=None):
         self.opts = opts
+        self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
         self.opts['pillar'] = {}
         self.mk_returners = returners
@@ -148,7 +152,9 @@ class MasterMinion(object):
         '''
         Load all of the modules for the minion
         '''
-        self.functions = salt.loader.minion_mods(self.opts)
+        self.functions = salt.loader.minion_mods(
+                self.opts,
+                whitelist=self.whitelist)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
@@ -185,7 +191,10 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        self.__processing = []
+        self.schedule = salt.utils.schedule.Schedule(
+                self.opts,
+                self.functions,
+                self.returners)
 
     def __prep_mod_opts(self):
         '''
@@ -287,6 +296,8 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
+                self.schedule.functions = self.functions
+                self.schedule.returners = self.returners
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -308,7 +319,6 @@ class Minion(object):
             process = threading.Thread(
                 target=target, args=(instance, self.opts, data)
             )
-        self.__processing.append(process)
         process.start()
 
     @classmethod
@@ -345,8 +355,8 @@ class Minion(object):
             ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kw = detect_kwargs(func, data['arg'], data)
-                ret['return'] = func(*args, **kw)
+                args, kwargs = detect_kwargs(func, data['arg'], data)
+                ret['return'] = func(*args, **kwargs)
                 ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
@@ -418,8 +428,8 @@ class Minion(object):
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kw = detect_kwargs(func, data['arg'][ind], data)
-                ret['return'][data['fun'][ind]] = func(*args, **kw)
+                args, kwargs = detect_kwargs(func, data['arg'][ind], data)
+                ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
@@ -555,8 +565,8 @@ class Minion(object):
         '''
         fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
         if os.path.isfile(fn_):
-            with salt.utils.fopen(fn_, 'r+') as f:
-                data = f.read()
+            with salt.utils.fopen(fn_, 'r+') as ifile:
+                data = ifile.read()
                 if 'pillar' in data:
                     self.opts['pillar'] = salt.pillar.get_pillar(
                         self.opts,
@@ -569,16 +579,8 @@ class Minion(object):
             except OSError:
                 pass
             self.functions, self.returners = self.__load_modules()
-
-    def cleanup_processes(self):
-        for process in self.__processing[:]:
-            if process.is_alive():
-                continue
-            process.join(0.025)
-            if isinstance(process, multiprocessing.Process):
-                process.terminate()
-            self.__processing.pop(self.__processing.index(process))
-            del(process)
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def tune_in(self):
         '''
@@ -616,7 +618,24 @@ class Minion(object):
         else:
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
-
+            for uri in (epub_uri, epull_uri):
+                if uri.startswith('tcp://'):
+                    # This check only applies to IPC sockets
+                    continue
+                # The socket path is limited to 107 characters on Solaris and
+                # Linux, and 103 characters on BSD-based systems.
+                # Let's fail at the lower level so no system checks are
+                # required.
+                if len(uri) > 103:
+                    raise SaltSystemExit(
+                        'The socket path length is more that what ZMQ allows. '
+                        'The length of {0!r} is more than 103 characters. '
+                        'Either try to reduce the length of this setting\'s '
+                        'path or switch to TCP; In the configuration file set '
+                        '"ipc_mode: tcp"'.format(
+                            uri
+                        )
+                    )
         log.debug(
             '{0} PUB socket URI: {1}'.format(
                 self.__class__.__name__, epub_uri
@@ -653,6 +672,19 @@ class Minion(object):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+            )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)
@@ -673,17 +705,19 @@ class Minion(object):
 
         while True:
             try:
-                socks = dict(self.poller.poll(60000))
+                self.schedule.eval()
+                socks = dict(self.poller.poll(
+                    self.opts['loop_interval'] * 1000)
+                    )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
                 time.sleep(0.05)
-                # This next call(multiprocessing.active_children()) is
-                # intentional, from docs, "Calling this has the side affect of
-                # “joining” any processes which have already finished."
+                # Clean up the minion processes which have been executed and
+                # have finished
                 multiprocessing.active_children()
+                # Check if modules and grains need to be refreshed
                 self.passive_refresh()
-                self.cleanup_processes()
                 # Check the event system
                 if self.epoller.poll(1):
                     try:
@@ -697,31 +731,28 @@ class Minion(object):
     def destroy(self):
         if hasattr(self, 'poller'):
             for socket in self.poller.sockets.keys():
-                if not socket.closed:
+                if socket.closed is False:
                     socket.close()
                 self.poller.unregister(socket)
         if hasattr(self, 'epoller'):
             for socket in self.epoller.sockets.keys():
-                if not socket.closed:
+                if socket.closed is False:
                     socket.close()
                 self.epoller.unregister(socket)
-        if hasattr(self, 'epub_sock'):
-            if not self.epub_sock.closed:
-                self.epub_sock.close()
-        if hasattr(self, 'epull_sock'):
-            if not self.epull_sock.closed:
-                self.epull_sock.close()
-        if hasattr(self, 'socket'):
-            if not self.socket.closed:
-                self.socket.close()
-        if hasattr(self, 'context'):
+        if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
+            self.epub_sock.close()
+        if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
+            self.epull_sock.close()
+        if hasattr(self, 'socket') and self.socket.closed is False:
+            self.socket.close()
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
     def __del__(self):
         self.destroy()
 
 
-class Syndic(salt.client.LocalClient, Minion):
+class Syndic(Minion):
     '''
     Make a Syndic minion, this minion will use the minion keys on the
     master to authenticate with a higher level master.
@@ -729,10 +760,9 @@ class Syndic(salt.client.LocalClient, Minion):
     def __init__(self, opts):
         self._syndic = True
         Minion.__init__(self, opts)
-        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
+        self.local = salt.client.LocalClient(opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
-
 
     def _handle_aes(self, load):
         '''
@@ -751,11 +781,18 @@ class Syndic(salt.client.LocalClient, Minion):
             return
         data['to'] = int(data['to']) - 1
         if 'user' in data:
-            log.debug(('User {0[user]} Executing syndic command {0[fun]} with '
-                'jid {0[jid]}'.format(data)))
+            log.debug(
+                'User {0[user]} Executing syndic command {0[fun]} with '
+                'jid {0[jid]}'.format(
+                    data
+                )
+            )
         else:
-            log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
-                .format(data)))
+            log.debug(
+                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(
+                    data
+                )
+            )
         log.debug('Command details: {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -766,11 +803,11 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
-                target=lambda: self.syndic_cmd(data)
+                target=self.syndic_cmd, args=(data,)
             ).start()
         else:
             threading.Thread(
-                target=lambda: self.syndic_cmd(data)
+                target=self.syndic_cmd, args=(data,)
             ).start()
 
     def syndic_cmd(self, data):
@@ -781,7 +818,7 @@ class Syndic(salt.client.LocalClient, Minion):
         if 'tgt_type' not in data:
             data['tgt_type'] = 'glob'
         # Send out the publication
-        pub_data = self.pub(
+        pub_data = self.local.pub(
                 data['tgt'],
                 data['fun'],
                 data['arg'],
@@ -791,11 +828,13 @@ class Syndic(salt.client.LocalClient, Minion):
                 data['to']
                 )
         # Gather the return data
-        ret = self.get_returns(
+        ret = self.local.get_full_returns(
                 pub_data['jid'],
                 pub_data['minions'],
                 data['to']
                 )
+        for minion in ret:
+            ret[minion] = ret[minion]['ret']
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         # Return the publication data up the pipe
@@ -903,6 +942,28 @@ class Matcher(object):
                     )
                 )
 
+    def data_match(self, tgt):
+        '''
+        Match based on the local data store on the minion
+        '''
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            return False
+        val = self.functions['data.getval'](comps[0])
+        if val is None:
+            # The value is not defined
+            return False
+        if isinstance(val, list):
+            # We are matching a single component to a single list member
+            for member in val:
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            val,
+            comps[1],
+            ))
+
     def exsel_match(self, tgt):
         '''
         Runs a function and return the exit code
@@ -975,8 +1036,9 @@ class Matcher(object):
                'S': 'ipcidr',
                'E': 'pcre'}
         results = []
-        opers = ['and', 'or', 'not']
-        for match in tgt.split():
+        opers = ['and', 'or', 'not', '(', ')']
+        tokens = re.findall(r'[^\s()]+|[()]', tgt)
+        for match in tokens:
             # Try to match tokens from the compound target, first by using
             # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
@@ -986,13 +1048,15 @@ class Matcher(object):
                     # If an unknown matcher is called at any time, fail out
                     return False
                 results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
+                    str(
+                        getattr(self, '{0}_match'.format(matcher))(
+                            '@'.join(comps[1:])
+                        )
+                    )
+                )
             elif match in opers:
-                # We didn't match a target, so append a boolean operator
+                # We didn't match a target, so append a boolean operator or
+                # subexpression
                 results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob

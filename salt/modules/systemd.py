@@ -12,6 +12,15 @@ LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
+def __virtual__():
+    '''
+    Only work on systems that have been booted with systemd
+    '''
+    if __grains__['kernel'] == 'Linux' and _sd_booted():
+        return 'service'
+    return False
+
+
 def _sd_booted():
     '''
     Return True if the system was booted with systemd, False otherwise.
@@ -21,26 +30,17 @@ def _sd_booted():
         try:
             # This check does the same as sd_booted() from libsystemd-daemon:
             # http://www.freedesktop.org/software/systemd/man/sd_booted.html
-            a = os.stat('/sys/fs/cgroup')
-            b = os.stat('/sys/fs/cgroup/systemd')
+            cgroup_fs = os.stat('/sys/fs/cgroup')
+            cgroup_systemd = os.stat('/sys/fs/cgroup/systemd')
         except OSError:
             __context__['systemd.sd_booted'] = False
         else:
-            if a.st_dev != b.st_dev:
+            if cgroup_fs.st_dev != cgroup_systemd.st_dev:
                 __context__['systemd.sd_booted'] = True
             else:
                 __context__['systemd.sd_booted'] = False
 
     return __context__['systemd.sd_booted']
-
-
-def __virtual__():
-    '''
-    Only work on systems that have been booted with systemd
-    '''
-    if __grains__['kernel'] == 'Linux' and _sd_booted():
-        return 'service'
-    return False
 
 
 def _canonical_unit_name(name):
@@ -182,6 +182,17 @@ def reload(name):
         salt '*' service.reload <service name>
     '''
     return not __salt__['cmd.retcode'](_systemctl_cmd('reload', name))
+
+
+def force_reload(name):
+    '''
+    Force-reload the specified service with systemd
+
+    CLI Example::
+
+        salt '*' service.force_reload <service name>
+    '''
+    return not __salt__['cmd.retcode'](_systemctl_cmd('force-reload', name))
 
 
 # The unused sig argument is required to maintain consistency in the state

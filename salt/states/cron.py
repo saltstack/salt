@@ -35,6 +35,8 @@ then a new cron job will be added to the user's crontab.
 
 # Import python libs
 import os
+
+# Import salt libs
 from salt.utils import mkstemp
 
 
@@ -324,20 +326,20 @@ def file(name,
         return ret
 
     if __opts__['test']:
-        r = __salt__['file.check_managed'](cron_path,
-                                           source,
-                                           source_hash,
-                                           owner,
-                                           group,
-                                           mode,
-                                           template,
-                                           False,  # makedirs = False
-                                           context,
-                                           defaults,
-                                           env,
-                                           **kwargs
-                                           )
-        ret['result'], ret['comment'] = r
+        fcm = __salt__['file.check_managed'](cron_path,
+                                             source,
+                                             source_hash,
+                                             owner,
+                                             group,
+                                             mode,
+                                             template,
+                                             False,  # makedirs = False
+                                             context,
+                                             defaults,
+                                             env,
+                                             **kwargs
+                                             )
+        ret['result'], ret['comment'] = fcm
         os.unlink(cron_path)
         return ret
 

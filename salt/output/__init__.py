@@ -19,7 +19,10 @@ def display_output(data, out, opts=None):
     '''
     Print the passed data using the desired output
     '''
-    print(get_printout(out, opts)(data).rstrip())
+    try:
+        print(get_printout(out, opts)(data).rstrip())
+    except Exception:
+        print(get_printout('pprint', opts)(data).rstrip())
 
 
 def get_printout(out, opts=None, **kwargs):
@@ -47,14 +50,14 @@ def get_printout(out, opts=None, **kwargs):
             out = out[:-4]
 
     if out is None:
-        out = 'pprint'
+        out = 'nested'
 
     opts.update(kwargs)
     if not 'color' in opts:
         opts['color'] = not bool(opts.get('no_color', False))
     outputters = salt.loader.outputters(opts)
     if not out in outputters:
-        return outputters['pprint']
+        return outputters['nested']
     return outputters[out]
 
 

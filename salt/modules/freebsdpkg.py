@@ -3,17 +3,28 @@ Package support for FreeBSD
 '''
 
 # Import python libs
+import logging
+
+# Import python libs
 import os
 import salt.utils
+
+
+log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is FreeBSD
+    '''
+    return 'pkg' if __grains__['os'] == 'FreeBSD' else False
 
 
 def _check_pkgng():
     '''
     Looks to see if pkgng is being used by checking if database exists
     '''
-    if os.path.isfile('/var/db/pkg/local.sqlite'):
-        return True
-    return False
+    return os.path.isfile('/var/db/pkg/local.sqlite')
 
 
 @salt.utils.memoize
@@ -37,24 +48,6 @@ def search(pkg_name):
         return {"Results": res}
 
 
-def __virtual__():
-    '''
-    Set the virtual pkg module if the os is Arch
-    '''
-    return 'pkg' if __grains__['os'] == 'FreeBSD' else False
-
-
-def _list_removed(old, new):
-    '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
-
-
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -64,9 +57,11 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     if _check_pkgng():
-        for line in __salt__['cmd.run']('pkg search -f {0}'.format(name)).splitlines():
+        for line in __salt__['cmd.run']('{0} search -f {1}'.format(
+            _cmd('pkg'), name)
+        ).splitlines():
             if line.startswith('Version'):
-                fn, ver = line.split(':', 1)
+                _, ver = line.split(':', 1)
                 return ver.strip()
     return ''
 
@@ -79,11 +74,7 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
-    else:
-        return ''
+    return list_pkgs().get(name, '')
 
 
 def refresh_db():
@@ -98,12 +89,6 @@ def refresh_db():
     '''
     if _check_pkgng():
         __salt__['cmd.run']('{0} update'.format(_cmd('pkg')))
-    else:
-        __salt__['cmd.run']('{0} fetch'.format(_cmd('portsnap')))
-        if not os.path.isdir('/usr/ports'):
-            __salt__['cmd.run']('{0} extract'.format(_cmd('portsnap')))
-        else:
-            __salt__['cmd.run']('{0} update'.format(_cmd('portsnap')))
     return {}
 
 
@@ -125,57 +110,100 @@ def list_pkgs():
     for line in __salt__['cmd.run'](pkg_command).splitlines():
         if not line:
             continue
-        comps = line.split(' ')[0].split('-')
-        __salt__['pkg_resource.add_pkg'](ret,
-                                        '-'.join(comps[0:-1]),
-                                        comps[-1])
-    __salt__['pkg_resource.sort_pkglist'](ret)
+        pkg, ver = line.split(' ')[0].rsplit('-', 1)
+        __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
+        __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
 
-def install(name, refresh=False, repo='', **kwargs):
+def install(name=None, refresh=False, fromrepo=None,
+            pkgs=None, sources=None, **kwargs):
     '''
     Install the passed package
+
+    name
+        The name of the package to be installed.
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+    fromrepo
+        Specify a package repository to install from.
+
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list.
+
+        CLI Example::
+
+            salt '*' pkg.install pkgs='["foo","bar"]'
+
+    sources
+        A list of packages to install. Must be passed as a list of dicts,
+        with the keys being package names, and the values being the source URI
+        or local path to the package.
+
+        CLI Example::
+
+            salt '*' pkg.install sources='[{"foo": "salt://foo.deb"},{"bar": "salt://bar.deb"}]'
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
         salt '*' pkg.install <package name>
     '''
-    env = ()
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources)
+
+    # Support old "repo" argument
+    repo = kwargs.get('repo', '')
+    if not fromrepo and repo:
+        fromrepo = repo
+
+    if not pkg_params:
+        return {}
+
+    env = []
+    args = []
     if _check_pkgng():
-        pkg_command = '{0} install -y'.format(_cmd('pkg'))
-        if not refresh:
-            pkg_command += ' -L'
-        if repo:
-            env = (('PACKAGESITE', repo),)
+        cmd = _cmd('pkg')
+        if fromrepo:
+            log.info('Setting PACKAGESITE={0}'.format(fromrepo))
+            env.append(('PACKAGESITE', fromrepo))
     else:
-        pkg_command = '{0} -r'.format(_cmd('pkg_add'))
-        if repo:
-            env = (('PACKAGEROOT', repo),)
-    old = list_pkgs()
-    __salt__['cmd.retcode']('{0} {1}'.format(pkg_command, name), env=env)
-    new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
+        cmd = _cmd('pkg_add')
+        if fromrepo:
+            log.info('Setting PACKAGEROOT={0}'.format(fromrepo))
+            env.append(('PACKAGEROOT', fromrepo))
+
+    if pkg_type == 'file':
+        if _check_pkgng():
+            env.append(('ASSUME_ALWAYS_YES', 'yes'))  # might be fixed later
+            args.append('add')
+    elif pkg_type == 'repository':
+        if _check_pkgng():
+            args.extend(('install', '-y'))  # Assume yes when asked
+            if not refresh:
+                args.append('-L')  # do not update repo db
         else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
+            args.append('-r')  # use remote repo
+
+    args.extend(pkg_params)
+
+    old = list_pkgs()
+    __salt__['cmd.run_all']('{0} {1}'.format(cmd, ' '.join(args)), env=env)
+    new = list_pkgs()
+
     rehash()
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade():
@@ -185,7 +213,7 @@ def upgrade():
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -199,27 +227,22 @@ def upgrade():
     old = list_pkgs()
     __salt__['cmd.retcode']('{0} upgrade -y'.format(_cmd('pkg')))
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    rehash()
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name):
+def remove(name=None, pkgs=None):
     '''
-    Remove a single package with pkg_delete
+    Remove a single package.
+
+    name : None
+        The name of the package to be deleted.
+
+    pkgs : None
+        A list of packages to delete. Must be passed as a python list.
+
+        CLI Example::
+
+            salt '*' pkg.remove pkgs='["foo","bar"]'
 
     Returns a list containing the removed packages.
 
@@ -227,16 +250,38 @@ def remove(name):
 
         salt '*' pkg.remove <package name>
     '''
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs)
+    if not pkg_params:
+        return {}
+
     old = list_pkgs()
-    if name in old:
-        name = '{0}-{1}'.format(name, old[name])
-        if _check_pkgng():
-            pkg_command = '{0} delete -y'.format(_cmd('pkg'))
+    args = []
+
+    for param in pkg_params:
+        ver = old.get(param, [])
+        if not ver:
+            continue
+        if isinstance(ver, list):
+            args.extend(['{0}-{1}'.format(param, v) for v in ver])
         else:
-            pkg_command = '{0}'.format(_cmd('pkg_delete'))
-        __salt__['cmd.retcode']('{0} {1}'.format(pkg_command, name))
+            args.append('{0}-{1}'.format(param, ver))
+
+    if not args:
+        return {}
+
+    for_remove = ' '.join(args)
+
+    if _check_pkgng():
+        cmd = '{0} remove -y {1}'.format(_cmd('pkg'), for_remove)
+    else:
+        cmd = '{0} {1}'.format(_cmd('pkg_remove'), for_remove)
+
+    __salt__['cmd.run_all'](cmd)
+
     new = list_pkgs()
-    return _list_removed(old, new)
+
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def purge(name):
@@ -265,3 +310,16 @@ def rehash():
     shell = __salt__['cmd.run']('echo $SHELL').split('/')
     if shell[len(shell) - 1] in ['csh', 'tcsh']:
         __salt__['cmd.run']('rehash')
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)

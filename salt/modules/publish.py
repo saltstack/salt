@@ -58,6 +58,7 @@ def _publish(
     return auth.crypticle.loads(
             sreq.send('aes', auth.crypticle.dumps(load), 1))
 
+
 def normalize_arg(arg):
     if not arg:
         arg = []
@@ -71,6 +72,7 @@ def normalize_arg(arg):
             arg = arg.split(',')
 
     return arg
+
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''

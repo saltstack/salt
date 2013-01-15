@@ -28,24 +28,27 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-_dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
-_dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-_dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+_DFLT_LOG_DATEFMT = '%H:%M:%S'
+_DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
+_DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
+_DFLT_LOG_FMT_LOGFILE = (
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+)
 
 
-def _validate_file_roots(file_roots):
+def _validate_file_roots(opts):
     '''
     If the file_roots option has a key that is None then we will error out,
     just replace it with an empty list
     '''
-    if not isinstance(file_roots, dict):
+    if not isinstance(opts['file_roots'], dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': ['/srv/salt']}
-    for env, dirs in list(file_roots.items()):
+    for env, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
-            file_roots[env] = []
-    return file_roots
+            opts['file_roots'][env] = []
+    return opts['file_roots']
 
 
 def _append_domain(opts):
@@ -67,6 +70,10 @@ def _read_conf_file(path):
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
+        for key, value in conf_opts.copy().iteritems():
+            if isinstance(value, unicode):
+                # We do not want unicode settings
+                conf_opts[key] = value.encode('utf-8')
         return conf_opts
 
 
@@ -89,21 +96,21 @@ def load_config(opts, path, env_var):
         if os.path.isfile(template):
             import salt.utils  # TODO: Need to re-import, need to find out why
             with salt.utils.fopen(path, 'w') as out:
-                with salt.utils.fopen(template, 'r') as f:
-                    f.readline()  # skip first line
-                    out.write(f.read())
+                with salt.utils.fopen(template, 'r') as ifile:
+                    ifile.readline()  # skip first line
+                    out.write(ifile.read())
 
     if os.path.isfile(path):
         try:
             opts.update(_read_conf_file(path))
             opts['conf_file'] = path
-        except Exception as e:
+        except Exception as err:
             import salt.log
             msg = 'Error parsing configuration file: {0} - {1}'
             if salt.log.is_console_configured():
-                log.warn(msg.format(path, e))
+                log.warn(msg.format(path, err))
             else:
-                print(msg.format(path, e))
+                print(msg.format(path, err))
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 
@@ -141,10 +148,10 @@ def include_config(include, opts, orig_path, verbose):
         for fn_ in glob.glob(path):
             try:
                 opts.update(_read_conf_file(fn_))
-            except Exception as e:
+            except Exception as err:
                 log.warn(
                     'Error parsing configuration file: {0} - {1}'.format(
-                        fn_, e
+                        fn_, err
                     )
                 )
     return opts
@@ -200,6 +207,7 @@ def minion_config(path, check_dns=True):
             'external_nodes': '',
             'disable_modules': [],
             'disable_returners': [],
+            'whitelist_modules': [],
             'module_dirs': [],
             'returner_dirs': [],
             'states_dirs': [],
@@ -215,15 +223,17 @@ def minion_config(path, check_dns=True):
             'log_file': '/var/log/salt/minion',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': _dflt_log_datefmt,
-            'log_fmt_console': _dflt_log_fmt_console,
-            'log_fmt_logfile': _dflt_log_fmt_logfile,
+            'log_datefmt': _DFLT_LOG_DATEFMT,
+            'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
+            'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
+            'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
             'state_verbose': True,
             'state_output': 'full',
             'acceptance_wait_time': 10,
+            'loop_interval': 60,
             'dns_check': True,
             'verify_env': True,
             'grains': {},
@@ -233,6 +243,12 @@ def minion_config(path, check_dns=True):
             'update_restart_services': [],
             'retry_dns': 30,
             'recon_max': 5000,
+            'win_repo_cachefile': 'salt://win/repo/winrepo.p',
+            'pidfile': '/var/run/salt-minion.pid',
+            'tcp_keepalive': True,
+            'tcp_keepalive_idle': 300,
+            'tcp_keepalive_cnt': -1,
+            'tcp_keepalive_intvl': -1,
             }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -295,7 +311,7 @@ def minion_config(path, check_dns=True):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules'
+        'pki_dir', 'cachedir', 'sock_dir', 'extension_modules', 'pidfile',
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -332,18 +348,19 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
+            'gitfs_remotes': [],
             'ext_pillar': [],
-            # NOTE: pillar version changed to 2 by default in 0.10.6
             'pillar_version': 2,
             'pillar_opts': True,
             'syndic_master': '',
             'runner_dirs': [],
             'client_acl': {},
             'external_auth': {},
-            'token_expire': 720,
+            'token_expire': 43200,
             'file_buffer_size': 1048576,
             'file_ignore_regex': None,
             'file_ignore_glob': None,
+            'fileserver_backend': ['roots'],
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
@@ -362,9 +379,10 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': None,
             'log_level_logfile': None,
-            'log_datefmt': _dflt_log_datefmt,
-            'log_fmt_console': _dflt_log_fmt_console,
-            'log_fmt_logfile': _dflt_log_fmt_logfile,
+            'log_datefmt': _DFLT_LOG_DATEFMT,
+            'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
+            'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
+            'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
@@ -376,12 +394,16 @@ def master_config(path):
             'state_output': 'full',
             'search': '',
             'search_index_interval': 3600,
+            'loop_interval': 60,
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',
             'verify_env': True,
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
+            'win_repo': '/srv/salt/win/repo',
+            'win_repo_mastercachefile': '/srv/salt/win/repo/winrepo.p',
+            'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
     }
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
@@ -402,38 +424,52 @@ def master_config(path):
             os.path.join(opts['cachedir'], 'extmods')
             )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
-                            'sock_dir', 'key_logfile', 'extension_modules',
-                            'autosign_file', 'token_dir'])
+    prepend_root_dirs = [
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'autosign_file', 'token_dir'
+    ]
+
+    # These can be set to syslog, so, not actual paths on the system
+    for config_key in ('log_file', 'key_logfile'):
+        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+            prepend_root_dirs.append(config_key)
+
+    prepend_root_dir(opts, prepend_root_dirs)
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
-    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    opts['file_roots'] = _validate_file_roots(opts)
 
     if opts['file_ignore_regex']:
         # If file_ignore_regex was given, make sure it's wrapped in a list.
         # Only keep valid regex entries for improved performance later on.
         if isinstance(opts['file_ignore_regex'], str):
-            ignore_regex = [ opts['file_ignore_regex'] ]
+            ignore_regex = [opts['file_ignore_regex']]
         elif isinstance(opts['file_ignore_regex'], list):
             ignore_regex = opts['file_ignore_regex']
 
         opts['file_ignore_regex'] = []
-        for r in ignore_regex:
+        for regex in ignore_regex:
             try:
-                # Can't store compiled regex itself in opts (breaks serialization)
-                re.compile(r)
-                opts['file_ignore_regex'].append(r)
+                # Can't store compiled regex itself in opts (breaks
+                # serialization)
+                re.compile(regex)
+                opts['file_ignore_regex'].append(regex)
             except:
-                log.warning('Unable to parse file_ignore_regex. Skipping: {0}'.format(r))
+                log.warning(
+                    'Unable to parse file_ignore_regex. Skipping: {0}'.format(
+                        regex
+                    )
+                )
 
     if opts['file_ignore_glob']:
         # If file_ignore_glob was given, make sure it's wrapped in a list.
         if isinstance(opts['file_ignore_glob'], str):
-            opts['file_ignore_glob'] = [ opts['file_ignore_glob'] ]
+            opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
     return opts
 

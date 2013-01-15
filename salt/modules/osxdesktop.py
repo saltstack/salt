@@ -4,6 +4,9 @@ Mac OS X implementations of various commands in the "desktop" interface
 
 
 def __virtual__():
+    '''
+    Only load on Mac systems
+    '''
     if __grains__['os'] == 'MacOS':
         return 'desktop'
     return False

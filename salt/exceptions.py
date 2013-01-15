@@ -71,13 +71,21 @@ class SaltRenderError(SaltException):
     Used when a renderer needs to raise an explicit error
     '''
 
+
 class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout
     '''
-    
+
+
 class EauthAuthenticationError(SaltException):
     '''
     Thrown when eauth authentication fails
     '''
 
+
+class SaltSystemExit(SystemExit):
+    '''
+    This exception is raised when an unsolvable problem is found. There's
+    nothing else to do, salt should just exit.
+    '''

@@ -9,7 +9,11 @@ import re
 __opts__ = {}
 __pillar__ = {}
 
+
 def _pecl(command):
+    '''
+    Execute the command passed with pecl
+    '''
     cmdline = 'pecl {0}'.format(command)
 
     ret = __salt__['cmd.run_all'](cmdline)
@@ -67,11 +71,8 @@ def list():
     lines.pop(0)
 
     for line in lines:
-        m = re.match('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)', line)
-        if m:
-            pecls[m.group(1)] = [m.group(2), m.group(3)]
+        match = re.match('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)', line)
+        if match:
+            pecls[match.group(1)] = [match.group(2), match.group(3)]
 
     return pecls
-
-
-

@@ -17,7 +17,7 @@ import salt.auth
 import salt.key
 
 from salt.utils import parsers
-from salt.utils.verify import verify_env
+from salt.utils.verify import verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
@@ -46,7 +46,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         if self.options.batch:
             batch = salt.cli.batch.Batch(self.config)
-            batch.run()
+            # Printing the output is already taken care of in run() itself
+            for res in batch.run():
+                pass
         else:
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']
@@ -115,7 +117,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         Print the output from a single return to the terminal
         '''
         # Handle special case commands
-        if self.config['fun'] == 'sys.doc':
+        if self.config['fun'] == 'sys.doc' and not isinstance(ret, Exception):
             self._print_docs(ret)
         else:
             # Determine the proper output method and run it
@@ -216,12 +218,19 @@ class SaltCall(parsers.SaltCallOptionParser):
             verify_env([
                     self.config['pki_dir'],
                     self.config['cachedir'],
-                    os.path.dirname(self.config['log_file'])
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
+            if (not self.config['log_file'].startswith('tcp://') or
+                not self.config['log_file'].startswith('udp://') or
+                not self.config['log_file'].startswith('file://')):
+                # Logfile is not using Syslog, verify
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user']
+                )
 
         if self.options.local:
             self.config['file_client'] = 'local'

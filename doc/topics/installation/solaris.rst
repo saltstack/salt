@@ -2,11 +2,18 @@
 Solaris
 =======
 
-Salt was added to the OpenCSW package repository in September of 2012 by Romeo Theriault <romeot@hawaii.edu> at version 0.10.2 of Salt. It has mainly been tested on Solaris 10 (sparc), though it is built for and has been tested minimally on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86). (Please let me know if you're using it on these platforms!) Most of the testing has also just focused on the minion, though it has verified that the master starts up successfully on Solaris 10.
+Salt was added to the OpenCSW package repository in September of 2012 by Romeo
+Theriault <romeot@hawaii.edu> at version 0.10.2 of Salt. It has mainly been
+tested on Solaris 10 (sparc), though it is built for and has been tested
+minimally on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86).
+(Please let me know if you're using it on these platforms!) Most of the testing
+has also just focused on the minion, though it has verified that the master
+starts up successfully on Solaris 10.
 
 Comments and patches for better support on these platforms is very welcome. 
 
-Currently at version 0.10.4, solaris is well supported under salt. With all of the following working well:
+As of version 0.10.4, solaris is well supported under salt, with all of the
+following working well:
 
 1.   remote execution
 2.   grain detection
@@ -16,8 +23,8 @@ Currently at version 0.10.4, solaris is well supported under salt. With all of t
 6.   user and group modules/states
 7.   shadow password management modules/states
 
-Salt is dependent on the following additional packages. These will automatically be installed as
-dependencies of the ``py_salt`` package. ::
+Salt is dependent on the following additional packages. These will
+automatically be installed as dependencies of the ``py_salt`` package.::
 
    py_yaml
    py_pyzmq
@@ -30,7 +37,8 @@ dependencies of the ``py_salt`` package. ::
 Installation
 ============
 
-To install Salt from the OpenCSW package repository you first need to install `pkgutil`_ assuming you don't already have it installed:
+To install Salt from the OpenCSW package repository you first need to install
+`pkgutil`_ assuming you don't already have it installed:
 
 On Solaris 10:
 
@@ -45,7 +53,8 @@ On Solaris 9:
    wget http://mirror.opencsw.org/opencsw/pkgutil.pkg
    pkgadd -d pkgutil.pkg all
 
-Once pkgutil is installed you'll need to edit it's config file ``/etc/opt/csw/pkgutil.conf`` to point it at the unstable catalog:
+Once pkgutil is installed you'll need to edit it's config file
+``/etc/opt/csw/pkgutil.conf`` to point it at the unstable catalog:
 
 .. code-block:: diff
 
@@ -64,16 +73,20 @@ Ok, time to install salt.
 Minion Configuration
 ====================
 
-Now that salt is installed you can find it's configuration files in:
+Now that salt is installed you can find it's configuration files in
+``/etc/opt/csw/salt/``.
 
-``/etc/opt/csw/salt/``
-
-You'll want to edit the minion config file to set the name of your salt master server:
+You'll want to edit the minion config file to set the name of your salt master
+server:
 
 .. code-block:: diff
 
     - #master: salt
     + master: your-salt-server
+
+If you would like to use `pkgutil`_ as the default package provider for your
+Solaris minions, you can do so using the :conf_minion:`providers` option in the
+minion config file.
 
 You can now start the salt minion like so:
 
@@ -90,7 +103,8 @@ On Solaris 9:
 
     /etc/init.d/salt-minion start
 
-You should now be able to log onto the salt master and check to see if the salt-minion key is awaiting acceptance:
+You should now be able to log onto the salt master and check to see if the
+salt-minion key is awaiting acceptance:
 
 .. code-block:: bash
 

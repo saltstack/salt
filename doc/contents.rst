@@ -22,7 +22,7 @@ Full Table of Contents
     topics/tutorials/standalone_minion
     topics/pillar/index
     topics/master_tops/index
-    topics/jobs/index
+    topics/jobs/*
     topics/nonroot
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
@@ -30,6 +30,9 @@ Full Table of Contents
     topics/projects/index
     topics/event/index
     topics/tests/*
+    topics/reactor/*
+    topics/style
+    topics/git/*
 
     ref/index
     ref/modules/*
@@ -53,11 +56,10 @@ Full Table of Contents
     ref/clientacl
     ref/syndic
     ref/python-api
-    ref/file_server/index
-    ref/file_server/file_roots
-    ref/file_server/dynamic-modules
+    ref/file_server/*
     ref/configuration/*
     ref/internals/index
+    ref/windows-package-manager
 
     ref/cli/index
     ref/cli/salt

@@ -99,7 +99,7 @@ class OptionParser(optparse.OptionParser):
 
         optparse.OptionParser.__init__(self, *args, **kwargs)
 
-        if '%prog' in self.epilog:
+        if self.epilog and '%prog' in self.epilog:
             self.epilog = self.epilog.replace('%prog', self.get_prog_name())
 
     def parse_args(self, args=None, values=None):
@@ -322,7 +322,10 @@ class LogLevelMixIn(object):
             # Remove it from config so it get's the default value bellow
             self.config.pop('log_datefmt', None)
 
-        datefmt = self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        datefmt = self.config.get(
+            'log_datefmt_logfile',
+            self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
+        )
         log.setup_logfile_logger(
             self.config[lfkey],
             loglevel,
@@ -334,14 +337,13 @@ class LogLevelMixIn(object):
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
-        if hasattr(self.options, 'daemon'):
-            if self.options.daemon:
-                self.config['log_level'] = 'quiet'
-        log.setup_console_logger(
-            self.config['log_level'],
-            log_format=self.config['log_fmt_console'],
-            date_format=self.config['log_datefmt']
-        )
+        if getattr(self.options, 'daemon', False) is False:
+            # Since we're not going to be a daemon, setup the console logger
+            log.setup_console_logger(
+                self.config['log_level'],
+                log_format=self.config['log_fmt_console'],
+                date_format=self.config['log_datefmt']
+            )
 
 
 class RunUserMixin(object):

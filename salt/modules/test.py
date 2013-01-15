@@ -6,19 +6,6 @@ Module for running arbitrary tests
 import time
 
 
-# Load the outputters for the module
-__outputter__ = {
-    'echo': 'txt',
-    'ping': 'txt',
-    'fib': 'yaml',
-    'version': 'txt',
-    'collatz': 'yaml',
-    'conf_test': 'txt',
-    'get_opts': 'yaml',
-    'outputter': 'txt',
-}
-
-
 def echo(text):
     '''
     Return a string - used for testing the connection
@@ -129,11 +116,11 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    a, b = 0, 1
+    fib_a, fib_b = 0, 1
     ret = [0]
-    while b < num:
-        ret.append(b)
-        a, b = b, a + b
+    while fib_b < num:
+        ret.append(fib_b)
+        fib_a, fib_b = fib_b, fib_a + fib_b
     return ret, time.time() - start
 
 

@@ -22,6 +22,7 @@ else:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -112,6 +113,42 @@ def verify_socket(interface, pub_port, ret_port):
     return result
 
 
+def verify_files(files, user):
+    '''
+    Verify that the named files exist and are owned by the named user
+    '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
+    import pwd  # after confirming not running Windows
+    import grp
+    try:
+        pwnam = pwd.getpwnam(user)
+        uid = pwnam[2]
+        gid = pwnam[3]
+        groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+
+    except KeyError:
+        err = ('Failed to prepare the Salt environment for user '
+               '{0}. The user is not available.\n').format(user)
+        sys.stderr.write(err)
+        sys.exit(2)
+    for fn_ in files:
+        dirname = os.path.dirname(fn_)
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        if not os.path.isfile(fn_):
+            with salt.utils.fopen(fn_, 'w+') as fp_:
+                fp_.write('')
+        stats = os.stat(fn_)
+        if not uid == stats.st_uid:
+            try:
+                os.chown(fn_, uid, -1)
+            except OSError:
+                pass
+    return True
+
+
 def verify_env(dirs, user, permissive=False, pki_dir=''):
     '''
     Verify that the named directories are in place and that the environment
@@ -144,10 +181,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                 if os.getuid() == 0:
                     os.chown(dir_, uid, gid)
                 os.umask(cumask)
-            except OSError as e:
+            except OSError as err:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
-                sys.stderr.write(msg.format(dir_, e))
-                sys.exit(e.errno)
+                sys.stderr.write(msg.format(dir_, err))
+                sys.exit(err.errno)
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
@@ -223,10 +260,10 @@ def check_user(user):
         return True
     import pwd  # after confirming not running Windows
     try:
-        p = pwd.getpwnam(user)
+        pwuser = pwd.getpwnam(user)
         try:
-            os.setgid(p.pw_gid)
-            os.setuid(p.pw_uid)
+            os.setgid(pwuser.pw_gid)
+            os.setuid(pwuser.pw_uid)
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
             msg = msg.format(user)
@@ -277,16 +314,16 @@ def check_path_traversal(path, user='root'):
     sure a user can read all parent directories of the minion's  key
     before trying to go and generate a new key and raising an IOError
     '''
-    for p in list_path_traversal(path):
-        if not os.access(p, os.R_OK):
-            msg = 'Could not access {0}.'.format(p)
+    for tpath in list_path_traversal(path):
+        if not os.access(tpath, os.R_OK):
+            msg = 'Could not access {0}.'.format(tpath)
             current_user = getpass.getuser()
             # Make the error message more intelligent based on how
             # the user invokes salt-call or whatever other script.
             if user != current_user:
                 msg += ' Try running as user {0}.'.format(user)
             else:
-                msg += ' Please give {0} read permissions.'.format(user, p)
+                msg += ' Please give {0} read permissions.'.format(user, tpath)
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)

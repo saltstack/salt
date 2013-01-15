@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     # TODO: This could work on windows with some love
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows():
         return False
     return 'ssh'
 
@@ -73,7 +73,7 @@ def _replace_auth_key(
         key,
         enc='ssh-rsa',
         comment='',
-        options=[],
+        options=None,
         config='.ssh/authorized_keys'):
     '''
     Replace an existing key
@@ -82,7 +82,7 @@ def _replace_auth_key(
                 key,
                 enc,
                 comment,
-                options)
+                options or [])
 
     lines = []
     uinfo = __salt__['user.info'](user)
@@ -132,13 +132,13 @@ def _validate_keys(key_file):
                     continue
 
                 # get "{options} key"
-                ln = re.search(linere, line)
-                if not ln:
+                search = re.search(linere, line)
+                if not search:
                     # not an auth ssh key, perhaps a blank line
                     continue
 
-                opts = ln.group(1)
-                comps = ln.group(2).split()
+                opts = search.group(1)
+                comps = search.group(2).split()
 
                 if len(comps) < 2:
                     # Not a valid line
@@ -309,12 +309,12 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                         continue
 
                     # get "{options} key"
-                    ln = re.search(linere, line)
-                    if not ln:
+                    search = re.search(linere, line)
+                    if not search:
                         # not an auth ssh key, perhaps a blank line
                         continue
 
-                    comps = ln.group(2).split()
+                    comps = search.group(2).split()
 
                     if len(comps) < 2:
                         # Not a valid line
@@ -391,7 +391,7 @@ def set_auth_key(
         key,
         enc='ssh-rsa',
         comment='',
-        options=[],
+        options=None,
         config='.ssh/authorized_keys'):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
@@ -415,7 +415,7 @@ def set_auth_key(
                 key,
                 enc,
                 comment,
-                options,
+                options or [],
                 config)
         return 'replace'
     elif status == 'exists':
@@ -611,8 +611,8 @@ def set_known_host(user, hostname,
     line = '{hostname} {enc} {key}\n'.format(**remote_host)
 
     try:
-        with salt.utils.fopen(full, 'a') as fd:
-            fd.write(line)
+        with salt.utils.fopen(full, 'a') as ofile:
+            ofile.write(line)
     except (IOError, OSError):
         raise CommandExecutionError("Couldn't append to known hosts file")
 

@@ -177,7 +177,7 @@ of matches you can perform:
             - match: grain
             - repos.ubuntu
 
-        'os:(RedHat|CentOS)'
+        'os:(RedHat|CentOS)':
             - match: grain_pcre
             - repos.epel
 
@@ -185,7 +185,7 @@ of matches you can perform:
             - match: list
             - database
 
-        'somekey:abc'
+        'somekey:abc':
             - match: pillar
             - xyz
 

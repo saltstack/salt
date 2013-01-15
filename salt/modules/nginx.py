@@ -6,10 +6,6 @@ Support for nginx
 import salt.utils
 
 
-__outputter__ = {
-    'signal': 'txt',
-}
-
 # Cache the output of running which('nginx') so this module
 # doesn't needlessly walk $PATH looking for the same binary
 # for nginx over and over and over for each function herein

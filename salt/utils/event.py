@@ -30,7 +30,7 @@ import salt.payload
 import salt.loader
 import salt.state
 from salt._compat import string_types
-
+from salt.exceptions import SaltSystemExit
 log = logging.getLogger(__name__)
 
 
@@ -78,6 +78,25 @@ class SaltEvent(object):
                         sock_dir,
                         'minion_event_{0}_pull.ipc'.format(id_hash)
                         ))
+        for uri in (puburi, pulluri):
+            if uri.startswith('tcp://'):
+                # This check only applies to IPC sockets
+                continue
+            # The socket path is limited to 107 characters on Solaris and
+            # Linux, and 103 characters on BSD-based systems.
+            # Let's fail at the lower level so no system checks are
+            # required.
+            if len(uri) > 103:
+                raise SaltSystemExit(
+                    'The socket path length is more that what ZMQ allows. '
+                    'The length of {0!r} is more than 103 characters. '
+                    'Either try to reduce the length of this setting\'s '
+                    'path or switch to TCP; In the configuration file set '
+                    '"ipc_mode: tcp"'.format(
+                        uri
+                    )
+                )
+
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
         )
@@ -111,18 +130,21 @@ class SaltEvent(object):
         if not self.cpub:
             self.connect_pub()
         self.sub.setsockopt(zmq.SUBSCRIBE, tag)
-        while True:
-            socks = dict(self.poller.poll(wait))
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-                data = self.serial.loads(raw[20:])
-                if full:
-                    ret = {'data': data,
-                           'tag': raw[:20].rstrip('|')}
-                    return ret
-                return data
-            else:
+        try:
+            while True:
+                socks = dict(self.poller.poll(wait))
+                if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                    raw = self.sub.recv()
+                    data = self.serial.loads(raw[20:])
+                    if full:
+                        ret = {'data': data,
+                               'tag': raw[:20].rstrip('|')}
+                        return ret
+                    return data
                 return None
+        finally:
+            # No sense in keeping subscribed to this event
+            self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
 
     def iter_events(self, tag='', full=False):
         '''
@@ -149,18 +171,26 @@ class SaltEvent(object):
         return True
 
     def destroy(self):
-        if self.cpub:
+        if self.cpub is True and self.sub.closed is False:
+            # Wait at most 2.5 secs to send any remaining messages in the
+            # socket or the context.term() bellow will hang indefinitely.
+            # See https://github.com/zeromq/pyzmq/issues/102
+            self.sub.setsockopt(zmq.LINGER, 1)
             self.sub.close()
-        if self.cpush:
+        if self.cpush is True and self.push.closed is False:
+            self.push.setsockopt(zmq.LINGER, 1)
             self.push.close()
         # If socket's are not unregistered from a poller, nothing which touches
         # that poller get's garbage collected. The Poller itself, it's
         # registered sockets and the Context
         for socket in self.poller.sockets.keys():
-            if not socket.closed:
+            if socket.closed is False:
+                # Should already be closed from above, but....
+                socket.setsockopt(zmq.LINGER, 1)
                 socket.close()
             self.poller.unregister(socket)
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()
@@ -173,6 +203,13 @@ class MasterEvent(SaltEvent):
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
         self.connect_pub()
+
+
+class LocalClientEvent(MasterEvent):
+    '''
+    This class is just used to differentiate who is handling the events,
+    specially on logs, but it's the same as MasterEvent.
+    '''
 
 
 class MinionEvent(SaltEvent):
@@ -238,10 +275,15 @@ class EventPublisher(Process):
                         continue
                     raise exc
         except KeyboardInterrupt:
-            self.epub_sock.close()
-            self.epull_sock.close()
+            if self.epub_sock.closed is False:
+                self.epub_sock.setsockopt(zmq.LINGER, 1)
+                self.epub_sock.close()
+            if self.epull_sock.closed is False:
+                self.epull_sock.setsockopt(zmq.LINGER, 1)
+                self.epull_sock.close()
         finally:
-            self.context.term()
+            if self.context.closed is False:
+                self.context.term()
 
 
 class Reactor(multiprocessing.Process, salt.state.Compiler):
@@ -367,3 +409,66 @@ class ReactWrap(object):
         wheel = salt.wheel.Wheel(self.opts)
         return wheel.master_call(**kwargs)
 
+
+class StateFire(object):
+    '''
+    Evaluate the data from a state run and fire events on the master and minion
+    for each returned chunk that is not "green"
+    This object is made to only run on a minion
+    '''
+    def __init__(self, opts, auth=None):
+        self.opts = opts
+        self.event = SaltEvent(opts, 'minion')
+        if not auth:
+            self.auth = salt.crypt.SAuth(self.opts)
+        else:
+            self.auth = auth
+
+    def fire_master(self, data, tag):
+        '''
+        Fire an event off on the master server
+
+        CLI Example::
+
+            salt '*' event.fire_master 'stuff to be in the event' 'tag'
+        '''
+        load = {'id': self.opts['id'],
+                'tag': tag,
+                'data': data,
+                'cmd': '_minion_event'}
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.auth.crypticle.dumps(load))
+        except:
+            pass
+        return True
+
+    def fire_running(self, running):
+        '''
+        Pass in a state "running" dict, this is the return dict from a state
+        call. The dict will be processesd and fire events.
+
+        By default yellows and reds fire events on the master and minion, but
+        this can be configured.
+        '''
+        load = {'id': self.opts['id'],
+                'events': [],
+                'cmd': '_minion_event'}
+        for stag in sorted(
+                running,
+                key=lambda k: running[k].get('__run_num__', 0)):
+            if running[stag]['result'] and not running[stag]['changes']:
+                continue
+            tag = 'state_{0}_{1}'.format(
+                    str(running[stag]['result']),
+                    'True' if running[stag]['changes'] else 'False')
+            load['events'].append(
+                    {'tag': tag,
+                     'data': running[stag]}
+                    )
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.auth.crypticle.dumps(load))
+        except:
+            pass
+        return True

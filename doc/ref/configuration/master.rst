@@ -439,7 +439,7 @@ Example:
 
     file_roots:
       base:
-        - /srv/salt/
+        - /srv/salt
       dev:
         - /srv/salt/dev/services
         - /srv/salt/dev/states
@@ -651,13 +651,24 @@ Master Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/var/log/salt/master`
+Default: /var/log/salt/master
 
-The location of the master log file
+The master log can be sent to a regular file, local path name, or network location.
+Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
+with rsyslogd(8) configured for network logging.  The format for remote addresses is:
+``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.  Examples:
 
 .. code-block:: yaml
 
     log_file: /var/log/salt/master
+
+.. code-block:: yaml
+
+    log_file: file:///dev/log
+
+.. code-block:: yaml
+
+    log_file: udp://loghost:10514
 
 .. conf_master:: log_level
 
@@ -666,12 +677,82 @@ The location of the master log file
 
 Default: ``warning``
 
-The level of messages to send to the log file.
-One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+The level of messages to send to the console.
+One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 .. code-block:: yaml
 
     log_level: warning
+
+.. conf_master:: log_level_logfile
+
+``log_level_logfile``
+---------------------
+
+Default: ``warning``
+
+The level of messages to send to the log file.
+One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+
+.. code-block:: yaml
+
+    log_level_logfile: warning
+
+.. conf_master:: log_datefmt
+
+``log_datefmt``
+---------------
+
+Default: ``%H:%M:%S``
+
+The date and time format used in console log messages. Allowed date/time formating
+can be seen on http://docs.python.org/library/time.html#time.strftime
+
+.. code-block:: yaml
+
+    log_datefmt: '%H:%M:%S'
+
+.. conf_master:: log_datefmt_logfile
+
+``log_datefmt_logfile``
+-----------------------
+
+Default: ``%Y-%m-%d %H:%M:%S``
+
+The date and time format used in log file messages. Allowed date/time formating
+can be seen on http://docs.python.org/library/time.html#time.strftime
+
+.. code-block:: yaml
+
+    log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
+
+.. conf_master:: log_fmt_console
+
+``log_fmt_console``
+-------------------
+
+Default: ``[%(levelname)-8s] %(message)s``
+
+The format of the console logging messages. Allowed formatting options can
+be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+
+.. code-block:: yaml
+
+    log_fmt_console: '[%(levelname)-8s] %(message)s'
+
+.. conf_master:: log_fmt_logfile
+
+``log_fmt_logfile``
+-------------------
+
+Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+
+The format of the log file logging messages. Allowed formatting options can
+be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+
+.. code-block:: yaml
+
+    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 .. conf_master:: log_granular_levels
 
@@ -680,15 +761,17 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 
 Default: ``{}``
 
-Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the Salt library at the 'warning' level, but you
-still wish to have 'salt.modules' at the 'debug' level:
+This can be used to control logging levels more specificically.  The
+example sets the main salt library at the 'warning' level, but sets 
+'salt.modules' to log at the 'debug' level:
 
 .. code-block:: yaml
 
   log_granular_levels:
     'salt': 'warning',
     'salt.modules': 'debug'
+
+.. conf_master:: default_include
 
 ``default_include``
 -------------------

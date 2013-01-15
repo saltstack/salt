@@ -45,10 +45,10 @@ from salt.exceptions import SaltInvocationError
 from salt.exceptions import EauthAuthenticationError
 
 # Try to import range from https://github.com/ytoolshed/range
-has_range = False
+HAS_RANGE = False
 try:
     import seco.range
-    has_range = True
+    HAS_RANGE = True
 except ImportError:
     pass
 
@@ -71,13 +71,13 @@ class LocalClient(object):
     '''
     def __init__(self, c_path='/etc/salt/master', mopts=None):
         if mopts:
-            self.opts - mopts
+            self.opts = mopts
         else:
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.LocalClientEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
@@ -96,8 +96,8 @@ class LocalClient(object):
         salt.utils.verify.check_path_traversal(self.opts['cachedir'], key_user)
 
         try:
-            with salt.utils.fopen(keyfile, 'r') as KEY:
-                return KEY.read()
+            with salt.utils.fopen(keyfile, 'r') as key:
+                return key.read()
         except (OSError, IOError):
             # Fall back to eauth
             return ''
@@ -125,8 +125,8 @@ class LocalClient(object):
         range = seco.range.Range(self.opts['range_server'])
         try:
             return range.expand(tgt)
-        except seco.range.RangeException as e:
-            print(("Range server exception: {0}".format(e)))
+        except seco.range.RangeException as err:
+            print("Range server exception: {0}".format(err))
             return []
 
     def _get_timeout(self, timeout):
@@ -149,22 +149,24 @@ class LocalClient(object):
         '''
         Return the information about a given job
         '''
-        return self.cmd(
+        jinfo = self.cmd(
                 tgt,
                 'saltutil.find_job',
                 [jid],
                 2,
                 tgt_type,
                 **kwargs)
+        return jinfo
 
     def _check_pub_data(self, pub_data):
         '''
         Common checks on the pub_data data structure returned from running pub
         '''
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
-            raise EauthAuthenticationError(err)
+            raise EauthAuthenticationError(
+                'Failed to authenticate, is this user permitted to execute '
+                'commands?'
+            )
 
         # Failed to connect to the master and send the pub
         if not 'jid' in pub_data or pub_data['jid'] == '0':
@@ -598,11 +600,15 @@ class LocalClient(object):
                 break
             time.sleep(0.01)
 
-    def get_returns(self, jid, minions, timeout=None):
+    def get_returns(
+            self,
+            jid,
+            minions,
+            timeout=None):
         '''
-        This method starts off a watcher looking at the return data for
-        a specified jid
+        Get the returns for the command line interface via the event system
         '''
+        minions = set(minions)
         if timeout is None:
             timeout = self.opts['timeout']
         jid_dir = salt.utils.jid_dir(
@@ -610,49 +616,35 @@ class LocalClient(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        start = 999999999999
-        gstart = int(time.time())
+        start = int(time.time())
+        found = set()
         ret = {}
         wtag = os.path.join(jid_dir, 'wtag*')
-        # If jid == 0, there is no payload
-        if int(jid) == 0:
-            return ret
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
         # Wait for the hosts to check in
         while True:
-            for fn_ in os.listdir(jid_dir):
-                if fn_.startswith('.'):
-                    continue
-                if fn_ not in ret:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            ret[fn_] = self.serial.load(
-                                    salt.utils.fopen(retp, 'r')
-                                    )
-                        except Exception:
-                            pass
-            if ret and start == 999999999999:
-                start = int(time.time())
+            raw = self.event.get_event(timeout, jid)
+            if not raw is None:
+                found.add(raw['id'])
+                ret[raw['id']] = raw['return']
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
+                continue
+            # Then event system timeout was reached and nothing was returned
+            if len(found.intersection(minions)) >= len(minions):
+                # All minions have returned, break out of the loop
+                break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(set(ret.keys()).intersection(minions)) >= len(minions):
-                # All Minions have returned
-                return ret
             if int(time.time()) > start + timeout:
-                # The timeout has been reached
-                return ret
-            if int(time.time()) > gstart + timeout and not ret:
-                # No minions have replied within the specified global timeout,
-                # return an empty dict
-                return ret
-            time.sleep(0.02)
+                break
+            time.sleep(0.01)
+        return ret
 
     def get_full_returns(self, jid, minions, timeout=None):
         '''
@@ -943,7 +935,7 @@ class LocalClient(object):
 
         # Convert a range expression to a list of nodes and change expression
         # form to list
-        if expr_form == 'range' and has_range:
+        if expr_form == 'range' and HAS_RANGE:
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 
@@ -1001,7 +993,8 @@ class LocalClient(object):
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
         if hasattr(self, 'event'):
-            self.event.destroy()
+            # The call bellow will take care of calling 'self.event.destroy()'
+            del(self.event)
 
 
 class FunctionWrapper(dict):
@@ -1066,5 +1059,5 @@ class Caller(object):
         Call a single salt function
         '''
         func = self.sminion.functions[fun]
-        args, kw = salt.minion.detect_kwargs(func, args, kwargs)
-        return func(*args, **kw)
+        args, kwargs = salt.minion.detect_kwargs(func, args, kwargs)
+        return func(*args, **kwargs)

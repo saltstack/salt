@@ -92,7 +92,7 @@ Targeting is specifying which minions should execute commands or manage server
 configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
-    Match minions using globing and regular expressions.
+    Match minions using globbing and regular expressions.
 
 :doc:`Grains </topics/targeting/grains>`
     Match minions using bits of static information about the minion such as
@@ -221,6 +221,13 @@ Salt is many splendid things.
     take advantage of automatic updates to keep your minions running your
     latest builds.
 
+:doc:`Windows Software Manager / Package Repository <ref/windows-package-manager>`
+    Looking for an easy way to manage software on all your Windows machines? Do
+    you feel left out of all the package manager magic found in yum and apt?
+    Search no more! Salt has an integrated software package manager for your
+    Windows machines! Install software hosted on your master, somewhere on your
+    network, or anywhere http, https, and ftp work.
+
 Reference
 ---------
 
@@ -244,6 +251,9 @@ More information about the project
 
 :doc:`Community </topics/community>`
     How you can get involved.
+
+:doc:`Salt Development </topics/development/index>`
+    Information for Hacking on Salt
 
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states

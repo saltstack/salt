@@ -88,7 +88,7 @@ def raw_cron(user):
         cmd = 'crontab -l {0}'.format(user)
     else:
         cmd = 'crontab -l -u {0}'.format(user)
-    return __salt__['cmd.run_stdout'](cmd)
+    return __salt__['cmd.run_stdout'](cmd, rstrip=False)
 
 
 def list_tab(user):
@@ -143,7 +143,7 @@ def list_tab(user):
     return ret
 
 # For consistency's sake
-ls = list_tab
+ls = list_tab  # pylint: disable-msg=C0103
 
 
 def set_special(user, special, cmd):
@@ -234,7 +234,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
         return comdat['stderr']
     return ret
 
-rm = rm_job
+rm = rm_job  # pylint: disable-msg=C0103
 
 
 def set_env(user, name, value=None):

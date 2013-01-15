@@ -11,6 +11,7 @@ import shutil
 import tempfile
 import time
 import signal
+import subprocess
 from hashlib import md5
 from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
@@ -45,7 +46,12 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
-SYS_TMP_DIR = tempfile.gettempdir()
+if os.environ.has_key('TMPDIR'):
+    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+    SYS_TMP_DIR = os.environ['TMPDIR']
+else:
+    SYS_TMP_DIR = tempfile.gettempdir()
+
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
@@ -234,25 +240,28 @@ class TestDaemon(object):
         self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
         self.syndic_process.start()
 
-        #if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
-        #    try:
-        #        import yaml
-        #        os.makedirs('/tmp/salttest/conf')
-        #    except OSError:
-        #        pass
-        #    self.master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
-        #    self.minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
-        #    open('/tmp/salttest/conf/master', 'w').write(
-        #        yaml.dump(self.master_opts)
-        #    )
-        #    open('/tmp/salttest/conf/minion', 'w').write(
-        #        yaml.dump(self.minion_opts)
-        #    )
+        if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
+            from copy import deepcopy
+            try:
+                import yaml
+                os.makedirs('/tmp/salttest/conf')
+            except OSError:
+                pass
+            master_opts = deepcopy(self.master_opts)
+            minion_opts = deepcopy(self.minion_opts)
+            master_opts.pop('conf_file', None)
+            master_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
 
-        # Let's create a local client to ping and sync minions
-        self.client = salt.client.LocalClient(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
-        )
+            minion_opts['user'] = pwd.getpwuid(os.getuid()).pw_name
+            minion_opts.pop('conf_file', None)
+            minion_opts.pop('grains', None)
+            minion_opts.pop('pillar', None)
+            open('/tmp/salttest/conf/master', 'w').write(
+                yaml.dump(master_opts)
+            )
+            open('/tmp/salttest/conf/minion', 'w').write(
+                yaml.dump(minion_opts)
+            )
 
         self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
@@ -267,8 +276,6 @@ class TestDaemon(object):
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
             grains = self.client.cmd('minion', 'grains.items')
-            import pprint
-            pprint.pprint(grains['minion'])
 
         print_header('', sep='=', inline=True)
 
@@ -276,6 +283,20 @@ class TestDaemon(object):
             return self
         finally:
             self.post_setup_minions()
+
+    @property
+    def client(self):
+        '''
+        Return a local client which will be used for example to ping and sync
+        the test minions.
+
+        This client is defined as a class attribute because it's creation needs
+        to be deferred to a latter stage. If created it on `__enter__` like it
+        previously was, it would not receive the master events.
+        '''
+        return salt.client.LocalClient(
+            mopts=self.master_opts
+        )
 
     def __exit__(self, type, value, traceback):
         '''
@@ -290,9 +311,9 @@ class TestDaemon(object):
         self._clean()
 
     def pre_setup_minions(self):
-        """
+        '''
         Subclass this method for additional minion setups.
-        """
+        '''
 
     def setup_minions(self):
         # Wait for minions to connect back
@@ -432,7 +453,7 @@ class TestDaemon(object):
 
     def __client_job_running(self, targets, jid):
         running = self.client.cmd(
-            ','.join(targets), 'saltutil.running', expr_form='list'
+            list(targets), 'saltutil.running', expr_form='list'
         )
         return [
             k for (k, v) in running.iteritems() if v and v[0]['jid'] == jid
@@ -465,7 +486,7 @@ class TestDaemon(object):
             sys.stdout.flush()
 
             responses = self.client.cmd(
-                ','.join(expected_connections), 'test.ping', expr_form='list',
+                list(expected_connections), 'test.ping', expr_form='list',
             )
             for target in responses:
                 if target not in expected_connections:
@@ -505,7 +526,7 @@ class TestDaemon(object):
         )
         syncing = set(targets)
         jid_info = self.client.run_job(
-            ','.join(targets), 'saltutil.sync_modules',
+            list(targets), 'saltutil.sync_modules',
             expr_form='list',
             timeout=9999999999999999,
         )
@@ -518,12 +539,19 @@ class TestDaemon(object):
             raise SystemExit()
 
         while syncing:
-            rdata = self.client.get_returns(jid_info['jid'], syncing, 1)
+            rdata = self.client.get_full_returns(jid_info['jid'], syncing, 1)
             if rdata:
                 for name, output in rdata.iteritems():
+                    if not output['ret']:
+                        # Already synced!?
+                        syncing.remove(name)
+                        continue
+
                     print(
                         '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
-                        '{1}'.format(name, ', '.join(output), **self.colors)
+                        '{1}'.format(
+                            name, ', '.join(output['ret']), **self.colors
+                        )
                     )
                     # Synced!
                     try:
@@ -563,14 +591,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90,
+                     **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=500, kwarg=kwargs
+            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
@@ -634,7 +663,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=500)
+        orig = self.client.cmd('minion', function, arg, timeout=90)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
@@ -832,11 +861,48 @@ class ShellCaseCommonTestsMixIn(object):
 
     def test_version_includes_binary_name(self):
         if getattr(self, '_call_binary_', None) is None:
-            self.skipTest("'_call_binary_' not defined.")
+            self.skipTest('\'_call_binary_\' not defined.')
 
-        out = '\n'.join(self.run_script(self._call_binary_, "--version"))
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         self.assertIn(self._call_binary_, out)
         self.assertIn(salt.__version__, out)
+
+    def test_salt_with_git_version(self):
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest('\'_call_binary_\' not defined.')
+        from salt.utils import which
+        from salt.version import __version_info__
+        git = which('git')
+        if not git:
+            self.skipTest('The git binary is not available')
+
+        # Let's get the output of git describe
+        process = subprocess.Popen(
+            [git, 'describe'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=os.path.abspath(os.path.dirname(salt.__file__))
+        )
+        out, _ = process.communicate()
+        if not out:
+            self.skipTest('Failed to get the output of \'git describe\'')
+
+        parsed_version = '{0}'.format(out.strip().lstrip('v'))
+        parsed_version_info = tuple([
+            int(i) for i in parsed_version.split('-', 1)[0].split('.')
+        ])
+        if parsed_version_info != __version_info__:
+            self.skipTest(
+                'In order to get the proper salt version with the '
+                'git hash you need to update salt\'s local git '
+                'tags. Something like: \'git fetch --tags\' or '
+                '\'git fetch --tags upstream\' if you followed '
+                'salt\'s contribute documentation. The version '
+                'string WILL NOT include the git hash.'
+            )
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
+        self.assertIn(parsed_version, out)
 
 
 class SaltReturnAssertsMixIn(object):
@@ -900,31 +966,46 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not True. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not True. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertSaltFalseReturn(self, ret):
         try:
             self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not False. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not False. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertSaltNoneReturn(self, ret):
         try:
             self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
-            raise AssertionError(
-                '{result} is not None. Salt Comment:\n{comment}'.format(
-                    **(ret.values()[0])
+            try:
+                raise AssertionError(
+                    '{result} is not None. Salt Comment:\n{comment}'.format(
+                        **(ret.values()[0])
+                    )
                 )
-            )
+            except AttributeError:
+                raise AssertionError(
+                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                )
 
     def assertInSaltComment(self, ret, in_comment):
         return self.assertIn(

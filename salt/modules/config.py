@@ -6,7 +6,7 @@ Return config information
 import re
 
 # Set up the default values for all systems
-defaults = {'mongo.db': 'salt',
+DEFAULTS = {'mongo.db': 'salt',
             'mongo.host': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
@@ -69,23 +69,31 @@ def valid_fileproto(uri):
     remote file protocol designation
     '''
     try:
-        return bool(re.match('^(?:salt|https?|ftp)://',uri))
+        return bool(re.match('^(?:salt|https?|ftp)://', uri))
     except:
         return False
 
 
-def option(value, default=''):
+def option(
+        value,
+        default='',
+        omit_opts=False,
+        omit_master=False,
+        omit_pillar=False):
     '''
     Pass in a generic option and receive the value that will be assigned
     '''
-    if value in __opts__:
-        return __opts__[value]
-    elif value in __pillar__.get('master', {}):
-        return __pillar__['master'][value]
-    elif value in __pillar__:
-        return __pillar__[value]
-    elif value in defaults:
-        return defaults[value]
+    if not omit_opts:
+        if value in __opts__:
+            return __opts__[value]
+    if not omit_master:
+        if value in __pillar__.get('master', {}):
+            return __pillar__['master'][value]
+    if not omit_pillar:
+        if value in __pillar__:
+            return __pillar__[value]
+    elif value in DEFAULTS:
+        return DEFAULTS[value]
     return default
 
 

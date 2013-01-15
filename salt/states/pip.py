@@ -43,7 +43,8 @@ def installed(name,
               no_download=False,
               install_options=None,
               user=None,
-              cwd=None):
+              cwd=None,
+              __env__='base'):
     '''
     Make sure the package is installed
 
@@ -111,7 +112,8 @@ def installed(name,
         no_download=no_download,
         install_options=install_options,
         runas=user,
-        cwd=cwd
+        cwd=cwd,
+        __env__=__env__
     )
 
     if pip_install_call and (pip_install_call['retcode'] == 0):
@@ -151,7 +153,8 @@ def removed(name,
             proxy=None,
             timeout=None,
             user=None,
-            cwd=None):
+            cwd=None,
+            __env__='base'):
     """
     Make sure that a package is not installed.
 
@@ -187,7 +190,8 @@ def removed(name,
                                  proxy=proxy,
                                  timeout=timeout,
                                  runas=user,
-                                 cwd=cwd):
+                                 cwd=cwd,
+                                 __env__='base'):
         ret["result"] = True
         ret["changes"][name] = "Removed"
         ret["comment"] = "Package was successfully removed."

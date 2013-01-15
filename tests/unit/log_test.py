@@ -27,7 +27,7 @@ class TestLog(TestCase):
         from salt import log as saltlog
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
-        log = saltlog.Logging(__name__)
+        log = saltlog.SaltLoggingClass(__name__)
 
         # Test for a format which includes digits in name formatting.
         log_format = '[%(name)-15s] %(message)s'
@@ -39,7 +39,7 @@ class TestLog(TestCase):
             # Let's create another log instance to trigger salt's logging class
             # calculations.
             try:
-                saltlog.Logging('{0}.with_digits'.format(__name__))
+                saltlog.SaltLoggingClass('{0}.with_digits'.format(__name__))
             except Exception, err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
@@ -58,7 +58,7 @@ class TestLog(TestCase):
             # Let's create another log instance to trigger salt's logging class
             # calculations.
             try:
-                saltlog.Logging('{0}.without_digits'.format(__name__))
+                saltlog.SaltLoggingClass('{0}.without_digits'.format(__name__))
             except Exception, err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)

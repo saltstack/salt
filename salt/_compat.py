@@ -19,6 +19,7 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
+# pylint: disable-msg=C0103
 if PY3:
     string_types = str,
     integer_types = int,
@@ -145,3 +146,4 @@ if PY3:
     from io import StringIO
 else:
     from StringIO import StringIO
+# pylint: enable-msg=C0103

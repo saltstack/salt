@@ -55,7 +55,7 @@ def _render_filenames(path, dest, env, template):
         return (path, dest)
 
     # render the path as a template using path_template_engine as the engine
-    if template not in salt.utils.templates.template_registry:
+    if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
             'Attempted to render file paths with unavailable engine '
             '{0}'.format(template)
@@ -73,7 +73,7 @@ def _render_filenames(path, dest, env, template):
         tmp_path_fn = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
-        data = salt.utils.templates.template_registry[template](
+        data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
@@ -101,6 +101,23 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     CLI Example::
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
+
+    Template rendering can be enabled on both the source and destination file names
+    like so::
+
+        salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
+
+    This example would instruct all Salt minions to download the vimrc from a
+    directory with the same name as their os grain and copy it to /etc/vimrc
+
+    For larger files, the cp.get_file module also supports gzip compression.
+    Because gzip is CPU-intensive, this should only be used in
+    scenarios where the compression ratio is very high (e.g. pretty-printed JSON
+    or YAML files).
+
+    Use the *gzip* named argument to enable it.  Valid values are 1..9,
+    where 1 is the lightest compression and 9 the heaviest.  1 uses the least CPU
+    on the master (and minion), 9 uses the most.
     '''
     (path, dest) = _render_filenames(path, dest, env, template)
 
@@ -149,6 +166,8 @@ def get_dir(path, dest, env='base', template=None, gzip=None):
     CLI Example::
 
         salt '*' cp.get_dir salt://path/to/dir/ /minion/dest
+
+    get_dir supports the same template and gzip arguments as get_file.
     '''
     (path, dest) = _render_filenames(path, dest, env, template)
 
@@ -194,8 +213,11 @@ def cache_file(path, env='base'):
     _mk_client()
     result = __context__['cp.fileclient'].cache_file(path, env)
     if not result:
-        log.error('Unable to cache file "{0}" from env '
-                  '"{1}".'.format(path,env))
+        log.error(
+            'Unable to cache file "{0}" from env "{1}".'.format(
+                path, env
+            )
+        )
     return result
 
 

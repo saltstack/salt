@@ -314,6 +314,18 @@ def reload(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def force_reload(name):
+    '''
+    Force-reload the named service
+
+    CLI Example::
+
+        salt '*' service.force_reload <service name>
+    '''
+    cmd = 'service {0} force-reload'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
 def status(name, sig=None):
     '''
     Return the status for a service, returns a bool whether the service is
@@ -346,8 +358,8 @@ def _upstart_disable(name):
     Disable an Upstart service.
     '''
     override = '/etc/init/{0}.conf.override'.format(name)
-    with file(override, 'w') as fd:
-        fd.write('manual')
+    with file(override, 'w') as ofile:
+        ofile.write('manual')
     return _upstart_is_disabled(name)
 
 

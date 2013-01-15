@@ -12,6 +12,11 @@ from distutils.cmd import Command
 from distutils.command.clean import clean
 from distutils.sysconfig import get_python_lib, PREFIX
 
+# Change to salt source's directory prior to running any command
+setup_dirname = os.path.dirname(__file__)
+if setup_dirname != '':
+    os.chdir(setup_dirname)
+
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
 # This ensures consistent behavior but allows for advanced usage with
 # virtualenv, buildout, and others.
@@ -24,7 +29,30 @@ if 'USE_SETUPTOOLS' in os.environ:
         with_setuptools = False
 
 if with_setuptools is False:
+    import warnings
     from distutils.core import setup
+    warnings.filterwarnings(
+        'ignore',
+        'Unknown distribution option: \'(install_requires|zip_safe)\'',
+        UserWarning,
+        'distutils.dist'
+    )
+
+try:
+    # Add the esky bdist target if the module is available
+    # may require additional modules depending on platform
+    from esky import bdist_esky
+    # bbfreeze chosen for its tight integration with distutils
+    import bbfreeze
+    HAS_ESKY = True
+except ImportError:
+    # print function that supports the 'file' argument isn't available until
+    # 2.6 http://docs.python.org/2.6/library/__future__.html
+    # Using this method until 2.5 support is dropped.
+    print >> sys.stderr, 'Cannot load esky build target'
+    print >> sys.stderr, ('Please install the \'esky\' and the \'bbfreeze\' '
+                          'modules to enable this functionality')
+    HAS_ESKY = False
 
 salt_version = os.path.join(os.path.abspath(
     os.path.dirname(__file__)), 'salt', 'version.py')
@@ -95,8 +123,6 @@ if 'SYSCONFDIR' in os.environ:
 else:
     etc_path = os.path.join(os.path.dirname(PREFIX), 'etc')
 
-libraries = ['ws2_32'] if sys.platform == 'win32' else []
-
 with open(salt_reqs) as f:
     lines = f.read().split('\n')
     requirements = [line for line in lines if line]
@@ -137,6 +163,7 @@ setup_kwargs = {'name': NAME,
                              'salt.returners',
                              'salt.runners',
                              'salt.states',
+                             'salt.fileserver',
                              'salt.search',
                              'salt.output',
                              'salt.utils',
@@ -154,9 +181,10 @@ setup_kwargs = {'name': NAME,
                                  ]),
                                ('share/man/man7', ['doc/man/salt.7']),
                                ],
+                # Required for esky builds
                 'install_requires': requirements,
                 # The dynamic module loading in salt.modules makes this
-                # package zip unsafe.
+                # package zip unsafe. Required for esky builds
                 'zip_safe': False
                 }
 
@@ -187,19 +215,16 @@ if sys.platform.startswith('win'):
         '_winreg',
         'wmi',
     ])
-    setup_kwargs['install_requires'] += '\nwmi'
+    setup_kwargs['install_requires'].append('wmi')
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
         'yum',
         'spwd',
     ])
 
-if 'bdist_esky' in sys.argv:
-    # Add the esky bdist target if the module is available
-    # may require additional modules depending on platform
-    from esky import bdist_esky
-    # bbfreeze chosen for its tight integration with distutils
-    import bbfreeze
+if HAS_ESKY:
+    # if the user has the esky / bbfreeze libraries installed, add the
+    # appropriate kwargs to setup
     options = setup_kwargs.get('options', {})
     options['bdist_esky'] = {
         "freezer_module": "bbfreeze",
@@ -230,10 +255,6 @@ else:
                                'scripts/salt-call',
                                'scripts/salt-run',
                                'scripts/salt']
-    # Distutils does not know what these are and throws warnings.
-    # Stop the warning.
-    setup_kwargs.pop('install_requires')
-    setup_kwargs.pop('zip_safe')
 
 if __name__ == '__main__':
     setup(**setup_kwargs)

@@ -3,12 +3,8 @@ Package support for OpenBSD
 '''
 
 # Import python libs
-import os
 import re
 import logging
-
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -26,9 +22,12 @@ def __virtual__():
 
 def _splitpkg(name):
     if name:
-        m = re.match('^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$', name)
-        if m:
-            return m.groups()
+        match = re.match(
+            '^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$',
+            name
+        )
+        if match:
+            return match.groups()
 
 
 def _list_removed(old, new):
@@ -54,12 +53,12 @@ def _get_pkgs():
 
 def _format_pkgs(split):
     pkg = {}
-    for k, v in split.items():
-        if v[2]:
-            name = '{0}--{1}'.format(v[0], v[2])
+    for value in split.values():
+        if value[2]:
+            name = '{0}--{1}'.format(value[0], value[2])
         else:
-            name = v[0]
-        pkg[name] = v[1]
+            name = value[0]
+        pkg[name] = value[1]
     return pkg
 
 
@@ -113,7 +112,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example, Install one package::
 
@@ -125,7 +124,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
     CLI Example, Install more than one package from a alternate source (e.g. salt file-server, http, ftp, local filesystem)::
 
-        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' 
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
@@ -171,7 +170,7 @@ def remove(name):
         salt '*' pkg.remove <package name>
     '''
     old = _get_pkgs()
-    stem, flavor = (name.split('--') + [''])[:2]
+    stem, _ = (name.split('--') + [''])[:2]
     if stem in old:
         cmd = 'pkg_delete -xD dependencies {0}'.format(stem)
         __salt__['cmd.retcode'](cmd)
@@ -190,3 +189,16 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     return remove(name)
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)

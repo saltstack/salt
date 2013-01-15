@@ -10,7 +10,6 @@ import logging
 import os
 import shutil
 import subprocess
-import sys
 from functools import partial
 
 # Import salt libs
@@ -28,10 +27,6 @@ except ImportError:
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Set up the default outputters
-__outputter__ = {
-    'run': 'txt',
-}
 
 DEFAULT_SHELL = shell_grain()['shell']
 
@@ -86,6 +81,53 @@ def _chugid(runas):
             )
 
 
+def _render_cmd(cmd, cwd, template):
+    '''
+    If template is a valid template engine, process the cmd and cwd through
+    that engine.
+    '''
+    if not template:
+        return (cmd, cwd)
+
+    # render the path as a template using path_template_engine as the engine
+    if template not in salt.utils.templates.TEMPLATE_REGISTRY:
+        raise CommandExecutionError(
+            'Attempted to render file paths with unavailable engine '
+            '{0}'.format(template)
+        )
+
+    kwargs = {}
+    kwargs['salt'] = __salt__
+    kwargs['pillar'] = __pillar__
+    kwargs['grains'] = __grains__
+    kwargs['opts'] = __opts__
+    kwargs['env'] = 'base'
+
+    def _render(contents):
+        # write out path to temp file
+        tmp_path_fn = salt.utils.mkstemp()
+        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+            fp_.write(contents)
+        data = salt.utils.templates.TEMPLATE_REGISTRY[template](
+            tmp_path_fn,
+            to_str=True,
+            **kwargs
+        )
+        salt.utils.safe_rm(tmp_path_fn)
+        if not data['result']:
+            # Failed to render the template
+            raise CommandExecutionError(
+                'Failed to cmd with error: {0}'.format(
+                    data['data']
+                )
+            )
+        else:
+            return data['data']
+
+    cmd = _render(cmd)
+    cwd = _render(cwd)
+    return (cmd, cwd)
+
 def _run(cmd,
          cwd=None,
          stdout=subprocess.PIPE,
@@ -96,7 +138,8 @@ def _run(cmd,
          shell=DEFAULT_SHELL,
          env=(),
          rstrip=True,
-         retcode=False):
+         retcode=False,
+         template=None):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -112,7 +155,7 @@ def _run(cmd,
         if not os.access(cwd, os.R_OK):
             cwd = '/'
 
-    if not sys.platform.startswith('win'):
+    if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
@@ -121,6 +164,9 @@ def _run(cmd,
     disable_runas = [
         'Windows',
     ]
+
+    # munge the cmd and cwd through the template
+    (cmd, cwd) = _render_cmd(cmd, cwd, template)
 
     ret = {}
 
@@ -144,6 +190,15 @@ def _run(cmd,
             )
         )
 
+    if not env:
+        env = {}
+
+    if not salt.utils.is_windows():
+        # Default to C!
+        # Salt only knows how to parse English words
+        # Don't override if the user has passed LC_ALL
+        env.setdefault('LC_ALL', 'C')
+
     run_env = os.environ
     run_env.update(env)
     kwargs = {'cwd': cwd,
@@ -155,15 +210,16 @@ def _run(cmd,
     if runas:
         kwargs['preexec_fn'] = partial(_chugid, runas)
 
-    if not sys.platform.startswith('win'):
+    if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
-    # If all we want is the return code then don't block on gathering input.
+    # Setting stdout to None seems to cause the Process to fail.
+    # See bug #2640 for more info
     if retcode:
-        kwargs['stdout'] = None
+        #kwargs['stdout'] = None
         kwargs['stderr'] = None
 
     # This is where the magic happens
@@ -184,71 +240,107 @@ def _run(cmd,
     return ret
 
 
-def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
     '''
     Helper for running commands quietly for minion startup
     '''
     return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT,
-                quiet=True, shell=shell, env=env)['stdout']
+                quiet=True, shell=shell, env=env, template=template)['stdout']
 
 
-def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
     '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data
     '''
-    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True)
+    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True, template=template)
 
 
-def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+        template=None, rstrip=True):
     '''
     Execute the passed command and return the output as a string
 
     CLI Example::
 
         salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
-    out = _run(cmd, runas=runas, shell=shell,
-               cwd=cwd, stderr=subprocess.STDOUT, env=env)['stdout']
+    out = _run(cmd, runas=runas, shell=shell, cwd=cwd,
+               stderr=subprocess.STDOUT, env=env, template=template,
+               rstrip=rstrip)['stdout']
     log.debug('output: {0}'.format(out))
     return out
 
 
-def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+               template=None, rstrip=True):
     '''
     Execute a command, and only return the standard out
 
     CLI Example::
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=())["stdout"]
+    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
+                  template=template, rstrip=rstrip)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
-def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+               template=None, rstrip=True):
     '''
     Execute a command and only return the standard error
 
     CLI Example::
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
-    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)["stderr"]
+    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
+                  template=template, rstrip=rstrip)["stderr"]
     log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
-def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+            template=None, rstrip=True):
     '''
     Execute the passed command and return a dict of return data
 
     CLI Example::
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
+
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)
+    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
+               template=template, rstrip=rstrip)
 
     if ret['retcode'] != 0:
         rcode = ret['retcode']
@@ -268,13 +360,20 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
     '''
     Execute a shell command and return the command's return code.
 
     CLI Example::
 
         salt '*' cmd.retcode "file /bin/bash"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example::
+
+        salt '*' cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
+
     '''
     return _run(
             cmd,
@@ -282,7 +381,8 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
             cwd=cwd,
             shell=shell,
             env=env,
-            retcode=True
+            retcode=True,
+            template=template
             )['retcode']
 
 
@@ -317,10 +417,11 @@ def script(
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
         shutil.copyfile(fn_, path)
-    os.chmod(path, 320)
-    os.chown(path, __salt__['file.user_to_uid'](runas), -1)
+    if not salt.utils.is_windows():
+        os.chmod(path, 320)
+        os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
-            path +' '+ args if args else path,
+            path + ' ' + args if args else path,
             cwd=cwd,
             quiet=kwargs.get('quiet', False),
             runas=runas,
@@ -364,6 +465,7 @@ def script_retcode(
             template,
             retcode=True,
             **kwargs)['retcode']
+
 
 def which(cmd):
     '''

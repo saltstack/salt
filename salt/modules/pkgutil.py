@@ -2,6 +2,14 @@
 Pkgutil support for Solaris
 '''
 
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is Solaris
+    '''
+    if __grains__['os'] == 'Solaris':
+        return 'pkgutil'
+    return False
+
 
 def _list_removed(old, new):
     '''
@@ -11,28 +19,6 @@ def _list_removed(old, new):
     for pkg in old:
         if pkg not in new:
             pkgs.append(pkg)
-    return pkgs
-
-
-def _compare_versions(old, new):
-    '''
-    Returns a dict that that displays old and new versions for a package after
-    install/upgrade of package.
-    '''
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
     return pkgs
 
 
@@ -113,7 +99,7 @@ def upgrade(refresh=True, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -135,7 +121,7 @@ def upgrade(refresh=True, **kwargs):
     new = _get_pkgs()
 
     # Return a list of the new package installed.
-    return _compare_versions(old, new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def list_pkgs():
@@ -188,7 +174,7 @@ def install(name, refresh=False, version=None, **kwargs):
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
@@ -219,7 +205,7 @@ def install(name, refresh=False, version=None, **kwargs):
     new = _get_pkgs()
 
     # Return a list of the new package installed.
-    return _compare_versions(old, new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(name, **kwargs):
@@ -265,3 +251,16 @@ def purge(name, **kwargs):
         salt '*' pkgutil.purge <package name>
     '''
     return remove(name, **kwargs)
+
+
+def compare(version1='', version2=''):
+    '''
+    Compare two version strings. Return -1 if version1 < version2,
+    0 if version1 == version2, and 1 if version1 > version2. Return None if
+    there was a problem making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](version1, version2)
