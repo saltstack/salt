@@ -49,7 +49,7 @@ def add(overlay):
     if len(old_overlays) == 0 and len(new_overlays) > 0:
         srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
-        if not __salt__['file.contains'](makeconf, layman):
+        if not __salt__['file.contains'](makeconf, 'layman'):
             __salt__['file.append'](makeconf, srcline)
 
     ret = [overlay for overlay in new_overlays if overlay not in old_overlays]
@@ -78,7 +78,7 @@ def delete(overlay):
     if len(new_overlays) == 0:
         srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
-        if __salt__['file.contains'](makeconf, layman):
+        if __salt__['file.contains'](makeconf, 'layman'):
             __salt__['file.sed'](makeconf, srcline, '')
 
     ret = [overlay for overlay in old_overlays if overlay not in new_overlays]
