@@ -131,19 +131,6 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
-.. conf_minion:: sub_timeout
-
-``sub_timeout``
----------------
-
-The minion connection to the master may be interrupted. The minion will
-verify the connection every so many seconds, to disable connection
-verification set this value to 0.
-
-.. code-block:: yaml
-
-    sub_timeout: 60
-
 .. conf_minion:: cachedir
 
 ``cachedir``
