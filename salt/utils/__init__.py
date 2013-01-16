@@ -206,7 +206,7 @@ def daemonize_if(opts, **kwargs):
     daemonize()
     sdata = {'pid': os.getpid()}
     sdata.update(data)
-    with salt.utils.fopen(fn_, 'w+') as ofile:
+    with fopen(fn_, 'w+') as ofile:
         ofile.write(serial.dumps(sdata))
 
 
@@ -396,7 +396,7 @@ def prep_jid(cachedir, sum_type, user='root'):
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
         os.makedirs(jid_dir_)
-        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+        with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
     else:
         return prep_jid(cachedir, sum_type)
@@ -513,7 +513,7 @@ def pem_finger(path, sum_type='md5'):
     '''
     if not os.path.isfile(path):
         return ''
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with fopen(path, 'rb') as fp_:
         key = ''.join(fp_.readlines()[1:-1])
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
