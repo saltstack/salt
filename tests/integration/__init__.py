@@ -877,7 +877,7 @@ class ShellCaseCommonTestsMixIn(object):
         if parsed_version_info and parsed_version_info < __version_info__:
             self.skipTest(
                 'We\'re likely about to release a new version. '
-                'This test would fail. Expected({0!r}) < Parsed({1!r})'.format(
+                'This test would fail. Parsed({0!r}) < Expected({1!r})'.format(
                     parsed_version_info, __version_info__
                 )
             )
