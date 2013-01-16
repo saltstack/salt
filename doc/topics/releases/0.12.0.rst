@@ -84,6 +84,16 @@ minutes:
         function: state.highstate
         minutes: 30
 
+Optional DSL for SLS Formulas
+-----------------------------
+
+Jack Kuan, our renderer expert, has created something that is astonishing.
+Salt, now comes with an optional Python based DSL, this is a very powerful
+interface that makes writing SLS files in pure python easier than it was
+with the raw py renderer. As usual this can be used with the renderer shebang
+line, so a single sls can be written with the DSL if pure python power is
+needed while keeping other sls files simple with YAML.
+
 Set Grains Remotely
 -------------------
 
