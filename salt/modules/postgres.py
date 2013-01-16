@@ -379,7 +379,7 @@ def user_create(username,
                         groups,
                         runas)
 
-def user_update(username,
+def _role_update(name,
                 user=None,
                 host=None,
                 port=None,
@@ -388,22 +388,19 @@ def user_update(username,
                 encrypted=False,
                 replication=False,
                 password=None,
+                groups=None,
                 runas=None):
     '''
-    Creates a Postgres user.
-
-    CLI Examples::
-
-        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
+    Updates a postgres role.
     '''
     (user, host, port) = _connection_defaults(user, host, port)
 
     # check if user exists
-    if not user_exists(username, user, host, port, runas=runas):
-        log.info("User '{0}' does not exist".format(username,))
+    if not user_exists(name, user, host, port, runas=runas):
+        log.info("User '{0}' does not exist".format(name,))
         return False
 
-    sub_cmd = "ALTER USER {0} WITH".format(username, )
+    sub_cmd = "ALTER ROLE {0} WITH".format(name, )
     if password:
         sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, password)
     if createdb:
@@ -418,8 +415,42 @@ def user_update(username,
     if sub_cmd.endswith("WITH"):
         sub_cmd = sub_cmd.replace(" WITH", "")
 
+    if groups:
+        for group in groups.split(','):
+            sub_cmd = "{0}; GRANT {1} TO {2}".format(sub_cmd, group, name)
+
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
     return __salt__['cmd.run'](cmd, runas=runas)
+
+def user_update(username,
+                user=None,
+                host=None,
+                port=None,
+                createdb=False,
+                createuser=False,
+                encrypted=False,
+                replication=False,
+                password=None,
+                groups=None,
+                runas=None):
+    '''
+    Creates a Postgres user.
+
+    CLI Examples::
+
+        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
+    '''
+    return _role_update(username,
+                        user,
+                        host,
+                        port,
+                        createdb,
+                        createuser,
+                        encrypted,
+                        replication,
+                        password,
+                        groups,
+                        runas)
 
 def user_remove(username, user=None, host=None, port=None, runas=None):
     '''
@@ -477,6 +508,36 @@ def group_create(groupname,
                         createuser,
                         encrypted,
                         superuser,
+                        replication,
+                        password,
+                        groups,
+                        runas)
+
+def group_update(groupname,
+                 user=None,
+                 host=None,
+                 port=None,
+                 createdb=False,
+                 createuser=False,
+                 encrypted=False,
+                 replication=False,
+                 password=None,
+                 groups=None,
+                 runas=None):
+    '''
+    Updated a postgres group
+
+    CLI Examples::
+
+        salt '*' postgres.group_update 'username' user='user' host='hostname' port='port' password='password'
+    '''
+    return _role_update(groupname,
+                        user,
+                        host,
+                        port,
+                        createdb,
+                        createuser,
+                        encrypted,
                         replication,
                         password,
                         groups,
