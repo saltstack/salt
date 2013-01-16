@@ -452,6 +452,26 @@ def user_update(username,
                         groups,
                         runas)
 
+def _role_remove(name, user=None, host=None, port=None, runas=None):
+    '''
+    Removes a role from the Postgres Server
+    '''
+    (user, host, port) = _connection_defaults(user, host, port)
+
+    # check if user exists
+    if not user_exists(name, user, host, port, runas=runas):
+        log.info("User '{0}' does not exist".format(name,))
+        return False
+
+    # user exists, proceed
+    sub_cmd = 'DROP ROLE {0}'.format(name)
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
+    __salt__['cmd.run'](cmd, runas=runas)
+    if not user_exists(name, user, host, port, runas=runas):
+        return True
+    else:
+        log.info("Failed to delete user '{0}'.".format(name, ))
+
 def user_remove(username, user=None, host=None, port=None, runas=None):
     '''
     Removes a user from the Postgres server.
@@ -460,22 +480,7 @@ def user_remove(username, user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.user_remove 'username'
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
-
-    # check if user exists
-    if not user_exists(username, user, host, port, runas=runas):
-        log.info("User '{0}' does not exist".format(username,))
-        return False
-
-    # user exists, proceed
-    sub_cmd = 'DROP USER {0}'.format(username)
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
-    __salt__['cmd.run'](cmd, runas=runas)
-    if not user_exists(username, user, host, port, runas=runas):
-        return True
-    else:
-        log.info("Failed to delete user '{0}'.".format(username, ))
-        return False
+    return _role_remove(username, user, host, port, runas)
 
 # Group related actions
 
@@ -542,3 +547,13 @@ def group_update(groupname,
                         password,
                         groups,
                         runas)
+
+def group_remove(groupname, user=None, host=None, port=None, runas=None):
+    '''
+    Removes a group from the Postgres server.
+
+    CLI Example::
+
+        salt '*' postgres.group_remove 'groupname'
+    '''
+    return _role_remove(groupname, user, host, port, runas)
