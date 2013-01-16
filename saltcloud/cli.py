@@ -46,31 +46,46 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.selected_query_option is not None:
             if self.options.map:
-                query_map = mapper.interpolated_map(
-                    query=self.selected_query_option
-                )
+                try:
+                    query_map = mapper.interpolated_map(
+                        query=self.selected_query_option
+                    )
+                except Exception as exc:
+                    print('There was an error: {0}'.format(exc))
             else:
-                query_map = mapper.map_providers(
-                    query=self.selected_query_option
-                )
+                try:
+                    query_map = mapper.map_providers(
+                        query=self.selected_query_option
+                    )
+                except Exception as exc:
+                    print('There was an error: {0}'.format(exc))
             salt.output.display_output(query_map, '', self.config)
 
         if self.options.list_locations is not None:
-            saltcloud.output.double_layer(
-                mapper.location_list(self.options.list_locations)
-            )
+            try:
+                saltcloud.output.double_layer(
+                    mapper.location_list(self.options.list_locations)
+                )
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.list_images is not None:
-            saltcloud.output.double_layer(
-                mapper.image_list(self.options.list_images)
-            )
+            try:
+                saltcloud.output.double_layer(
+                    mapper.image_list(self.options.list_images)
+                )
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.list_sizes is not None:
-            saltcloud.output.double_layer(
-                mapper.size_list(self.options.list_sizes)
-            )
+            try:
+                saltcloud.output.double_layer(
+                    mapper.size_list(self.options.list_sizes)
+                )
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.destroy and (self.config.get('names', None) or
@@ -79,7 +94,11 @@ class SaltCloud(parsers.SaltCloudParser):
                 names = mapper.delete_map(query='list_nodes')
             else:
                 names = self.config.get('names', None)
-            mapper.destroy(names)
+
+            try:
+                mapper.destroy(names)
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.action and (self.config.get('names', None) or
@@ -88,13 +107,23 @@ class SaltCloud(parsers.SaltCloudParser):
                 names = mapper.delete_map(query='list_nodes')
             else:
                 names = self.config.get('names', None)
-            mapper.do_action(names)
+
+            try:
+                mapper.do_action(names)
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.profile and self.config.get('names', False):
-            mapper.run_profile()
+            try:
+                mapper.run_profile()
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.map and self.selected_query_option is None:
-            mapper.run_map()
+            try:
+                mapper.run_map()
+            except Exception as exc:
+                print('There was an error: {0}'.format(exc))
             self.exit(0)
