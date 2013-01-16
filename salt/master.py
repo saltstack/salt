@@ -165,12 +165,14 @@ class Master(SMaster):
         '''
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
-        last = time.time()
+        last = int(time.time())
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         while True:
-            if self.opts['keep_jobs'] != 0:
+            now = int(time.time())
+            loop_interval = int(self.opts['loop_interval'])
+            if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
 
                 for top in os.listdir(jid_root):
@@ -188,7 +190,6 @@ class Master(SMaster):
                         elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
                             shutil.rmtree(f_path)
             if self.opts.get('search'):
-                now = time.time()
                 if now - last > self.opts['search_index_interval']:
                     search.index()
             try:
@@ -199,12 +200,16 @@ class Master(SMaster):
                     )
             try:
                 schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if schedule.loop_interval < loop_interval:
+                    loop_interval = schedule.loop_interval
             except Exception as exc:
                 log.error(
                     'Exception {0} occured in scheduled job'.format(exc)
                     )
             try:
-                time.sleep(int(self.opts['loop_interval']))
+                time.sleep(loop_interval)
             except KeyboardInterrupt:
                 break
 

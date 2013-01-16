@@ -23,6 +23,7 @@ import time
 import datetime
 import multiprocessing
 import threading
+import sys
 
 
 class Schedule(object):
@@ -41,6 +42,8 @@ class Schedule(object):
         else:
             self.returners = {}
         self.schedule_returner = self.option('schedule_returner')
+        # Keep track of the lowest loop interval needed in this variable
+        self.loop_interval = sys.maxint
 
     def option(self, opt):
         '''
@@ -110,6 +113,12 @@ class Schedule(object):
             seconds += int(data.get('minutes', 0)) * 60
             seconds += int(data.get('hours', 0)) * 3600
             seconds += int(data.get('days', 0)) * 86400
+            # Check if the seconds variable is lower than current lowest
+            # loop interval needed. If it is lower then overwrite variable
+            # external loops using can then check this variable for how often
+            # they need to reschedule themselves
+            if seconds < self.loop_interval:
+                self.loop_interval = seconds
             now = int(time.time())
             run = False
             if job in self.intervals:
