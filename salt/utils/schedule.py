@@ -1,9 +1,5 @@
 '''
-<<<<<<< HEAD
 Scheduling routines are located here. To activate the scheduler make the schedule
-=======
-Sceduling routines are located here. To activate the scheduler make the schedule
->>>>>>> 339fca7fbaa8aedb1e6bfc255c37c89878bf589a
 option available to the master or minion configurations (master config file or
 for the minion via config or pillar)
 
