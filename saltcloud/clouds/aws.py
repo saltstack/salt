@@ -25,6 +25,7 @@ set in the main cloud config:
 # Import python libs
 import os
 import sys
+import stat
 import types
 import time
 import tempfile
@@ -72,6 +73,13 @@ def __virtual__():
     for conf in confs:
         if conf not in __opts__:
             return False
+
+    if not os.path.exists(__opts__['AWS.private_key']):
+            raise SaltException('The AWS key file{0} does not exist\n'.format(__opts__['AWS.private_key']))
+    keymode = str(oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode)))
+    if keymode != '0600':
+            raise SaltException('The AWS key file{0} needs to b e set to mode 0600\n'.format(__opts__['AWS.private_key']))
+        
     log.debug('Loading AWS cloud module')
     return 'aws'
 
