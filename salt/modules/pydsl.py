@@ -56,9 +56,13 @@ Example of a ``cmd`` state calling a python function::
 
 #TODOs:
 #
+#  - add support for implicit ordering.
+#
 #  - modify the stateconf renderer so that we can pipe pydsl to
-#    it to make use of its features, particularly the implicit
-#    ordering of states using ordered dict.
+#    it to make use of its features
+# 
+#  - support exclude declarations
+#  - support include declarations with env
 #
 #  - allow this:
 #      state('X').cmd.run.cwd = '/'
@@ -84,6 +88,11 @@ REQUISITES = set("require watch use require_in watch_in use_in".split())
 class PyDslError(Exception):
     pass
 
+class Options(dict):
+    def __getattr__(self, name):
+        return self.get(name)
+
+
 def sls(sls):
     return Sls(sls)
 
@@ -97,15 +106,24 @@ class Sls(object):
         self.includes = []
         self.extends = []
         self.decls = []
+        self.options = Options()
+    
+    def set(self, **options):
+        self.options.update(options)
 
     def include(self, *sls_names):
         self.includes.extend(sls_names)
 
     def extend(self, *state_funcs):
         for f in state_funcs:
-            self.extends.append(self.all_decls[f.mod._state_id])
-        for f in state_funcs:
-            self.decls.pop()
+            id = f.mod._state_id
+            self.extends.append(self.all_decls[id])
+            i = len(self.decls)
+            for decl in reversed(self.decls):
+                i -= 1
+                if decl._id == id:
+                    del self.decls[i]
+                    break
         
     def state(self, id=None):
         if not id:
