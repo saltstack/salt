@@ -294,33 +294,35 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
         return False
     return True if val.strip() == 't' else False
 
-
-def user_create(username,
-                user=None,
-                host=None,
-                port=None,
-                createdb=False,
-                createuser=False,
-                encrypted=False,
-                superuser=False,
-                replication=False,
-                password=None,
-                runas=None):
+def _role_create(name,
+                 login,
+                 user=None,
+                 host=None,
+                 port=None,
+                 createdb=False,
+                 createuser=False,
+                 encrypted=False,
+                 superuser=False,
+                 replication=False,
+                 password=None,
+                 runas=None):
     '''
-    Creates a Postgres user.
-
-    CLI Examples::
-
-        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
+    Creates a Postgres role. Users and Groups are both roles in postgres.
+    However, users can login, groups cannot.
     '''
     (user, host, port) = _connection_defaults(user, host, port)
 
-    # check if user exists
-    if user_exists(username, user, host, port, runas=runas):
-        log.info("User '{0}' already exists".format(username,))
+    if login:
+        create_type = 'USER'
+    else:
+        create_type = 'ROLE'
+
+    # check if role exists
+    if user_exists(name, user, host, port, runas=runas):
+        log.info("{0} '{1}' already exists".format(create_type, name,))
         return False
 
-    sub_cmd = 'CREATE USER "{0}" WITH'.format(username, )
+    sub_cmd = 'CREATE {0} "{1}" WITH'.format(create_type, name, )
     if password:
         if encrypted:
             sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
@@ -340,6 +342,37 @@ def user_create(username,
 
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
     return __salt__['cmd.run'](cmd, runas=runas)
+
+def user_create(username,
+                user=None,
+                host=None,
+                port=None,
+                createdb=False,
+                createuser=False,
+                encrypted=False,
+                superuser=False,
+                replication=False,
+                password=None,
+                runas=None):
+    '''
+    Creates a Postgres user.
+
+    CLI Examples::
+
+        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
+    '''
+    return _role_create(username,
+                        True,
+                        user,
+                        host,
+                        port,
+                        createdb,
+                        createuser,
+                        encrypted,
+                        superuser,
+                        replication,
+                        password,
+                        runas)
 
 def user_update(username,
                 user=None,
@@ -407,3 +440,37 @@ def user_remove(username, user=None, host=None, port=None, runas=None):
     else:
         log.info("Failed to delete user '{0}'.".format(username, ))
         return False
+
+# Group related actions
+
+def group_create(groupname,
+                 user=None,
+                 host=None,
+                 port=None,
+                 createdb=False,
+                 createuser=False,
+                 encrypted=False,
+                 superuser=False,
+                 replication=False,
+                 password=None,
+                 runas=None):
+    '''
+    Creates a Postgres group. A group is postgres is similar to a user, but
+    cannot login.
+
+    CLI Example::
+
+        salt '*' postgres.group_create 'groupname' user='user' host='hostname' port='port' password='password'
+    '''
+    return _role_create(groupname,
+                        False,
+                        user,
+                        host,
+                        port,
+                        createdb,
+                        createuser,
+                        encrypted,
+                        superuser,
+                        replication,
+                        password,
+                        runas)
