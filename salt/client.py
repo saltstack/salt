@@ -34,9 +34,6 @@ import glob
 import time
 import getpass
 
-# Import third party libs
-import zmq
-
 # Import salt libs
 import salt.config
 import salt.payload
@@ -81,7 +78,6 @@ class LocalClient(object):
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
         self.event = salt.utils.event.LocalClientEvent(self.opts['sock_dir'])
-        self.event.connect_pub()
 
     def __read_master_key(self):
         '''
@@ -199,7 +195,7 @@ class LocalClient(object):
         except Exception:
             jid = ''
 
-        self.event.sub.setsockopt(zmq.SUBSCRIBE, jid)
+        self.event.subscribe(jid)
 
         pub_data = self.pub(
             tgt,
@@ -211,7 +207,10 @@ class LocalClient(object):
             timeout=self._get_timeout(timeout),
             **kwargs)
 
-        return self._check_pub_data(pub_data)
+        try:
+            return self._check_pub_data(pub_data)
+        finally:
+            self.event.unsubscribe(jid)
 
     def cmd_async(
         self,
