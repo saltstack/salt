@@ -12,10 +12,14 @@ import logging
 import tempfile
 import traceback
 
+# Import third party libs
+import jinja2
+import jinja2.ext
+
 # Import salt libs
 import salt.utils
 import salt.exceptions
-
+from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 
 log = logging.getLogger(__name__)
 
@@ -68,12 +72,6 @@ def wrap_tmpl_func(render_str):
 
 
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
-    # Late import Jinja2 to allow building salt without making it a build
-    # dependency
-    import jinja2
-    import jinja2.ext
-    from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
-
     opts = context['opts']
     env = context['env']
     loader = None

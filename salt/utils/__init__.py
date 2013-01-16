@@ -30,6 +30,8 @@ except ImportError:
     HAS_FNCTL = False
 
 # Import salt libs
+import salt.minion
+import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
 
@@ -194,11 +196,6 @@ def daemonize_if(opts, **kwargs):
             data[key[6:]] = val
     if not 'jid' in data:
         return
-
-    # Late import salt libs to overcome circular imports and to allow building
-    # salt without making Jinja2 a build dependency
-    import salt.minon
-    import salt.payload
 
     serial = salt.payload.Serial(opts)
     proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
