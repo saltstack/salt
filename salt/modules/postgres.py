@@ -305,6 +305,7 @@ def _role_create(name,
                  superuser=False,
                  replication=False,
                  password=None,
+                 groups=None,
                  runas=None):
     '''
     Creates a Postgres role. Users and Groups are both roles in postgres.
@@ -336,6 +337,8 @@ def _role_create(name,
         sub_cmd = "{0} SUPERUSER".format(sub_cmd, )
     if replication:
         sub_cmd = "{0} REPLICATION".format(sub_cmd, )
+    if groups:
+        sub_cmd = "{0} IN GROUP {1}".format(sub_cmd, groups, )
 
     if sub_cmd.endswith("WITH"):
         sub_cmd = sub_cmd.replace(" WITH", "")
@@ -353,6 +356,7 @@ def user_create(username,
                 superuser=False,
                 replication=False,
                 password=None,
+                groups=None,
                 runas=None):
     '''
     Creates a Postgres user.
@@ -372,6 +376,7 @@ def user_create(username,
                         superuser,
                         replication,
                         password,
+                        groups,
                         runas)
 
 def user_update(username,
@@ -453,6 +458,7 @@ def group_create(groupname,
                  superuser=False,
                  replication=False,
                  password=None,
+                 groups=None,
                  runas=None):
     '''
     Creates a Postgres group. A group is postgres is similar to a user, but
@@ -473,4 +479,5 @@ def group_create(groupname,
                         superuser,
                         replication,
                         password,
+                        groups,
                         runas)
