@@ -105,6 +105,24 @@ class SaltEvent(object):
         )
         return puburi, pulluri
 
+
+    def subscribe(self, tag):
+        '''
+        Subscribe to events matching the passed tag.
+        '''
+        if not self.cpub:
+            self.connect_pub()
+        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+
+    def unsubscribe(self, tag):
+        '''
+        Un-subscribe to events matching the passed tag.
+        '''
+        if not self.cpub:
+            # There's no way we've even subscribed to this tag
+            return
+        self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+
     def connect_pub(self):
         '''
         Establish the publish connection
@@ -127,9 +145,8 @@ class SaltEvent(object):
         Get a single publication
         '''
         wait = wait * 1000
-        if not self.cpub:
-            self.connect_pub()
-        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+
+        self.subscribe(tag)
         try:
             while True:
                 socks = dict(self.poller.poll(wait))
@@ -147,7 +164,7 @@ class SaltEvent(object):
                 return None
         finally:
             # No sense in keeping subscribed to this event
-            self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+            self.unsubscribe(tag)
 
     def iter_events(self, tag='', full=False):
         '''
