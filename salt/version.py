@@ -39,11 +39,6 @@ def __get_version_info_from_git(version, version_info):
             int(i) for i in parsed_version.split('-', 1)[0].split('.')
         ])
         if parsed_version_info != version_info:
-            warnings.filterwarnings(
-                'module',
-                category=UserWarning,
-                module='salt.version'
-            )
             warnings.warn(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '
