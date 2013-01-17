@@ -196,6 +196,8 @@ class Cloud(object):
         vm_['priv_key'] = priv
         ok = False
 
+        if 'script' in self.opts:
+            vm_['os'] = self.opts['script']
         if 'script' in vm_:
             vm_['os'] = vm_['script']
 

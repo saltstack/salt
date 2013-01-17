@@ -210,6 +210,7 @@ def create(vm_):
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -239,6 +240,10 @@ def create(vm_):
             if saltcloud.utils.wait_for_passwd(host=ip_address, username=user, timeout=60, key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
+    sudo = True
+    if 'sudo' in vm_.keys():
+        sudo = vm_['sudo']
+
     if __opts__['deploy'] is True:
         deploy_kwargs = {
             'host': ip_address,
@@ -248,7 +253,7 @@ def create(vm_):
             'tty': True,
             'script': deploy_script.script,
             'name': vm_['name'],
-            'sudo': True,
+            'sudo': sudo,
             'start_action': __opts__['start_action'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
