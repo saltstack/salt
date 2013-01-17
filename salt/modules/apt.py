@@ -309,7 +309,7 @@ def purge(pkg):
     return ret_pkgs
 
 
-def upgrade(refresh=False, **kwargs):
+def upgrade(refresh=True, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -441,7 +441,7 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
@@ -449,6 +449,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
+        refresh_db()
     return _get_upgradable()
 
 
