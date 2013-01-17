@@ -28,7 +28,6 @@ Here is a sample script::
     apt-get upgrade -y
 
     # Set salt master location and start minion
-    cp /etc/salt/minion.template /etc/salt/minion
     sed -i 's/#master: salt/master: [salt_master_fqdn]/' /etc/salt/minion
     salt-minion -d
 
