@@ -147,24 +147,20 @@ class SaltEvent(object):
         wait = wait * 1000
 
         self.subscribe(tag)
-        try:
-            while True:
-                socks = dict(self.poller.poll(wait))
-                if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                    raw = self.sub.recv()
-                    # Double check the tag
-                    if tag != raw[:20].rstrip('|'):
-                        continue
-                    data = self.serial.loads(raw[20:])
-                    if full:
-                        ret = {'data': data,
-                               'tag': raw[:20].rstrip('|')}
-                        return ret
-                    return data
-                return None
-        finally:
-            # No sense in keeping subscribed to this event
-            self.unsubscribe(tag)
+        while True:
+            socks = dict(self.poller.poll(wait))
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                raw = self.sub.recv()
+                # Double check the tag
+                if tag != raw[:20].rstrip('|'):
+                    continue
+                data = self.serial.loads(raw[20:])
+                if full:
+                    ret = {'data': data,
+                           'tag': raw[:20].rstrip('|')}
+                    return ret
+                return data
+            return None
 
     def iter_events(self, tag='', full=False):
         '''

@@ -207,10 +207,7 @@ class LocalClient(object):
             timeout=self._get_timeout(timeout),
             **kwargs)
 
-        try:
-            return self._check_pub_data(pub_data)
-        finally:
-            self.event.unsubscribe(jid)
+        return self._check_pub_data(pub_data)
 
     def cmd_async(
         self,
