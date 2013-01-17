@@ -5,6 +5,7 @@ import shutil
 # Import salt libs
 import salt.utils
 import integration
+from saltunittest import skipIf
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -222,7 +223,8 @@ fi
             for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
-
+    
+    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
