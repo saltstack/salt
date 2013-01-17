@@ -12,3 +12,5 @@ salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/RHEL6.sh
 salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/SmartOS.sh
 salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Ubuntu-git.sh
 salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Ubuntu.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Debian-git.sh
+salt-cloud: script-not-executable usr/share/pyshared/saltcloud/deploy/Debian.sh
