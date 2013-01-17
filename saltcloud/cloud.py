@@ -19,6 +19,8 @@ import salt.utils
 import yaml
 try:
     from mako.template import Template
+except:
+    log.debug('Mako not available')
 
 # Get logging started
 log = logging.getLogger(__name__)
