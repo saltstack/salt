@@ -122,6 +122,9 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(0)
 
         if self.options.map and self.selected_query_option is None:
+            if len(mapper.map) == 0:
+                print('Nothing to do')
+                self.exit(0)
             try:
                 mapper.run_map()
             except Exception as exc:
