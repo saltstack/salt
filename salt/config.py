@@ -271,6 +271,8 @@ def load_config(path, env_var):
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 
+    return {}
+
 
 def include_config(include, orig_path, verbose):
     '''
