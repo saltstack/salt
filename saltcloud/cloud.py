@@ -17,6 +17,8 @@ import salt.utils
 
 # Import third party libs
 import yaml
+try:
+    from mako.template import Template
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -302,7 +304,13 @@ class Map(Cloud):
             raise ValueError('The specified map file does not exist: {0}\n'.format(self.opts['map']))
         try:
             with open(self.opts['map'], 'rb') as fp_:
-                map_ = yaml.load(fp_.read())
+                try:
+                    #open mako file
+                    temp_ = Template(open(fp_, 'r').read()) 
+                    #render as yaml
+                    map_ = temp_.render() 
+                except:
+                    map_ = yaml.load(fp_.read())
         except Exception:
             return {}
         if 'include' in map_:
