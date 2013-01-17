@@ -11,7 +11,7 @@ echo deb http://debian.madduck.net/repo squeeze-backports main | tee -a /etc/apt
 wget -q -O- "http://debian.madduck.net/repo/gpg/archive.key" | apt-key add -
 
 apt-get update
-apt-get install -y salt-minion git-core
+apt-get install -y -o DPkg::Options::=--force-confold salt-minion git-core
 # minion will be started automatically by install
 service salt-minion stop
 
