@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 7.0.50),
                python-libcloud,
                python-setuptools,
                python-sphinx,
-               python-yaml,
+               python-yaml
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
 #X-Python-Version: >= 2.6, <= 2.7
@@ -22,8 +22,7 @@ Depends: ${python:Depends},
          python-libcloud,
          python-paramiko,
          python-yaml,
-         salt-master,
-         salt-minion,
+         salt-common
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly 
  controlled profile and mapping system.
