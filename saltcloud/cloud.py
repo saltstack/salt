@@ -17,12 +17,14 @@ import salt.utils
 
 # Import third party libs
 import yaml
-try:
-    from mako.template import Template
 
 # Get logging started
 log = logging.getLogger(__name__)
 
+try:
+    from mako.template import Template
+except:
+    log.debug('Mako not available')
 
 class Cloud(object):
     '''
