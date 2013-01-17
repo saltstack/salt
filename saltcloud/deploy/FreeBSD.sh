@@ -1,6 +1,8 @@
 #!/bin/sh
 
-portsnap fetch extract update
+sed -i 's/jot -r 1 0 3600/jot -r 1 0 3/' /usr/sbin/portsnap
+portsnap cron extract update
+sed -i 's/jot -r 1 0 3/jot -r 1 0 3600/' /usr/sbin/portsnap
 cd /usr/ports/ports-mgmt/pkg
 make install clean
 cd
