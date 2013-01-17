@@ -240,12 +240,12 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             log.info('Targeting repo "{0}"'.format(fromrepo))
         cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
               '{pkg}'.format(
-            confold='-o DPkg::Options::=--force-confold',
-            confdef='-o DPkg::Options::=--force-confdef',
-            verify='--allow-unauthenticated' if skip_verify else '',
-            target='-t {0}'.format(fromrepo) if fromrepo else '',
-            pkg=fname,
-        )
+                  confold='-o DPkg::Options::=--force-confold',
+                  confdef='-o DPkg::Options::=--force-confdef',
+                  verify='--allow-unauthenticated' if skip_verify else '',
+                  target='-t {0}'.format(fromrepo) if fromrepo else '',
+                  pkg=fname,
+              )
 
     old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
@@ -309,7 +309,7 @@ def purge(pkg):
     return ret_pkgs
 
 
-def upgrade(refresh=True, **kwargs):
+def upgrade(refresh=False, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -328,7 +328,9 @@ def upgrade(refresh=True, **kwargs):
         salt '*' pkg.upgrade
     '''
     salt.utils.daemonize_if(__opts__, **kwargs)
-    if refresh:
+
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh == 'True':
         refresh_db()
 
     ret_pkgs = {}
@@ -382,7 +384,7 @@ def list_pkgs(regex_string=''):
     for line in out.splitlines():
         cols = line.split()
         if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and \
-                                                        'installed' in cols[2]:
+                'installed' in cols[2]:
             __salt__['pkg_resource.add_pkg'](ret, cols[3], cols[4])
 
     # Check for virtual packages. We need aptitude for this.
