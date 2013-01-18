@@ -46,7 +46,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler
-
+from salt.exceptions import SaltMasterError
 
 log = logging.getLogger(__name__)
 
