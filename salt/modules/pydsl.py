@@ -56,9 +56,8 @@ Example of a ``cmd`` state calling a python function::
 
 #TODOs:
 #
-#  - modify the stateconf renderer so that we can pipe pydsl to
-#    it to make use of its features, particularly the implicit
-#    ordering of states using ordered dict.
+#  - support exclude declarations
+#  - support include declarations with env
 #
 #  - allow this:
 #      state('X').cmd.run.cwd = '/'
@@ -84,6 +83,11 @@ REQUISITES = set("require watch use require_in watch_in use_in".split())
 class PyDslError(Exception):
     pass
 
+class Options(dict):
+    def __getattr__(self, name):
+        return self.get(name)
+
+
 def sls(sls):
     return Sls(sls)
 
@@ -97,15 +101,31 @@ class Sls(object):
         self.includes = []
         self.extends = []
         self.decls = []
+        self.options = Options()
+        self.funcs = []  # track the ordering of state func declarations
+    
+    def set(self, **options):
+        self.options.update(options)
 
     def include(self, *sls_names):
         self.includes.extend(sls_names)
 
     def extend(self, *state_funcs):
+        if self.options.ordered and self.last_func():
+            raise PyDslError("Can't extend while the ordered option is turned on!")
         for f in state_funcs:
-            self.extends.append(self.all_decls[f.mod._state_id])
-        for f in state_funcs:
-            self.decls.pop()
+            id = f.mod._state_id
+            self.extends.append(self.all_decls[id])
+            i = len(self.decls)
+            for decl in reversed(self.decls):
+                i -= 1
+                if decl._id == id:
+                    del self.decls[i]
+                    break
+            try:
+                self.funcs.remove(f) # untrack it
+            except ValueError:
+                pass
         
     def state(self, id=None):
         if not id:
@@ -114,9 +134,15 @@ class Sls(object):
         try:
             return self.all_decls[id]
         except KeyError:
-            self.all_decls[id] = s = StateDeclaration(id)
+            self.all_decls[id] = s = StateDeclaration(id, self)
             self.decls.append(s)
             return s
+
+    def last_func(self):
+        return self.funcs[-1] if self.funcs else None
+
+    def track_func(self, statefunc):
+        self.funcs.append(statefunc)
 
     def to_highstate(self, slsmod=None):
         # generate a state that uses the stateconf.set state, which
@@ -159,7 +185,8 @@ class Sls(object):
 
 class StateDeclaration(object):
 
-    def __init__(self, id=None):
+    def __init__(self, id, sls):
+        self._sls = sls
         self._id = id
         self._mods = []
 
@@ -234,6 +261,13 @@ class StateFunction(object):
         self.mod = parent_mod
         self.name = name
         self.args = []
+
+        sls = Sls.all_decls[parent_mod._state_id]._sls
+        if sls.options.ordered:
+            last_f = sls.last_func()
+            if last_f:
+                self.require(last_f.mod)
+            sls.track_func(self)
 
     def __call__(self, *args, **kws):
         self.configure(args, kws)
