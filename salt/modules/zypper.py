@@ -34,7 +34,7 @@ def _list_removed(old, new):
     return pkgs
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
@@ -42,6 +42,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     ret = {}
     out = __salt__['cmd.run_stdout']('zypper list-updates').splitlines()
     for line in out:
@@ -215,7 +218,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
                        'new': '<new-version>'}}
     '''
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -233,7 +236,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade, a zypper upgrade
 
@@ -246,6 +249,9 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     old = list_pkgs()
     cmd = 'zypper -n up -l'
     __salt__['cmd.retcode'](cmd)
