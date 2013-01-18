@@ -119,7 +119,7 @@ def version(*names):
     ret = {}
     pkgs = list_pkgs()
     for name in names:
-        ret[name] = pkgs.get(name,'')
+        ret[name] = pkgs.get(name, '')
     # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
@@ -148,7 +148,7 @@ def list_pkgs():
     return ret
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -156,6 +156,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     out = _parse_yum('check-update')
     return dict([(i.name, i.version) for i in out])
 
@@ -240,7 +243,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
                        'new': '<new-version>'}}
     '''
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -281,7 +284,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -294,6 +297,9 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     old = list_pkgs()
     cmd = 'yum -q -y upgrade'
     __salt__['cmd.retcode'](cmd)
