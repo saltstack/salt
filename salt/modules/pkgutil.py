@@ -60,7 +60,8 @@ def upgrade_available(name):
         salt '*' pkgutil.upgrade_available CSWpython
     '''
     version = None
-    cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(name)
+    cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(
+        name)
     out = __salt__['cmd.run_stdout'](cmd)
     if out:
         version = out.split()[2].strip()
@@ -84,7 +85,8 @@ def list_upgrades(refresh=True):
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
     upgrades = {}
-    lines = __salt__['cmd.run_stdout']('/opt/csw/bin/pkgutil -A --parse').splitlines()
+    lines = __salt__['cmd.run_stdout'](
+        '/opt/csw/bin/pkgutil -A --parse').splitlines()
     for line in lines:
         comps = line.split('\t')
         if comps[2] == "SAME":
