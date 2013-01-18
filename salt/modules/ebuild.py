@@ -365,7 +365,7 @@ def upgrade(refresh=True):
     return ret_pkgs
 
 
-def remove(pkg):
+def remove(pkg, **kwargs):
     '''
     Remove a single package via emerge --unmerge
 
@@ -389,7 +389,7 @@ def remove(pkg):
     return ret_pkgs
 
 
-def purge(pkg):
+def purge(pkg, **kwargs):
     '''
     Portage does not have a purge, this function calls remove followed
     by depclean to emulate a purge process
