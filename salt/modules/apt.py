@@ -220,7 +220,10 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         fromrepo = repo
 
     if kwargs.get('env'):
-        os.environ.update(kwargs.get('env'))
+        try:
+            os.environ.update(kwargs.get('env'))
+        except Exception as e:
+            log.exception(e)
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -253,7 +256,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(pkg):
+def remove(pkg, **kwargs):
     '''
     Remove a single package via ``apt-get remove``
 
@@ -267,7 +270,10 @@ def remove(pkg):
     old_pkgs = list_pkgs()
 
     if kwargs.get('env'):
-        os.environ.update(kwargs.get('env'))
+        try:
+            os.environ.update(kwargs.get('env'))
+        except Exception as e:
+            log.exception(e)
 
     cmd = 'apt-get -q -y remove {0}'.format(pkg)
     __salt__['cmd.run'](cmd)
@@ -279,7 +285,7 @@ def remove(pkg):
     return ret_pkgs
 
 
-def purge(pkg):
+def purge(pkg, **kwargs):
     '''
     Remove a package via ``apt-get purge`` along with all configuration
     files and unused dependencies.
@@ -294,7 +300,10 @@ def purge(pkg):
     old_pkgs = list_pkgs()
 
     if kwargs.get('env'):
-        os.environ.update(kwargs.get('env'))
+        try:
+            os.environ.update(kwargs.get('env'))
+        except Exception as e:
+            log.exception(e)
 
     # Remove inital package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)

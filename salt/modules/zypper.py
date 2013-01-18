@@ -273,7 +273,7 @@ def upgrade(refresh=True):
     return pkgs
 
 
-def remove(name):
+def remove(name, **kwargs):
     '''
     Remove a single package with ``zypper remove``
 
@@ -290,7 +290,7 @@ def remove(name):
     return _list_removed(old, new)
 
 
-def purge(name):
+def purge(name, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``zypper remove -u``
