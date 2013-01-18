@@ -230,7 +230,7 @@ def upgrade():
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name=None, pkgs=None):
+def remove(name=None, pkgs=None, **kwargs):
     '''
     Remove a single package.
 
@@ -284,7 +284,7 @@ def remove(name=None, pkgs=None):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name):
+def purge(name, **kwargs):
     '''
     Remove a single package with pkg_delete
 
