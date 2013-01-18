@@ -485,7 +485,11 @@ class Minions(LowDataAdapter):
         for chunk in cherrypy.request.lowstate:
             chunk['client'] = 'local_async'
         job_data = next(self.exec_lowstate(), {})
-        raise cherrypy.HTTPRedirect('/jobs/{jid}'.format(**job_data), 302)
+
+        cherrypy.response.status = 202
+        return [{
+            'return': job_data,
+        }]
 
 class Jobs(LowDataAdapter):
     def GET(self, jid=None):
