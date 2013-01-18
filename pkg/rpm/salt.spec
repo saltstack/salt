@@ -24,6 +24,9 @@ Source4: %{name}-master.service
 Source5: %{name}-syndic.service
 Source6: %{name}-minion.service
 Source7: README.fedora
+Patch0: 0003-Late-stage-jinja2-dependency.patch
+Patch1: 0004-Jinja2-no-longer-build-dep.patch
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
@@ -116,6 +119,9 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -q
+
+%patch0 -p1
+%patch1 -p1
 
 %build
 
