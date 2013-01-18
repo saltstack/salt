@@ -152,6 +152,11 @@ class ExecutionOptionsMixIn(object):
             # Include description here as a string
         )
         group.add_option(
+            '-L', '--location',
+            default='',
+            help='Specify which region to connect'
+        )
+        group.add_option(
             '-a', '--action',
             default='',
             help=('Perform an action that may be specific to this cloud'
