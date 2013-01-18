@@ -2,6 +2,7 @@
 Pkgutil support for Solaris
 '''
 
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
@@ -59,15 +60,16 @@ def upgrade_available(name):
         salt '*' pkgutil.upgrade_available CSWpython
     '''
     version = None
-    cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(name)
+    cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(
+        name)
     out = __salt__['cmd.run_stdout'](cmd)
     if out:
-       version = out.split()[2].strip() 
+        version = out.split()[2].strip()
     if version:
         if version == "SAME":
             return ''
         else:
-            return version        
+            return version
     return ''
 
 
@@ -80,7 +82,8 @@ def list_upgrades():
         salt '*' pkgutil.list_upgrades
     '''
     upgrades = {}
-    lines = __salt__['cmd.run_stdout']('/opt/csw/bin/pkgutil -A --parse').splitlines()
+    lines = __salt__['cmd.run_stdout'](
+        '/opt/csw/bin/pkgutil -A --parse').splitlines()
     for line in lines:
         comps = line.split('\t')
         if comps[2] == "SAME":
@@ -89,7 +92,6 @@ def list_upgrades():
             continue
         upgrades[comps[0]] = comps[1]
     return upgrades
-
 
 
 def upgrade(refresh=True, **kwargs):
@@ -108,12 +110,12 @@ def upgrade(refresh=True, **kwargs):
     if refresh:
         refresh_db()
 
-    # Get a list of the packages before install so we can diff after to see 
+    # Get a list of the packages before install so we can diff after to see
     # what got installed.
     old = _get_pkgs()
 
     # Install or upgrade the package
-    # If package is already installed  
+    # If package is already installed
     cmd = '/opt/csw/bin/pkgutil -yu'
     __salt__['cmd.run'](cmd)
 
@@ -170,7 +172,7 @@ def available_version(name):
 def install(name, refresh=False, version=None, **kwargs):
     '''
     Install the named package using the pkgutil tool.
-        
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -192,12 +194,12 @@ def install(name, refresh=False, version=None, **kwargs):
 
     cmd = '/opt/csw/bin/pkgutil -yu '
 
-    # Get a list of the packages before install so we can diff after to see 
+    # Get a list of the packages before install so we can diff after to see
     # what got installed.
     old = _get_pkgs()
 
     # Install or upgrade the package
-    # If package is already installed  
+    # If package is already installed
     cmd += '{0}'.format(pkg)
     __salt__['cmd.run'](cmd)
 
@@ -218,12 +220,12 @@ def remove(name, **kwargs):
     CLI Example::
 
         salt '*' pkgutil.remove <package name>
-        salt '*' pkgutil.remove SMCliconv 
+        salt '*' pkgutil.remove SMCliconv
     '''
 
     # Check to see if the package is installed before we proceed
     if version(name) == '':
-        return '' 
+        return ''
 
     # Get a list of the currently installed pkgs.
     old = _get_pkgs()
@@ -234,7 +236,7 @@ def remove(name, **kwargs):
 
     # Get a list of the packages after the uninstall
     new = _get_pkgs()
-     
+
     # Compare the pre and post remove package objects and report the uninstalled pkgs.
     return _list_removed(old, new)
 
