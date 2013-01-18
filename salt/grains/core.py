@@ -529,6 +529,7 @@ _OS_FAMILY_MAP = {
     'Slamd64': 'Slackware',
     'SLES': 'Suse',
     'SUSE Enterprise Server': 'Suse',
+    'SUSE  Enterprise Server': 'Suse',
     'SLED': 'Suse',
     'openSUSE': 'Suse',
     'SUSE': 'Suse',
