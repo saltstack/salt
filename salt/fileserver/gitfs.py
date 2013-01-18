@@ -37,10 +37,7 @@ def _get_ref(repo, short):
     Return bool if the short ref is in the repo
     '''
     for ref in repo.refs:
-        if isinstance(ref, git.TagReference):
-            if short == os.path.basename(ref.name):
-                return ref
-        elif isinstance(ref, git.Head):
+        if isinstance(ref, git.RemoteReference):
             if short == os.path.basename(ref.name):
                 return ref
     return False
@@ -98,11 +95,15 @@ def init():
         rp_ = os.path.join(bp_, str(ind))
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
-        repo = git.Repo.init(rp_, bare=True)
+        repo = git.Repo.init(rp_)
         if not repo.remotes:
             try:
                 repo.create_remote('origin', __opts__['gitfs_remotes'][ind])
             except Exception:
+                # This exception occurs when two processes are trying to write
+                # to the git config at once, go ahead and pass over it since
+                # this is the only write
+                # This should place a lock down
                 pass
         if repo.remotes:
             repos.append(repo)
@@ -125,19 +126,6 @@ def update():
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
-        for ref in repo.refs:
-            if isinstance(ref, git.refs.remote.RemoteReference):
-                found = False
-                short = os.path.basename(ref.name)
-                for branch in repo.branches:
-                    if os.path.basename(branch.name) == short:
-                        # Found it, make sure it has the correct ref
-                        if not branch.tracking_branch() is ref:
-                            branch.set_tracking_branch(ref)
-                            found = True
-                if not found:
-                    branch = repo.create_head(short, ref)
-                    branch.set_tracking_branch(ref)
 
 
 def envs():
