@@ -10,7 +10,7 @@
 
 Name: salt
 Version: 0.12.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -44,6 +44,7 @@ BuildRequires: python26-devel
 BuildRequires: python26-PyYAML
 BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
+BuildRequires: python26-unittest2
 
 Requires: python26-crypto
 Requires: python26-zmq
@@ -60,6 +61,7 @@ BuildRequires: python-devel
 BuildRequires: PyYAML
 BuildRequires: m2crypto
 BuildRequires: python-msgpack
+BuildRequires: python-unittest2
 
 Requires: python-crypto
 Requires: python-zmq
@@ -147,7 +149,10 @@ install -p %{SOURCE7} .
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
 install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
- 
+
+%check
+%{__python} setup.py test
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -296,6 +301,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Jan 17 2013 Wendall Cada <wendallc@83864.com> - 0.12.0-2
+- Added unittest support
+
 * Wed Jan 16 2013 Clint Savage <herlo1@gmail.com> - 0.12.0-1
 - Upstream release 0.12.0
 
