@@ -439,7 +439,7 @@ class Minions(LowDataAdapter):
 
     def POST(self, **kwargs):
         '''
-        Run an execution command and immediately return the job id
+        Start an execution command and immediately return the job id
 
         .. http:post:: /minions
 
@@ -450,26 +450,31 @@ class Minions(LowDataAdapter):
             **Example request**::
 
                 % curl -sSi localhost:8000/minions \\
-                    -H "Accept: application/json" \\
-                    -d tgt="ms-3" \\
-                    -d fun="test.fib" \\
-                    -d arg="3"
+                    -H "Accept: application/x-yaml" \\
+                    -d tgt='*' \\
+                    -d fun='status.diskusage'
 
             .. code-block:: http
 
                 POST /minions HTTP/1.1
                 Host: localhost:8000
-                Content-Length: 27
+                Accept: application/x-yaml
+                Content-Length: 26
                 Content-Type: application/x-www-form-urlencoded
 
-                tgt=ms-3&fun=test.fib&arg=3
+                tgt=*&fun=status.diskusage
 
             **Example response**:
 
             .. code-block:: http
 
-                HTTP/1.1 302 Found
-                Location: http://localhost:8000/jobs/20121129120137435069
+                HTTP/1.1 202 Accepted
+                Content-Length: 86
+                Content-Type: application/x-yaml
+
+                - return:
+                    jid: '20130118105423694155'
+                    minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
 
         :form lowstate: lowstate data for the
             :py:mod:`~salt.client.LocalClient`; the ``client`` parameter will
@@ -478,7 +483,7 @@ class Minions(LowDataAdapter):
             Lowstate may be supplied in any supported format by specifying the
             :mailheader:`Content-Type` header in the request. Supported formats
             are listed in the :mailheader:`Alternates` response header.
-        :status 302: success
+        :status 202: success
         :status 401: authentication required
         :status 406: requested :mailheader:`Content-Type` not available
         '''
