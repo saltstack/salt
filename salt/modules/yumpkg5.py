@@ -315,7 +315,7 @@ def upgrade():
     return pkgs
 
 
-def remove(pkg):
+def remove(pkg, **kwargs):
     '''
     Remove a single package with yum remove
 
@@ -332,7 +332,7 @@ def remove(pkg):
     return _list_removed(old, new)
 
 
-def purge(pkg):
+def purge(pkg, **kwargs):
     '''
     Yum does not have a purge, this function calls remove
 

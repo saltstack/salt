@@ -159,7 +159,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
 
 
-def remove(name):
+def remove(name, **kwargs):
     '''
     Remove a single package with pkg_delete
 
@@ -178,7 +178,7 @@ def remove(name):
     return _list_removed(_format_pkgs(old), new)
 
 
-def purge(name):
+def purge(name, **kwargs):
     '''
     Remove a single package with pkg_delete
 

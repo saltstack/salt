@@ -81,7 +81,7 @@ def available_version(*names):
         return ret
 
 
-def remove(pkgs):
+def remove(pkgs, **kwargs):
     '''
     Removes packages with ``brew uninstall``
 
