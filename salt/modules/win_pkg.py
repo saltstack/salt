@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows() and  HAS_DEPENDENCIES:
+    if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return 'pkg'
     return False
 
@@ -76,7 +76,7 @@ def upgrade_available(name):
     return False
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
@@ -85,6 +85,12 @@ def list_upgrades():
         salt '*' pkg.list_upgrades
     '''
     log.warning('pkg.list_upgrades not implemented on Windows yet')
+
+    # Uncomment the below once pkg.list_upgrades has been implemented
+
+    # Catch both boolean input from state and string input from CLI
+    #if refresh is True or str(refresh).lower() == 'true':
+    #    refresh_db()
     return {}
 
 
@@ -116,8 +122,8 @@ def list_pkgs(*args):
     pythoncom.CoInitialize()
     if len(args) == 0:
         pkgs = dict(
-                   list(_get_reg_software().items()) +
-                   list(_get_msi_software().items()))
+            list(_get_reg_software().items()) +
+            list(_get_msi_software().items()))
     else:
         # get package version for each package in *args
         pkgs = {}
@@ -125,6 +131,7 @@ def list_pkgs(*args):
             pkgs.update(_search_software(arg))
     pythoncom.CoUninitialize()
     return pkgs
+
 
 def _search_software(target):
     '''
@@ -134,13 +141,14 @@ def _search_software(target):
     '''
     search_results = {}
     software = dict(
-                    list(_get_reg_software().items()) +
-                    list(_get_msi_software().items()))
+        list(_get_reg_software().items()) +
+        list(_get_msi_software().items()))
     for key, value in software.items():
         if key is not None:
             if target.lower() in key.lower():
                 search_results[key] = value
     return search_results
+
 
 def _get_msi_software():
     '''
@@ -150,13 +158,14 @@ def _get_msi_software():
     win32_products = {}
     this_computer = "."
     wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-    swbem_services = wmi_service.ConnectServer(this_computer,"root\cimv2")
+    swbem_services = wmi_service.ConnectServer(this_computer, "root\cimv2")
     products = swbem_services.ExecQuery("Select * from Win32_Product")
     for product in products:
         prd_name = product.Name.encode('ascii', 'ignore')
         prd_ver = product.Version.encode('ascii', 'ignore')
         win32_products[prd_name] = prd_ver
     return win32_products
+
 
 def _get_reg_software():
     '''
@@ -187,10 +196,10 @@ def _get_reg_software():
         for reg_key in reg_keys:
             try:
                 reg_handle = win32api.RegOpenKeyEx(
-                                reg_hive,
-                                reg_key,
-                                0,
-                                win32con.KEY_READ)
+                    reg_hive,
+                    reg_key,
+                    0,
+                    win32con.KEY_READ)
             except Exception:
                 pass
                 #Unsinstall key may not exist for all users
@@ -212,6 +221,7 @@ def _get_reg_software():
                         reg_software[prd_name] = prd_ver
     return reg_software
 
+
 def _get_machine_keys():
     '''
     This will return the hive 'const' value and some registry keys where
@@ -222,10 +232,11 @@ def _get_machine_keys():
     machine_keys = [
         "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
         "Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-        ]
+    ]
     machine_hive = win32con.HKEY_LOCAL_MACHINE
     machine_hive_and_keys[machine_hive] = machine_keys
     return machine_hive_and_keys
+
 
 def _get_user_keys():
     '''
@@ -244,10 +255,10 @@ def _get_user_keys():
                   'S-1-5-20']
     sw_uninst_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
     reg_handle = win32api.RegOpenKeyEx(
-                    users_hive,
-                    '',
-                    0,
-                    win32con.KEY_READ)
+        users_hive,
+        '',
+        0,
+        win32con.KEY_READ)
     for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
         #this is some identical key of a sid that contains some software names
         #but no detailed information about the software installed for that user
@@ -258,6 +269,7 @@ def _get_user_keys():
             user_keys.append(usr_sw_uninst_key)
     user_hive_and_keys[users_hive] = user_keys
     return user_hive_and_keys
+
 
 def _get_reg_value(reg_hive, reg_key, value_name=''):
     '''
@@ -326,7 +338,8 @@ def install(name=None, refresh=False, **kwargs):
         cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['installer'])
         if not cached_pkg:
             # It's not cached. Cache it, mate.
-            cached_pkg = __salt__['cp.cache_file'](pkginfo[version]['installer'])
+            cached_pkg = __salt__['cp.cache_file'](pkginfo[
+                                                   version]['installer'])
     else:
         cached_pkg = pkginfo[version]['installer']
     cached_pkg = cached_pkg.replace('/', '\\')
@@ -338,7 +351,7 @@ def install(name=None, refresh=False, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade
 
@@ -352,6 +365,12 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
     log.warning('pkg.upgrade not implemented on Windows yet')
+
+    # Uncomment the below once pkg.upgrade has been implemented
+
+    # Catch both boolean input from state and string input from CLI
+    #if refresh is True or str(refresh).lower() == 'true':
+    #    refresh_db()
     return {}
 
 
@@ -374,13 +393,15 @@ def remove(name, version=None):
         cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['uninstaller'])
         if not cached_pkg:
             # It's not cached. Cache it, mate.
-            cached_pkg = __salt__['cp.cache_file'](pkginfo[version]['uninstaller'])
+            cached_pkg = __salt__['cp.cache_file'](pkginfo[
+                                                   version]['uninstaller'])
     else:
         cached_pkg = pkginfo[version]['uninstaller']
     cached_pkg = cached_pkg.replace('/', '\\')
     if not os.path.exists(os.path.expandvars(cached_pkg)) and '(x86)' in cached_pkg:
         cached_pkg = cached_pkg.replace('(x86)', '')
-    cmd = '"' + str(os.path.expandvars(cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
+    cmd = '"' + str(os.path.expandvars(
+        cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
@@ -400,6 +421,7 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     return remove(name)
+
 
 def _get_package_info(name):
     '''
@@ -424,8 +446,9 @@ def _get_package_info(name):
     if name in repodata:
         return repodata[name]
     else:
-        return False #name, ' is not available.'
-    return False #name, ' is not available.'
+        return False  # name, ' is not available.'
+    return False  # name, ' is not available.'
+
 
 def _reverse_cmp_pkg_versions(pkg1, pkg2):
     '''
@@ -435,6 +458,7 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
         return 1
     else:
         return -1
+
 
 def _get_latest_pkg_version(pkginfo):
     if len(pkginfo) == 1:
