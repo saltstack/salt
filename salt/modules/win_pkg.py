@@ -374,7 +374,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name, version=None):
+def remove(name, version=None, **kwargs):
     '''
     Remove a single package
 
@@ -409,7 +409,7 @@ def remove(name, version=None):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name):
+def purge(name, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it

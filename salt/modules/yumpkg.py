@@ -444,7 +444,7 @@ def upgrade(refresh=True):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(pkgs):
+def remove(pkgs, **kwargs):
     '''
     Removes packages with yum remove
 
@@ -477,7 +477,7 @@ def remove(pkgs):
     return _list_removed(old, new)
 
 
-def purge(pkgs):
+def purge(pkgs, **kwargs):
     '''
     Yum does not have a purge, this function calls remove
 
