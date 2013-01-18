@@ -132,16 +132,23 @@ def create(vm_):
 
     if __opts__['deploy'] is True:
         log.debug('Deploying {0} using IP address {1}'.format(vm_['name'], data.public_ips[0]))
-        deployed = saltcloud.utils.deploy_script(
-            host=data.public_ips[0],
-            username='idcuser',
-            key_filename=__opts__['IBMSCE.ssh_key_file'],
-            script=deploy_script.script,
-            name=vm_['name'],
-            provider='ibmsce',
-            sudo=True,
-            start_action=__opts__['start_action'],
-            sock_dir=__opts__['sock_dir'])
+        deploy_kwargs = {
+            'host': data.public_ips[0],
+            'username': 'idcuser',
+            'provider': 'ibmsce',
+            'password': data.extra['password'],
+            'key_filename': __opts__['IBMSCE.ssh_key_file'],
+            'script': deploy_script.script,
+            'name': vm_['name'],
+            'sudo': True,
+            'start_action': __opts__['start_action'],
+            'sock_dir': __opts__['sock_dir'],
+            'conf_file': __opts__['conf_file'],
+            'minion_pem': vm_['priv_key'],
+            'minion_pub': vm_['pub_key'],
+            }
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:
