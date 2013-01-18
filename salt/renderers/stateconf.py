@@ -2,6 +2,10 @@
 # for a guide to using this module.
 #
 # TODO:
+#
+#   - support exclude declarations
+#   - support include declarations with env
+#
 #   - sls meta/info state: Eg,
 #
 #       sls_info:

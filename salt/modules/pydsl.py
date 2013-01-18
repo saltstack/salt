@@ -56,11 +56,6 @@ Example of a ``cmd`` state calling a python function::
 
 #TODOs:
 #
-#  - add support for implicit ordering.
-#
-#  - modify the stateconf renderer so that we can pipe pydsl to
-#    it to make use of its features
-# 
 #  - support exclude declarations
 #  - support include declarations with env
 #
