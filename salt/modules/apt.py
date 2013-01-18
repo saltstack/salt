@@ -204,7 +204,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     salt.utils.daemonize_if(__opts__, **kwargs)
 
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     if debconf:
@@ -337,7 +337,9 @@ def upgrade(refresh=True, **kwargs):
         salt '*' pkg.upgrade
     '''
     salt.utils.daemonize_if(__opts__, **kwargs)
-    if refresh:
+
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     ret_pkgs = {}
@@ -456,6 +458,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     return _get_upgradable()
 
 

@@ -130,7 +130,7 @@ def list_upgrades(refresh=True):
         salt '*' pkg.list_upgrades
     '''
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh.lower() == 'true':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
     return _get_upgradable()
 
@@ -270,7 +270,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
         }
     ))
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh.lower() == 'true':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -342,7 +342,7 @@ def upgrade(refresh=True):
         salt '*' pkg.upgrade
     '''
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh.lower() == 'true':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     ret_pkgs = {}
