@@ -233,7 +233,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
                     fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
                     break
         # Catch both boolean input from state and string input from CLI
-        if refresh is True or refresh.lower() == 'true':
+        if refresh is True or str(refresh).lower() == 'true':
             cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
         else:
             cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
