@@ -97,17 +97,22 @@ def create(vm_):
         log.error(err)
         return False
     if __opts__['deploy'] is True:
-        deployed = saltcloud.utils.deploy_script(
-            host=data.public_ips[0],
-            username='root',
-            key_filename=__opts__['JOYENT.private_key'],
-            deploy_command='/tmp/deploy.sh',
-            tty=True,
-            script=deploy_script.script,
-            name=vm_['name'],
-            start_action=__opts__['start_action'],
-            conf_file=__opts__['conf_file'],
-            sock_dir=__opts__['sock_dir'])
+        deploy_kwargs = {
+            'host': data.public_ips[0],
+            'username': 'root',
+            'key_filename': __opts__['JOYENT.private_key'],
+            'script': deploy_script.script,
+            'name': vm_['name'],
+            'deploy_command': '/tmp/deploy.sh',
+            'tty': True,
+            'start_action': __opts__['start_action'],
+            'sock_dir': __opts__['sock_dir'],
+            'conf_file': __opts__['conf_file'],
+            'minion_pem': vm_['priv_key'],
+            'minion_pub': vm_['pub_key'],
+            }
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:

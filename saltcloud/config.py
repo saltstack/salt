@@ -24,6 +24,7 @@ def cloud_config(path):
             'ssh_auth': '',
             'keysize': 4096,
             'os': '',
+            'script': 'bootstrap-salt-minion',
             'start_action': None,
             # Logging defaults
             'log_file': '/var/log/salt/cloud',
