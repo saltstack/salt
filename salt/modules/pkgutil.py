@@ -73,7 +73,7 @@ def upgrade_available(name):
     return ''
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
@@ -81,6 +81,9 @@ def list_upgrades():
 
         salt '*' pkgutil.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh.lower() == 'true':
+        refresh_db()
     upgrades = {}
     lines = __salt__['cmd.run_stdout'](
         '/opt/csw/bin/pkgutil -A --parse').splitlines()
@@ -107,7 +110,8 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkgutil.upgrade
     '''
-    if refresh:
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or refresh.lower() == 'true':
         refresh_db()
 
     # Get a list of the packages before install so we can diff after to see
