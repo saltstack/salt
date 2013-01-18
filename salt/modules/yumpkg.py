@@ -101,7 +101,7 @@ def _list_removed(old, new):
     return pkgs
 
 
-def list_upgrades(*args):
+def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -109,6 +109,10 @@ def list_upgrades(*args):
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
+
     pkgs = list_pkgs()
 
     yumbase = yum.YumBase()
@@ -158,7 +162,7 @@ def available_version(*names):
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-            and (pkg.arch == getBaseArch() or pkg.arch == 'noarch'):
+                    and (pkg.arch == getBaseArch() or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
     # Return a string if only one package name passed
@@ -194,7 +198,7 @@ def version(*names):
     ret = {}
     pkgs = list_pkgs()
     for name in names:
-        ret[name] = pkgs.get(name,'')
+        ret[name] = pkgs.get(name, '')
     # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
@@ -319,7 +323,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         name = '{0}-{1}'.format(name, kwargs.get('version'))
 
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -399,7 +403,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -412,6 +416,9 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
 
     yumbase = yum.YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
@@ -655,7 +662,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d'):
     if onlyrepo:
         os.remove(repofile)
         return 'File {0} containing repo {1} has been removed'.format(
-                                                            repofile, repo)
+            repofile, repo)
 
     # There must be other repos in this file, write the file with them
     header, filerepos = _parse_repo_file(repofile)
@@ -739,11 +746,11 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if 'baseurl' in todelete:
         if 'mirrorlist' not in kwargs and 'mirrorlist' \
-                        not in filerepos[repo].keys():
+                not in filerepos[repo].keys():
             return 'Error: Cannot delete baseurl without specifying mirrorlist'
     if 'mirrorlist' in todelete:
         if 'baseurl' not in kwargs and 'baseurl' \
-                        not in filerepos[repo].keys():
+                not in filerepos[repo].keys():
             return 'Error: Cannot delete mirrorlist without specifying baseurl'
 
     # Delete anything in the todelete list
@@ -803,6 +810,7 @@ def _parse_repo_file(filename):
             repos[repo][comps[0].strip()] = '='.join(comps[1:])
 
     return (header, repos)
+
 
 def compare(version1='', version2=''):
     '''
