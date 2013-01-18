@@ -1353,7 +1353,7 @@ class ClearFuncs(object):
             else:
                 log.info(
                     'Authentication failed from host {id}, the key is in '
-                    'pending and needs to be accepted with salt-key'
+                    'pending and needs to be accepted with salt-key '
                     '-a {id}'.format(**load)
                 )
                 eload = {'result': True,
