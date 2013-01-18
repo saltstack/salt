@@ -101,7 +101,7 @@ def _list_removed(old, new):
     return pkgs
 
 
-def list_upgrades(*args):
+def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -109,6 +109,10 @@ def list_upgrades(*args):
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
+
     pkgs = list_pkgs()
 
     yumbase = yum.YumBase()
@@ -319,7 +323,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         name = '{0}-{1}'.format(name, kwargs.get('version'))
 
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -399,7 +403,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -412,6 +416,9 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
 
     yumbase = yum.YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
