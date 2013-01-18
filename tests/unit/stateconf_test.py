@@ -176,6 +176,8 @@ extend:
 
 
     def test_start_state_generation(self):            
+        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+            self.skipTest('OrderedDict is not available')
         result = render_sls('''
 A:
   cmd.run:
