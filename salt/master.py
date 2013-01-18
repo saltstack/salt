@@ -193,6 +193,10 @@ class Master(SMaster):
                 if now - last > self.opts['search_index_interval']:
                     search.index()
             try:
+                if not fileserver.servers:
+                    log.error('No fileservers loaded, The master will not be'
+                              'able to serve files to minions')
+                    raise SaltMasterError('No fileserver backends available')
                 fileserver.update()
             except Exception as exc:
                 log.error(
