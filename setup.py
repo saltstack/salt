@@ -7,7 +7,7 @@ import os
 import urllib
 from distutils.core import setup
 
-boostrapdest = os.path.join(
+bootstrapdest = os.path.join(
     os.path.dirname(__file__),
     'saltcloud/deploy/bootstrap-salt-minion.sh',
     )
