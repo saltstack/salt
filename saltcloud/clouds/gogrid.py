@@ -63,6 +63,8 @@ def __virtual__():
             'sharedsecret',
             ]
     for conf in confs:
+        if not __opts__['providers']['gogrid']:
+            return False
         for provider in __opts__['providers']['gogrid']:
             if conf not in __opts__['providers']['gogrid'][provider]:
                 return False
