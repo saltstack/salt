@@ -4,12 +4,18 @@ Set up the version of Salt
 
 # Import python libs
 import os
+import re
 import sys
 import warnings
 import subprocess
 
 __version_info__ = (0, 12, 0)
 __version__ = '.'.join(map(str, __version_info__))
+
+GIT_DESCRIBE_RE = re.compile(
+    r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
+    r'(?:(?:.*)-(?P<noc>[\d]{1,2})-(?P<sha>[a-z0-9]{8}))?'
+)
 
 
 def __get_version_info_from_git(version, version_info):
@@ -34,9 +40,19 @@ def __get_version_info_from_git(version, version_info):
         if not out.strip():
             return version, version_info
 
-        parsed_version = '{0}'.format(out.strip().lstrip('v'))
+        match = GIT_DESCRIBE_RE.search(out.strip())
+        if not match:
+            return version, version_info
+
+        parsed_version = '{0}.{1}.{2}-{3}-{4}'.format(
+            match.group('major'),
+            match.group('minor'),
+            match.group('bugfix'),
+            match.group('noc'),
+            match.group('sha')
+        )
         parsed_version_info = tuple([
-            int(i) for i in parsed_version.split('-', 1)[0].split('.')
+            int(g) for g in match.groups()[:3] if g.isdigit()
         ])
         if parsed_version_info != version_info:
             warnings.warn(
