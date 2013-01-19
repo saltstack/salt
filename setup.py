@@ -7,15 +7,6 @@ import os
 import urllib
 from distutils.core import setup
 
-bootstrapdest = os.path.join(
-    os.path.dirname(__file__),
-    'saltcloud/deploy/bootstrap-salt-minion.sh',
-    )
-urllib.urlretrieve(
-    'http://bootstrap.saltstack.org',
-    bootstrapdest,
-    )
-
 if os.environ.get('VIRTUAL_ENV'):
     from setuptools import setup
 
