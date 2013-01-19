@@ -18,7 +18,13 @@ import sys
 
 # Import third party libs
 import zmq
-import seco.range
+
+HAS_RANGE = False
+try:
+    import seco.range
+    HAS_RANGE = True
+except ImportError:
+    pass
 
 # Import salt libs
 from salt.exceptions import (
@@ -1023,11 +1029,13 @@ class Matcher(object):
                 return tgt in self.functions['network.ip_addrs']()
 
     def range_match(self, tgt):
-      '''
-      Matches based on range cluster
-      '''
-      range = seco.range.Range(self.opts['range_server'])
-      return self.opts['grains']['fqdn'] in range.expand(tgt)
+        '''
+        Matches based on range cluster
+        '''
+        if HAS_RANGE:
+            range = seco.range.Range(self.opts['range_server'])
+            return self.opts['grains']['fqdn'] in range.expand(tgt)
+        return
 
 
     def compound_match(self, tgt):
@@ -1043,8 +1051,9 @@ class Matcher(object):
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre',
-               'R': 'range'}
+               'E': 'pcre'}
+        if HAS_Range:
+            ref['R'] = 'range'
         results = []
         opers = ['and', 'or', 'not', '(', ')']
         tokens = re.findall(r'[^\s()]+|[()]', tgt)
