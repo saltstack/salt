@@ -58,3 +58,12 @@ to be modified in any way to work with a minion.
 This makes it easy to "script" deployments with Salt states without having to
 set up a master, and allows for these SLS modules to be easily moved into a
 Salt master as the deployment grows.
+
+You can run your states use::
+    
+    salt-call state.highstate
+
+If you didn't change your ``file_client`` to ``local``, you can still run 
+salt-masterless with bellow command::
+
+    salt-call --local state.highstate
