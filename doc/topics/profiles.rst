@@ -14,7 +14,7 @@ yaml configuration. The syntax for declaring profiles is simple:
       script: Fedora
 
 A few key peices of information need to be declared and can change based on the
-public cloud provider. A number of additional paramaters can also be inserted:
+public cloud provider. A number of additional parameters can also be inserted:
 
 .. code-block:: yaml
 
@@ -28,7 +28,7 @@ public cloud provider. A number of additional paramaters can also be inserted:
       grains:
         role: webserver
 
-Some paramaters can be specified in the main Salt cloud config file and then
+Some parameters can be specified in the main Salt cloud config file and then
 are applied to all cloud profiles. For instance if only a single cloud provider
 is being used then the provider option can be declared in the Salt cloud config
 file.
