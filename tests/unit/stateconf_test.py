@@ -10,11 +10,7 @@ import salt.config
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.master_config('whatever, just load the defaults!')
-# we should have used minion_config(), but that would try to resolve
-# the master hostname, and retry for 30 seconds! Lucily for our purpose,
-# master conf or minion conf, it doesn't matter.
-
+OPTS = salt.config.minion_config(None, check_dns=False)
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/'])
 
@@ -175,13 +171,13 @@ extend:
         self.assertTrue('test.utils::some_state' in result['extend'])
 
 
-    def test_start_state_generation(self):            
+    def test_start_state_generation(self):
         if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
             self.skipTest('OrderedDict is not available')
         result = render_sls('''
 A:
   cmd.run:
-    - name: echo hello 
+    - name: echo hello
     - cwd: /
 B:
   cmd.run:
