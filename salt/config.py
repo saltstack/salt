@@ -328,16 +328,18 @@ def prepend_root_dir(opts, path_options):
             if opts[path_option].startswith(opts['root_dir']):
                 opts[path_option] = opts[path_option][len(opts['root_dir']):]
             opts[path_option] = salt.utils.path_join(
-                    root_dir,
-                    opts[path_option])
+                root_dir,
+                opts[path_option]
+            )
 
 
-def minion_config(path, check_dns=True):
+def minion_config(path, check_dns=True, env_var='SALT_MINION_CONFIG'):
     '''
     Reads in the minion configuration file and sets up special options
     '''
-    overrides = load_config(path, 'SALT_MINION_CONFIG')
-    default_include = overrides.get('default_include', DEFAULT_MINION_OPTS['default_include'])
+    overrides = load_config(path, env_var)
+    default_include = overrides.get('default_include',
+                                    DEFAULT_MINION_OPTS['default_include'])
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False))
@@ -400,9 +402,9 @@ def apply_minion_config(overrides=None, check_dns=True):
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = (
-            opts.get('extension_modules') or
-            os.path.join(opts['cachedir'], 'extmods')
-            )
+        opts.get('extension_modules') or
+        os.path.join(opts['cachedir'], 'extmods')
+    )
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
@@ -418,18 +420,20 @@ def apply_minion_config(overrides=None, check_dns=True):
     return opts
 
 
-def master_config(path):
+def master_config(path, env_var='SALT_MASTER_CONFIG'):
     '''
     Reads in the master configuration file and sets up default options
     '''
 
-    overrides = load_config(path, 'SALT_MASTER_CONFIG')
-    default_include = overrides.get('default_include', DEFAULT_MASTER_OPTS['default_include'])
+    overrides = load_config(path, env_var)
+    default_include = overrides.get('default_include',
+                                    DEFAULT_MASTER_OPTS['default_include'])
     include = overrides.get('include', [])
 
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
     return apply_master_config(overrides)
+
 
 def apply_master_config(overrides=None):
     '''
@@ -445,9 +449,9 @@ def apply_master_config(overrides=None):
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     opts['extension_modules'] = (
-            opts.get('extension_modules') or
-            os.path.join(opts['cachedir'], 'extmods')
-            )
+        opts.get('extension_modules') or
+        os.path.join(opts['cachedir'], 'extmods')
+    )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
 
     # Prepend root_dir to other paths
@@ -458,7 +462,11 @@ def apply_master_config(overrides=None):
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ('log_file', 'key_logfile'):
-        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+        log_setting = opts.get(config_key, '')
+        if log_setting is None:
+            continue
+
+        if urlparse.urlparse(log_setting).scheme == '':
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -499,7 +507,7 @@ def apply_master_config(overrides=None):
     return opts
 
 
-def client_config(path):
+def client_config(path, env_var='SALT_CLIENT_CONFIG'):
     '''
     Load in the configuration data needed for the LocalClient. This function
     searches for client specific configurations and adds them to the data from
@@ -508,7 +516,7 @@ def client_config(path):
     opts = {'token_file': os.path.expanduser('~/.salt_token')}
     opts.update(master_config(path))
     cpath = os.path.expanduser('~/.salt')
-    opts.update(load_config(cpath, 'SALT_CLIENT_CONFIG'))
+    opts.update(load_config(cpath, env_var))
     if 'token_file' in opts:
         opts['token_file'] = os.path.expanduser(opts['token_file'])
     if os.path.isfile(opts['token_file']):
