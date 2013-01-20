@@ -1,4 +1,9 @@
-"""A Python DSL for generating Salt's highstate data structure.
+'''
+:maintainer: Jack Kuan <kjkuan@gmail.com>
+:maturity: new
+:platform: all
+
+A Python DSL for generating Salt's highstate data structure.
 
 This module is intended to be used with the `pydsl` renderer,
 but can also be used on its own. Here's what you can do with
@@ -8,9 +13,9 @@ Salt PyDSL::
 
     apache = state('apache')
     apache.pkg.installed()
-    apache.service.running() \
+    apache.service.running() \\
                   .watch(pkg='apache',
-                         file='/etc/httpd/conf/httpd.conf',
+                         file='/etc/httpd/conf/httpd.conf', 
                          user='apache')
 
     if __grains__['os'] == 'RedHat':
@@ -20,7 +25,7 @@ Salt PyDSL::
     apache.group.present(gid=87).require(apache.pkg)
     apache.user.present(uid=87, gid=87,
                         home='/var/www/html',
-                        shell='/bin/nologin') \
+                        shell='/bin/nologin') \\
                .require(apache.group)
 
     state('/etc/httpd/conf/httpd.conf').file.managed(
@@ -52,7 +57,16 @@ Example of a ``cmd`` state calling a python function::
 
     state('hello').cmd.call(hello, 'pydsl!')
         
-"""
+'''
+
+# Implementation note:
+#  - There's a bit of terminology mix-up here: 
+#    - what I called a state or state declaration here is actually
+#      an ID declaration.
+#    - what I called a module or a state module actually corresponds
+#      to a state declaration.
+#    - and a state function is a function declaration.
+
 
 #TODOs:
 #
@@ -250,8 +264,11 @@ class StateModule(object):
 
 
 def _generate_requsite_method(t):
-    def req(self, mod, ref=None):
-        self.reference(t, mod, ref)
+    def req(self, *args, **kws):
+        for mod in args:
+            self.reference(t, mod, None)
+        for mod_ref in kws.iteritems():
+            self.reference(t, *mod_ref)
         return self
     return req
 
@@ -285,7 +302,10 @@ class StateFunction(object):
         args = list(args)
         if args:
             first = args[0]
-            if self.mod._name == 'cmd' and self.name == 'call' and callable(first):
+            if self.mod._name == 'cmd' and \
+               self.name in ('call', 'wait_call') and \
+               callable(first):
+
                 args[0] = first.__name__
                 kws = dict(func=first, args=args[1:], kws=kws)
                 del args[1:]
@@ -302,9 +322,10 @@ class StateFunction(object):
         if isinstance(mod, StateModule):
             ref = mod._state_id
         elif not (mod and ref):
-            raise PyDslError("Invalid argument(s) to a requisite expression!")
+            raise PyDslError(
+                    "Invalid a requisite reference declaration! {0}: {1}".format(
+                    mod, ref))
         self.args.append({req_type: [{str(mod): str(ref)}]})
-        return self
 
     ns = locals()
     for req_type in REQUISITES:
