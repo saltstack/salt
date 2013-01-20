@@ -1676,17 +1676,10 @@ class ClearFuncs(object):
                 load['tgt'],
                 load.get('tgt_type', 'glob')
                 )
-        try:
-            return {
-                'enc': 'clear',
-                'load': {
-                    'jid': clear_load['jid'],
-                    'minions': minions
-                }
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions
             }
-        finally:
-            if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 1)
-                pub_sock.close()
-            if context.closed is False:
-                context.term()
+        }
