@@ -2,6 +2,10 @@
 salt.renderers.stateconf
 ========================
 
+:maintainer: Jack Kuan <kjkuan@gmail.com>
+:maturity: new
+:platform: all
+
 This module provides a custom renderer that process a salt file with a
 specified templating engine(eg, jinja) and a chosen data renderer(eg, yaml),
 extract arguments for any ``stateconf.set`` state and provide the extracted
