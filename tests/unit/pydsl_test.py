@@ -13,10 +13,7 @@ from salt.renderers.yaml import HAS_ORDERED_DICT
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.master_config('whatever, just load the defaults!')
-# we should have used minion_config(), but that would try to resolve
-# the master hostname, and retry for 30 seconds! Lucily for our purpose,
-# master conf or minion conf, it doesn't matter.
+OPTS = salt.config.minion_config(None, check_dns=False)
 OPTS['id'] = 'whatever'
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
@@ -29,8 +26,6 @@ def render_sls(content, sls='', env='base', **kws):
     return STATE.rend['pydsl'](
                 StringIO(content), env=env, sls=sls,
                 **kws)
-
-            
 
 class PyDSLRendererTestCase(TestCase):
 
@@ -91,7 +86,7 @@ state('G').service.watch_in(state('A').cmd)
 state('H').cmd.require_in('cmd', 'echo hello')
 state('H').cmd.run('echo world')
 ''')
-        self.assertTrue(len(result), 6)            
+        self.assertTrue(len(result), 6)
         self.assertTrue(set("X A B G H".split()).issubset(set(result.keys())))
         b = result['B']['cmd']
         self.assertEqual(b[0], 'run')
@@ -280,14 +275,14 @@ state('.C').cmd.run('echo C >> {2}', cwd='/')
             sys.modules['salt.loaded.int.render.pydsl'].__salt__ = HIGHSTATE.state.functions
 
             high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
-#            import pprint 
+#            import pprint
 #            pprint.pprint(errors)
 #            pprint.pprint(high)
             out = HIGHSTATE.state.call_high(high)
 #            pprint.pprint(out)
             with open(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
-             
+
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
