@@ -7,7 +7,7 @@ repositories and `EPEL`_. It is installable using yum. Fedora will have more
 up to date versions of Salt than other members of the Red Hat family, which
 makes it a great place to help improve Salt!
 
-.. admonition:: CentOS / RHEL 5
+.. admonition:: CentOS / RHEL 5 / RHEL 6
 
     Salt and all dependencies have been *finally* accepted into the yum
     reposities for EPEL5 and EPEL6. Currently, the latest is in epel-testing
@@ -52,11 +52,24 @@ To have the Master start automatically at boot time:
 
     systemctl enable salt-master.service
 
+or
+
+.. code-block:: bash
+
+    chkconfig salt-master on
+
+
 To start the Master:
 
 .. code-block:: bash
 
     systemctl start salt-master.service
+
+or
+
+.. code-block:: bash
+
+    service salt-master start
 
 **Minion**
 
@@ -66,11 +79,23 @@ To have the Minion start automatically at boot time:
 
     systemctl enable salt-minion.service
 
+or
+
+.. code-block:: bash
+
+    chkconfig salt-minion on
+
 To start the Minion:
 
 .. code-block:: bash
 
     systemctl start salt-minion.service
+
+or 
+
+.. code-block:: bash
+
+    service salt-minion start
 
 Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 
