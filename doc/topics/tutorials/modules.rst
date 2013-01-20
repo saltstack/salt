@@ -34,9 +34,14 @@ Targets can be filtered by regular expression::
 
     salt -E 'virtmach[0-9]' test.ping
 
-Finally, targets can be explicitly specified in a list::
+Targets can be explicitly specified in a list::
 
-    salt -L foo,bar,baz,quo test.ping
+    salt -L 'foo,bar,baz,quo' test.ping
+
+Or Multiple target types can be combined in one command::
+    
+    salt -C 'G@os:Ubuntu and webser* or E@database.*' test.ping
+
 
 function
 --------
