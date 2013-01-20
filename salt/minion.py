@@ -1052,7 +1052,7 @@ class Matcher(object):
                'L': 'list',
                'S': 'ipcidr',
                'E': 'pcre'}
-        if HAS_Range:
+        if HAS_RANGE:
             ref['R'] = 'range'
         results = []
         opers = ['and', 'or', 'not', '(', ')']
