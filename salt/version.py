@@ -14,7 +14,7 @@ __version__ = '.'.join(map(str, __version_info__))
 
 GIT_DESCRIBE_RE = re.compile(
     r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
-    r'(?:(?:.*)-(?P<noc>[\d]{1,2})-(?P<sha>[a-z0-9]{8}))?'
+    r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
 )
 
 
