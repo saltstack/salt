@@ -33,6 +33,7 @@ def managed(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
+
     For yum-based systems, take note of the following configuration values:
 
     humanname
@@ -53,6 +54,31 @@ def managed(name, **kwargs):
         Sometimes you want to supply additional information, but not as
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
+    
+
+    For apt-based systems, take note of the following configuration vaolues:
+
+    uri
+        On apt-based systems, uri refers to a direct URL to be used for the 
+        apt repo.
+
+    disabled
+        On apt-based systems, disabled toggles whether or not the repo is 
+        used for resolving dependancies and/or installing packages
+
+    comps
+        On apt-based systems, comps dictate the types of packages to be
+        installed from the repository (e.g. main, nonfree, ...).  For 
+        purposes of this, comps should be a comma-separated list.
+
+    file
+       The filename for the .list that the repository is configured in.
+       It is important to include the full-path AND make sure it is in
+       a directory that APT will look in when handling packages
+  
+    dist
+       This dictates the release of the distro the packages should be built
+       for.  (e.g. unstable)    
     '''
     ret = {'name': name,
            'changes': {},
@@ -63,20 +89,6 @@ def managed(name, **kwargs):
         repo = __salt__['pkg.get_repo'](name)
     except:
         pass
-    if repo:
-        notset = False
-        for kwarg in kwargs:
-            if kwarg not in repo.keys():
-                notset = True
-            else:
-                if kwargs[kwarg] != repo[kwarg]:
-                    notset = True
-        if notset is False:
-            ret['comment'] = 'Package repo {0} already configured'.format(name)
-            return ret
-    if __opts__['test']:
-        ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
-        return ret
 
     # pkg.mod_repo has conflicting kwargs, so move 'em around
     repokwargs = {}
@@ -85,15 +97,38 @@ def managed(name, **kwargs):
             repokwargs['repo'] = kwargs[kwarg]
         elif kwarg == 'humanname':
             repokwargs['name'] = kwargs[kwarg]
-        elif kwarg in ('__id__', 'fun', 'state'):
+        elif kwarg in ('__id__', 'fun', 'state', '__env__', '__sls__', 'order'):
             pass
         else:
             repokwargs[kwarg] = kwargs[kwarg]
 
+    if repo:
+        notset = False
+        for kwarg in repokwargs:
+            if kwarg not in repo.keys():
+                notset = True
+            else:
+                if repokwargs[kwarg] != repo[kwarg]:
+                    notset = True
+        if notset is False:
+            ret['comment'] = 'Package repo {0} already configured'.format(name)
+            return ret
+    if __opts__['test']:
+        ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
+        return ret
+
+
     __salt__['pkg.mod_repo'](repo=name, **repokwargs)
     try:
         repodict = __salt__['pkg.get_repo'](name)
-        ret['changes'] = {'repo': name}
+        if repo:
+            for kwarg in repokwargs:
+                if repodict[kwarg] != repo.get(kwarg):
+                    change = { 'new': repodict[kwarg],
+                               'old': repo.get(kwarg) }
+                    ret['changes'][kwarg] = change
+        else:
+            ret['changes'] = { 'repo': name }
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0}'.format(name)
         return ret
@@ -102,7 +137,6 @@ def managed(name, **kwargs):
     ret['result'] = False
     ret['comment'] = 'Failed to configure repo {0}'.format(name)
     return ret
-
 
 def absent(name):
     '''
