@@ -569,9 +569,34 @@ def script(name,
 def call(name, func, args=(), kws=None,
          onlyif=None,
          unless=None,
-         stateful=False,
          **kwargs):
     '''
+    Invoke a pre-defined Python function with arguments specified in the state
+    declaration. This function is mainly used by the :mod:`salt.renderers.pydsl`
+    renderer.
+
+    The intepretation of `onlyif` and `unless` arguments are identical to those
+    of :func:`salt.states.cmd.run`, and all other arguments(`cwd`, `runas`, ...)
+    allowed by `cmd.run` are allowed here, except that their effects apply only
+    to the commands specified in `onlyif` and `unless` rather than to the function
+    to be invoked.
+
+    In addition the `stateful` argument has no effects here.
+
+    The return value of the invoked function will be interpreted as follows.
+
+    If it's a dictionary then it will be passed through to the state system, which
+    expects it to have the usual structure returned by any salt state function.
+
+    Otherwise, the return value(denoted as ``result`` in the code below) is
+    expected to be a JSON serializable object, and this dictionary is returned:
+
+    .. code-block:: python
+
+        { 'changes': { 'retval': result },
+          'result': True if result is None else bool(result),
+          'comment': result if isinstance(result, basestring) else ''
+        }
     '''
     ret = {'name': name,
            'changes': {},
@@ -596,8 +621,6 @@ def call(name, func, args=(), kws=None,
     if isinstance(result, dict):
         ret.update(result)
         return ret
-    elif isinstance(result, basestring) and stateful:
-        return _reinterpreted_state(result)
     else:
         # result must be json serializable else we get an error
         ret['changes'] = {'retval': result}
@@ -605,8 +628,16 @@ def call(name, func, args=(), kws=None,
         if isinstance(result, basestring):
             ret['comment'] = result
         return ret
-            
 
+def wait_call(name, func, args=(), kws=None,
+              onlyif=None,
+              unless=None,
+              stateful=False,
+              **kwargs):
+    return {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': ''}
 
 def mod_watch(name, **kwargs):
     '''
@@ -623,6 +654,10 @@ def mod_watch(name, **kwargs):
             kwargs.pop('stateful')
             return _reinterpreted_state(script(name, **kwargs))
         return script(name, **kwargs)
+
+    elif kwargs['sfun'] == 'wait_call' or kwargs['sfun'] == 'call':
+        return call(name, **kwargs)
+
 
     return {'name': name,
             'changes': {},

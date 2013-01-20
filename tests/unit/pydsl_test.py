@@ -78,12 +78,12 @@ state('X').cmd.run('echo hello')
 state('A').cmd.run('mkdir tmp', cwd='/var')
 state('B').cmd.run('ls -la', cwd='/var/tmp') \
               .require(state('X').cmd) \
-              .require('cmd', 'A') \
-              .watch('service', 'G')
+              .require(cmd='A') \
+              .watch(service='G')
 state('G').service.running(name='collectd')
 state('G').service.watch_in(state('A').cmd)
 
-state('H').cmd.require_in('cmd', 'echo hello')
+state('H').cmd.require_in(cmd='echo hello')
 state('H').cmd.run('echo world')
 ''')
         self.assertTrue(len(result), 6)
@@ -112,7 +112,7 @@ extend(
     A,
     state('X').cmd.run(cwd='/a/b/c'),
     state('Y').file('managed', name='a_file.txt'),
-    state('Z').service.watch('file', 'A')
+    state('Z').service.watch(file='A')
 )
 ''')
         self.assertEqual(len(result), 4)
@@ -164,7 +164,7 @@ state('A').cmd.wait('echo hehe')
     def test_no_state_func_in_state_mod(self):
         with self.assertRaisesRegexp(self.PyDslError, 'No state function specified'):
             render_sls('''
-state('B').cmd.require('cmd', 'hoho')
+state('B').cmd.require(cmd='hoho')
 ''')
 
 
@@ -257,10 +257,10 @@ state('.F').cmd.run('echo F >> {2}', cwd='/')
 include('xxx', 'yyy')
 
 # make all states in yyy run BEFORE states in this sls.
-extend(state('.start').stateconf.require('stateconf', 'xxx::goal'))
+extend(state('.start').stateconf.require(stateconf='xxx::goal'))
 
 # make all states in xxx run AFTER this sls.
-extend(state('.goal').stateconf.require_in('stateconf', 'yyy::start'))
+extend(state('.goal').stateconf.require_in(stateconf='yyy::start'))
 
 __pydsl__.set(ordered=True)
 
