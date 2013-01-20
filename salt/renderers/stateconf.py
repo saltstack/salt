@@ -1,3 +1,8 @@
+'''
+:maintainer: Jack Kuan <kjkuan@gmail.com>
+:maturity: new
+:platform: all
+'''
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
