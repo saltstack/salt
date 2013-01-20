@@ -333,7 +333,10 @@ def prepend_root_dir(opts, path_options):
             )
 
 
-def minion_config(path, check_dns=True, env_var='SALT_MINION_CONFIG'):
+def minion_config(path,
+                  check_dns=True,
+                  env_var='SALT_MINION_CONFIG',
+                  defaults=None):
     '''
     Reads in the minion configuration file and sets up special options
     '''
@@ -345,14 +348,17 @@ def minion_config(path, check_dns=True, env_var='SALT_MINION_CONFIG'):
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    return apply_minion_config(overrides, check_dns)
+    return apply_minion_config(overrides, check_dns, defaults)
 
 
-def apply_minion_config(overrides=None, check_dns=True):
+def apply_minion_config(overrides=None, check_dns=True, defaults=None):
     '''
     Returns minion configurations dict.
     '''
-    opts = DEFAULT_MINION_OPTS.copy()
+    if defaults is None:
+        defaults = DEFAULT_MINION_OPTS
+
+    opts = defaults.copy()
     if overrides:
         opts.update(overrides)
 
@@ -420,7 +426,7 @@ def apply_minion_config(overrides=None, check_dns=True):
     return opts
 
 
-def master_config(path, env_var='SALT_MASTER_CONFIG'):
+def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     '''
     Reads in the master configuration file and sets up default options
     '''
@@ -432,14 +438,17 @@ def master_config(path, env_var='SALT_MASTER_CONFIG'):
 
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
-    return apply_master_config(overrides)
+    return apply_master_config(overrides, defaults)
 
 
-def apply_master_config(overrides=None):
+def apply_master_config(overrides=None, defaults=None):
     '''
     Returns master configurations dict.
     '''
-    opts = DEFAULT_MASTER_OPTS.copy()
+    if defaults is None:
+        defaults = DEFAULT_MASTER_OPTS
+
+    opts = defaults.copy()
     if overrides:
         opts.update(overrides)
 
