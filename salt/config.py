@@ -521,19 +521,44 @@ def apply_master_config(overrides=None, defaults=None):
     return opts
 
 
-def client_config(path, env_var='SALT_CLIENT_CONFIG'):
+def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     '''
     Load in the configuration data needed for the LocalClient. This function
     searches for client specific configurations and adds them to the data from
     the master configuration.
     '''
-    opts = {'token_file': os.path.expanduser('~/.salt_token')}
-    opts.update(master_config(path))
-    cpath = os.path.expanduser('~/.salt')
-    opts.update(load_config(cpath, env_var))
+    if defaults is None:
+        defaults = DEFAULT_MASTER_OPTS
+
+    # Get the token file path from the provided defaults. If not found, specify
+    # our own, sane, default
+    opts = {
+        'token_file': defaults.get(
+            'token_file',
+            os.path.expanduser('~/.salt_token')
+        )
+    }
+    # Update options with the master configuration, either from the provided
+    # path, salt's defaults or provided defaults
+    opts.update(
+        master_config(path, defaults=defaults)
+    )
+    # Update with the users salt dot file or with the environment variable
+    opts.update(
+        load_config(
+            os.path.expanduser('~/.salt'), env_var
+        )
+    )
+    # Make sure we have a proper and absolute path to the token file
     if 'token_file' in opts:
-        opts['token_file'] = os.path.expanduser(opts['token_file'])
+        opts['token_file'] = os.path.abspath(
+            os.path.expanduser(
+                opts['token_file']
+            )
+        )
+    # If the token file exists, read and store the contained token
     if os.path.isfile(opts['token_file']):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
+    # Return the client options
     return opts
