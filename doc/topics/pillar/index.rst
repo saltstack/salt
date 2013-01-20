@@ -29,8 +29,8 @@ behavior and function as the ``file_roots`` configuration:
         - /srv/pillar
 
 This example configuration declares that the base environment will be located
-in the ``/srv/pillar`` directory. The top file used matches the name of the top file
-used for States, and has the same structure:
+in the ``/srv/pillar`` directory. The top file used matches the name of the top
+file used for States, and has the same structure:
 
 ``/srv/pillar/top.sls``
 
@@ -40,16 +40,16 @@ used for States, and has the same structure:
       '*':
         - packages
 
-This further example shows how to use other standard top matching types (grain matching is 
-used in this example) to deliver specific salt pillar data to minions with different 'environment' 
-grains:
+This further example shows how to use other standard top matching types (grain
+matching is used in this example) to deliver specific salt pillar data to minions
+with different 'os' grains:
 
 .. code-block:: yaml
 
     dev:
-    'environment:dev':
-      - match: grain  
-      - servers
+      'os:Debian':
+        - match: grain  
+        - servers
 
 ``/srv/pillar/packages.sls``
 
