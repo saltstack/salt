@@ -40,9 +40,16 @@ used for States, and has the same structure:
       '*':
         - packages
 
-This further example shows how to enable pcre matching in the salt pillar file. 
-The flexibility enabled by pcre matching is particularly useful in salt pillar
-files.
+This further example shows how to use other standard top matching types (grain matching is 
+used in this example) to deliver specific salt pillar data to minions with different 'environment' 
+grains:
+
+.. code-block:: yaml
+
+    dev:
+    'environment:dev':
+      - match: grain  
+      - servers
 
 ``/srv/pillar/packages.sls``
 
