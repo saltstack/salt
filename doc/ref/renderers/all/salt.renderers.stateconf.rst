@@ -22,7 +22,7 @@ Instead, you specify them as renderer arguments: ``#!stateconf mako . yaml``.
 
 Here's a list of features enabled by this renderer:
 
-  - Recognizes the special state function, ``stateconf.set``, that configures a
+- Recognizes the special state function, ``stateconf.set``, that configures a
     default list of named arguments useable within the template context of
     the salt file. Example::
 
@@ -80,7 +80,6 @@ Here's a list of features enabled by this renderer:
           stateconf.set:
             - host: localhost
             - port: 1234
-        {#  - url: 'http://{{host}}:{{port}}/' #}
 
         # --- end of state config ---
         # {{ apache.setdefault('url', "http://%(host)s:%(port)s/" % apache) }}
@@ -90,7 +89,7 @@ Here's a list of features enabled by this renderer:
             - name: echo '{{apache.url}}'
             - cwd: /
 
-  - Adds support for relative include and exclude of .sls files. Example::
+- Adds support for relative include and exclude of .sls files. Example::
 
         include:
           - .apache
@@ -112,11 +111,11 @@ Here's a list of features enabled by this renderer:
           - sls: some.users
 
 
-  - Adds a ``sls_dir`` context variable that expands to the directory containing
+- Adds a ``sls_dir`` context variable that expands to the directory containing
     the rendering salt file. So, you can write ``salt://${sls_dir}/...`` to
     reference templates files used by your salt file.
 
-  - Prefixes any state id(declaration or reference) that starts with a dot(``.``)
+- Prefixes any state id(declaration or reference) that starts with a dot(``.``)
     to avoid duplicated state ids when the salt file is included by other salt
     files.
 
@@ -158,12 +157,10 @@ Here's a list of features enabled by this renderer:
             stateconf.set:
               - name1: something
 
-  - Optionally(enabled by default, *disable* via the `-G` renderer option,
-    eg, in the shebang line: ``#!stateconf -G``), generates a
-    ``stateconf.set`` goal state(state id named as ``.goal`` by default,
-    configurable via the master/minion config option, ``stateconf_goal_state``)
-    that requires all other states in the salt file. Note, the ``.goal``
-    state id is subject to dot-prefix rename rule mentioned earlier.
+- Optionally generates a ``stateconf.set`` goal state:
+    (enabled by default, *disable* via the `-G` renderer option, e.g., in the shebang line: ``#!stateconf -G``), 
+    Generates a ``stateconf.set`` goal state that requires all other states in the salt file. Note, the ``.goal``
+    state id is subject to dot-prefix rename rule mentioned earlier. (state id named as ``.goal`` by default, configurable via the master/minion config option, ``stateconf_goal_state``)
 
     Such goal state is intended to be required by some state in an including
     salt file. For example, in your webapp salt file, if you include a
@@ -171,8 +168,9 @@ Here's a list of features enabled by this renderer:
     all states in the Tomcat sls file will be executed before some state in
     the webapp sls file.
 
-  - Optionally(enable via the `-o` renderer option, eg, in the shebang line:
-    ``#!stateconf -o``), orders the states in a sls file by adding a
+- Optionally orders the states in a sls file: 
+    (enable via the `-o` renderer option, eg, in the shebang line ``#!stateconf -o``)
+    Orders the states in a sls file by adding a
     ``require`` requisite to each state such that every state requires the
     state defined just before it. The order of the states here is the order
     they are defined in the sls file.(Note: this feature is only available
