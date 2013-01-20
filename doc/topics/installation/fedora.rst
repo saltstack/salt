@@ -52,7 +52,7 @@ To have the Master start automatically at boot time:
 
     systemctl enable salt-master.service
 
-OR
+or
 
 .. code-block:: bash
 
@@ -65,7 +65,7 @@ To start the Master:
 
     systemctl start salt-master.service
 
-OR
+or
 
 .. code-block:: bash
 
@@ -79,7 +79,7 @@ To have the Minion start automatically at boot time:
 
     systemctl enable salt-minion.service
 
-OR
+or
 
 .. code-block:: bash
 
@@ -90,6 +90,8 @@ To start the Minion:
 .. code-block:: bash
 
     systemctl start salt-minion.service
+
+or 
 
 .. code-block:: bash
 
