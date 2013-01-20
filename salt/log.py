@@ -311,6 +311,12 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         logging.getLogger(__name__).warn('Logfile logging already configured')
         return
 
+    if log_path is None:
+        logging.getLogger(__name__).warn(
+            'log_path setting is set to `None`. Nothing else to do'
+        )
+        return
+
     # Remove the temporary null logging handler
     __remove_null_logging_handler()
 
