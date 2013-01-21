@@ -58,7 +58,7 @@ def version():
     return __salt__['cmd.run'](cmd)
 
 
-def available_version(name):
+def available_version(pkg_name):
     '''
     The available version of the package in the repository
    
@@ -67,7 +67,7 @@ def available_version(name):
         salt '*' pkgng.available_version <package name>
     '''
 
-    cmd = 'pkg info {0}'.format(name)
+    cmd = 'pkg info {0}'.format(pkg_name)
     out = __salt__['cmd.run'](cmd).split()
     return out[0]
 
@@ -91,16 +91,38 @@ def update_package_site(new_url):
     return True
 
 
-def stats():
+def stats(local=False, remote=False):
     '''
     Return pkgng stats.
 
     CLI Example::
 
         salt '*' pkgng.stats
+
+        local
+            Display stats only for the local package database.
+
+            CLI Example::
+
+                salt '*' pkgng.stats local=True
+
+        remote
+            Display stats only for the remote package database(s).
+
+            CLI Example::
+        
+                salt '*' pkgng.stats remote=True
     '''
 
-    cmd = 'pkg stats'
+    opts = ''
+    if local:
+        opts += 'l'
+    if remote:
+        opts += 'r'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg stats {0}'.format(opts)
     res = __salt__['cmd.run'](cmd)
     res = [x.strip("\t") for x in res.split("\n")]
     return res
@@ -159,33 +181,211 @@ def audit():
     return __salt__['cmd.run'](cmd)
 
 
-def install(pkg_name):
+def install(pkg_name, orphan=False, force=False, glob=False, local=False,
+            dryrun=False, quiet=False, require=False, reponame=None,
+            regex=False, pcre=False):
     '''
     Install package from repositories
 
     CLI Example::
 
-        salt '*' pkgng.install bash
+        salt '*' pkgng.install <package name>
+        
+        orphan
+            Mark the installed package as orphan. Will be automatically removed
+            if no other packages depend on them. For more information please
+            refer to pkg-autoremove(8).
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> orphan=True
+
+        force
+            Force the reinstallation of the package if already installed.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> force=True
+
+        glob
+            Treat the package names as shell glob patterns.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> glob=True
+
+        local
+            Skip updating the repository catalogues with pkg-update(8). Use the
+            locally cached copies only.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> local=True
+
+        dryrun
+            Dru-run mode. The list of changes to packages is always printed,
+            but no changes are actually made.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> dryrun=True
+
+        quiet
+            Force quiet output, except when dryrun is used, where pkg install
+            will always show packages to be installed, upgraded or deleted.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> quiet=True
+
+        require
+            When used with force, reinstalls any packages that require the
+            given package.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> require=True force=True
+
+        reponame
+            In multi-repo mode, override the pkg.conf ordering and only attempt
+            to download packages from the named repository.
+
+            CLI Example::
+
+                salt '*' pkgng.install <package name> reponame=repo
+
+        regex
+            Treat the package names as a regular expression
+
+            CLI Example::
+
+                salt '*' pkgng.install <regular expression> regex=True
+
+        pcre
+            Treat the package names as extended regular expressions.
+
+            CLI Example::
+            
+                salt '*' pkgng.install <extended regular expression> pcre=True
     '''
 
-    cmd = 'pkg install -y {0}'.format(pkg_name)
+    opts = ''
+    if orphan:
+        opts += 'A'
+    if force:
+        opts += 'f'
+    if glob:
+        opts += 'g'
+    if local:
+        opts += 'l'
+    if dryrun:
+        opts += 'n'
+    if not dryrun:
+        opts += 'y'
+    if quiet:
+        opts += 'q'
+    if require:
+        opts += 'R'
+    if reponame:
+        opts += 'r {0}'
+    if regex:
+        opts += 'x'
+    if pcre:
+        opts += 'X'
+    if opts:
+        opts = '=' + opts
+
+    cmd = 'pkg install {0} {1}'.format(opts,pkg_name)
     return __salt__['cmd.run'](cmd)
 
 
-def delete(pkg_name):
+def delete(pkg_name, all_installed=False, force=False, glob=False,
+            dryrun=False, recurse=False, regex=False, pcre=False):
     '''
     Delete a package from the database and system
 
     CLI Example::
 
-        salt '*' pkgng.delete bash
+        salt '*' pkgng.delete <package name>
+
+        all_installed
+            Deletes all installed packages from the system and empties the
+            database. USE WITH CAUTION!
+
+            CLI Example::
+
+                salt '*' pkgng.delete all all_installed=True force=True
+
+        force
+            Forces packages to be removed despite leaving unresolved
+            dependencies.
+
+            CLI Example::
+
+                salt '*' pkgng.delete <package name> force=True
+
+        glob
+            Treat the package names as shell glob patterns.
+
+            CLI Example::
+
+                salt '*' pkgng.delete <package name> glob=True
+
+        dryrun
+            Dry run mode. The list of packages to delete is always printed, but
+            no packages are actually deleted.
+
+            CLI Example::
+
+                salt '*' pkgng.delete <package name> dryrun=True
+
+        recurse
+            Delete all packages that require the listed package as well.
+
+            CLI Example::
+
+                salt '*' pkgng.delete <package name> recurse=True
+
+        regex
+            Treat the package names as regular expressions.
+
+            CLI Example::
+
+                salt '*' pkgng.delete <regular expression> regex=True
+
+        pcre
+            Treat the package names as extended regular expressions.
+
+            CLI Example::
+
+                salt '*' pkgng.delete <extended regular expression> pcre=True
     '''
 
-    cmd = 'pkg delete -y {0}'.format(pkg_name)
+    opts = ''
+    if all_installed:
+        opts += 'a'
+    if force:
+        opts += 'f'
+    if glob:
+        opts += 'g'
+    if dryrun:
+        opts += 'n'
+    if not dryrun:
+        opts += 'y'
+    if recurse:
+        opts += 'R'
+    if regex:
+        opts += 'x'
+    if pcre:
+        opts += 'X'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg delete {0} {1}'.format(opts,pkg_name)
     return __salt__['cmd.run'](cmd)
 
 
-def info(pkg=None):
+def info(pkg_name=None):
     '''
     Returns info on packages installed on system
 
@@ -194,14 +394,14 @@ def info(pkg=None):
         salt '*' pkgng.info
         salt '*' pkgng.info sudo
     '''
-    if pkg:
-        cmd = 'pkg info {0}'.format(pkg)
+    if pkg_name:
+        cmd = 'pkg info {0}'.format(pkg_name)
     else:
         cmd = 'pkg info'
 
     res = __salt__['cmd.run'](cmd)
 
-    if not pkg:
+    if not pkg_name:
         res = res.splitlines()
 
     return res
@@ -214,20 +414,70 @@ def update():
     CLI Example::
 
         salt '*' pkgng.update
-    '''
 
-    cmd = 'pkg update'
+        force
+            Force a full download of the repository catalogue without regard to
+            the respective ages of the local and remote copies of the
+            catalogue.
+
+            CLI Example::
+
+                salt '*' pkgng.update force=True
+    '''
+    opts =''
+    if force:
+        opts += 'f'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg update {0}'.format(opts)
     return __salt__['cmd.run'](cmd)
 
 
-def upgrade():
+def upgrade(force=False, local=False, dryrun=False):
     '''
     Upgrade all packages
 
     CLI Example::
 
         salt '*' pkgng.upgrade
+
+        force
+            Force reinstalling/upgrading the whole set of packages.
+
+            CLI Example::
+
+                salt '*' pkgng.upgrade force=True
+
+        local
+            Skip updating the repository catalogues with pkg-update(8). Use the
+            local cache only.
+
+            CLI Example::
+
+                salt '*' pkgng.update local=True
+
+        dryrun
+            Dry-run mode: show what packages have updates available, but do not
+            perform any upgrades. Repository catalogues will be updated as
+            usual unless the local option is also given.
+
+            CLI Example::
+
+                salt '*' pkgng.update dryrun=True
     '''
 
-    cmd = 'pkg upgrade -y'
+    opts = ''
+    if force:
+        opts += 'f'
+    if local:
+        opts += 'L'
+    if dryrun:
+        opts += 'n'
+    if not dryrun:
+        opts += 'y'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg upgrade {0}'.format(opts)
     return __salt__['cmd.run'](cmd)
