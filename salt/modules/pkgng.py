@@ -285,15 +285,17 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
     if require:
         opts += 'R'
     if reponame:
-        opts += 'r {0}'.format(reponame)
+        repo_opts += 'r {0}'.format(reponame)
     if regex:
         opts += 'x'
     if pcre:
         opts += 'X'
     if opts:
-        opts = '=' + opts
+        opts = '-' + opts
+    if repo_opts:
+        repo_opts = '-' + repo_opts
 
-    cmd = 'pkg install {0} {1}'.format(opts,pkg_name)
+    cmd = 'pkg install {0} {1} {2}'.format(repo_opts,opts,pkg_name)
     return __salt__['cmd.run'](cmd)
 
 
@@ -801,7 +803,7 @@ def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
     if quiet:
         opts += 'q'
     if reponame:
-        opts += 'r {0}'.format(reponame)
+        repo_opts += 'r {0}'.format(reponame)
     if glob:
         opts += 'g'
     if regex:
@@ -814,8 +816,10 @@ def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
         opts += 'd'
     if opts:
         opts = '-' + opts
+    if repo_opts:
+        opts = '-' + repo_opts
 
-    cmd = 'pkg fetch -y {0} {1}'.format(opts,pkg_name)
+    cmd = 'pkg fetch -y {0} {1} {2}'.format(repo_opts,opts,pkg_name)
     return __salt__['cmd.run'](cmd)
 
 
