@@ -21,10 +21,11 @@ Many popular distributions will be able to install the salt minion by executing 
 
 The script should also make it simple to install a salt master, if desired.
 
-Currently the install script supports:
+Currently the install script has been tested to work on:
 
 * Ubuntu 10.x/11.x/12.x
 * Debian 6.x
+* RHEL 6.3
 * CentOS 6.3
 * Fedora
 * Arch
@@ -45,13 +46,13 @@ These guides go into detail how to install salt on a given platform.
 
     arch
     debian
-    ubuntu
     fedora
     freebsd
     gentoo
-    windows
+    rhel
+    ubuntu
     solaris
-
+    windows
 
 Dependencies
 ------------
