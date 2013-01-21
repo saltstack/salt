@@ -39,12 +39,12 @@ def list_exports(exports='/etc/exports'):
         if line.startswith('#'):
             continue
         comps = line.split()
-        ret[comps[0]] = {'hosts': [], 'options': []}
+        ret[comps[0]] = []
         for perm in comps[1:]:
             permcomps = perm.split('(')
             permcomps[1] = permcomps[1].replace(')', '')
-            ret[comps[0]]['hosts'] = permcomps[0].split(',')
-            ret[comps[0]]['options'] = permcomps[1].split(',')
+            hosts = permcomps[0].split(',')
+            options = permcomps[1].split(',')
+            ret[comps[0]].append({'hosts': hosts, 'options': options})
     f.close()
     return ret
-
