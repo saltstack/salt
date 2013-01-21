@@ -98,14 +98,10 @@ class SaltCloud(parsers.SaltCloudParser):
             msg = 'The following virtual machines are set to be destroyed:\n'
             for name in names:
                 msg += '  {0}\n'.format(name)
-            print(msg)
-            res = raw_input('Proceed? [N/y]')
-            if not res.lower().startswith('y'):
-                return
-            print('...proceeding')
 
             try:
-                mapper.destroy(names)
+                if self.print_confirm(msg):
+                    mapper.destroy(names)
             except Exception as exc:
                 print('There was an error: {0}'.format(exc))
             self.exit(0)
@@ -117,8 +113,13 @@ class SaltCloud(parsers.SaltCloudParser):
             else:
                 names = self.config.get('names', None)
 
+            msg = 'The following virtual machines are set to be actioned with "{0}":\n'.format(self.options.action)
+            for name in names:
+                msg += '  {0}\n'.format(name)
+
             try:
-                mapper.do_action(names)
+                if self.print_confirm(msg):
+                    mapper.do_action(names)
             except Exception as exc:
                 print('There was an error: {0}'.format(exc))
             self.exit(0)
@@ -139,3 +140,12 @@ class SaltCloud(parsers.SaltCloudParser):
             except Exception as exc:
                 print('There was an error: {0}'.format(exc))
             self.exit(0)
+
+
+    def print_confirm(self, msg):
+        print(msg)
+        res = raw_input('Proceed? [N/y]')
+        if not res.lower().startswith('y'):
+            return False
+        print('...proceeding')
+        return True
