@@ -120,7 +120,8 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
     else:
-        ret['changes']['ret'] = mret
+        if mret:
+            ret['changes']['ret'] = mret
 
     if 'returner' in kwargs:
         ret_ret = {
