@@ -65,7 +65,7 @@ def items(sanitize=False):
         return __grains__
 
 
-def item(*args):
+def item(*args, **kargs):
     '''
     Return a single component of the grains data
 
@@ -78,12 +78,22 @@ def item(*args):
     CLI Example::
 
         salt '*' grains.item os osrelease oscodename
+        
+    Sanitized CLI Example::
+
+        salt '*' grains.item host sanitize=True
     '''
     ret = {}
     for k in args:
         if k in __grains__:
             ret[k] = __grains__[k]
-    return ret
+    if 'sanitize' in kargs:
+        for k, func in _SANITIZERS.items():
+            if k in ret:
+                ret[k] = func(ret[k])
+        return ret
+    else:
+        return ret
 
 
 def setval(key, val):
