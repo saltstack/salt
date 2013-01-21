@@ -106,6 +106,24 @@ def salt_auth_tool():
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
 
+def wants_html():
+    '''
+    Determine if the request is asking for HTML specifically.
+
+    Returns an empty string or a string containing the output of the
+    cherrypy.lib.cptools.accept() function.
+    '''
+    # Short-circuit if the request is vague or overly broad
+    if (not 'Accept' in cherrypy.request.headers
+            or cherrypy.request.headers['Accept'] == '*/*'):
+        return ''
+
+    try:
+        return cherrypy.lib.cptools.accept(
+                ['text/html'] + [i for (i, _) in ct_out_map])
+    except (AttributeError, cherrypy.CherryPyException):
+        return ''
+
 # Be conservative in what you send
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
 # preserve order of preference.
@@ -126,15 +144,10 @@ def hypermedia_handler(*args, **kwargs):
     # If we're being asked for HTML, try to serve index.html from the 'static'
     # directory; this is useful (as a random, non-specific example) for
     # bootstrapping the salt-ui app
-    try:
-        best = cherrypy.lib.cptools.accept(
-                ['text/html'] + [i for (i, _) in ct_out_map])
-        index = os.path.join(cherrypy.config['static'], 'index.html')
-    except (AttributeError, cherrypy.CherryPyException):
-        pass
-    else:
-        if 'html' in best and os.path.exists(index):
-            return cherrypy.lib.static.serve_file(index)
+    index = os.path.join(cherrypy.config['static'], 'index.html')
+
+    if 'html' in wants_html() and os.path.exists(index):
+        return cherrypy.lib.static.serve_file(index)
 
     # Execute the real handler. Handle or pass-through any errors we know how
     # to handle (auth & HTTP errors). Reformat any errors we don't know how to
