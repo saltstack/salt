@@ -1,4 +1,4 @@
-.TH "SALT-API" "7" "November 17, 2012" "0.7.0" "salt-api"
+.TH "SALT-API" "7" "January 21, 2013" "0.7.5" "salt-api"
 .SH NAME
 salt-api \- salt-api Documentation
 .
@@ -35,6 +35,12 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 variety of entry points into a running Salt system. It can start and manage
 multiple interfaces allowing a REST API to coexist with XMLRPC or even a
 Websocket API.
+.SH GETTING STARTED
+.sp
+Running \fBsalt\-api\fP will automatically start any netapi modules that
+have been configured in your Salt master config file. Consult the documentation
+for each netapi module for what options are required. \fBsalt\-api\fP must
+be run on the same machine as your Salt master.
 .SH NETAPI MODULES
 .sp
 The core functionality for \fBsalt\-api\fP lies in pluggable netapi modules
@@ -155,6 +161,15 @@ Required when \fBdebug\fP is \fBFalse\fP
 .TP
 .B ssl_key
 Required when \fBdebug\fP is \fBFalse\fP
+.TP
+.B static
+A filesystem path to static HTML/JavaScript/CSS/image assets.
+If this directory contains a \fBindex.html\fP file, it will be served at
+the root URL when HTML is requested by a client via the \fBAccept\fP
+header.
+.sp
+This directory may point to a clone of the \fI\%salt-ui\fP project to
+bootstrap a graphical interface for interacting with Salt.
 .UNINDENT
 .sp
 For example:
@@ -185,18 +200,19 @@ the dependencies for this module):
 You may request various output formats by sending the appropriate
 \fIAccept\fP header. You may also send various formats in
 \fI\%POST\fP and \fI\%PUT\fP requests by specifying the
-\fIContent\-Type\fP. JSON and YAML are currently supported, HTML
-will be soon supported.
+\fIContent\-Type\fP.
 .RE
 .INDENT 0.0
 .TP
 .B class saltapi.netapi.rest_cherrypy.LowDataAdapter(opts)
 The primary purpose of this handler is to provide a RESTful API to execute
 Salt client commands and return the response as a data structure.
-.sp
-In addition, there is enough functionality to bootstrap the single\-page
-browser app (which will then utilize the REST API via ajax calls) when the
-request is intiated from a browser (asks for HTML).
+.INDENT 7.0
+.TP
+.B Parameters
+\fBopts\fP \-\- A dictionary of options from Salt\(aqs master config (e.g.
+Salt\(aqs, \fB__opts__\fP)
+.UNINDENT
 .INDENT 7.0
 .TP
 .B GET()
@@ -300,15 +316,12 @@ return:
 .UNINDENT
 .INDENT 7.0
 .TP
-.B Form client
-the client interface in Salt
-.TP
-.B Form fun
-the function to execute on the specified Salt client
-.TP
-.B Form arg
-any args to pass to the function; this parameter is required
-even if blank
+.B Form lowstate
+lowstate data appropriate for the \fI\%client\fP interface you are calling.
+.sp
+Lowstate may be supplied in any supported format by specifying the
+\fIContent\-Type\fP header in the request. Supported formats
+are listed in the \fIAlternates\fP response header.
 .TP
 .B Status 200
 success
@@ -442,6 +455,235 @@ requested Content\-Type not available
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.INDENT 0.0
+.TP
+.B class saltapi.netapi.rest_cherrypy.Minions(opts)
+.INDENT 7.0
+.TP
+.B GET(mid=None)
+A convenience URL for getting lists of minions or getting minion
+details
+.INDENT 7.0
+.TP
+.B GET /minions/(mid)
+Get grains, modules, functions, and inline function documentation
+for all minions or a single minion
+.sp
+\fBExample request\fP:
+.sp
+.nf
+.ft C
+% curl \-i localhost:8000/minions/ms\-3
+.ft P
+.fi
+.sp
+.nf
+.ft C
+GET /minions/ms\-3 HTTP/1.1
+Host: localhost:8000
+Accept: application/x\-yaml
+.ft P
+.fi
+.sp
+\fBExample response\fP:
+.sp
+.nf
+.ft C
+HTTP/1.1 200 OK
+Content\-Length: 129005
+Content\-Type: application/x\-yaml
+
+return:
+\- ms\-3:
+    grains.items:
+      ...
+.ft P
+.fi
+.UNINDENT
+.INDENT 7.0
+.TP
+.B Parameters
+\fBmid\fP \-\- (optional) a minion id
+.TP
+.B Status 200
+success
+.TP
+.B Status 401
+authentication required
+.TP
+.B Status 406
+requested Content\-Type not available
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B POST(**kwargs)
+Start an execution command and immediately return the job id
+.INDENT 7.0
+.TP
+.B POST /minions
+You must pass low\-data in the requst body either from an HTML form
+or as JSON or YAML. The \fBclient\fP option is pre\-set to
+\fBlocal_async\fP.
+.sp
+\fBExample request\fP:
+.sp
+.nf
+.ft C
+% curl \-sSi localhost:8000/minions \e
+    \-H "Accept: application/x\-yaml" \e
+    \-d tgt=\(aq*\(aq \e
+    \-d fun=\(aqstatus.diskusage\(aq
+.ft P
+.fi
+.sp
+.nf
+.ft C
+POST /minions HTTP/1.1
+Host: localhost:8000
+Accept: application/x\-yaml
+Content\-Length: 26
+Content\-Type: application/x\-www\-form\-urlencoded
+
+tgt=*&fun=status.diskusage
+.ft P
+.fi
+.sp
+\fBExample response\fP:
+.sp
+.nf
+.ft C
+HTTP/1.1 202 Accepted
+Content\-Length: 86
+Content\-Type: application/x\-yaml
+
+\- return:
+    jid: \(aq20130118105423694155\(aq
+    minions: [ms\-4, ms\-3, ms\-2, ms\-1, ms\-0]
+.ft P
+.fi
+.UNINDENT
+.INDENT 7.0
+.TP
+.B Form lowstate
+lowstate data for the
+\fBLocalClient\fP; the \fBclient\fP parameter will
+be set to \fBlocal_async\fP
+.sp
+Lowstate may be supplied in any supported format by specifying the
+\fIContent\-Type\fP header in the request. Supported formats
+are listed in the \fIAlternates\fP response header.
+.TP
+.B Status 202
+success
+.TP
+.B Status 401
+authentication required
+.TP
+.B Status 406
+requested \fIContent\-Type\fP not available
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class saltapi.netapi.rest_cherrypy.Jobs(opts)
+.INDENT 7.0
+.TP
+.B GET(jid=None)
+A convenience URL for getting lists of previously run jobs or getting
+the return from a single job
+.INDENT 7.0
+.TP
+.B GET /jobs/(jid)
+Get grains, modules, functions, and inline function documentation
+for all minions or a single minion
+.sp
+\fBExample request\fP:
+.sp
+.nf
+.ft C
+% curl \-i localhost:8000/jobs
+.ft P
+.fi
+.sp
+.nf
+.ft C
+GET /jobs HTTP/1.1
+Host: localhost:8000
+Accept: application/x\-yaml
+.ft P
+.fi
+.sp
+\fBExample response\fP:
+.sp
+.nf
+.ft C
+HTTP/1.1 200 OK
+Content\-Length: 165
+Content\-Type: application/x\-yaml
+
+return:
+\- \(aq20121130104633606931\(aq:
+    Arguments:
+    \- \(aq3\(aq
+    Function: test.fib
+    Start Time: 2012, Nov 30 10:46:33.606931
+    Target: ms\-3
+    Target\-type: glob
+.ft P
+.fi
+.sp
+\fBExample request\fP:
+.sp
+.nf
+.ft C
+% curl \-i localhost:8000/jobs/20121130104633606931
+.ft P
+.fi
+.sp
+.nf
+.ft C
+GET /jobs/20121130104633606931 HTTP/1.1
+Host: localhost:8000
+Accept: application/x\-yaml
+.ft P
+.fi
+.sp
+\fBExample response\fP:
+.sp
+.nf
+.ft C
+HTTP/1.1 200 OK
+Content\-Length: 73
+Content\-Type: application/x\-yaml
+
+return:
+\- ms\-3:
+  \- \- 0
+    \- 1
+    \- 1
+    \- 2
+  \- 9.059906005859375e\-06
+.ft P
+.fi
+.UNINDENT
+.INDENT 7.0
+.TP
+.B Parameters
+\fBmid\fP \-\- (optional) a minion id
+.TP
+.B Status 200
+success
+.TP
+.B Status 401
+authentication required
+.TP
+.B Status 406
+requested Content\-Type not available
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .SH RELEASES
 .SS Release notes
 .SS salt\-api 0.5.0
@@ -536,6 +778,37 @@ module.
 Authentication is performed through Salt\(aqs incredibly flexible \fI\%external
 auth\fP system and is maintained when accessing the API via session
 tokens.
+.SS Participation
+.sp
+\fBsalt\-api\fP is just getting off the ground so feedback, questions, and
+ideas are critical as we solidify how this project fits into the overall Salt
+infrastructure management stack. Please get involved by \fI\%filing issues\fP on
+GitHub, \fI\%discussing on the mailing list\fP, and chatting in \fB#salt\-devel\fP on
+Freenode.
+.SS salt\-api 0.7.5
+.sp
+This release is a mostly a minor release to pave a better path for
+\fBsalt\-ui\fP though there are some small feature additions and bugfixes.
+.SS Changes
+.INDENT 0.0
+.IP \(bu 2
+Convenience URLs \fB/minions\fP and \fB/jobs\fP have been added as well as a
+async client wrapper. This starts a job and immediately returns the job ID,
+allowing you to fetch the result of that job at a later time.
+.IP \(bu 2
+The return format will now default to JSON if no specific format is
+requested.
+.IP \(bu 2
+A new setting \fBstatic\fP has been added that will serve any static media from
+the directory specified. In addition if an \fBindex.html\fP file is found
+in that directory and the \fBAccept\fP header in the request prefer HTML that
+file will be served.
+.IP \(bu 2
+All HTML, including the login form, has been removed from \fBsalt\-api\fP
+and moved into the \fBsalt\-ui\fP project.
+.IP \(bu 2
+Sessions now live as long as the Salt token.
+.UNINDENT
 .SS Participation
 .sp
 \fBsalt\-api\fP is just getting off the ground so feedback, questions, and
