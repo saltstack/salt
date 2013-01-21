@@ -92,7 +92,7 @@ def option(
     if not omit_pillar:
         if value in __pillar__:
             return __pillar__[value]
-    elif value in DEFAULTS:
+    if value in DEFAULTS:
         return DEFAULTS[value]
     return default
 
