@@ -16,10 +16,9 @@ def __get_version_info_from_git(version, version_info):
     If we can get a version from Git use that instead, otherwise we carry on
     '''
     try:
-        from salt.utils import which
-
-        git = which('git')
-        if not git:
+        try:
+            git = subprocess.check_output('which git', shell=True)[:-1]
+        except subprocess.CalledProcessError:
             return version, version_info
 
         process = subprocess.Popen(
