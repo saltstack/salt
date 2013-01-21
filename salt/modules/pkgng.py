@@ -407,7 +407,7 @@ def info(pkg_name=None):
     return res
 
 
-def update():
+def update(force=False):
     '''
     Refresh PACKAGESITE contents
 
@@ -480,4 +480,377 @@ def upgrade(force=False, local=False, dryrun=False):
         opts = '-' + opts
 
     cmd = 'pkg upgrade {0}'.format(opts)
+    return __salt__['cmd.run'](cmd)
+
+
+def clean():
+    '''
+    Cleans the local cache of fetched remote packages
+
+    CLI Example::
+
+        salt '*' pkgng.clean
+    '''
+
+    cmd = 'pkg clean'
+    return __salt__['cmd.run'](cmd)
+
+
+def autoremove(dryrun=False):
+    '''
+    Delete packages which were automatically installed as dependencies and are 
+    not required anymore
+
+    CLI Example::
+
+	    salt '*' pkgng.autoremove
+
+        dryrun
+            Dry-run mode. The list of changes to packages is always printed,
+            but no changes are actually made.
+
+            CLI Example::
+
+                salt '*' pkgng.autoremove dryrun=True
+    '''
+
+    opts = ''
+    if dryrun:
+        opts += 'n'
+    else:
+        opts += 'y'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg autoremove {0}'.format(opts)
+    return __salt__['cmd.run'](cmd)
+
+
+def check(depends=False, recompute=False, checksum=False):
+    '''
+    Sanity checks installed packages
+
+        depends
+            Check for and install missing dependencies.
+
+            CLI Example::
+
+                salt '*' pkgng.check recompute=True
+
+        recompute
+            Recompute sizes and checksums of installed packages.
+
+            CLI Example::
+
+                salt '*' pkgng.check depends=True
+
+        checksum
+            Find invalid checksums for installed packages.
+
+            CLI Example::
+
+                salt '*' pkgng.check checksum=True
+    '''
+
+    opts = ''
+    if depends:
+        opts += 'dy'
+    if recompute:
+        opts += 'r'
+    if checksum:
+        opts += 's'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg check {0}'.format(opts)
+    return __salt__['cmd.run'](cmd)
+
+
+def which(file_name, origin=False, quiet=False):
+    '''
+    Displays which package installed a specific file
+
+    CLI Example::
+
+        salt '*' pkgng.which <file name>
+
+        origin
+            Shows the origin of the package instead of name-version.
+
+            CLI Example::
+
+                salt '*' pkgng.which <file name> origin=True
+
+        quiet
+            Quiet output.
+
+            CLI Example::
+
+                salt '*' pkgng.which <file name> quiet=True
+    '''
+
+    opts = ''
+    if quiet:
+        opts += 'q'
+    if origin:
+        opts += 'o'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg which {0} {1}'.format(opts, file_name)
+    return __salt__['cmd.run'](cmd)
+
+
+def search(pkg_name, exact=False, glob=False, regex=False, pcre=False, 
+            comment=False, desc=False, full=False, depends=False,
+            size=False, quiet=False, origin=False, prefix=False, ):
+    '''
+    Searches in remote package repositories
+
+    CLI Example::
+
+        salt '*' pkgng.search pattern
+
+        exact
+            Treat pattern as exact pattern.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern exact=True
+
+        glob
+            Treat pattern as a shell glob pattern.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern glob=True
+
+        regex
+            Treat pattern as a regular expression.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern regex=True
+
+        pcre
+            Treat pattern as an extended regular expression.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern pcre=True
+
+        comment
+            Search for pattern in the package comment one-line description.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern comment=True
+
+        desc
+            Search for pattern in the package description.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern desc=True
+
+        full
+            Displays full information about the matching packages.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern full=True
+
+        depends
+            Displays the dependencies of pattern.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern depends=True
+
+        size
+            Displays the size of the package
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern size=True
+
+        quiet
+            Be quiet. Prints only the requested information without displaying
+            many hints.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern quiet=True
+
+        origin
+            Displays pattern origin.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern origin=True
+
+        prefix
+            Displays the installation prefix for each package matching pattern.
+
+            CLI Example::
+
+                salt '*' pkgng.search pattern prefix=True
+    '''
+
+    opts = ''
+    if exact:
+        opts += 'e'
+    if glob:
+        opts += 'g'
+    if regex:
+        opts += 'x'
+    if pcre:
+        opts += 'X'
+    if comment:
+        opts += 'c'
+    if desc:
+        opts += 'D'
+    if full:
+        opts += 'f'
+    if depends:
+        opts += 'd'
+    if size:
+        opts += 's'
+    if quiet:
+        opts += 'q'
+    if origin:
+        opts += 'o'
+    if prefix:
+        opts += 'p'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg search {0} {1}'.format(opts,pkg_name)
+    return __salt__['cmd.run'](cmd)
+
+
+def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True, 
+            regex=False, pcre=False, local=False, depends=False):
+    '''
+    Fetches remote packages
+    
+    CLI Example::
+
+        salt '*' pkgng.fetch <package name>
+
+        all
+            Fetch all packages.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <package name> all=True
+
+        quiet
+            Quiet mode. Show less output.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <package name> quiet=True
+
+        reponame
+            Fetches packages from the given reponame if multiple repo support
+            is enabled. See pkg.conf(5).
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <package name> reponame=repo
+
+        glob
+            Treat pkg_name as a shell glob pattern.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <package name> glob=True
+
+        regex
+            Treat pkg_name as a regular expression.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <regular expression> regex=True
+
+        pcre
+            Treat pkg_name is an extended regular expression.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <extended regular expression> pcre=True
+
+        local
+            Skip updating the repository catalogues with pkg-update(8). Use the
+            local cache only.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <package name> local=True
+
+        depends
+            Fetch the package and its dependencies as well.
+
+            CLI Example::
+
+                salt '*' pkgng.fetch <package name> depends=True
+    ''' 
+
+    opts = ''
+    if all:
+        opts += 'a'
+    if quiet:
+        opts += 'q'
+    if reponame:
+        opts += 'r'
+    if glob:
+        opts += 'g'
+    if regex:
+        opts += 'x'
+    if pcre:
+        opts += 'X'
+    if local:
+        opts += 'L'
+    if depends:
+        opts += 'd'
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg fetch -y {0} {1}'.format(opts,pkg_name)
+    return __salt__['cmd.run'](cmd)
+
+
+def updating(pkg_name, filedate=None, filename=None):
+    ''''
+    Displays UPDATING entries of software packages
+
+    CLI Example::
+    
+        salt '*' pkgng.updating foo
+
+        filedate
+            Only entries newer than date are shown. Use a YYYYMMDD date format.
+
+            CLI Example::
+
+                salt '*' pkgng.updating foo filedate=20130101
+
+        filename
+            Defines an alternative location of the UPDATING file.
+
+            CLI Example::
+
+                salt '*' pkgng.updating foo filename=/tmp/UPDATING
+    '''
+
+    opts = ''
+    if filedate:
+        opts += 'd {0}'.format(filedate)
+    if filename:
+        opts += 'f {0}'.format(filename)
+    if opts:
+        opts = '-' + opts
+
+    cmd = 'pkg updating {0} {1}'.format(opts,pkg_name)
     return __salt__['cmd.run'](cmd)
