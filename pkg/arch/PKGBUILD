@@ -1,7 +1,7 @@
-# Maintainer: Thomas S Hatch <thatch45@gmail.com>
+# Maintainer: Christer Edwards <christer.edwards@gmail.com>
 
 pkgname=salt
-pkgver=0.9.4
+pkgver=0.11.1
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=(any)
@@ -11,31 +11,51 @@ depends=('python2'
          'python2-pyzmq'
          'python-m2crypto'
          'python2-yaml'
-         'pycrypto'
+         'python2-crypto'
          'python2-psutil'
-         'python2-jinja')
-backup=('etc/salt/master' 
+         'python2-jinja'
+         'python2-msgpack')
+
+backup=('etc/salt/master'
         'etc/salt/minion')
+
 makedepends=()
 optdepends=()
 options=()
-source=("https://github.com/downloads/saltstack/salt/$pkgname-$pkgver.tar.gz"
+conflicts=('salt-git')
+
+source=("http://pypi.python.org/packages/source/s/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        "salt-master.service"
+        "salt-syndic.service"
+        "salt-minion.service"
         "salt-master"
         "salt-syndic"
         "salt-minion")
-md5sums=('c27837bac06dadfdb51b4a2b63fe6d35'
-         '1594591acb0a266854186a694da21103'
-         '09683ef4966e401761f7d2db6ad4b692'
-         '21ab2eac231e9f61bf002ba5f16f8a3d')
+
+md5sums=('0e96a361a5bfb9a208a6a30b2537a7c2'
+         '3a2b032ec37077363c049969105b128e'
+         'e4c6adce5087e947c26c5c9d9fc3c9bb'
+         '833d31ebee69f5c0e2c0b6c8d345b6d7'
+         '33bb43fa74f67da7675c093664d43159'
+         'b4adb3a08871646c345f0050e3d55fae'
+         'ce64b6fb207142465bb5e2855e27cd8a')
 
 package() {
-  cd $srcdir/$pkgname-$pkgver
+  cd ${srcdir}/${pkgname}-${pkgver}
 
-  python2 setup.py install --root=$pkgdir/ --optimize=1
+  python2 setup.py install --root=${pkgdir}/ --optimize=1
 
-  mkdir -p $pkgdir/etc/rc.d/
-  cp $srcdir/salt-master $pkgdir/etc/rc.d/
-  cp $srcdir/salt-minion $pkgdir/etc/rc.d/
-  cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
-  chmod +x $pkgdir/etc/rc.d/*
+  mkdir -p ${pkgdir}/etc/rc.d/
+  cp ${srcdir}/salt-master ${pkgdir}/etc/rc.d/
+  cp ${srcdir}/salt-minion ${pkgdir}/etc/rc.d/
+  cp ${srcdir}/salt-syndic ${pkgdir}/etc/rc.d/
+  chmod +x ${pkgdir}/etc/rc.d/salt-{master,minion,syndic}
+
+  install -Dm644 ${srcdir}/salt-master.service ${pkgdir}/usr/lib/systemd/system/salt-master.service
+  install -Dm644 ${srcdir}/salt-syndic.service ${pkgdir}/usr/lib/systemd/system/salt-syndic.service
+  install -Dm644 ${srcdir}/salt-minion.service ${pkgdir}/usr/lib/systemd/system/salt-minion.service
+
+  mkdir -p ${pkgdir}/etc/salt/
+  cp ${srcdir}/${pkgname}-${pkgver}/conf/master ${pkgdir}/etc/salt/
+  cp ${srcdir}/${pkgname}-${pkgver}/conf/minion ${pkgdir}/etc/salt/
 }

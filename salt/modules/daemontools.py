@@ -15,7 +15,10 @@ __outputter__ = {
     'get_all': 'yaml',
 }
 
-SERVICE_DIR = "/service"
+if os.path.exists('/service'):
+    SERVICE_DIR = "/service"
+elif os.path.exists('/var/service'):
+    SERVICE_DIR = "/var/service"
 
 
 def _service_path(name):
