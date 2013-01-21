@@ -1,11 +1,23 @@
 ========================
-OS Support for Cloud VMS
+OS Support for Cloud VMs
 ========================
 
-Salt cloud works primarily by executing a script on the virtual machines as
+Salt Cloud works primarily by executing a script on the virtual machines as
 soon as they become available. The script that is executed is referenced in
-the cloud profile as the ``script``.
+the cloud profile as the ``script``. In older versions, this was the ``os``
+argument. This was changed in 0.8.2.
 
+A number of legacy scripts exist in the deploy directory in the saltcloud
+source tree. The preferred method is currently to use the salt-bootstrap
+script. A stable version is included with each release tarball starting with
+0.8.4. The most updated version can be found at:
+
+https://github.com/saltstack/salt-bootstrap
+
+If you do not specify a script argument, this script will be used at the
+default.
+
+If the Salt Bootstrap script does not meet your needs, you may write your own.
 The script should be written in bash and is a Jinja template. Deploy scripts
 need to execute a number of functions to do a complete salt setup. These
 functions include:
@@ -24,24 +36,28 @@ script:
 
 https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh
 
+A number of legacy deploy scripts are included with the release tarball. None
+of them are as functional or complete as Salt Bootstrap, and are still included
+for academic purposes.
 
-.. code-block:: bash
 
-    #!/bin/bash
+Other Generic Deploy Scripts
+============================
+If you want to be assured of always using the latest Salt Bootstrap script,
+there are a few generic templates available in the deploy directory of your
+saltcloud source tree:
 
-    # Install the salt-minion package from yum. This is easy for Fedora because
-    # Salt packages are in the Fedora package repos
-    yum install -y salt-minion
-    # Save in the minion public and private RSA keys before the minion is started
-    mkdir -p /etc/salt/pki
-    echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
-    echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-    # Copy the minion configuration file into place before starting the minion
-    echo '{{ minion }}' > /etc/salt/minion
-    # Set the minion to start on reboot
-    systemctl enable salt-minion.service
-    # Start the minion!
-    systemctl start salt-minion.service
+.. code-block::
+
+    curl-bootstrap
+    curl-bootstrap-git
+    python-bootstrap
+    wget-bootstrap
+    wget-bootstrap-git
+
+These are example scripts which were designed to be customized, adapted, and
+refit to meet your needs. One important use of them is to pass options to
+the salt-bootstrap script, such as updating to specific git tags.
 
 
 Post-Deploy Commands
@@ -74,4 +90,12 @@ Or it can be set from the main cloud config file:
     deploy: False
 
 The default for deploy is True.
+
+In the profile, you may also set the script option to None:
+
+.. code-block:: yaml
+
+    script: None
+
+This is the slowest option, since it still uploads the None deploy script and executes it.
 
