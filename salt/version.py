@@ -23,10 +23,15 @@ def __get_version_info_from_git(version, version_info):
     If we can get a version from Git use that instead, otherwise we carry on
     '''
     try:
-        try:
-            git = subprocess.check_output('which git', shell=True)[:-1]
-        except subprocess.CalledProcessError:
+        process = subprocess.Popen(
+                'which git',
+                stdout=subprocess.PIPE,
+                shell=True
+        )
+        git, _ = process.communicate()
+        if process.poll() != 0:
             return version, version_info
+        git = git[:-1]
 
         process = subprocess.Popen(
             [git, 'describe'],
