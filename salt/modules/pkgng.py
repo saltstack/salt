@@ -287,7 +287,7 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
     if require:
         opts += 'R'
     if reponame:
-        opts += 'r {0}'
+        opts += 'r {0}'.format(reponame)
     if regex:
         opts += 'x'
     if pcre:
@@ -803,7 +803,7 @@ def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
     if quiet:
         opts += 'q'
     if reponame:
-        opts += 'r'
+        opts += 'r {0}'.format(reponame)
     if glob:
         opts += 'g'
     if regex:
