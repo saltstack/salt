@@ -67,7 +67,7 @@ class Cloud(object):
             fun = '{0}.{1}'.format(prov, query)
             if not fun in self.clouds:
                 msg = ('Public cloud provider {0} is not available'.format(
-                    self.provider(vm_))
+                    prov)
                     )
                 log.error(msg)
                 continue
