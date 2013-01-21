@@ -66,7 +66,11 @@ state('A').service.running(name='apache')
         # 2 rather than 1 because pydsl adds an extra no-op state
         # declaration.
 
-        s = result.itervalues().next()['file']
+        s_iter = result.itervalues()
+        try:
+            s = s_iter.next()['file']
+        except KeyError:
+            s = s_iter.next()['file']
         self.assertEqual(s[0], 'managed')
         self.assertEqual(s[1]['name'], 'myfile.txt')
         self.assertEqual(s[2]['source'], 'salt://path/to/file')
