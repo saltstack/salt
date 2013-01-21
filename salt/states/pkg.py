@@ -299,11 +299,11 @@ def latest(
     problems = []
     for pkg in desired_pkgs:
         if not avail[pkg]:
-            if not cur[pkg]:
-                msg = 'No information found for "{0}".'.format(pkg)
-                log.error(msg)
-                problems.append(msg)
-        else:
+            msg = 'No information found for "{0}".'.format(pkg)
+            log.error(msg)
+            problems.append(msg)
+        elif not cur[pkg] or __salt__['pkg.compare'](cur[pkg],
+                                                     avail[pkg]) == -1:
             targets[pkg] = avail[pkg]
 
     if problems:
