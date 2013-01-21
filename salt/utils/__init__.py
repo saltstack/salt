@@ -30,8 +30,6 @@ except ImportError:
     HAS_FNCTL = False
 
 # Import salt libs
-import salt.minion
-import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
 
@@ -197,6 +195,8 @@ def daemonize_if(opts, **kwargs):
     if not 'jid' in data:
         return
 
+    import salt.minion
+    import salt.payload
     serial = salt.payload.Serial(opts)
     proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
     fn_ = os.path.join(proc_dir, data['jid'])
