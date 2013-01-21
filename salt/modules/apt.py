@@ -8,7 +8,12 @@ import re
 import logging
 
 #import aptsources.sourceslist
-from aptsources import sourceslist
+try:
+    from aptsources import sourceslist
+    apt_support = True
+except ImportError:
+    apt_support = False
+
 try:
     from softwareproperties.ppa import expand_ppa_line
     ppa_format_support = True
@@ -517,6 +522,9 @@ def list_repos():
        salt '*' pkg.list_repos
        salt '*' pkg.list_repos disabled=True
     '''
+    if not apt_support:
+        return 'Error: aptsources.sourceslist python module not found'
+
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
@@ -544,6 +552,10 @@ def get_repo(repo):
 
         salt '*' pkg.get_repo "myrepo definition"
     '''
+    if not apt_support:
+        msg = 'Error: aptsources.sourceslist python module not found'
+        raise Exception(msg)
+
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
@@ -592,6 +604,9 @@ def del_repo(repo, refresh=False):
         salt '*' pkg.del_repo "myrepo definition"
         salt '*' pkg.del_repo "myrepo definition" refresh=True
     '''
+    if not apt_support:
+        return 'Error: aptsources.sourceslist python module not found'
+
     is_ppa = False
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
@@ -682,6 +697,9 @@ def mod_repo(repo, refresh=False, **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
+    if not apt_support:
+        return 'Error: aptsources.sourceslist python module not found'
+
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     _MODIFY_OK = set(['uri', 'comps', 'architectures', 'disabled', 'file', 'dist'])
