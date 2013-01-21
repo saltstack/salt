@@ -13,6 +13,7 @@ __grains__ = {}
 # Change the default outputter to make it more readable
 __outputter__ = {
     'items': 'grains',
+    'item': 'grains',
     'setval': 'grains',
 }
 
@@ -64,22 +65,25 @@ def items(sanitize=False):
         return __grains__
 
 
-def item(key=None, sanitize=False):
+def item(*args):
     '''
-    Return a singe component of the grains data
+    Return a single component of the grains data
 
     CLI Example::
 
         salt '*' grains.item os
+        
+    Return multiple components of the grains data
 
-    Sanitized CLI output::
+    CLI Example::
 
-        salt '*' grains.items serialnumber sanitize=True
+        salt '*' grains.item os osrelease oscodename
     '''
-    if sanitize and key in _SANITIZERS:
-        return _SANITIZERS[key](__grains__.get(key, ''))
-    else:
-        return __grains__.get(key, '')
+    ret = {}
+    for k in args:
+        if k in __grains__:
+            ret[k] = __grains__[k]
+    return ret
 
 
 def setval(key, val):
