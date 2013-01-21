@@ -21,6 +21,8 @@ A hypermedia REST API for Salt using the CherryPy framework
         This directory may point to a clone of the `salt-ui`_ project to
         bootstrap a graphical interface for interacting with Salt.
 
+    .. _`salt-ui`: https://github.com/saltstack/salt-ui
+
     For example:
 
     .. code-block:: yaml
@@ -39,8 +41,6 @@ A hypermedia REST API for Salt using the CherryPy framework
     .. code-block:: bash
 
         % salt-call tls.create_self_signed_cert
-
-.. _`sait-ui`: https://github.com/saltstack/salt-ui
 
 .. admonition:: Content negotiation
 
