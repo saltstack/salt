@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "December 10, 2012" "0.8.3" "salt-cloud"
+.TH "SALT-CLOUD" "7" "January 21, 2013" "0.8.4" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -33,7 +33,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH VM PROFILES
 .sp
 Salt cloud designates virtual machines inside the profile configuration file.
-The profile configuration file defaults to \fB/etc/salt/cloud.vm\fP and is a
+The profile configuration file defaults to \fB/etc/salt/cloud.profiles\fP and is a
 yaml configuration. The syntax for declaring profiles is simple:
 .sp
 .nf
@@ -47,7 +47,7 @@ fedora_rackspace:
 .fi
 .sp
 A few key peices of information need to be declared and can change based on the
-public cloud provider. A number of additional paramaters can also be inserted:
+public cloud provider. A number of additional parameters can also be inserted:
 .sp
 .nf
 .ft C
@@ -63,7 +63,7 @@ centos_rackspace:
 .ft P
 .fi
 .sp
-Some paramaters can be specified in the main Salt cloud config file and then
+Some parameters can be specified in the main Salt cloud config file and then
 are applied to all cloud profiles. For instance if only a single cloud provider
 is being used then the provider option can be declared in the Salt cloud config
 file.
@@ -71,11 +71,19 @@ file.
 .sp
 .nf
 .ft C
-base_aws:
+rhel_aws:
   provider: aws
   image: ami\-e565ba8c
   size: Micro Instance
   script: RHEL6
+  minion:
+      cheese: edam
+
+ubuntu_aws:
+  provider: aws
+  image: ami\-7e2da54e
+  size: Micro Instance
+  script: Ubuntu
   minion:
       cheese: edam
 
@@ -238,10 +246,22 @@ systems, but if libcloud support is not available or another system makes more
 sense then by all means, use the other system to connect to the cloud provider.
 .SH OS SUPPORT FOR CLOUD VMS
 .sp
-Salt cloud works primarily by executing a script on the virtual machines as
+Salt Cloud works primarily by executing a script on the virtual machines as
 soon as they become available. The script that is executed is referenced in
-the cloud profile as the \fBscript\fP.
+the cloud profile as the \fBscript\fP. In older versions, this was the \fBos\fP
+argument. This was changed in 0.8.2.
 .sp
+A number of legacy scripts exist in the deploy directory in the saltcloud
+source tree. The preferred method is currently to use the salt\-bootstrap
+script. A stable version is included with each release tarball starting with
+0.8.4. The most updated version can be found at:
+.sp
+\fI\%https://github.com/saltstack/salt-bootstrap\fP
+.sp
+If you do not specify a script argument, this script will be used at the
+default.
+.sp
+If the Salt Bootstrap script does not meet your needs, you may write your own.
 The script should be written in bash and is a Jinja template. Deploy scripts
 need to execute a number of functions to do a complete salt setup. These
 functions include:
@@ -265,25 +285,18 @@ script:
 .sp
 \fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh\fP
 .sp
-.nf
-.ft C
-#!/bin/bash
-
-# Install the salt\-minion package from yum. This is easy for Fedora because
-# Salt packages are in the Fedora package repos
-yum install \-y salt\-minion
-# Save in the minion public and private RSA keys before the minion is started
-mkdir \-p /etc/salt/pki
-echo \(aq{{ vm[\(aqpriv_key\(aq] }}\(aq > /etc/salt/pki/minion.pem
-echo \(aq{{ vm[\(aqpub_key\(aq] }}\(aq > /etc/salt/pki/minion.pub
-# Copy the minion configuration file into place before starting the minion
-echo \(aq{{ minion }}\(aq > /etc/salt/minion
-# Set the minion to start on reboot
-systemctl enable salt\-minion.service
-# Start the minion!
-systemctl start salt\-minion.service
-.ft P
-.fi
+A number of legacy deploy scripts are included with the release tarball. None
+of them are as functional or complete as Salt Bootstrap, and are still included
+for academic purposes.
+.SS Other Generic Deploy Scripts
+.sp
+If you want to be assured of always using the latest Salt Bootstrap script,
+there are a few generic templates available in the deploy directory of your
+saltcloud source tree:
+.sp
+These are example scripts which were designed to be customized, adapted, and
+refit to meet your needs. One important use of them is to pass options to
+the salt\-bootstrap script, such as updating to specific git tags.
 .SS Post\-Deploy Commands
 .sp
 Once a minion has been deployed, it has the option to run a salt command. Normally, this would be the state.highstate command, which would finish provisioning the VM. Another common option is state.sls, or for just testing, test.ping. This is configured in the main cloud config file:
@@ -316,6 +329,16 @@ deploy: False
 .fi
 .sp
 The default for deploy is True.
+.sp
+In the profile, you may also set the script option to None:
+.sp
+.nf
+.ft C
+script: None
+.ft P
+.fi
+.sp
+This is the slowest option, since it still uploads the None deploy script and executes it.
 .SH CORE CONFIGURATION
 .sp
 A number of core configuration options and some options that are global to
@@ -1062,6 +1085,221 @@ log_level: debug
 .sp
 Check salt\-cloud \-\-help for a list of logging levels, which can also be
 specified from the command line.
+.SS Salt Cloud 0.8.3 Release Notes
+.sp
+Welcome to 0.8.3! While there are some new features, this release of Salt
+Cloud is primarily targeted at stability. Read on to see what\(aqs happened.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.3.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.3.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS No Deploy
+.sp
+Salt Cloud was originally intended to spin up machines and deploy Salt on them,
+but several use cases have arisen in which this is not the appropriate action.
+For instance, when booting into new platforms which may not even support Salt
+just yet, it makes no sense to try and install a non\-existant package. In these
+instances, you can add the \-\-no\-deploy argument to the salt\-cloud command to
+skip running the deploy script.
+.sp
+It is also possible to configure Salt Cloud to default to never deploying:
+.sp
+.nf
+.ft C
+deploy: False
+.ft P
+.fi
+.SS Firing Events
+.sp
+Salt Cloud is starting to make use of Salt\(aqs event system. If you are watching
+the event bus on the Salt Master, you can now watch for events to fire when
+minions are created or destroyed.
+.SS Start Actions
+.sp
+This is an experimental feature which some users may find handy. You may now
+configure a start_action for a deployed VM:
+.sp
+.nf
+.ft C
+start_action: state.highstate
+.ft P
+.fi
+.sp
+If configured, when the salt\-cloud command runs the deploy script, it will open
+a subprocess to wait for the salt\-minion service to start, and check in with
+the master (via the salt event bus). This feature does not currently work
+smoothly with all providers, particularly the ones which do not use "root" as
+the default login users. Your mileage will vary.
+.SS Exception Handling
+.sp
+There were a handful of spots in the code which would exit when an error
+occurred, sometimes without any meaningful error messages. This was was neither
+helpful to the user, nor Pythonic. Errors now should fire an exception of some
+sort, and if the error is Salt\- or Salt Cloud\-specific, a SaltException will be
+fired. This also helps pave the way for API usage of Salt Cloud.
+.SS Provider\-Specific Actions
+.sp
+This is largely a programmatic addition at this point, which will continue to
+expand into userland. All providers supported by libcloud provide a minimum
+level of functionality that Salt Cloud takes advantage of. Most providers also
+include a number of "extra" functions which are non\-standard. Some of these
+are critical in certain instances. For instance, most providers will shut down
+a VM for you when you send a destroy command, but Joyent requires you to
+manually shut it down first. This was previously only doable via their web
+interface. You may now pass a supported \-\-action (or \-a) to a cloud provider:
+.sp
+.nf
+.ft C
+salt\-cloud \-\-action stop joyentvm1
+.ft P
+.fi
+.sp
+All cloud providers support the destroy command via an action:
+.sp
+.nf
+.ft C
+salt\-cloud \-a destroy mymachine1 mymachine2 mymachine2
+.ft P
+.fi
+.SS Human\-Readable States
+.sp
+Most of our cloud providers are accessed via libcloud, which provides a
+numerical code declaring the current state of the machine. This state is
+viewable via the various query options. Unfortunately, if you don\(aqt know what
+the codes mean, they\(aqre largely useless to you. Now, with the \-Q or \-\-query
+option, a human\-readable state (i.e. RUNNING) will de displayed instead).
+.sp
+It should be noted that because some users are running salt\-cloud via another
+script, the \-F/\-\-full\-query and \-S/\-\-select\-query options still return the
+numerical code.
+.SS Various other Features and Stability Fixes
+.sp
+The above features addressed many stability issues. Additionally, the following
+have been addressed.
+.sp
+Salt Cloud requires at least libcloud 0.11.4. If you are not running at least
+this version, an exception will be fired.
+.sp
+A certain amount of minion configuration is required for all VMs. If you fail
+to specify any, a (mostly empty) minion config will be created for you. The
+default master for this config will be "salt".
+.sp
+Previously, Joyent supported all Salt Cloud features without using Salt Cloud\(aqs
+own built\-in deploy function. This is no longer the case, and so the Joyent
+module has been updated appropriately.
+.sp
+Some log settings where previously ignored. This has been fixed.
+.sp
+The Rackspace module previously would silently strip certain characters from
+a VM name. It now has a base set of characters that it will verify against, and
+raise an exception if an illegal character was specified. This functionality is
+also available for other cloud providers, but not currently set up for them.
+.sp
+AWS introduced a new region in Sydney. This region is not available in the
+latest official libcloud release, but if you happen to be running libcloud out
+of trunk, it will be supported by Salt Cloud.
+.sp
+Additional logging and PEP\-8 fixes have also been applied. This should only
+affect developers.
+.SS Salt Cloud 0.8.4 Release Notes
+.sp
+Welcome to 0.8.4! Aside from various bug fixes, the most important improvements
+in this release are to the deploy scripts. Read on to see what\(aqs happened.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.4.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Salt Bootstrap
+.sp
+By far the biggest change to Salt Cloud is the inclusion of the salt\-bootstrap
+script, made possible by the genius of Alec Koumjian and Pedro Algarvio. From
+this point on, each release of Salt Cloud will include the latest stable
+version of bootstrap\-salt\-minion.sh in the deploy folder. This is a generic,
+POSIX\-compliant deployment script, which autodetects your OS, and installs
+the latest version of Salt accordingly. For more information, see:
+.sp
+\fI\%https://github.com/saltstack/salt-bootstrap\fP
+.sp
+To use this deploy script explicitly, set the script option to
+bootstrap\-salt\-minion in the profile for your VM. For instance:
+.sp
+.nf
+.ft C
+aws\-archlinux:
+    provider: aws
+    image: ami\-0356da6a
+    size: Micro Instance
+    script: bootstrap\-salt\-minion
+    ssh_username: root
+.ft P
+.fi
+.sp
+For those of you still using "os" in your profiles, it should be noted that
+this option was renamed to "script" in 0.8.2, and your configuration should
+be updated accordingly.
+.SS Optional Script Option
+.sp
+As mentioned above, usage of the "os" argument has been deprecated in favor of
+the "script" argument. However, "script" is now optional. If you do not
+specify this option, salt\-cloud will default to bootstrap\-salt\-minion for you.
+If you do not want any deployment scripts run, you still have the following
+options available to you.
+.sp
+From the command line, use the \-\-no\-deploy option:
+.sp
+.nf
+.ft C
+salt\-cloud \-\-no\-deploy \-p myprofile mymachine
+.ft P
+.fi
+.sp
+In the Salt Cloud configuration, set:
+.sp
+.nf
+.ft C
+deploy: False
+.ft P
+.fi
+.sp
+Or in the profile, set the script option to None:
+.sp
+.nf
+.ft C
+script: None
+.ft P
+.fi
+.SS Other Generic Deploy Scripts
+.sp
+If you want to be assured of always using the latest Salt Bootstrap script,
+there are now a few generic templates available in the deploy directory of
+your saltcloud source tree:
+.sp
+These are example scripts which were designed to be customized, adapted, and
+refit to meet your needs. One important use of them is to pass options to
+the salt\-bootstrap script, such as updating to specific git tags.
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
