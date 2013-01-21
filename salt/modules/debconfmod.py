@@ -22,7 +22,6 @@ def __virtual__():
         return False
 
     if salt.utils.which('debconf-get-selections') is None:
-        log.warning('The package debconf-utils is missing')
         return False
 
     return 'debconf'
