@@ -95,6 +95,15 @@ class SaltCloud(parsers.SaltCloudParser):
             else:
                 names = self.config.get('names', None)
 
+            msg = 'The following virtual machines are set to be destroyed:\n'
+            for name in names:
+                msg += '  {0}\n'.format(name)
+            print(msg)
+            res = raw_input('Proceed? [N/y]')
+            if not res.lower().startswith('y'):
+                return
+            print('...proceeding')
+
             try:
                 mapper.destroy(names)
             except Exception as exc:
