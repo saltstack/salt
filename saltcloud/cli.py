@@ -136,7 +136,18 @@ class SaltCloud(parsers.SaltCloudParser):
                 print('Nothing to do')
                 self.exit(0)
             try:
-                mapper.run_map()
+                dmap = self.map_data()
+
+                msg = 'The following virtual machines are set to be created:\n'
+                for name in dmap['create']:
+                    msg += '  {0}\n'.format(name)
+                if 'destroy' in dmap:
+                    msg += 'The following virtual machines are set to be destroyed:\n'
+                    for name in dmap['destroy']:
+                        msg += '  {0}\n'.format(name)
+
+                if self.print_confirm(msg):
+                    mapper.run_map(dmap)
             except Exception as exc:
                 print('There was an error: {0}'.format(exc))
             self.exit(0)
