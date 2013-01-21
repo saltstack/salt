@@ -65,11 +65,12 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `PyCrypto`_ - The Python cryptography toolkit
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
+* `Jinja2`_ - the default parser for Salt States (configurable in the master settings)
 
 Optional Dependencies
 ---------------------
 
-* `Jinja2`_ - parsing Salt States (configurable in the master settings)
+* `mako`_ - an optional parser for Salt States (configurable in the master settings)
 * gcc - dynamic `Cython`_ module compiling
 
 .. _`Python 2.6`: http://python.org/download/
@@ -80,4 +81,6 @@ Optional Dependencies
 .. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
 .. _`Cython`: http://cython.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
+.. _`mako`: http://www.makotemplates.org/
+
 
