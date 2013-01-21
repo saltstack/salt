@@ -50,6 +50,7 @@ def version():
     Displays the current version of pkg
 
     CLI Example::
+
         salt '*' pkgng.version
     '''
 
@@ -62,6 +63,7 @@ def available_version(name):
     The available version of the package in the repository
    
     CLI Example::
+
         salt '*' pkgng.available_version <package name>
     '''
 
@@ -77,6 +79,7 @@ def update_package_site(new_url):
     Must be using http://, ftp://, or https// protos
 
     CLI Example::
+
         salt '*' pkgng.update_package_site http://127.0.0.1/
     '''
     config_file = parse_config()['config_file']
@@ -93,6 +96,7 @@ def stats():
     Return pkgng stats.
 
     CLI Example::
+
         salt '*' pkgng.stats
     '''
 
@@ -107,6 +111,7 @@ def backup(file_name):
     Export installed packages into yaml+mtree file
 
     CLI Example::
+
         salt '*' pkgng.backup /tmp/pkg
     '''
     cmd = 'pkg backup -d {0}'.format(file_name)
@@ -117,6 +122,8 @@ def backup(file_name):
 def restore(file_name):
     '''
     Reads archive created by pkg backup -d and recreates the database.
+
+        salt '*' pkgng.restore /tmp/pkg
     '''
     cmd = 'pkg backup -r {0}'.format(file_name)
     res = __salt__['cmd.run'](cmd)
@@ -128,6 +135,7 @@ def add(pkg_path):
     Install a package from either a local source or remote one
 
     CLI Example::
+
         salt '*' pkgng.add /tmp/package.txz
     '''
     if not os.path.isfile(pkg_path) or pkg_path.split(".")[1] != "txz":
@@ -143,6 +151,7 @@ def audit():
     Audits installed packages against known vulnerabilities
 
     CLI Example::
+
         salt '*' pkgng.audit
     '''
 
@@ -155,6 +164,7 @@ def install(pkg_name):
     Install package from repositories
 
     CLI Example::
+
         salt '*' pkgng.install bash
     '''
 
@@ -167,6 +177,7 @@ def delete(pkg_name):
     Delete a package from the database and system
 
     CLI Example::
+
         salt '*' pkgng.delete bash
     '''
 
@@ -179,10 +190,8 @@ def info(pkg=None):
     Returns info on packages installed on system
 
     CLI Example::
+
         salt '*' pkgng.info
-
-        For individual info
-
         salt '*' pkgng.info sudo
     '''
     if pkg:
@@ -203,6 +212,7 @@ def update():
     Refresh PACKAGESITE contents
 
     CLI Example::
+
         salt '*' pkgng.update
     '''
 
@@ -215,6 +225,7 @@ def upgrade():
     Upgrade all packages
 
     CLI Example::
+
         salt '*' pkgng.upgrade
     '''
 
