@@ -12,9 +12,18 @@ import time
 import urlparse
 
 # import third party libs
+import yaml
+try:
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+except Exception:
+    pass
 
 # Import salt libs
+import salt.crypt
+import salt.loader
 import salt.utils
+import salt.pillar
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
@@ -212,12 +221,6 @@ def _append_domain(opts):
 
 
 def _read_conf_file(path):
-    import yaml
-    try:
-        yaml.Loader = yaml.CLoader
-        yaml.Dumper = yaml.CDumper
-    except Exception:
-        pass
     with salt.utils.fopen(path, 'r') as conf_file:
         conf_opts = yaml.safe_load(conf_file.read()) or {}
         # allow using numeric ids: convert int to string
@@ -457,7 +460,6 @@ def apply_master_config(overrides=None, defaults=None):
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
-    import salt.crypt
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     opts['extension_modules'] = (
