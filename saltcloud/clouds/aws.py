@@ -48,15 +48,6 @@ from salt.exceptions import SaltException
 # Get logging started
 log = logging.getLogger(__name__)
 
-# Init the libcloud functions
-avail_images = namespaced_function(avail_images, globals())
-avail_sizes = namespaced_function(avail_sizes, globals())
-script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
-list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
-list_nodes_select = namespaced_function(list_nodes_select, globals())
-
 
 # Only load in this module if the AWS configurations are in place
 def __virtual__():
@@ -80,6 +71,20 @@ def __virtual__():
     if keymode != '0600':
             raise SaltException('The AWS key file{0} needs to b e set to mode 0600\n'.format(__opts__['AWS.private_key']))
         
+    global avail_images, avail_sizes, script, destroy, list_nodes, list_nodes_full, list_nodes_select
+
+    # open a connection in a specific region
+    conn = get_conn(**{'location': get_location()})
+
+    # Init the libcloud functions
+    avail_images = namespaced_function(avail_images, globals(), (conn,))
+    avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
+    script = namespaced_function(script, globals(), (conn,))
+    destroy = namespaced_function(destroy, globals(), (conn,))
+    list_nodes = namespaced_function(list_nodes, globals(), (conn,))
+    list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
+    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
+
     log.debug('Loading AWS cloud module')
     return 'aws'
 
@@ -164,11 +169,19 @@ def ssh_interface(vm_):
     return vm_.get('ssh_interface', __opts__.get('AWS.ssh_interface', 'public_ips'))
 
 
-def get_location(vm_):
+def get_location(vm_=None):
     '''
-    Return the AWS region to use
+    Return the AWS region to use, in this order:
+        - CLI parameter
+        - Cloud profile setting
+        - Global salt-cloud config
     '''
-    return vm_.get('location', __opts__.get('AWS.location', DEFAULT_LOCATION))
+    if __opts__['location'] != '':
+        return __opts__['location']
+    elif vm_ is not None and 'location' in vm_:
+        return vm_['location']
+    else:
+        return __opts__.get('AWS.location', DEFAULT_LOCATION)
 
 
 def get_availability_zone(conn, vm_):
