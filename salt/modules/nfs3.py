@@ -73,6 +73,15 @@ def del_export(exports='/etc/exports', path=None):
 def _write_exports(exports, edict):
     '''
     Write an exports file to disk
+
+    If multiple shares were initially configured per line, like:
+
+        /media/storage /media/data *(ro,sync,no_subtree_check)
+
+    ...then they will be saved to disk with only one share per line:
+
+        /media/storage *(ro,sync,no_subtree_check)
+        /media/data *(ro,sync,no_subtree_check)
     '''
     f = open(exports, 'w')
     for export in edict:
