@@ -540,7 +540,7 @@ def verify(*package):
     return ret
 
 
-def grouplist():
+def group_list():
     '''
     Lists all groups known by yum on this system
 
@@ -563,7 +563,7 @@ def grouplist():
     return ret
 
 
-def groupinfo(groupname):
+def group_info(groupname):
     '''
     Lists packages belonging to a certain group
 
