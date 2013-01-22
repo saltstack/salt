@@ -54,7 +54,7 @@ def running(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    all_processes = __salt__['supervisord.list'](user=runas)
+    all_processes = __salt__['supervisord.status'](user=runas)
     needs_update = name not in all_processes
 
     if __opts__['test']:
