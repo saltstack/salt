@@ -235,6 +235,10 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     refresh
         Whether or not to sync the portage tree before installing.
 
+    version
+        Install a specific version of the package, e.g. 1.0.9-r1. Ignored
+        if "pkgs" or "sources" is passed.
+
 
     Multiple Package Installation Options:
 
@@ -272,6 +276,10 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
+
+    # Handle version kwarg
+    if kwargs.get('version') and pkgs is None and sources is None:
+        name = '={0}-{1}'.format(name, kwargs.get('version'))
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
