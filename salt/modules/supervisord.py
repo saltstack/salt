@@ -107,7 +107,7 @@ def status(name=None, user=None):
     List programms and its state
 
     CLI Example::
-        salt '*' supervisord.list
+        salt '*' supervisord.status
     '''
     all_process = {}
     for line in status_raw(name, user).splitlines():
