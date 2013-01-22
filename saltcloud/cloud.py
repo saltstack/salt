@@ -212,7 +212,10 @@ class Cloud(object):
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
             if definition['profile'] == profile:
-                return definition['provider']
+                if 'provider' in definition:
+                    return definition['provider']
+                else:
+                    return self.opts['provider']
 
     def run_profile(self):
         '''
@@ -295,7 +298,6 @@ class Map(Cloud):
         for profile in query_map:
             for vm in query_map[profile]:
                 names.append(vm)
-        log.info("VMs to delete: {0}\n".format(names))
         return names
 
     def read(self):
@@ -357,23 +359,10 @@ class Map(Cloud):
             ret['destroy'] = exist.difference(defined)
         return ret
 
-    def run_map(self):
+    def run_map(self, dmap):
         '''
         Execute the contents of the VM map
         '''
-        dmap = self.map_data()
-        msg = 'The following virtual machines are set to be created:\n'
-        for name in dmap['create']:
-            msg += '  {0}\n'.format(name)
-        if 'destroy' in dmap:
-            msg += 'The following virtual machines are set to be destroyed:\n'
-            for name in dmap['destroy']:
-                msg += '  {0}\n'.format(name)
-        log.info(msg)
-        res = raw_input('Proceed? [N/y]')
-        if not res.lower().startswith('y'):
-            return
-        log.warn('...proceeding')
         # We are good to go, execute!
         # Generate the fingerprint of the master pubkey in
         #     order to mitigate man-in-the-middle attacks
