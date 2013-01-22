@@ -759,6 +759,10 @@ def start():
     conf = root.get_conf()
     gconf = conf.get('global', {})
 
+    # Add to global config
+    cherrypy.config.update(gconf)
+
+    # Register salt-specific hooks
     cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
             salt_token_tool, priority=55)
     cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
@@ -768,6 +772,7 @@ def start():
     cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
             hypermedia_in)
 
+    # Start the development server or the production (SSL) server
     if gconf['debug']:
         cherrypy.quickstart(root, '/', conf)
     else:
