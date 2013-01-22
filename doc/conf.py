@@ -131,7 +131,7 @@ html_title = None
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = 'salt-vert.png'
+html_logo = 'saltstack_logo.png'
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
@@ -168,7 +168,7 @@ latex_documents = [
   ('contents', 'Salt.tex', 'Salt Documentation', 'Thomas Hatch', 'manual'),
 ]
 
-latex_logo = '_static/salt-vert.png'
+latex_logo = '_static/saltstack_logo.png'
 
 
 ### Manpage options
