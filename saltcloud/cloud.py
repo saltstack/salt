@@ -298,7 +298,6 @@ class Map(Cloud):
         for profile in query_map:
             for vm in query_map[profile]:
                 names.append(vm)
-        log.info("VMs to delete: {0}\n".format(names))
         return names
 
     def read(self):
