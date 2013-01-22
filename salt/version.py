@@ -27,7 +27,7 @@ def __get_version_info_from_git(version, version_info):
         git = git[:-1]
 
         process = subprocess.Popen(
-            [git, 'describe'],
+            [git, 'describe', '--tags'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
