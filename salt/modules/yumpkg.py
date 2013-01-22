@@ -582,13 +582,13 @@ def group_info(groupname):
                     'description': group.description}
 
 
-def group_detail(groupname):
+def group_diff(groupname):
     '''
     Lists packages belonging to a certain group, and which are installed
 
     CLI Example::
 
-        salt '*' pkg.group_detail 'Perl Support'
+        salt '*' pkg.group_diff 'Perl Support'
     '''
     ret = {
            'mandatory packages': {'installed': [], 'not installed': []},
@@ -621,7 +621,7 @@ def group_detail(groupname):
                     ret['conditional packages']['installed'].append(pkg)
                 else:
                     ret['conditional packages']['not installed'].append(pkg)
-            return ret
+            return {groupname: ret}
 
 
 def list_repos(basedir='/etc/yum.repos.d'):
