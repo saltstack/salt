@@ -40,12 +40,18 @@ def list_exports(exports='/etc/exports'):
             continue
         comps = line.split()
         ret[comps[0]] = []
+        newshares = []
         for perm in comps[1:]:
+            if perm.startswith('/'):
+                newshares.append(perm)
+                continue
             permcomps = perm.split('(')
             permcomps[1] = permcomps[1].replace(')', '')
             hosts = permcomps[0].split(',')
             options = permcomps[1].split(',')
             ret[comps[0]].append({'hosts': hosts, 'options': options})
+        for share in newshares:
+            ret[share] = ret[comps[0]]
     f.close()
     return ret
 
