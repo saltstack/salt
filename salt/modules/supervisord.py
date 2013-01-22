@@ -102,7 +102,7 @@ def update(user=None):
     ret = __salt__['cmd.run_all'](_ctl_cmd('update', None), runas=user)
     return _get_return(ret)
 
-def list(name=None, user=None):
+def status(name=None, user=None):
     '''
     List programms and its state
 
@@ -110,7 +110,7 @@ def list(name=None, user=None):
         salt '*' supervisord.list
     '''
     all_process = {}
-    for line in status(name, user).splitlines():
+    for line in status_raw(name, user).splitlines():
         if len(line.split()) > 2:
             process, state, reason = line.split(None, 2)
         else:
@@ -118,7 +118,7 @@ def list(name=None, user=None):
         all_process[process] = {'state': state, 'reason': reason}
     return all_process
 
-def status(name=None, user=None):
+def status_raw(name=None, user=None):
     ret = __salt__['cmd.run_all'](_ctl_cmd('status', name), runas=user)
     return _get_return(ret)
 
