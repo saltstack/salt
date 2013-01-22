@@ -42,7 +42,7 @@ or to execute a state.highstate.
         - mysql
         - webservers
 
-The above defined over state will execute the msql stage first because it is
+The above defined over state will execute the mysql stage first because it is
 required by the webservers stage. The webservers stage will then be executed
 only if the mysql stage executes without any issues. The webservers stage
 will execute state.highstate on the matched minions, while the mysql stage
