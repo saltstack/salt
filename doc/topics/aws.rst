@@ -123,3 +123,53 @@ Multiple security groups can also be specified in the same fashion:
       - default
       - extra
 
+EC2 Images
+==========
+The following are lists of available AMI images, generally sorted by OS. These
+lists are on 3rd-party websites, are not managed by Salt Stack in any way. They
+are provided here as a reference for those who are interested, and contain no
+warranty (express or implied) from anyone affiliated with Salt Stack. Most of
+them have never been used, much less tested, by the Salt Stack team.
+
+Arch Linux
+
+.. code-block::
+
+    https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
+
+FreeBSD
+
+.. code-block::
+
+    http://www.daemonology.net/freebsd-on-ec2/
+
+Fedora
+
+.. code-block::
+
+    https://fedoraproject.org/wiki/Cloud_images
+
+Ubuntu
+
+.. code-block::
+
+    http://cloud-images.ubuntu.com/locator/ec2/
+
+Debian
+
+.. code-block::
+
+    http://wiki.debian.org/Cloud/AmazonEC2Image
+
+Gentoo
+
+.. code-block::
+
+    https://aws.amazon.com/amis?platform=Gentoo&selection=platform
+
+All Images on Amazon
+
+.. code-block::
+
+    https://aws.amazon.com/amis
+
