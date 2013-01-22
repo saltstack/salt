@@ -477,3 +477,69 @@ def rename(name, kwargs):
             )
         )
         log.error(exc)
+
+
+def enable_term_protect(name):
+    '''
+    Enable termination protection on a node
+    '''
+    _toggle_term_protect(name, True)
+
+
+def disable_term_protect(name):
+    '''
+    Disable termination protection on a node
+    '''
+    _toggle_term_protect(name, False)
+
+
+def _toggle_term_protect(name, enabled):
+    '''
+    Toggle termination protection on a node
+    '''
+    try:
+        import botocore.session
+    except ImportError:
+        log.error('You must install module botocore')
+        return
+
+    # region is required for all boto queries
+    region = get_location(None)
+
+    # init botocore
+    session = botocore.session.get_session()
+    session.set_credentials(
+        access_key=__opts__['AWS.id'],
+        secret_key=__opts__['AWS.key'],
+        )
+
+    service = session.get_service('ec2')
+    endpoint = service.get_endpoint(region)
+
+    # get the instance-id for the supplied node name
+    client = salt.client.LocalClient()
+    ret = client.cmd(name, 'grains.item', ['instanceId'])
+
+    if ret[name] == "":
+        log.error("Couldn't get instance_id for {0}".format(name))
+        return
+    else:
+        instance_id = ret[name]
+
+    params = {
+        'instance_id': instance_id,
+        'attribute': 'disableApiTermination',
+        'value': 'true' if enabled else 'false',
+    }
+
+    # get instance information
+    operation = service.get_operation('modify-instance-attribute')
+    http_response, response_data = operation.call(endpoint, **params)
+
+    if http_response.status_code == 200:
+        if enabled:
+            log.info('Termination protection successfully enabled on {0}'.format(name))
+        else:
+            log.info('Termination protection successfully disabled on {0}'.format(name))
+    else:
+        log.error('Bad response from AWS: {0}'.format(http_response.status_code))
