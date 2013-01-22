@@ -1,5 +1,5 @@
 '''
-Module for managing NFS.
+Module for managing NFS version 3.
 '''
 
 # Import python libs
@@ -20,7 +20,7 @@ def __virtual__():
         ]
     if not salt.utils.which('showmount'):
         return False
-    return 'nfs'
+    return 'nfs3'
 
 
 def list_exports(exports='/etc/exports'):
