@@ -212,7 +212,10 @@ class Cloud(object):
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
             if definition['profile'] == profile:
-                return definition['provider']
+                if 'provider' in definition:
+                    return definition['provider']
+                else:
+                    return self.opts['provider']
 
     def run_profile(self):
         '''
