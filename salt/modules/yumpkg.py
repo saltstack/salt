@@ -582,6 +582,48 @@ def groupinfo(groupname):
                     'description': group.description}
 
 
+def group_detail(groupname):
+    '''
+    Lists packages belonging to a certain group, and which are installed
+
+    CLI Example::
+
+        salt '*' pkg.group_detail 'Perl Support'
+    '''
+    ret = {
+           'mandatory packages': {'installed': [], 'not installed': []},
+           'optional packages': {'installed': [], 'not installed': []},
+           'default packages': {'installed': [], 'not installed': []},
+           'conditional packages': {'installed': [], 'not installed': []},
+           }
+    pkgs = list_pkgs()
+    yumbase = yum.YumBase()
+    (installed, available) = yumbase.doGroupLists()
+    for group in installed:
+        if group.name == groupname:
+            for pkg in group.mandatory_packages:
+                if pkg in pkgs:
+                    ret['mandatory packages']['installed'].append(pkg)
+                else:
+                    ret['mandatory packages']['not installed'].append(pkg)
+            for pkg in group.optional_packages:
+                if pkg in pkgs:
+                    ret['optional packages']['installed'].append(pkg)
+                else:
+                    ret['optional packages']['not installed'].append(pkg)
+            for pkg in group.default_packages:
+                if pkg in pkgs:
+                    ret['default packages']['installed'].append(pkg)
+                else:
+                    ret['default packages']['not installed'].append(pkg)
+            for pkg in group.conditional_packages:
+                if pkg in pkgs:
+                    ret['conditional packages']['installed'].append(pkg)
+                else:
+                    ret['conditional packages']['not installed'].append(pkg)
+            return ret
+
+
 def list_repos(basedir='/etc/yum.repos.d'):
     '''
     Lists all repos in <basedir> (default: /etc/yum.repos.d/).
