@@ -88,6 +88,8 @@ class Caller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
+            if oput == 'highstate':
+                ret['return'] = {'local': ret['return']}
         if self.opts.get('return', ''):
             ret['id'] = self.opts['id']
             ret['fun'] = fun
