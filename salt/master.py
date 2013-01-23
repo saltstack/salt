@@ -46,7 +46,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler
-
+from salt.exceptions import SaltMasterError
 
 log = logging.getLogger(__name__)
 
@@ -165,12 +165,14 @@ class Master(SMaster):
         '''
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
-        last = time.time()
+        last = int(time.time())
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         while True:
-            if self.opts['keep_jobs'] != 0:
+            now = int(time.time())
+            loop_interval = int(self.opts['loop_interval'])
+            if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
 
                 for top in os.listdir(jid_root):
@@ -188,10 +190,13 @@ class Master(SMaster):
                         elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
                             shutil.rmtree(f_path)
             if self.opts.get('search'):
-                now = time.time()
                 if now - last > self.opts['search_index_interval']:
                     search.index()
             try:
+                if not fileserver.servers:
+                    log.error('No fileservers loaded, The master will not be'
+                              'able to serve files to minions')
+                    raise SaltMasterError('No fileserver backends available')
                 fileserver.update()
             except Exception as exc:
                 log.error(
@@ -199,12 +204,16 @@ class Master(SMaster):
                     )
             try:
                 schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if schedule.loop_interval < loop_interval:
+                    loop_interval = schedule.loop_interval
             except Exception as exc:
                 log.error(
                     'Exception {0} occured in scheduled job'.format(exc)
                     )
             try:
-                time.sleep(int(self.opts['loop_interval']))
+                time.sleep(loop_interval)
             except KeyboardInterrupt:
                 break
 
@@ -1005,6 +1014,8 @@ class AESFuncs(object):
             timeout = clear_load['timeout']
         # Encrypt!
         payload['load'] = self.crypticle.dumps(load)
+        # Set the subscriber to the the jid before publishing the command
+        self.local.event.subscribe(load['jid'])
         # Connect to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
@@ -1031,6 +1042,7 @@ class AESFuncs(object):
                     timeout
                 )
             finally:
+                self.local.event.unsubscribe(load['jid'])
                 if pub_sock.closed is False:
                     pub_sock.setsockopt(zmq.LINGER, 1)
                     pub_sock.close()
@@ -1049,6 +1061,7 @@ class AESFuncs(object):
             try:
                 return ret
             finally:
+                self.local.event.unsubscribe(load['jid'])
                 if pub_sock.closed is False:
                     pub_sock.setsockopt(zmq.LINGER, 1)
                     pub_sock.close()
@@ -1344,7 +1357,7 @@ class ClearFuncs(object):
             else:
                 log.info(
                     'Authentication failed from host {id}, the key is in '
-                    'pending and needs to be accepted with salt-key'
+                    'pending and needs to be accepted with salt-key '
                     '-a {id}'.format(**load)
                 )
                 eload = {'result': True,
@@ -1663,17 +1676,10 @@ class ClearFuncs(object):
                 load['tgt'],
                 load.get('tgt_type', 'glob')
                 )
-        try:
-            return {
-                'enc': 'clear',
-                'load': {
-                    'jid': clear_load['jid'],
-                    'minions': minions
-                }
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions
             }
-        finally:
-            if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 1)
-                pub_sock.close()
-            if context.closed is False:
-                context.term()
+        }

@@ -39,6 +39,7 @@ def __virtual__():
                'Ubuntu',
                'Debian',
                'Arch',
+               'ALT',
               ]
     if __grains__['os'] in disable:
         return False

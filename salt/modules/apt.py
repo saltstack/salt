@@ -7,6 +7,19 @@ import os
 import re
 import logging
 
+#import aptsources.sourceslist
+try:
+    from aptsources import sourceslist
+    apt_support = True
+except ImportError:
+    apt_support = False
+
+try:
+    from softwareproperties.ppa import expand_ppa_line
+    ppa_format_support = True
+except ImportError:
+    ppa_format_support = False
+
 # Import salt libs
 import salt.utils
 
@@ -204,7 +217,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     salt.utils.daemonize_if(__opts__, **kwargs)
 
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     if debconf:
@@ -220,7 +233,10 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         fromrepo = repo
 
     if kwargs.get('env'):
-        os.environ.update(kwargs.get('env'))
+        try:
+            os.environ.update(kwargs.get('env'))
+        except Exception as e:
+            log.exception(e)
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -240,12 +256,12 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             log.info('Targeting repo "{0}"'.format(fromrepo))
         cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
               '{pkg}'.format(
-            confold='-o DPkg::Options::=--force-confold',
-            confdef='-o DPkg::Options::=--force-confdef',
-            verify='--allow-unauthenticated' if skip_verify else '',
-            target='-t {0}'.format(fromrepo) if fromrepo else '',
-            pkg=fname,
-        )
+                  confold='-o DPkg::Options::=--force-confold',
+                  confdef='-o DPkg::Options::=--force-confdef',
+                  verify='--allow-unauthenticated' if skip_verify else '',
+                  target='-t {0}'.format(fromrepo) if fromrepo else '',
+                  pkg=fname,
+              )
 
     old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
@@ -253,7 +269,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(pkg):
+def remove(pkg, **kwargs):
     '''
     Remove a single package via ``apt-get remove``
 
@@ -267,7 +283,10 @@ def remove(pkg):
     old_pkgs = list_pkgs()
 
     if kwargs.get('env'):
-        os.environ.update(kwargs.get('env'))
+        try:
+            os.environ.update(kwargs.get('env'))
+        except Exception as e:
+            log.exception(e)
 
     cmd = 'apt-get -q -y remove {0}'.format(pkg)
     __salt__['cmd.run'](cmd)
@@ -279,7 +298,7 @@ def remove(pkg):
     return ret_pkgs
 
 
-def purge(pkg):
+def purge(pkg, **kwargs):
     '''
     Remove a package via ``apt-get purge`` along with all configuration
     files and unused dependencies.
@@ -294,7 +313,10 @@ def purge(pkg):
     old_pkgs = list_pkgs()
 
     if kwargs.get('env'):
-        os.environ.update(kwargs.get('env'))
+        try:
+            os.environ.update(kwargs.get('env'))
+        except Exception as e:
+            log.exception(e)
 
     # Remove inital package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)
@@ -328,7 +350,9 @@ def upgrade(refresh=True, **kwargs):
         salt '*' pkg.upgrade
     '''
     salt.utils.daemonize_if(__opts__, **kwargs)
-    if refresh:
+
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     ret_pkgs = {}
@@ -382,7 +406,7 @@ def list_pkgs(regex_string=''):
     for line in out.splitlines():
         cols = line.split()
         if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and \
-                                                        'installed' in cols[2]:
+                'installed' in cols[2]:
             __salt__['pkg_resource.add_pkg'](ret, cols[3], cols[4])
 
     # Check for virtual packages. We need aptitude for this.
@@ -439,7 +463,7 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
@@ -447,6 +471,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     return _get_upgradable()
 
 
@@ -480,3 +507,283 @@ def compare(version1='', version2=''):
     except Exception as e:
         log.error(e)
     return None
+
+def _split_repo_str(repo):
+    splitter = sourceslist.SourceEntry('')
+    split = splitter.mysplit(repo)
+    return split[0], split[1], split[2], split[3:]
+
+def list_repos():
+    '''
+    Lists all repos in the sources.list (and sources.lists.d) files
+
+    CLI Example::
+
+       salt '*' pkg.list_repos
+       salt '*' pkg.list_repos disabled=True
+    '''
+    if not apt_support:
+        return 'Error: aptsources.sourceslist python module not found'
+
+    repos = {}
+    sources = sourceslist.SourcesList()
+    for source in sources.list:
+        if source.invalid:
+            continue
+        repo = {}
+        repo['file'] = source.file
+        repo['comps'] = getattr(source, 'comps', [])
+        repo['disabled'] = source.disabled
+        repo['dist'] = source.dist
+        repo['type'] = source.type
+        repo['uri'] = source.uri
+        repo['line'] = source.line
+        repo['architectures'] = source.architectures
+        repos.setdefault(source.uri, []).append(repo)
+    return repos
+
+def get_repo(repo):
+    '''
+    Display a repo from the sources.list / sources.list.d
+
+    The repo passwd in needs to be a complete repo entry.
+
+    CLI Examples::
+
+        salt '*' pkg.get_repo "myrepo definition"
+    '''
+    if not apt_support:
+        msg = 'Error: aptsources.sourceslist python module not found'
+        raise Exception(msg)
+
+    # we have to be clever about this since the repo definition formats
+    # are a bit more "loose" than in some other distributions
+    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+        # This is a PPA definition meaning special handling is needed
+        # to derive the name.
+        if not ppa_format_support:
+            error_str = 'cannot parse "ppa:" style repos definitions: {0}'
+            raise Exception(error_str.format(repo))
+        repo = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
+
+    repos = list_repos()
+
+    if repos:
+        try:
+            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+        except SyntaxError, e:
+            error_str = 'Error: repo "{0}" is not a well formatted definition'
+            raise Exception(error_str.format(repo))
+
+        for source in repos.values():
+            for sub in source:
+                if (sub['type'] == repo_type and
+                    sub['uri'] == repo_uri and
+                    sub['dist'] == repo_dist):
+                    if not repo_comps:
+                       return sub
+                    for comp in repo_comps:
+                        if comp in sub.get('comps', []):
+                            return sub
+
+    raise Exception('repo "{0}" was not found'.format(repo))
+
+def del_repo(repo, refresh=False):
+    '''
+    Delete a repo from the sources.list / sources.list.d
+
+    If the .list file is in the sources.list.d directory
+    and the file that the repo exists in does not contain any other
+    repo configuration, the file itself will be deleted.
+
+    The repo passed in must be a fully formed repository definition
+    string.
+
+    CLI Examples::
+
+        salt '*' pkg.del_repo "myrepo definition"
+        salt '*' pkg.del_repo "myrepo definition" refresh=True
+    '''
+    if not apt_support:
+        return 'Error: aptsources.sourceslist python module not found'
+
+    is_ppa = False
+    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+        # This is a PPA definition meaning special handling is needed
+        # to derive the name.
+        is_ppa = True
+        if not ppa_format_support:
+            error_str = 'Error: cannot parse "ppa:" style repo definition: {0}'
+            return error_str.format(repo)
+        repo = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
+
+    sources = sourceslist.SourcesList()
+    repos = filter(lambda s: not s.invalid, sources.list)
+    if repos:
+        deleted_from = dict()
+        try:
+            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+        except SyntaxError:
+            error_str = 'Error: repo "{0}" not a well formatted definition'
+            return error_str.format(repo)
+
+        for source in repos:
+            if (source.type == repo_type and source.uri == repo_uri and
+                source.dist == repo_dist):
+
+                s_comps = set(source.comps)
+                r_comps = set(repo_comps)
+                if s_comps.intersection(r_comps):
+                    deleted_from[source.file] = 0
+                    source.comps = list(s_comps.difference(r_comps))
+                    if not source.comps:
+                        try:
+                            sources.remove(source)
+                        except ValueError:
+                            pass
+            # PPAs are special and can add deb-src where expand_ppa_line doesn't
+            # always reflect this.  Lets just cleanup here for good measure
+            if (is_ppa and repo_type == 'deb' and  source.type == 'deb-src' and
+                source.uri == repo_uri and source.dist == repo_dist):
+
+                s_comps = set(source.comps)
+                r_comps = set(repo_comps)
+                if s_comps.intersection(r_comps):
+                    deleted_from[source.file] = 0
+                    source.comps = list(s_comps.difference(r_comps))
+                    if not source.comps:
+                        try:
+                            sources.remove(source)
+                        except ValueError:
+                            pass
+            sources.save()
+        if deleted_from:
+            ret = ''
+            for source in sources:
+                if deleted_from.has_key(source.file):
+                    deleted_from[source.file] += 1
+            for repo_file,c in deleted_from.iteritems():
+                msg = 'Repo "{0}" has been removed from {1}.\n'
+                if c == 0 and 'sources.list.d/' in repo_file:
+                    if os.path.isfile(repo_file):
+                        msg = 'File {1} containing repo "{0}" has been removed.\n'
+                        try:
+                            os.remove(repo_file)
+                        except OSError, e:
+                            pass
+                ret += msg.format(repo, repo_file)
+            if refresh or str(refresh).lower() == 'true':
+                refresh_db()
+            return ret
+
+    return "Repo {0} doesn't exist in the sources.list(s)".format(repo)
+
+def mod_repo(repo, refresh=False, **kwargs):
+    '''
+    Modify one or more values for a repo.  If the repo does not exist, it will
+    be created, so long as the definition is well formed.  For Ubuntu the
+    "ppa:<project>/repo" format is acceptable. "ppa:" format can only be
+    used to create a new repository.
+
+    The following options are available to modify a repo definition::
+
+        uri (the uri of the repo, e.g. deb http://archive.ubuntu.com/ubuntu)
+        comps (a comma separated list of components for the repo, e.g. "main")
+        file (a file name to be used)
+        refresh (refresh the apt sources db when the mod is done)
+
+    CLI Examples::
+
+        salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
+        salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
+    '''
+    if not apt_support:
+        return 'Error: aptsources.sourceslist python module not found'
+
+    # to ensure no one sets some key values that _shouldn't_ be changed on the
+    # object itself, this is just a white-list of "ok" to set properties
+    _MODIFY_OK = set(['uri', 'comps', 'architectures', 'disabled', 'file', 'dist'])
+    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+        if not ppa_format_support:
+            error_str = 'cannot parse "ppa:" style repo definitions: {0}'
+            return error_str.format(repo)
+        ppa = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
+        cmd = 'apt-add-repository -y {0}'.format(repo)
+        out = __salt__['cmd.run_stdout'](cmd)
+        if refresh is True or str(refresh).lower() == 'true':
+            refresh_db()
+        return {repo: out}
+    else:
+        sources = sourceslist.SourcesList()
+        repos = filter(lambda s: not s.invalid, sources)
+        if repos:
+            mod_source = None
+            try:
+                repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+            except SyntaxError:
+                error_str = 'Error: repo "{0}" not a well formatted definition'
+                return error_str.format(repo)
+
+            for source in repos:
+                if (source.type == repo_type and source.uri == repo_uri and
+                    source.dist == repo_dist):
+
+                    for comp in repo_comps:
+                        if comp in getattr(source, 'comps', []):
+                            mod_source = source
+                    if not source.comps:
+                        mod_source = source
+                    if mod_source:
+                        break
+  
+            if 'comps' in kwargs:
+                kwargs['comps'] = kwargs['comps'].split(',')
+
+            if 'architecturess' in kwargs:
+                kwargs['architectures'] = kwargs['architectures'].split(',')
+
+            if 'disabled' in kwargs:
+                kw_disabled = kwargs['disabled']
+                if kw_disabled is True or str(kw_disabled).lower() == 'true':
+                    kwargs['disabled'] = True
+                else:
+                    kwargs['disabled'] = False
+ 
+            if not mod_source:
+                mod_source = sourceslist.SourceEntry(repo)
+                sources.list.append(mod_source)
+
+            # if all comps aren't part of the disable
+            # match, it is important we keep the comps
+            # not destined to be disabled/enabled in
+            # the original state
+            if ('disabled' in kwargs and 
+                mod_source.disabled != kwargs['disabled']):
+
+                s_comps = set(mod_source.comps)
+                r_comps = set(repo_comps)
+                if s_comps.symmetric_difference(r_comps):
+                   new_source = sourceslist.SourceEntry(source.line)
+                   new_source.file = source.file
+                   new_source.comps = list(r_comps.difference(s_comps))
+                   source.comps = list(s_comps.difference(r_comps))
+                   sources.insert(sources.index(source), new_source)
+                   sources.save()
+
+            for key in kwargs:
+                if key in _MODIFY_OK and hasattr(mod_source, key):
+                    if type(getattr(mod_source, key)) == type(kwargs[key]):
+                        setattr(mod_source, key, kwargs[key])
+            sources.save()
+            if refresh is True or str(refresh).lower() == 'true':
+                refresh_db()
+            return { repo: {
+                     'architectures': mod_source.architectures,
+                     'comps': mod_source.comps,
+                     'disabled': mod_source.disabled,
+                     'file': mod_source.file,
+                     'type': mod_source.type,
+                     'uri': mod_source.uri, 
+                     'line': mod_source.line,
+                     }
+                   }

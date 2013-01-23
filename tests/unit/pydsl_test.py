@@ -1,32 +1,31 @@
 # Import Python libs
-import sys
+import sys, os
+import shutil
+import tempfile
 from cStringIO import StringIO
 
 # Import Salt libs
 from saltunittest import TestCase
 import salt.loader
 import salt.config
-from salt.state import State
+from salt.state import State, HighState
+from salt.renderers.yaml import HAS_ORDERED_DICT
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.master_config('whatever, just load the defaults!')
-# we should have used minion_config(), but that would try to resolve
-# the master hostname, and retry for 30 seconds! Lucily for our purpose,
-# master conf or minion conf, it doesn't matter.
+OPTS = salt.config.minion_config(None, check_dns=False)
 OPTS['id'] = 'whatever'
 OPTS['file_client'] = 'local'
-OPTS['file_roots'] = dict(base=['/'])
+OPTS['file_roots'] = dict(base=['/tmp'])
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
 STATE = State(OPTS)
+
 
 def render_sls(content, sls='', env='base', **kws):
     return STATE.rend['pydsl'](
                 StringIO(content), env=env, sls=sls,
                 **kws)
-
-            
 
 class PyDSLRendererTestCase(TestCase):
 
@@ -67,7 +66,11 @@ state('A').service.running(name='apache')
         # 2 rather than 1 because pydsl adds an extra no-op state
         # declaration.
 
-        s = result.itervalues().next()['file']
+        s_iter = result.itervalues()
+        try:
+            s = s_iter.next()['file']
+        except KeyError:
+            s = s_iter.next()['file']
         self.assertEqual(s[0], 'managed')
         self.assertEqual(s[1]['name'], 'myfile.txt')
         self.assertEqual(s[2]['source'], 'salt://path/to/file')
@@ -79,15 +82,15 @@ state('X').cmd.run('echo hello')
 state('A').cmd.run('mkdir tmp', cwd='/var')
 state('B').cmd.run('ls -la', cwd='/var/tmp') \
               .require(state('X').cmd) \
-              .require('cmd', 'A') \
-              .watch('service', 'G')
+              .require(cmd='A') \
+              .watch(service='G')
 state('G').service.running(name='collectd')
 state('G').service.watch_in(state('A').cmd)
 
-state('H').cmd.require_in('cmd', 'echo hello')
+state('H').cmd.require_in(cmd='echo hello')
 state('H').cmd.run('echo world')
 ''')
-        self.assertTrue(len(result), 6)            
+        self.assertTrue(len(result), 6)
         self.assertTrue(set("X A B G H".split()).issubset(set(result.keys())))
         b = result['B']['cmd']
         self.assertEqual(b[0], 'run')
@@ -107,13 +110,16 @@ include(
     'another.sls.file',
     'more.sls.file'
 )
+A = state('A').cmd.run('echo hoho', cwd='/')
+state('B').cmd.run('echo hehe', cwd='/')
 extend(
+    A,
     state('X').cmd.run(cwd='/a/b/c'),
     state('Y').file('managed', name='a_file.txt'),
-    state('Z').service.watch('file', 'A')
+    state('Z').service.watch(file='A')
 )
 ''')
-        self.assertEqual(len(result), 3)
+        self.assertEqual(len(result), 4)
         self.assertEqual(result['include'],
                          'some.sls.file another.sls.file more.sls.file'.split())
         extend = result['extend']
@@ -123,6 +129,10 @@ extend(
         self.assertEqual(extend['Y']['file'][1]['name'], 'a_file.txt')
         self.assertEqual(len(extend['Z']['service']), 1)
         self.assertEqual(extend['Z']['service'][0]['watch'][0]['file'], 'A')
+
+        self.assertEqual(result['B']['cmd'][0], 'run')
+        self.assertTrue('A' not in result)
+        self.assertEqual(extend['A']['cmd'][0], 'run')
 
 
     def test_cmd_call(self):
@@ -158,7 +168,7 @@ state('A').cmd.wait('echo hehe')
     def test_no_state_func_in_state_mod(self):
         with self.assertRaisesRegexp(self.PyDslError, 'No state function specified'):
             render_sls('''
-state('B').cmd.require('cmd', 'hoho')
+state('B').cmd.require(cmd='hoho')
 ''')
 
 
@@ -195,5 +205,90 @@ state('A').cmd.run(name='echo hello world')
         self.assertEqual(result['B']['service'][0], 'running')
         self.assertEqual(result['B']['service'][1]['require'][0]['pkg'], 'B')
         self.assertEqual(result['B']['service'][2]['watch'][0]['cmd'], 'A')
+
+
+    def test_ordered_states(self):
+        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+            self.skipTest('OrderedDict is not available')
+        result = render_sls('''
+__pydsl__.set(ordered=True)
+A = state('A')
+state('B').cmd.run('echo bbbb')
+A.cmd.run('echo aaa')
+state('B').cmd.run(cwd='/')
+state('C').cmd.run('echo ccc')
+state('B').file.managed(source='/a/b/c')
+''')
+        self.assertEqual(len(result['B']['cmd']), 3)
+        self.assertEqual(result['A']['cmd'][1]['require'][0]['cmd'], 'B')
+        self.assertEqual(result['C']['cmd'][1]['require'][0]['cmd'], 'A')
+        self.assertEqual(result['B']['file'][1]['require'][0]['cmd'], 'C')
+
+
+    def test_pipe_through_stateconf(self):
+        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+            self.skipTest('OrderedDict is not available')
+        dirpath = tempfile.mkdtemp()
+        output = os.path.join(dirpath, 'output')
+        try:
+            xxx = os.path.join(dirpath, 'xxx.sls')
+            with open(xxx, 'w') as xxx:
+                xxx.write('''#!stateconf -os yaml . jinja
+.X:
+  cmd.run:
+    - name: echo X >> {0}
+    - cwd: /
+.Y:
+  cmd.run:
+    - name: echo Y >> {1}
+    - cwd: /
+.Z:
+  cmd.run:
+    - name: echo Z >> {2}
+    - cwd: /
+'''.format(output, output, output))
+            yyy = os.path.join(dirpath, 'yyy.sls')
+            with open(yyy, 'w') as yyy:
+                yyy.write('''#!pydsl|stateconf -ps
+state('.D').cmd.run('echo D >> {0}', cwd='/')
+state('.E').cmd.run('echo E >> {1}', cwd='/')
+state('.F').cmd.run('echo F >> {2}', cwd='/')
+'''.format(output, output, output))
+
+            aaa = os.path.join(dirpath, 'aaa.sls')
+            with open(aaa, 'w') as aaa:
+                aaa.write('''#!pydsl|stateconf -ps
+include('xxx', 'yyy')
+
+# make all states in yyy run BEFORE states in this sls.
+extend(state('.start').stateconf.require(stateconf='xxx::goal'))
+
+# make all states in xxx run AFTER this sls.
+extend(state('.goal').stateconf.require_in(stateconf='yyy::start'))
+
+__pydsl__.set(ordered=True)
+
+state('.A').cmd.run('echo A >> {0}', cwd='/')
+state('.B').cmd.run('echo B >> {1}', cwd='/')
+state('.C').cmd.run('echo C >> {2}', cwd='/')
+'''.format(output, output, output))
+
+            OPTS['file_roots'] = dict(base=[dirpath])
+            HIGHSTATE = HighState(OPTS)
+            HIGHSTATE.state.load_modules()
+            sys.modules['salt.loaded.int.render.pydsl'].__salt__ = HIGHSTATE.state.functions
+
+            high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
+#            import pprint
+#            pprint.pprint(errors)
+#            pprint.pprint(high)
+            out = HIGHSTATE.state.call_high(high)
+#            pprint.pprint(out)
+            with open(output, 'r') as f:
+                self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
+
+        finally:
+            shutil.rmtree(dirpath, ignore_errors=True)
+
 
 

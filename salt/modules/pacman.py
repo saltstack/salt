@@ -88,8 +88,8 @@ def list_upgrades():
     '''
     upgrades = {}
     lines = __salt__['cmd.run'](
-            'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
-            ).splitlines()
+        'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
+    ).splitlines()
     for line in lines:
         comps = line.split(' ')
         if len(comps) < 2:
@@ -146,7 +146,6 @@ def list_pkgs():
             __salt__['pkg_resource.add_pkg'](ret, name, version)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
-
 
 
 def refresh_db():
@@ -234,7 +233,7 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
                     fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
                     break
         # Catch both boolean input from state and string input from CLI
-        if refresh is True or refresh == 'True':
+        if refresh is True or str(refresh).lower() == 'true':
             cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
         else:
             cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
@@ -281,7 +280,7 @@ def upgrade():
     return pkgs
 
 
-def remove(name):
+def remove(name, **kwargs):
     '''
     Remove a single package with ``pacman -R``
 
@@ -298,7 +297,7 @@ def remove(name):
     return _list_removed(old, new)
 
 
-def purge(name):
+def purge(name, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``pacman -Rsc``

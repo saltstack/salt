@@ -121,7 +121,7 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     List all available package upgrades.
 
@@ -129,6 +129,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
+        refresh_db()
     return _get_upgradable()
 
 
@@ -232,6 +235,10 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     refresh
         Whether or not to sync the portage tree before installing.
 
+    version
+        Install a specific version of the package, e.g. 1.0.9-r1. Ignored
+        if "pkgs" or "sources" is passed.
+
 
     Multiple Package Installation Options:
 
@@ -267,8 +274,12 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
         }
     ))
     # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
+
+    # Handle version kwarg
+    if kwargs.get('version') and pkgs is None and sources is None:
+        name = '={0}-{1}'.format(name, kwargs.get('version'))
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
@@ -317,15 +328,15 @@ def update(pkg, refresh=False):
                 continue
             else:
                 ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                             'new': new_pkgs[pkg]}
+                                 'new': new_pkgs[pkg]}
         else:
             ret_pkgs[pkg] = {'old': '',
-                         'new': new_pkgs[pkg]}
+                             'new': new_pkgs[pkg]}
 
     return ret_pkgs
 
 
-def upgrade(refresh=False):
+def upgrade(refresh=True):
     '''
     Run a full system upgrade (emerge --update world)
 
@@ -338,7 +349,8 @@ def upgrade(refresh=False):
 
         salt '*' pkg.upgrade
     '''
-    if(refresh):
+    # Catch both boolean input from state and string input from CLI
+    if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
     ret_pkgs = {}
@@ -361,7 +373,7 @@ def upgrade(refresh=False):
     return ret_pkgs
 
 
-def remove(pkg):
+def remove(pkg, **kwargs):
     '''
     Remove a single package via emerge --unmerge
 
@@ -385,7 +397,7 @@ def remove(pkg):
     return ret_pkgs
 
 
-def purge(pkg):
+def purge(pkg, **kwargs):
     '''
     Portage does not have a purge, this function calls remove followed
     by depclean to emulate a purge process

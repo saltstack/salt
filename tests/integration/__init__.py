@@ -46,11 +46,8 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
-if os.environ.has_key('TMPDIR'):
-    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    SYS_TMP_DIR = os.environ['TMPDIR']
-else:
-    SYS_TMP_DIR = tempfile.gettempdir()
+# Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
@@ -381,9 +378,9 @@ class TestDaemon(object):
         return True
 
     def post_setup_minions(self):
-        """
+        '''
         Subclass this method to execute code after the minions have been setup
-        """
+        '''
 
     def _enter_mockbin(self):
         path = os.environ.get('PATH', '')
@@ -591,7 +588,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90,
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=30,
                      **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -663,7 +660,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=90)
+        orig = self.client.cmd('minion', function, arg, timeout=30)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
@@ -839,26 +836,6 @@ class ShellCase(TestCase):
 
 class ShellCaseCommonTestsMixIn(object):
 
-    def test_deprecated_config(self):
-        """
-        test for the --config deprecation warning
-
-        Once --config is fully deprecated, this test can be removed
-
-        """
-
-        if getattr(self, '_call_binary_', None) is None:
-            self.skipTest("'_call_binary_' not defined.")
-
-        cfgfile = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
-        out, err = self.run_script(
-            self._call_binary_,
-            '--config {0}'.format(cfgfile),
-            catch_stderr=True
-        )
-        self.assertIn('Usage: {0}'.format(self._call_binary_), '\n'.join(err))
-        self.assertIn('deprecated', '\n'.join(err))
-
     def test_version_includes_binary_name(self):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
@@ -882,17 +859,29 @@ class ShellCaseCommonTestsMixIn(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
-            cwd=os.path.abspath(os.path.dirname(salt.__file__))
+            cwd=CODE_DIR
         )
-        out, _ = process.communicate()
+        out, err = process.communicate()
         if not out:
-            self.skipTest('Failed to get the output of \'git describe\'')
+            self.skipTest(
+                'Failed to get the output of \'git describe\'. '
+                'Error: {0!r}'.format(
+                    err
+                )
+            )
 
         parsed_version = '{0}'.format(out.strip().lstrip('v'))
         parsed_version_info = tuple([
             int(i) for i in parsed_version.split('-', 1)[0].split('.')
         ])
-        if parsed_version_info != __version_info__:
+        if parsed_version_info and parsed_version_info < __version_info__:
+            self.skipTest(
+                'We\'re likely about to release a new version. '
+                'This test would fail. Parsed({0!r}) < Expected({1!r})'.format(
+                    parsed_version_info, __version_info__
+                )
+            )
+        elif parsed_version_info != __version_info__:
             self.skipTest(
                 'In order to get the proper salt version with the '
                 'git hash you need to update salt\'s local git '

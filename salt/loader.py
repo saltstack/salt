@@ -200,19 +200,19 @@ def grains(opts):
     '''
     if not 'grains' in opts:
         pre_opts = {}
-        salt.config.load_config(
-            pre_opts, opts['conf_file'], 'SALT_MINION_CONFIG'
-        )
+        pre_opts.update(salt.config.load_config(
+            opts['conf_file'], 'SALT_MINION_CONFIG'
+        ))
         default_include = pre_opts.get(
             'default_include', opts['default_include']
         )
         include = pre_opts.get('include', [])
-        pre_opts = salt.config.include_config(
-            default_include, pre_opts, opts['conf_file'], verbose=False
-        )
-        pre_opts = salt.config.include_config(
-            include, pre_opts, opts['conf_file'], verbose=True
-        )
+        pre_opts.update(salt.config.include_config(
+            default_include, opts['conf_file'], verbose=False
+        ))
+        pre_opts.update(salt.config.include_config(
+            include, opts['conf_file'], verbose=True
+        ))
         if 'grains' in pre_opts:
             opts['grains'] = pre_opts['grains']
         else:

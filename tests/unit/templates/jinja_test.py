@@ -39,7 +39,7 @@ class TestSaltCacheLoader(TestCase):
         '''
         tmp = tempfile.gettempdir()
         loader = SaltCacheLoader({'cachedir': tmp}, env='test')
-        assert loader.searchpath == os.path.join(tmp, 'files', 'test')
+        assert loader.searchpath == [os.path.join(tmp, 'files', 'test')]
 
     def test_mockclient(self):
         '''
@@ -106,7 +106,7 @@ class TestGetTemplate(TestCase):
             'cachedir': TEMPLATES_DIR,
             'file_client': 'local',
             'file_roots': {
-                'other': os.path.join(TEMPLATES_DIR, 'files', 'test')
+                'other': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
             }
         }
 

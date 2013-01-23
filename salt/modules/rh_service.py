@@ -20,6 +20,7 @@ def __virtual__():
                'CloudLinux',
                'Amazon',
                'Fedora',
+               'ALT',
               ]
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Fedora':

@@ -49,7 +49,10 @@ def __virtual__():
         return False
     if not os.path.exists('/proc/modules'):
         return False
-    if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
+    try:
+        if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
+            return False
+    except IOError:
         return False
     if not HAS_LIBVIRT:
         return False

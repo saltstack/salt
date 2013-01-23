@@ -80,7 +80,7 @@ class TestCommand(Command):
         self.run_command('build')
         build_cmd = self.get_finalized_command('build_ext')
         runner = os.path.abspath('tests/runtests.py')
-        test_cmd = 'python {0}'.format(runner)
+        test_cmd = sys.executable + ' {0}'.format(runner)
         if self.runtests_opts:
             test_cmd += ' {0}'.format(self.runtests_opts)
 

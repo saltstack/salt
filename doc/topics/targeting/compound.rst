@@ -22,6 +22,7 @@ P      Grains PCRE match    ``P@os:(RedHat|Fedora|CentOS)``
 L      List of minions      ``L@minion1.example.com,minion3.domain.com or bl*.domain.com``
 I      Pillar glob match    ``I@pdata:foobar``
 S      Subnet/IP addr match ``S@192.168.1.0/24`` or ``S@192.168.1.100``
+R      Range cluster match  ``R@%foo.bar``
 ====== ==================== ===============================================================
 
 Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.

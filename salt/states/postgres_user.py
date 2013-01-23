@@ -17,6 +17,7 @@ def present(name,
             superuser=False,
             replication=False,
             password=None,
+            groups=None,
             runas=None):
     '''
     Ensure that the named user is present with the specified privileges
@@ -42,6 +43,9 @@ def present(name,
     password
         The user's pasword
 
+    groups
+        A string of comma seperated groups the user should be in
+
     runas
         System user all operation should be preformed on behalf of
     '''
@@ -66,6 +70,7 @@ def present(name,
                                         superuser=superuser,
                                         replication=replication,
                                         password=password,
+                                        groups=groups,
                                         runas=runas):
         ret['comment'] = 'The user {0} has been created'.format(name)
         ret['changes'][name] = 'Present'

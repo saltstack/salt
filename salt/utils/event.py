@@ -105,6 +105,24 @@ class SaltEvent(object):
         )
         return puburi, pulluri
 
+
+    def subscribe(self, tag):
+        '''
+        Subscribe to events matching the passed tag.
+        '''
+        if not self.cpub:
+            self.connect_pub()
+        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
+
+    def unsubscribe(self, tag):
+        '''
+        Un-subscribe to events matching the passed tag.
+        '''
+        if not self.cpub:
+            # There's no way we've even subscribed to this tag
+            return
+        self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+
     def connect_pub(self):
         '''
         Establish the publish connection
@@ -127,24 +145,22 @@ class SaltEvent(object):
         Get a single publication
         '''
         wait = wait * 1000
-        if not self.cpub:
-            self.connect_pub()
-        self.sub.setsockopt(zmq.SUBSCRIBE, tag)
-        try:
-            while True:
-                socks = dict(self.poller.poll(wait))
-                if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                    raw = self.sub.recv()
-                    data = self.serial.loads(raw[20:])
-                    if full:
-                        ret = {'data': data,
-                               'tag': raw[:20].rstrip('|')}
-                        return ret
-                    return data
-                return None
-        finally:
-            # No sense in keeping subscribed to this event
-            self.sub.setsockopt(zmq.UNSUBSCRIBE, tag)
+
+        self.subscribe(tag)
+        while True:
+            socks = dict(self.poller.poll(wait))
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
+                raw = self.sub.recv()
+                # Double check the tag
+                if tag != raw[:20].rstrip('|'):
+                    continue
+                data = self.serial.loads(raw[20:])
+                if full:
+                    ret = {'data': data,
+                           'tag': raw[:20].rstrip('|')}
+                    return ret
+                return data
+            return None
 
     def iter_events(self, tag='', full=False):
         '''

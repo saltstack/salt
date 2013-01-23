@@ -72,7 +72,7 @@ class Batch(object):
         args = [[],
                 self.opts['fun'],
                 self.opts['arg'],
-                9999999999,
+                99999,
                 'list',
                 ]
         bnum = self.get_bnum()

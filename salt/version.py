@@ -3,12 +3,19 @@ Set up the version of Salt
 '''
 
 # Import python libs
-import sys
 import os
+import re
+import sys
+import warnings
 import subprocess
 
 __version_info__ = (0, 12, 0)
 __version__ = '.'.join(map(str, __version_info__))
+
+GIT_DESCRIBE_RE = re.compile(
+    r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
+    r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
+)
 
 
 def __get_version_info_from_git(version, version_info):
@@ -16,14 +23,18 @@ def __get_version_info_from_git(version, version_info):
     If we can get a version from Git use that instead, otherwise we carry on
     '''
     try:
-        from salt.utils import which
-
-        git = which('git')
-        if not git:
+        process = subprocess.Popen(
+                'which git',
+                stdout=subprocess.PIPE,
+                shell=True
+        )
+        git, _ = process.communicate()
+        if process.poll() != 0:
             return version, version_info
+        git = git[:-1]
 
         process = subprocess.Popen(
-            [git, 'describe'],
+            [git, 'describe', '--tags'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -33,23 +44,31 @@ def __get_version_info_from_git(version, version_info):
         if not out.strip():
             return version, version_info
 
-        parsed_version = '{0}'.format(out.strip().lstrip('v'))
+        match = GIT_DESCRIBE_RE.search(out.strip())
+        if not match:
+            return version, version_info
+
+        parsed_version = '{0}.{1}.{2}-{3}-{4}'.format(
+            match.group('major'),
+            match.group('minor'),
+            match.group('bugfix'),
+            match.group('noc'),
+            match.group('sha')
+        )
         parsed_version_info = tuple([
-            int(i) for i in parsed_version.split('-', 1)[0].split('.')
+            int(g) for g in match.groups()[:3] if g.isdigit()
         ])
         if parsed_version_info != version_info:
-            msg = ('In order to get the proper salt version with the '
-                   'git hash you need to update salt\'s local git '
-                   'tags. Something like: \'git fetch --tags\' or '
-                   '\'git fetch --tags upstream\' if you followed '
-                   'salt\'s contribute documentation. The version '
-                   'string WILL NOT include the git hash.')
-            from salt import log
-            if log.is_console_configured():
-                import logging
-                logging.getLogger(__name__).warning(msg)
-            else:
-                sys.stderr.write('WARNING: {0}\n'.format(msg))
+            warnings.warn(
+                'In order to get the proper salt version with the '
+                'git hash you need to update salt\'s local git '
+                'tags. Something like: \'git fetch --tags\' or '
+                '\'git fetch --tags upstream\' if you followed '
+                'salt\'s contribute documentation. The version '
+                'string WILL NOT include the git hash.',
+                UserWarning,
+                stacklevel=2
+            )
             return version, version_info
         return parsed_version, parsed_version_info
     except OSError, err:
@@ -62,9 +81,8 @@ def __get_version_info_from_git(version, version_info):
 
 
 # Get version information from git if available
-__version__, __version_info__ = __get_version_info_from_git(
-    __version__, __version_info__
-)
+__version__, __version_info__ = \
+    __get_version_info_from_git(__version__, __version_info__)
 # This function has executed once, we're done with it. Delete it!
 del __get_version_info_from_git
 

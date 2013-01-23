@@ -45,21 +45,6 @@ The network port to set up the publication interface
     publish_port: 4505
 
 
-.. conf_master:: pub_refresh
-
-``pub_refresh``
----------------
-
-Default: ``False``
-
-The pub_refresh system manually refreshed the master ZeroMQ publisher. It is
-used in some cases where the minions loose connection to the master and it
-is solved by restarting the master.
-
-.. code-block:: yaml
-
-    pub_refresh: False
-
 .. conf_master:: user
 
 ``user``
