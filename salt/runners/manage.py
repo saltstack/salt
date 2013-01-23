@@ -3,6 +3,7 @@ General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
 '''
 
+import yaml
 import distutils.version
 
 # Import salt libs
@@ -10,9 +11,9 @@ import salt.key
 import salt.client
 
 
-def down():
+def status(output=True):
     '''
-    Print a list of all the down or unresponsive salt minions
+    Print the status of all known salt minions
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
@@ -20,7 +21,19 @@ def down():
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
 
-    ret = sorted(set(keys['minions']) - set(minions))
+    ret = {}
+    ret['up'] = sorted(minions)
+    ret['down'] = sorted(set(keys['minions']) - set(minions))
+    if output:
+        print(yaml.safe_dump(ret, default_flow_style=False))
+    return ret
+
+
+def down():
+    '''
+    Print a list of all the down or unresponsive salt minions
+    '''
+    ret = status(output=False).get('down', [])
     for minion in ret:
         print(minion)
     return ret
@@ -30,13 +43,10 @@ def up():  # pylint: disable-msg=C0103
     '''
     Print a list of all of the minions that are up
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
-    minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
-
-    for minion in sorted(minions):
+    ret = status(output=False).get('up', [])
+    for minion in ret:
         print(minion)
-
-    return sorted(minions)
+    return ret
 
 
 def versions():
