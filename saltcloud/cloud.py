@@ -254,16 +254,29 @@ class Cloud(object):
         Perform an action which may be specific to this cloud provider
         '''
         pmap = self.map_providers()
+
+        current_boxen = {}
+        for provider in pmap:
+            for box in pmap[provider]:
+                current_boxen[box] = provider
+
         acts = {}
         for prov, nodes in pmap.items():
             acts[prov] = []
             for node in nodes:
                 if node in names:
                     acts[prov].append(node)
+
+        completed = []
         for prov, names_ in acts.items():
             fun = '{0}.{1}'.format(prov, self.opts['action'])
             for name in names_:
                 self.clouds[fun](name)
+                completed.append(name)
+
+        for name in names:
+            if name not in completed:
+                print('{0} was not found, not running {1} action'.format(name, self.opts['action']))
 
 
 class Map(Cloud):
