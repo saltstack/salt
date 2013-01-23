@@ -249,7 +249,7 @@ class Cloud(object):
         if not found:
             log.error('Profile {0} is not defined'.format(self.opts['profile']))
 
-    def do_action(self, names):
+    def do_action(self, names, kwargs):
         '''
         Perform an action which may be specific to this cloud provider
         '''
@@ -269,10 +269,14 @@ class Cloud(object):
 
         completed = []
         for prov, names_ in acts.items():
-            fun = '{0}.{1}'.format(prov, self.opts['action'])
-            for name in names_:
-                self.clouds[fun](name)
-                completed.append(name)
+            for name in names:
+                if name in names_:
+                    fun = '{0}.{1}'.format(prov, self.opts['action'])
+                    if kwargs:
+                        self.clouds[fun](name, kwargs)
+                    else:
+                        self.clouds[fun](name)
+                    completed.append(name)
 
         for name in names:
             if name not in completed:
