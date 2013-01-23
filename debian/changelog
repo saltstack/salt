@@ -1,0 +1,5 @@
+salt-api (0.7.5) quantal; urgency=low
+
+  * initial package for salt-api
+
+ -- Sean Channel <pentabular@gmail.com>  Tue, 22 Jan 2013 14:05:52 -0800
