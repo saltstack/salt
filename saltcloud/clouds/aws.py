@@ -337,3 +337,18 @@ def start(name):
         log.error('Failed to start node {0}'.format(name))
         log.error(exc)
 
+
+def get_tags(name):
+    '''
+    Retrieve tags for a node
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    try:
+        data = conn.ex_describe_tags(resource=node)
+        log.info('Retrieving tags from {0}'.format(name))
+        log.debug(data)
+    except Exception as exc:
+        log.error('Failed to retrieve tags from {0}'.format(name))
+        log.error(exc)
+
