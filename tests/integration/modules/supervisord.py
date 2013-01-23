@@ -65,7 +65,7 @@ class SupervisordModuleTest(integration.ModuleCase):
         status all services
         '''
         ret = self.run_function('supervisord.status', [])
-        self.assertEqual(ret, '')
+        self.assertEqual(ret, {})
 
     def test_status_one(self):
         '''

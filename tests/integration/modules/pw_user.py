@@ -13,10 +13,10 @@ class UseraddModuleTest(integration.ModuleCase):
     def setUp(self):
         super(UseraddModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain != 'FreeBSD':
+        if os_grain['kernel'] != 'FreeBSD':
             self.skipTest(
-                'Test not applicable to \'{0}\' kernel'.format(
-                    os_grain
+                'Test not applicable to \'{kernel}\' kernel'.format(
+                    **os_grain
                 )
             )
 
