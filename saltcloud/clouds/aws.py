@@ -354,7 +354,12 @@ def set_tags(name, tags):
     try:
         log.info('Setting tags for {0}'.format(name))
         data = conn.ex_create_tags(resource=node, tags=tags)
-        get_tags(name)
+
+        # print the new tags- with special handling for renaming of a node
+        if 'Name' in tags:
+            get_tags(tags['Name'])
+        else:
+            get_tags(name)
     except Exception as exc:
         log.error('Failed to set tags for {0}'.format(name))
         log.error(exc)
