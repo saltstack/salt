@@ -1,0 +1,32 @@
+Source: salt-api
+Section: devel
+Priority: optional
+Maintainer: Sean Channel <pentabular@gmail.com>
+Build-Depends: debhelper (>= 7.0.50),
+               python | python-all | python-dev | python-all-dev,
+               python-setuptools,
+               python-cherrypy
+Standards-Version: 3.9.3
+Homepage: http://saltstack.org
+#X-Python-Version: >= 2.6, <= 2.7
+
+
+Package: salt-api
+Architecture: all
+Depends: ${python:Depends},
+         ${misc:Depends},
+         ${shlibs:Depends},
+         python,
+         salt-common
+Description: Generic, modular network access system
+ a modular interface on top of Salt that can provide a variety of entry points
+ into a running Salt system. It can start and manage multiple interfaces
+ allowing a REST API to coexist with XMLRPC or even a Websocket API.
+ . 
+ The Salt API system is used to expose the fundamental aspects of Salt control
+ to external sources. salt-api acts as the bridge between Salt itself and
+ REST, Websockets, etc.
+ .
+ Documentation is available on Read the Docs:
+ .
+ http://salt-api.readthedocs.org/

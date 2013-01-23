@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+COPYRIGHT=LICENSE
+
+%:
+	cp $(COPYRIGHT) debian/copyright
+	dh $@ 
+
+dh_override_auto_build:
+	python setup.py build
