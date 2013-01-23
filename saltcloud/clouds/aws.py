@@ -338,6 +338,25 @@ def start(name):
         log.error(exc)
 
 
+def add_tags(name, tags):
+    '''
+    Add tags to a node
+
+    CLI Example::
+
+        salt-cloud -a add_tags mymachine tag1=somestuff tag2='Other stuff'
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    try:
+        data = conn.ex_create_tags(resource=node, tags=tags)
+        log.info('Adding tags to {0}'.format(name))
+        log.debug(data)
+    except Exception as exc:
+        log.error('Failed to add tags to {0}'.format(name))
+        log.error(exc)
+
+
 def get_tags(name):
     '''
     Retrieve tags for a node
