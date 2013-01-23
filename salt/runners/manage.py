@@ -33,7 +33,7 @@ def down():
     '''
     Print a list of all the down or unresponsive salt minions
     '''
-    ret = status(output=False).get('down')
+    ret = status(output=False).get('down', [])
     for minion in ret:
         print(minion)
     return ret
@@ -43,7 +43,7 @@ def up():  # pylint: disable-msg=C0103
     '''
     Print a list of all of the minions that are up
     '''
-    ret = status(output=False).get('up')
+    ret = status(output=False).get('up', [])
     for minion in ret:
         print(minion)
     return ret
