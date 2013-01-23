@@ -217,7 +217,12 @@ def refresh_db():
     return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
 
 
-def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            pkgs=None,
+            sources=None,
+            slot=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to sync the portage tree
     before package is installed.
@@ -238,6 +243,14 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     version
         Install a specific version of the package, e.g. 1.0.9-r1. Ignored
         if "pkgs" or "sources" is passed.
+
+    slot
+        Similar to version, but specifies a valid slot to be installed. It
+        will install the latest available version in the specified slot.
+        Ignored if "pkgs" or "sources" or "version" is passed.
+
+        CLI Example::
+            salt '*' pkg.install sys-devel/gcc slot='4.4'
 
 
     Multiple Package Installation Options:
@@ -278,8 +291,11 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
         refresh_db()
 
     # Handle version kwarg
-    if kwargs.get('version') and pkgs is None and sources is None:
-        name = '={0}-{1}'.format(name, kwargs.get('version'))
+    if pkgs is None and sources is None:
+        if kwargs.get('version'):
+            name = '={0}-{1}'.format(name, kwargs.get('version'))
+        elif slot is not None:
+            name = '{0}:{1}'.format(name, slot)
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
@@ -300,9 +316,13 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def update(pkg, refresh=False):
+def update(pkg, slot=None, refresh=False):
     '''
     Updates the passed package (emerge --update package)
+
+    slot
+        Restrict the update to a particular slot. It will update to the
+        latest version within the slot.
 
     Return a dict containing the new package names and versions::
 
@@ -316,9 +336,14 @@ def update(pkg, refresh=False):
     if(refresh):
         refresh_db()
 
+    if slot is not None:
+        full_atom = '{0}:{1}'.format(pkg, slot)
+    else:
+        full_atom = pkg
+
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(pkg)
+    cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(full_atom)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
@@ -373,9 +398,12 @@ def upgrade(refresh=True):
     return ret_pkgs
 
 
-def remove(pkg, **kwargs):
+def remove(pkg, slot=None, **kwargs):
     '''
     Remove a single package via emerge --unmerge
+
+    slot
+        Restrict the remove to a specific slot.
 
     Return a list containing the names of the removed packages:
 
@@ -386,7 +414,12 @@ def remove(pkg, **kwargs):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn {0}'.format(pkg)
+    if slot is not None:
+        full_atom = '{0}:{1}'.format(pkg, slot)
+    else:
+        full_atom = pkg
+
+    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn {0}'.format(full_atom)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
@@ -412,11 +445,14 @@ def purge(pkg, **kwargs):
     return remove(pkg) + depclean()
 
 
-def depclean(pkg=None):
+def depclean(pkg=None, slot=None):
     '''
     Portage has a function to remove unused dependencies. If a package
     is provided, it will only removed the package if no other package
     depends on it.
+
+    slot
+        Restrict the remove to a specific slot. Ignored if pkg is None
 
     Return a list containing the removed packages:
 
@@ -427,7 +463,12 @@ def depclean(pkg=None):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
-    cmd = 'emerge --depclean --quiet {0}'.format(pkg)
+    if pkg is not None and slot is not None:
+        full_atom = '{0}:{1}'.format(pkg, slot)
+    else:
+        full_atom = pkg
+
+    cmd = 'emerge --depclean --quiet {0}'.format(full_atom)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
