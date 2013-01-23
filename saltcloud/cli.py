@@ -128,13 +128,22 @@ class SaltCloud(parsers.SaltCloudParser):
             else:
                 names = self.config.get('names', None)
 
+            kwargs = {}
+            machines = []
             msg = 'The following virtual machines are set to be actioned with "{0}":\n'.format(self.options.action)
             for name in names:
-                msg += '  {0}\n'.format(name)
+                if '=' in name:
+                    # This is obviously not a machine name, treat it as a kwarg
+                    comps = name.split('=')
+                    kwargs[comps[0]] = comps[1]
+                else:
+                    msg += '  {0}\n'.format(name)
+                    machines.append(name)
+            names = machines
 
             try:
                 if self.print_confirm(msg):
-                    mapper.do_action(names)
+                    mapper.do_action(names, kwargs)
             except Exception as exc:
                 print('There was an error: {0}'.format(exc))
             self.exit(0)
