@@ -44,6 +44,21 @@ class SaltCloud(parsers.SaltCloudParser):
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
+        if self.options.usb:
+            import urllib
+            branch = 'develop'
+            url = ('https://raw.github.com/saltstack/salt-bootstrap/{0}/bootstrap-salt-minion.sh'.format(branch))
+            req = urllib.urlopen(url)
+            deploy_path = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    'saltcloud', 'deploy', 'bootstrap-salt-minion.sh')
+            print('Updating bootstrap-salt-minion.sh.'
+                  '\n\tSource:      {0}'
+                  '\n\tDestination: {1}'.format(url, deploy_path))
+            f = open(deploy_path, 'w')
+            f.write(req.read())
+            f.close()            
+
         if self.selected_query_option is not None:
             if self.options.map:
                 try:
