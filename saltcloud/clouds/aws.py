@@ -338,22 +338,22 @@ def start(name):
         log.error(exc)
 
 
-def add_tags(name, tags):
+def set_tags(name, tags):
     '''
-    Add tags to a node
+    Set tags for a node
 
     CLI Example::
 
-        salt-cloud -a add_tags mymachine tag1=somestuff tag2='Other stuff'
+        salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
     conn = get_conn()
     node = get_node(conn, name)
     try:
+        log.info('Setting tags for {0}'.format(name))
         data = conn.ex_create_tags(resource=node, tags=tags)
-        log.info('Adding tags to {0}'.format(name))
-        log.debug(data)
+        get_tags(name)
     except Exception as exc:
-        log.error('Failed to add tags to {0}'.format(name))
+        log.error('Failed to set tags for {0}'.format(name))
         log.error(exc)
 
 
@@ -364,10 +364,35 @@ def get_tags(name):
     conn = get_conn()
     node = get_node(conn, name)
     try:
-        data = conn.ex_describe_tags(resource=node)
         log.info('Retrieving tags from {0}'.format(name))
-        log.debug(data)
+        data = conn.ex_describe_tags(resource=node)
+        log.info(data)
     except Exception as exc:
         log.error('Failed to retrieve tags from {0}'.format(name))
+        log.error(exc)
+
+
+def del_tags(name, kwargs):
+    '''
+    Delete tags for a node
+
+    CLI Example::
+
+        salt-cloud -a del_tags mymachine tag1,tag2,tag3
+    '''
+    conn = get_conn()
+    node = get_node(conn, name)
+    current_tags = conn.ex_describe_tags(resource=node)
+
+    tags = {}
+    for tag in kwargs['tags'].split(','):
+        tags[tag] = current_tags[tag]
+
+    try:
+        data = conn.ex_delete_tags(resource=node, tags=tags)
+        log.info('Deleting tags from {0}'.format(name))
+        get_tags(name)
+    except Exception as exc:
+        log.error('Failed to delete tags from {0}'.format(name))
         log.error(exc)
 
