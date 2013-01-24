@@ -196,6 +196,13 @@ class Cloud(object):
         vm_['priv_key'] = priv
         ok = False
 
+        if vm_['make_master'] is True:
+            master_priv, master_pub = saltcloud.utils.gen_keys(
+                saltcloud.utils.get_option('keysize', self.opts, vm_)
+                )
+            vm_['master_pub'] = master_pub
+            vm_['master_pem'] = master_priv
+
         if 'script' in self.opts:
             vm_['os'] = self.opts['script']
         if 'script' in vm_:
