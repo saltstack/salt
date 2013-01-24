@@ -134,7 +134,7 @@ def outputters(opts):
     '''
     Returns the returner modules
     '''
-    load = _create_loader(opts, 'output', 'output')
+    load = _create_loader(opts, 'output', 'output', ext_type_dirs='outputter_dirs')
     return load.filter_func('output')
 
 

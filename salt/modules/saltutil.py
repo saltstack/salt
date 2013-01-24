@@ -250,6 +250,20 @@ def sync_returners(env=None):
     return _sync('returners', env)
 
 
+def sync_outputters(env=None):
+    '''
+    Sync the outputters from the _outputters directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _outputters directory, base is the default
+    environment.
+
+    CLI Example::
+
+        salt '*' saltutil.sync_outputters
+    '''
+    return _sync('outputters', env)
+
+
 def sync_all(env=None):
     '''
     Sync down all of the dynamic modules from the file server for a specific
@@ -266,6 +280,7 @@ def sync_all(env=None):
     ret.append(sync_grains(env))
     ret.append(sync_renderers(env))
     ret.append(sync_returners(env))
+    ret.append(sync_outputters(env))
     return ret
 
 
