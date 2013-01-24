@@ -858,6 +858,23 @@ class Matcher(object):
             functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
 
+    def _traverse_dict(self, data, target, delim=':'):
+        '''
+        Traverse a dict using a colon-delimited (or otherwise delimited, using
+        the "delim" param) target string. The target 'foo:bar:baz' will return
+        data['foo']['bar']['baz'] if this value exists, and will otherwise
+        return an empty dict.
+        '''
+        target = target.split(delim)
+        ptr = data
+        try:
+            for index in range(len(target)):
+                ptr = ptr.get(target[index], {})
+        except (SyntaxError, AttributeError):
+            # Encountered a non-dict value in the middle of traversing
+            return {}
+        return ptr
+
     def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
@@ -983,31 +1000,27 @@ class Matcher(object):
         '''
         Reads in the pillar glob match
         '''
-        log.debug('tgt {0}'.format(tgt))
-        comps = tgt.split(':')
-        if len(comps) < 2:
-            log.error(
-                'Got insufficient arguments for pillar match statement '
-                'from master'
-            )
+        log.debug('pillar target: {0}'.format(tgt))
+        comps = tgt.rsplit(':', 1)
+        if len(comps) != 2:
+            log.error('Got insufficient arguments for pillar match '
+                      'statement from master')
             return False
-        if comps[0] not in self.opts['pillar']:
-            log.error(
-                'Got unknown pillar match statement from master: {0}'.format(
-                    comps[0]
-                )
-            )
+        match = self._traverse_dict(self.opts['pillar'], comps[0])
+        if match == {}:
+            log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
-        if isinstance(self.opts['pillar'][comps[0]], list):
+        if isinstance(match, dict):
+            log.error('Targeted pillar "{0}" must correspond to a list, '
+                      'string, or numeric value'.format(comps[0]))
+            return False
+        if isinstance(match, list):
             # We are matching a single component to a single list member
-            for member in self.opts['pillar'][comps[0]]:
+            for member in match:
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
-        return bool(fnmatch.fnmatch(
-            str(self.opts['pillar'][comps[0]]).lower(),
-            comps[1].lower(),
-        ))
+        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
 
     def ipcidr_match(self, tgt):
         '''
