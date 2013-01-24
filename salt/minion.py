@@ -924,23 +924,27 @@ class Matcher(object):
         '''
         Reads in the grains glob match
         '''
-        comps = tgt.split(':')
-        if len(comps) < 2:
-            log.error('Got insufficient arguments for grains from master')
+        log.debug('grains target: {0}'.format(tgt))
+        comps = tgt.rsplit(':', 1)
+        if len(comps) != 2:
+            log.error('Got insufficient arguments for grains match '
+                      'statement from master')
             return False
-        if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: {0}'.format(comps[0]))
+        match = self._traverse_dict(self.opts['grains'], comps[0])
+        if match == {}:
+            log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
-        if isinstance(self.opts['grains'][comps[0]], list):
+        if isinstance(match, dict):
+            log.error('Targeted grain "{0}" must correspond to a list, '
+                      'string, or numeric value'.format(comps[0]))
+            return False
+        if isinstance(match, list):
             # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]]:
+            for member in match:
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
-        return bool(fnmatch.fnmatch(
-            str(self.opts['grains'][comps[0]]).lower(),
-            comps[1].lower(),
-        ))
+        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
 
     def grain_pcre_match(self, tgt):
         '''
