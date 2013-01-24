@@ -26,6 +26,8 @@ Full Table of Contents
     topics/reactor/*
     topics/style
     topics/git/*
+    topics/development/index
+    topics/specs/salt_auth_proto_abs
 
     ref/index
     ref/modules/*
@@ -52,6 +54,7 @@ Full Table of Contents
     ref/file_server/*
     ref/configuration/*
     ref/internals/index
+    ref/topology
     ref/windows-package-manager
 
     ref/cli/index
@@ -64,5 +67,4 @@ Full Table of Contents
     ref/cli/salt-run
     ref/cli/salt-syndic
 
-    topics/specs/salt_auth_proto_abs
     topics/releases/index

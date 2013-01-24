@@ -47,12 +47,13 @@ Installing Salt for development
 Clone the repository using::
 
     git clone https://github.com/saltstack/salt
+
 .. note:: tags
 
     Just cloning the repository is enough to work with Salt and make
     contributions. However, you must fetch additional tags into your clone to
     have Salt report the correct version for itself. To do this you must first
-    add the git repository as an upstream source.::
+    add the git repository as an upstream source::
 
         git remote add upstream http://github.com/saltstack/salt
 
