@@ -283,7 +283,7 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-.. include:: extend_with_require_watch.rst
+.. include:: /_incl/extend_with_require_watch.rst
 
 Understanding the Render System
 ===============================

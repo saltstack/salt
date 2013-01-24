@@ -97,7 +97,7 @@ release = version
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '_incl/*']
 
 extensions = [
     'saltdocs',
