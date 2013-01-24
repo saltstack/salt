@@ -560,10 +560,9 @@ class OutputOptionsMixIn(object):
         group.add_option(
             '--out', '--output',
             dest='output',
-            choices=outputters.keys(),
             help=(
                 'Print the output from the \'{0}\' command using the '
-                'specified outputter. One of {1}.'.format(
+                'specified outputter. The builtins are {1}.'.format(
                     self.get_prog_name(),
                     ', '.join([repr(k) for k in outputters])
                 )
