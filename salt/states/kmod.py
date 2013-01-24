@@ -21,7 +21,7 @@ def __virtual__():
     return 'kmod' if 'kmod.available' in __salt__ else False
 
 
-def present(name, persist = False):
+def present(name, persist=False):
     '''
     Ensure that the specified kernel module is loaded
 
@@ -66,7 +66,7 @@ def present(name, persist = False):
     return ret
 
 
-def absent(name, persist = False, comment = True):
+def absent(name, persist=False, comment=True):
     '''
     Verify that the named kernel module is not loaded
 
