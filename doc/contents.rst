@@ -11,15 +11,8 @@ Full Table of Contents
     topics/configuration
     topics/hacking
     topics/targeting/index
-    topics/tutorials/modules
-    topics/tutorials/starting_states
-    topics/tutorials/states*
+    topics/tutorials/index
     topics/eauth/*
-    topics/tutorials/firewall
-    topics/tutorials/bootstrap_ec2
-    topics/tutorials/esky
-    topics/tutorials/preseed_key
-    topics/tutorials/standalone_minion
     topics/pillar/index
     topics/master_tops/index
     topics/jobs/*
