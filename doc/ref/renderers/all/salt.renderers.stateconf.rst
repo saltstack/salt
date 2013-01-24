@@ -2,6 +2,8 @@
 salt.renderers.stateconf
 ========================
 
+.. py:module:: salt.renderers.stateconf
+
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
 :platform: all
