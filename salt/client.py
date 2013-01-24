@@ -34,7 +34,6 @@ import glob
 import time
 import getpass
 import re
-import sys
 
 # Import salt libs
 import salt.config
@@ -131,10 +130,6 @@ class LocalClient(object):
         user = self.salt_user
         if user is None:
           user = self.opts['user']
-        if user == 'root':
-          sys.stderr.write(('You may not run salt commands as root. '
-                            'Use "sudo salt <cmd>" instead.\n'))
-          sys.exit(2)
         try:
             for wl_fun in wl:
                 if re.match(wl_fun, fun):
@@ -144,9 +139,8 @@ class LocalClient(object):
                   return False
             return True
         except TypeError, e:
-            sys.stderr.write(('Problem reading the whitelist that is '
+            raise SystemExit(('Problem reading the whitelist that is '
                               'defined\n'))
-            sys.exit(2)
 
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
@@ -975,8 +969,7 @@ class LocalClient(object):
                     err = ('You do not have permissions to run this function. '
                     'Please contact your local administrator if you believe '
                     'this is in error.\n')
-                    sys.stderr.write(err)
-                    sys.exit(2)
+                    raise SystemExit(err)
 
         # If an external job cache is specified add it to the ret list
         if self.opts.get('ext_job_cache'):
