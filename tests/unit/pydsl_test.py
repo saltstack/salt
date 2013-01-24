@@ -9,7 +9,6 @@ from saltunittest import TestCase
 import salt.loader
 import salt.config
 from salt.state import State, HighState
-from salt.renderers.yaml import HAS_ORDERED_DICT
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
@@ -208,7 +207,7 @@ state('A').cmd.run(name='echo hello world')
 
 
     def test_ordered_states(self):
-        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+        if sys.version_info < (2, 7):
             self.skipTest('OrderedDict is not available')
         result = render_sls('''
 __pydsl__.set(ordered=True)
@@ -226,7 +225,7 @@ state('B').file.managed(source='/a/b/c')
 
 
     def test_pipe_through_stateconf(self):
-        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+        if sys.version_info < (2, 7):
             self.skipTest('OrderedDict is not available')
         dirpath = tempfile.mkdtemp()
         output = os.path.join(dirpath, 'output')
