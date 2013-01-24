@@ -312,7 +312,8 @@ def stop(name):
     '''
     Stop a node
     '''
-    conn = get_conn()
+    location = get_location()
+    conn = get_conn(location=location)
     node = get_node(conn, name)
     try:
         data = conn.ex_stop_node(node=node)
@@ -327,7 +328,8 @@ def start(name):
     '''
     Start a node
     '''
-    conn = get_conn()
+    location = get_location()
+    conn = get_conn(location=location)
     node = get_node(conn, name)
     try:
         data = conn.ex_start_node(node=node)
@@ -346,12 +348,18 @@ def set_tags(name, tags):
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
-    conn = get_conn()
+    location = get_location()
+    conn = get_conn(location=location)
     node = get_node(conn, name)
     try:
         log.info('Setting tags for {0}'.format(name))
         data = conn.ex_create_tags(resource=node, tags=tags)
-        get_tags(name)
+
+        # print the new tags- with special handling for renaming of a node
+        if 'Name' in tags:
+            get_tags(tags['Name'])
+        else:
+            get_tags(name)
     except Exception as exc:
         log.error('Failed to set tags for {0}'.format(name))
         log.error(exc)
@@ -361,7 +369,8 @@ def get_tags(name):
     '''
     Retrieve tags for a node
     '''
-    conn = get_conn()
+    location = get_location()
+    conn = get_conn(location=location)
     node = get_node(conn, name)
     try:
         log.info('Retrieving tags from {0}'.format(name))
@@ -380,7 +389,8 @@ def del_tags(name, kwargs):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
-    conn = get_conn()
+    location = get_location()
+    conn = get_conn(location=location)
     node = get_node(conn, name)
     current_tags = conn.ex_describe_tags(resource=node)
 
