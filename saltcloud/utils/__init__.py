@@ -257,9 +257,9 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
                   name=None, pub_key=None, sock_dir=None, provider=None,
-                  conf_file=None, start_action=None, minion_pub=None,
-                  minion_pem=None, minion_conf=None, master_pub=None,
-                  master_pem=None, master_conf=None):
+                  conf_file=None, start_action=None, make_master=False,
+                  master_pub=None, master_pem=None, master_conf=None,
+                  minion_pub=None, minion_pem=None, minion_conf=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -339,6 +339,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Run the deploy script
             if script:
                 log.debug('Executing /tmp/deploy.sh')
+                if make_master:
+                    deploy_command += ' -m'
                 if 'bootstrap-salt-minion' in script:
                     deploy_command += ' -c /tmp/'
                 root_cmd(deploy_command, tty, sudo, **kwargs)
