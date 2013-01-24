@@ -274,8 +274,18 @@ def create(vm_):
             'minion_pub': vm_['pub_key'],
             }
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+
+        # Deploy salt-master files, if necessary
+        if vm_['make_master'] is True:
+            deploy_kwargs['master_pub'] = vm_['master_pub']
+            deploy_kwargs['master_pem'] = vm_['master_pem']
+            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
+            if master_conf:
+                deploy_kwargs['master_conf'] = master_conf
+
         if username == 'root':
             deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
