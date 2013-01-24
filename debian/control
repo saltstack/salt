@@ -77,6 +77,7 @@ Architecture: all
 Depends: ${misc:Depends},
          python,
          python-pkg-resources,
+         debconf-utils,
          salt-common (= ${source:Version})
 Recommends: dmidecode, pciutils
 Description: This package represents the client package for salt
