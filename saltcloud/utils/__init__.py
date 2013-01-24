@@ -172,6 +172,22 @@ def minion_conf_string(opts, vm_):
     return yaml.safe_dump(minion, default_flow_style=False)
 
 
+def master_conf_string(opts, vm_):
+    '''
+    Return a string to be passed into the deployment script for the master
+    configuration file
+    '''
+    master = {}
+
+    master.update(opts.get('master', {}))
+    master.update(vm_.get('master', {}))
+
+    master.update(opts.get('map_master', {}))
+    master.update(vm_.get('map_master', {}))
+
+    return yaml.safe_dump(master, default_flow_style=False)
+
+
 def wait_for_ssh(host, port=22, timeout=900):
     '''
     Wait until an ssh connection can be made on a specified host
