@@ -41,40 +41,19 @@ to the latest version.
 
 .. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
 
-Editing and Previewing the Docs
--------------------------------
-You need ``sphinx-build`` to build the docs. In Debian/Ubuntu this is provided
-in the ``python-sphinx`` package.
-
-Then::
-
-    cd doc; make html
-
-- The docs then are built in the ``docs/_build/html/`` folder. If you make
-  changes and want to see the results, ``make html`` again.
-- The docs use ``reStructuredText`` for markup. See a live demo at
-  http://rst.ninjs.org/.
-- The help information on each module or state is culled from the python code
-  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
-- If you are developing using Arch Linux (or any other distribution for which
-  Python 3 is the default Python installation), then ``sphinx-build`` may be
-  named ``sphinx-build2`` instead. If this is the case, then you will need to
-  run the following ``make`` command::
-
-    make SPHINXBUILD=sphinx-build2 html
-
 Installing Salt for development
 -------------------------------
 
 Clone the repository using::
 
     git clone https://github.com/saltstack/salt
+
 .. note:: tags
 
     Just cloning the repository is enough to work with Salt and make
     contributions. However, you must fetch additional tags into your clone to
     have Salt report the correct version for itself. To do this you must first
-    add the git repository as an upstream source.::
+    add the git repository as an upstream source::
 
         git remote add upstream http://github.com/saltstack/salt
 
@@ -258,3 +237,29 @@ Finally you use setup.py to run the tests with the following command::
 For greater control while running the tests, please try::
 
     ./tests/runtests.py -h
+
+Editing and previewing the documention
+--------------------------------------
+
+You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is provided
+in the ``python-sphinx`` package.  You can also install this directly to your virtual
+environment using pip::
+
+    pip install Sphinx
+
+Change to salt documention directory, then::
+
+    cd doc; make html
+
+- The docs then are built in the ``docs/_build/html/`` folder. If you make
+  changes and want to see the results, ``make html`` again.
+- The docs use `reStructuredText <http://sphinx-doc.org/rest.html>`_ for markup.
+  See a live demo at http://rst.ninjs.org/.
+- The help information on each module or state is culled from the python code
+  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
+- If you are developing using Arch Linux (or any other distribution for which
+  Python 3 is the default Python installation), then ``sphinx-build`` may be
+  named ``sphinx-build2`` instead. If this is the case, then you will need to
+  run the following ``make`` command::
+
+    make SPHINXBUILD=sphinx-build2 html

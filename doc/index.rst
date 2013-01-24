@@ -78,8 +78,7 @@ truly make it work for you.
 
 .. sidebar:: More tutorials!
 
-    * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
-    * :doc:`Preseeding Minions with Accepted Keys <topics/tutorials/preseed_key>`
+    * :doc:`All Salt tutorials <topics/tutorials/index>`
 
 .. contents:: The components of Salt
     :local:

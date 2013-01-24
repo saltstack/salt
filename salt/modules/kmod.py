@@ -212,6 +212,7 @@ def remove(mod, persist = False, comment = True):
     comment
         If persist is set don't remove line from /etc/modules but only
         comment it
+
     CLI Example::
 
         salt '*' kmod.remove kvm

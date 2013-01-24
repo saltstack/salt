@@ -35,6 +35,7 @@ is defined. For more in depth directions, see the `tutorial <http://docs.saltsta
 
 1. Create the top.sls file
 ::
+
   # /srv/salt/top.sls
   base:
     '*':
@@ -42,6 +43,7 @@ is defined. For more in depth directions, see the `tutorial <http://docs.saltsta
 
 2. Create our webserver state tree
 ::
+
   # /srv/salt/webserver.sls
   apache:                 # ID declaration
     pkg:                  # state declaration

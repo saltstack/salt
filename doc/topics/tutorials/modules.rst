@@ -2,7 +2,7 @@
 Remote execution tutorial
 =========================
 
-.. include:: requisite_incl.rst
+.. include:: /_incl/requisite_incl.rst
 
 Order your minions around
 =========================

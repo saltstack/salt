@@ -151,7 +151,7 @@ vhosts file is changed:
       file.managed:
         - source: salt://apache/httpd-vhosts.conf
 
-.. include:: extend_with_require_watch.rst
+.. include:: /_incl/extend_with_require_watch.rst
 
 :term:`Name declaration`
 ------------------------

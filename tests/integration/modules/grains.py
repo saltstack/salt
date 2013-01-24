@@ -24,7 +24,7 @@ class TestModulesGrains(integration.ModuleCase):
         '''
         opts = self.minion_opts
         self.assertEqual(
-            self.run_function('grains.item', ['test_grain']),
+            self.run_function('grains.item', ['test_grain'])['test_grain'],
             opts['grains']['test_grain']
         )
 
