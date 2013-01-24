@@ -44,7 +44,7 @@ class SaltCloud(parsers.SaltCloudParser):
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
-        if self.options.usb:
+        if self.options.update_bootstrap:
             import urllib
             branch = 'develop'
             url = ('https://raw.github.com/saltstack/salt-bootstrap/{0}/bootstrap-salt-minion.sh'.format(branch))

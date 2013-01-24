@@ -199,7 +199,7 @@ class ExecutionOptionsMixIn(object):
             help='Build all of the specified virtual machines in parallel'
         )
         group.add_option(
-            '-u', '--usb',
+            '-u', '--update-bootstrap',
             default=False,
             action='store_true',
             help='Update salt-bootstrap to the latest develop version on GitHub'
