@@ -127,6 +127,16 @@ def remove_key(pki_dir, id_):
         os.remove(key)
 
 
+def rename_key(pki_dir, id_, new_id):
+    '''
+    Rename a key, when an instance has also been renamed
+    '''
+    oldkey = os.path.join(pki_dir, 'minions/{0}'.format(id_))
+    newkey = os.path.join(pki_dir, 'minions/{0}'.format(new_id))
+    if os.path.isfile(oldkey):
+        os.rename(oldkey, newkey)
+
+
 def get_option(option, opts, vm_):
     '''
     Convenience function to return the dominant option to be used. Always

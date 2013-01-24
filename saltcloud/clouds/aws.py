@@ -406,3 +406,20 @@ def del_tags(name, kwargs):
         log.error('Failed to delete tags from {0}'.format(name))
         log.error(exc)
 
+
+def rename(name, kwargs):
+    '''
+    Properly rename a node
+    '''
+    location = get_location()
+    conn = get_conn(location=location)
+    node = get_node(conn, name)
+    tags = {'Name': kwargs['newname']}
+    try:
+        log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
+        data = conn.ex_create_tags(resource=node, tags=tags)
+        saltcloud.utils.rename_key(__opts__['pki_dir'], name, kwargs['newname'])
+    except Exception as exc:
+        log.error('Failed to rename {0} to {1}'.format(name, kwargs['newname']))
+        log.error(exc)
+
