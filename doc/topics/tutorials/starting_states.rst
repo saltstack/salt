@@ -5,7 +5,7 @@ How Do I Use Salt States?
 Simplicity, Simplicity, Simplicity
 
 Many of the most powerful and useful engineering solutions are founded on
-simple principals, the Salt SLS system strives to do just that. K.I.S.S.
+simple principles. The Salt SLS system strives to do just that. K.I.S.S.
 
 The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
