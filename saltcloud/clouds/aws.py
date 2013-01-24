@@ -409,7 +409,11 @@ def del_tags(name, kwargs):
 
 def rename(name, kwargs):
     '''
-    Properly rename a node
+    Properly rename a node. Pass in the new name as "new name".
+
+    CLI Example::
+
+        salt-cloud -a rename mymachine newname=yourmachine
     '''
     location = get_location()
     conn = get_conn(location=location)
