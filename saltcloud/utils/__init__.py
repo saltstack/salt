@@ -242,7 +242,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   deploy_command='/tmp/deploy.sh', sudo=False, tty=None,
                   name=None, pub_key=None, sock_dir=None, provider=None,
                   conf_file=None, start_action=None, minion_pub=None,
-                  minion_pem=None, minion_conf=None):
+                  minion_pem=None, minion_conf=None, master_pub=None,
+                  master_pem=None, master_conf=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -280,6 +281,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
             sftp = ssh.get_transport()
             sftp.open_session()
             sftp = paramiko.SFTPClient.from_transport(sftp)
+
+            # Minion configuration
             if minion_pem:
                 sftp_file(sftp, host, '/tmp/minion.pem', minion_pem)
                 ssh.exec_command('chmod 600 /tmp/minion.pem')
@@ -287,6 +290,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 sftp_file(sftp, host, '/tmp/minion.pub', minion_pub)
             if minion_conf:
                 sftp_file(sftp, host, '/tmp/minion', minion_conf)
+
+            # Master configuration
+            if master_pem:
+                sftp_file(sftp, host, '/tmp/master.pem', master_pem)
+                ssh.exec_command('chmod 600 /tmp/master.pem')
+            if master_pub:
+                sftp_file(sftp, host, '/tmp/master.pub', master_pub)
+            if master_conf:
+                sftp_file(sftp, host, '/tmp/master', master_conf)
+
+            # The actual deploy script
             if script:
                 sftp_file(sftp, host, '/tmp/deploy.sh', script)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
@@ -306,14 +320,18 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Starting new process to wait for salt-minion')
                 process.start()
 
+            # Run the deploy script
             if script:
                 log.debug('Executing /tmp/deploy.sh')
                 if 'bootstrap-salt-minion' in script:
                     deploy_command += ' -c /tmp/'
                 root_cmd(deploy_command, tty, sudo, **kwargs)
                 log.debug('Executed /tmp/deploy.sh')
+                # Remove the deploy script
                 ssh.exec_command('rm /tmp/deploy.sh')
                 log.debug('Removed /tmp/deploy.sh')
+
+            # Remove minion configuration
             if minion_pub:
                 ssh.exec_command('rm /tmp/minion.pub')
                 log.debug('Removed /tmp/minion.pub')
@@ -323,6 +341,18 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if minion_conf:
                 ssh.exec_command('rm /tmp/minion')
                 log.debug('Removed /tmp/minion')
+
+            # Remove master configuration
+            if master_pub:
+                ssh.exec_command('rm /tmp/master.pub')
+                log.debug('Removed /tmp/master.pub')
+            if master_pem:
+                ssh.exec_command('rm /tmp/master.pem')
+                log.debug('Removed /tmp/master.pem')
+            if master_conf:
+                ssh.exec_command('rm /tmp/master')
+                log.debug('Removed /tmp/master')
+
             if start_action:
                 queuereturn = queue.get()
                 process.join()
