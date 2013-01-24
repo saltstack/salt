@@ -1,5 +1,5 @@
 '''
-Manage groups on Linux
+Manage groups on Linux and OpenBSD
 '''
 
 # Import python libs
@@ -11,9 +11,9 @@ except ImportError:
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is Linux or OpenBSD
     '''
-    return 'group' if __grains__.get('kernel', '') == 'Linux' else False
+    return 'group' if __grains__['kernel'] in ('Linux', 'OpenBSD') else False
 
 
 def add(name, gid=None, system=False):
