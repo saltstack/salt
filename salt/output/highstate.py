@@ -76,10 +76,11 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = (' {0}Name: {1} - Function: {2} - Result: {3}{4}'
+                    msg = (' {0}Name: {1} - Function: {2}.{3} - Result: {4}{5}'
                             ).format(
                                     tcolor,
                                     comps[2],
+                                    comps[0],
                                     comps[-1],
                                     str(ret['result']),
                                     colors['ENDC']
