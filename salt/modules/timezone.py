@@ -122,11 +122,11 @@ def zone_compare(timezone):
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
 
     f = open(zonepath, 'r')
-    usrzone = f.read()
+    usrzone = md5.new(f.read()).hexdigest()
     f.close()
 
     f = open('/etc/localtime', 'r')
-    etczone = f.read()
+    etczone = md5.new(f.read()).hexdigest()
     f.close()
 
     if usrzone == etczone:
