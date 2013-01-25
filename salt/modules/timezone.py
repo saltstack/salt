@@ -4,6 +4,7 @@ Module for managing timezone on posix-like systems.
 
 # Import python libs
 import os
+import md5
 import logging
 
 log = logging.getLogger(__name__)
@@ -100,6 +101,34 @@ def set_zone(timezone):
         open('/etc/timezone', 'w').write(timezone)
 
     return True
+
+
+def zone_compare(timezone):
+    '''
+    Checks the md5sum between the given timezone, and the one set in
+    /etc/localtime. Returns True if they match, and False if not. Mostly useful
+    for running state checks.
+
+    Example::
+
+        salt '*' timezone.zone_compare 'America/Denver'
+    '''
+    if not os.path.exists('/etc/localtime'):
+        return 'Error: /etc/localtime does not exist.'
+
+    zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+
+    f = open(zonepath, 'r')
+    usrzone = f.read()
+    f.close()
+
+    f = open('/etc/localtime', 'r')
+    etczone = f.read()
+    f.close()
+
+    if usrzone == etczone:
+        return True
+    return False
 
 
 def get_hwclock():
