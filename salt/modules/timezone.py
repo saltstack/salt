@@ -72,7 +72,11 @@ def get_offset():
 
 def set_zone(timezone):
     '''
-    Unlinks, then symlinks /etc/localtime to the set timezone
+    Unlinks, then symlinks /etc/localtime to the set timezone.
+
+    The timezone is crucial to several system processes, each of which SHOULD
+    be restarted (for instance, whatever you system uses as its cron and
+    syslog daemons). This will not be magically done for you!
 
     CLI Example::
 
