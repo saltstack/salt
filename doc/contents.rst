@@ -27,7 +27,6 @@ Full Table of Contents
     topics/style
     topics/git/*
     topics/development/index
-    topics/specs/salt_auth_proto_abs
 
     ref/index
     ref/modules/*
