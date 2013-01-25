@@ -33,6 +33,7 @@ import os
 import glob
 import time
 import getpass
+import re
 
 # Import salt libs
 import salt.config
@@ -120,6 +121,26 @@ class LocalClient(object):
         elif user == self.opts['user']:
             return user
         return user
+
+    def __check_whitelist(self, fun):
+        '''
+        Check if whitelist exists for fun
+        '''
+        wl = self.opts['whitelist']
+        user = self.salt_user
+        if user is None:
+          user = self.opts['user']
+        try:
+            for wl_fun in wl:
+                if re.match(wl_fun, fun):
+                  for wl_user in wl[wl_fun]:
+                    if re.match(wl_user, user) or re.match('sudo_{0}'.format(wl_user), user):
+                      return True
+                  return False
+            return True
+        except TypeError, e:
+            raise SystemExit(('Problem reading the whitelist that is '
+                              'defined\n'))
 
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
@@ -940,6 +961,15 @@ class LocalClient(object):
         if expr_form == 'range' and HAS_RANGE:
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
+
+        # Check the whitelist before publishing
+        if 'whitelist' in self.opts:
+            if self.salt_user:
+                if not self.__check_whitelist(fun):
+                    err = ('You do not have permissions to run this function. '
+                    'Please contact your local administrator if you believe '
+                    'this is in error.\n')
+                    raise SystemExit(err)
 
         # If an external job cache is specified add it to the ret list
         if self.opts.get('ext_job_cache'):

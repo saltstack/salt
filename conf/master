@@ -187,7 +187,7 @@
 #   ext_nodes: <Shell command which returns yaml>
 #
 #master_tops: {}
-# 
+#
 # The external_nodes option allows Salt to gather data that would normally be
 # placed in a top file. The external_nodes option is the executable that will
 # return the ENC data. Remember that Salt will look for external nodes AND top
@@ -206,7 +206,7 @@
 # The state_verbose setting can be set to True or False, when set to False
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
-# 
+#
 # The state_output setting changes if the output is the full multi line
 # output for each changed state if set to 'full', but if set to 'terse'
 # the output will be shortened to a single line.
@@ -278,7 +278,7 @@
 # fileserver_backend:
 #   - git
 #   - roots
-#fileserver_backend: 
+#fileserver_backend:
 #   - roots
 #
 # Git fileserver backend configuration
@@ -407,7 +407,7 @@
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 #
 # This can be used to control logging levels more specificically.  This
-# example sets the main salt library at the 'warning' level, but sets 
+# example sets the main salt library at the 'warning' level, but sets
 # 'salt.modules' to log at the 'debug' level:
 #   log_granular_levels:
 #     'salt': 'warning',
@@ -443,4 +443,20 @@
 #
 # List of git repositories to include with the local repo
 # win_gitrepos:
-#   - 'https://github.com/saltstack/salt-winrepo.git' 
+#   - 'https://github.com/saltstack/salt-winrepo.git'
+
+
+#####     Master Whitelist            #####
+###########################################
+# Control the commands that may be executed on the master.  This is
+# easily bypassed, but it keeps casual users (sometimes the most
+# dangerous ones) from doing something stupid.
+#
+# A whitelist looks like:
+#whitelist:
+#  'cmd\..*':
+#    - foo
+#     - user2
+#     - user3
+#   test.ping:
+#     - '.*'
