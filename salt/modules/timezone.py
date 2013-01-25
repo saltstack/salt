@@ -4,7 +4,7 @@ Module for managing timezone on posix-like systems.
 
 # Import python libs
 import os
-import md5
+import hashlib
 import salt.utils
 import logging
 
@@ -123,10 +123,10 @@ def zone_compare(timezone):
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
 
     with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = md5.new(fp_.read()).hexdigest()
+        usrzone = hashlib.md5(fp_.read()).hexdigest()
 
     with salt.utils.fopen('/etc/localtime', 'r') as fp_:
-        etczone = md5.new(fp_.read()).hexdigest()
+        etczone = hashlib.md5(fp_.read()).hexdigest()
 
     if usrzone == etczone:
         return True
