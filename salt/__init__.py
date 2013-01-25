@@ -192,8 +192,6 @@ class Minion(parsers.MinionOptionParser):
         except KeyboardInterrupt:
             logger.warn('Stopping the Salt Minion')
             self.shutdown()
-        finally:
-            raise SystemExit('\nExiting on Ctrl-c')
 
     def shutdown(self):
         '''
@@ -269,8 +267,6 @@ class Syndic(parsers.SyndicOptionParser):
             except KeyboardInterrupt:
                 logger.warn('Stopping the Salt Syndic Minion')
                 self.shutdown()
-            finally:
-                raise SystemExit('\nExiting on Ctrl-c')
 
     def shutdown(self):
         '''
