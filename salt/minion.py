@@ -15,6 +15,7 @@ import threading
 import time
 import traceback
 import sys
+import signal
 
 # Import third party libs
 import zmq
@@ -589,6 +590,12 @@ class Minion(object):
             self.schedule.functions = self.functions
             self.schedule.returners = self.returners
 
+    def handle_sigchld(self, sig, frame):
+        '''
+        Passively join the finished child procs
+        '''
+        multiprocessing.active_children()
+
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
@@ -704,6 +711,7 @@ class Minion(object):
             'minion_start'
         )
 
+        signal.signal(signal.SIGCHLD, self.handle_sigchld)
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
@@ -722,7 +730,6 @@ class Minion(object):
                 time.sleep(0.05)
                 # Clean up the minion processes which have been executed and
                 # have finished
-                multiprocessing.active_children()
                 # Check if modules and grains need to be refreshed
                 self.passive_refresh()
                 # Check the event system
@@ -732,6 +739,11 @@ class Minion(object):
                         self.epub_sock.send(package)
                     except Exception:
                         pass
+            except zmq.ZMQError:
+                # This is thrown by the inturupt caused by python handling the
+                # SIGCHLD. This is a safe error and we just start the poll
+                # again
+                continue
             except Exception:
                 log.critical(traceback.format_exc())
 
