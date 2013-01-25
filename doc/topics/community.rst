@@ -78,6 +78,7 @@ A few examples of salt states from the community:
 * https://github.com/rentalita/ubuntu-setup/
 * https://github.com/brutasse/states
 * https://github.com/bclermont/states
+* https://github.com/pcrews/salt-data
 
 Follow on ohloh
 ===============
