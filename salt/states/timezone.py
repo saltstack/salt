@@ -7,7 +7,7 @@ The timezone can be managed for the system:
 .. code-block:: yaml
 
     America/Denver:
-      timezone.system
+      timezone.system:
         utc: True
 '''
 
