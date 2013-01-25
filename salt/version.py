@@ -19,6 +19,7 @@ def __get_version_info_from_git(version, version_info):
         process = subprocess.Popen(
                 'which git',
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 shell=True
         )
         git, _ = process.communicate()
