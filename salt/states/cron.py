@@ -37,7 +37,7 @@ then a new cron job will be added to the user's crontab.
 import os
 
 # Import salt libs
-from salt.utils import mkstemp
+from salt.utils import mkstemp, fopen
 
 
 def _check_cron(cmd, user, minute, hour, dom, month, dow):
@@ -304,7 +304,7 @@ def file(name,
     owner, group, crontab_dir = _get_cron_info()
 
     cron_path = mkstemp()
-    with open(cron_path, 'w+') as fp_:
+    with fopen(cron_path, 'w+') as fp_:
         fp_.write(__salt__['cron.raw_cron'](user))
 
     ret = {'changes': {},
@@ -377,9 +377,14 @@ def file(name,
                                        mode,
                                        env,
                                        backup)
+    if ret['changes']:
+        ret['changes'] = {'diff': ret['changes']['diff']}
+        ret['comment'] = 'Crontab for user {0} was updated'.format(user)
+    elif ret['result']:
+        ret['comment'] = 'Crontab for user {0} is in the correct ' \
+                         'state'.format(user)
     if not __salt__['cron.write_cron_file'](user, cron_path):
-        ret['comment'] = 'Crontab file updated, but was unable to ' \
-                         'update cron daemon'
+        ret['comment'] = 'Unable to update user {0} crontab'.format(user)
         ret['result'] = False
     os.unlink(cron_path)
     return ret
