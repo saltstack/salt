@@ -21,7 +21,7 @@ def __virtual__():
 
 def system(name, utc=''):
     '''
-    Set the timezone for the system
+    Set the timezone for the system.
 
     name
         The name of the timezone to use (e.g.: America/Denver)
