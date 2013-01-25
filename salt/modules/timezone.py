@@ -40,6 +40,9 @@ def get_zone():
         return open('/etc/timezone','r').read()
     elif 'Gentoo' in __grains__['os_family']:
         return open('/etc/timezone','r').read()
+    elif 'FreeBSD' in __grains__['os_family']:
+        return ('FreeBSD does not store a human-readable timezone. Please'
+                'consider using timezone.get_zonecode or timezone.zonecompare')
     out = __salt__['cmd.run'](cmd).split('=')
     ret = out[1].replace('"', '')
     return ret
