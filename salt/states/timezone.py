@@ -36,14 +36,14 @@ def system(name, utc=''):
     # Set up metadata
     do_utc = False
     do_zone = False
-    myzone = __salt__['timezone.get_zone']()
+    compzone = __salt__['timezone.zone_compare'](name)
     myutc = True
     messages = []
     if __salt__['timezone.get_hwclock']() == 'localtime':
         myutc = False
 
     # Check the time zone
-    if myzone == name:
+    if compzone is True:
         ret['result'] = True
         messages.append('Timezone {0} already set'.format(name))
     else:
@@ -62,7 +62,7 @@ def system(name, utc=''):
 
     if __opts__['test']:
         messages = []
-        if myzone != name:
+        if compzone is False:
             messages.append('Timezone {0} needs to be set'.format(name))
         if utc != '' and myutc != utc:
             messages.append('UTC needs to be set to {0}'.format(utc))
