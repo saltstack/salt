@@ -13,7 +13,7 @@ backports for dependencies:
 
 .. code-block:: bash
 
-    for i in salt-{common,master,minion,syndic,doc}; do
+    for i in salt-{common,master,minion,syndic,doc} sysvinit-utils; do
     echo "Package: $i"
     echo "Pin: release a=squeeze-backports"
     echo "Pin-Priority: 600"
