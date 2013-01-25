@@ -356,7 +356,6 @@ class Publisher(multiprocessing.Process):
             if pull_sock.closed is False:
                 pull_sock.setsockopt(zmq.LINGER, 1)
                 pull_sock.close()
-        finally:
             if context.closed is False:
                 context.term()
 
@@ -1032,22 +1031,14 @@ class AESFuncs(object):
         else:
             ret_form = 'clean'
         if ret_form == 'clean':
-            try:
-                return self.local.get_returns(
-                    jid,
-                    self.ckminions.check_minions(
-                        clear_load['tgt'],
-                        expr_form
-                    ),
-                    timeout
-                )
-            finally:
-                self.local.event.unsubscribe(load['jid'])
-                if pub_sock.closed is False:
-                    pub_sock.setsockopt(zmq.LINGER, 1)
-                    pub_sock.close()
-                if context.closed is False:
-                    context.term()
+            return self.local.get_returns(
+                jid,
+                self.ckminions.check_minions(
+                    clear_load['tgt'],
+                    expr_form
+                ),
+                timeout
+            )
         elif ret_form == 'full':
             ret = self.local.get_full_returns(
                     jid,
@@ -1058,15 +1049,7 @@ class AESFuncs(object):
                     timeout
                     )
             ret['__jid__'] = jid
-            try:
-                return ret
-            finally:
-                self.local.event.unsubscribe(load['jid'])
-                if pub_sock.closed is False:
-                    pub_sock.setsockopt(zmq.LINGER, 1)
-                    pub_sock.close()
-                if context.closed is False:
-                    context.term()
+            return ret
 
     def run_func(self, func, load):
         '''
