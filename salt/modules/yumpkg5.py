@@ -55,6 +55,11 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
+    # Force input to be a list so below loop works
+    if not isinstance(old, list):
+        old = [old]
+    if not isinstance(new, list):
+        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -177,8 +182,13 @@ def refresh_db():
     return True
 
 
-def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
-            pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            skip_verify=False,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -194,7 +204,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to clean the yum database before executing.
+        Whether or not to update the yum database before executing.
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
@@ -242,6 +252,15 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    # This allows modules to specify the version in a kwarg, like the other
+    # package modules
+    if kwargs.get('version'):
+        if pkgs is None and sources is None:
+            name = '{0}-{1}'.format(name, kwargs.get('version'))
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
+
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
@@ -262,21 +281,31 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         fromrepo = repo
 
     if fromrepo:
-        log.info('Restricting install to repo \'{0}\''.format(fromrepo))
+        log.info('Restricting install to repo "{0}"'.format(fromrepo))
         repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
     else:
         repo_arg = ''
         if disablerepo:
-            log.info('Disabling repo \'{0}\''.format(disablerepo))
+            log.info('Disabling repo "{0}"'.format(disablerepo))
             repo_arg += '--disablerepo="{0}" '.format(disablerepo)
         if enablerepo:
-            log.info('Enabling repo \'{0}\''.format(enablerepo))
+            log.info('Enabling repo "{0}"'.format(enablerepo))
             repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+
+    if pkg_type == 'repository' and pkgs:
+        targets = []
+        for param, version in pkg_params.iteritems():
+            if version is None:
+                targets.append(param)
+            else:
+                targets.append('{0}-{1}'.format(param, version))
+    else:
+        targets = pkg_params
 
     cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
         repo=repo_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkg=' '.join(pkg_params),
+        pkg=' '.join(targets),
     )
     old = list_pkgs()
     __salt__['cmd.run_all'](cmd)

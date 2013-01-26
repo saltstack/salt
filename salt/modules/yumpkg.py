@@ -93,6 +93,11 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
+    # Force input to be a list so below loop works
+    if not isinstance(old, list):
+        old = [old]
+    if not isinstance(new, list):
+        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -251,8 +256,13 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
-            pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            skip_verify=False,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -268,7 +278,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to clean the yum database before executing.
+        Whether or not to update the yum database before executing.
 
     skip_verify
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
@@ -316,11 +326,14 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-
     # This allows modules to specify the version in a kwarg, like the other
     # package modules
-    if kwargs.get('version') and pkgs is None and sources is None:
-        name = '{0}-{1}'.format(name, kwargs.get('version'))
+    if kwargs.get('version'):
+        if pkgs is None and sources is None:
+            name = '{0}-{1}'.format(name, kwargs.get('version'))
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
 
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
@@ -376,6 +389,9 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
                     log.info('Upgrade failed, trying local downgrade')
                     yumbase.downgradeLocal(target)
             else:
+                version = pkg_params[target]
+                if version is not None:
+                    target = '{0}-{1}'.format(target, version)
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
                 installed = yumbase.install(pattern=target)
@@ -591,11 +607,11 @@ def group_diff(groupname):
         salt '*' pkg.group_diff 'Perl Support'
     '''
     ret = {
-           'mandatory packages': {'installed': [], 'not installed': []},
-           'optional packages': {'installed': [], 'not installed': []},
-           'default packages': {'installed': [], 'not installed': []},
-           'conditional packages': {'installed': [], 'not installed': []},
-           }
+        'mandatory packages': {'installed': [], 'not installed': []},
+        'optional packages': {'installed': [], 'not installed': []},
+        'default packages': {'installed': [], 'not installed': []},
+        'conditional packages': {'installed': [], 'not installed': []},
+    }
     pkgs = list_pkgs()
     yumbase = yum.YumBase()
     (installed, available) = yumbase.doGroupLists()
