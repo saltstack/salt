@@ -2,7 +2,22 @@
 '''
 The setup script for saltapi
 '''
-from distutils.core import setup
+
+import os
+# Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
+# This ensures consistent behavior but allows for advanced usage with
+# virtualenv, buildout, and others.
+USE_SETUPTOOLS = False
+if 'USE_SETUPTOOLS' in os.environ:
+    try:
+        from setuptools import setup
+        USE_SETUPTOOLS = True
+    except:
+        USE_SETUPTOOLS = False
+
+
+if USE_SETUPTOOLS is False:
+    from distutils.core import setup
 
 # pylint: disable-msg=W0122,E0602
 exec(compile(open('saltapi/version.py').read(), 'saltapi/version.py', 'exec'))
