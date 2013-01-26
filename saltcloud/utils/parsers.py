@@ -204,6 +204,12 @@ class ExecutionOptionsMixIn(object):
             action='store_true',
             help='Update salt-bootstrap to the latest develop version on GitHub'
         )
+        group.add_option(
+            '-y', '--assume-yes',
+            default=False,
+            action='store_true',
+            help='Default yes in answer to all confirmation questions'
+        )
         self.add_option_group(group)
 
 
