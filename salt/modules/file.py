@@ -1417,7 +1417,7 @@ def makedirs(path, user=None, group=None, mode=None):
         # follow the principal of least surprise method.
 
 
-def makedirs_perms(name, user=None, group=None, mode=0755):
+def makedirs_perms(name, user=None, group=None, mode='0755'):
     '''
     Taken and modified from os.makedirs to set user, group and mode for each
     directory created.
