@@ -56,7 +56,16 @@ def managed(name, **kwargs):
         in the repo configuration with a comment marker (#) in front.
     
 
-    For apt-based systems, take note of the following configuration vaolues:
+    For apt-based systems, take note of the following configuration values:
+
+    name:
+        on apt-based systems this must be the complete entry as it would be
+        seen in the sources.list file.  This can have a limited subset of 
+        components (i.e. 'main') which can be added/modified with the
+        "comps" option.
+
+          EXAMPLE: deb http://us.archive.ubuntu.com/ubuntu/ precise main
+
 
     uri
         On apt-based systems, uri refers to a direct URL to be used for the 
