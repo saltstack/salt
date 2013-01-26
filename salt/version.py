@@ -24,8 +24,9 @@ def __get_version_info_from_git(version, version_info):
     '''
     try:
         process = subprocess.Popen(
-                'which git',
+                'command -v git',
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 shell=True
         )
         git, _ = process.communicate()
