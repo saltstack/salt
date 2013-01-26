@@ -456,7 +456,7 @@ class Minions(LowDataAdapter):
 
         .. http:post:: /minions
 
-            You must pass low-data in the requst body either from an HTML form
+            You must pass low-data in the request body either from an HTML form
             or as JSON or YAML. The ``client`` option is pre-set to
             ``local_async``.
 
