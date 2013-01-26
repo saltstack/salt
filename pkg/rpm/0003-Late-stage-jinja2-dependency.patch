@@ -28,7 +28,7 @@ index 290339d..11f428d 100644
 +
 +    # Late import salt libs to overcome circular imports and to allow building
 +    # salt without making Jinja2 a build dependency
-+    import salt.minon
++    import salt.minion
 +    import salt.payload
 +
      serial = salt.payload.Serial(opts)
