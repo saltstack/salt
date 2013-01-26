@@ -1,3 +1,4 @@
 conf/cloud /etc/salt
+conf/* /usr/share/doc/salt-cloud/examples
 usr/lib/python2*/dist-packages/saltcloud/
 scripts/salt-cloud /usr/bin
