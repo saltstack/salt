@@ -509,9 +509,40 @@ def compare(version1='', version2=''):
     return None
 
 def _split_repo_str(repo):
-    splitter = sourceslist.SourceEntry('')
-    split = splitter.mysplit(repo)
-    return split[0], split[1], split[2], split[3:]
+    split = sourceslist.SourceEntry(repo)
+    return split.type, split.uri, split.dist, split.comps
+
+def _consolidate_repo_sources(sources):
+    if not isinstance(sources, sourceslist.SourcesList):
+        raise TypeError('"{0}" not a "{1}"'.format(type(sources),
+                                                   sourceslist.SourcesList))
+
+    consolidated = {}
+    delete_files = set()
+    base_file = sourceslist.SourceEntry('').file
+
+    repos = filter(lambda s: not s.invalid, sources.list)
+
+    for r in repos:
+        key = str((r.architectures, r.disabled, r.type, r.uri))
+        if key in consolidated:
+            combined = consolidated[key]
+            combined_comps = set(r.comps).union(set(combined.comps))
+            consolidated[key].comps = list(combined_comps)
+        else:
+            consolidated[key] = sourceslist.SourceEntry(r.line)
+
+        if r.file != base_file:
+            delete_files.add(r.file)
+
+    sources.list = consolidated.values()
+    sources.save()
+    for f in delete_files:
+        try:
+            os.remove(f)
+        except:
+            pass
+    return sources
 
 def list_repos():
     '''
@@ -687,10 +718,13 @@ def mod_repo(repo, refresh=False, **kwargs):
 
     The following options are available to modify a repo definition::
 
-        uri (the uri of the repo, e.g. http://archive.ubuntu.com/ubuntu )
         comps (a comma separated list of components for the repo, e.g. "main")
         file (a file name to be used)
         refresh (refresh the apt sources db when the mod is done)
+        keyserver (keyserver to get gpg key from)
+        keyid (key id to load with the keyserver argument)
+        key_url (URl to a gpg key to add to the apt gpg keyring)
+        consolidate (if true, will attempt to de-dup and consolidate sources)
 
     CLI Examples::
 
@@ -698,15 +732,15 @@ def mod_repo(repo, refresh=False, **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
     if not apt_support:
-        return 'Error: aptsources.sourceslist python module not found'
+        raise ImportError('Error: aptsources.sourceslist module not found')
 
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
-    _MODIFY_OK = set(['uri', 'comps', 'architectures', 'disabled', 'file', 'dist'])
+    _MODIFY_OK = set(['comps', 'architectures', 'disabled', 'file', 'dist'])
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         if not ppa_format_support:
             error_str = 'cannot parse "ppa:" style repo definitions: {0}'
-            return error_str.format(repo)
+            raise Exception(error_str.format(repo))
         ppa = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
         cmd = 'apt-add-repository -y {0}'.format(repo)
         out = __salt__['cmd.run_stdout'](cmd)
@@ -715,6 +749,20 @@ def mod_repo(repo, refresh=False, **kwargs):
         return {repo: out}
     else:
         sources = sourceslist.SourcesList()
+        if kwargs.get('consolidate', False):
+            # attempt to de-dup and consolidate all sources
+            # down to entries in sources.list
+            # this option makes it easier to keep the sources
+            # list in a "sane" state.
+            #
+            # this should remove duplicates, consolidate comps
+            # for a given source down to one line
+            # and eliminate "invalid" and comment lines
+            #
+            # the second side effect is removal of files
+            # that are not the main sources.list file
+            sources = _consolidate_repo_sources(sources)
+
         repos = filter(lambda s: not s.invalid, sources)
         if repos:
             mod_source = None
@@ -722,22 +770,42 @@ def mod_repo(repo, refresh=False, **kwargs):
                 repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
             except SyntaxError:
                 error_str = 'Error: repo "{0}" not a well formatted definition'
-                return error_str.format(repo)
+                raise SyntaxError(error_str.format(repo))
 
-            for source in repos:
-                if (source.type == repo_type and source.uri == repo_uri and
-                    source.dist == repo_dist):
+            full_comp_list = set(repo_comps)
 
-                    for comp in repo_comps:
-                        if comp in getattr(source, 'comps', []):
-                            mod_source = source
-                    if not source.comps:
-                        mod_source = source
-                    if mod_source:
-                        break
-  
+            if 'keyid' in kwargs:
+                keyid = kwargs.pop('keyid', None)
+                ks = kwargs.pop('keyserver', None)
+                if not keyid or not ks:
+                    error_str = 'both keyserver and keyid options required.'
+                    raise NameError(error_str)
+                cmd = 'apt-key export {0}'.format(keyid)
+                output = __salt__['cmd.run_stdout'](cmd)
+                imported = output.startswith('-----BEGIN PGP')
+                if ks:
+                    cmd = 'apt-key export {0}'.format(keyid)
+                    output = __salt__['cmd.run_stdout'](cmd)
+                    if not imported:
+                        cmd = 'apt-key adv --keyserver {0} --logger-fd 1 --recv-keys {1}'
+                        out = __salt__['cmd.run_stdout'](cmd.format(keyid, fp))
+                        if not out.find('imported') or out.find('not changed'):
+                            error_str = 'Error: key retrieval failed: {0}'
+                            raise Exception(error_str.format(cmd.format(ks,
+                                                                        keyid)))
+            elif 'key_url' in kwargs:
+                key_url = kwargs.pop('key_url', None)
+                cmd = 'wget -q -O- {0} | apt-key add -'.format(key_url)
+                out = __salt__['cmd.run_stdout'](cmd)
+                if not out.upper().startswith('OK'):
+                    error_str = 'Error: key retrieval failed: {0}'
+                    raise Exception(error_str.format(cmd.format(key_url)))
+
             if 'comps' in kwargs:
                 kwargs['comps'] = kwargs['comps'].split(',')
+                full_comp_list.union(set(kwargs['comps']))
+            else:
+               kwargs['comps'] = list(full_comp_list)
 
             if 'architecturess' in kwargs:
                 kwargs['architectures'] = kwargs['architectures'].split(',')
@@ -748,7 +816,28 @@ def mod_repo(repo, refresh=False, **kwargs):
                     kwargs['disabled'] = True
                 else:
                     kwargs['disabled'] = False
- 
+
+            kw_type = kwargs.get('type')
+            kw_uri = kwargs.get('uri')
+            kw_dist = kwargs.get('dist')
+
+            for source in repos:
+                # This series of checks will identify the starting source line
+                # and the resulting source line.  The idea here is to ensure
+                # we are not retuning bogus data because the source line
+                # has already been modified on a previous run.
+                if ((source.type == repo_type and source.uri == repo_uri and
+                     source.dist == repo_dist) or (source.dist == kw_dist and
+                     source.type == kw_type and source.type == kw_type)):
+
+                    for comp in full_comp_list:
+                        if comp in getattr(source, 'comps', []):
+                            mod_source = source
+                    if not source.comps:
+                        mod_source = source
+                    if mod_source:
+                        break
+
             if not mod_source:
                 mod_source = sourceslist.SourceEntry(repo)
                 sources.list.append(mod_source)
@@ -757,7 +846,7 @@ def mod_repo(repo, refresh=False, **kwargs):
             # match, it is important we keep the comps
             # not destined to be disabled/enabled in
             # the original state
-            if ('disabled' in kwargs and 
+            if ('disabled' in kwargs and
                 mod_source.disabled != kwargs['disabled']):
 
                 s_comps = set(mod_source.comps)
@@ -778,12 +867,13 @@ def mod_repo(repo, refresh=False, **kwargs):
             if refresh is True or str(refresh).lower() == 'true':
                 refresh_db()
             return { repo: {
-                     'architectures': mod_source.architectures,
-                     'comps': mod_source.comps,
-                     'disabled': mod_source.disabled,
-                     'file': mod_source.file,
-                     'type': mod_source.type,
-                     'uri': mod_source.uri, 
-                     'line': mod_source.line,
-                     }
+                            'architectures': mod_source.architectures,
+                            'comps': mod_source.comps,
+                            'disabled': mod_source.disabled,
+                            'file': mod_source.file,
+                            'type': mod_source.type,
+                            'uri': mod_source.uri,
+                            'line': mod_source.line,
+                           }
                    }
+
