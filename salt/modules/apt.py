@@ -687,7 +687,7 @@ def mod_repo(repo, refresh=False, **kwargs):
 
     The following options are available to modify a repo definition::
 
-        uri (the uri of the repo, e.g. deb http://archive.ubuntu.com/ubuntu)
+        uri (the uri of the repo, e.g. http://archive.ubuntu.com/ubuntu )
         comps (a comma separated list of components for the repo, e.g. "main")
         file (a file name to be used)
         refresh (refresh the apt sources db when the mod is done)
