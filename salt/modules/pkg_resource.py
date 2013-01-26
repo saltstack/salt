@@ -107,7 +107,7 @@ def pack_pkgs(pkgs):
             log.error(err)
             return []
     if not isinstance(pkgs, list) \
-    or [x for x in pkgs if not isinstance(x, basestring)]:
+            or [x for x in pkgs if not isinstance(x, basestring)]:
         log.error('Invalid input: {0}'.format(pprint.pformat(pkgs)))
         log.error('Input must be a list of strings')
         return []
@@ -248,7 +248,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
-        and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
+                and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
             problems = _verify_binary_pkg(srcinfo)
             # If any problems are found in the caching or metadata parsing done
             # in the above for loop, log each problem and return None,None,
@@ -332,13 +332,13 @@ def compare(pkg1='', pkg2=''):
     '''
     try:
         if distutils.version.LooseVersion(pkg1) < \
-           distutils.version.LooseVersion(pkg2):
+                distutils.version.LooseVersion(pkg2):
             return -1
         elif distutils.version.LooseVersion(pkg1) == \
-             distutils.version.LooseVersion(pkg2):
+                distutils.version.LooseVersion(pkg2):
             return 0
         elif distutils.version.LooseVersion(pkg1) > \
-             distutils.version.LooseVersion(pkg2):
+                distutils.version.LooseVersion(pkg2):
             return 1
     except Exception as e:
         log.exception(e)
