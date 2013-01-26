@@ -95,23 +95,40 @@ def _parse_pkg_meta(path):
 
 def pack_pkgs(pkgs):
     '''
-    Accepts list (or a string representing a list) and returns back either the
-    list passed, or the list represenation of the string passed.
+    Accepts a list of packages or package/version pairs (or a string
+    representing said list) and returns a dict of name/version pairs. For a
+    given package, if no version was specified (i.e. the value is a string and
+    not a dict, then the dict returned will use None as the value for that
+    package.
 
-    Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
+    Example: '["foo", {"bar": 1.2}, "baz"]' would become
+             {'foo': None, 'bar': 1.2, 'baz': None}
     '''
     if isinstance(pkgs, basestring):
         try:
             pkgs = yaml.safe_load(pkgs)
         except yaml.parser.ParserError as err:
             log.error(err)
-            return []
+            return {}
     if not isinstance(pkgs, list) \
-            or [x for x in pkgs if not isinstance(x, basestring)]:
+            or [x for x in pkgs if not isinstance(x, (basestring, int,
+                                                      float, dict))]:
         log.error('Invalid input: {0}'.format(pprint.pformat(pkgs)))
-        log.error('Input must be a list of strings')
-        return []
-    return pkgs
+        log.error('Input must be a list of strings/dicts')
+        return {}
+    ret = {}
+    for pkg in pkgs:
+        if isinstance(pkg, (basestring, int, float)):
+            ret[pkg] = None
+        else:
+            if len(pkg) != 1:
+                log.error('Invalid input: package name/version pairs must '
+                          'contain only one element (data passed: '
+                          '{0}).'.format(pkg))
+                return {}
+            ret.update(pkg)
+    return dict([(str(x), str(y) if y is not None else y)
+                 for x, y in ret.iteritems()])
 
 
 def pack_sources(sources):
