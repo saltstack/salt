@@ -48,7 +48,7 @@ def search(pkg_name):
         return {"Results": res}
 
 
-def available_version(name):
+def available_version(*names):
     '''
     The available version of the package in the repository
 
@@ -56,14 +56,49 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
+
+    ret = {}
+
     if _check_pkgng():
-        for line in __salt__['cmd.run']('{0} search -f {1}'.format(
-            _cmd('pkg'), name)
+        for line in __salt__['cmd.run_stdout']('{0} upgrade -nq'.format(
+            _cmd('pkg'))
         ).splitlines():
-            if line.startswith('Version'):
-                _, ver = line.split(':', 1)
-                return ver.strip()
-    return ''
+            if not line.startswith('\t'):
+                continue
+            line = line.strip()
+            if line.startswith('Installing'):
+                _, pkg, ver = line.split()
+                pkg = pkg.rstrip(':')
+            elif line.startswith('Upgrading'):
+                _, pkg, _, _, ver = line.split()
+                pkg = pkg.rstrip(':')
+            elif line.startswith('Reinstalling'):
+                _, pkgver = line.split()
+                comps = pkgver.split('-')
+                pkg = ''.join(comps[:-1])
+                ver = comps[-1]
+            else:
+                # unexpected string
+                continue
+            if pkg in names:
+                ret[pkg] = ver
+
+        # keep pkg.latest culm
+        for pkg in set(names) - set(ret) - set(list_pkgs()):
+            for line in __salt__['cmd.run']('{0} search -fe {1}'.format(
+                _cmd('pkg'), pkg)
+            ).splitlines():
+                if line.startswith('Version'):
+                    _, _, ver = line.split()[:3]
+                    ret[pkg] = ver
+                    break
+
+    ret.update(dict.fromkeys(set(names) - set(ret), ''))
+
+    if len(names) == 1:
+        return ret.values()[0]
+
+    return ret
 
 
 def version(name):
