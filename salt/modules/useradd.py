@@ -421,7 +421,12 @@ def list_groups(name):
     ugrp = set()
 
     # Add the primary user's group
-    ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    try:
+        ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    except KeyError:
+        # The user's applied default group is undefined on the system, so
+        # it does not exist
+        pass
 
     # If we already grabbed the group list, it's overkill to grab it again
     if 'useradd_getgrall' in __context__:
