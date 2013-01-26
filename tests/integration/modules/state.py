@@ -224,8 +224,10 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
     
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_issue_2068_template_str(self):
+        ret = self.run_function('cmd.has_exec', ['virtualenv'])
+        if not ret:
+            self.skipTest('virtualenv not installed')
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
         )
