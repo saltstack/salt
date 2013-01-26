@@ -23,26 +23,18 @@ def __get_version_info_from_git(version, version_info):
     If we can get a version from Git use that instead, otherwise we carry on
     '''
     try:
-        process = subprocess.Popen(
-                'command -v git',
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True
-        )
-        git, _ = process.communicate()
-        if process.poll() != 0:
-            return version, version_info
-        git = git[:-1]
-
-        process = subprocess.Popen(
-            [git, 'describe', '--tags'],
+        kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            close_fds=True,
             cwd=os.path.abspath(os.path.dirname(__file__))
         )
-        out, _ = process.communicate()
-        if not out.strip():
+        if not sys.platform.startswith('win'):
+            # Let's not import `salt.utils` for the above check
+            kwargs['close_fds'] = True
+
+        process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
+        out, err = process.communicate()
+        if not out.strip() or err.strip():
             return version, version_info
 
         match = GIT_DESCRIBE_RE.search(out.strip())
