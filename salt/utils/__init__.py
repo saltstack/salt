@@ -234,7 +234,7 @@ def profile_func(filename=None):
 
 def which(exe=None):
     '''
-    Python clone of POSIX's /usr/bin/which
+    Python clone of /usr/bin/which
     '''
     if exe:
         if os.access(exe, os.X_OK):
