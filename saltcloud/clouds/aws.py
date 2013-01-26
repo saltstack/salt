@@ -83,7 +83,6 @@ def __virtual__():
     avail_images = namespaced_function(avail_images, globals(), (conn,))
     avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
-    destroy = namespaced_function(destroy, globals(), (conn,))
     list_nodes = namespaced_function(list_nodes, globals(), (conn,))
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
@@ -477,6 +476,22 @@ def rename(name, kwargs):
             )
         )
         log.error(exc)
+
+
+def destroy(name):
+    '''
+    Wrap core libcloudfuncs destroy method, adding check for termination protection
+    '''
+    from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
+    location = get_location()
+    conn = get_conn(location=location)
+    try:
+        libcloudfuncs_destroy(name, conn)
+    except Exception as e:
+        if e.message.startswith('OperationNotPermitted'):
+            log.warning('Failed: termination protection is enabled on {0}'.format(name))
+        else:
+            raise e
 
 
 def enable_term_protect(name):
