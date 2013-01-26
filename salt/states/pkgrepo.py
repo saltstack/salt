@@ -54,40 +54,55 @@ def managed(name, **kwargs):
         Sometimes you want to supply additional information, but not as
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
-    
+
 
     For apt-based systems, take note of the following configuration values:
 
     name:
         on apt-based systems this must be the complete entry as it would be
-        seen in the sources.list file.  This can have a limited subset of 
+        seen in the sources.list file.  This can have a limited subset of
         components (i.e. 'main') which can be added/modified with the
         "comps" option.
 
           EXAMPLE: deb http://us.archive.ubuntu.com/ubuntu/ precise main
 
-
-    uri
-        On apt-based systems, uri refers to a direct URL to be used for the 
-        apt repo.
-
     disabled
-        On apt-based systems, disabled toggles whether or not the repo is 
+        On apt-based systems, disabled toggles whether or not the repo is
         used for resolving dependancies and/or installing packages
 
     comps
         On apt-based systems, comps dictate the types of packages to be
-        installed from the repository (e.g. main, nonfree, ...).  For 
+        installed from the repository (e.g. main, nonfree, ...).  For
         purposes of this, comps should be a comma-separated list.
 
     file
        The filename for the .list that the repository is configured in.
        It is important to include the full-path AND make sure it is in
        a directory that APT will look in when handling packages
-  
+
     dist
        This dictates the release of the distro the packages should be built
-       for.  (e.g. unstable)    
+       for.  (e.g. unstable)
+
+    keyid
+       The KeyID of the GPG key to install.  This option also requires
+       the 'keyserver' option to be set.
+
+    keyserver
+       This is the name of the keyserver to retrieve gpg keys from.  The
+       keyid option must also be set for this option to work.
+
+    key_url
+       A web url to retreive the GPG key from.
+
+    consolidate:
+       If set to true, this will consolidate all sources definitions to
+       the sources.list file, cleanup the now unused files, consolidate
+       components (e.g. main) for the same uri, type, and architecture
+       to a single line, and finally remove comments from the sources.list
+       file.  The consolidate will run every time the state is processed. The
+       option only needs to be set on one repo managed by salt to take effect.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -125,14 +140,20 @@ def managed(name, **kwargs):
     if __opts__['test']:
         ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
         return ret
-
-
-    __salt__['pkg.mod_repo'](repo=name, **repokwargs)
+    try:
+        __salt__['pkg.mod_repo'](repo=name, **repokwargs)
+    except Exception, e:
+        # This is another way to pass information back from the mod_repo
+        # function.
+        ret['result'] = False
+        ret['comment'] = 'Failed to configure repo "{0}": {1}'.format(name,
+                                                                      str(e))
+        return ret
     try:
         repodict = __salt__['pkg.get_repo'](name)
         if repo:
             for kwarg in repokwargs:
-                if repodict[kwarg] != repo.get(kwarg):
+                if repodict.get(kwarg) != repo.get(kwarg):
                     change = { 'new': repodict[kwarg],
                                'old': repo.get(kwarg) }
                     ret['changes'][kwarg] = change
