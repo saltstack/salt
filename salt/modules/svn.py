@@ -23,7 +23,9 @@ def __virtual__():
 
 
 def _check_svn():
-    '''Check for svn on this node.'''
+    '''
+    Check for svn on this node.
+    '''
     utils.check_or_die('svn')
 
 
