@@ -252,15 +252,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # This allows modules to specify the version in a kwarg, like the other
-    # package modules
-    if kwargs.get('version'):
-        if pkgs is None and sources is None:
-            name = '{0}-{1}'.format(name, kwargs.get('version'))
-        else:
-            log.warning('"version" parameter will be ignored for muliple '
-                        'package targets')
-
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
@@ -275,6 +266,15 @@ def install(name=None,
     disablerepo = kwargs.get('disablerepo', '')
     enablerepo = kwargs.get('enablerepo', '')
     repo = kwargs.get('repo', '')
+    version = kwargs.get('version')
+
+    if version:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version}
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
 
     # Support old "repo" argument
     if not fromrepo and repo:
@@ -292,7 +292,7 @@ def install(name=None,
             log.info('Enabling repo "{0}"'.format(enablerepo))
             repo_arg += '--enablerepo="{0}" '.format(enablerepo)
 
-    if pkg_type == 'repository' and pkgs:
+    if pkg_type == 'repository':
         targets = []
         for param, version in pkg_params.iteritems():
             if version is None:
