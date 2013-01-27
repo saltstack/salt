@@ -339,7 +339,7 @@ def find_changes(old=None, new=None):
     return pkgs
 
 
-def compare(pkg1='', pkg2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
     Compares two version strings using distutils.version.LooseVersion. This is
     a fallback for providers which don't have a version comparison utility
@@ -360,3 +360,24 @@ def compare(pkg1='', pkg2=''):
     except Exception as e:
         log.exception(e)
     return None
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Package version comparison function.
+    '''
+    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
+               '>=': (0, 1), '>': (1,)}
+    if oper not in ['!='] + cmp_map.keys():
+        log.error('Invalid operator "{0}" for package '
+                  'comparison'.format(oper))
+        return False
+
+    cmp_result = __salt__['pkg.perform_cmp'](pkg1, pkg2)
+    if cmp_result is None:
+        return False
+
+    if oper == '!=':
+        return cmp_result not in cmp_map['==']
+    else:
+        return cmp_result in cmp_map[oper]
