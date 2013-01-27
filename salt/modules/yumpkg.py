@@ -93,6 +93,11 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
+    # Force input to be a list so below loop works
+    if not isinstance(old, list):
+        old = [old]
+    if not isinstance(new, list):
+        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -251,8 +256,13 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
-            pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            skip_verify=False,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -268,13 +278,13 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to clean the yum database before executing.
+        Whether or not to update the yum database before executing.
 
     skip_verify
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
 
     version
-        Install a specific version of the package, e.g. 1.0.9. Ignored
+        Install a specific version of the package, e.g. 1.2.3-4.el6. Ignored
         if "pkgs" or "sources" is passed.
 
 
@@ -297,10 +307,13 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
 
     pkgs
         A list of packages to install from a software repository. Must be
-        passed as a python list.
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Examples::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4.el6"}]'
 
     sources
         A list of RPM packages to install. Must be passed as a list of dicts,
@@ -316,12 +329,6 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-
-    # This allows modules to specify the version in a kwarg, like the other
-    # package modules
-    if kwargs.get('version') and pkgs is None and sources is None:
-        name = '{0}-{1}'.format(name, kwargs.get('version'))
-
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
@@ -342,6 +349,15 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     disablerepo = kwargs.get('disablerepo', '')
     enablerepo = kwargs.get('enablerepo', '')
     repo = kwargs.get('repo', '')
+
+    version = kwargs.get('version')
+    if version:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version}
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
 
     # Support old "repo" argument
     if not fromrepo and repo:
@@ -376,6 +392,9 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
                     log.info('Upgrade failed, trying local downgrade')
                     yumbase.downgradeLocal(target)
             else:
+                version = pkg_params[target]
+                if version is not None:
+                    target = '{0}-{1}'.format(target, version)
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
                 installed = yumbase.install(pattern=target)
@@ -591,11 +610,11 @@ def group_diff(groupname):
         salt '*' pkg.group_diff 'Perl Support'
     '''
     ret = {
-           'mandatory packages': {'installed': [], 'not installed': []},
-           'optional packages': {'installed': [], 'not installed': []},
-           'default packages': {'installed': [], 'not installed': []},
-           'conditional packages': {'installed': [], 'not installed': []},
-           }
+        'mandatory packages': {'installed': [], 'not installed': []},
+        'optional packages': {'installed': [], 'not installed': []},
+        'default packages': {'installed': [], 'not installed': []},
+        'conditional packages': {'installed': [], 'not installed': []},
+    }
     pkgs = list_pkgs()
     yumbase = yum.YumBase()
     (installed, available) = yumbase.doGroupLists()
@@ -854,14 +873,27 @@ def _parse_repo_file(filename):
     return (header, repos)
 
 
-def compare(version1='', version2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
-    Compare two version strings. Return -1 if version1 < version2,
-    0 if version1 == version2, and 1 if version1 > version2. Return None if
-    there was a problem making the comparison.
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
 
     CLI Example::
 
-        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.compare'](version1, version2)
+    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Compare two version strings.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
+        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

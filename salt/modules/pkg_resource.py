@@ -95,23 +95,40 @@ def _parse_pkg_meta(path):
 
 def pack_pkgs(pkgs):
     '''
-    Accepts list (or a string representing a list) and returns back either the
-    list passed, or the list represenation of the string passed.
+    Accepts a list of packages or package/version pairs (or a string
+    representing said list) and returns a dict of name/version pairs. For a
+    given package, if no version was specified (i.e. the value is a string and
+    not a dict, then the dict returned will use None as the value for that
+    package.
 
-    Example: '["foo","bar","baz"]' would become ["foo","bar","baz"]
+    Example: '["foo", {"bar": 1.2}, "baz"]' would become
+             {'foo': None, 'bar': 1.2, 'baz': None}
     '''
     if isinstance(pkgs, basestring):
         try:
             pkgs = yaml.safe_load(pkgs)
         except yaml.parser.ParserError as err:
             log.error(err)
-            return []
+            return {}
     if not isinstance(pkgs, list) \
-    or [x for x in pkgs if not isinstance(x, basestring)]:
+            or [x for x in pkgs if not isinstance(x, (basestring, int,
+                                                      float, dict))]:
         log.error('Invalid input: {0}'.format(pprint.pformat(pkgs)))
-        log.error('Input must be a list of strings')
-        return []
-    return pkgs
+        log.error('Input must be a list of strings/dicts')
+        return {}
+    ret = {}
+    for pkg in pkgs:
+        if isinstance(pkg, (basestring, int, float)):
+            ret[pkg] = None
+        else:
+            if len(pkg) != 1:
+                log.error('Invalid input: package name/version pairs must '
+                          'contain only one element (data passed: '
+                          '{0}).'.format(pkg))
+                return {}
+            ret.update(pkg)
+    return dict([(str(x), str(y) if y is not None else y)
+                 for x, y in ret.iteritems()])
 
 
 def pack_sources(sources):
@@ -248,7 +265,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         # Check metadata to make sure the name passed matches the source
         if __grains__['os_family'] not in ('Solaris',) \
-        and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
+                and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
             problems = _verify_binary_pkg(srcinfo)
             # If any problems are found in the caching or metadata parsing done
             # in the above for loop, log each problem and return None,None,
@@ -263,7 +280,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         return [x[2] for x in srcinfo], 'file'
 
     elif name and __grains__['os_family'] != 'Solaris':
-        return [name], 'repository'
+        return {name: None}, 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')
@@ -322,7 +339,7 @@ def find_changes(old=None, new=None):
     return pkgs
 
 
-def compare(pkg1='', pkg2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
     Compares two version strings using distutils.version.LooseVersion. This is
     a fallback for providers which don't have a version comparison utility
@@ -332,14 +349,35 @@ def compare(pkg1='', pkg2=''):
     '''
     try:
         if distutils.version.LooseVersion(pkg1) < \
-           distutils.version.LooseVersion(pkg2):
+                distutils.version.LooseVersion(pkg2):
             return -1
         elif distutils.version.LooseVersion(pkg1) == \
-             distutils.version.LooseVersion(pkg2):
+                distutils.version.LooseVersion(pkg2):
             return 0
         elif distutils.version.LooseVersion(pkg1) > \
-             distutils.version.LooseVersion(pkg2):
+                distutils.version.LooseVersion(pkg2):
             return 1
     except Exception as e:
         log.exception(e)
     return None
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Package version comparison function.
+    '''
+    cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
+               '>=': (0, 1), '>': (1,)}
+    if oper not in ['!='] + cmp_map.keys():
+        log.error('Invalid operator "{0}" for package '
+                  'comparison'.format(oper))
+        return False
+
+    cmp_result = __salt__['pkg.perform_cmp'](pkg1, pkg2)
+    if cmp_result is None:
+        return False
+
+    if oper == '!=':
+        return cmp_result not in cmp_map['==']
+    else:
+        return cmp_result in cmp_map[oper]

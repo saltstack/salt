@@ -305,8 +305,10 @@ def latest(
                 msg = 'No information found for "{0}".'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-        elif not cur[pkg] or __salt__['pkg.compare'](cur[pkg],
-                                                     avail[pkg]) == -1:
+        elif not cur[pkg] or \
+                __salt__['pkg.compare'](pkg1=cur[pkg],
+                                        oper='<',
+                                        pkg2=avail[pkg]):
             targets[pkg] = avail[pkg]
 
     if problems:
