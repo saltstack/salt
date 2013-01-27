@@ -1,5 +1,5 @@
 '''
-Recursively display nested data, this is the default outputter. 
+Recursively display nested data, this is the default outputter.
 '''
 
 # Import salt libs
@@ -22,7 +22,7 @@ class NestDisplay(object):
                     prefix,
                     ret,
                     self.colors['ENDC'])
-        elif isinstance(ret, int):
+        elif isinstance(ret, (int, float)):
             out += '{0}{1}{2}{3}{4}\n'.format(
                     self.colors['YELLOW'],
                     ' ' * indent,
