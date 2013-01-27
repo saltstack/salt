@@ -86,6 +86,8 @@ def available_version(*names):
         candidate = __salt__['cmd.run_stdout'](cmd).split()
         if len(candidate) >= 2:
             candidate = candidate[-1]
+            if candidate.lower() == '(none)':
+                candidate = ''
         else:
             candidate = ''
 
@@ -153,8 +155,14 @@ def refresh_db():
     return servers
 
 
-def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
-            debconf=None, pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            skip_verify=False,
+            debconf=None,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package, add refresh=True to update the dpkg database.
 
@@ -227,6 +235,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
                                                                   pkgs,
                                                                   sources)
 
+    log.debug(pkg_params)
     # Support old "repo" argument
     repo = kwargs.get('repo', '')
     if not fromrepo and repo:
@@ -246,12 +255,14 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             pkg=' '.join(pkg_params),
         )
     elif pkg_type == 'repository':
-        fname = ' '.join(pkg_params)
-        if len(pkg_params) == 1:
-            for vkey, vsign in (('eq', '='), ('version', '=')):
-                if kwargs.get(vkey) is not None:
-                    fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
-                    break
+        if pkgs is None and kwargs.get('version'):
+            pkg_params = {name: kwargs.get('version')}
+        targets = []
+        for param, version in pkg_params.iteritems():
+            if version is None:
+                targets.append(param)
+            else:
+                targets.append('{0}={1}'.format(param, version))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
         cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
@@ -260,7 +271,7 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
                   confdef='-o DPkg::Options::=--force-confdef',
                   verify='--allow-unauthenticated' if skip_verify else '',
                   target='-t {0}'.format(fromrepo) if fromrepo else '',
-                  pkg=fname,
+                  pkg=' '.join(targets),
               )
 
     old = list_pkgs()
@@ -512,6 +523,7 @@ def compare(version1='', version2=''):
 def _split_repo_str(repo):
     split = sourceslist.SourceEntry(repo)
     return split.type, split.uri, split.dist, split.comps
+
 
 def _consolidate_repo_sources(sources):
     if not isinstance(sources, sourceslist.SourcesList):
@@ -812,7 +824,7 @@ def mod_repo(repo, refresh=False, **kwargs):
                 kwargs['comps'] = kwargs['comps'].split(',')
                 full_comp_list.union(set(kwargs['comps']))
             else:
-               kwargs['comps'] = list(full_comp_list)
+                kwargs['comps'] = list(full_comp_list)
 
             if 'architecturess' in kwargs:
                 kwargs['architectures'] = kwargs['architectures'].split(',')
@@ -833,9 +845,10 @@ def mod_repo(repo, refresh=False, **kwargs):
                 # and the resulting source line.  The idea here is to ensure
                 # we are not retuning bogus data because the source line
                 # has already been modified on a previous run.
-                if ((source.type == repo_type and source.uri == repo_uri and
-                     source.dist == repo_dist) or (source.dist == kw_dist and
-                     source.type == kw_type and source.type == kw_type)):
+                if ((source.type == repo_type and source.uri == repo_uri
+                     and source.dist == repo_dist) or
+                    (source.dist == kw_dist and source.type == kw_type
+                     and source.type == kw_type)):
 
                     for comp in full_comp_list:
                         if comp in getattr(source, 'comps', []):
