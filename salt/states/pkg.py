@@ -139,6 +139,8 @@ def installed(
 
     else:
         targets = [name]
+        if version:
+            version = str(version)
 
         cver = old_pkgs.get(name, '')
         if cver == version:
