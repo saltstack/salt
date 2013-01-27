@@ -108,7 +108,7 @@ def stats(local=False, remote=False):
             Display stats only for the remote package database(s).
 
             CLI Example::
-        
+
                 salt '*' pkgng.stats remote=True
     '''
 
@@ -188,7 +188,7 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
     CLI Example::
 
         salt '*' pkgng.install <package name>
-        
+
         orphan
             Mark the installed package as orphan. Will be automatically removed
             if no other packages depend on them. For more information please
@@ -263,7 +263,7 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
             Treat the package names as extended regular expressions.
 
             CLI Example::
-            
+
                 salt '*' pkgng.install <extended regular expression> pcre=True
     '''
 
@@ -498,7 +498,7 @@ def clean():
 
 def autoremove(dryrun=False):
     '''
-    Delete packages which were automatically installed as dependencies and are 
+    Delete packages which were automatically installed as dependencies and are
     not required anymore
 
     CLI Example::
@@ -601,7 +601,7 @@ def which(file_name, origin=False, quiet=False):
     return __salt__['cmd.run'](cmd)
 
 
-def search(pkg_name, exact=False, glob=False, regex=False, pcre=False, 
+def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
             comment=False, desc=False, full=False, depends=False,
             size=False, quiet=False, origin=False, prefix=False, ):
     '''
@@ -729,11 +729,11 @@ def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
     return __salt__['cmd.run'](cmd)
 
 
-def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True, 
+def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
             regex=False, pcre=False, local=False, depends=False):
     '''
     Fetches remote packages
-    
+
     CLI Example::
 
         salt '*' pkgng.fetch <package name>
@@ -795,7 +795,7 @@ def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
             CLI Example::
 
                 salt '*' pkgng.fetch <package name> depends=True
-    ''' 
+    '''
 
     opts = ''
     if all:
@@ -828,7 +828,7 @@ def updating(pkg_name, filedate=None, filename=None):
     Displays UPDATING entries of software packages
 
     CLI Example::
-    
+
         salt '*' pkgng.updating foo
 
         filedate
@@ -858,14 +858,27 @@ def updating(pkg_name, filedate=None, filename=None):
     return __salt__['cmd.run'](cmd)
 
 
-def compare(version1='', version2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
-    Compare two version strings. Return -1 if version1 < version2,
-    0 if version1 == version2, and 1 if version1 > version2. Return None if
-    there was a problem making the comparison.
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
 
     CLI Example::
 
-        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.compare'](version1, version2)
+    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Compare two version strings.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
+        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
