@@ -4,6 +4,7 @@ Package support for openSUSE via the zypper package manager
 
 # Import python libs
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -175,7 +176,11 @@ def refresh_db():
     return ret
 
 
-def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
     before package is installed.
@@ -193,15 +198,25 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     refresh
         Whether or not to refresh the package database before installing.
 
+    version
+        Can be either a version number, or the combination of a comparison
+        operator (<, >, <=, >=, =) and a version number (ex. '>1.2.3-4').
+        This parameter is ignored if "pkgs" or "sources" is passed.
+
 
     Multiple Package Installation Options:
 
     pkgs
         A list of packages to install from a software repository. Must be
-        passed as a python list.
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version. As with the ``version`` parameter above, comparison operators
+        can be used to target a specific version of a package.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Examples::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4"}]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "<1.2.3-4"}]'
 
     sources
         A list of RPM packages to install. Must be passed as a list of dicts,
@@ -227,11 +242,56 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    cmd = 'zypper -n install -l {0}'.format(' '.join(pkg_params))
+    version = kwargs.get('version')
+    if version:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version}
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
+
+    if pkg_type == 'repository':
+        targets = []
+        problems = []
+        for param, version in pkg_params.iteritems():
+            if version is None:
+                targets.append(param)
+            else:
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                if match:
+                    gt_lt, eq, verstr = match.groups()
+                    prefix = gt_lt or ''
+                    prefix += eq or ''
+                    # If no prefix characters were supplied, use '='
+                    prefix = prefix or '='
+                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
+                    log.debug(targets)
+                else:
+                    msg = 'Invalid version string "{0}" for package ' \
+                          '"{1}"'.format(name, version)
+                    problems.append(msg)
+        if problems:
+            for problem in problems:
+                log.error(problem)
+            return {}
+    else:
+        targets = pkg_params
+
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
-    if stderr:
-        log.error(stderr)
+    # Quotes needed around package targets because of the possibility of output
+    # redirection characters "<" or ">" in zypper command.
+    cmd = 'zypper -n install -l "{0}"'.format(' '.join(targets))
+    stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    downgrades = []
+    for line in stdout.splitlines():
+        match = re.match("^The selected package '([^']+)'.+has lower version",
+                         line)
+        if match:
+            downgrades.append(match.group(1))
+    if downgrades:
+        cmd = 'zypper -n install -l --force {0}'.format(' '.join(downgrades))
+        __salt__['cmd.run_all'](cmd)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
