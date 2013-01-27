@@ -178,6 +178,8 @@ class SaltCloud(parsers.SaltCloudParser):
 
 
     def print_confirm(self, msg):
+        if self.options.assume_yes:
+            return True
         print(msg)
         res = raw_input('Proceed? [N/y]')
         if not res.lower().startswith('y'):
