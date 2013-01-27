@@ -276,7 +276,7 @@ def create(vm_):
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
 
         # Deploy salt-master files, if necessary
-        if vm_['make_master'] is True:
+        if 'make_master' in vm_ and vm_['make_master'] is True:
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
             master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
