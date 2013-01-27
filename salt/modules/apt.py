@@ -192,7 +192,7 @@ def install(name=None,
         installation.
 
     version
-        Install a specific version of the package, e.g. 1.0.9~ubuntu. Ignored
+        Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
 
 
@@ -203,7 +203,8 @@ def install(name=None,
         passed as a python list.
 
         CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-0ubuntu0"}]'
 
     sources
         A list of DEB packages to install. Must be passed as a list of dicts,

@@ -284,7 +284,7 @@ def install(name=None,
         Skip the GPG verification check. (e.g., ``--nogpgcheck``)
 
     version
-        Install a specific version of the package, e.g. 1.0.9. Ignored
+        Install a specific version of the package, e.g. 1.2.3-4.el6. Ignored
         if "pkgs" or "sources" is passed.
 
 
@@ -307,10 +307,13 @@ def install(name=None,
 
     pkgs
         A list of packages to install from a software repository. Must be
-        passed as a python list.
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Examples::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4.el6"}]'
 
     sources
         A list of RPM packages to install. Must be passed as a list of dicts,
@@ -346,8 +349,8 @@ def install(name=None,
     disablerepo = kwargs.get('disablerepo', '')
     enablerepo = kwargs.get('enablerepo', '')
     repo = kwargs.get('repo', '')
-    version = kwargs.get('version')
 
+    version = kwargs.get('version')
     if version:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
