@@ -269,7 +269,7 @@ def install(name=None,
                     log.debug(targets)
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(name, version)
+                          '"{1}"'.format(version, name)
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -281,7 +281,7 @@ def install(name=None,
     old = list_pkgs()
     # Quotes needed around package targets because of the possibility of output
     # redirection characters "<" or ">" in zypper command.
-    cmd = 'zypper -n install -l "{0}"'.format(' '.join(targets))
+    cmd = 'zypper -n install -l "{0}"'.format('" "'.join(targets))
     stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
     downgrades = []
     for line in stdout.splitlines():
