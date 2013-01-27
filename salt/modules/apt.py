@@ -508,6 +508,7 @@ def compare(version1='', version2=''):
         log.error(e)
     return None
 
+
 def _split_repo_str(repo):
     split = sourceslist.SourceEntry(repo)
     return split.type, split.uri, split.dist, split.comps
@@ -544,6 +545,7 @@ def _consolidate_repo_sources(sources):
             pass
     return sources
 
+
 def list_repos():
     '''
     Lists all repos in the sources.list (and sources.lists.d) files
@@ -572,6 +574,7 @@ def list_repos():
         repo['architectures'] = source.architectures
         repos.setdefault(source.uri, []).append(repo)
     return repos
+
 
 def get_repo(repo):
     '''
@@ -610,14 +613,15 @@ def get_repo(repo):
             for sub in source:
                 if (sub['type'] == repo_type and
                     sub['uri'] == repo_uri and
-                    sub['dist'] == repo_dist):
+                        sub['dist'] == repo_dist):
                     if not repo_comps:
-                       return sub
+                        return sub
                     for comp in repo_comps:
                         if comp in sub.get('comps', []):
                             return sub
 
     raise Exception('repo "{0}" was not found'.format(repo))
+
 
 def del_repo(repo, refresh=False):
     '''
@@ -660,7 +664,7 @@ def del_repo(repo, refresh=False):
 
         for source in repos:
             if (source.type == repo_type and source.uri == repo_uri and
-                source.dist == repo_dist):
+                    source.dist == repo_dist):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_comps)
@@ -674,8 +678,8 @@ def del_repo(repo, refresh=False):
                             pass
             # PPAs are special and can add deb-src where expand_ppa_line doesn't
             # always reflect this.  Lets just cleanup here for good measure
-            if (is_ppa and repo_type == 'deb' and  source.type == 'deb-src' and
-                source.uri == repo_uri and source.dist == repo_dist):
+            if (is_ppa and repo_type == 'deb' and source.type == 'deb-src' and
+                    source.uri == repo_uri and source.dist == repo_dist):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_comps)
@@ -691,9 +695,9 @@ def del_repo(repo, refresh=False):
         if deleted_from:
             ret = ''
             for source in sources:
-                if deleted_from.has_key(source.file):
+                if source.file in deleted_from:
                     deleted_from[source.file] += 1
-            for repo_file,c in deleted_from.iteritems():
+            for repo_file, c in deleted_from.iteritems():
                 msg = 'Repo "{0}" has been removed from {1}.\n'
                 if c == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
@@ -708,6 +712,7 @@ def del_repo(repo, refresh=False):
             return ret
 
     return "Repo {0} doesn't exist in the sources.list(s)".format(repo)
+
 
 def mod_repo(repo, refresh=False, **kwargs):
     '''
@@ -736,7 +741,8 @@ def mod_repo(repo, refresh=False, **kwargs):
 
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
-    _MODIFY_OK = set(['comps', 'architectures', 'disabled', 'file', 'dist'])
+    _MODIFY_OK = set(
+        ['uri', 'comps', 'architectures', 'disabled', 'file', 'dist'])
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         if not ppa_format_support:
             error_str = 'cannot parse "ppa:" style repo definitions: {0}'
@@ -767,7 +773,8 @@ def mod_repo(repo, refresh=False, **kwargs):
         if repos:
             mod_source = None
             try:
-                repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+                repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(
+                    repo)
             except SyntaxError:
                 error_str = 'Error: repo "{0}" not a well formatted definition'
                 raise SyntaxError(error_str.format(repo))
@@ -847,17 +854,17 @@ def mod_repo(repo, refresh=False, **kwargs):
             # not destined to be disabled/enabled in
             # the original state
             if ('disabled' in kwargs and
-                mod_source.disabled != kwargs['disabled']):
+                    mod_source.disabled != kwargs['disabled']):
 
                 s_comps = set(mod_source.comps)
                 r_comps = set(repo_comps)
                 if s_comps.symmetric_difference(r_comps):
-                   new_source = sourceslist.SourceEntry(source.line)
-                   new_source.file = source.file
-                   new_source.comps = list(r_comps.difference(s_comps))
-                   source.comps = list(s_comps.difference(r_comps))
-                   sources.insert(sources.index(source), new_source)
-                   sources.save()
+                    new_source = sourceslist.SourceEntry(source.line)
+                    new_source.file = source.file
+                    new_source.comps = list(r_comps.difference(s_comps))
+                    source.comps = list(s_comps.difference(r_comps))
+                    sources.insert(sources.index(source), new_source)
+                    sources.save()
 
             for key in kwargs:
                 if key in _MODIFY_OK and hasattr(mod_source, key):
@@ -866,14 +873,13 @@ def mod_repo(repo, refresh=False, **kwargs):
             sources.save()
             if refresh is True or str(refresh).lower() == 'true':
                 refresh_db()
-            return { repo: {
-                            'architectures': mod_source.architectures,
-                            'comps': mod_source.comps,
-                            'disabled': mod_source.disabled,
-                            'file': mod_source.file,
-                            'type': mod_source.type,
-                            'uri': mod_source.uri,
-                            'line': mod_source.line,
-                           }
-                   }
-
+            return {repo: {
+                    'architectures': mod_source.architectures,
+                    'comps': mod_source.comps,
+                    'disabled': mod_source.disabled,
+                    'file': mod_source.file,
+                    'type': mod_source.type,
+                    'uri': mod_source.uri,
+                    'line': mod_source.line,
+                    }
+                    }
