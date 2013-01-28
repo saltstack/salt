@@ -28,19 +28,14 @@ def __get_version_info_from_git(version, version_info):
             stderr=subprocess.PIPE,
             cwd=os.path.abspath(os.path.dirname(__file__))
         )
+
         if not sys.platform.startswith('win'):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
-            class WindowsError(OSError):
-                """
-                Let's just mimic the Windows exception so we don't have
-                errors in non Windows environment.
-                """
-
         try:
             process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
-        except WindowsError, err:
+        except OSError, err:
             if err.errno != 2:
                 # Raise any other WindowsError exception so we know what's
                 # going on.
@@ -49,6 +44,7 @@ def __get_version_info_from_git(version, version_info):
             return version, version_info
 
         out, err = process.communicate()
+
         if not out.strip() or err.strip():
             return version, version_info
 
