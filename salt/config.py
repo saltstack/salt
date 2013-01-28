@@ -373,39 +373,6 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
 
-    if opts.get('file_client', 'remote') == 'local' and check_dns:
-        check_dns = False
-
-    if check_dns is True:
-        # Because I import salt.log below I need to re-import salt.utils here
-        import salt.utils
-        try:
-            opts['master_ip'] = salt.utils.dns_check(opts['master'], True)
-        except SaltClientError:
-            if opts['retry_dns']:
-                while True:
-                    import salt.log
-                    msg = ('Master hostname: {0} not found. Retrying in {1} '
-                           'seconds').format(opts['master'], opts['retry_dns'])
-                    if salt.log.is_console_configured():
-                        log.warn(msg)
-                    else:
-                        print('WARNING: {0}'.format(msg))
-                    time.sleep(opts['retry_dns'])
-                    try:
-                        opts['master_ip'] = salt.utils.dns_check(
-                            opts['master'], True
-                        )
-                        break
-                    except SaltClientError:
-                        pass
-            else:
-                opts['master_ip'] = '127.0.0.1'
-    else:
-        opts['master_ip'] = '127.0.0.1'
-
-    opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
-                                                    port=opts['master_port'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
