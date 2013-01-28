@@ -1,4 +1,4 @@
-# Official distro images for Arch, Centos, Debian, Fedora, Ubuntu 
+# Official distro images for Arch, Centos, Debian, Fedora, FreeBSD, Ubuntu 
 
 # Arch Linux
 # https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
@@ -7,24 +7,22 @@ arch_aws:
   image: ami-6ee95107
   size: Micro Instance
   os: Arch
-  ssh_username: ec2_user
+  ssh_username: root
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 arch_cloud-init_aws:
   provider: aws
   image: ami-596de730
   size: Micro Instance
   os: Arch
-  ssh_username: ec2_user
+  ssh_username: root
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 # Centos 6, available from aws marketplace for no-charge
 centos_6
@@ -36,8 +34,7 @@ centos_6
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 # official Debain, available at no-charge from aws marketplace:
 # https://aws.amazon.com/marketplace/pp?sku=8fvdn95s5ev33cprr62nq3q7t
@@ -50,8 +47,7 @@ debian_squeeze_aws:
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 # Fedora project cloud images
 # https://fedoraproject.org/wiki/Cloud_images
@@ -60,38 +56,48 @@ fedora_17_aws:
   image: ami-2ea50247
   size: Micro Instance
   os: Fedora
-  ssh_username: ec2_user
+  ssh_username: ec2-user
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 fedora_18_aws:
   provider: aws
   image: ami-6145cc08
   size: Micro Instance
   os: Fedora
-  ssh_username: ec2_user
+  ssh_username: ec2-user
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 # FreeBSD 9.1
 # http://www.daemonology.net/freebsd-on-ec2/
+
+# this micro instance does not auto-populate SSH keys see above link
 freebsd_91_aws:
   provider: aws
   image: ami-5339bb3a
   size: Micro Instance
-  os: Freebsd
-  ssh_username: ec2_user
+  os: FreeBSD
+  ssh_username: ec2-user
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
+
+freebsd_91_4XL_aws:
+  provider: aws
+  image: ami-79088510
+  size: Cluster Compute 4XL
+  os: FreeBSD
+  ssh_username: ec2-user
+  location: us-east-1
+  minion:
+    grains:
+      cloud: ec2-us-east-1
 
 # Canonical Ubuntu LTS images
 # http://cloud-images.ubuntu.com/releases/
@@ -104,8 +110,7 @@ ubuntu_lucid_aws:
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
 ubuntu_precise_aws:
   provider: aws
@@ -116,6 +121,5 @@ ubuntu_precise_aws:
   location: us-east-1
   minion:
     grains:
-      where: us-east-1
-      cloud: ec2
+      cloud: ec2-us-east-1
 
