@@ -21,9 +21,10 @@ A Salt Minion Windows installer can be found here:
     * http://saltstack.org/static/downloads/Salt-Minion-0.12.1-Setup-amd64.exe
     * http://saltstack.org/static/downloads/Salt-Minion-0.12.1-Setup-win32.exe
 
-This installer has been tested on Windows 7 64bit and Windows Server 2008R2
-64bit. Please file a bug report on our github repo if issues for other
-platforms are found.
+The 64bit installer has been tested on Windows 7 64bit and Windows Server
+2008R2 64bit. The 32bit installer has been tested on Windows 2003 Server 32bit.
+Please file a bug report on our github repo if issues for other platforms are
+found.
 
 The installer asks for 2 bits of information; the master hostname and the
 minion name. The installer will update the minion config with these options and
