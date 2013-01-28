@@ -915,5 +915,6 @@ def file_list(*packages):
         cmd = 'rpm -qla'
     else:
         cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    return __salt__['cmd.run'](cmd).splitlines()
+    ret = __salt__['cmd.run'](cmd).splitlines()
+    return {'errors': [], 'files': ret}
 
