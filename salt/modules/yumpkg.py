@@ -897,3 +897,24 @@ def compare(pkg1='', oper='==', pkg2=''):
         salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
     '''
     return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of _every_ file on the system's rpm database (not generally
+    recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    if not packages:
+        cmd = 'rpm -qla'
+    else:
+        cmd = 'rpm -ql {0}'.format(' '.join(packages))
+    ret = __salt__['cmd.run'](cmd).splitlines()
+    return {'errors': [], 'files': ret}
+
