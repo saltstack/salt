@@ -616,7 +616,9 @@ def os_data():
                     for line in ifile:
                         comps = line.split()
                         if comps[0] == 'ALT':
-                            grains['lsb_distrib_codename'] = comps[2]
+                            grains['lsb_distrib_release'] = comps[2]
+                            grains['lsb_distrib_codename'] = \
+                                comps[3].replace('(','').replace(')','')
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
             supported_dists=_supported_dists)
