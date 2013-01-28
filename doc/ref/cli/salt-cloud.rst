@@ -2,7 +2,7 @@
 ``salt-cloud``
 ==============
 
-Copy a file to a set of systems
+Provision virtual machines in the cloud with Salt
 
 Synopsis
 ========
