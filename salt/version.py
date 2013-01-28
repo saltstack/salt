@@ -32,6 +32,12 @@ def __get_version_info_from_git(version, version_info):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
+            class WindowsError(OSError):
+                """
+                Let's just mimic the Windows exception so we don't have
+                errors in non Windows environment.
+                """
+
         try:
             process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
         except WindowsError, err:
