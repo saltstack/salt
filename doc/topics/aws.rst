@@ -149,6 +149,12 @@ Fedora
 
     https://fedoraproject.org/wiki/Cloud_images
 
+CentOS
+
+.. code-block::
+
+    http://wiki.centos.org/Cloud/AWS
+
 Ubuntu
 
 .. code-block::
