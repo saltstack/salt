@@ -32,7 +32,16 @@ def __get_version_info_from_git(version, version_info):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
-        process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
+        try:
+            process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
+        except WindowsError, err:
+            if err.errno != 2:
+                # Raise any other WindowsError exception so we know what's
+                # going on.
+                raise
+            # The system cannot find the file specified
+            return version, version_info
+
         out, err = process.communicate()
         if not out.strip() or err.strip():
             return version, version_info
