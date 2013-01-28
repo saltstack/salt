@@ -382,8 +382,8 @@ def compare(pkg1='', oper='==', pkg2=''):
 def file_list(*packages):
     '''
     List the files that belong to a package. Not specifying any packages will
-    return a list of _every_ file on the system's rpm database (not generally
-    recommended).
+    return a list of _every_ file on the system's package database (not
+    generally recommended).
 
     CLI Examples::
 
@@ -407,7 +407,7 @@ def file_dict(*packages):
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
-    rpm database (not generally recommended).
+    package database (not generally recommended).
 
     CLI Examples::
 
