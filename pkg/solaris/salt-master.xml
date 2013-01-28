@@ -11,7 +11,7 @@
       <single_instance/>
 
       <dependency name="config-file"
-                  grouping="require-all"
+                  grouping="require_all"
                   restart_on="none"
                   type="path">
           <service_fmri value='file:///etc/salt/minion'/>
@@ -52,7 +52,7 @@
         <propval name="config_file" type="astring" value="/etc/salt/master"/>
       </property_group>
 
-      <stability value="Evolving"/>
+      <stability value="Unstable"/>
 
       <template>
         <common_name>
