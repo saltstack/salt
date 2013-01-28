@@ -25,6 +25,7 @@ arch_cloud-init_aws:
       cloud: ec2-us-west-1
 
 # Centos 6, available from aws marketplace for no-charge
+# http://wiki.centos.org/Cloud/AWS
 centos_6
   provider: aws
   image: ami-f61630b3
@@ -37,7 +38,7 @@ centos_6
       cloud: ec2-us-west-1
 
 # official Debain, available at no-charge from aws marketplace:
-# https://aws.amazon.com/marketplace/pp?sku=8fvdn95s5ev33cprr62nq3q7t
+# http://wiki.debian.org/Cloud/AmazonEC2Image
 debian_squeeze_aws:
   provider: aws
   image: ami-2c735269
