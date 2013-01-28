@@ -79,6 +79,20 @@ fedora_18_aws:
       where: us-west-1
       cloud: ec2
 
+# FreeBSD 9.1
+# http://www.daemonology.net/freebsd-on-ec2/
+freebsd_91_aws:
+  provider: aws
+  image: ami-4c8baa09
+  size: Micro Instance
+  os: Freebsd
+  ssh_username: ec2_user
+  location: us-west-1
+  minion:
+    grains:
+      where: us-west-1
+      cloud: ec2
+
 # Canonical Ubuntu LTS images
 # http://cloud-images.ubuntu.com/releases/
 ubuntu_lucid_aws:
