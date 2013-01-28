@@ -28,7 +28,6 @@ class Master(parsers.MasterOptionParser):
     '''
     Creates a master server
     '''
-
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt master server.
@@ -115,7 +114,6 @@ class Minion(parsers.MinionOptionParser):
     '''
     Create a minion server
     '''
-
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt minion.
