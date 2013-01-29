@@ -35,7 +35,7 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    prefix = '/etc/rc{0}.d/S'.format(_get_runlevel())
+    prefix = '/etc/rc[S{0}].d/S'.format(_get_runlevel())
     ret = set()
     lines = glob.glob('{0}*'.format(prefix))
     for line in lines:
