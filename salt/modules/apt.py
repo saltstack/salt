@@ -929,24 +929,7 @@ def file_list(*packages):
         salt '*' pkg.file_list httpd postfix
         salt '*' pkg.file_list
     '''
-    errors = []
-    ret = set([])
-    pkgs = {}
-    cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        if line.startswith('ii '):
-            comps = line.split()
-            pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
-        if 'No packages found' in line:
-            errors.append(line)
-    for pkg in pkgs.keys():
-        files = []
-        cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
-            files.append(line)
-        fileset = set(files)
-        ret = ret.union(fileset)
-    return {'errors': errors, 'files': list(ret)}
+    return __salt__['lowpkg.file_list'](*packages)
 
 
 def file_dict(*packages):
@@ -961,20 +944,4 @@ def file_dict(*packages):
         salt '*' pkg.file_list httpd postfix
         salt '*' pkg.file_list
     '''
-    errors = []
-    ret = {}
-    pkgs = {}
-    cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        if line.startswith('ii '):
-            comps = line.split()
-            pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
-        if 'No packages found' in line:
-            errors.append(line)
-    for pkg in pkgs.keys():
-        files = []
-        cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
-            files.append(line)
-        ret[pkg] = files
-    return {'errors': errors, 'packages': ret}
+    return __salt__['lowpkg.file_dict'](*packages)
