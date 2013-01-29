@@ -26,7 +26,7 @@ arch_cloud-init_aws:
 
 # Centos 6, available from aws marketplace for no-charge
 # http://wiki.centos.org/Cloud/AWS
-centos_6
+centos_6:
   provider: aws
   image: ami-f61630b3
   size: Micro Instance
