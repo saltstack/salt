@@ -82,7 +82,7 @@ def available_version(*names):
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
         if avail:
-            if not installed or compare(installed, avail) == -1:
+            if not installed or compare(pkg1=installed, oper='<', pkg2=avail):
                 ret[name] = avail
 
     # Return a string if only one package name passed
