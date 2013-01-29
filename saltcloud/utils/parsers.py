@@ -55,51 +55,6 @@ class CloudConfigMixIn(object):
         if optvalue:
             setattr(self.options, name, os.path.abspath(optvalue))
 
-    def __merge_config_with_cli(self, *args):
-        # Taken from https://github.com/saltstack/salt/blob/develop/salt/utils/parsers.py#L175
-
-        # Merge parser options
-        for option in self.option_list:
-            if option.dest is None:
-                # --version does not have dest attribute set for example.
-                # All options defined by us, even if not explicitly(by kwarg),
-                # will have the dest attribute set
-                continue
-
-            # Get the passed value from shell. If empty get the default one
-            default = self.defaults.get(option.dest)
-            value = getattr(self.options, option.dest, default)
-
-            if option.dest not in self.config:
-                # There's no value in the configuration file
-                if value is not None:
-                    # There's an actual value, add it to the config
-                    self.config[option.dest] = value
-            elif value is not None and value != default:
-                # Only set the value in the config file IF it's not the default
-                # value, this allows to tweak settings on the configuration
-                # files bypassing the shell option flags
-                self.config[option.dest] = value
-
-        # Merge parser group options if any
-        for group in self.option_groups:
-            for option in group.option_list:
-                if option.dest is None:
-                    continue
-                # Get the passed value from shell. If empty get the default one
-                default = self.defaults.get(option.dest)
-                value = getattr(self.options, option.dest, default)
-                if option.dest not in self.config:
-                    # There's no value in the configuration file
-                    if value is not None:
-                        # There's an actual value, add it to the config
-                        self.config[option.dest] = value
-                else:
-                    if value is not None and value != default:
-                        # Only set the value in the config file IF it's not the
-                        # default value, this allows to tweak settings on the
-                        # configuration files bypassing the shell option flags
-                        self.config[option.dest] = value
 
     def _mixin_after_parsed(self):
         for option in self.config_group.option_list:
@@ -323,16 +278,19 @@ class CloudProvidersListsMixIn(object):
         )
         if len(list_options_selected) > 1:
             self.error(
-                "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join([
-                    option.get_opt_string() for option in
-                    list_options_selected
-                ]))
+                'The options {0} are mutually exclusive. Please only choose '
+                'one of them'.format(
+                    '/'.join([
+                        option.get_opt_string() for option in
+                        list_options_selected
+                    ])
+                )
             )
 
 
 class SaltCloudParser(parsers.OptionParser,
                       parsers.LogLevelMixIn,
+                      parsers.MergeConfigMixIn,
                       parsers.OutputOptionsWithTextMixIn,
                       CloudConfigMixIn,
                       CloudQueriesMixIn,
