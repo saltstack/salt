@@ -153,6 +153,8 @@ class SMinion(object):
         # module
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        if self.opts.get('file_client', 'remote') == 'remote':
+            self.opts.update(resolve_dns(opts))
         self.gen_modules()
 
     def gen_modules(self):
