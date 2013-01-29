@@ -93,7 +93,8 @@ def available_version(*names):
 
         installed = pkgs.get(name, '')
         if candidate:
-            if not installed or compare(installed, candidate) == -1:
+            if not installed or compare(pkg1=installed, oper='<',
+                                        pkg2=candidate):
                 ret[name] = candidate
 
     # Return a string if only one package name passed
@@ -977,4 +978,3 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
-
