@@ -6,7 +6,7 @@
 # 
 # It has been designed as an example, to be customized for your own needs.
 
-curl -L http://bootstrap.saltstack.org | sudo sh -s git develop -c /tmp
+curl -L http://bootstrap.saltstack.org | sudo sh -s -- -c /tmp git develop
 
 # Salt Cloud now places the minion's keys and configuration in /tmp/ before
 # executing the deploy script. After it has executed, these temporary files
