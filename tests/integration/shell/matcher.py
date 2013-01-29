@@ -27,6 +27,23 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
+    def test_compound(self):
+        '''
+        test salt compound matcher
+        '''
+        data = self.run_salt('-C "min* and G@test_grain:cheese" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-C "min* and not G@test_grain:foo" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-C "min* not G@test_grain:foo" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+
     def test_glob(self):
         '''
         test salt glob matcher
