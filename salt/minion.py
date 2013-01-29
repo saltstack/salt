@@ -30,7 +30,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError
+    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit, SaltClientError
 )
 import salt.client
 import salt.crypt
@@ -50,6 +50,47 @@ log = logging.getLogger(__name__)
 # 4. Store the aes key
 # 5. connect to the publisher
 # 6. handle publications
+
+def resolve_dns(opts):
+    '''
+    Resolves the master_ip and master_uri options
+    '''
+    ret = {}
+    check_dns = True
+    if opts.get('file_client', 'remote') == 'local' and check_dns:
+        check_dns = False
+
+    if check_dns is True:
+        # Because I import salt.log below I need to re-import salt.utils here
+        import salt.utils
+        try:
+            ret['master_ip'] = salt.utils.dns_check(opts['master'], True)
+        except SaltClientError:
+            if opts['retry_dns']:
+                while True:
+                    import salt.log
+                    msg = ('Master hostname: {0} not found. Retrying in {1} '
+                           'seconds').format(opts['master'], opts['retry_dns'])
+                    if salt.log.is_console_configured():
+                        log.warn(msg)
+                    else:
+                        print('WARNING: {0}'.format(msg))
+                    time.sleep(opts['retry_dns'])
+                    try:
+                        ret['master_ip'] = salt.utils.dns_check(
+                            opts['master'], True
+                        )
+                        break
+                    except SaltClientError:
+                        pass
+            else:
+                ret['master_ip'] = '127.0.0.1'
+    else:
+        ret['master_ip'] = '127.0.0.1'
+
+    ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
+                                                    port=opts['master_port'])
+    return ret
 
 
 def get_proc_dir(cachedir):
@@ -186,6 +227,7 @@ class Minion(object):
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
+        opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate()
         self.opts['pillar'] = salt.pillar.get_pillar(
