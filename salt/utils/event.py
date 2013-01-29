@@ -150,14 +150,11 @@ class SaltEvent(object):
         '''
         Creates a generator that continuously listens for events
         '''
-        try:
-            while True:
-                data = self.get_event(tag=tag, full=full)
-                if data is None:
-                    continue
-                yield data
-        finally:
-            self.destroy()
+        while True:
+            data = self.get_event(tag=tag, full=full)
+            if data is None:
+                continue
+            yield data
 
     def fire_event(self, data, tag=''):
         '''
@@ -281,7 +278,6 @@ class EventPublisher(Process):
             if self.epull_sock.closed is False:
                 self.epull_sock.setsockopt(zmq.LINGER, 1)
                 self.epull_sock.close()
-        finally:
             if self.context.closed is False:
                 self.context.term()
 
