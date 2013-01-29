@@ -38,8 +38,8 @@ def list_pkgs(*packages):
 
     CLI Example::
 
-        salt '*' pkg.list_pkgs
-        salt '*' pkg.list_pkgs httpd
+        salt '*' lowpkg.list_pkgs
+        salt '*' lowpkg.list_pkgs httpd
     '''
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
