@@ -25,6 +25,31 @@ def __virtual__():
     return 'lowpkg' if __grains__['os_family'] == 'Debian' else False
 
 
+def list_pkgs(*packages):
+    ''' 
+    List the packages currently installed in a dict::
+
+        {'<package_name>': '<version>'}
+
+    External dependencies::
+
+        Virtual package resolution requires aptitude. Because this function
+        uses dpkg, virtual packages will be reported as not installed.
+
+    CLI Example::
+
+        salt '*' lowpkg.list_pkgs
+        salt '*' lowpkg.list_pkgs httpd
+    '''
+    pkgs = {}
+    cmd = 'dpkg -l {0}'.format(' '.join(packages))
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if line.startswith('ii '):
+            comps = line.split()
+            pkgs[comps[1]] = comps[2]
+    return pkgs
+
+
 def file_list(*packages):
     '''
     List the files that belong to a package. Not specifying any packages will
