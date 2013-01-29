@@ -129,30 +129,34 @@ def refresh_db():
     '''
     Updates the APT database to latest packages based upon repositories
 
-    Returns a dict::
+    Returns a dict, with the keys being package databases and the values being
+    the result of the update attempt. Values can be one of the following:
 
-        {'<database name>': Bool}
+        ``True``: Database updated successfully
+        ``False``: Problem updating database
+        ``None``: Database already up-to-date
 
     CLI Example::
 
         salt '*' pkg.refresh_db
     '''
+    ret = {}
     cmd = 'apt-get -q update'
-
-    out = __salt__['cmd.run_stdout'](cmd)
-
-    servers = {}
-    for line in out:
+    lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+    for line in lines:
         cols = line.split()
-        if not len(cols):
+        if not cols:
             continue
-        ident = ' '.join(cols[1:4])
+        ident = ' '.join(cols[1:])
         if 'Get' in cols[0]:
-            servers[ident] = True
-        else:
-            servers[ident] = False
-
-    return servers
+            # Strip filesize from end of line
+            ident = re.sub(' \[.+B\]$', '', ident)
+            ret[ident] = True
+        elif cols[0] == 'Ign':
+            ret[ident] = False
+        elif cols[0] == 'Hit':
+            ret[ident] = None
+    return ret
 
 
 def install(name=None,
