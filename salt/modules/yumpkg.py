@@ -911,10 +911,5 @@ def file_list(*packages):
         salt '*' pkg.file_list httpd postfix
         salt '*' pkg.file_list
     '''
-    if not packages:
-        cmd = 'rpm -qla'
-    else:
-        cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    ret = __salt__['cmd.run'](cmd).splitlines()
-    return {'errors': [], 'files': ret}
+    return __salt__['lowpkg.file_list'](*packages)
 
