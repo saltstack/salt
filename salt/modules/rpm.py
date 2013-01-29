@@ -114,3 +114,37 @@ def file_list(*packages):
     ret = __salt__['cmd.run'](cmd).splitlines()
     return {'errors': [], 'files': ret}
 
+
+def file_dict(*packages):
+    '''
+    List the files that belong to a package, sorted by group. Not specifying
+    any packages will return a list of _every_ file on the system's rpm
+    database (not generally recommended).
+
+    CLI Examples::
+
+        salt '*' lowpkg.file_list httpd
+        salt '*' lowpkg.file_list httpd postfix
+        salt '*' lowpkg.file_list
+    '''
+    errors = []
+    ret = {}
+    pkgs = {}
+    if not packages:
+        cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+    else:
+        cmd = "rpm -q --qf '%{{NAME}} %{{VERSION}}\\n' {0}".format(' '.join(packages))
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if 'is not installed' in line:
+            errors.append(line)
+            continue
+        comps = line.split()
+        pkgs[comps[0]] = {'version': comps[1]}
+    for pkg in pkgs.keys():
+        files = []
+        cmd = 'rpm -ql {0}'.format(pkg)
+        for line in __salt__['cmd.run'](cmd).splitlines():
+            files.append(line)
+        ret[pkg] = files
+    return {'errors': errors, 'packages': ret}
+
