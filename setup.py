@@ -4,29 +4,44 @@ The setup script for salt
 '''
 
 import os
-import urllib
 from distutils.core import setup
 
-if os.environ.get('VIRTUAL_ENV'):
-    from setuptools import setup
+setup_kwargs = {}
+USE_SETUPTOOLS = False
+if 'USE_SETUPTOOLS' in os.environ:
+    try:
+        from setuptools import setup
+        USE_SETUPTOOLS = True
+        saltcloud_reqs = os.path.join(
+            os.path.abspath(
+                os.path.dirname(__file__)
+            ),
+            'requirements.txt'
+        )
+        requirements = ''
+        with open(saltcloud_reqs) as f:
+            requirements = f.read()
 
-exec(compile(
-    open("saltcloud/version.py").read(), "saltcloud/version.py", 'exec')
+        setup_kwargs['install_requires'] = requirements
+    except:
+        USE_SETUPTOOLS = False
+
+
+if USE_SETUPTOOLS is False:
+    from distutils.core import setup
+
+exec(
+    compile(
+        open("saltcloud/version.py").read(), "saltcloud/version.py", 'exec'
     )
+)
 
-saltcloud_reqs = os.path.join(os.path.abspath(
-    os.path.dirname(__file__)), 'requirements.txt')
 
 NAME = 'salt-cloud'
 VER = __version__
 DESC = ('Generic cloud provisioning system with build in functions ')
 
-requirements = ''
-with open(saltcloud_reqs) as f:
-    requirements = f.read()
-
-setup(
-      name=NAME,
+setup(name=NAME,
       version=VER,
       description=DESC,
       author='Thomas S Hatch',
@@ -52,10 +67,9 @@ setup(
       package_data={
           'saltcloud': ['deploy/*'],
           },
-      data_files=[('share/man/man1',
-                     ['doc/man/salt-cloud.1']),
-                     ('share/man/man7',
-                     ['doc/man/salt-cloud.7'])],
-      install_requires=requirements,
+      data_files=[('share/man/man1', ['doc/man/salt-cloud.1']),
+                  ('share/man/man7', ['doc/man/salt-cloud.7'])
+                  ],
       scripts=['scripts/salt-cloud'],
-     )
+      **setup_kwargs
+      )
