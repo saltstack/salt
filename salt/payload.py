@@ -156,10 +156,7 @@ class SREQ(object):
                         timeout * tried
                     )
                 )
-        try:
-            return self.serial.loads(self.socket.recv())
-        finally:
-            self.poller.unregister(self.socket)
+        return self.serial.loads(self.socket.recv())
 
     def send_auto(self, payload):
         '''
