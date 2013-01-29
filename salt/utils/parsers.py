@@ -675,8 +675,9 @@ class MinionOptionParser(MasterOptionParser):
         return config.minion_config(self.get_config_file_path('minion'))
 
 
-class SyndicOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
-                         RunUserMixin, DaemonMixIn, PidfileMixin):
+class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                         LogLevelMixIn, RunUserMixin, DaemonMixIn,
+                         PidfileMixin):
 
     __metaclass__ = OptionParserMeta
 
@@ -710,8 +711,8 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
         return opts
 
 
-class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
-                          ExtendedTargetOptionsMixIn,
+class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                          TimeoutMixIn, ExtendedTargetOptionsMixIn,
                           OutputOptionsWithTextMixIn):
 
     __metaclass__ = OptionParserMeta
@@ -813,8 +814,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
         return config.client_config(self.get_config_file_path('master'))
 
 
-class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
-                         TargetOptionsMixIn):
+class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                         TimeoutMixIn, TargetOptionsMixIn):
     __metaclass__ = OptionParserMeta
 
     description = (
@@ -844,8 +845,8 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
         return config.master_config(self.get_config_file_path('master'))
 
 
-class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
-                          OutputOptionsMixIn):
+class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                          LogLevelMixIn, OutputOptionsMixIn):
 
     __metaclass__ = OptionParserMeta
     _skip_console_logging_config_ = True
@@ -1029,8 +1030,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             os.makedirs(self.config['gen_keys_dir'])
 
 
-class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
-                           OutputOptionsWithTextMixIn):
+class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                           LogLevelMixIn, OutputOptionsWithTextMixIn):
     __metaclass__ = OptionParserMeta
 
     _default_logging_level_ = 'info'
@@ -1099,7 +1100,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             self.config['module_dirs'] = self.options.module_dirs.split(',')
 
 
-class SaltRunOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn):
+class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
+                          TimeoutMixIn):
     __metaclass__ = OptionParserMeta
 
     default_timeout = 1
