@@ -24,7 +24,9 @@ def managed(name,
             prompt='',
             __env__='base',
             runas=None,
-            cwd=None):
+            cwd=None,
+            index_url=None,
+            extra_index_url=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -124,7 +126,10 @@ def managed(name,
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name))
         _ret = __salt__['pip.install'](
-            requirements=requirements, bin_env=name, runas=runas, cwd=cwd, __env__=__env__
+            requirements=requirements, bin_env=name, runas=runas, cwd=cwd,
+            index_url=None,
+            extra_index_url=None,
+            __env__=__env__
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
