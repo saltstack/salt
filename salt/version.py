@@ -33,16 +33,7 @@ def __get_version_info_from_git(version, version_info):
             # Let's not import `salt.utils` for the above check
             kwargs['close_fds'] = True
 
-        try:
-            process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
-        except OSError, err:
-            if err.errno != 2:
-                # Raise any other WindowsError exception so we know what's
-                # going on.
-                raise
-            # The system cannot find the file specified
-            return version, version_info
-
+        process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
         out, err = process.communicate()
 
         if not out.strip() or err.strip():
@@ -76,9 +67,9 @@ def __get_version_info_from_git(version, version_info):
             return version, version_info
         return parsed_version, parsed_version_info
     except OSError, err:
-        if not hasattr(err, 'child_traceback'):
-            # This is not an exception thrown within the Popen created child.
-            # Let's raise it so it can be catch by the developers
+        if err.errno != 2:
+            # If the errno is not 2(The system cannot find the file specified),
+            # raise the exception so it can be catch by the developers
             raise
         # Popen child exceptions are not raised
     return version, version_info
