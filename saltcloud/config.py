@@ -146,7 +146,7 @@ def apply_vm_profiles_config(overrides, defaults=None):
     vms = []
 
     for key, val in opts.items():
-        if key in ('conf_file',):
+        if key in ('conf_file', 'include', 'default_include'):
             continue
         val['profile'] = key
         vms.append(val)
