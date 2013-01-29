@@ -45,6 +45,32 @@ def __virtual__():
     return False
 
 
+def list_pkgs(*packages):
+    '''
+    List the packages currently installed in a dict::
+
+        {'<package_name>': '<version>'}
+
+    CLI Example::
+
+        salt '*' lowpkg.list_pkgs
+    '''
+    errors = []
+    ret = {}
+    pkgs = {}
+    if not packages:
+        cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+    else:
+        cmd = "rpm -q --qf '%{{NAME}} %{{VERSION}}\\n' {0}".format(' '.join(packages))
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if 'is not installed' in line:
+            errors.append(line)
+            continue
+        comps = line.split()
+        pkgs[comps[0]] = comps[1]
+    return pkgs
+
+
 def verify(*package):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
