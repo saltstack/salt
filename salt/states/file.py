@@ -576,8 +576,11 @@ def managed(name,
         line must consist of full name of the file and checksum separated by
         space:
 
+.. code-block:: raw
+
         /etc/rc.conf md5=ef6e82e4006dee563d98ada2a2a80a27
         /etc/resolv.conf sha256=c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a
+
 
     user
         The user to own the file, this defaults to the user salt is running as
