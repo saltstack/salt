@@ -613,7 +613,12 @@ def os_data():
                 # ALT Linux
                 grains['lsb_distrib_id'] = 'altlinux'
                 with salt.utils.fopen('/etc/altlinux-release') as ifile:
+                    # This file is symlinked to from:
+                    #     /etc/fedora-release
+                    #     /etc/redhat-release
+                    #     /etc/system-release
                     for line in ifile:
+                        # ALT Linux Sisyphus (unstable)
                         comps = line.split()
                         if comps[0] == 'ALT':
                             grains['lsb_distrib_release'] = comps[2]
