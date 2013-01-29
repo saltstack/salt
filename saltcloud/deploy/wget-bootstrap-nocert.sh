@@ -6,7 +6,7 @@
 # 
 # It has been designed as an example, to be customized for your own needs.
 
-wget --no-check-certificate -O - http://bootstrap.saltstack.org | sudo sh -c /tmp
+wget --no-check-certificate -O - http://bootstrap.saltstack.org | sudo sh -s -- -c /tmp
 
 # Salt Cloud now places the minion's keys and configuration in /tmp/ before
 # executing the deploy script. After it has executed, these temporary files
