@@ -1132,6 +1132,13 @@ class Matcher(object):
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
+                if match == 'not':
+                    if results[-1] == 'and':
+                        pass
+                    elif results[-1] == 'or':
+                        pass
+                    else:
+                        results.append('and')
                 results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob
