@@ -1580,8 +1580,8 @@ class ClearFuncs(object):
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
                 # If someone can sudo, allow them to act as root
-                if clear_load.pop('key') == self.key['root']:
-                    pass
+                if clear_load.get('key', 'invalid') == self.key.get('root'):
+                    clear_load.pop('key')
                 elif not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
                     log.warning('Authentication failure of type "user" ocurred.')
                     return ''
