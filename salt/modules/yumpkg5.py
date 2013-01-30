@@ -295,23 +295,41 @@ def install(name=None,
             log.info('Enabling repo "{0}"'.format(enablerepo))
             repo_arg += '--enablerepo="{0}" '.format(enablerepo)
 
+    old = list_pkgs()
+    downgrade = []
     if pkg_type == 'repository':
         targets = []
         for param, version in pkg_params.iteritems():
             if version is None:
                 targets.append(param)
             else:
-                targets.append('{0}-{1}'.format(param, version))
+                pkgstr = '{0}-{1}'.format(param, version)
+                cver = old.get(param, '')
+                if not cver or __salt__['pkg.compare'](pkg1=version,
+                                                       oper='>=',
+                                                       pkg2=cver):
+                    targets.append(pkgstr)
+                else:
+                    downgrade.append(pkgstr)
     else:
         targets = pkg_params
 
-    cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
-        repo=repo_arg,
-        gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkg=' '.join(targets),
-    )
-    old = list_pkgs()
-    __salt__['cmd.run_all'](cmd)
+    if targets:
+        cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
+            repo=repo_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(targets),
+        )
+        __salt__['cmd.run_all'](cmd)
+
+    if downgrade:
+        cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
+            repo=repo_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(downgrade),
+        )
+        __salt__['cmd.run_all'](cmd)
+
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
