@@ -183,15 +183,16 @@ def _verify_binary_pkg(srcinfo):
     return problems
 
 
-def check_targets(targets=None):
+def check_desired(desired=None):
     '''
-    Examines target package names to make sure they were formatted properly.
+    Examines desired package names to make sure they were formatted properly.
     Returns a list of problems encountered.
     '''
     problems = []
-    # If minion is Gentoo-based, check targeted packages to ensure they are
-    # properly submitted as category/pkgname. For any package that does not
-    # follow this format, offer matches from the portage tree.
+
+    # If minion is Gentoo-based, ensure packages are properly submitted as
+    # category/pkgname. For any package that does not follow this format, offer
+    # matches from the portage tree.
     if __grains__['os_family'] == 'Gentoo':
         for pkg in (targets or []):
             if '/' not in pkg:
@@ -204,6 +205,21 @@ def check_targets(targets=None):
                           'found in portage tree.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
+
+    # If minion is using anything but zypper or pacman, flag a problem if
+    # greater-than, less-than, etc. operators are used in version string.
+    if __grains__.get('os_family', '') != 'Suse' \
+            and __grains__.get('os', '') != 'Arch':
+        for pkgname, pkgver in desired.iteritems():
+            if pkgver is None:
+                continue
+            match = re.match('^([<>]?=?)', pkgver)
+            if match and match.group(1):
+                msg = 'Comparison operator "{0}" is only valid for the ' \
+                      'pacman and zypper providers.'.format(match.group(1))
+                log.error(msg)
+                problems.append(msg)
+
     return problems
 
 
