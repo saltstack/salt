@@ -387,7 +387,7 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
-def prep_jid(cachedir, sum_type, user='root'):
+def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
@@ -398,8 +398,10 @@ def prep_jid(cachedir, sum_type, user='root'):
         os.makedirs(jid_dir_)
         with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
+        with fopen(os.path.join(jid_dir_, 'nocache'), 'w+') as fn_:
+            fn_.write('')
     else:
-        return prep_jid(cachedir, sum_type)
+        return prep_jid(cachedir, sum_type, user=user, nocache=nocache)
     return jid
 
 
