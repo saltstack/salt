@@ -596,7 +596,7 @@ class OutputOptionsMixIn(object):
                   'outputters that support indentation.')
         )
         group.add_option(
-            '--no-color',
+            '--no-color', '--no-colour',
             default=False,
             action='store_true',
             help='Disable all colored output'
