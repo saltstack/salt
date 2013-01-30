@@ -248,10 +248,30 @@ class Master(SMaster):
                 '{0}/{1}'.format(mof_s, mof_h)
             )
 
+    def _pre_flight(self):
+        '''
+        Run pre flight checks, if anything in this method fails then the master
+        should not start up
+        '''
+        errors = []
+        fileserver = salt.fileserver.Fileserver(self.opts)
+        if not fileserver.servers:
+            errors.append(('Failed to load fileserver backends, the configured'
+                           'backends are:\n{0}').format(
+                           ' '.join(self.opts['fileserver_backend'])))
+        if not self.opts['fileserver_backend']:
+            errors.append('No fileserver backends are configured')
+        if errors:
+            for error in errors:
+                log.error(error)
+            log.error('Master failed pre flight checks, exiting\n')
+            sys.exit(1)
+
     def start(self):
         '''
         Turn on the master server components
         '''
+        self._pre_flight()
         log.info(
             'salt-master is starting as user \'{0}\''.format(getpass.getuser())
         )
