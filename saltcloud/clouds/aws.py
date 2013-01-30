@@ -83,8 +83,8 @@ def __virtual__():
             )
         )
 
-    global (avail_images, avail_sizes, script, destroy, list_nodes,
-            list_nodes_full, list_nodes_select)
+    global avail_images, avail_sizes, script, destroy, list_nodes
+    global list_nodes_full, list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
