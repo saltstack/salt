@@ -83,8 +83,8 @@ def __virtual__():
             )
         )
 
-    global (avail_images, avail_sizes, script, destroy, list_nodes,
-            list_nodes_full, list_nodes_select)
+    global avail_images, avail_sizes, script, destroy, list_nodes
+    global list_nodes_full, list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
@@ -280,8 +280,8 @@ def create(vm_):
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
-                host=ip_address, username=user, timeout=60,
-                key_filename=__opts__['AWS.private_key']):
+                    host=ip_address, username=user, timeout=60,
+                    key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
     sudo = True
@@ -321,21 +321,19 @@ def create(vm_):
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
+            log.info('Salt installed on {name}'.format(**vm_))
         else:
-            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+            log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
     log.info(
-        'Created Cloud VM {0} with the following values:'.format(
-            vm_['name']
-        )
+        'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
     for key, val in data.__dict__.items():
         log.info('  {0}: {1}'.format(key, val))
     volumes = vm_.get('map_volumes')
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
-        create_attach_volumes(volumes,location, data)
+        create_attach_volumes(volumes, location, data)
 
 
 def create_attach_volumes(volumes, location, data):
@@ -348,7 +346,7 @@ def create_attach_volumes(volumes, location, data):
         if avz.availability_zone.name == node_avz:
             break
     for volume in volumes:
-        volume_name = volume['device'] + " on " +  data.name
+        volume_name = '{0} on {1}'.format(volume['device'], data.name)
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
