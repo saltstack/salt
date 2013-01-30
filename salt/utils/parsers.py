@@ -688,8 +688,11 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def setup_config(self):
         opts = config.master_config(self.get_config_file_path('master'))
+        user = opts.get('user', 'root')
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(config.minion_config(self.get_config_file_path('minion')))
+        # Over ride the user from the master config file
+        opts['user'] = user
 
         if 'syndic_master' not in opts:
             self.error(
