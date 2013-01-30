@@ -121,7 +121,7 @@ def version(*names):
     if not names:
         return ''
 
-    ret = dict.fromkeys(names, '')
+    ret = {}
     installed = list_pkgs()
     for name in names:
         ret[name] = installed.get(name, '')
