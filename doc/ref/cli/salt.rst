@@ -31,7 +31,9 @@ Options
 
 .. option:: -t TIMEOUT, --timeout=TIMEOUT
 
-    The timeout in seconds to wait for replies from the Salt minions.
+    The timeout in seconds to wait for replies from the Salt minions. The
+    timeout number specifes how long the command line client will wait to
+    query the minions and check on running jobs.
 
 .. option:: -s STATIC, --static=STATIC
 
