@@ -295,6 +295,7 @@ def parse_opts():
     )
     output_options_group.add_option(
         '--no-colors',
+        '--no-colours',
         default=False,
         action='store_true',
         help='Disable colour printing.'
