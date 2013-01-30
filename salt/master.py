@@ -1462,20 +1462,25 @@ class ClearFuncs(object):
         '''
         # All wheel ops pass through eauth
         if not 'eauth' in clear_load:
+            log.warning('Authentication failure of type "eauth" ocurred.')
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
+            log.warning('Authentication failure of type "eauth" ocurred.')
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
+                log.warning('Authentication failure of type "eauth" ocurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
+                log.warning('Authentication failure of type "eauth" ocurred.')
                 return ''
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][clear_load['eauth']][name],
                     clear_load['fun'])
             if not good:
+                log.warning('Authentication failure of type "eauth" ocurred.')
                 return ''
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
@@ -1493,15 +1498,19 @@ class ClearFuncs(object):
         contain the eauth key and the needed authentication creds.
         '''
         if not 'eauth' in clear_load:
+            log.warning('Authentication failure of type "eauth" ocurred.')
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
+            log.warning('Authentication failure of type "eauth" ocurred.')
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
+                log.warning('Authentication failure of type "eauth" ocurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
+                log.warning('Authentication failure of type "eauth" ocurred.')
                 return ''
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
