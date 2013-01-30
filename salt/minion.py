@@ -727,6 +727,10 @@ class Minion(object):
             self.socket.setsockopt(
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
+        if hasattr(zmq, 'IPV4ONLY'):
+            self.socket.setsockopt(
+                zmq.IPV4ONLY, 0
+            )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)
