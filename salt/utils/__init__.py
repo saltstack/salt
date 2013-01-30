@@ -471,8 +471,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
-        cmd = [rcon, dest]
-        subprocess.call(cmd)
+        with open(os.devnull, 'w') as dev_null:
+            cmd = [rcon, dest]
+            subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
         # The temp file failed to move
         try:
