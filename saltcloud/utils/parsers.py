@@ -55,7 +55,6 @@ class CloudConfigMixIn(object):
         if optvalue:
             setattr(self.options, name, os.path.abspath(optvalue))
 
-
     def _mixin_after_parsed(self):
         for option in self.config_group.option_list:
             if option.dest is None:
