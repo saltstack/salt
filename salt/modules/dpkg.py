@@ -7,11 +7,6 @@ import os
 import re
 import logging
 
-try:
-    deb_support = True
-except ImportError:
-    deb_support = False
-
 # Import salt libs
 import salt.utils
 
