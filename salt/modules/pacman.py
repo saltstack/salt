@@ -260,7 +260,6 @@ def install(name=None,
                     # If no prefix characters were supplied, use '='
                     prefix = prefix or '='
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
-                    log.debug(targets)
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
                           '"{1}"'.format(version, name)
