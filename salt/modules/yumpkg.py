@@ -6,6 +6,7 @@ Support for YUM
 '''
 
 # Import python libs
+import yaml
 import os
 import logging
 
@@ -254,6 +255,82 @@ def clean_metadata():
         salt '*' pkg.clean_metadata
     '''
     return refresh_db()
+
+
+def group_install(name=None,
+                  groups=None,
+                  skip=None,
+                  include=None,
+                  **kwargs):
+    '''
+    Install the passed package group(s). This is basically a wrapper around
+    pkg.install, which performs package group resolution for the user. This
+    function is currently considered "experimental", and should be expected to
+    undergo changes before it becomes official.
+
+    name
+        The name of a single package group to install. Note that this option is
+        ignored if "groups" is passed.
+
+    groups
+        The names of multiple packages which are to be installed.
+
+        CLI Example::
+    
+            salt '*' pkg.groupinstall groups='["Group 1", "Group 2"]'
+
+    skip
+        The name(s), in a list, of any packages that would normally be
+        installed by the package group ("default" packages), which should not
+        be installed.
+
+        CLI Examples::
+    
+            salt '*' pkg.groupinstall 'My Group' skip='["foo", "bar"]'
+
+    include
+        The name(s), in a list, of any packages which are included in a group,
+        which would not normally be installed ("optional" packages). Note that
+        this will nor enforce group membership; if you include packages which
+        are not members of the specified groups, they will still be installed.
+
+        CLI Examples::
+    
+            salt '*' pkg.groupinstall 'My Group' include='["foo", "bar"]'
+
+    other arguments
+        Because this is essentially a wrapper around pkg.install, any argument
+        which can be passed to pkg.install may also be included here, and it
+        will be passed along wholesale.
+    '''
+    pkg_groups = []
+    if groups:
+        pkg_groups = yaml.safe_load(groups)
+    else:
+        pkg_groups.append(name)
+
+    skip_pkgs = []
+    if skip:
+        skip_pkgs = yaml.safe_load(skip)
+
+    include = []
+    if include:
+        include = yaml.safe_load(include)
+
+    ret = {}
+    pkgs = []
+    for group in pkg_groups:
+        group_detail = group_info(group)
+        for package in group_detail['mandatory packages'].keys():
+            pkgs.append(package)
+        for package in group_detail['default packages'].keys():
+            if package not in skip_pkgs:
+                pkgs.append(package)
+        for package in include:
+            pkgs.append(package)
+
+    install_pkgs = yaml.safe_dump(pkgs)
+    return install(pkgs=install_pkgs, **kwargs)
 
 
 def install(name=None,
