@@ -35,7 +35,9 @@ import logging
 # Import libcloud
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
+from libcloud.compute.deployment import (
+    MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
+)
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -66,12 +68,23 @@ def __virtual__():
             return False
 
     if not os.path.exists(__opts__['AWS.private_key']):
-            raise SaltException('The AWS key file{0} does not exist\n'.format(__opts__['AWS.private_key']))
-    keymode = str(oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode)))
+        raise SaltException(
+            'The AWS key file {0} does not exist\n'.format(
+                __opts__['AWS.private_key']
+            )
+        )
+    keymode = str(
+        oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode))
+    )
     if keymode != '0600':
-            raise SaltException('The AWS key file{0} needs to b e set to mode 0600\n'.format(__opts__['AWS.private_key']))
-        
-    global avail_images, avail_sizes, script, destroy, list_nodes, list_nodes_full, list_nodes_select
+        raise SaltException(
+            'The AWS key file {0} needs to be set to mode 0600\n'.format(
+                __opts__['AWS.private_key']
+            )
+        )
+
+    global (avail_images, avail_sizes, script, destroy, list_nodes,
+            list_nodes_full, list_nodes_select)
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
@@ -111,15 +124,20 @@ def get_conn(**kwargs):
     if 'location' in kwargs:
         location = kwargs['location']
         if location not in EC2_LOCATIONS:
-            raise SaltException('The specified location does not seem to be valid: {0}\n'.format(location))
+            raise SaltException(
+                'The specified location does not seem to be valid: '
+                '{0}\n'.format(
+                    location
+                )
+            )
     else:
         location = DEFAULT_LOCATION
 
     driver = get_driver(EC2_LOCATIONS[location])
     return driver(
-            __opts__['AWS.id'],
-            __opts__['AWS.key'],
-            )
+        __opts__['AWS.id'],
+        __opts__['AWS.key'],
+    )
 
 
 def keyname(vm_):
@@ -133,8 +151,14 @@ def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return vm_.get('securitygroup', __opts__.get('AWS.securitygroup', 'default'))
-    securitygroups = vm_.get('securitygroup', __opts__.get('AWS.securitygroup', 'default'))
+    return vm_.get(
+        'securitygroup', __opts__.get('AWS.securitygroup', 'default')
+    )
+
+    # XXX: This code won't get executed. On purpose?
+    securitygroups = vm_.get(
+        'securitygroup', __opts__.get('AWS.securitygroup', 'default')
+    )
     if not isinstance(securitygroups, list):
         securitygroup = securitygroups
         securitygroups = [securitygroup]
@@ -145,7 +169,9 @@ def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to 'ec2-user'.
     '''
-    usernames = vm_.get('ssh_username', __opts__.get('AWS.ssh_username', 'ec2-user'))
+    usernames = vm_.get(
+        'ssh_username', __opts__.get('AWS.ssh_username', 'ec2-user')
+    )
     if not isinstance(usernames, list):
         username = usernames
         usernames = [username]
@@ -164,9 +190,12 @@ def ssh_username(vm_):
 
 def ssh_interface(vm_):
     '''
-    Return the ssh_interface type to connect to. Either 'public_ips' (default) or 'private_ips'.
+    Return the ssh_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
     '''
-    return vm_.get('ssh_interface', __opts__.get('AWS.ssh_interface', 'public_ips'))
+    return vm_.get(
+        'ssh_interface', __opts__.get('AWS.ssh_interface', 'public_ips')
+    )
 
 
 def get_location(vm_=None):
@@ -250,7 +279,9 @@ def create(vm_):
         ip_address = data.public_ips[0]
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(host=ip_address, username=user, timeout=60, key_filename=__opts__['AWS.private_key']):
+            if saltcloud.utils.wait_for_passwd(
+                host=ip_address, username=user, timeout=60,
+                key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
     sudo = True
@@ -273,7 +304,9 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             }
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
+            __opts__, vm_
+        )
 
         # Deploy salt-master files, if necessary
         if 'make_master' in vm_ and vm_['make_master'] is True:
@@ -292,7 +325,11 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
-    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info(
+        'Created Cloud VM {0} with the following values:'.format(
+            vm_['name']
+        )
+    )
     for key, val in data.__dict__.items():
         log.info('  {0}: {1}'.format(key, val))
     volumes = vm_.get('map_volumes')
@@ -315,7 +352,11 @@ def create_attach_volumes(volumes, location, data):
         created_volume = conn.create_volume(volume['size'], volume_name, avz)
         attach = conn.attach_volume(data, created_volume, volume['device'])
         if attach:
-            log.info('{0} attached to {1} (aka {2}) as device {3}'.format(created_volume.id, data.id, data.name, volume['device']))
+            log.info(
+                '{0} attached to {1} (aka {2}) as device {3}'.format(
+                    created_volume.id, data.id, data.name, volume['device']
+                )
+            )
 
 
 def stop(name):
@@ -432,8 +473,13 @@ def rename(name, kwargs):
     try:
         log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
         data = conn.ex_create_tags(resource=node, tags=tags)
-        saltcloud.utils.rename_key(__opts__['pki_dir'], name, kwargs['newname'])
+        saltcloud.utils.rename_key(
+            __opts__['pki_dir'], name, kwargs['newname']
+        )
     except Exception as exc:
-        log.error('Failed to rename {0} to {1}'.format(name, kwargs['newname']))
+        log.error(
+            'Failed to rename {0} to {1}'.format(
+                name, kwargs['newname']
+            )
+        )
         log.error(exc)
-
