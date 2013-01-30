@@ -2047,6 +2047,9 @@ class BaseHighState(object):
 
         # Verify that the high data is structurally sound
         errors += self.state.verify_high(high)
+        high, req_in_errors = self.state.requisite_in(high)
+        errors += req_in_errors
+        high = self.state.apply_exclude(high)
 
         if errors:
             return errors
