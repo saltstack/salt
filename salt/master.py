@@ -801,6 +801,8 @@ class AESFuncs(object):
                 'that is not present on the master: {jid}'.format(**load)
             )
             return False
+        if os.path.exists(os.path.join(jid_dir, 'nocache')):
+            return
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
