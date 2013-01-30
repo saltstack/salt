@@ -133,6 +133,7 @@ def highstate(test=None, **kwargs):
         opts['test'] = test
 
     st_ = salt.state.HighState(opts)
+    salt.state.HighState.current = st_
     ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
