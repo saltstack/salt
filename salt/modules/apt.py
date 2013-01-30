@@ -236,7 +236,6 @@ def install(name=None,
                                                                   pkgs,
                                                                   sources)
 
-    log.debug(pkg_params)
     # Support old "repo" argument
     repo = kwargs.get('repo', '')
     if not fromrepo and repo:
@@ -514,7 +513,7 @@ def perform_cmp(pkg1='', pkg2=''):
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions "{0}" {1} ' \
-                  '"{2}"'.format(version1, oper, version2)
+                  '"{2}"'.format(pkg1, oper, pkg2)
             if __salt__['cmd.retcode'](cmd) == 0:
                 return ret
     except Exception as e:
