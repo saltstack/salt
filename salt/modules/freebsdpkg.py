@@ -107,15 +107,29 @@ def available_version(*names):
     return ret
 
 
-def version(name):
+def version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return list_pkgs().get(name, '')
+    if not names:
+        return ''
+
+    ret = dict.fromkeys(names, '')
+    installed = list_pkgs()
+    for name in names:
+        ret[name] = installed.get(name, '')
+
+    if len(names) == 1:
+        return ret[names[0]]
+    else:
+        return ret
 
 
 def refresh_db():
@@ -377,3 +391,80 @@ def compare(pkg1='', oper='==', pkg2=''):
         salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
     '''
     return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of _every_ file on the system's package database (not
+    generally recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    ret = file_dict(*packages)
+    files = []
+    for pkg, its_files in ret['files'].items():
+        files.extend(its_files)
+    ret['files'] = files
+    return ret
+
+
+def file_dict(*packages):
+    '''
+    List the files that belong to a package, grouped by package. Not
+    specifying any packages will return a list of _every_ file on the
+    system's package database (not generally recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    errors = []
+    files = {}
+
+    if _check_pkgng():
+        if packages:
+            match_pattern = '%n ~ {0}'
+            matches = [match_pattern.format(p) for p in packages]
+
+            cmd = '{0} query -e \'{1}\' \'%n %Fp\''.format(
+                _cmd('pkg'), ' || '.join(matches))
+        else:
+            cmd = '{0} query -a \'%n %Fp\''.format(_cmd('pkg'))
+
+        for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+            pkg, fn = line.split(' ', 1)
+            if pkg not in files:
+                files[pkg] = []
+            files[pkg].append(fn)
+    else:
+        if packages:
+            match_pattern = '\'{0}-[0-9]*\''
+            matches = [match_pattern.format(p) for p in packages]
+
+            cmd = '{0} -QL {1}'.format(_cmd('pkg_info'), ' '.join(matches))
+        else:
+            cmd = '{0} -QLa'.format(_cmd('pkg_info'))
+
+        ret = __salt__['cmd.run_all'](cmd)
+
+        for line in ret['stderr'].splitlines():
+            errors.append(line)
+
+        pkg = None
+        for line in ret['stdout'].splitlines():
+            if pkg is not None and line.startswith('/'):
+                files[pkg].append(line)
+            elif ':/' in line:
+                pkg, fn = line.split(':', 1)
+                pkg, ver = pkg.rsplit('-', 1)
+                files[pkg] = [fn]
+            else:
+                continue  # unexpected string
+    return {'errors': errors, 'files': files}
