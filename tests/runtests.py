@@ -14,16 +14,21 @@ import tempfile
 
 # Import salt libs
 import saltunittest
-from integration import print_header, PNUM, TestDaemon
+from integration import print_header, PNUM, TestDaemon, TMP
 
 try:
     import xmlrunner
 except ImportError:
     xmlrunner = None
 
+try:
+    import junitxml
+    import junitxml.runner
+except ImportError:
+    junitxml = None
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-
+XML_OUTPUT_DIR = os.path.join(TMP, 'test-reports')
 
 try:
     import coverage
@@ -57,12 +62,19 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
     print_header('Starting {0}'.format(header))
 
     if opts.xmlout:
-        runner = xmlrunner.XMLTestRunner(output='test-reports').run(tests)
+        runner = xmlrunner.XMLTestRunner(output=XML_OUTPUT_DIR).run(tests)
+    elif opts.junit_xml:
+        if not os.path.isdir(XML_OUTPUT_DIR):
+            os.makedirs(XML_OUTPUT_DIR)
+        runner = junitxml.runner.JUnitXmlTestRunner(
+            open(os.path.join(XML_OUTPUT_DIR, 'results.xml'), 'w')
+        ).run(tests)
     else:
         runner = saltunittest.TextTestRunner(
             verbosity=opts.verbosity
         ).run(tests)
         TEST_RESULTS.append((header, runner))
+
     return runner.wasSuccessful()
 
 
@@ -255,9 +267,20 @@ def parse_opts():
         dest='xmlout',
         default=False,
         action='store_true',
-        help='XML test runner output'
+        help='XML test runner output(Output directory: {0})'.format(
+            XML_OUTPUT_DIR
+        )
     )
-
+    output_options_group.add_option(
+        '-j',
+        '--junit-xml',
+        default=False,
+        action='store_true',
+        help='JUnit compatible XML test runner output'
+             '(Output filename: {0})'.format(
+                 os.path.join(XML_OUTPUT_DIR, 'results.xml')
+             )
+    )
     output_options_group.add_option(
         '--no-report',
         default=False,
@@ -281,8 +304,16 @@ def parse_opts():
     options, _ = parser.parse_args()
 
     if options.xmlout and xmlrunner is None:
-        parser.error('\'--xml\' is not available. The xmlrunner library '
-                     'is not installed.')
+        parser.error(
+            '\'--xml\' is not available. The xmlrunner library is not '
+            'installed.'
+        )
+
+    if options.junit_xml and junitxml is None:
+        parser.error(
+            '\'--junit-xml\' is not available. The junitxml library is not'
+            'installed.'
+        )
 
     if options.coverage and code_coverage is None:
         parser.error(
