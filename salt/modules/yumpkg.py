@@ -603,7 +603,7 @@ def group_list():
 
     CLI Example::
 
-        salt '*' pkg.grouplist
+        salt '*' pkg.group_list
     '''
     ret = {'installed': [], 'available': [], 'available languages': {}}
     yumbase = yum.YumBase()
