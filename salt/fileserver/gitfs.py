@@ -9,6 +9,7 @@ When using the git file server backend,
 import os
 import time
 import hashlib
+import logging
 
 # Import third party libs
 HAS_GIT = False
@@ -23,13 +24,21 @@ import salt.utils
 import salt.fileserver
 
 
+log = logging.getLogger(__name__)
+
 def __virtual__():
     '''
     Only load if gitpython is available
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
-    return 'git' if HAS_GIT else False
+    if not 'git' in __opts__['fileserver_backend']:
+        return False
+    if not HAS_GIT:
+        log.error('Git fileserver backend is enabled in configuration but '
+                  'could not be loaded, is git-python installed?')
+        return False
+    return 'git'
 
 
 def _get_ref(repo, short):
