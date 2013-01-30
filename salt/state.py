@@ -1347,6 +1347,13 @@ class State(object):
                 if ctag not in running:
                     if ctag in self.active:
                         log.error('Recursive requisite found')
+                        if not ctag in running:
+                            running[tag] = {
+                                    'changes': {},
+                                    'result': False,
+                                    'comment': 'Recursive requisite found',
+                                    '__run_num__': self.__run_num}
+                        self.__run_num += 1
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
