@@ -1556,7 +1556,10 @@ class ClearFuncs(object):
                     return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
-            if clear_load['user'].startswith('sudo_'):
+            if 'root' in self.key:
+                if clear_load.pop('key') == self.key['root']:
+                    pass
+            elif clear_load['user'].startswith('sudo_'):
                 if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
                     log.warning('Authentication failure of type "user" ocurred.')
                     return ''
