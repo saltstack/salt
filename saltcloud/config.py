@@ -2,45 +2,70 @@
 Manage configuration files in salt-cloud
 '''
 
-# Import python libs
-import os
-
 # Import salt libs
 import salt.config
 
-__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
-__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
-__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+
+CLOUD_CONFIG_DEFAULTS = {
+    'default_include': 'cloud.d/*.conf',
+    # Provider defaults
+    'provider': '',
+    'location': '',
+    # Global defaults
+    'ssh_auth': '',
+    'keysize': 4096,
+    'os': '',
+    'script': 'bootstrap-salt-minion',
+    'start_action': None,
+    # Logging defaults
+    'log_file': '/var/log/salt/cloud',
+    'log_level': None,
+    'log_level_logfile': None,
+    'log_level': None,
+    'log_level_logfile': None,
+    'log_datefmt': salt.config._DFLT_LOG_DATEFMT,
+    'log_datefmt_logfile': salt.config._DFLT_LOG_DATEFMT_LOGFILE,
+    'log_fmt_console': salt.config._DFLT_LOG_FMT_CONSOLE,
+    'log_fmt_logfile': salt.config._DFLT_LOG_FMT_LOGFILE,
+    'log_granular_levels': {},
+}
+
+VM_CONFIG_DEFAULTS = {
+    'default_include': 'profiles.d/*.conf',
+}
 
 
-def cloud_config(path):
+def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
     '''
     Read in the salt cloud config and return the dict
     '''
-    opts = {  # Provider defaults
-            'provider': '',
-            'location': '',
-            # Global defaults
-            'ssh_auth': '',
-            'keysize': 4096,
-            'os': '',
-            'script': 'bootstrap-salt-minion',
-            'start_action': None,
-            # Logging defaults
-            'log_file': '/var/log/salt/cloud',
-            'log_level': None,
-            'log_level_logfile': None,
-            'log_datefmt': __dflt_log_datefmt,
-            'log_fmt_console': __dflt_log_fmt_console,
-            'log_fmt_logfile': __dflt_log_fmt_logfile,
-            'log_granular_levels': {},
-            }
+    if defaults is None:
+        defaults = CLOUD_CONFIG_DEFAULTS
 
-    salt.config.load_config(opts, path, 'SALT_CLOUD_CONFIG')
+    overrides = salt.config.load_config(path, env_var)
+    default_include = overrides.get(
+        'default_include', defaults['default_include']
+    )
+    include = overrides.get('include', [])
 
-    if 'include' in opts:
-        opts = salt.config.include_config(opts, path)
+    overrides.update(
+        salt.config.include_config(default_include, path, verbose=False)
+    )
+    overrides.update(
+        salt.config.include_config(include, path, verbose=True)
+    )
+    return apply_cloud_config(overrides, defaults)
 
+
+def apply_cloud_config(overrides, defaults=None):
+    if defaults is None:
+        defaults = CLOUD_CONFIG_DEFAULTS
+
+    opts = defaults.copy()
+    if overrides:
+        opts.update(overrides)
+
+    # Migrate old configuration
     opts = old_to_new(opts)
     opts = prov_dict(opts)
 
@@ -88,24 +113,41 @@ def prov_dict(opts):
     return opts
 
 
-def vm_config(path):
+def vm_profiles_config(path, env_var='SALT_CLOUDVM_CONFIG', defaults=None):
     '''
     Read in the salt cloud VM config file
     '''
-    # No defaults
-    opts = {}
+    if defaults is None:
+        defaults = VM_CONFIG_DEFAULTS
 
-    salt.config.load_config(opts, path, 'SALT_CLOUDVM_CONFIG')
+    overrides = salt.config.load_config(path, env_var)
+    default_include = overrides.get(
+        'default_include', defaults['default_include']
+    )
+    include = overrides.get('include', [])
 
-    if 'include' in opts:
-        opts = salt.config.include_config(opts, path)
+    overrides.update(
+        salt.config.include_config(default_include, path, verbose=False)
+    )
+    overrides.update(
+        salt.config.include_config(include, path, verbose=True)
+    )
+    return apply_vm_profiles_config(overrides, defaults)
+
+
+def apply_vm_profiles_config(overrides, defaults=None):
+    if defaults is None:
+        defaults = VM_CONFIG_DEFAULTS
+
+    opts = defaults.copy()
+    if overrides:
+        opts.update(overrides)
 
     vms = []
 
-    if 'conf_file' in opts:
-        opts.pop('conf_file')
-
     for key, val in opts.items():
+        if key in ('conf_file', 'include', 'default_include'):
+            continue
         val['profile'] = key
         vms.append(val)
 

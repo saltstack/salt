@@ -55,7 +55,6 @@ class CloudConfigMixIn(object):
         if optvalue:
             setattr(self.options, name, os.path.abspath(optvalue))
 
-
     def _mixin_after_parsed(self):
         for option in self.config_group.option_list:
             if option.dest is None:
@@ -74,11 +73,11 @@ class CloudConfigMixIn(object):
         # 2nd Override master config with salt-cloud config
         # Done in CloudConfigMixIn.process_cloud_config()
 
-        # 3rd - Override config with cli options
-        self.__merge_config_with_cli()
+        # 3rd - Include VM config
+        # Done in CloudConfigMixIn.process_vm_config()
 
-        # 4th - Include VM config
-        self.config['vm'] = config.vm_config(self.options.vm_config)
+        # 4th - Override config with cli options
+        # Done in parsers.MergeConfigMixIn,.__merge_config_with_cli()
 
         # Remove log_level_logfile from config if set to None so it can be
         # equal to console log_level
@@ -94,6 +93,11 @@ class CloudConfigMixIn(object):
         self.config.update(config.cloud_config(self.options.cloud_config))
     # Force process_cloud_config to run AFTER process_master_config
     process_cloud_config._mixin_prio_ = -999
+
+    def process_vm_config(self):
+        self.config['vm'] = config.vm_profiles_config(self.options.vm_config)
+    # Force process_vm_config to run AFTER process_cloud_config
+    process_vm_config._mixin_prio_ = -998
 
 
 class ExecutionOptionsMixIn(object):
@@ -166,6 +170,10 @@ class ExecutionOptionsMixIn(object):
             help='Default yes in answer to all confirmation questions'
         )
         self.add_option_group(group)
+
+    def _mixin_after_parsed(self):
+        if not self.options.map:
+            self.config['map'] = None
 
 
 class CloudQueriesMixIn(object):
