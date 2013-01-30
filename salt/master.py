@@ -1507,10 +1507,13 @@ class ClearFuncs(object):
                         )
                 return ''
             if not token:
+                log.warning('Authentication failure of type "token" ocurred.')
                 return ''
             if not token['eauth'] in self.opts['external_auth']:
+                log.warning('Authentication failure of type "token" ocurred.')
                 return ''
             if not token['name'] in self.opts['external_auth'][token['eauth']]:
+                log.warning('Authentication failure of type "token" ocurred.')
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][token['eauth']][token['name']],
@@ -1520,16 +1523,20 @@ class ClearFuncs(object):
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
+                    log.warning('Authentication failure of type "token" ocurred.')
                     return ''
         elif 'eauth' in extra:
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
+                log.warning('Authentication failure of type "eauth" ocurred.')
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
                 if not name in self.opts['external_auth'][extra['eauth']]:
+                    log.warning('Authentication failure of type "eauth" ocurred.')
                     return ''
                 if not self.loadauth.time_auth(extra):
+                    log.warning('Authentication failure of type "eauth" ocurred.')
                     return ''
             except Exception as exc:
                 log.error(
@@ -1545,27 +1552,34 @@ class ClearFuncs(object):
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
+                    log.warning('Authentication failure of type "eauth" ocurred.')
                     return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
                 if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                    log.warning('Authentication failure of type "user" ocurred.')
                     return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                    log.warning('Authentication failure of type "user" ocurred.')
                     return ''
             elif clear_load['user'] == 'root':
                 if not clear_load.pop('key') == self.key.get(self.opts.get('user', 'root')):
+                    log.warning('Authentication failure of type "user" ocurred.')
                     return ''
             elif clear_load['user'] == getpass.getuser():
                 if not clear_load.pop('key') == self.key.get(clear_load['user']):
+                    log.warning('Authentication failure of type "user" ocurred.')
                     return ''
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
+                        log.warning('Authentication failure of type "user" ocurred.')
                         return ''
                     if not clear_load['user'] in self.opts['client_acl']:
+                        log.warning('Authentication failure of type "user" ocurred.')
                         return ''
                     good = self.ckminions.auth_check(
                             self.opts['client_acl'][clear_load['user']],
@@ -1575,11 +1589,14 @@ class ClearFuncs(object):
                     if not good:
                         # Accept find_job so the cli will function cleanly
                         if not clear_load['fun'] == 'saltutil.find_job':
+                            log.warning('Authentication failure of type "user" ocurred.')
                             return ''
                 else:
+                    log.warning('Authentication failure of type "user" ocurred.')
                     return ''
         else:
             if not clear_load.pop('key') == self.key[getpass.getuser()]:
+                log.warning('Authentication failure of type "other" ocurred.')
                 return ''
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
