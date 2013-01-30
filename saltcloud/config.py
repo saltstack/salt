@@ -132,7 +132,7 @@ def vm_profiles_config(path, env_var='SALT_CLOUDVM_CONFIG', defaults=None):
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_vm_config(overrides, defaults)
+    return apply_vm_profiles_config(overrides, defaults)
 
 
 def apply_vm_profiles_config(overrides, defaults=None):
