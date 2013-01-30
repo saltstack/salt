@@ -321,18 +321,27 @@ class LocalClient(object):
         if not pub_data:
             yield pub_data
         else:
-            for fn_ret in self.get_cli_event_returns(pub_data['jid'],
-                    pub_data['minions'],
-                    self._get_timeout(timeout),
-                    tgt,
-                    expr_form,
-                    verbose,
-                    **kwargs):
+            try:
+                for fn_ret in self.get_cli_event_returns(
+                        pub_data['jid'],
+                        pub_data['minions'],
+                        self._get_timeout(timeout),
+                        tgt,
+                        expr_form,
+                        verbose,
+                        **kwargs):
 
-                if not fn_ret:
-                    continue
+                    if not fn_ret:
+                        continue
 
-                yield fn_ret
+                    yield fn_ret
+            except KeyboardInterrupt:
+                msg = ('Exiting on Ctrl-C\nThis job\'s jid is:\n{0}\n'
+                       'The minions may not have all finished running and any'
+                       'remaining minions will return upon completion. To look'
+                       'up the return data for this job later run:\n'
+                       'salt-run jobs.lookup_jid {0}').format(pub_data['jid'])
+                raise SystemExit(msg)
 
     def cmd_iter(
         self,
