@@ -69,7 +69,7 @@ def __virtual__():
 
     if not os.path.exists(__opts__['AWS.private_key']):
         raise SaltException(
-            'The AWS key file{0} does not exist\n'.format(
+            'The AWS key file {0} does not exist\n'.format(
                 __opts__['AWS.private_key']
             )
         )
@@ -78,7 +78,7 @@ def __virtual__():
     )
     if keymode != '0600':
         raise SaltException(
-            'The AWS key file{0} needs to be set to mode 0600\n'.format(
+            'The AWS key file {0} needs to be set to mode 0600\n'.format(
                 __opts__['AWS.private_key']
             )
         )
