@@ -74,7 +74,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                 except Exception as exc:
                     log.debug(traceback.format_exc(exc))
-                    log.error(
+                    self.error(
                         'There was an error with a custom map: {0}'.format(
                             exc
                         )
@@ -86,10 +86,12 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                 except Exception as exc:
                     log.debug(traceback.format_exc(exc))
-                    log.error(
+                    self.error(
                         'There was an error with a map: {0}'.format(exc)
                     )
             salt.output.display_output(query_map, '', self.config)
+            self.exit(0)
+
 
         if self.options.list_locations is not None:
             try:
