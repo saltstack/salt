@@ -333,6 +333,7 @@ def create_attach_volumes(volumes, location, data):
     '''
     conn = get_conn(location=location)
     node_avz = data.__dict__.get('extra').get('availability')
+    avz = None
     for avz in conn.list_locations():
         if avz.availability_zone.name == node_avz:
             break
