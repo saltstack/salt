@@ -127,7 +127,7 @@ class Fileserver(object):
                         continue
                     args = comp.split('=', 1)
                     kwargs[comp[0]] = comp[1]
-        if not 'env' in kwargs:
+        if 'env' in kwargs:
             env = kwargs.pop('env')
         for fsb in back:
             fstr = '{0}.find_file'.format(fsb)
