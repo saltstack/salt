@@ -90,7 +90,6 @@ class SaltCloud(parsers.SaltCloudParser):
                         'There was an error with a map: {0}'.format(exc)
                     )
             salt.output.display_output(query_map, '', self.config)
-            self.exit(0)
 
 
         if self.options.list_locations is not None:
