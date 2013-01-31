@@ -15,6 +15,7 @@ the cloud configuration file
 '''
 
 # Import python libs
+import sys
 import logging
 
 # Import libcloud

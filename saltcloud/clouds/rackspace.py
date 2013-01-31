@@ -24,6 +24,7 @@ and requires that two configuration paramaters be set for use:
 import logging
 import socket
 import time
+import sys
 
 # Import libcloud
 from libcloud.compute.base import NodeState
