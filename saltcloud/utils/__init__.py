@@ -264,7 +264,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   name=None, pub_key=None, sock_dir=None, provider=None,
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
-                  minion_pub=None, minion_pem=None, minion_conf=None):
+                  minion_pub=None, minion_pem=None, minion_conf=None,
+                  keep_tmp=False):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -364,31 +365,38 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     deploy_command += ' -c /tmp/'
                 root_cmd(deploy_command, tty, sudo, **kwargs)
                 log.debug('Executed /tmp/deploy.sh')
+
                 # Remove the deploy script
-                ssh.exec_command('rm /tmp/deploy.sh')
-                log.debug('Removed /tmp/deploy.sh')
+                if not keep_tmp:
+                    ssh.exec_command('rm /tmp/deploy.sh')
+                    log.debug('Removed /tmp/deploy.sh')
+
+            if keep_tmp:
+                log.debug('Not removing deloyment files from /tmp/')
 
             # Remove minion configuration
-            if minion_pub:
-                ssh.exec_command('rm /tmp/minion.pub')
-                log.debug('Removed /tmp/minion.pub')
-            if minion_pem:
-                ssh.exec_command('rm /tmp/minion.pem')
-                log.debug('Removed /tmp/minion.pem')
-            if minion_conf:
-                ssh.exec_command('rm /tmp/minion')
-                log.debug('Removed /tmp/minion')
+            if not keep_tmp:
+                if minion_pub:
+                    ssh.exec_command('rm /tmp/minion.pub')
+                    log.debug('Removed /tmp/minion.pub')
+                if minion_pem:
+                    ssh.exec_command('rm /tmp/minion.pem')
+                    log.debug('Removed /tmp/minion.pem')
+                if minion_conf:
+                    ssh.exec_command('rm /tmp/minion')
+                    log.debug('Removed /tmp/minion')
 
             # Remove master configuration
-            if master_pub:
-                ssh.exec_command('rm /tmp/master.pub')
-                log.debug('Removed /tmp/master.pub')
-            if master_pem:
-                ssh.exec_command('rm /tmp/master.pem')
-                log.debug('Removed /tmp/master.pem')
-            if master_conf:
-                ssh.exec_command('rm /tmp/master')
-                log.debug('Removed /tmp/master')
+            if not keep_tmp:
+                if master_pub:
+                    ssh.exec_command('rm /tmp/master.pub')
+                    log.debug('Removed /tmp/master.pub')
+                if master_pem:
+                    ssh.exec_command('rm /tmp/master.pem')
+                    log.debug('Removed /tmp/master.pem')
+                if master_conf:
+                    ssh.exec_command('rm /tmp/master')
+                    log.debug('Removed /tmp/master')
 
             if start_action:
                 queuereturn = queue.get()

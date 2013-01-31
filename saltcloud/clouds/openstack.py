@@ -243,6 +243,7 @@ def create(vm_):
         'start_action': __opts__['start_action'],
         'minion_pem': vm_['priv_key'],
         'minion_pub': vm_['pub_key'],
+        'keep_tmp': __opts__['keep_tmp'],
     }
 
     deployargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
