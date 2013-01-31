@@ -3,6 +3,7 @@ File server pluggable modules and generic backend functions
 '''
 
 # Import python libs
+import os
 import re
 import fnmatch
 import logging
