@@ -26,6 +26,7 @@ try:
 except:
     log.debug('Mako not available')
 
+
 class Cloud(object):
     '''
     An object for the creation of new VMs
@@ -244,7 +245,11 @@ class Cloud(object):
                     found = True
                     if name in current_boxen:
                         # The specified VM already exists, don't make it anew
-                        log.warn("{0} already exists on {1}".format(name, current_boxen[name]))
+                        log.warn(
+                            '{0} already exists on {1}'.format(
+                                name, current_boxen[name]
+                            )
+                        )
                         continue
                     vm_['name'] = name
                     if self.opts['parallel']:
@@ -254,7 +259,9 @@ class Cloud(object):
                     else:
                         self.create(vm_)
         if not found:
-            log.error('Profile {0} is not defined'.format(self.opts['profile']))
+            log.error(
+                'Profile {0} is not defined'.format(self.opts['profile'])
+            )
 
     def do_action(self, names, kwargs):
         '''
@@ -309,7 +316,7 @@ class Map(Cloud):
             for vm in vms:
                 if provider not in full_map:
                     full_map[provider] = {}
-    
+
                 if vm in query_map[provider]:
                     full_map[provider][vm] = query_map[provider][vm]
                 else:
@@ -336,9 +343,9 @@ class Map(Cloud):
             with open(self.opts['map'], 'rb') as fp_:
                 try:
                     #open mako file
-                    temp_ = Template(open(fp_, 'r').read()) 
+                    temp_ = Template(open(fp_, 'r').read())
                     #render as yaml
-                    map_ = temp_.render() 
+                    map_ = temp_.render()
                 except:
                     map_ = yaml.load(fp_.read())
         except Exception as exc:

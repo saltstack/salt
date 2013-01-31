@@ -37,15 +37,15 @@ class CloudConfigMixIn(object):
         group.add_option(
             '-M', '--master-config',
             default='/etc/salt/master',
-            help=('The location of the salt master config file. Default: '
-                  '%default')
+            help='The location of the salt master config file. '
+                 'Default: %default'
         )
         group.add_option(
             '-V', '--profiles', '--vm_config',
             dest='vm_config',
             default='/etc/salt/cloud.profiles',
-            help=('The location of the saltcloud VM config file. Default: '
-                  '%default')
+            help='The location of the saltcloud VM config file. '
+                 'Default: %default'
         )
         self.add_option_group(group)
 
@@ -77,12 +77,19 @@ class CloudConfigMixIn(object):
         # Done in CloudConfigMixIn.process_vm_config()
 
         # 4th - Override config with cli options
-        # Done in parsers.MergeConfigMixIn,.__merge_config_with_cli()
+        # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
 
         # Remove log_level_logfile from config if set to None so it can be
         # equal to console log_level
         if self.config['log_level_logfile'] is None:
             self.config.pop('log_level_logfile')
+
+    def setup_config(self):
+        '''
+        This method needs to be defined in order for `parsers.MergeConfigMixIn`
+        to do it's job.
+        '''
+        return {}
 
     def process_master_config(self):
         self.config = salt.config.master_config(
@@ -135,8 +142,8 @@ class ExecutionOptionsMixIn(object):
             '-H', '--hard',
             default=False,
             action='store_true',
-            help=('Delete all VMs that are not defined in the map file '
-                  'CAUTION!!! This operation can irrevocably destroy VMs!')
+            help='Delete all VMs that are not defined in the map file '
+                 'CAUTION!!! This operation can irrevocably destroy VMs!'
         )
         group.add_option(
             '-d', '--destroy',
@@ -161,7 +168,8 @@ class ExecutionOptionsMixIn(object):
             '-u', '--update-bootstrap',
             default=False,
             action='store_true',
-            help='Update salt-bootstrap to the latest develop version on GitHub'
+            help='Update salt-bootstrap to the latest develop version on '
+                 'GitHub'
         )
         group.add_option(
             '-y', '--assume-yes',
@@ -170,10 +178,6 @@ class ExecutionOptionsMixIn(object):
             help='Default yes in answer to all confirmation questions'
         )
         self.add_option_group(group)
-
-    def _mixin_after_parsed(self):
-        if not self.options.map:
-            self.config['map'] = None
 
 
 class CloudQueriesMixIn(object):
