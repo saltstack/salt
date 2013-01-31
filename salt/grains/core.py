@@ -504,8 +504,8 @@ _OS_NAME_MAP = {
     'arch': 'Arch',
     'debian': 'Debian',
     'debiangnu/': 'Debian',
-    'fedoraremi': 'RedHat',
-    'amazonami': 'RedHat',
+    'fedoraremi': 'Fedora',
+    'amazonami': 'Amazon',
     'alt': 'ALT',
 }
 
