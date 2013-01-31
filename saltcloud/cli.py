@@ -13,6 +13,7 @@ Primary interfaces for the salt-cloud system
 # Import python libs
 import os
 import logging
+import traceback
 
 # Import salt libs
 import saltcloud.config
@@ -72,7 +73,8 @@ class SaltCloud(parsers.SaltCloudParser):
                         query=self.selected_query_option
                     )
                 except Exception as exc:
-                    print(
+                    log.debug(traceback.format_exc(exc))
+                    log.error(
                         'There was an error with a custom map: {0}'.format(
                             exc
                         )
@@ -83,7 +85,10 @@ class SaltCloud(parsers.SaltCloudParser):
                         query=self.selected_query_option
                     )
                 except Exception as exc:
-                    print('There was an error with a map: {0}'.format(exc))
+                    log.debug(traceback.format_exc(exc))
+                    log.error(
+                        'There was an error with a map: {0}'.format(exc)
+                    )
             salt.output.display_output(query_map, '', self.config)
 
         if self.options.list_locations is not None:
@@ -92,7 +97,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.location_list(self.options.list_locations)
                 )
             except Exception as exc:
-                print('There was an error listing locations: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error(
+                    'There was an error listing locations: {0}'.format(exc)
+                )
             self.exit(0)
 
         if self.options.list_images is not None:
@@ -101,7 +109,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.image_list(self.options.list_images)
                 )
             except Exception as exc:
-                print('There was an error listing images: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error(
+                    'There was an error listing images: {0}'.format(exc)
+                )
             self.exit(0)
 
         if self.options.list_sizes is not None:
@@ -110,7 +121,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.size_list(self.options.list_sizes)
                 )
             except Exception as exc:
-                print('There was an error listing sizes: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error(
+                    'There was an error listing sizes: {0}'.format(exc)
+                )
             self.exit(0)
 
         if self.options.destroy and (self.config.get('names', None) or
@@ -128,7 +142,10 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     mapper.destroy(names)
             except Exception as exc:
-                print('There was an error destroy machines: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error(
+                    'There was an error destroy machines: {0}'.format(exc)
+                )
             self.exit(0)
 
         if self.options.action and (self.config.get('names', None) or
@@ -160,14 +177,18 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     mapper.do_action(names, kwargs)
             except Exception as exc:
-                print('There was an error actioning machines: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error(
+                    'There was an error actioning machines: {0}'.format(exc)
+                )
             self.exit(0)
 
         if self.options.profile and self.config.get('names', False):
             try:
                 mapper.run_profile()
             except Exception as exc:
-                print('There was a profile error: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error('There was a profile error: {0}'.format(exc))
             self.exit(0)
 
         if self.options.map and self.selected_query_option is None:
@@ -175,7 +196,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 print('Nothing to do')
                 self.exit(0)
             try:
-                dmap = self.map_data()
+                dmap = mapper.map_data()
 
                 msg = 'The following virtual machines are set to be created:\n'
                 for name in dmap['create']:
@@ -189,15 +210,16 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     mapper.run_map(dmap)
             except Exception as exc:
-                print('There was a query error: {0}'.format(exc))
+                log.debug(traceback.format_exc(exc))
+                self.error('There was a query error: {0}'.format(exc))
             self.exit(0)
 
     def print_confirm(self, msg):
         if self.options.assume_yes:
             return True
         print(msg)
-        res = raw_input('Proceed? [N/y]')
+        res = raw_input('Proceed? [N/y] ')
         if not res.lower().startswith('y'):
             return False
-        print('...proceeding')
+        print('... proceeding')
         return True
