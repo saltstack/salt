@@ -337,8 +337,8 @@ class LocalClient(object):
                     yield fn_ret
             except KeyboardInterrupt:
                 msg = ('Exiting on Ctrl-C\nThis job\'s jid is:\n{0}\n'
-                       'The minions may not have all finished running and any'
-                       'remaining minions will return upon completion. To look'
+                       'The minions may not have all finished running and any '
+                       'remaining minions will return upon completion. To look '
                        'up the return data for this job later run:\n'
                        'salt-run jobs.lookup_jid {0}').format(pub_data['jid'])
                 raise SystemExit(msg)
