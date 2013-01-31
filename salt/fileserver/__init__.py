@@ -126,7 +126,7 @@ class Fileserver(object):
                         # Invalid option, skip it
                         continue
                     args = comp.split('=', 1)
-                    kwargs[comp[0]] = comp[1]
+                    kwargs[args[0]] = args[1]
         if 'env' in kwargs:
             env = kwargs.pop('env')
         for fsb in back:
