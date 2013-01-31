@@ -36,11 +36,11 @@ from jinja2 import Template
 import yaml
 
 NSTATES = {
-        0: 'running',
-        1: 'rebooting',
-        2: 'terminated',
-        3: 'pending',
-        }
+    0: 'running',
+    1: 'rebooting',
+    2: 'terminated',
+    3: 'pending',
+}
 
 
 def os_script(os_, vm_=None, opts=None, minion=''):
@@ -48,8 +48,9 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     Return the script as a string for the specific os
     '''
     deploy_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            'deploy')
+        os.path.dirname(os.path.dirname(__file__)),
+        'deploy'
+    )
     for fn_ in os.listdir(deploy_path):
         full = os.path.join(deploy_path, fn_)
         if not os.path.isfile(full):
@@ -75,10 +76,7 @@ def gen_keys(keysize=2048):
     if keysize < 2048:
         keysize = 2048
     tdir = tempfile.mkdtemp()
-    salt.crypt.gen_keys(
-            tdir,
-            'minion',
-            keysize)
+    salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
     with open(priv_path) as fp_:
@@ -99,16 +97,16 @@ def accept_key(pki_dir, pub, id_):
         os.makedirs(pki_dir)
 
     key = os.path.join(
-            pki_dir,
-            'minions/{0}'.format(id_)
-            )
+        pki_dir,
+        'minions/{0}'.format(id_)
+    )
     with open(key, 'w+') as fp_:
         fp_.write(pub)
 
     oldkey = os.path.join(
-            pki_dir,
-            'minions_pre/{0}'.format(id_)
-            )
+        pki_dir,
+        'minions_pre/{0}'.format(id_)
+    )
     if os.path.isfile(oldkey):
         with open(oldkey) as fp_:
             if fp_.read() == pub:
@@ -120,9 +118,9 @@ def remove_key(pki_dir, id_):
     This method removes a specified key from the accepted keys dir
     '''
     key = os.path.join(
-            pki_dir,
-            'minions/{0}'.format(id_)
-            )
+        pki_dir,
+        'minions/{0}'.format(id_)
+    )
     if os.path.isfile(key):
         os.remove(key)
 
@@ -231,11 +229,16 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 kwargs['key_filename'] = key_filename
             try:
                 ssh.connect(**kwargs)
-            except (paramiko.AuthenticationException, paramiko.SSHException) as authexc:
+            except (paramiko.AuthenticationException,
+                    paramiko.SSHException) as authexc:
                 connectfail = True
                 ssh.close()
                 trycount += 1
-                log.debug('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
+                log.debug(
+                    'Attempting to authenticate (try {0} of {1}): {2}'.format(
+                        trycount, maxtries, authexc
+                    )
+                )
                 if trycount < maxtries:
                     time.sleep(trysleep)
                     continue
@@ -243,7 +246,9 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                     log.error('Authentication failed: {0}'.format(authexc))
                     return False
             except Exception as exc:
-                log.error('There was an error in wait_for_passwd: {0}'.format(exc))
+                log.error(
+                    'There was an error in wait_for_passwd: {0}'.format(exc)
+                )
             if connectfail is False:
                 return True
             return False
@@ -268,8 +273,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
     if wait_for_ssh(host=host, port=port, timeout=timeout):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        if wait_for_passwd(host, port=port, username=username, password=password, key_filename=key_filename, timeout=newtimeout):
-            log.debug('Logging into {0}:{1} as {2}'.format(host, port, username))
+        if wait_for_passwd(host, port=port, username=username,
+                           password=password, key_filename=key_filename,
+                           timeout=newtimeout):
+            log.debug(
+                'Logging into {0}:{1} as {2}'.format(
+                    host, port, username
+                )
+            )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -287,10 +298,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 ssh.connect(**kwargs)
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
-                log.error('There was an error in deploy_script: {0}'.format(exc))
+                log.error(
+                    'There was an error in deploy_script: {0}'.format(exc)
+                )
             if provider == 'ibmsce':
-                ssh.exec_command('sudo sed -i "s/#Subsystem/Subsystem/" /etc/ssh/sshd_config')
-                stdin, stdout, stderr = ssh.exec_command('sudo service sshd restart')
+                ssh.exec_command(
+                    'sudo sed -i "s/#Subsystem/Subsystem/" '
+                    '/etc/ssh/sshd_config'
+                )
+                stdin, stdout, stderr = ssh.exec_command(
+                    'sudo service sshd restart'
+                )
                 for line in stdout:
                     sys.stdout.write(line)
                 ssh.connect(**kwargs)
@@ -330,9 +348,10 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if start_action:
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
-                        target=lambda: check_auth(name=name, pub_key=pub_key, sock_dir=sock_dir,
-                                                  timeout=newtimeout, queue=queue),
-                        )
+                    target=lambda: check_auth(name=name, pub_key=pub_key,
+                                              sock_dir=sock_dir,
+                                              timeout=newtimeout, queue=queue)
+                )
                 log.debug('Starting new process to wait for salt-minion')
                 process.start()
 
@@ -376,18 +395,33 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 process.join()
                 if queuereturn and start_action:
                     #client = salt.client.LocalClient(conf_file)
-                    #output = client.cmd_iter(host, 'state.highstate', timeout=timeout)
+                    #output = client.cmd_iter(
+                    #    host, 'state.highstate', timeout=timeout
+                    #)
                     #for line in output:
                     #    print(line)
-                    log.info('Executing {0} on the salt-minion'.format(start_action))
-                    root_cmd('salt-call {0}'.format(start_action), tty, sudo, **kwargs)
-                    log.info('Finished executing {0} on the salt-minion'.format(start_action))
+                    log.info(
+                        'Executing {0} on the salt-minion'.format(
+                            start_action
+                        )
+                    )
+                    root_cmd(
+                        'salt-call {0}'.format(start_action),
+                        tty, sudo, **kwargs
+                    )
+                    log.info(
+                        'Finished executing {0} on the salt-minion'.format(
+                            start_action
+                        )
+                    )
             #Fire deploy action
             event = salt.utils.event.SaltEvent(
                 'master',
-                sock_dir,
-                )
-            event.fire_event('{0} has been created at {1}'.format(name, host), 'salt-cloud')
+                sock_dir
+            )
+            event.fire_event(
+                '{0} has been created at {1}'.format(name, host), 'salt-cloud'
+            )
             return True
     return False
 
@@ -418,13 +452,15 @@ def root_cmd(command, tty, sudo, **kwargs):
     if tty:
         # Tried this with paramiko's invoke_shell(), and got tired of
         # fighting with it
-        log.debug('Using ssh command to simulate tty session, to execute command')
-        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"').format(
-                kwargs['key_filename'],
-                kwargs['username'],
-                kwargs['hostname'],
-                command
-                )
+        log.debug(
+            'Using ssh command to simulate tty session, to execute command'
+        )
+        cmd = 'ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"'.format(
+            kwargs['key_filename'],
+            kwargs['username'],
+            kwargs['hostname'],
+            command
+        )
         subprocess.call(cmd, shell=True)
     else:
         log.debug('Using paramiko to execute command')
@@ -441,13 +477,14 @@ def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
     '''
-    event = salt.utils.event.SaltEvent(
-        'master',
-        sock_dir,
-        )
+    event = salt.utils.event.SaltEvent('master', sock_dir)
     starttime = time.mktime(time.localtime())
     newtimeout = timeout
-    log.debug('In check_auth, waiting for {0} to become available'.format(name))
+    log.debug(
+        'In check_auth, waiting for {0} to become available'.format(
+            name
+        )
+    )
     while newtimeout > 0:
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         ret = event.get_event(full=True)
@@ -492,23 +529,26 @@ def check_name(name, pattern):
     '''
     regexp = re.compile(pattern)
     if not regexp.match(name):
-        raise SaltException('{0} contains characters not supported by this'
-                            'cloud provider. Valid characters are: {1}'.format(
-                            name, pattern))
+        raise SaltException(
+            '{0} contains characters not supported by this cloud provider. '
+            'Valid characters are: {1}'.format(
+                name, pattern
+            )
+        )
 
 
 def namespaced_function(function, global_dict, defaults=None):
-    """
+    '''
     Redefine(clone) a function under a different globals() namespace scope
-    """
+    '''
     if defaults is None:
         defaults = function.__defaults__
 
-    namespaced_function = types.FunctionType(
+    new_namespaced_function = types.FunctionType(
         function.__code__,
         global_dict,
         name=function.__name__,
         argdefs=defaults
     )
-    namespaced_function.__dict__.update(function.__dict__)
-    return namespaced_function
+    new_namespaced_function.__dict__.update(function.__dict__)
+    return new_namespaced_function

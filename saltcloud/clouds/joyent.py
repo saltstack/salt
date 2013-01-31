@@ -20,15 +20,7 @@ it requires that the username and password to the joyent accound be configured
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import subprocess
-import types
 import logging
-
-# Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *

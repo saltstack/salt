@@ -26,18 +26,8 @@ set in the main cloud config:
 import os
 import sys
 import stat
-import types
 import time
-import tempfile
-import subprocess
 import logging
-
-# Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import (
-    MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
-)
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -57,12 +47,12 @@ def __virtual__():
     Set up the libcloud funcstions and check for AWS configs
     '''
     confs = [
-            'AWS.id',
-            'AWS.key',
-            'AWS.keyname',
-            'AWS.securitygroup',
-            'AWS.private_key',
-            ]
+        'AWS.id',
+        'AWS.key',
+        'AWS.keyname',
+        'AWS.securitygroup',
+        'AWS.private_key',
+    ]
     for conf in confs:
         if conf not in __opts__:
             return False
@@ -218,17 +208,17 @@ def get_availability_zone(conn, vm_):
     Return the availability zone to use
     '''
     locations = conn.list_locations()
-    az = None
+    avz = None
     if 'availability_zone' in vm_:
-        az = vm_['availability_zone']
+        avz = vm_['availability_zone']
     elif 'AWS.availability_zone' in __opts__:
-        az = __opts__['AWS.availability_zone']
+        avz = __opts__['AWS.availability_zone']
 
-    if az is None:
+    if avz is None:
         # Default to first zone
         return locations[0]
     for loc in locations:
-        if loc.availability_zone.name == az:
+        if loc.availability_zone.name == avz:
             return loc
 
 
@@ -256,11 +246,12 @@ def create(vm_):
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        err = ('Error creating {0} on AWS\n\n'
-               'The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], exc
-                       )
+        err = (
+            'Error creating {0} on AWS\n\n'
+            'The following exception was thrown by libcloud when trying to '
+            'run the initial deployment: \n{1}').format(
+                vm_['name'], exc
+        )
         sys.stderr.write(err)
         log.error(err)
         return False
@@ -303,7 +294,7 @@ def create(vm_):
             'sock_dir': __opts__['sock_dir'],
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
-            }
+        }
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
@@ -342,6 +333,7 @@ def create_attach_volumes(volumes, location, data):
     '''
     conn = get_conn(location=location)
     node_avz = data.__dict__.get('extra').get('availability')
+    avz = None
     for avz in conn.list_locations():
         if avz.availability_zone.name == node_avz:
             break
@@ -402,7 +394,7 @@ def set_tags(name, tags):
     node = get_node(conn, name)
     try:
         log.info('Setting tags for {0}'.format(name))
-        data = conn.ex_create_tags(resource=node, tags=tags)
+        conn.ex_create_tags(resource=node, tags=tags)
 
         # print the new tags- with special handling for renaming of a node
         if 'Name' in tags:
@@ -448,7 +440,7 @@ def del_tags(name, kwargs):
         tags[tag] = current_tags[tag]
 
     try:
-        data = conn.ex_delete_tags(resource=node, tags=tags)
+        conn.ex_delete_tags(resource=node, tags=tags)
         log.info('Deleting tags from {0}'.format(name))
         get_tags(name)
     except Exception as exc:
@@ -470,7 +462,7 @@ def rename(name, kwargs):
     tags = {'Name': kwargs['newname']}
     try:
         log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
-        data = conn.ex_create_tags(resource=node, tags=tags)
+        conn.ex_create_tags(resource=node, tags=tags)
         saltcloud.utils.rename_key(
             __opts__['pki_dir'], name, kwargs['newname']
         )

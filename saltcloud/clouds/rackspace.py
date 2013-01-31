@@ -21,18 +21,13 @@ and requires that two configuration paramaters be set for use:
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import types
-import tempfile
 import logging
 import socket
 import time
+import sys
 
 # Import libcloud
 from libcloud.compute.base import NodeState
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *

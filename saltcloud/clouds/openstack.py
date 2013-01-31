@@ -42,9 +42,6 @@ Either a password or an API key must also be specified:
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import types
-import tempfile
 import time
 import sys
 import logging
@@ -52,9 +49,6 @@ import socket
 
 # Import libcloud
 from libcloud.compute.base import NodeState
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *

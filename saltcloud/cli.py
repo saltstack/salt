@@ -19,6 +19,7 @@ import saltcloud.config
 import saltcloud.output
 import salt.config
 import salt.output
+import salt.utils
 
 # Import saltcloud libs
 from saltcloud.utils import parsers
@@ -49,17 +50,20 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.options.update_bootstrap:
             import urllib
             branch = 'develop'
-            url = ('https://raw.github.com/saltstack/salt-bootstrap/{0}/bootstrap-salt-minion.sh'.format(branch))
+            url = (
+                'https://raw.github.com/saltstack/salt-bootstrap/{0}/'
+                'bootstrap-salt-minion.sh'.format(branch)
+            )
             req = urllib.urlopen(url)
             deploy_path = os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)),
-                    'saltcloud', 'deploy', 'bootstrap-salt-minion.sh')
+                os.path.dirname(os.path.dirname(__file__)),
+                'saltcloud', 'deploy', 'bootstrap-salt-minion.sh'
+            )
             print('Updating bootstrap-salt-minion.sh.'
                   '\n\tSource:      {0}'
                   '\n\tDestination: {1}'.format(url, deploy_path))
-            f = open(deploy_path, 'w')
-            f.write(req.read())
-            f.close()
+            with salt.utils.fopen(deploy_path, 'w') as fp_:
+                fp_.write(req.read())
 
         if self.selected_query_option is not None:
             if self.options.map:
@@ -68,7 +72,11 @@ class SaltCloud(parsers.SaltCloudParser):
                         query=self.selected_query_option
                     )
                 except Exception as exc:
-                    print('There was an error with a custom map: {0}'.format(exc))
+                    print(
+                        'There was an error with a custom map: {0}'.format(
+                            exc
+                        )
+                    )
             else:
                 try:
                     query_map = mapper.map_providers(
@@ -132,7 +140,12 @@ class SaltCloud(parsers.SaltCloudParser):
 
             kwargs = {}
             machines = []
-            msg = 'The following virtual machines are set to be actioned with "{0}":\n'.format(self.options.action)
+            msg = (
+                'The following virtual machines are set to be actioned with '
+                '"{0}":\n'.format(
+                    self.options.action
+                )
+            )
             for name in names:
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
@@ -168,7 +181,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 for name in dmap['create']:
                     msg += '  {0}\n'.format(name)
                 if 'destroy' in dmap:
-                    msg += 'The following virtual machines are set to be destroyed:\n'
+                    msg += ('The following virtual machines are set to be '
+                            'destroyed:\n')
                     for name in dmap['destroy']:
                         msg += '  {0}\n'.format(name)
 
