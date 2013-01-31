@@ -54,7 +54,6 @@ import socket
 from libcloud.compute.base import NodeState
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *

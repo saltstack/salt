@@ -34,7 +34,6 @@ import logging
 # Import libcloud
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 from libcloud.compute.base import NodeAuthSSHKey
 
 # Import generic libcloud functions
