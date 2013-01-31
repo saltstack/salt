@@ -116,7 +116,6 @@ def create(vm_):
                 time.strftime('%H:%M:%S'),
             )
         )
-        log.debug(msg)
         nodelist = list_nodes()
         private = nodelist[vm_['name']]['private_ips']
         if private:
