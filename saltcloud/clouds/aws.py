@@ -29,10 +29,6 @@ import stat
 import time
 import logging
 
-# Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
 # Import saltcloud libs
 import saltcloud.utils
 from saltcloud.utils import namespaced_function

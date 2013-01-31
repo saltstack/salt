@@ -52,8 +52,6 @@ import socket
 
 # Import libcloud
 from libcloud.compute.base import NodeState
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *

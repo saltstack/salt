@@ -20,8 +20,6 @@ import types
 import logging
 
 # Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
 from libcloud.compute.types import NodeState
 from libcloud.compute.base import NodeAuthPassword
 

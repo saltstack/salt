@@ -25,10 +25,6 @@ import subprocess
 import types
 import logging
 
-# Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
 
