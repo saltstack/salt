@@ -68,4 +68,4 @@ Now the declared state can now be executed with::
 Or the salt-call command can be executed with the `--local` flag, this makes it
 unnecessary to change the configuration file::
 
-    salt-call state.highstate --loca
+    salt-call state.highstate --local
