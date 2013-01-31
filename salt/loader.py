@@ -2,9 +2,6 @@
 Routines to set up a minion
 '''
 
-# TODO: This module still needs package support, so that the functions dict
-# returned can send back functions like: foo.bar.baz
-
 # Import python libs
 import os
 import imp
@@ -134,7 +131,11 @@ def outputters(opts):
     '''
     Returns the returner modules
     '''
-    load = _create_loader(opts, 'output', 'output', ext_type_dirs='outputter_dirs')
+    load = _create_loader(
+        opts,
+        'output',
+        'output',
+        ext_type_dirs='outputter_dirs')
     return load.filter_func('output')
 
 
@@ -389,12 +390,14 @@ class Loader(object):
                     ), fn_, path, desc
                 )
         except ImportError as exc:
-            log.debug('Failed to import module {0}: {1}'.format(name, exc))
+            log.debug('Failed to import {0} {1}: {2}'.format(
+                self.tag, name, exc)
+                )
             return mod
         except Exception:
             trb = traceback.format_exc()
-            log.warning('Failed to import module {0}, this is due most likely '
-                        'to a syntax error: {1}'.format(name, trb))
+            log.warning('Failed to import {0} {1}, this is due most likely '
+                        'to a syntax error: {2}'.format(self.tag, name, trb))
             return mod
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -521,20 +524,25 @@ class Loader(object):
                     # removed during sync_modules)
                     for submodule in submodules:
                         try:
-                            smname = '{0}.{1}.{2}'.format(LOADED_BASE_NAME, self.tag, name)
-                            smfile = os.path.splitext(submodule.__file__)[0] + ".py"
+                            smname = '{0}.{1}.{2}'.format(
+                                    LOADED_BASE_NAME,
+                                    self.tag,
+                                    name)
+                            smfile = os.path.splitext(submodule.__file__)[0] + '.py'
                             if submodule.__name__.startswith(smname) and os.path.isfile(smfile):
                                 reload(submodule)
                         except AttributeError:
                             continue
             except ImportError as exc:
-                log.debug('Failed to import module {0}, this is most likely '
-                          'NOT a problem: {1}'.format(name, exc))
+                log.debug('Failed to import {0} {1}, this is most likely '
+                          'NOT a problem: {2}'.format(self.tag, name, exc))
                 continue
             except Exception:
                 trb = traceback.format_exc()
-                log.warning('Failed to import module {0}, this is due most '
-                            'likely to a syntax error: {1}'.format(name, trb))
+                log.warning('Failed to import {0} {1}, this is due most '
+                            'likely to a syntax error: {2}'.format(
+                                self.tag, name, trb)
+                            )
                 continue
             modules.append(mod)
         for mod in modules:
@@ -620,7 +628,7 @@ class Loader(object):
                     # If the module throws an exception during __virtual__()
                     # then log the information and continue to the next.
                     log.exception(('Failed to read the virtual function for '
-                                   'module: {0}').format(module_name))
+                                   '{0}: {1}').format(self.tag, module_name))
                     continue
 
             if whitelist:
