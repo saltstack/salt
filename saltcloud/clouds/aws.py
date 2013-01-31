@@ -66,9 +66,9 @@ def __virtual__():
     keymode = str(
         oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode))
     )
-    if keymode != '0600':
+    if keymode not in ('0400', '0600'):
         raise SaltException(
-            'The AWS key file {0} needs to be set to mode 0600\n'.format(
+            'The AWS key file {0} needs to be set to mode 0400 or 0600\n'.format(
                 __opts__['AWS.private_key']
             )
         )
