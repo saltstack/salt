@@ -194,7 +194,7 @@ def check_desired(desired=None):
     # category/pkgname. For any package that does not follow this format, offer
     # matches from the portage tree.
     if __grains__['os_family'] == 'Gentoo':
-        for pkg in (targets or []):
+        for pkg in (desired or []):
             if '/' not in pkg:
                 matches = __salt__['pkg.porttree_matches'](pkg)
                 if matches:

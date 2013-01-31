@@ -277,7 +277,7 @@ def install(name=None,
                        'new': '<new-version>'}}
     '''
 
-    logging.debug('Called modules.pkg.install: {0}'.format(
+    log.debug('Called modules.pkg.install: {0}'.format(
         {
             'name': name,
             'refresh': refresh,
@@ -307,7 +307,16 @@ def install(name=None,
     else:
         emerge_opts = ''
 
-    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(pkg_params))
+    if pkg_type == 'repository':
+        targets = list()
+        for param, version in pkg_params.iteritems():
+            if version is None:
+                targets.append(param)
+            else:
+                targets.append('={0}-{1}'.format(param, version))
+    else:
+        targets = pkg_params
+    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(targets))
     old = list_pkgs()
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
