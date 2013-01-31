@@ -153,7 +153,7 @@ def envs():
     return list(ret)
 
 
-def find_file(path, short='base'):
+def find_file(path, short='base', **kwargs):
     '''
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
