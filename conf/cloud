@@ -1,3 +1,21 @@
+# ----- Primary Configuration Settings -------------------------------------->
+# This configuration file is used to manage the behavior of the Salt Cloud.
+# Values that are commented out but have no space after the comment are
+# defaults that need not be set in the configuration. If there is a space after
+# the comment that the value is presented as an example and is not the default.
+#
+# this file should be installed at: /etc/salt/cloud 
+#
+# <---- Primary Configuration Settings ---------------------------------------
+
+
+#####                  Primary configuration settings                   #####
+##########################################
+# This configuration file is used to manage the behavior of the Salt Master
+# Values that are commented out but have no space after the comment are
+# defaults that need not be set in the config. If there is a space after the
+# comment that the value is presented as an example and is not the default.
+#
 # this file should be installed at: /etc/salt/cloud 
 #####          VM Defaults           #####
 ##########################################
