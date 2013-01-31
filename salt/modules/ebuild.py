@@ -325,7 +325,7 @@ def install(name=None,
                     prefix += eq or ''
                     # If no prefix characters were supplied, use '='
                     prefix = prefix or '='
-                    targets.append('{0}{1}-{2}'.format(prefix, param, verstr))
+                    targets.append('"{0}{1}-{2}"'.format(prefix, param, verstr))
     else:
         targets = pkg_params
     cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(targets))
