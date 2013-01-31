@@ -1652,7 +1652,7 @@ class ClearFuncs(object):
             clear_load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
                     self.opts['hash_type'],
-                    clear_load.get('nocache', False)
+                    extra.get('nocache', False)
                     )
         jid_dir = salt.utils.jid_dir(
                 clear_load['jid'],
