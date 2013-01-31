@@ -294,6 +294,7 @@ def create(vm_):
             'sock_dir': __opts__['sock_dir'],
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
+            'keep_tmp': __opts__['keep_tmp'],
         }
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
