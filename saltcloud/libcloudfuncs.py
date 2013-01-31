@@ -89,7 +89,7 @@ def avail_locations(conn=None):
     relevant data
     '''
     if not conn:
-	    conn = get_conn()
+        conn = get_conn()
 
     locations = conn.list_locations()
     ret = {}
