@@ -20,6 +20,7 @@ import datetime
 import platform
 import tempfile
 import subprocess
+import zmq
 from calendar import month_abbr as months
 
 try:
@@ -32,7 +33,9 @@ except ImportError:
 # Import salt libs
 import salt.minion
 import salt.payload
-from salt.exceptions import SaltClientError, CommandNotFoundError
+from salt.exceptions import (
+        SaltClientError, CommandNotFoundError, SaltSystemExit
+)
 
 
 # Do not use these color declarations, use get_colors()
@@ -196,6 +199,7 @@ def daemonize_if(opts, **kwargs):
             data[key[6:]] = val
     if not 'jid' in data:
         return
+
     serial = salt.payload.Serial(opts)
     proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
     fn_ = os.path.join(proc_dir, data['jid'])
@@ -230,7 +234,7 @@ def profile_func(filename=None):
 
 def which(exe=None):
     '''
-    Python clone of POSIX's /usr/bin/which
+    Python clone of /usr/bin/which
     '''
     if exe:
         if os.access(exe, os.X_OK):
@@ -383,7 +387,7 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
-def prep_jid(cachedir, sum_type, user='root'):
+def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
@@ -394,8 +398,10 @@ def prep_jid(cachedir, sum_type, user='root'):
         os.makedirs(jid_dir_)
         with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
+        with fopen(os.path.join(jid_dir_, 'nocache'), 'w+') as fn_:
+            fn_.write('')
     else:
-        return prep_jid(cachedir, sum_type)
+        return prep_jid(cachedir, sum_type, user=user, nocache=nocache)
     return jid
 
 
@@ -467,8 +473,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
-        cmd = [rcon, dest]
-        subprocess.call(cmd)
+        with open(os.devnull, 'w') as dev_null:
+            cmd = [rcon, dest]
+            subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
         # The temp file failed to move
         try:
@@ -794,3 +801,19 @@ def is_linux():
     Simple function to return if a host is Linux or not
     '''
     return sys.platform.startswith('linux')
+
+
+def check_ipc_path_max_len(uri):
+    # The socket path is limited to 107 characters on Solaris and
+    # Linux, and 103 characters on BSD-based systems.
+    ipc_path_max_len = getattr(zmq, 'IPC_PATH_MAX_LEN', 103)
+    if ipc_path_max_len and len(uri) > ipc_path_max_len:
+        raise SaltSystemExit(
+            'The socket path is longer than allowed by OS. '
+            '{0!r} is longer than {1} characters. '
+            'Either try to reduce the length of this setting\'s '
+            'path or switch to TCP; in the configuration file, '
+            'set "ipc_mode: tcp".'.format(
+                uri, ipc_path_max_len
+            )
+        )

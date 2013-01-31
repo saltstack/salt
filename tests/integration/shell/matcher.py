@@ -27,6 +27,23 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
+    def test_compound(self):
+        '''
+        test salt compound matcher
+        '''
+        data = self.run_salt('-C "min* and G@test_grain:cheese" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-C "min* and not G@test_grain:foo" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-C "min* not G@test_grain:foo" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+
     def test_glob(self):
         '''
         test salt glob matcher
@@ -57,11 +74,39 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         test salt grain matcher
         '''
+        # First-level grain (string value)
         data = self.run_salt('-t 1 -G "test_grain:cheese" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
         data = self.run_salt('-G "test_grain:spam" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # First-level grain (list member)
+        data = self.run_salt('-t 1 -G "planets:earth" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-G "planets:saturn" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Nested grain (string value)
+        data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-G "level1:level2:bar" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Nested grain (list member)
+        data = self.run_salt('-t 1 -G "companions:one:ian" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-G "companions:two:jamie" test.ping')
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
@@ -85,15 +130,28 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         test pillar matcher
         '''
+        # First-level pillar (string value)
         data = self.run_salt('-I "monty:python" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
+        # First-level pillar (string value, only in sub_minion)
         data = self.run_salt('-I "sub:sub_minion" test.ping')
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # First-level pillar (list member)
         data = self.run_salt('-I "knights:Bedevere" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+        # Nested pillar (string value)
+        data = self.run_salt('-I "level1:level2:foo" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+        # Nested pillar (list member)
+        data = self.run_salt('-I "companions:three:sarah jane" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
@@ -119,7 +177,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
-    def test_ipcadr(self):
+    def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
         yaml_data = yaml.load('\n'.join(subnets_data))
 
@@ -160,7 +218,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('user.add:', data)
         data = self.run_salt('\'*\' sys.doc user.add')
         self.assertIn('user.add:', data)
-
 
 
 if __name__ == "__main__":

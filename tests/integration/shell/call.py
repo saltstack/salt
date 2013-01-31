@@ -36,7 +36,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         expect = ['local:',
                   '    - 0',
                   '    - 1',
-                  '    - 1']
+                  '    - 1',
+                  '    - 2']
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):

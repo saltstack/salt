@@ -10,11 +10,7 @@ import salt.config
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.master_config('whatever, just load the defaults!')
-# we should have used minion_config(), but that would try to resolve
-# the master hostname, and retry for 30 seconds! Lucily for our purpose,
-# master conf or minion conf, it doesn't matter.
-
+OPTS = salt.config.minion_config(None, check_dns=False)
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/'])
 
@@ -78,7 +74,7 @@ test1:
 test2:
   user.present
 '''     )
-        self.assertTrue(len(result), 3)
+        self.assertEqual(len(result), 3)
         for args in (result['test1']['pkg.installed'],
                      result['test2']['user.present']  ):
             self.assertTrue(isinstance(args, list))
@@ -175,6 +171,23 @@ extend:
         self.assertTrue('test.utils::some_state' in result['extend'])
 
 
+    def test_start_state_generation(self):
+        if sys.version_info < (2, 7) and not HAS_ORDERED_DICT:
+            self.skipTest('OrderedDict is not available')
+        result = render_sls('''
+A:
+  cmd.run:
+    - name: echo hello
+    - cwd: /
+B:
+  cmd.run:
+    - name: echo world
+    - cwd: /
+''', sls='test', argline='-so yaml . jinja')
+        self.assertEqual(len(result), 4)
+        self.assertEqual(result['test::start']['stateconf.set'][1]['require_in'][0]['cmd'], 'A')
+
+
     def test_goal_state_generation(self):
         result = render_sls('''
 {% for sid in "ABCDE": %}
@@ -185,7 +198,7 @@ extend:
 {% endfor %}
 
 ''', sls='test.goalstate', argline='yaml . jinja')
-        self.assertTrue(len(result), len('ABCDE')+1)
+        self.assertEqual(len(result), len('ABCDE')+1)
 
         reqs = result['test.goalstate::goal']['stateconf.set'][1]['require']
         # note: arg 0 is the name arg.
@@ -249,3 +262,4 @@ G:
         self.assertEqual(
                 [i.itervalues().next() for i in goal_args[1]['require']],
                 list('ABCDEFG'))
+

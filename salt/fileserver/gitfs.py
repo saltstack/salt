@@ -9,6 +9,7 @@ When using the git file server backend,
 import os
 import time
 import hashlib
+import logging
 
 # Import third party libs
 HAS_GIT = False
@@ -23,13 +24,21 @@ import salt.utils
 import salt.fileserver
 
 
+log = logging.getLogger(__name__)
+
 def __virtual__():
     '''
     Only load if gitpython is available
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
-    return 'git' if HAS_GIT else False
+    if not 'git' in __opts__['fileserver_backend']:
+        return False
+    if not HAS_GIT:
+        log.error('Git fileserver backend is enabled in configuration but '
+                  'could not be loaded, is git-python installed?')
+        return False
+    return 'git'
 
 
 def _get_ref(repo, short):
@@ -144,7 +153,7 @@ def envs():
     return list(ret)
 
 
-def find_file(path, short='base'):
+def find_file(path, short='base', **kwargs):
     '''
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
@@ -178,6 +187,15 @@ def find_file(path, short='base'):
     if not os.path.isdir(shadir):
         os.makedirs(shadir)
     repos = init()
+    if 'index' in kwargs:
+        try:
+            repos = [repos[int(kwargs['index'])]]
+        except IndexError:
+            # Invalid index param
+            return fnd
+        except ValueError:
+            # Invalid index option
+            return fnd
     for repo in repos:
         ref = _get_ref(repo, short)
         if not ref:

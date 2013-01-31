@@ -9,7 +9,7 @@ system please refer to the full :doc:`states reference </ref/states/index>`.
 This tutorial will walk you through using Salt to configure a minion to run the
 Apache HTTP server and to ensure the server is running.
 
-.. include:: requisite_incl.rst
+.. include:: /_incl/requisite_incl.rst
 
 Setting up the Salt State Tree
 ==============================

@@ -3,11 +3,11 @@ FreeBSD
 =======
 
 Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2 and 9.0
+<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2, 9.0 and 9.1
 releases.
 
 Salt is dependent on the following additional ports. These will be installed as
-dependencies of the ``sysutils/salt`` port. ::
+dependencies of the ``sysutils/py-salt`` port. ::
 
    /devel/py-yaml
    /devel/py-pyzmq
@@ -23,11 +23,7 @@ To install Salt from the FreeBSD ports tree, use the command:
 
 .. code-block:: bash
 
-   cd /usr/ports/sysutils/salt && make install clean
-
-Once the port is installed, it is necessary to make a few configuration changes.
-These include defining the IP to bind to (optional), and some configuration
-path changes to make salt fit more natively into the FreeBSD filesystem tree.
+    make -C /usr/ports/sysutils/py-salt install clean
 
 Post-installation tasks
 =======================
@@ -71,6 +67,7 @@ Activate the Salt Minion in ``/etc/rc.conf`` or ``/etc/rc.conf.local`` and add:
 .. code-block:: diff
 
    + salt_minion_enable="YES"
+   + salt_minion_paths="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 
 **Start the Minion**
 
@@ -81,5 +78,4 @@ Start the Salt Minion as follows:
    service salt_minion start
 
 Now go to the :doc:`Configuring Salt</topics/configuration>` page.
-
 

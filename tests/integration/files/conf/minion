@@ -21,3 +21,15 @@ grains:
   test_grain: cheese
   script: grail
   alot: many
+  planets:
+    - mercury
+    - venus
+    - earth
+    - mars
+  level1:
+    level2: foo
+  companions:
+    one:
+      - susan
+      - ian
+      - barbara

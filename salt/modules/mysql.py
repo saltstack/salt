@@ -163,16 +163,16 @@ def query(database, query):
     else:
         elapsed_h = str(round(elapsed, 2)) + 's'
     ret['query time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
-    if len(results) == 0:
-        ret['rows affected'] = affected
-        return ret
-    else:
+    if query.upper().strip().startswith("SELECT"):
         ret['rows returned'] = affected
         columns = ()
         for column in cur.description:
             columns += (column[0],)
         ret['columns'] = columns
         ret['results'] = results
+        return ret
+    else:
+        ret['rows affected'] = affected
         return ret
 
 

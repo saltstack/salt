@@ -1347,6 +1347,13 @@ class State(object):
                 if ctag not in running:
                     if ctag in self.active:
                         log.error('Recursive requisite found')
+                        if not ctag in running:
+                            running[tag] = {
+                                    'changes': {},
+                                    'result': False,
+                                    'comment': 'Recursive requisite found',
+                                    '__run_num__': self.__run_num}
+                        self.__run_num += 1
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1976,7 +1983,7 @@ class BaseHighState(object):
             highstate['__extend__'] = highext
         return highstate, errors
 
-    def call_highstate(self):
+    def call_highstate(self, exclude=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -2002,6 +2009,13 @@ class BaseHighState(object):
             return ret
         self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(',')
+            if '__exclude__' in high:
+                high['__exclude__'].extend(exclude)
+            else:
+                high['__exclude__'] = exclude
         err += errors
         if err:
             return err
@@ -2040,6 +2054,9 @@ class BaseHighState(object):
 
         # Verify that the high data is structurally sound
         errors += self.state.verify_high(high)
+        high, req_in_errors = self.state.requisite_in(high)
+        errors += req_in_errors
+        high = self.state.apply_exclude(high)
 
         if errors:
             return errors

@@ -1,4 +1,9 @@
-"""A Python DSL for generating Salt's highstate data structure.
+'''
+:maintainer: Jack Kuan <kjkuan@gmail.com>
+:maturity: new
+:platform: all
+
+A Python DSL for generating Salt's highstate data structure.
 
 This module is intended to be used with the `pydsl` renderer,
 but can also be used on its own. Here's what you can do with
@@ -8,9 +13,9 @@ Salt PyDSL::
 
     apache = state('apache')
     apache.pkg.installed()
-    apache.service.running() \
+    apache.service.running() \\
                   .watch(pkg='apache',
-                         file='/etc/httpd/conf/httpd.conf',
+                         file='/etc/httpd/conf/httpd.conf', 
                          user='apache')
 
     if __grains__['os'] == 'RedHat':
@@ -20,7 +25,7 @@ Salt PyDSL::
     apache.group.present(gid=87).require(apache.pkg)
     apache.user.present(uid=87, gid=87,
                         home='/var/www/html',
-                        shell='/bin/nologin') \
+                        shell='/bin/nologin') \\
                .require(apache.group)
 
     state('/etc/httpd/conf/httpd.conf').file.managed(
@@ -52,13 +57,21 @@ Example of a ``cmd`` state calling a python function::
 
     state('hello').cmd.call(hello, 'pydsl!')
         
-"""
+'''
+
+# Implementation note:
+#  - There's a bit of terminology mix-up here: 
+#    - what I called a state or state declaration here is actually
+#      an ID declaration.
+#    - what I called a module or a state module actually corresponds
+#      to a state declaration.
+#    - and a state function is a function declaration.
+
 
 #TODOs:
 #
-#  - modify the stateconf renderer so that we can pipe pydsl to
-#    it to make use of its features, particularly the implicit
-#    ordering of states using ordered dict.
+#  - support exclude declarations
+#  - support include declarations with env
 #
 #  - allow this:
 #      state('X').cmd.run.cwd = '/'
@@ -84,6 +97,11 @@ REQUISITES = set("require watch use require_in watch_in use_in".split())
 class PyDslError(Exception):
     pass
 
+class Options(dict):
+    def __getattr__(self, name):
+        return self.get(name)
+
+
 def sls(sls):
     return Sls(sls)
 
@@ -97,15 +115,31 @@ class Sls(object):
         self.includes = []
         self.extends = []
         self.decls = []
+        self.options = Options()
+        self.funcs = []  # track the ordering of state func declarations
+    
+    def set(self, **options):
+        self.options.update(options)
 
     def include(self, *sls_names):
         self.includes.extend(sls_names)
 
     def extend(self, *state_funcs):
+        if self.options.ordered and self.last_func():
+            raise PyDslError("Can't extend while the ordered option is turned on!")
         for f in state_funcs:
-            self.extends.append(self.all_decls[f.mod._state_id])
-        for f in state_funcs:
-            self.decls.pop()
+            id = f.mod._state_id
+            self.extends.append(self.all_decls[id])
+            i = len(self.decls)
+            for decl in reversed(self.decls):
+                i -= 1
+                if decl._id == id:
+                    del self.decls[i]
+                    break
+            try:
+                self.funcs.remove(f) # untrack it
+            except ValueError:
+                pass
         
     def state(self, id=None):
         if not id:
@@ -114,9 +148,15 @@ class Sls(object):
         try:
             return self.all_decls[id]
         except KeyError:
-            self.all_decls[id] = s = StateDeclaration(id)
+            self.all_decls[id] = s = StateDeclaration(id, self)
             self.decls.append(s)
             return s
+
+    def last_func(self):
+        return self.funcs[-1] if self.funcs else None
+
+    def track_func(self, statefunc):
+        self.funcs.append(statefunc)
 
     def to_highstate(self, slsmod=None):
         # generate a state that uses the stateconf.set state, which
@@ -159,7 +199,8 @@ class Sls(object):
 
 class StateDeclaration(object):
 
-    def __init__(self, id=None):
+    def __init__(self, id, sls):
+        self._sls = sls
         self._id = id
         self._mods = []
 
@@ -223,8 +264,11 @@ class StateModule(object):
 
 
 def _generate_requsite_method(t):
-    def req(self, mod, ref=None):
-        self.reference(t, mod, ref)
+    def req(self, *args, **kws):
+        for mod in args:
+            self.reference(t, mod, None)
+        for mod_ref in kws.iteritems():
+            self.reference(t, *mod_ref)
         return self
     return req
 
@@ -234,6 +278,13 @@ class StateFunction(object):
         self.mod = parent_mod
         self.name = name
         self.args = []
+
+        sls = Sls.all_decls[parent_mod._state_id]._sls
+        if sls.options.ordered:
+            last_f = sls.last_func()
+            if last_f:
+                self.require(last_f.mod)
+            sls.track_func(self)
 
     def __call__(self, *args, **kws):
         self.configure(args, kws)
@@ -251,7 +302,10 @@ class StateFunction(object):
         args = list(args)
         if args:
             first = args[0]
-            if self.mod._name == 'cmd' and self.name == 'call' and callable(first):
+            if self.mod._name == 'cmd' and \
+               self.name in ('call', 'wait_call') and \
+               callable(first):
+
                 args[0] = first.__name__
                 kws = dict(func=first, args=args[1:], kws=kws)
                 del args[1:]
@@ -268,9 +322,10 @@ class StateFunction(object):
         if isinstance(mod, StateModule):
             ref = mod._state_id
         elif not (mod and ref):
-            raise PyDslError("Invalid argument(s) to a requisite expression!")
+            raise PyDslError(
+                    "Invalid a requisite reference declaration! {0}: {1}".format(
+                    mod, ref))
         self.args.append({req_type: [{str(mod): str(ref)}]})
-        return self
 
     ns = locals()
     for req_type in REQUISITES:

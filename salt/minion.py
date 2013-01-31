@@ -15,14 +15,22 @@ import threading
 import time
 import traceback
 import sys
+import signal
 
 # Import third party libs
 import zmq
 
+HAS_RANGE = False
+try:
+    import seco.range
+    HAS_RANGE = True
+except ImportError:
+    pass
+
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit
+    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit, SaltClientError
 )
 import salt.client
 import salt.crypt
@@ -42,6 +50,47 @@ log = logging.getLogger(__name__)
 # 4. Store the aes key
 # 5. connect to the publisher
 # 6. handle publications
+
+def resolve_dns(opts):
+    '''
+    Resolves the master_ip and master_uri options
+    '''
+    ret = {}
+    check_dns = True
+    if opts.get('file_client', 'remote') == 'local' and check_dns:
+        check_dns = False
+
+    if check_dns is True:
+        # Because I import salt.log below I need to re-import salt.utils here
+        import salt.utils
+        try:
+            ret['master_ip'] = salt.utils.dns_check(opts['master'], True)
+        except SaltClientError:
+            if opts['retry_dns']:
+                while True:
+                    import salt.log
+                    msg = ('Master hostname: {0} not found. Retrying in {1} '
+                           'seconds').format(opts['master'], opts['retry_dns'])
+                    if salt.log.is_console_configured():
+                        log.warn(msg)
+                    else:
+                        print('WARNING: {0}'.format(msg))
+                    time.sleep(opts['retry_dns'])
+                    try:
+                        ret['master_ip'] = salt.utils.dns_check(
+                            opts['master'], True
+                        )
+                        break
+                    except SaltClientError:
+                        pass
+            else:
+                ret['master_ip'] = '127.0.0.1'
+    else:
+        ret['master_ip'] = '127.0.0.1'
+
+    ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
+                                                    port=opts['master_port'])
+    return ret
 
 
 def get_proc_dir(cachedir):
@@ -104,6 +153,8 @@ class SMinion(object):
         # module
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        if self.opts.get('file_client', 'remote') == 'remote':
+            self.opts.update(resolve_dns(opts))
         self.gen_modules()
 
     def gen_modules(self):
@@ -111,11 +162,11 @@ class SMinion(object):
         Load all of the modules for the minion
         '''
         self.opts['pillar'] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                ).compile_pillar()
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+        ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
@@ -153,8 +204,8 @@ class MasterMinion(object):
         Load all of the modules for the minion
         '''
         self.functions = salt.loader.minion_mods(
-                self.opts,
-                whitelist=self.whitelist)
+            self.opts,
+            whitelist=self.whitelist)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
@@ -178,6 +229,7 @@ class Minion(object):
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
+        opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate()
         self.opts['pillar'] = salt.pillar.get_pillar(
@@ -185,16 +237,16 @@ class Minion(object):
             opts['grains'],
             opts['id'],
             opts['environment'],
-            ).compile_pillar()
+        ).compile_pillar()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
         self.schedule = salt.utils.schedule.Schedule(
-                self.opts,
-                self.functions,
-                self.returners)
+            self.opts,
+            self.functions,
+            self.returners)
 
     def __prep_mod_opts(self):
         '''
@@ -269,10 +321,10 @@ class Minion(object):
         #    return
         if 'user' in data:
             log.info(('User {0[user]} Executing command {0[fun]} with jid '
-                '{0[jid]}'.format(data)))
+                      '{0[jid]}'.format(data)))
         else:
             log.info(('Executing command {0[fun]} with jid {0[jid]}'
-                .format(data)))
+                      .format(data)))
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -389,14 +441,14 @@ class Minion(object):
                 try:
                     minion_instance.returners['{0}.returner'.format(
                         returner
-                        )](ret)
+                    )](ret)
                 except Exception as exc:
                     log.error(
-                            'The return failed for job {0} {1}'.format(
-                                data['jid'],
-                                exc
-                                )
-                            )
+                        'The return failed for job {0} {1}'.format(
+                        data['jid'],
+                        exc
+                        )
+                    )
 
     @classmethod
     def _thread_multi_return(class_, minion_instance, opts, data):
@@ -409,9 +461,9 @@ class Minion(object):
         if not minion_instance:
             minion_instance = class_(opts)
         ret = {
-                'return': {},
-                'success': {},
-                }
+            'return': {},
+            'success': {},
+        }
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
@@ -434,10 +486,10 @@ class Minion(object):
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
-                        'The minion function caused an exception: {0}'.format(
-                            exc
-                            )
-                        )
+                    'The minion function caused an exception: {0}'.format(
+                    exc
+                    )
+                )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
         minion_instance._return_pub(ret)
@@ -447,14 +499,14 @@ class Minion(object):
                 try:
                     minion_instance.returners['{0}.returner'.format(
                         returner
-                        )](ret)
+                    )](ret)
                 except Exception as exc:
                     log.error(
-                            'The return failed for job {0} {1}'.format(
-                                data['jid'],
-                                exc
-                                )
-                            )
+                        'The return failed for job {0} {1}'.format(
+                        data['jid'],
+                        exc
+                        )
+                    )
 
     def _return_pub(self, ret, ret_cmd='_return'):
         '''
@@ -502,10 +554,10 @@ class Minion(object):
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
             fn_ = os.path.join(
-                    self.opts['cachedir'],
-                    'minion_jobs',
-                    load['jid'],
-                    'return.p')
+                self.opts['cachedir'],
+                'minion_jobs',
+                load['jid'],
+                'return.p')
             jdir = os.path.dirname(fn_)
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
@@ -573,7 +625,7 @@ class Minion(object):
                         self.opts['grains'],
                         self.opts['id'],
                         self.opts['environment'],
-                        ).compile_pillar()
+                    ).compile_pillar()
             try:
                 os.remove(fn_)
             except OSError:
@@ -581,6 +633,12 @@ class Minion(object):
             self.functions, self.returners = self.__load_modules()
             self.schedule.functions = self.functions
             self.schedule.returners = self.returners
+
+    def handle_sigchld(self, sig, frame):
+        '''
+        Passively join the finished child procs
+        '''
+        multiprocessing.active_children()
 
     def tune_in(self):
         '''
@@ -600,42 +658,26 @@ class Minion(object):
         # Start with the publish socket
         id_hash = hashlib.md5(self.opts['id']).hexdigest()
         epub_sock_path = os.path.join(
-                self.opts['sock_dir'],
-                'minion_event_{0}_pub.ipc'.format(id_hash)
-                )
+            self.opts['sock_dir'],
+            'minion_event_{0}_pub.ipc'.format(id_hash)
+        )
         epull_sock_path = os.path.join(
-                self.opts['sock_dir'],
-                'minion_event_{0}_pull.ipc'.format(id_hash)
-                )
+            self.opts['sock_dir'],
+            'minion_event_{0}_pull.ipc'.format(id_hash)
+        )
         self.epub_sock = self.context.socket(zmq.PUB)
         if self.opts.get('ipc_mode', '') == 'tcp':
             epub_uri = 'tcp://127.0.0.1:{0}'.format(
-                    self.opts['tcp_pub_port']
-                    )
+                self.opts['tcp_pub_port']
+            )
             epull_uri = 'tcp://127.0.0.1:{0}'.format(
-                    self.opts['tcp_pull_port']
-                    )
+                self.opts['tcp_pull_port']
+            )
         else:
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            salt.utils.check_ipc_path_max_len(epub_uri)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
-            for uri in (epub_uri, epull_uri):
-                if uri.startswith('tcp://'):
-                    # This check only applies to IPC sockets
-                    continue
-                # The socket path is limited to 107 characters on Solaris and
-                # Linux, and 103 characters on BSD-based systems.
-                # Let's fail at the lower level so no system checks are
-                # required.
-                if len(uri) > 103:
-                    raise SaltSystemExit(
-                        'The socket path length is more that what ZMQ allows. '
-                        'The length of {0!r} is more than 103 characters. '
-                        'Either try to reduce the length of this setting\'s '
-                        'path or switch to TCP; In the configuration file set '
-                        '"ipc_mode: tcp"'.format(
-                            uri
-                        )
-                    )
+            salt.utils.check_ipc_path_max_len(epull_uri)
         log.debug(
             '{0} PUB socket URI: {1}'.format(
                 self.__class__.__name__, epub_uri
@@ -655,13 +697,13 @@ class Minion(object):
         # Restrict access to the sockets
         if not self.opts.get('ipc_mode', '') == 'tcp':
             os.chmod(
-                    epub_sock_path,
-                    448
-                    )
+                epub_sock_path,
+                448
+            )
             os.chmod(
-                    epull_sock_path,
-                    448
-                    )
+                epull_sock_path,
+                448
+            )
 
         self.poller = zmq.Poller()
         self.epoller = zmq.Poller()
@@ -685,18 +727,23 @@ class Minion(object):
             self.socket.setsockopt(
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
+        if hasattr(zmq, 'IPV4ONLY'):
+            self.socket.setsockopt(
+                zmq.IPV4ONLY, 0
+            )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)
         # Send an event to the master that the minion is live
         self._fire_master(
-                'Minion {0} started at {1}'.format(
-                    self.opts['id'],
-                    time.asctime()
-                    ),
-                'minion_start'
-                )
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'minion_start'
+        )
 
+        signal.signal(signal.SIGCHLD, self.handle_sigchld)
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
@@ -708,14 +755,13 @@ class Minion(object):
                 self.schedule.eval()
                 socks = dict(self.poller.poll(
                     self.opts['loop_interval'] * 1000)
-                    )
+                )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
                 time.sleep(0.05)
                 # Clean up the minion processes which have been executed and
                 # have finished
-                multiprocessing.active_children()
                 # Check if modules and grains need to be refreshed
                 self.passive_refresh()
                 # Check the event system
@@ -725,6 +771,11 @@ class Minion(object):
                         self.epub_sock.send(package)
                     except Exception:
                         pass
+            except zmq.ZMQError:
+                # This is thrown by the inturupt caused by python handling the
+                # SIGCHLD. This is a safe error and we just start the poll
+                # again
+                continue
             except Exception:
                 log.critical(traceback.format_exc())
 
@@ -819,20 +870,20 @@ class Syndic(Minion):
             data['tgt_type'] = 'glob'
         # Send out the publication
         pub_data = self.local.pub(
-                data['tgt'],
-                data['fun'],
-                data['arg'],
-                data['tgt_type'],
-                data['ret'],
-                data['jid'],
-                data['to']
-                )
+            data['tgt'],
+            data['fun'],
+            data['arg'],
+            data['tgt_type'],
+            data['ret'],
+            data['jid'],
+            data['to']
+        )
         # Gather the return data
         ret = self.local.get_full_returns(
-                pub_data['jid'],
-                pub_data['minions'],
-                data['to']
-                )
+            pub_data['jid'],
+            pub_data['minions'],
+            data['to']
+        )
         for minion in ret:
             ret[minion] = ret[minion]['ret']
         ret['jid'] = data['jid']
@@ -850,6 +901,23 @@ class Matcher(object):
         if functions is None:
             functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
+
+    def _traverse_dict(self, data, target, delim=':'):
+        '''
+        Traverse a dict using a colon-delimited (or otherwise delimited, using
+        the "delim" param) target string. The target 'foo:bar:baz' will return
+        data['foo']['bar']['baz'] if this value exists, and will otherwise
+        return an empty dict.
+        '''
+        target = target.split(delim)
+        ptr = data
+        try:
+            for index in range(len(target)):
+                ptr = ptr.get(target[index], {})
+        except (SyntaxError, AttributeError):
+            # Encountered a non-dict value in the middle of traversing
+            return {}
+        return ptr
 
     def confirm_top(self, match, data, nodegroups=None):
         '''
@@ -873,7 +941,7 @@ class Matcher(object):
         else:
             log.error('Attempting to match with unknown matcher: {0}'.format(
                 matcher
-                ))
+            ))
             return False
 
     def glob_match(self, tgt):
@@ -900,23 +968,27 @@ class Matcher(object):
         '''
         Reads in the grains glob match
         '''
-        comps = tgt.split(':')
-        if len(comps) < 2:
-            log.error('Got insufficient arguments for grains from master')
+        log.debug('grains target: {0}'.format(tgt))
+        comps = tgt.rsplit(':', 1)
+        if len(comps) != 2:
+            log.error('Got insufficient arguments for grains match '
+                      'statement from master')
             return False
-        if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: {0}'.format(comps[0]))
+        match = self._traverse_dict(self.opts['grains'], comps[0])
+        if match == {}:
+            log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
-        if isinstance(self.opts['grains'][comps[0]], list):
+        if isinstance(match, dict):
+            log.error('Targeted grain "{0}" must correspond to a list, '
+                      'string, or numeric value'.format(comps[0]))
+            return False
+        if isinstance(match, list):
             # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]]:
+            for member in match:
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
-        return bool(fnmatch.fnmatch(
-            str(self.opts['grains'][comps[0]]).lower(),
-            comps[1].lower(),
-            ))
+        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
 
     def grain_pcre_match(self, tgt):
         '''
@@ -936,11 +1008,11 @@ class Matcher(object):
                     return True
             return False
         return bool(
-                re.match(
-                    comps[1].lower(),
-                    str(self.opts['grains'][comps[0]]).lower()
-                    )
-                )
+            re.match(
+                comps[1].lower(),
+                str(self.opts['grains'][comps[0]]).lower()
+            )
+        )
 
     def data_match(self, tgt):
         '''
@@ -962,7 +1034,7 @@ class Matcher(object):
         return bool(fnmatch.fnmatch(
             val,
             comps[1],
-            ))
+        ))
 
     def exsel_match(self, tgt):
         '''
@@ -976,31 +1048,27 @@ class Matcher(object):
         '''
         Reads in the pillar glob match
         '''
-        log.debug('tgt {0}'.format(tgt))
-        comps = tgt.split(':')
-        if len(comps) < 2:
-            log.error(
-                'Got insufficient arguments for pillar match statement '
-                'from master'
-            )
+        log.debug('pillar target: {0}'.format(tgt))
+        comps = tgt.rsplit(':', 1)
+        if len(comps) != 2:
+            log.error('Got insufficient arguments for pillar match '
+                      'statement from master')
             return False
-        if comps[0] not in self.opts['pillar']:
-            log.error(
-                'Got unknown pillar match statement from master: {0}'.format(
-                    comps[0]
-                )
-            )
+        match = self._traverse_dict(self.opts['pillar'], comps[0])
+        if match == {}:
+            log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
-        if isinstance(self.opts['pillar'][comps[0]], list):
+        if isinstance(match, dict):
+            log.error('Targeted pillar "{0}" must correspond to a list, '
+                      'string, or numeric value'.format(comps[0]))
+            return False
+        if isinstance(match, list):
             # We are matching a single component to a single list member
-            for member in self.opts['pillar'][comps[0]]:
+            for member in match:
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
-        return bool(fnmatch.fnmatch(
-            str(self.opts['pillar'][comps[0]]).lower(),
-            comps[1].lower(),
-            ))
+        return bool(fnmatch.fnmatch(str(match).lower(), comps[1].lower()))
 
     def ipcidr_match(self, tgt):
         '''
@@ -1021,6 +1089,15 @@ class Matcher(object):
             else:
                 return tgt in self.functions['network.ip_addrs']()
 
+    def range_match(self, tgt):
+        '''
+        Matches based on range cluster
+        '''
+        if HAS_RANGE:
+            range = seco.range.Range(self.opts['range_server'])
+            return self.opts['grains']['fqdn'] in range.expand(tgt)
+        return
+
     def compound_match(self, tgt):
         '''
         Runs the compound target check
@@ -1035,6 +1112,8 @@ class Matcher(object):
                'L': 'list',
                'S': 'ipcidr',
                'E': 'pcre'}
+        if HAS_RANGE:
+            ref['R'] = 'range'
         results = []
         opers = ['and', 'or', 'not', '(', ')']
         tokens = re.findall(r'[^\s()]+|[()]', tgt)
@@ -1057,6 +1136,13 @@ class Matcher(object):
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
+                if match == 'not':
+                    if results[-1] == 'and':
+                        pass
+                    elif results[-1] == 'or':
+                        pass
+                    else:
+                        results.append('and')
                 results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob
@@ -1071,6 +1157,6 @@ class Matcher(object):
         '''
         if tgt in nodegroups:
             return self.compound_match(
-                    salt.utils.minions.nodegroup_comp(tgt, nodegroups)
-                    )
+                salt.utils.minions.nodegroup_comp(tgt, nodegroups)
+            )
         return False

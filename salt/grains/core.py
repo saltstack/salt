@@ -504,8 +504,9 @@ _OS_NAME_MAP = {
     'arch': 'Arch',
     'debian': 'Debian',
     'debiangnu/': 'Debian',
-    'fedoraremi': 'RedHat',
-    'amazonami': 'RedHat',
+    'fedoraremi': 'Fedora',
+    'amazonami': 'Amazon',
+    'alt': 'ALT',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -536,6 +537,7 @@ _OS_FAMILY_MAP = {
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'Arch ARM': 'Arch',
+    'ALT': 'RedHat',
 }
 
 
@@ -607,6 +609,21 @@ def os_data():
                             name, value = match.groups()
                             if name.lower() == 'name':
                                 grains['lsb_distrib_id'] = value.strip()
+            elif os.path.isfile('/etc/altlinux-release'):
+                # ALT Linux
+                grains['lsb_distrib_id'] = 'altlinux'
+                with salt.utils.fopen('/etc/altlinux-release') as ifile:
+                    # This file is symlinked to from:
+                    #     /etc/fedora-release
+                    #     /etc/redhat-release
+                    #     /etc/system-release
+                    for line in ifile:
+                        # ALT Linux Sisyphus (unstable)
+                        comps = line.split()
+                        if comps[0] == 'ALT':
+                            grains['lsb_distrib_release'] = comps[2]
+                            grains['lsb_distrib_codename'] = \
+                                comps[3].replace('(','').replace(')','')
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
             supported_dists=_supported_dists)

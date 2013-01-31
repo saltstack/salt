@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is Linux or OpenBSD
     and remove some of the functionality on OS X
     '''
     import sys
@@ -28,9 +28,9 @@ def __virtual__():
         mod = sys.modules[__name__]
         for attr in dir(mod):
             if callable(getattr(mod, attr)):
-                if not attr in ('getent', 'info', 'list_groups', 'list_users', '__virtual__'):
+                if not attr in ('_format_info', 'getent', 'info', 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
-    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
+    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD') else False
 
 
 def _get_gecos(name):
@@ -421,7 +421,12 @@ def list_groups(name):
     ugrp = set()
 
     # Add the primary user's group
-    ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    try:
+        ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    except KeyError:
+        # The user's applied default group is undefined on the system, so
+        # it does not exist
+        pass
 
     # If we already grabbed the group list, it's overkill to grab it again
     if 'useradd_getgrall' in __context__:

@@ -70,5 +70,5 @@ class TestLog(TestCase):
 
 if __name__ == "__main__":
     loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(ConfigTestCase)
+    tests = loader.loadTestsFromTestCase(TestLog)
     TextTestRunner(verbosity=1).run(tests)

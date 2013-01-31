@@ -4,7 +4,7 @@ Windows
 
 Salt has full support for running the Salt Minion on Windows.
 
-There are no plans for the forseeable future to develop a Salt
+There are no plans for the foreseeable future to develop a Salt
 Master on Windows. For now you must run your Salt Master on a
 supported operating system to control your Salt Minions on Windows.
 
@@ -18,11 +18,13 @@ A Salt Minion Windows installer can be found here:
 
 .. admonition:: Download here
 
-    http://saltstack.org/static/downloads/Salt-Minion-0.11.1-Setup-amd64.exe
+    * http://saltstack.org/static/downloads/Salt-Minion-0.12.1-Setup-amd64.exe
+    * http://saltstack.org/static/downloads/Salt-Minion-0.12.1-Setup-win32.exe
 
-This installer has been tested on Windows 7 64bit and Windows Server 2008R2
-64bit. Please file a bug report on our github repo if issues for other
-platforms are found.
+The 64bit installer has been tested on Windows 7 64bit and Windows Server
+2008R2 64bit. The 32bit installer has been tested on Windows 2003 Server 32bit.
+Please file a bug report on our github repo if issues for other platforms are
+found.
 
 The installer asks for 2 bits of information; the master hostname and the
 minion name. The installer will update the minion config with these options and
@@ -86,7 +88,7 @@ Install on Windows XP 32bit
 
 4.  Add c:\\Python27 to your system path
 
-5.  Install the Microsoft Visuall C++ 2008 SP1 Redistributable, `vcredist_x86`_. 
+5.  Install the Microsoft Visual C++ 2008 SP1 Redistributable, `vcredist_x86`_.
 
 6.  Install `Win32OpenSSL-1_0_0e.exe`_
     
@@ -187,7 +189,7 @@ On a 64 bit Windows host the following script makes an unattended install of sal
 
 	(All in one line.)
 
-You can execute the above command remotely from a linux host using winexe:
+You can execute the above command remotely from a Linux host using winexe:
 
 .. code-block:: bash
 

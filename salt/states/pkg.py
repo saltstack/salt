@@ -15,6 +15,7 @@ declarations are typically rather simple:
 # Import python libs
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -27,6 +28,157 @@ def __gen_rtag():
     Return the location of the refresh tag
     '''
     return os.path.join(__opts__['cachedir'], 'pkg_refresh')
+
+
+def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
+    '''
+    Inspect the arguments to pkg.installed and discover what packages need to
+    be installed. Return a dict of desired packages, a dict of those
+    '''
+    if all((pkgs, sources)):
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'Only one of "pkgs" and "sources" is permitted.'}
+
+    cur_pkgs = __salt__['pkg.list_pkgs']()
+    if any((pkgs, sources)):
+        if pkgs:
+            desired = __salt__['pkg_resource.pack_pkgs'](pkgs)
+        elif sources:
+            desired = __salt__['pkg_resource.pack_sources'](sources)
+
+        if not desired:
+            # Badly-formatted SLS
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'Invalidly formatted "{0}" parameter. See '
+                               'minion log.'.format('pkgs' if pkgs
+                                                    else 'sources')}
+
+    else:
+        desired = {name: version}
+
+        cver = cur_pkgs.get(name, '')
+        if cver == version:
+            # The package is installed and is the correct version
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': ('Package {0} is already installed and is the '
+                                'correct version').format(name)}
+
+        # if cver is not an empty string, the package is already installed
+        elif cver and version is None:
+            # The package is installed
+            return {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'Package {0} is already installed'.format(name)}
+
+    version_spec = False
+    # Find out which packages will be targeted in the call to pkg.install
+    if sources:
+        targets = [x for x in desired if x not in cur_pkgs]
+    else:
+        problems = __salt__['pkg_resource.check_desired'](desired)
+        if problems:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': ' '.join(problems)}
+        # Check current versions against desired versions
+        targets = {}
+        problems = []
+        for pkgname, pkgver in desired.iteritems():
+            cver = cur_pkgs.get(pkgname, '')
+            # Package not yet installed, so add to targets
+            if not cver:
+                targets[pkgname] = pkgver
+                continue
+            # No version specified and pkg is installed, do not add to targets
+            elif pkgver is None:
+                continue
+            version_spec = True
+            match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
+            if not match:
+                msg = 'Invalid version specification "{0}" for package ' \
+                      '"{1}".'.format(pkgver, pkgname)
+                problems.append(msg)
+            else:
+                gt_lt, eq, verstr = match.groups()
+                comparison = gt_lt or ''
+                comparison += eq or ''
+                # A comparison operator of "=" is redundant, but possbile.
+                # Change it to "==" so that it works in pkg.compare.
+                if comparison in ['=', '']:
+                    comparison = '=='
+                if not __salt__['pkg.compare'](pkg1=cver, oper=comparison,
+                                               pkg2=verstr):
+                    # Current version did not match desired, add to targets
+                    targets[pkgname] = pkgver
+
+        if problems:
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': ' '.join(problems)}
+
+    if not targets:
+        # All specified packages are installed
+        msg = 'All specified packages are already installed{0}.'.format(
+            ' and are at the desired version' if version_spec else '')
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
+    return desired, targets
+
+
+def _verify_install(desired, new_pkgs):
+    '''
+    Determine whether or not the installed packages match what was requested in
+    the SLS file.
+    '''
+    ok = []
+    failed = []
+    for pkgname, pkgver in desired.iteritems():
+        cver = new_pkgs.get(pkgname)
+        if not cver:
+            failed.append(pkgname)
+            continue
+        elif not pkgver:
+            ok.append(pkgname)
+            continue
+        match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
+        gt_lt, eq, verstr = match.groups()
+        comparison = gt_lt or ''
+        comparison += eq or ''
+        # A comparison operator of "=" is redundant, but possbile.
+        # Change it to "==" so that it works in pkg.compare.
+        if comparison in ('=', ''):
+            comparison = '=='
+        if __salt__['pkg.compare'](pkg1=cver, oper=comparison, pkg2=verstr):
+            ok.append(pkgname)
+        else:
+            failed.append(pkgname)
+    return ok, failed
+
+
+def _get_desired_pkg(name, desired):
+    '''
+    Helper function that retrieves and nicely formats the desired pkg (and
+    version if specified) so that helpful information can be printed in the
+    comment for the state.
+    '''
+    if not desired[name] or desired[name].startswith(('<', '>', '=')):
+        oper = ''
+    else:
+        oper = '='
+    return '{0}{1}{2}'.format(name, oper,
+                              '' if not desired[name] else desired[name])
 
 
 def installed(
@@ -57,7 +209,13 @@ def installed(
 
     version
         Install a specific version of a package. This option is ignored if
-        either "pkgs" or "sources" is used.
+        either "pkgs" or "sources" is used. Currently, this option is supported
+        for the following pkg providers: :mod:`apt <salt.modules.apt>`,
+        :mod:`ebuild <salt.modules.ebuild>`,
+        :mod:`pacman <salt.modules.pacman>`,
+        :mod:`yumpkg <salt.modules.yumpkg>`,
+        :mod:`yumpkg5 <salt.modules.yumpkg5>`, and
+        :mod:`zypper <salt.modules.zypper>`.
 
     Usage::
 
@@ -68,7 +226,7 @@ def installed(
             - version: 2.0.6~ubuntu3
 
 
-    Multiple Package Installation Options: (not supported in Windows)
+    Multiple Package Installation Options: (not supported in Windows or pkgng)
 
     pkgs
         A list of packages to install from a software repository.
@@ -81,6 +239,36 @@ def installed(
               - foo
               - bar
               - baz
+
+    ``NOTE:`` For :mod:`apt <salt.modules.apt>`,
+    :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
+    :mod:`yumpkg5 <salt.modules.yumpkg5>`,
+    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+    in the ``pkgs`` argument. Example::
+
+        mypkgs:
+          pkg.installed:
+            - pkgs:
+              - foo
+              - bar: 1.2.3-4
+              - baz
+
+    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>` and
+    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
+    ``>`` operators for more control over what versions will be installed.
+    Example::
+
+        mypkgs:
+          pkg.installed:
+            - pkgs:
+              - foo
+              - bar: '>=1.2.3-4'
+              - baz
+
+    ``NOTE:`` When using comparison operators, the expression must be enclosed
+    in quotes to avoid a YAML render error.
 
     sources
         A list of packages to install, along with the source URI or local path
@@ -98,79 +286,28 @@ def installed(
     '''
     rtag = __gen_rtag()
 
-    if all((pkgs, sources)):
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': 'Only one of "pkgs" and "sources" is permitted.'}
+    result = _find_install_targets(name, version, pkgs, sources)
+    try:
+        desired, targets = result
+    except ValueError:
+        # _find_install_targets() found no targets or encountered an error
+        return result
 
-    old_pkgs = __salt__['pkg.list_pkgs']()
-    if any((pkgs, sources)):
-        if pkgs:
-            desired_pkgs = __salt__['pkg_resource.pack_pkgs'](pkgs)
-        elif sources:
-            desired_pkgs = __salt__['pkg_resource.pack_sources'](sources)
-
-        if not desired_pkgs:
-            # Badly-formatted SLS
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': 'Invalidly formatted "{0}" parameter. See '
-                               'minion log.'.format('pkgs' if pkgs
-                                                    else 'sources')}
-
-        targets = [x for x in desired_pkgs if x not in old_pkgs]
-
-        if not targets:
-            # All specified packages are installed
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'All specified packages are already '
-                               'installed'.format(name)}
-        else:
-            if pkgs:
-                pkgs = targets
-            elif sources:
-                # Remove any targets that are already installed, to avoid
-                # upgrading them.
-                sources = [x for x in sources if x.keys()[0] in targets]
-
-    else:
-        targets = [name]
-
-        cver = old_pkgs.get(name, '')
-        if cver == version:
-            # The package is installed and is the correct version
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': ('Package {0} is already installed and is the '
-                                'correct version').format(name)}
-
-        # if cver is not an empty string, the package is already installed
-        elif cver and version is None:
-            # The package is installed
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'Package {0} is already installed'.format(name)}
-
-    if not sources:
-        problems = __salt__['pkg_resource.check_targets'](targets)
-        if problems:
-            return {'name': name,
-                    'changes': {},
-                    'result': False,
-                    'comment': ' '.join(problems)}
+    # Remove any targets that are already installed, to avoid upgrading them
+    if pkgs:
+        pkgs = [dict([(x, y)]) for x, y in targets.iteritems()]
+    elif sources:
+        sources = [x for x in sources if x.keys()[0] in targets]
 
     if __opts__['test']:
-        if len(targets) > 1:
-            comment = 'The following packages are set to be ' \
-                      'installed: {0}'.format(', '.join(targets))
-        else:
-            comment = 'Package {0} is set to be installed'.format(targets[0])
+        if targets:
+            if sources:
+                summary = ', '.join(modified)
+            else:
+                summary = ', '.join([_get_desired_pkg(x, targets)
+                                     for x in targets])
+            comment = 'The following package(s) are set to be ' \
+                      'installed/updated: {0}.'.format(summary)
         return {'name': name,
                 'changes': {},
                 'result': None,
@@ -189,6 +326,7 @@ def installed(
             os.remove(rtag)
     else:
         changes = __salt__['pkg.install'](name,
+                                          refresh=False,
                                           version=version,
                                           fromrepo=fromrepo,
                                           skip_verify=skip_verify,
@@ -196,33 +334,51 @@ def installed(
                                           sources=sources,
                                           **kwargs)
 
-    installed = [x for x in changes.keys() if x in targets]
+    if sources:
+        modified = [x for x in changes.keys() if x in targets]
+        not_modified = [x for x in desired if x not in targets]
+        failed = [x for x in targets if x not in modified]
+    else:
+        ok, failed = _verify_install(desired, __salt__['pkg.list_pkgs']())
+        modified = [x for x in ok if x in targets]
+        not_modified = [x for x in ok if x not in targets]
 
-    # Some (or all) of the requested packages failed to install
-    if len(installed) != len(targets):
-        if len(targets) > 1:
-            failed = [x for x in targets if x not in installed]
-            comment = 'The following packages failed to install: ' \
-                      '{0}'.format(', '.join(sorted(failed)))
+    comment = []
+    if modified:
+        if sources:
+            summary = ', '.join(modified)
         else:
-            comment = 'Package {0} failed to install'.format(targets[0])
+            summary = ', '.join([_get_desired_pkg(x, desired)
+                                 for x in modified])
+        comment.append('The following package(s) were installed/updated: '
+                       '{0}.'.format(summary))
 
+    if not_modified:
+        if sources:
+            summary = ', '.join(not_modified)
+        else:
+            summary = ', '.join([_get_desired_pkg(x, desired)
+                                 for x in not_modified])
+        comment.append('The following package(s) were already installed: '
+                       '{0}.'.format(summary))
+
+    if failed:
+        if sources:
+            summary = ', '.join(failed)
+        else:
+            summary = ', '.join([_get_desired_pkg(x, desired)
+                                 for x in failed])
+        comment.insert(0, 'The following package(s) failed to '
+                          'install/update: {0}.'.format(summary))
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': comment}
-
-    # Success!
-    if len(targets) > 1:
-        comment = 'The following pacakages were installed: ' \
-                  '{0}'.format(', '.join(sorted(targets)))
+                'comment': ' '.join(comment)}
     else:
-        comment = 'Package {0} installed'.format(targets[0])
-
-    return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': comment}
+        return {'name': name,
+                'changes': changes,
+                'result': True,
+                'comment': ' '.join(comment)}
 
 
 def latest(
@@ -235,9 +391,10 @@ def latest(
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
-    the package. Generally it is better for the ``installed`` function to be
-    used, as ``latest`` will update the package whenever a new package is
-    available.
+    the package. Generally it is better for the
+    :mod:`installed <salt.states.pkg.installed>` function to be
+    used, as :mod:`latest <salt.states.pkg.latest>` will update the package
+    whenever a new package is available.
 
     name
         The name of the package to maintain at the latest available version.
@@ -303,8 +460,10 @@ def latest(
                 msg = 'No information found for "{0}".'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-        elif not cur[pkg] or __salt__['pkg.compare'](cur[pkg],
-                                                     avail[pkg]) == -1:
+        elif not cur[pkg] or \
+                __salt__['pkg.compare'](pkg1=cur[pkg],
+                                        oper='<',
+                                        pkg2=avail[pkg]):
             targets[pkg] = avail[pkg]
 
     if problems:

@@ -7,7 +7,7 @@ The timezone can be managed for the system:
 .. code-block:: yaml
 
     America/Denver:
-      timezone.system
+      timezone.system:
         utc: True
 '''
 
@@ -21,7 +21,7 @@ def __virtual__():
 
 def system(name, utc=''):
     '''
-    Set the timezone for the system
+    Set the timezone for the system.
 
     name
         The name of the timezone to use (e.g.: America/Denver)
@@ -36,14 +36,14 @@ def system(name, utc=''):
     # Set up metadata
     do_utc = False
     do_zone = False
-    myzone = __salt__['timezone.get_zone']()
+    compzone = __salt__['timezone.zone_compare'](name)
     myutc = True
     messages = []
     if __salt__['timezone.get_hwclock']() == 'localtime':
         myutc = False
 
     # Check the time zone
-    if myzone == name:
+    if compzone is True:
         ret['result'] = True
         messages.append('Timezone {0} already set'.format(name))
     else:
@@ -62,7 +62,7 @@ def system(name, utc=''):
 
     if __opts__['test']:
         messages = []
-        if myzone != name:
+        if compzone is False:
             messages.append('Timezone {0} needs to be set'.format(name))
         if utc != '' and myutc != utc:
             messages.append('UTC needs to be set to {0}'.format(utc))

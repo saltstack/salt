@@ -55,6 +55,11 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
+    # Force input to be a list so below loop works
+    if not isinstance(old, list):
+        old = [old]
+    if not isinstance(new, list):
+        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -83,7 +88,7 @@ def available_version(*names):
     for name in names:
         ret[name] = ''
     # Get updates for specified package(s)
-    updates = _parse_yum('list updates {0}'.format(' '.join(names)))
+    updates = _parse_yum('list available {0}'.format(' '.join(names)))
     for pkg in updates:
         ret[pkg.name] = pkg.version
     # Return a string if only one package name passed
@@ -177,8 +182,13 @@ def refresh_db():
     return True
 
 
-def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
-            pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            skip_verify=False,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -194,13 +204,13 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to clean the yum database before executing.
+        Whether or not to update the yum database before executing.
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
 
     version
-        Install a specific version of the package, e.g. 1.0.9. Ignored
+        Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
         if "pkgs" or "sources" is passed.
 
 
@@ -223,10 +233,13 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
 
     pkgs
         A list of packages to install from a software repository. Must be
-        passed as a python list.
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Examples::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
 
     sources
         A list of RPM packages to install. Must be passed as a list of dicts,
@@ -257,29 +270,66 @@ def install(name=None, refresh=False, fromrepo=None, skip_verify=False,
     enablerepo = kwargs.get('enablerepo', '')
     repo = kwargs.get('repo', '')
 
+    version = kwargs.get('version')
+    if version:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version}
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
+
     # Support old "repo" argument
     if not fromrepo and repo:
         fromrepo = repo
 
     if fromrepo:
-        log.info('Restricting install to repo \'{0}\''.format(fromrepo))
+        log.info('Restricting install to repo "{0}"'.format(fromrepo))
         repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
     else:
         repo_arg = ''
         if disablerepo:
-            log.info('Disabling repo \'{0}\''.format(disablerepo))
+            log.info('Disabling repo "{0}"'.format(disablerepo))
             repo_arg += '--disablerepo="{0}" '.format(disablerepo)
         if enablerepo:
-            log.info('Enabling repo \'{0}\''.format(enablerepo))
+            log.info('Enabling repo "{0}"'.format(enablerepo))
             repo_arg += '--enablerepo="{0}" '.format(enablerepo)
 
-    cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
-        repo=repo_arg,
-        gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkg=' '.join(pkg_params),
-    )
     old = list_pkgs()
-    __salt__['cmd.run_all'](cmd)
+    downgrade = []
+    if pkg_type == 'repository':
+        targets = []
+        for param, version in pkg_params.iteritems():
+            if version is None:
+                targets.append(param)
+            else:
+                pkgstr = '{0}-{1}'.format(param, version)
+                cver = old.get(param, '')
+                if not cver or __salt__['pkg.compare'](pkg1=version,
+                                                       oper='>=',
+                                                       pkg2=cver):
+                    targets.append(pkgstr)
+                else:
+                    downgrade.append(pkgstr)
+    else:
+        targets = pkg_params
+
+    if targets:
+        cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
+            repo=repo_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(targets),
+        )
+        __salt__['cmd.run_all'](cmd)
+
+    if downgrade:
+        cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
+            repo=repo_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(downgrade),
+        )
+        __salt__['cmd.run_all'](cmd)
+
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -351,14 +401,27 @@ def purge(pkg, **kwargs):
     return remove(pkg)
 
 
-def compare(version1='', version2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
-    Compare two version strings. Return -1 if version1 < version2,
-    0 if version1 == version2, and 1 if version1 > version2. Return None if
-    there was a problem making the comparison.
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
 
     CLI Example::
 
-        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.compare'](version1, version2)
+    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Compare two version strings.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
+        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

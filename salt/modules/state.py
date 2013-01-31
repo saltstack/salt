@@ -133,7 +133,7 @@ def highstate(test=None, **kwargs):
         opts['test'] = test
 
     st_ = salt.state.HighState(opts)
-    ret = st_.call_highstate()
+    ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
@@ -149,7 +149,7 @@ def highstate(test=None, **kwargs):
     return ret
 
 
-def sls(mods, env='base', test=None, **kwargs):
+def sls(mods, env='base', test=None, exclude=None, **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
@@ -177,6 +177,13 @@ def sls(mods, env='base', test=None, **kwargs):
     if errors:
         return errors
 
+    if exclude:
+        if isinstance(exclude, str):
+            exclude = exclude.split(',')
+        if '__exclude__' in high:
+            high['__exclude__'].extend(exclude)
+        else:
+            high['__exclude__'] = exclude
     ret = st_.state.call_high(high)
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')

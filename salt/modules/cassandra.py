@@ -18,19 +18,9 @@ log = logging.getLogger(__name__)
 HAS_PYCASSA = False
 try:
     from pycassa.system_manager import SystemManager
-
-    # Verify that Cassandra and nodetool are actually installed
-    nodetool = __salt__['config.option']('cassandra.nodetool')
-    host = __salt__['config.option']('cassandra.host')
-    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
-
     HAS_PYCASSA = True
 except ImportError:
     pass
-
-NT = ''
-HOST = ''
-THRIFT_PORT = ''
 
 
 def __virtual__():
@@ -40,7 +30,7 @@ def __virtual__():
     if not HAS_PYCASSA:
         return False
 
-    if nodetool and host and thrift_port:
+    if HAS_PYCASSA and salt.utils.which('nodetool'):
         return 'cassandra'
     return False
 
@@ -50,14 +40,18 @@ def _nodetool(cmd):
     Internal cassandra nodetool wrapper. Some functions are not
     available via pycassa so we must rely on nodetool.
     '''
-    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(NT, HOST, cmd))
+    nodetool = __salt__['config.option']('cassandra.nodetool')
+    host = __salt__['config.option']('cassandra.host')
+    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nodetool, host, cmd))
 
 
 def _sys_mgr():
     '''
     Return a pycassa system manager connection object
     '''
-    return SystemManager('{0}:{1}'.format(HOST, THRIFT_PORT))
+    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
+    host = __salt__['config.option']('cassandra.host')
+    return SystemManager('{0}:{1}'.format(host, thrift_port))
 
 
 def compactionstats():

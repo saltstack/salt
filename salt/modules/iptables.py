@@ -124,7 +124,9 @@ def save(filename):
 
         salt '*' iptables.save /etc/sysconfig/iptables
     '''
-    os.makedirs(os.path.dirname(filename))
+    parent_dir = os.path.dirname(filename)
+    if not os.path.isdir(parent_dir):
+        os.makedirs(parent_dir)
     cmd = 'iptables-save > {0}'.format(filename)
     out = __salt__['cmd.run'](cmd)
     return out

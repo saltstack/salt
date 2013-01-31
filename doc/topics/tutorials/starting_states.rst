@@ -5,7 +5,7 @@ How Do I Use Salt States?
 Simplicity, Simplicity, Simplicity
 
 Many of the most powerful and useful engineering solutions are founded on
-simple principals, the Salt SLS system strives to do just that. K.I.S.S.
+simple principles. The Salt SLS system strives to do just that. K.I.S.S.
 
 The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
@@ -283,7 +283,7 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-.. include:: extend_with_require_watch.rst
+.. include:: /_incl/extend_with_require_watch.rst
 
 Understanding the Render System
 ===============================

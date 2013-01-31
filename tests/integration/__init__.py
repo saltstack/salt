@@ -378,9 +378,9 @@ class TestDaemon(object):
         return True
 
     def post_setup_minions(self):
-        """
+        '''
         Subclass this method to execute code after the minions have been setup
-        """
+        '''
 
     def _enter_mockbin(self):
         path = os.environ.get('PATH', '')

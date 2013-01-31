@@ -48,33 +48,88 @@ def search(pkg_name):
         return {"Results": res}
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
+
+    ret = {}
+
     if _check_pkgng():
-        for line in __salt__['cmd.run']('{0} search -f {1}'.format(
-            _cmd('pkg'), name)
+        for line in __salt__['cmd.run_stdout']('{0} upgrade -nq'.format(
+            _cmd('pkg'))
         ).splitlines():
-            if line.startswith('Version'):
-                _, ver = line.split(':', 1)
-                return ver.strip()
-    return ''
+            if not line.startswith('\t'):
+                continue
+            line = line.strip()
+            if line.startswith('Installing'):
+                _, pkg, ver = line.split()
+                pkg = pkg.rstrip(':')
+            elif line.startswith('Upgrading'):
+                _, pkg, _, _, ver = line.split()
+                pkg = pkg.rstrip(':')
+            elif line.startswith('Reinstalling'):
+                _, pkgver = line.split()
+                comps = pkgver.split('-')
+                pkg = ''.join(comps[:-1])
+                ver = comps[-1]
+            else:
+                # unexpected string
+                continue
+            if pkg in names:
+                ret[pkg] = ver
+
+        # keep pkg.latest culm
+        for pkg in set(names) - set(ret) - set(list_pkgs()):
+            for line in __salt__['cmd.run']('{0} search -fe {1}'.format(
+                _cmd('pkg'), pkg)
+            ).splitlines():
+                if line.startswith('Version'):
+                    _, _, ver = line.split()[:3]
+                    ret[pkg] = ver
+                    break
+
+    ret.update(dict.fromkeys(set(names) - set(ret), ''))
+
+    if len(names) == 1:
+        return ret.values()[0]
+
+    return ret
 
 
-def version(name):
+def version(*names):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return list_pkgs().get(name, '')
+    if not names:
+        return ''
+
+    ret = {}
+    installed = list_pkgs()
+    for name in names:
+        ret[name] = installed.get(name, '')
+
+    if len(names) == 1:
+        return ret[names[0]]
+    else:
+        return ret
 
 
 def refresh_db():
@@ -312,14 +367,104 @@ def rehash():
         __salt__['cmd.run']('rehash')
 
 
-def compare(version1='', version2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
-    Compare two version strings. Return -1 if version1 < version2,
-    0 if version1 == version2, and 1 if version1 > version2. Return None if
-    there was a problem making the comparison.
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
 
     CLI Example::
 
-        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.compare'](version1, version2)
+    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Compare two version strings.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
+        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of _every_ file on the system's package database (not
+    generally recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    ret = file_dict(*packages)
+    files = []
+    for pkg, its_files in ret['files'].items():
+        files.extend(its_files)
+    ret['files'] = files
+    return ret
+
+
+def file_dict(*packages):
+    '''
+    List the files that belong to a package, grouped by package. Not
+    specifying any packages will return a list of _every_ file on the
+    system's package database (not generally recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    errors = []
+    files = {}
+
+    if _check_pkgng():
+        if packages:
+            match_pattern = '%n ~ {0}'
+            matches = [match_pattern.format(p) for p in packages]
+
+            cmd = '{0} query -e \'{1}\' \'%n %Fp\''.format(
+                _cmd('pkg'), ' || '.join(matches))
+        else:
+            cmd = '{0} query -a \'%n %Fp\''.format(_cmd('pkg'))
+
+        for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+            pkg, fn = line.split(' ', 1)
+            if pkg not in files:
+                files[pkg] = []
+            files[pkg].append(fn)
+    else:
+        if packages:
+            match_pattern = '\'{0}-[0-9]*\''
+            matches = [match_pattern.format(p) for p in packages]
+
+            cmd = '{0} -QL {1}'.format(_cmd('pkg_info'), ' '.join(matches))
+        else:
+            cmd = '{0} -QLa'.format(_cmd('pkg_info'))
+
+        ret = __salt__['cmd.run_all'](cmd)
+
+        for line in ret['stderr'].splitlines():
+            errors.append(line)
+
+        pkg = None
+        for line in ret['stdout'].splitlines():
+            if pkg is not None and line.startswith('/'):
+                files[pkg].append(line)
+            elif ':/' in line:
+                pkg, fn = line.split(':', 1)
+                pkg, ver = pkg.rsplit('-', 1)
+                files[pkg] = [fn]
+            else:
+                continue  # unexpected string
+    return {'errors': errors, 'files': files}

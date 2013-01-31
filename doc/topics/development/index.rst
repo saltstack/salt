@@ -2,5 +2,8 @@
 Salt Development Guidelines
 ===========================
 
+.. toctree::
+    :maxdepth: 1
+    :glob:
 
-:doc:`Salt Dunder Dictionaries</topics/development/dunder_dictionaries>`
+    *

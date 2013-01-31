@@ -5,6 +5,7 @@ import shutil
 # Import salt libs
 import salt.utils
 import integration
+from saltunittest import skipIf
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -222,8 +223,11 @@ fi
             for fname in list(fnames) + [to_include_test_file]:
                 if os.path.isfile(fname):
                     os.remove(fname)
-
+    
     def test_issue_2068_template_str(self):
+        ret = self.run_function('cmd.has_exec', ['virtualenv'])
+        if not ret:
+            self.skipTest('virtualenv not installed')
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
         )

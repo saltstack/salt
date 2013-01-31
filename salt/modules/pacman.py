@@ -5,6 +5,7 @@ A module to wrap pacman calls, since Arch is the best
 
 # Import python libs
 import logging
+import re
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +176,11 @@ def refresh_db():
     return ret
 
 
-def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=True,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package, add refresh=True to install with an -Sy.
 
@@ -197,10 +202,15 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
 
     pkgs
         A list of packages to install from a software repository. Must be
-        passed as a python list.
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version. As with the ``version`` parameter above, comparison operators
+        can be used to target a specific version of a package.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Examples::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4"}]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "<1.2.3-4"}]'
 
     sources
         A list of packages to install. Must be passed as a list of dicts,
@@ -221,27 +231,54 @@ def install(name=None, refresh=False, pkgs=None, sources=None, **kwargs):
                                                                   sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-    elif pkg_type == 'file':
+
+    version = kwargs.get('version')
+    if version:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version}
+        else:
+            log.warning('"version" parameter will be ignored for muliple '
+                        'package targets')
+
+    if pkg_type == 'file':
         cmd = 'pacman -U --noprogressbar --noconfirm ' \
               '{0}'.format(' '.join(pkg_params))
+        targets = pkg_params
     elif pkg_type == 'repository':
-        fname = ' '.join(pkg_params)
-        if len(pkg_params) == 1:
-            for vkey, vsign in (('gt', '>'), ('lt', '<'),
-                                ('eq', '='), ('version', '=')):
-                if kwargs.get(vkey) is not None:
-                    fname = '"{0}{1}{2}"'.format(fname, vsign, kwargs[vkey])
-                    break
+        targets = []
+        problems = []
+        for param, version in pkg_params.iteritems():
+            if version is None:
+                targets.append(param)
+            else:
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                if match:
+                    gt_lt, eq, verstr = match.groups()
+                    prefix = gt_lt or ''
+                    prefix += eq or ''
+                    # If no prefix characters were supplied, use '='
+                    prefix = prefix or '='
+                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
+                else:
+                    msg = 'Invalid version string "{0}" for package ' \
+                          '"{1}"'.format(version, name)
+                    problems.append(msg)
+        if problems:
+            for problem in problems:
+                log.error(problem)
+            return {}
+
         # Catch both boolean input from state and string input from CLI
         if refresh is True or str(refresh).lower() == 'true':
-            cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
+            cmd = 'pacman -Syu --noprogressbar --noconfirm ' \
+                  '"{0}"'.format('" "'.join(targets))
         else:
-            cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
+            cmd = 'pacman -S --noprogressbar --noconfirm ' \
+                  '"{0}"'.format('" "'.join(targets))
 
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
-    if stderr:
-        log.error(stderr)
+    __salt__['cmd.run_all'](cmd)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -315,14 +352,79 @@ def purge(name, **kwargs):
     return _list_removed(old, new)
 
 
-def compare(version1='', version2=''):
+def perform_cmp(pkg1='', pkg2=''):
     '''
-    Compare two version strings. Return -1 if version1 < version2,
-    0 if version1 == version2, and 1 if version1 > version2. Return None if
-    there was a problem making the comparison.
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
 
     CLI Example::
 
-        salt '*' pkg.compare '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
     '''
-    return __salt__['pkg_resource.compare'](version1, version2)
+    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Compare two version strings.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
+        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of _every_ file on the system's package database (not
+    generally recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    errors = []
+    ret = []
+    cmd = 'pacman -Ql {0}'.format(' '.join(packages))
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if line.startswith('error'):
+            errors.append(line)
+        else:
+            comps = line.split()
+            ret.append(' '.join(comps[1:]))
+    return {'errors': errors, 'files': ret}
+
+
+def file_dict(*packages):
+    '''
+    List the files that belong to a package, grouped by package. Not
+    specifying any packages will return a list of _every_ file on the system's
+    package database (not generally recommended).
+
+    CLI Examples::
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    errors = []
+    ret = {}
+    cmd = 'pacman -Ql {0}'.format(' '.join(packages))
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if line.startswith('error'):
+            errors.append(line)
+        else:
+            comps = line.split()
+            if not comps[0] in ret:
+                ret[comps[0]] = []
+            ret[comps[0]].append((' '.join(comps[1:])))
+    return {'errors': errors, 'packages': ret}
+
+

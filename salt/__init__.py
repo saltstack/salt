@@ -28,7 +28,6 @@ class Master(parsers.MasterOptionParser):
     '''
     Creates a master server
     '''
-
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt master server.
@@ -58,14 +57,16 @@ class Master(parsers.MasterOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+                logfile = self.config['log_file']
+                if logfile is not None and (
+                        not logfile.startswith('tcp://') or
+                        not logfile.startswith('udp://') or
+                        not logfile.startswith('file://')):
                     # Logfile is not using Syslog, verify
-                    verify_files(
-                        [self.config['log_file']],
-                        self.config['user']
-                    )
+                        verify_files(
+                            [logfile],
+                            self.config['user']
+                        )
         except OSError as err:
             sys.exit(err.errno)
 
@@ -113,7 +114,6 @@ class Minion(parsers.MinionOptionParser):
     '''
     Create a minion server
     '''
-
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt minion.
@@ -190,8 +190,6 @@ class Minion(parsers.MinionOptionParser):
         except KeyboardInterrupt:
             logger.warn('Stopping the Salt Minion')
             self.shutdown()
-        finally:
-            raise SystemExit('\nExiting on Ctrl-c')
 
     def shutdown(self):
         '''
@@ -267,8 +265,6 @@ class Syndic(parsers.SyndicOptionParser):
             except KeyboardInterrupt:
                 logger.warn('Stopping the Salt Syndic Minion')
                 self.shutdown()
-            finally:
-                raise SystemExit('\nExiting on Ctrl-c')
 
     def shutdown(self):
         '''
