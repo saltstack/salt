@@ -4,4 +4,4 @@ correct cloud modules
 '''
 
 # Import saltcloud libs
-from cloud import Cloud
+from saltcloud.cloud import Cloud

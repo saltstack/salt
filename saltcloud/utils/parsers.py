@@ -177,6 +177,12 @@ class ExecutionOptionsMixIn(object):
             action='store_true',
             help='Default yes in answer to all confirmation questions'
         )
+        group.add_option(
+            '--keep-tmp',
+            default=False,
+            action='store_true',
+            help='Do not remove files from /tmp/ after deploy.sh finishes'
+        )
         self.add_option_group(group)
 
 

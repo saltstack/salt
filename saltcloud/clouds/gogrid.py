@@ -22,15 +22,8 @@ be set in the config file to enable interfacing with GoGrid
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import subprocess
-import types
+import sys
 import logging
-
-# Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
@@ -118,6 +111,7 @@ def create(vm_):
             'conf_file': __opts__['conf_file'],
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
+            'keep_tmp': __opts__['keep_tmp'],
             }
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)

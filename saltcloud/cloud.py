@@ -3,7 +3,6 @@ The top level interface used to translate configuration data back to the
 correct cloud modules
 '''
 # Import python libs
-import sys
 import os
 import copy
 import multiprocessing
@@ -67,10 +66,11 @@ class Cloud(object):
         for prov in provs:
             fun = '{0}.{1}'.format(prov, query)
             if not fun in self.clouds:
-                msg = ('Public cloud provider {0} is not available'.format(
-                    prov)
+                log.error(
+                    'Public cloud provider {0} is not available'.format(
+                        prov
                     )
-                log.error(msg)
+                )
                 continue
             try:
                 pmap[prov] = self.clouds[fun]()
@@ -184,23 +184,24 @@ class Cloud(object):
         if 'minion' in vm_ and vm_['minion'] is None:
             vm_['minion'] = {}
         fun = '{0}.create'.format(self.provider(vm_))
-        if not fun in self.clouds:
-            msg = ('Public cloud provider {0} is not available'.format(
-                self.provider(vm_))
+        if fun not in self.clouds:
+            log.error(
+                'Public cloud provider {0} is not available'.format(
+                    self.provider(vm_)
                 )
-            log.error(msg)
+            )
             return
+
         priv, pub = saltcloud.utils.gen_keys(
-                saltcloud.utils.get_option('keysize', self.opts, vm_)
-                )
+            saltcloud.utils.get_option('keysize', self.opts, vm_)
+        )
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
-        ok = False
 
         if 'make_master' in vm_ and vm_['make_master'] is True:
             master_priv, master_pub = saltcloud.utils.gen_keys(
                 saltcloud.utils.get_option('keysize', self.opts, vm_)
-                )
+            )
             vm_['master_pub'] = master_pub
             vm_['master_pem'] = master_priv
 
@@ -211,11 +212,14 @@ class Cloud(object):
 
         saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
         try:
-            ok = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+            self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
         except KeyError as exc:
-            msg = ('Failed to create VM {0}. Configuration value {1} needs '
-                  'to be set'.format(vm_['name'], exc))
-            log.error(msg)
+            log.error(
+                'Failed to create VM {0}. Configuration value {1} needs '
+                'to be set'.format(
+                    vm_['name'], exc
+                )
+            )
 
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
@@ -254,8 +258,8 @@ class Cloud(object):
                     vm_['name'] = name
                     if self.opts['parallel']:
                         multiprocessing.Process(
-                                target=lambda: self.create(vm_),
-                                ).start()
+                            target=lambda: self.create(vm_),
+                        ).start()
                     else:
                         self.create(vm_)
         if not found:
@@ -294,7 +298,9 @@ class Cloud(object):
 
         for name in names:
             if name not in completed:
-                print('{0} was not found, not running {1} action'.format(name, self.opts['action']))
+                print('{0} was not found, not running {1} action'.format(
+                    name, self.opts['action'])
+                )
 
 
 class Map(Cloud):
@@ -338,7 +344,11 @@ class Map(Cloud):
         if not self.opts['map']:
             return {}
         if not os.path.isfile(self.opts['map']):
-            raise ValueError('The specified map file does not exist: {0}\n'.format(self.opts['map']))
+            raise ValueError(
+                'The specified map file does not exist: {0}\n'.format(
+                    self.opts['map']
+                )
+            )
         try:
             with open(self.opts['map'], 'rb') as fp_:
                 try:
@@ -349,8 +359,11 @@ class Map(Cloud):
                 except:
                     map_ = yaml.load(fp_.read())
         except Exception as exc:
-            log.error('Rendering map {0} failed, render error:\n{1}'
-                      .format(self.opts['map'], exc))
+            log.error(
+                'Rendering map {0} failed, render error:\n{1}'.format(
+                    self.opts['map'], exc
+                )
+            )
             return {}
         if 'include' in map_:
             map_ = salt.config.include_config(map_, self.opts['map'])
@@ -384,7 +397,7 @@ class Map(Cloud):
                 exist.add(name)
                 if name in ret['create']:
                     if prov != 'aws' or pmap['aws'][name]['state'] != 2:
-                      ret['create'].pop(name)
+                        ret['create'].pop(name)
         if self.opts['hard']:
             # Look for the items to delete
             ret['destroy'] = exist.difference(defined)
@@ -416,8 +429,8 @@ class Map(Cloud):
                             tvm['map_volumes'] = miniondict[name]['volumes']
             if self.opts['parallel']:
                 multiprocessing.Process(
-                        target=lambda: self.create(tvm)
-                        ).start()
+                    target=lambda: self.create(tvm)
+                ).start()
             else:
                 self.create(tvm)
         for name in dmap.get('destroy', set()):
