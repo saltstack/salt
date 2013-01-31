@@ -1035,8 +1035,16 @@ class AESFuncs(object):
                 log.warn(msg)
                 return {}
         if 'tgt_type' in clear_load:
-            load['tgt_type'] = clear_load['tgt_type']
-            expr_form = load['tgt_type']
+            if clear_load['tgt_type'].startswith('node'):
+                if clear_load['tgt'] in self.opts['nodegroups']:
+                    load['tgt'] = self.opts['nodegroups'][clear_load['tgt']]
+                    load['tgt_type'] = 'compound'
+                    expr_form = load['tgt_type']
+                else:
+                    return {}
+            else:
+                load['tgt_type'] = clear_load['tgt_type']
+                expr_form = load['tgt_type']
         if 'timeout' in clear_load:
             timeout = clear_load['timeout']
         # Encrypt!
