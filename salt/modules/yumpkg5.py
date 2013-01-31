@@ -88,7 +88,7 @@ def available_version(*names):
     for name in names:
         ret[name] = ''
     # Get updates for specified package(s)
-    updates = _parse_yum('list updates {0}'.format(' '.join(names)))
+    updates = _parse_yum('list available {0}'.format(' '.join(names)))
     for pkg in updates:
         ret[pkg.name] = pkg.version
     # Return a string if only one package name passed
