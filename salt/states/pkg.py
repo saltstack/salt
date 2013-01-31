@@ -254,7 +254,8 @@ def installed(
               - bar: 1.2.3-4
               - baz
 
-    Additionally, :mod:`pacman <salt.modules.pacman>` and
+    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>` and
     :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
     ``>`` operators for more control over what versions will be installed.
     Example::
