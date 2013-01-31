@@ -22,6 +22,20 @@ def find_file(path, env='base', **kwargs):
         return fnd
     if env not in __opts__['file_roots']:
         return fnd
+    if 'index' in kwargs:
+        try:
+            root = __opts__['file_roots'][env][int(kwargs['index'])]
+        except IndexError:
+            # An invalid index was passed
+            return fnd
+        except Exception:
+            # An invalid index option was passed
+            return fnd
+        full = os.path.join(root, path)
+        if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
+            fnd['path'] = full
+            fnd['rel'] = path
+        return fnd
     for root in __opts__['file_roots'][env]:
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
