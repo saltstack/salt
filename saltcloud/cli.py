@@ -11,8 +11,8 @@ Primary interfaces for the salt-cloud system
 # the VM data will be in opts['vm']
 
 # Import python libs
-import optparse
 import os
+import logging
 
 # Import salt libs
 import saltcloud.config
@@ -23,6 +23,9 @@ import salt.output
 # Import saltcloud libs
 from saltcloud.utils import parsers
 from saltcloud.libcloudfuncs import libcloud_version
+
+
+log = logging.getLogger(__name__)
 
 
 class SaltCloud(parsers.SaltCloudParser):
@@ -39,8 +42,7 @@ class SaltCloud(parsers.SaltCloudParser):
         self.setup_logfile_logger()
 
         # Late imports so logging works as expected
-        import logging
-        logging.getLogger(__name__).info('salt-cloud starting')
+        log.info('salt-cloud starting')
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
@@ -57,7 +59,7 @@ class SaltCloud(parsers.SaltCloudParser):
                   '\n\tDestination: {1}'.format(url, deploy_path))
             f = open(deploy_path, 'w')
             f.write(req.read())
-            f.close()            
+            f.close()
 
         if self.selected_query_option is not None:
             if self.options.map:
@@ -122,7 +124,7 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(0)
 
         if self.options.action and (self.config.get('names', None) or
-                                     self.options.map):
+                                    self.options.map):
             if self.options.map:
                 names = mapper.delete_map(query='list_nodes')
             else:
@@ -175,7 +177,6 @@ class SaltCloud(parsers.SaltCloudParser):
             except Exception as exc:
                 print('There was a query error: {0}'.format(exc))
             self.exit(0)
-
 
     def print_confirm(self, msg):
         if self.options.assume_yes:
