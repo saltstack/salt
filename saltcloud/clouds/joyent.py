@@ -20,9 +20,6 @@ it requires that the username and password to the joyent accound be configured
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import subprocess
-import types
 import logging
 
 # Import generic libcloud functions

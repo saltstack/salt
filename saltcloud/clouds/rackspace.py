@@ -21,9 +21,6 @@ and requires that two configuration paramaters be set for use:
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import types
-import tempfile
 import logging
 import socket
 import time

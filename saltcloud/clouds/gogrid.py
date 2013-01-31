@@ -22,9 +22,6 @@ be set in the config file to enable interfacing with GoGrid
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import subprocess
-import types
 import logging
 
 # Import generic libcloud functions

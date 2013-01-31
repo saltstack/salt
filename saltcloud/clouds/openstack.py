@@ -42,9 +42,6 @@ Either a password or an API key must also be specified:
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
-import types
-import tempfile
 import time
 import sys
 import logging
