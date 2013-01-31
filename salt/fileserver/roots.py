@@ -28,7 +28,7 @@ def find_file(path, env='base', **kwargs):
         except IndexError:
             # An invalid index was passed
             return fnd
-        except Exception:
+        except ValueError:
             # An invalid index option was passed
             return fnd
         full = os.path.join(root, path)
