@@ -77,12 +77,19 @@ class CloudConfigMixIn(object):
         # Done in CloudConfigMixIn.process_vm_config()
 
         # 4th - Override config with cli options
-        # Done in parsers.MergeConfigMixIn,.__merge_config_with_cli()
+        # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
 
         # Remove log_level_logfile from config if set to None so it can be
         # equal to console log_level
         if self.config['log_level_logfile'] is None:
             self.config.pop('log_level_logfile')
+
+    def setup_config(self):
+        '''
+        This method needs to be defined in order for `parsers.MergeConfigMixIn`
+        to do it's job.
+        '''
+        return {}
 
     def process_master_config(self):
         self.config = salt.config.master_config(
@@ -171,18 +178,6 @@ class ExecutionOptionsMixIn(object):
             help='Default yes in answer to all confirmation questions'
         )
         self.add_option_group(group)
-
-    def process_profile(self):
-        # This key/value pair needs to be in the loaded config dictionary
-        self.config['profile'] = self.options.profile
-
-    def process_parallel(self):
-        # This key/value pair needs to be in the loaded config dictionary
-        self.config['parallel'] = self.options.parallel
-
-    def _mixin_after_parsed(self):
-        if not self.options.map:
-            self.config['map'] = None
 
 
 class CloudQueriesMixIn(object):
