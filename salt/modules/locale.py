@@ -56,7 +56,7 @@ def get_locale():
     if len(out) == 2:
       ret = out[1].replace('"', '')
     else:
-      ret = ""
+      ret = ''
     return ret
 
 
