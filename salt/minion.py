@@ -729,7 +729,7 @@ class Minion(object):
             )
         if hasattr(zmq, 'IPV4ONLY'):
             self.socket.setsockopt(
-                zmq.IPV4ONLY, 0
+                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable')))
             )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
