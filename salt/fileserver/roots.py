@@ -12,7 +12,7 @@ import salt.fileserver
 import salt.utils
 
 
-def find_file(path, env='base'):
+def find_file(path, env='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
