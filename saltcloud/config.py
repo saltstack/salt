@@ -21,8 +21,6 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_file': '/var/log/salt/cloud',
     'log_level': None,
     'log_level_logfile': None,
-    'log_level': None,
-    'log_level_logfile': None,
     'log_datefmt': salt.config._DFLT_LOG_DATEFMT,
     'log_datefmt_logfile': salt.config._DFLT_LOG_DATEFMT_LOGFILE,
     'log_fmt_console': salt.config._DFLT_LOG_FMT_CONSOLE,
