@@ -343,7 +343,7 @@ class Publisher(multiprocessing.Process):
         if hasattr(zmq, 'IPV4ONLY'):
             pub_sock.setsockopt(
                 zmq.IPV4ONLY,
-                int(not int(self.opts.get('ipv6_enable')))
+                int(not int(self.opts.get('ipv6_enable', False)))
                 )
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
@@ -399,7 +399,7 @@ class ReqServer(object):
         self.clients = self.context.socket(zmq.ROUTER)
         if hasattr(zmq, 'IPV4ONLY'):
             self.clients.setsockopt(
-                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable')))
+                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable', False)))
             )
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
