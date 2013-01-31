@@ -101,7 +101,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 self.servers[fstr]()
 
-    def find_file(self, path, env=None, back=None):
+    def find_file(self, path, env, back=None):
         '''
         Find the path and return the fnd structure, this structure is passed
         to other backend interfaces.
@@ -127,11 +127,11 @@ class Fileserver(object):
                     args = comp.split('=', 1)
                     kwargs[comp[0]] = comp[1]
         if not 'env' in kwargs:
-            kwargs['env'] = env
+            env = kwargs.pop('env')
         for fsb in back:
             fstr = '{0}.find_file'.format(fsb)
             if fstr in self.servers:
-                fnd = self.servers[fstr](path, **kwargs)
+                fnd = self.servers[fstr](path, env, **kwargs)
                 if fnd.get('path'):
                     fnd['back'] = fsb
                     return fnd
