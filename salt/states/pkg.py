@@ -254,7 +254,8 @@ def installed(
               - bar: 1.2.3-4
               - baz
 
-    Additionally, :mod:`pacman <salt.modules.pacman>` and
+    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>` and
     :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
     ``>`` operators for more control over what versions will be installed.
     Example::
@@ -268,6 +269,21 @@ def installed(
 
     ``NOTE:`` When using comparison operators, the expression must be enclosed
     in quotes to avoid a YAML render error.
+
+    Additionally, :mod:`ebuild <salt.modules.ebuild>` supports specifying slots
+    rather than versions. To specify a slot, use a ``:`` before the slot
+    number.
+    Example::
+
+        mypkgs:
+          pkg.installed:
+            - pkgs:
+              - foo
+              - bar: ':2.1'
+              - baz
+
+    ``NOTE:`` When using slots, the expression must be enclosed in quotes to
+    avoid a YAML render error.
 
     sources
         A list of packages to install, along with the source URI or local path
