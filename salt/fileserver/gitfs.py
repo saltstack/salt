@@ -187,6 +187,15 @@ def find_file(path, short='base', **kwargs):
     if not os.path.isdir(shadir):
         os.makedirs(shadir)
     repos = init()
+    if 'index' in kwargs:
+        try:
+            repos = [repos[int(kwargs['index'])]]
+        except IndexError:
+            # Invalid index param
+            return fnd
+        except ValueError:
+            # Invalid index option
+            return fnd
     for repo in repos:
         ref = _get_ref(repo, short)
         if not ref:
