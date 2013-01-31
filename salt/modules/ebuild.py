@@ -290,16 +290,18 @@ def install(name=None,
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
 
-    # Handle version kwarg
-    if pkgs is None and sources is None:
-        if kwargs.get('version'):
-            name = '={0}-{1}'.format(name, kwargs.get('version'))
-        elif slot is not None:
-            name = '{0}:{1}'.format(name, slot)
-
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
                                                                   sources)
+
+    # Handle version kwarg for a single package target
+    if pkgs is None and sources is None:
+        version = kwargs.get('version')
+        if version:
+            pkg_params = {name: version}
+        elif slot is not None:
+            pkg_params = {name: ':{0}'.format(slot)}
+
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -312,8 +314,18 @@ def install(name=None,
         for param, version in pkg_params.iteritems():
             if version is None:
                 targets.append(param)
+            elif version.startswith(':'):
+                # Really this 'version' is a slot
+                targets.append('{0}{1}'.format(param, version))
             else:
-                targets.append('={0}-{1}'.format(param, version))
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                if match:
+                    gt_lt, eq, verstr = match.groups()
+                    prefix = gt_lt or ''
+                    prefix += eq or ''
+                    # If no prefix characters were supplied, use '='
+                    prefix = prefix or '='
+                    targets.append('"{0}{1}-{2}"'.format(prefix, param, verstr))
     else:
         targets = pkg_params
     cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(targets))
