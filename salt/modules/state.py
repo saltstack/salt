@@ -318,6 +318,8 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     elif kwval_as == 'json':
         def parse_kwval(value):
             return json.loads(value)
+    elif kwval_as is None or kwval_as == 'verbatim':
+        parse_kwval = lambda value: value
     else:
         return 'Unknown format({0}) for state keyword arguments!'.format(
                 kwval_as)
