@@ -24,9 +24,7 @@ Once you have our github repo cloned locally and have made some changes, we reco
     git checkout -b fixed-broken-thing
     Switched to a new branch 'fixed-broken-thing'
 
-You should use a verbose enough name for your branch so it is clear what it is
-about.  Now you can commit your changes and regularly merge in the upstream
-master as described below.
+You should choose a name for your branch that describes its purpose.  
 
 When you are ready to generate a pull request, either for preliminary review,
 or for consideration of merging into the project you must first push your local
