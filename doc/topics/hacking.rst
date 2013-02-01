@@ -17,7 +17,7 @@ fork, commit your changes to the fork, and then open up a pull request.
 
 The following is an example (from `Open Comparison Contributing Docs`_ ) 
 of an efficient workflow for forking, cloning, branching, committing, and 
-sending a pull request for a github repository::
+sending a pull request for a github repository.
 
 Once you have our github repo cloned locally and have made some changes, we recommend the following::
 
@@ -46,15 +46,16 @@ request and reissue it after making changes. Just make the changes locally in th
 same local feature branch, push them to GitHub, then add a comment to the 
 discussion section of the pull request. 
 
-Travis-CI
+.. note:: Travis-CI
 
-If you want to make our life really easier, please also enable Travis-CI on 
-your fork. Salt is already configured, all you need to do is follow the first 
-two(2) steps on their `Getting Started Doc`_.
+    If you want to make our life really easier, please also enable Travis-CI on 
+    your fork. Salt is already configured, all you need to do is follow the first 
+    2 steps on their `Getting Started Doc`_.
 
 .. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
 
 Pull upstream changes into your fork regularly
+----------------------------------------------
 
 Salt is advancing quickly. It is therefore critical that you pull upstream changes from master into your fork on a regular basis. Nothing is worse than putting in a days of hard work into a pull request only to have it rejected because it has diverged too far from master. 
 
@@ -78,7 +79,6 @@ Then if you are happy with the changes, merge them into your current branch::
     git merge upstream/develop
 
 For more info, see `Github Fork a Repo Guide`_ or `Open Comparison Contributing Docs`_
-
 
 .. _`Github Fork a Repo Guide`: http://help.github.com/fork-a-repo/
 .. _`Open Comparison Contributing Docs`: http://opencomparison.readthedocs.org/en/latest/contributing.html
