@@ -206,21 +206,6 @@ def check_desired(desired=None):
                 log.error(msg)
                 problems.append(msg)
 
-    # If minion is using anything but ebuild, zypper or pacman, flag a problem
-    # if greater-than, less-than, etc. operators are used in version string.
-    if __grains__.get('os_family', '') != 'Suse' \
-            and __grains__.get('os', '') != 'Gentoo' \
-            and __grains__.get('os', '') != 'Arch':
-        for pkgname, pkgver in desired.iteritems():
-            if pkgver is None:
-                continue
-            match = re.match('^([<>]?=?)', pkgver)
-            if match and match.group(1):
-                msg = 'Comparison operator "{0}" is only valid for the ' \
-                      'pacman and zypper providers.'.format(match.group(1))
-                log.error(msg)
-                problems.append(msg)
-
     return problems
 
 
