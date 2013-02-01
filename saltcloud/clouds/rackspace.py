@@ -177,6 +177,7 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': vm_['script_args'],
             }
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
