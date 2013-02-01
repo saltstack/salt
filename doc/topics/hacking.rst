@@ -2,35 +2,18 @@ Developing Salt
 ===============
 
 If you want to help develop Salt there is a great need and your patches are
-welcome!
+welcome! Our goal here is to make contributions clear, make sure there is a trail for
+where the code has come from, and most importantly, to give credit where credit
+is due!
 
 To assist in Salt development, you can help in a number of ways.
 
-Setting a Github pull request
------------------------------
+
+Sending us a Github pull request
+--------------------------------
 
 This is the preferred method for contributions, simply create a Github
 fork, commit your changes to the fork, and then open up a pull request.
-If you want to make our life really easier, please also enable Travis-CI on 
-your fork. Salt is already configured, all you need to do is follow the first 
-two(2) steps on their `Getting Started Doc`_.
-
-.. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
-
-Posting patches to the mailing list
------------------------------------
-
-If you have a patch for Salt, please format it via :command:`git format-patch`
-and send it to the Salt users mailing list. This allows the patch to give you
-the contributor the credit for your patch, and gives the Salt community an
-archive of the patch and a place for discussion.
-
-Contributions Welcome!
-----------------------
-
-The goal here is to make contributions clear, make sure there is a trail for
-where the code has come from, but most importantly, to give credit where credit
-is due!
 
 The `Open Comparison Contributing Docs`__ explains the workflow for forking,
 cloning, branching, committing, and sending a pull request for the git
@@ -40,6 +23,21 @@ repository.
 to the latest version.
 
 .. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
+
+If you want to make our life really easier, please also enable Travis-CI on 
+your fork. Salt is already configured, all you need to do is follow the first 
+two(2) steps on their `Getting Started Doc`_.
+
+.. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
+
+Posting patches to the mailing list
+-----------------------------------
+
+If you have a patch for Salt to email us,format it via :command:`git format-patch`
+and send it to the Salt users mailing list. This allows the patch to give you
+the contributor the credit for your patch, and gives the Salt community an
+archive of the patch and a place for discussion.
+
 
 Installing Salt for development
 -------------------------------
