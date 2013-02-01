@@ -5,6 +5,7 @@ Maintainer: Sean Channel <pentabular@gmail.com>
 Build-Depends: debhelper (>= 7.0.50),
                python | python-all | python-dev | python-all-dev,
                python-libcloud,
+               python-boto,
                python-setuptools,
                python-sphinx,
                python-yaml
@@ -20,6 +21,7 @@ Depends: ${python:Depends},
          ${shlibs:Depends},
          python,
          python-libcloud,
+         python-boto,
          python-paramiko,
          python-yaml,
          salt-common
