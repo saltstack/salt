@@ -1136,13 +1136,16 @@ def recurse(name,
 
     keep = set()
     vdir = set()
-    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
+    for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
+            continue
+        srcpath = source[7:]
+        if not fn_.startswith(srcpath):
             continue
         # fn_ here is the absolute source path of the file to copy from;
         # it is either a normal file or an empty dir(if include_empty==true).
 
-        dest = _get_recurse_dest(name, fn_, source, env)
+        dest = os.path.join(name, os.path.relpath(fn_, srcpath))
         #- Check if it is to be excluded. Match only trailing part of the path
         # after base directory
         if not _check_include_exclude(dest[len(name):], include_pat, exclude_pat):
@@ -1155,12 +1158,14 @@ def recurse(name,
             manage_directory(dirname)
             vdir.add(dirname)
 
-        if os.path.isdir(fn_) and include_empty:
-            #create empty dir
-            manage_directory(dest)
-        else:
-            src = source + _get_recurse_dest('/', fn_, source, env)
-            manage_file(dest, src)
+        src = 'salt://{0}'.format(fn_)
+        manage_file(dest, src)
+
+    if include_empty:
+        mdirs = __salt__['cp.list_master_dirs'](env)
+        for mdir in mdirs:
+            mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
+            manage_directory(mdest)
 
     keep = list(keep)
     if clean:
