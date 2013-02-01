@@ -267,7 +267,7 @@ def install(name=None,
             if version is None:
                 targets.append(param)
             else:
-                targets.append('{0}={1}'.format(param, version))
+                targets.append('"{0}={1}"'.format(param, version))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
         cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
