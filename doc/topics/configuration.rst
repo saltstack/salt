@@ -38,6 +38,8 @@ interfaces (0.0.0.0). To bind Salt to a specific IP, redefine the
    + interface: 10.0.0.1
 
 After updating the configuration file, restart the Salt master.
+See the :doc:`master configuration reference </ref/configuration/master>`
+for more details about other configurable options.
 
 Minion Configuration
 ====================
@@ -57,6 +59,8 @@ configuration file, typically ``/etc/salt/minion``, as follows:
    + master: 10.0.0.1
 
 After updating the configuration file, restart the Salt minion.
+See the :doc:`minion configuration reference </ref/configuration/minion>`
+for more details about other configurable options.
 
 Running Salt
 ============
