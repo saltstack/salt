@@ -93,8 +93,10 @@ def accept_key(pki_dir, pub, id_):
     the opts directory, this method places the pub key in the accepted
     keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
-    if not os.path.exists(pki_dir):
-        os.makedirs(pki_dir)
+    for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+        key_path = os.path.join(pki_dir, key_dir)
+        if not os.path.exists(key_path):
+            os.makedirs(key_path)
 
     key = os.path.join(
         pki_dir,
