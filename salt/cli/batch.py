@@ -36,7 +36,7 @@ class Batch(object):
         if selected_target_option is not None:
             args.append(selected_target_option)
         else:
-            args.append('glob')
+            args.append(self.opts['expr_form'])
 
         fret = []
         for ret in self.local.cmd_iter(*args):

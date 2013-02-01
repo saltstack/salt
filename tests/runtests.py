@@ -64,10 +64,8 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
     if opts.xmlout:
         runner = xmlrunner.XMLTestRunner(output=XML_OUTPUT_DIR).run(tests)
     elif opts.junit_xml:
-        if not os.path.isdir(XML_OUTPUT_DIR):
-            os.makedirs(XML_OUTPUT_DIR)
         runner = junitxml.runner.JUnitXmlTestRunner(
-            open(os.path.join(XML_OUTPUT_DIR, 'results.xml'), 'w')
+            open(os.path.join(XML_OUTPUT_DIR, 'results.xml'), 'a'),
         ).run(tests)
     else:
         runner = saltunittest.TextTestRunner(
@@ -314,6 +312,14 @@ def parse_opts():
         parser.error(
             '\'--junit-xml\' is not available. The junitxml library is not'
             'installed.'
+        )
+    elif options.junit_xml:
+        # Create directories and add XML header
+        if not os.path.isdir(XML_OUTPUT_DIR):
+            os.makedirs(XML_OUTPUT_DIR)
+
+        open(os.path.join(XML_OUTPUT_DIR, 'results.xml'), 'w').write(
+            """<?xml version="1.0" encoding="UTF-8"?>\n"""
         )
 
     if options.coverage and code_coverage is None:

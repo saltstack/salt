@@ -53,7 +53,10 @@ def get_locale():
         cmd = 'eselect --brief locale show'
         return __salt__['cmd.run'](cmd).strip()
     out = __salt__['cmd.run'](cmd).split('=')
-    ret = out[1].replace('"', '')
+    if len(out) == 2:
+      ret = out[1].replace('"', '')
+    else:
+      ret = ''
     return ret
 
 

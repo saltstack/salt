@@ -341,7 +341,10 @@ class Publisher(multiprocessing.Process):
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
         if hasattr(zmq, 'IPV4ONLY'):
-            pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+            pub_sock.setsockopt(
+                zmq.IPV4ONLY,
+                int(not int(self.opts.get('ipv6_enable', False)))
+                )
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -396,7 +399,7 @@ class ReqServer(object):
         self.clients = self.context.socket(zmq.ROUTER)
         if hasattr(zmq, 'IPV4ONLY'):
             self.clients.setsockopt(
-                zmq.IPV4ONLY, 0
+                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable', False)))
             )
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
@@ -787,7 +790,8 @@ class AESFuncs(object):
         # The minion is returning a standalone job, request a jobid
             load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
-                    self.opts['hash_type'])
+                    self.opts['hash_type'],
+                    load.get('nocache', False))
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
         if self.opts['master_ext_job_cache']:
@@ -990,7 +994,8 @@ class AESFuncs(object):
         # Set up the publication payload
         jid = salt.utils.prep_jid(
                 self.opts['cachedir'],
-                self.opts['hash_type']
+                self.opts['hash_type'],
+                clear_load.get('nocache', False)
                 )
         load = {
                 'fun': clear_load['fun'],
@@ -1649,7 +1654,8 @@ class ClearFuncs(object):
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
-                    self.opts['hash_type']
+                    self.opts['hash_type'],
+                    extra.get('nocache', False)
                     )
         jid_dir = salt.utils.jid_dir(
                 clear_load['jid'],
