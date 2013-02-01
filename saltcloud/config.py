@@ -17,7 +17,6 @@ CLOUD_CONFIG_DEFAULTS = {
     'os': '',
     'script': 'bootstrap-salt-minion',
     'start_action': None,
-    'script_args': None,
     # Logging defaults
     'log_file': '/var/log/salt/cloud',
     'log_level': None,
