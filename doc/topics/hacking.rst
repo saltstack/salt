@@ -1,45 +1,92 @@
 Developing Salt
 ===============
 
-If you want to help develop Salt there is a great need and your patches are
-welcome!
+There is a great need for contributions to salt and patches are welcome! The goal 
+here is to make contributions clear, make sure there is a trail for where the code 
+has come from, and most importantly, to give credit where credit is due!
 
-To assist in Salt development, you can help in a number of ways.
+There are a number of ways to contribute to salt development.
 
-Setting a Github pull request
+
+Sending a Github pull request
 -----------------------------
 
 This is the preferred method for contributions, simply create a Github
-fork, commit your changes to the fork, and then open up a pull request.
-If you want to make our life really easier, please also enable Travis-CI on 
-your fork. Salt is already configured, all you need to do is follow the first 
-two(2) steps on their `Getting Started Doc`_.
+fork, commit changes to the fork, and then open up a pull request.
+
+The following is an example (from `Open Comparison Contributing Docs`_ ) 
+of an efficient workflow for forking, cloning, branching, committing, and 
+sending a pull request for a github repository.
+
+Once the salt github repo is cloned locally and changes are ready to submit, do the following::
+
+    git checkout -b fixed-broken-thing
+    Switched to a new branch 'fixed-broken-thing'
+
+Choose a name for your branch that describes its purpose.  
+
+To generate a pull request, either for preliminary review,
+or for consideration of merging into the project, first push the local
+feature branch back up to GitHub::
+
+    git push origin fixed-broken-thing
+    
+When looking at the fork on GitHub, this new branch will now be listed under
+the "Source" tab where it says "Switch Branches".  Select the feature branch 
+from this list, and then click the "Pull request" button.
+
+Put in a descriptive comment, and include links to any project issues related to the pull request.
+
+The repo managers will be notified of your pull request and it will
+be reviewed. If a reviewer asks for changes, just make the changes locally in the 
+same local feature branch, push them to GitHub, then add a comment to the 
+discussion section of the pull request. 
+
+.. note:: Travis-CI
+
+    To make reviewing pull requests easier for the maintainers, please enable Travis-CI on 
+    the fork. Salt is already configured, so simply follow the first 
+    2 steps on the Travis-CI `Getting Started Doc`_.
 
 .. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
+
+Keeping Salt Forks in Sync
+--------------------------
+
+Salt is advancing quickly. It is therefore critical to pull upstream changes from master into forks on a regular basis. Nothing is worse than putting in a days of hard work into a pull request only to have it rejected because it has diverged too far from master. 
+
+To pull in upstream changes::
+
+    # For ssh github
+    git remote add upstream git@github.com:saltstack/salt.git
+    git fetch upstream
+
+    # For https github
+    git remote add upstream https://github.com/saltstack/salt.git
+    git fetch upstream
+
+
+To check the log to be sure that you actually want the changes, run this before merging::
+
+    git log upstream/develop
+
+Then to accept the changes and merge into the current branch::
+
+    git merge upstream/develop
+
+For more info, see `Github Fork a Repo Guide`_ or `Open Comparison Contributing Docs`_
+
+.. _`Github Fork a Repo Guide`: http://help.github.com/fork-a-repo/
+.. _`Open Comparison Contributing Docs`: http://opencomparison.readthedocs.org/en/latest/contributing.html
 
 Posting patches to the mailing list
 -----------------------------------
 
-If you have a patch for Salt, please format it via :command:`git format-patch`
-and send it to the Salt users mailing list. This allows the patch to give you
-the contributor the credit for your patch, and gives the Salt community an
-archive of the patch and a place for discussion.
+Patches will also be accepted by email. Format patches using `git format-patch`_
+and send them to the Salt users mailing list. The contributor will then get credit 
+for the patch, and the Salt community will have an archive of the patch and a place for discussion.
 
-Contributions Welcome!
-----------------------
-
-The goal here is to make contributions clear, make sure there is a trail for
-where the code has come from, but most importantly, to give credit where credit
-is due!
-
-The `Open Comparison Contributing Docs`__ explains the workflow for forking,
-cloning, branching, committing, and sending a pull request for the git
-repository.
-
-``git pull upstream develop`` is a shorter way to update your local repository
-to the latest version.
-
-.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
+.. _`git format-patch`: http://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 
 Installing Salt for development
 -------------------------------
