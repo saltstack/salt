@@ -15,14 +15,38 @@ Sending us a Github pull request
 This is the preferred method for contributions, simply create a Github
 fork, commit your changes to the fork, and then open up a pull request.
 
-The `Open Comparison Contributing Docs`__ explains the workflow for forking,
-cloning, branching, committing, and sending a pull request for the git
-repository.
+The following is an example (from `Open Comparison Contributing Docs`_ ) 
+of an efficient workflow for forking, cloning, branching, committing, and 
+sending a pull request for a github repository::
 
-``git pull upstream develop`` is a shorter way to update your local repository
-to the latest version.
+Once you have our github repo cloned locally and have made some changes, we recommend the following::
 
-.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
+    git checkout -b fixed-broken-thing
+    Switched to a new branch 'fixed-broken-thing'
+
+You should use a verbose enough name for your branch so it is clear what it is
+about.  Now you can commit your changes and regularly merge in the upstream
+master as described below.
+
+When you are ready to generate a pull request, either for preliminary review,
+or for consideration of merging into the project you must first push your local
+feature branch back up to GitHub::
+
+    git push origin fixed-broken-thing
+    
+Now when you go to your fork on GitHub, you will see this branch listed under
+the "Source" tab where it says "Switch Branches".  Go ahead and select your
+feature branch from this list, and then click the "Pull request" button.
+
+Here you can add a comment about your branch.  If this in response to
+a submitted issue, please put a link to that issue in this initial
+comment.  The repo managers will be notified of your pull request and it will
+be reviewed. If a reviewer asks for changes, you do not need to close the pull 
+request and reissue it after making changes. Just make the changes locally in the 
+same local feature branch, push them to GitHub, then add a comment to the 
+discussion section of the pull request. 
+
+Travis-CI
 
 If you want to make our life really easier, please also enable Travis-CI on 
 your fork. Salt is already configured, all you need to do is follow the first 
@@ -30,10 +54,39 @@ two(2) steps on their `Getting Started Doc`_.
 
 .. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
 
+Pull upstream changes into your fork regularly
+
+Salt is advancing quickly. It is therefore critical that you pull upstream changes from master into your fork on a regular basis. Nothing is worse than putting in a days of hard work into a pull request only to have it rejected because it has diverged too far from master. 
+
+To pull in upstream changes::
+
+    # For ssh github
+    git remote add upstream git@github.com:saltstack/salt.git
+    git fetch upstream
+
+    # For https github
+    git remote add upstream https://github.com/saltstack/salt.git
+    git fetch upstream
+
+
+If you want to check the log to be sure that you actually want the changes, run this before merging::
+
+    git log upstream/develop
+
+Then if you are happy with the changes, merge them into your current branch::
+
+    git merge upstream/develop
+
+For more info, see `Github Fork a Repo Guide`_ or `Open Comparison Contributing Docs`_
+
+
+.. _`Github Fork a Repo Guide`: http://help.github.com/fork-a-repo/
+.. _`Open Comparison Contributing Docs`: http://opencomparison.readthedocs.org/en/latest/contributing.html
+
 Posting patches to the mailing list
 -----------------------------------
 
-If you have a patch for Salt to email us,format it via :command:`git format-patch`
+If you have a patch for Salt to email us, format it via :command:`git format-patch`
 and send it to the Salt users mailing list. This allows the patch to give you
 the contributor the credit for your patch, and gives the Salt community an
 archive of the patch and a place for discussion.
