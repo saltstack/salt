@@ -72,7 +72,7 @@ a simple protocol described below:
 
       # writing the state line
       echo  # an empty line here so the next line will be the last.
-      echo "changed=yes comment=\"something's changed!\" whatever=123"
+      echo "changed=yes comment='something has changed' whatever=123"
 
 
     And an example salt file using this module::
