@@ -303,7 +303,7 @@ def install(name=None,
             if version is None:
                 targets.append(param)
             else:
-                pkgstr = '{0}-{1}'.format(param, version)
+                pkgstr = '"{0}-{1}"'.format(param, version)
                 cver = old.get(param, '')
                 if not cver or __salt__['pkg.compare'](pkg1=version,
                                                        oper='>=',
