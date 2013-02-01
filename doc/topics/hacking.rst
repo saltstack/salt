@@ -84,11 +84,12 @@ For more info, see `Github Fork a Repo Guide`_ or `Open Comparison Contributing 
 Posting patches to the mailing list
 -----------------------------------
 
-If you have a patch for Salt to email us, format it via :command:`git format-patch`
+If you have a patch for Salt to email us, format it via `git format-patch`_
 and send it to the Salt users mailing list. This allows the patch to give you
 the contributor the credit for your patch, and gives the Salt community an
 archive of the patch and a place for discussion.
 
+.. _`git format-patch`: http://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 
 Installing Salt for development
 -------------------------------
