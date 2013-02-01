@@ -295,11 +295,13 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            'script_args': vm_['script_args'],
         }
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
+
+        if 'script_args' in vm_:
+            deploy_kwargs['script_args'] = vm_['script_args']
 
         # Deploy salt-master files, if necessary
         if 'make_master' in vm_ and vm_['make_master'] is True:
