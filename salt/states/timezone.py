@@ -8,7 +8,7 @@ The timezone can be managed for the system:
 
     America/Denver:
       timezone.system:
-        utc: True
+        - utc: True
 '''
 
 
