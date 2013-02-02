@@ -30,3 +30,6 @@ coverage.xml
 htmlcov/
 /.project
 /.pydevproject
+
+# ignore ctags file
+tags
