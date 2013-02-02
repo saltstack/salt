@@ -25,7 +25,7 @@ import locale
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'enterprise', 'ovs', 'system')
+                     'slamd64', 'enterprise', 'ovs', 'system', 'mint')
 
 # Import salt libs
 import salt.log
@@ -525,6 +525,7 @@ _OS_FAMILY_MAP = {
     'OEL': 'RedHat',
     'Mandrake': 'Mandriva',
     'ESXi': 'VMWare',
+    'Mint': 'Debian',
     'VMWareESX': 'VMWare',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
