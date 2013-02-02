@@ -176,6 +176,16 @@ Install Salt (and dependencies) into the virtualenv::
 .. _`Fedora Linux`: http://fedoraproject.org/
 .. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
 
+.. note:: Installing dependencies on OS X.
+
+One simple way to get all needed dependencies on OS X is to use homebrew,
+and install the following packages::
+
+    brew install swig
+    brew install zmq
+
+Afterward the pip commands should run without a hitch. Also be sure to set
+max_open_files to 2048 (see below).
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -200,6 +210,7 @@ Edit the master config file:
     ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
+5. On OS X also set max_open_files to 2048.
 
 Edit the minion config file:
 
