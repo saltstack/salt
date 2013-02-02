@@ -124,7 +124,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
         for user in mdb.system.users.find():
             output.append([
                 ('user', user['user']),
-                ('readOnly', user['readOnly'])
+                ('readOnly', user.get('readOnly', 'None'))
             ])
         return output
 
