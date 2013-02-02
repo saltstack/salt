@@ -192,6 +192,22 @@ the jobs system and is not generally recommended. Normally it is wise to make
 sure the master has access to a faster IO system or a tmpfs is mounted to the
 jobs dir
 
+.. conf_master:: ext_job_cache
+
+``ext_job_cache``
+-----------------
+
+Default: ''
+
+Used to specify a default returner for all minions, when this option is set
+the specified returner needs to be properly configured and the minions will
+allways default to sening returns to this returner. This will also disable the
+local job cache on the master
+
+.. code-block:: yaml
+
+    ext_job_cache: redis
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
