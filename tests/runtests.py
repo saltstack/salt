@@ -23,7 +23,7 @@ except ImportError:
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 XML_OUTPUT_DIR = os.environ.get(
-    'SALT_XML_TEST_REPORTS',
+    'SALT_XML_TEST_REPORTS_DIR',
     os.path.join(TMP, 'xml-test-reports')
 )
 
@@ -61,6 +61,8 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
     if opts.xmlout:
         runner = xmlrunner.XMLTestRunner(output=XML_OUTPUT_DIR).run(tests)
     else:
+        if not os.path.isdir(XML_OUTPUT_DIR):
+            os.makedirs(XML_OUTPUT_DIR)
         runner = saltunittest.TextTestRunner(
             verbosity=opts.verbosity
         ).run(tests)
