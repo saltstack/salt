@@ -156,8 +156,10 @@ Install Salt (and dependencies) into the virtualenv::
 One simple way to get all needed dependencies on OS X is to use homebrew,
 and install the following packages::
 
-    # brew install swig
-    # brew install zmq
+    brew install swig
+    brew install zmq
+
+Afterward the pip commands should run without a hitch.
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
