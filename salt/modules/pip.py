@@ -237,8 +237,8 @@ def install(pkgs=None,
     if editable:
         if editable.find('egg') == -1:
             raise Exception('You must specify an egg for this editable')
-        cmd = '{cmd} --editable={editable} '.format(
-            cmd=cmd, editable=editable)
+        cmd = '{0} install --editable={editable}'.format(
+            _get_pip_bin(bin_env), editable=editable)
 
     if find_links:
         if not find_links.startswith("http://"):
