@@ -21,14 +21,11 @@ try:
 except ImportError:
     xmlrunner = None
 
-try:
-    import junitxml
-    import junitxml.runner
-except ImportError:
-    junitxml = None
-
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-XML_OUTPUT_DIR = os.path.join(TMP, 'test-reports')
+XML_OUTPUT_DIR = os.environ.get(
+    'SALT_XML_TEST_REPORTS',
+    os.path.join(TMP, 'xml-test-reports')
+)
 
 try:
     import coverage
@@ -63,10 +60,6 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
 
     if opts.xmlout:
         runner = xmlrunner.XMLTestRunner(output=XML_OUTPUT_DIR).run(tests)
-    elif opts.junit_xml:
-        runner = junitxml.runner.JUnitXmlTestRunner(
-            open(os.path.join(XML_OUTPUT_DIR, 'results.xml'), 'a'),
-        ).run(tests)
     else:
         runner = saltunittest.TextTestRunner(
             verbosity=opts.verbosity
@@ -270,16 +263,6 @@ def parse_opts():
         )
     )
     output_options_group.add_option(
-        '-j',
-        '--junit-xml',
-        default=False,
-        action='store_true',
-        help='JUnit compatible XML test runner output'
-             '(Output filename: {0})'.format(
-                 os.path.join(XML_OUTPUT_DIR, 'results.xml')
-             )
-    )
-    output_options_group.add_option(
         '--no-report',
         default=False,
         action='store_true',
@@ -306,20 +289,6 @@ def parse_opts():
         parser.error(
             '\'--xml\' is not available. The xmlrunner library is not '
             'installed.'
-        )
-
-    if options.junit_xml and junitxml is None:
-        parser.error(
-            '\'--junit-xml\' is not available. The junitxml library is not'
-            'installed.'
-        )
-    elif options.junit_xml:
-        # Create directories and add XML header
-        if not os.path.isdir(XML_OUTPUT_DIR):
-            os.makedirs(XML_OUTPUT_DIR)
-
-        open(os.path.join(XML_OUTPUT_DIR, 'results.xml'), 'w').write(
-            """<?xml version="1.0" encoding="UTF-8"?>\n"""
         )
 
     if options.coverage and code_coverage is None:
