@@ -807,9 +807,8 @@ def directory(name,
             else:
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
-    if not os.path.isdir(name):
-        __salt__['file.makedirs'](name, user=user, group=group, mode=mode)
         os.makedirs(name)
+        ret['changes'][name] = 'New Dir'
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
