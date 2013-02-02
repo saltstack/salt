@@ -110,7 +110,7 @@ Install Salt (and dependencies) into the virtualenv::
 
     pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
     pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil
-    pip install -e ./salt       # the path to the salt git clone from above
+    pip install -e ./salt   # the path to the salt git clone from above (or . if you're already in that directory)
 
 .. note:: Installing M2Crypto
 
