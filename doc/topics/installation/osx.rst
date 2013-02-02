@@ -7,9 +7,7 @@ Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 Dependency installation
 -----------------------
 
-There are many ways to skin the dependency cat. One solution that I found
-simple enough was to install two key packages with the fine homebrew package
-manager:
+ZeroMQ and swig need to be installed first, these are avilable via homebrew:
 
 
 .. code-block:: bash
@@ -17,12 +15,12 @@ manager:
     brew install swig
     brew install zmq
 
-and then install the python dependencies as follows:
+Now pip can install the remaining deps and salt itself:
 
 
 .. code-block:: bash
 
-    pip install M2Crypto pyzmq PyYAML pycrypto msgpack-python jinja2 psutil
+    pip install M2Crypto pyzmq PyYAML pycrypto msgpack-python jinja2 psutil salt
 
 
 Post-installation tasks
