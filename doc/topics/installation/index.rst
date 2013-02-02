@@ -51,6 +51,7 @@ These guides go into detail how to install salt on a given platform.
     gentoo
     windows
     solaris
+    osx
 
 
 Dependencies
