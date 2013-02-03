@@ -9,7 +9,7 @@ from salt.exceptions import CommandExecutionError
 
 def __virtual__():
     '''
-    Only run on Linux systems
+    Only run on FreeBSD systems
     '''
     return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
 
