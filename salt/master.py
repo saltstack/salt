@@ -242,11 +242,23 @@ class Master(SMaster):
             # There's room to raise the value. Raise it!
             log.warning('Raising max open files value to {0}'.format(mof_c))
             resource.setrlimit(resource.RLIMIT_NOFILE, (mof_c, mof_h))
-            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
-            log.warning(
-                'New values for max open files soft/hard values: '
-                '{0}/{1}'.format(mof_s, mof_h)
-            )
+            try:
+                mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+                log.warning(
+                    'New values for max open files soft/hard values: '
+                    '{0}/{1}'.format(mof_s, mof_h)
+                )
+            except ValueError:
+                # https://github.com/saltstack/salt/issues/1991#issuecomment-13025595
+                # A user under OSX reported that our 100000 default value is
+                # still too high.
+                log.critical(
+                    'Failed to raise max open files setting to {0}. If this '
+                    'value is too low. The salt-master will most likely fail '
+                    'to run properly.'.format(
+                        mof_c
+                    )
+                )
 
     def _pre_flight(self):
         '''
