@@ -212,20 +212,11 @@ def db_remove(name, user=None, host=None, port=None, db=None, runas=None):
         salt '*' postgres.db_remove 'dbname'
     '''
 
-    # check if db exists
-    if not db_exists(name, user, host, port, db, runas=runas):
-        log.info('DB \'{0}\' does not exist'.format(name,))
-        return False
-
     # db doesnt exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
     cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db)
-    __salt__['cmd.run'](cmd, runas=runas)
-    if not db_exists(name, user, host, port, db, runas=runas):
-        return True
-    else:
-        log.info('Failed to delete DB \'{0}\'.'.format(name, ))
-        return False
+    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    return ret['retcode'] == 0
 
 
 # User related actions
