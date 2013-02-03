@@ -146,11 +146,7 @@ def db_exists(name, user=None, host=None, port=None, db=None, runas=None):
     '''
 
     databases = db_list(user=user, host=host, port=port, db=db, runas=runas)
-    for database in databases:
-        if name == dict(database).get('Name'):
-            return True
-
-    return False
+    return name in databases
 
 
 def db_create(name,
