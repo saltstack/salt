@@ -53,7 +53,7 @@ def version():
 
 def _connection_defaults(user=None, host=None, port=None, db=None):
     '''
-    Returns a tuple of (user, host, port) with config, pillar, or default
+    Returns a tuple of (user, host, port, db) with config, pillar, or default
     values assigned to missing values.
     '''
     if not user:
@@ -79,7 +79,7 @@ def _psql_cmd(*args, **kwargs):
                                                   kwargs.get('host'),
                                                   kwargs.get('port'),
                                                   kwargs.get('db'))
-    cmd = ['psql', '--no-align', '--no-readline', '--no-password']
+    cmd = [which('psql'), '--no-align', '--no-readline', '--no-password']
     if user:
         cmd += ['--username', user]
     if host:
@@ -97,35 +97,41 @@ def _psql_cmd(*args, **kwargs):
 
 def db_list(user=None, host=None, port=None, db=None, runas=None):
     '''
-    Return a list of databases of a Postgres server using the output
-    from the ``psql -l`` query.
+    Return dictionary with information about databases of a Postgres server.
 
     CLI Example::
 
         salt '*' postgres.db_list
     '''
 
-    ret = []
+    ret = {}
+    header = ['Name',
+              'Owner',
+              'Encoding',
+              'Collate',
+              'Ctype',
+              'Access privileges']
+
     query = 'SELECT datname as "Name", pga.rolname as "Owner", ' \
             'pg_encoding_to_char(encoding) as "Encoding", ' \
             'datcollate as "Collate", datctype as "Ctype", ' \
             'datacl as "Access privileges" FROM pg_database pgd, ' \
             'pg_authid pga WHERE pga.oid = pgd.datdba'
 
-    cmd = _psql_cmd('-c', query,
+    cmd = _psql_cmd('-c', query, '-t',
                     host=host, user=user, port=port, db=db)
 
-    cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split('|')) == 6]
-    if not lines:
-        log.error('no results from postgres.db_list')
-    else:
-        log.debug(lines)
-        header = [x.strip() for x in lines[0].split('|')]
-        for line in lines[1:]:
-            line = [x.strip() for x in line.split('|')]
-            if not line[0] == '':
-                ret.append(list(zip(header[:-1], line[:-1])))
+    cmdret = __salt__['cmd.run_all'](cmd, runas=runas)
+
+    if cmdret['retcode'] > 0:
+        return ret
+
+    for line in cmdret['stdout'].splitlines():
+        if line.count('|') != 5:
+            log.warning('Unexpected string: {0}'.format(line))
+            continue
+        comps = line.split('|')
+        ret[comps[0]] = dict(zip(header[1:], comps[1:]))
 
     return ret
 
