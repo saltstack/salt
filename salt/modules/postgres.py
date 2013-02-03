@@ -52,7 +52,7 @@ def version():
     return '{0} {1}'.format(name, ver)
 
 
-def _connection_defaults(user=None, host=None, port=None):
+def _connection_defaults(user=None, host=None, port=None, db=None):
     '''
     Returns a tuple of (user, host, port) with config, pillar, or default
     values assigned to missing values.
@@ -63,8 +63,10 @@ def _connection_defaults(user=None, host=None, port=None):
         host = __salt__['config.option']('postgres.host')
     if not port:
         port = __salt__['config.option']('postgres.port')
+    if not db:
+        db = __salt__['config.option']('postgres.db')
 
-    return (user, host, port)
+    return (user, host, port, db)
 
 
 def _psql_cmd(*args, **kwargs):
@@ -74,9 +76,10 @@ def _psql_cmd(*args, **kwargs):
     Accept optional keyword arguments: user, host and port as well as any
     number or positional arguments to be added to the end of command.
     '''
-    (user, host, port) = _connection_defaults(kwargs.get('user'),
-                                              kwargs.get('host'),
-                                              kwargs.get('port'))
+    (user, host, port, db) = _connection_defaults(kwargs.get('user'),
+                                                  kwargs.get('host'),
+                                                  kwargs.get('port'),
+                                                  kwargs.get('db'))
     cmd = ['psql', '--no-align', '--no-readline', '--no-password']
     if user:
         cmd += ['--username', user]
@@ -84,6 +87,8 @@ def _psql_cmd(*args, **kwargs):
         cmd += ['--host', host]
     if port:
         cmd += ['--port', port]
+    if db:
+        cmd += ['--dbname', db]
     cmd += args
     cmdstr = ' '.join(map(pipes.quote, cmd))
     return cmdstr
@@ -91,7 +96,7 @@ def _psql_cmd(*args, **kwargs):
 
 # Database related actions
 
-def db_list(user=None, host=None, port=None, runas=None):
+def db_list(user=None, host=None, port=None, db=None, runas=None):
     '''
     Return a list of databases of a Postgres server using the output
     from the ``psql -l`` query.
@@ -109,7 +114,7 @@ def db_list(user=None, host=None, port=None, runas=None):
             'pg_authid pga WHERE pga.oid = pgd.datdba'
 
     cmd = _psql_cmd('-c', query,
-                    host=host, user=user, port=port)
+                    host=host, user=user, port=port, db=db)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     lines = [x for x in cmdret.splitlines() if len(x.split('|')) == 6]
@@ -126,7 +131,7 @@ def db_list(user=None, host=None, port=None, runas=None):
     return ret
 
 
-def db_exists(name, user=None, host=None, port=None, runas=None):
+def db_exists(name, user=None, host=None, port=None, db=None, runas=None):
     '''
     Checks if a database exists on the Postgres server.
 
@@ -135,7 +140,7 @@ def db_exists(name, user=None, host=None, port=None, runas=None):
         salt '*' postgres.db_exists 'dbname'
     '''
 
-    databases = db_list(user=user, host=host, port=port, runas=runas)
+    databases = db_list(user=user, host=host, port=port, db=db, runas=runas)
     for database in databases:
         if name == dict(database).get('Name'):
             return True
@@ -147,6 +152,7 @@ def db_create(name,
               user=None,
               host=None,
               port=None,
+              db=None,
               tablespace=None,
               encoding=None,
               locale=None,
@@ -167,13 +173,13 @@ def db_create(name,
     '''
 
     # check if db exists
-    if db_exists(name, user, host, port, runas=runas):
+    if db_exists(name, user, host, port, db, runas=runas):
         log.info('DB \'{0}\' already exists'.format(name,))
         return False
 
     # check if template exists
     if template:
-        if not db_exists(template, user, host, port, runas=runas):
+        if not db_exists(template, user, host, port, db, runas=runas):
             log.info('template \'{0}\' does not exist.'.format(template, ))
             return False
 
@@ -201,18 +207,18 @@ def db_create(name,
         query += ' '.join(with_chunks)
 
     # Execute the command
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port)
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db)
     __salt__['cmd.run'](cmd, runas=runas)
 
     # Check the result
-    if db_exists(name, user, host, port, runas=runas):
+    if db_exists(name, user, host, port, db, runas=runas):
         return True
     else:
         log.info('Failed to create DB \'{0}\''.format(name,))
         return False
 
 
-def db_remove(name, user=None, host=None, port=None, runas=None):
+def db_remove(name, user=None, host=None, port=None, db=None, runas=None):
     '''
     Removes a databases from the Postgres server.
 
@@ -222,15 +228,15 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
     '''
 
     # check if db exists
-    if not db_exists(name, user, host, port, runas=runas):
+    if not db_exists(name, user, host, port, db, runas=runas):
         log.info('DB \'{0}\' does not exist'.format(name,))
         return False
 
     # db doesnt exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port)
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db)
     __salt__['cmd.run'](cmd, runas=runas)
-    if not db_exists(name, user, host, port, runas=runas):
+    if not db_exists(name, user, host, port, db, runas=runas):
         return True
     else:
         log.info('Failed to delete DB \'{0}\'.'.format(name, ))
@@ -239,7 +245,7 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
 
 # User related actions
 
-def user_list(user=None, host=None, port=None, runas=None):
+def user_list(user=None, host=None, port=None, db=None, runas=None):
     '''
     Return a list of users of a Postgres server.
 
@@ -256,7 +262,7 @@ def user_list(user=None, host=None, port=None, runas=None):
         FROM pg_roles'''
     )
     cmd = _psql_cmd('-c', query,
-                    host=host, user=user, port=port)
+                    host=host, user=user, port=port, db=db)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     lines = [x for x in cmdret.splitlines() if len(x.split('|')) == 12]
@@ -270,7 +276,7 @@ def user_list(user=None, host=None, port=None, runas=None):
     return ret
 
 
-def user_exists(name, user=None, host=None, port=None, runas=None):
+def user_exists(name, user=None, host=None, port=None, db=None, runas=None):
     '''
     Checks if a user exists on the Postgres server.
 
@@ -285,7 +291,7 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
         'WHERE EXISTS '
         '(SELECT rolname WHERE rolname=\'{role}\')'.format(role=name)
     )
-    cmd = _psql_cmd('-c', query, host=host, user=user, port=port)
+    cmd = _psql_cmd('-c', query, host=host, user=user, port=port, db=db)
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     log.debug(cmdret.splitlines())
     try:
@@ -301,6 +307,7 @@ def _role_create(name,
                  user=None,
                  host=None,
                  port=None,
+                 db=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
@@ -320,7 +327,7 @@ def _role_create(name,
         create_type = 'ROLE'
 
     # check if role exists
-    if user_exists(name, user, host, port, runas=runas):
+    if user_exists(name, user, host, port, db, runas=runas):
         log.info('{0} \'{1}\' already exists'.format(create_type, name,))
         return False
 
@@ -344,7 +351,7 @@ def _role_create(name,
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db)
     return __salt__['cmd.run'](cmd, runas=runas)
 
 
@@ -352,6 +359,7 @@ def user_create(username,
                 user=None,
                 host=None,
                 port=None,
+                db=None,
                 createdb=False,
                 createuser=False,
                 encrypted=False,
@@ -372,6 +380,7 @@ def user_create(username,
                         user,
                         host,
                         port,
+                        db,
                         createdb,
                         createuser,
                         encrypted,
@@ -386,6 +395,7 @@ def _role_update(name,
                  user=None,
                  host=None,
                  port=None,
+                 db=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
@@ -398,7 +408,7 @@ def _role_update(name,
     '''
 
     # check if user exists
-    if not user_exists(name, user, host, port, runas=runas):
+    if not user_exists(name, user, host, port, db, runas=runas):
         log.info('User \'{0}\' does not exist'.format(name,))
         return False
 
@@ -421,7 +431,7 @@ def _role_update(name,
         for group in groups.split(','):
             sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db)
     return __salt__['cmd.run'](cmd, runas=runas)
 
 
@@ -429,6 +439,7 @@ def user_update(username,
                 user=None,
                 host=None,
                 port=None,
+                db=None,
                 createdb=False,
                 createuser=False,
                 encrypted=False,
@@ -447,6 +458,7 @@ def user_update(username,
                         user,
                         host,
                         port,
+                        db,
                         createdb,
                         createuser,
                         encrypted,
@@ -456,27 +468,27 @@ def user_update(username,
                         runas)
 
 
-def _role_remove(name, user=None, host=None, port=None, runas=None):
+def _role_remove(name, user=None, host=None, port=None, db=None, runas=None):
     '''
     Removes a role from the Postgres Server
     '''
 
     # check if user exists
-    if not user_exists(name, user, host, port, runas=runas):
+    if not user_exists(name, user, host, port, db, runas=runas):
         log.info('User \'{0}\' does not exist'.format(name,))
         return False
 
     # user exists, proceed
     sub_cmd = 'DROP ROLE {0}'.format(name)
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db)
     __salt__['cmd.run'](cmd, runas=runas)
-    if not user_exists(name, user, host, port, runas=runas):
+    if not user_exists(name, user, host, port, db, runas=runas):
         return True
     else:
         log.info('Failed to delete user \'{0}\'.'.format(name, ))
 
 
-def user_remove(username, user=None, host=None, port=None, runas=None):
+def user_remove(username, user=None, host=None, port=None, db=None, runas=None):
     '''
     Removes a user from the Postgres server.
 
@@ -484,7 +496,7 @@ def user_remove(username, user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.user_remove 'username'
     '''
-    return _role_remove(username, user, host, port, runas)
+    return _role_remove(username, user, host, port, db, runas)
 
 
 # Group related actions
@@ -493,6 +505,7 @@ def group_create(groupname,
                  user=None,
                  host=None,
                  port=None,
+                 db=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
@@ -514,6 +527,7 @@ def group_create(groupname,
                         user,
                         host,
                         port,
+                        db,
                         createdb,
                         createuser,
                         encrypted,
@@ -528,6 +542,7 @@ def group_update(groupname,
                  user=None,
                  host=None,
                  port=None,
+                 db=None,
                  createdb=False,
                  createuser=False,
                  encrypted=False,
@@ -546,6 +561,7 @@ def group_update(groupname,
                         user,
                         host,
                         port,
+                        db,
                         createdb,
                         createuser,
                         encrypted,
@@ -555,7 +571,7 @@ def group_update(groupname,
                         runas)
 
 
-def group_remove(groupname, user=None, host=None, port=None, runas=None):
+def group_remove(groupname, user=None, host=None, port=None, db=None, runas=None):
     '''
     Removes a group from the Postgres server.
 
@@ -563,4 +579,4 @@ def group_remove(groupname, user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.group_remove 'groupname'
     '''
-    return _role_remove(groupname, user, host, port, runas)
+    return _role_remove(groupname, user, host, port, db, runas)
