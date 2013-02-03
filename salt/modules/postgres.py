@@ -20,7 +20,7 @@ import pipes
 import logging
 
 # Import salt libs
-from salt.utils import check_or_die
+from salt.utils import check_or_die, which
 from salt.exceptions import CommandNotFoundError
 
 log = logging.getLogger(__name__)
@@ -40,16 +40,15 @@ def __virtual__():
 def version():
     '''
     Return the version of a Postgres server using the output
-    from the ``psql --version`` cmd.
+    from the ``postgres --version`` cmd.
 
     CLI Example::
 
         salt '*' postgres.version
     '''
-    version_line = __salt__['cmd.run']('psql --version').split('\n')[0]
-    name = version_line.split(' ')[1]
-    ver = version_line.split(' ')[2]
-    return '{0} {1}'.format(name, ver)
+    cmd = '{0} --version'.format(which('postgres'))
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        return line.split()[-1]
 
 
 def _connection_defaults(user=None, host=None, port=None, db=None):
