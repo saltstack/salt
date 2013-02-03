@@ -37,12 +37,10 @@ Using Custom State Modules
 Place your custom state modules inside a ``_states`` directory within the
 :conf_master:`file_roots` specified by the master config file. These custom
 state modules can then be distributed in a number of ways. Custom state modules
-are distributed when `state.highstate`_ is run, or by executing the
-`saltutil.sync_states`_ or `saltutil.sync_all`_ functions.
-
-.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
-.. _`saltutil.sync_states`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_states
-.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
+are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is
+run, or by executing the :mod:`saltutil.sync_states
+<salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>` functions.
 
 
 Cross Calling Modules
