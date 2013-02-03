@@ -488,7 +488,12 @@ def _role_remove(name, user=None, host=None, port=None, db=None, runas=None):
         log.info('Failed to delete user \'{0}\'.'.format(name, ))
 
 
-def user_remove(username, user=None, host=None, port=None, db=None, runas=None):
+def user_remove(username,
+                user=None,
+                host=None,
+                port=None,
+                db=None,
+                runas=None):
     '''
     Removes a user from the Postgres server.
 
@@ -571,7 +576,12 @@ def group_update(groupname,
                         runas)
 
 
-def group_remove(groupname, user=None, host=None, port=None, db=None, runas=None):
+def group_remove(groupname,
+                 user=None,
+                 host=None,
+                 port=None,
+                 db=None,
+                 runas=None):
     '''
     Removes a group from the Postgres server.
 
