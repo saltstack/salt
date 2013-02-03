@@ -173,17 +173,6 @@ def db_create(name,
 
     '''
 
-    # check if db exists
-    if db_exists(name, user, host, port, db, runas=runas):
-        log.info('DB \'{0}\' already exists'.format(name,))
-        return False
-
-    # check if template exists
-    if template:
-        if not db_exists(template, user, host, port, db, runas=runas):
-            log.info('template \'{0}\' does not exist.'.format(template, ))
-            return False
-
     # Base query to create a database
     query = 'CREATE DATABASE "{0}"'.format(name)
 
@@ -209,14 +198,9 @@ def db_create(name,
 
     # Execute the command
     cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db)
-    __salt__['cmd.run'](cmd, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, runas=runas)
 
-    # Check the result
-    if db_exists(name, user, host, port, db, runas=runas):
-        return True
-    else:
-        log.info('Failed to create DB \'{0}\''.format(name,))
-        return False
+    return ret['retcode'] == 0
 
 
 def db_remove(name, user=None, host=None, port=None, db=None, runas=None):
