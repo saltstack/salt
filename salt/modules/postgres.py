@@ -100,7 +100,6 @@ def db_list(user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.db_list
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
     query = 'SELECT datname as "Name", pga.rolname as "Owner", ' \
@@ -135,7 +134,6 @@ def db_exists(name, user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.db_exists 'dbname'
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     databases = db_list(user=user, host=host, port=port, runas=runas)
     for database in databases:
@@ -167,7 +165,6 @@ def db_create(name,
         salt '*' postgres.db_create 'dbname' template=template_postgis
 
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     # check if db exists
     if db_exists(name, user, host, port, runas=runas):
@@ -223,7 +220,6 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.db_remove 'dbname'
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     # check if db exists
     if not db_exists(name, user, host, port, runas=runas):
@@ -251,7 +247,6 @@ def user_list(user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.user_list
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
     query = (
@@ -283,7 +278,6 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
 
         salt '*' postgres.user_exists 'username'
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     query = (
         'SELECT true '
@@ -319,7 +313,6 @@ def _role_create(name,
     Creates a Postgres role. Users and Groups are both roles in postgres.
     However, users can login, groups cannot.
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     if login:
         create_type = 'USER'
@@ -403,7 +396,6 @@ def _role_update(name,
     '''
     Updates a postgres role.
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     # check if user exists
     if not user_exists(name, user, host, port, runas=runas):
@@ -468,7 +460,6 @@ def _role_remove(name, user=None, host=None, port=None, runas=None):
     '''
     Removes a role from the Postgres Server
     '''
-    (user, host, port) = _connection_defaults(user, host, port)
 
     # check if user exists
     if not user_exists(name, user, host, port, runas=runas):
