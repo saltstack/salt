@@ -46,10 +46,11 @@ def version():
 
         salt '*' postgres.version
     '''
-    version_line =  __salt__['cmd.run']('psql --version').split("\n")[0]
+    version_line = __salt__['cmd.run']('psql --version').split("\n")[0]
     name = version_line.split(" ")[1]
     ver = version_line.split(" ")[2]
     return '{0} {1}'.format(name, ver)
+
 
 def _connection_defaults(user=None, host=None, port=None):
     '''
@@ -64,6 +65,7 @@ def _connection_defaults(user=None, host=None, port=None):
         port = __salt__['config.option']('postgres.port')
 
     return (user, host, port)
+
 
 def _psql_cmd(*args, **kwargs):
     '''
@@ -102,11 +104,13 @@ def db_list(user=None, host=None, port=None, runas=None):
 
     ret = []
     query = """SELECT datname as "Name", pga.rolname as "Owner", """ \
-    """pg_encoding_to_char(encoding) as "Encoding", datcollate as "Collate", datctype as "Ctype", """ \
-    """datacl as "Access privileges" FROM pg_database pgd, pg_authid pga WHERE pga.oid = pgd.datdba"""
+            """pg_encoding_to_char(encoding) as "Encoding", """ \
+            """datcollate as "Collate", datctype as "Ctype", """ \
+            """datacl as "Access privileges" FROM pg_database pgd, """ \
+            """pg_authid pga WHERE pga.oid = pgd.datdba"""
 
     cmd = _psql_cmd('-c', query,
-            host=host, user=user, port=port)
+                    host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 6]
@@ -236,6 +240,7 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
         log.info("Failed to delete DB '{0}'.".format(name, ))
         return False
 
+
 # User related actions
 
 def user_list(user=None, host=None, port=None, runas=None):
@@ -250,12 +255,13 @@ def user_list(user=None, host=None, port=None, runas=None):
 
     ret = []
     query = (
-        '''SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
-        rolcatupdate, rolcanlogin, rolreplication, rolconnlimit, rolvaliduntil, rolconfig, oid
+        '''SELECT rolname, rolsuper, rolinherit, rolcreaterole,
+        rolcreatedb, rolcatupdate, rolcanlogin, rolreplication,
+        rolconnlimit, rolvaliduntil, rolconfig, oid
         FROM pg_roles'''
     )
     cmd = _psql_cmd('-c', query,
-            host=host, user=user, port=port)
+                    host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
     lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 12]
@@ -267,6 +273,7 @@ def user_list(user=None, host=None, port=None, runas=None):
             ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
+
 
 def user_exists(name, user=None, host=None, port=None, runas=None):
     '''
@@ -293,6 +300,7 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
         log.error("Invalid PostgreSQL result: '%s'", cmdret)
         return False
     return True if val.strip() == 't' else False
+
 
 def _role_create(name,
                  login,
@@ -346,6 +354,7 @@ def _role_create(name,
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
     return __salt__['cmd.run'](cmd, runas=runas)
 
+
 def user_create(username,
                 user=None,
                 host=None,
@@ -379,17 +388,18 @@ def user_create(username,
                         groups,
                         runas)
 
+
 def _role_update(name,
-                user=None,
-                host=None,
-                port=None,
-                createdb=False,
-                createuser=False,
-                encrypted=False,
-                replication=False,
-                password=None,
-                groups=None,
-                runas=None):
+                 user=None,
+                 host=None,
+                 port=None,
+                 createdb=False,
+                 createuser=False,
+                 encrypted=False,
+                 replication=False,
+                 password=None,
+                 groups=None,
+                 runas=None):
     '''
     Updates a postgres role.
     '''
@@ -422,6 +432,7 @@ def _role_update(name,
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
     return __salt__['cmd.run'](cmd, runas=runas)
 
+
 def user_update(username,
                 user=None,
                 host=None,
@@ -452,6 +463,7 @@ def user_update(username,
                         groups,
                         runas)
 
+
 def _role_remove(name, user=None, host=None, port=None, runas=None):
     '''
     Removes a role from the Postgres Server
@@ -472,6 +484,7 @@ def _role_remove(name, user=None, host=None, port=None, runas=None):
     else:
         log.info("Failed to delete user '{0}'.".format(name, ))
 
+
 def user_remove(username, user=None, host=None, port=None, runas=None):
     '''
     Removes a user from the Postgres server.
@@ -481,6 +494,7 @@ def user_remove(username, user=None, host=None, port=None, runas=None):
         salt '*' postgres.user_remove 'username'
     '''
     return _role_remove(username, user, host, port, runas)
+
 
 # Group related actions
 
@@ -518,6 +532,7 @@ def group_create(groupname,
                         groups,
                         runas)
 
+
 def group_update(groupname,
                  user=None,
                  host=None,
@@ -547,6 +562,7 @@ def group_update(groupname,
                         password,
                         groups,
                         runas)
+
 
 def group_remove(groupname, user=None, host=None, port=None, runas=None):
     '''
