@@ -46,9 +46,9 @@ def version():
 
         salt '*' postgres.version
     '''
-    version_line = __salt__['cmd.run']('psql --version').split("\n")[0]
-    name = version_line.split(" ")[1]
-    ver = version_line.split(" ")[2]
+    version_line = __salt__['cmd.run']('psql --version').split('\n')[0]
+    name = version_line.split(' ')[1]
+    ver = version_line.split(' ')[2]
     return '{0} {1}'.format(name, ver)
 
 
@@ -103,25 +103,25 @@ def db_list(user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
-    query = """SELECT datname as "Name", pga.rolname as "Owner", """ \
-            """pg_encoding_to_char(encoding) as "Encoding", """ \
-            """datcollate as "Collate", datctype as "Ctype", """ \
-            """datacl as "Access privileges" FROM pg_database pgd, """ \
-            """pg_authid pga WHERE pga.oid = pgd.datdba"""
+    query = 'SELECT datname as "Name", pga.rolname as "Owner", ' \
+            'pg_encoding_to_char(encoding) as "Encoding", ' \
+            'datcollate as "Collate", datctype as "Ctype", ' \
+            'datacl as "Access privileges" FROM pg_database pgd, ' \
+            'pg_authid pga WHERE pga.oid = pgd.datdba'
 
     cmd = _psql_cmd('-c', query,
                     host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 6]
+    lines = [x for x in cmdret.splitlines() if len(x.split('|')) == 6]
     if not lines:
-        log.error("no results from postgres.db_list")
+        log.error('no results from postgres.db_list')
     else:
         log.debug(lines)
-        header = [x.strip() for x in lines[0].split("|")]
+        header = [x.strip() for x in lines[0].split('|')]
         for line in lines[1:]:
-            line = [x.strip() for x in line.split("|")]
-            if not line[0] == "":
+            line = [x.strip() for x in line.split('|')]
+            if not line[0] == '':
                 ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
@@ -171,13 +171,13 @@ def db_create(name,
 
     # check if db exists
     if db_exists(name, user, host, port, runas=runas):
-        log.info("DB '{0}' already exists".format(name,))
+        log.info('DB \'{0}\' already exists'.format(name,))
         return False
 
     # check if template exists
     if template:
         if not db_exists(template, user, host, port, runas=runas):
-            log.info("template '{0}' does not exist.".format(template, ))
+            log.info('template \'{0}\' does not exist.'.format(template, ))
             return False
 
     # Base query to create a database
@@ -189,9 +189,9 @@ def db_create(name,
         # doesn't get thrown by dashes in the name
         'OWNER': owner and '"{0}"'.format(owner),
         'TEMPLATE': template,
-        'ENCODING': encoding and "'{0}'".format(encoding),
-        'LC_COLLATE': lc_collate and "'{0}'".format(lc_collate),
-        'LC_CTYPE': lc_ctype and "'{0}'".format(lc_ctype),
+        'ENCODING': encoding and '\'{0}\''.format(encoding),
+        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
+        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
         'TABLESPACE': tablespace,
     }
     with_chunks = []
@@ -211,7 +211,7 @@ def db_create(name,
     if db_exists(name, user, host, port, runas=runas):
         return True
     else:
-        log.info("Failed to create DB '{0}'".format(name,))
+        log.info('Failed to create DB \'{0}\''.format(name,))
         return False
 
 
@@ -227,7 +227,7 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
 
     # check if db exists
     if not db_exists(name, user, host, port, runas=runas):
-        log.info("DB '{0}' does not exist".format(name,))
+        log.info('DB \'{0}\' does not exist'.format(name,))
         return False
 
     # db doesnt exist, proceed
@@ -237,7 +237,7 @@ def db_remove(name, user=None, host=None, port=None, runas=None):
     if not db_exists(name, user, host, port, runas=runas):
         return True
     else:
-        log.info("Failed to delete DB '{0}'.".format(name, ))
+        log.info('Failed to delete DB \'{0}\'.'.format(name, ))
         return False
 
 
@@ -264,12 +264,12 @@ def user_list(user=None, host=None, port=None, runas=None):
                     host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 12]
+    lines = [x for x in cmdret.splitlines() if len(x.split('|')) == 12]
     log.debug(lines)
-    header = [x.strip() for x in lines[0].split("|")]
+    header = [x.strip() for x in lines[0].split('|')]
     for line in lines[1:]:
-        line = [x.strip() for x in line.split("|")]
-        if not line[0] == "":
+        line = [x.strip() for x in line.split('|')]
+        if not line[0] == '':
             ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
@@ -286,10 +286,10 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     query = (
-        "SELECT true "
-        "FROM pg_roles "
-        "WHERE EXISTS "
-        "(SELECT rolname WHERE rolname='{role}')".format(role=name)
+        'SELECT true '
+        'FROM pg_roles '
+        'WHERE EXISTS '
+        '(SELECT rolname WHERE rolname=\'{role}\')'.format(role=name)
     )
     cmd = _psql_cmd('-c', query, host=host, user=user, port=port)
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
@@ -297,7 +297,7 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
     try:
         val = cmdret.splitlines()[1]
     except IndexError:
-        log.error("Invalid PostgreSQL result: '%s'", cmdret)
+        log.error('Invalid PostgreSQL result: \'%s\'', cmdret)
         return False
     return True if val.strip() == 't' else False
 
@@ -328,28 +328,28 @@ def _role_create(name,
 
     # check if role exists
     if user_exists(name, user, host, port, runas=runas):
-        log.info("{0} '{1}' already exists".format(create_type, name,))
+        log.info('{0} \'{1}\' already exists'.format(create_type, name,))
         return False
 
     sub_cmd = 'CREATE {0} "{1}" WITH'.format(create_type, name, )
     if password:
         if encrypted:
-            sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
-        escaped_password = password.replace("'", "''")
-        sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, escaped_password)
+            sub_cmd = '{0} ENCRYPTED'.format(sub_cmd, )
+        escaped_password = password.replace('\'', '\'\'')
+        sub_cmd = '{0} PASSWORD \'{1}\''.format(sub_cmd, escaped_password)
     if createdb:
-        sub_cmd = "{0} CREATEDB".format(sub_cmd, )
+        sub_cmd = '{0} CREATEDB'.format(sub_cmd, )
     if createuser:
-        sub_cmd = "{0} CREATEUSER".format(sub_cmd, )
+        sub_cmd = '{0} CREATEUSER'.format(sub_cmd, )
     if superuser:
-        sub_cmd = "{0} SUPERUSER".format(sub_cmd, )
+        sub_cmd = '{0} SUPERUSER'.format(sub_cmd, )
     if replication:
-        sub_cmd = "{0} REPLICATION".format(sub_cmd, )
+        sub_cmd = '{0} REPLICATION'.format(sub_cmd, )
     if groups:
-        sub_cmd = "{0} IN GROUP {1}".format(sub_cmd, groups, )
+        sub_cmd = '{0} IN GROUP {1}'.format(sub_cmd, groups, )
 
-    if sub_cmd.endswith("WITH"):
-        sub_cmd = sub_cmd.replace(" WITH", "")
+    if sub_cmd.endswith('WITH'):
+        sub_cmd = sub_cmd.replace(' WITH', '')
 
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
     return __salt__['cmd.run'](cmd, runas=runas)
@@ -407,27 +407,27 @@ def _role_update(name,
 
     # check if user exists
     if not user_exists(name, user, host, port, runas=runas):
-        log.info("User '{0}' does not exist".format(name,))
+        log.info('User \'{0}\' does not exist'.format(name,))
         return False
 
-    sub_cmd = "ALTER ROLE {0} WITH".format(name, )
+    sub_cmd = 'ALTER ROLE {0} WITH'.format(name, )
     if password:
-        sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, password)
+        sub_cmd = '{0} PASSWORD \'{1}\''.format(sub_cmd, password)
     if createdb:
-        sub_cmd = "{0} CREATEDB".format(sub_cmd, )
+        sub_cmd = '{0} CREATEDB'.format(sub_cmd, )
     if createuser:
-        sub_cmd = "{0} CREATEUSER".format(sub_cmd, )
+        sub_cmd = '{0} CREATEUSER'.format(sub_cmd, )
     if encrypted:
-        sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
+        sub_cmd = '{0} ENCRYPTED'.format(sub_cmd, )
     if encrypted:
-        sub_cmd = "{0} REPLICATION".format(sub_cmd, )
+        sub_cmd = '{0} REPLICATION'.format(sub_cmd, )
 
-    if sub_cmd.endswith("WITH"):
-        sub_cmd = sub_cmd.replace(" WITH", "")
+    if sub_cmd.endswith('WITH'):
+        sub_cmd = sub_cmd.replace(' WITH', '')
 
     if groups:
         for group in groups.split(','):
-            sub_cmd = "{0}; GRANT {1} TO {2}".format(sub_cmd, group, name)
+            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
 
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port)
     return __salt__['cmd.run'](cmd, runas=runas)
@@ -472,7 +472,7 @@ def _role_remove(name, user=None, host=None, port=None, runas=None):
 
     # check if user exists
     if not user_exists(name, user, host, port, runas=runas):
-        log.info("User '{0}' does not exist".format(name,))
+        log.info('User \'{0}\' does not exist'.format(name,))
         return False
 
     # user exists, proceed
@@ -482,7 +482,7 @@ def _role_remove(name, user=None, host=None, port=None, runas=None):
     if not user_exists(name, user, host, port, runas=runas):
         return True
     else:
-        log.info("Failed to delete user '{0}'.".format(name, ))
+        log.info('Failed to delete user \'{0}\'.'.format(name, ))
 
 
 def user_remove(username, user=None, host=None, port=None, runas=None):
