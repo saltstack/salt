@@ -41,7 +41,7 @@ class OverState(object):
             with salt.utils.fopen(overstate) as fp_:
                 try:
                     # TODO Use render system
-                    return self.__sort_stages(yaml.load(fp_))
+                    return self.__sort_stages(yaml.safe_load(fp_))
                 except Exception:
                     return {}
         if self.env not in self.opts['file_roots']:
@@ -56,7 +56,7 @@ class OverState(object):
             with salt.utils.fopen(fn_) as fp_:
                 try:
                     # TODO Use render system
-                    return self.__sort_stages(yaml.load(fp_))
+                    return self.__sort_stages(yaml.safe_load(fp_))
                 except Exception:
                     return {}
         return {}
