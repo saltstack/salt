@@ -201,7 +201,7 @@ Default: ''
 
 Used to specify a default returner for all minions, when this option is set
 the specified returner needs to be properly configured and the minions will
-allways default to sening returns to this returner. This will also disable the
+always default to sending returns to this returner. This will also disable the
 local job cache on the master
 
 .. code-block:: yaml
