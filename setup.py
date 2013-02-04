@@ -215,7 +215,7 @@ if sys.platform.startswith('win'):
         '_winreg',
         'wmi',
     ])
-    setup_kwargs['install_requires'].append('wmi')
+    setup_kwargs['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
         'yum',
