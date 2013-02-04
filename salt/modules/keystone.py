@@ -11,6 +11,11 @@ Module for handling openstack keystone calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        
+        OR (for token based authentication)
+
+        keystone.token: 'ADMIN'
+        keystone.endpoint: 'http://127.0.0.1:35357/v2.0'
 '''
 
 # Import third party libs
@@ -45,14 +50,25 @@ def auth():
     tenant_id = __salt__['config.option']('keystone.tenant_id')
     auth_url = __salt__['config.option']('keystone.auth_url')
     insecure = __salt__['config.option']('keystone.insecure')
-    kwargs = {
-        'username': user,
-        'password': password,
-        'tenant_name': tenant,
-        'tenant_id': tenant_id,
-        'auth_url': auth_url,
-        'insecure': insecure,
-        }
+    token = __salt__['config.option']('keystone.token')
+    endpoint = __salt__['config.option']('keystone.endpoint')
+
+    kwargs = {}
+    if token:
+        kwargs = {
+                'token': token,
+                'endpoint': endpoint,
+                }
+    else:
+        kwargs = {
+                'username': user,
+                'password': password,
+                'tenant_name': tenant,
+                'tenant_id': tenant_id,
+                'auth_url': auth_url,
+                'insecure': insecure,
+                }
+
     return client.Client(**kwargs)
 
 
