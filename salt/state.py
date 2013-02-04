@@ -478,11 +478,13 @@ class State(object):
     '''
     Class used to execute salt states
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, pillar=None):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.opts['pillar'] = self.__gather_pillar()
+        if pillar and isinstance(pillar, dict):
+            self.opts['pillar'].update(pillar)
         self.state_con = {}
         self.load_modules()
         self.active = set()
@@ -2076,10 +2078,10 @@ class HighState(BaseHighState):
     salt master or in the local cache.
     '''
     current = None  # Current active HighState object during a state.highstate run.
-    def __init__(self, opts):
+    def __init__(self, opts, pillar=None):
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts)
+        self.state = State(self.opts, pillar)
         self.matcher = salt.minion.Matcher(self.opts)
 
 
