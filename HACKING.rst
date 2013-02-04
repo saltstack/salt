@@ -146,6 +146,19 @@ Install Salt (and dependencies) into the virtualenv::
     your virtualenv using the ``--system-site-packages`` option so that these
     modules are available in the virtualenv.
 
+    M2Crypto also supplies a fedora_setup.sh script you may use as well if you
+    get the following error:
+
+        This openssl-devel package does not work your architecture?. Use the -cpperraswarn option to continue swig processing.
+
+    You can use it doing the following:
+
+        cd <path-to-your-venv>/build/M2Crypto
+        chmod u+x fedora_setup.sh
+        ./fedora_setup.sh build
+        ./fedora_setup.sh install
+
+
 .. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
 .. _`CentOS`: http://centos.org/
 .. _`Fedora Linux`: http://fedoraproject.org/
