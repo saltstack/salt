@@ -12,6 +12,10 @@ try:
 except Exception:
     pass
 
+# This function is safe and needs to stay as yaml.load. The load function
+# accepts a custom loader, and every time this function is used in Salt
+# the custom loader defined below is used. This should be altered though to
+# not require the custom loader to be explicitly added.
 load = yaml.load  # pylint: disable-msg=C0103
 
 
@@ -34,8 +38,12 @@ class CustomLoader(yaml.SafeLoader):
         yaml.SafeLoader.__init__(self, stream)
         if dictclass is not dict:
             # then assume ordred dict and use it for both !map and !omap
-            self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
-            self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+            self.add_constructor(
+                u'tag:yaml.org,2002:map',
+                type(self).construct_yaml_map)
+            self.add_constructor(
+                u'tag:yaml.org,2002:omap',
+                type(self).construct_yaml_map)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):
