@@ -38,18 +38,22 @@ def __virtual__():
         return False
 
 
-def version():
+def version(user=None, host=None, port=None, db=None, runas=None):
     '''
-    Return the version of a Postgres server using the output
-    from the ``postgres --version`` cmd.
+    Return the version of a Postgres server.
 
     CLI Example::
 
         salt '*' postgres.version
     '''
-    cmd = '{0} --version'.format(which('postgres'))
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        return line.split()[-1]
+    query = 'SELECT setting FROM pg_catalog.pg_settings ' \
+            'WHERE name = \'server_version\''
+    cmd = _psql_cmd('-c', query, '-t',
+                    host=host, user=user, port=port, db=db)
+    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+
+    for line in ret['stdout'].splitlines():
+        return line
 
 
 def _connection_defaults(user=None, host=None, port=None, db=None):
