@@ -248,7 +248,11 @@ def user_list(user=None, host=None, port=None, db=None, runas=None):
               'expiry time',
               'defaults variables']
 
-    ver = version().split('.')
+    ver = version(user=None,
+                  host=None,
+                  port=None,
+                  db=None,
+                  runas=None).split('.')
     if len(ver) >= 2 and ver[0] >= 9 and ver[1] >= 1:
         query = (
             'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
