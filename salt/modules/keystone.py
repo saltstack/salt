@@ -12,7 +12,7 @@ Module for handling openstack keystone calls.
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
         
-        OR
+        OR (for token based authentication)
 
         keystone.token: 'ADMIN'
         keystone.endpoint: 'http://127.0.0.1:35357/v2.0'
