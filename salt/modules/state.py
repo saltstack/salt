@@ -33,11 +33,11 @@ def __resolve_struct(value, kwval_as):
     specified medium
     '''
     if kwval_as == 'yaml':
-        return =  _yaml_load(value, _YamlCustomLoader)
+        return  _yaml_load(value, _YamlCustomLoader)
     elif kwval_as == 'json':
-        return = json.loads(value)
+        return json.loads(value)
     elif kwval_as is None or kwval_as == 'verbatim':
-        return = value
+        return value
 
 
 def running():
