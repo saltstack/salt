@@ -16,6 +16,7 @@ Module to provide Postgres compatibility to salt.
 '''
 
 # Import python libs
+from datetime import datetime
 import pipes
 import logging
 
@@ -223,31 +224,67 @@ def db_remove(name, user=None, host=None, port=None, db=None, runas=None):
 
 def user_list(user=None, host=None, port=None, db=None, runas=None):
     '''
-    Return a list of users of a Postgres server.
+    Return a dict with information about users of a Postgres server.
 
     CLI Example::
 
         salt '*' postgres.user_list
     '''
 
-    ret = []
-    query = (
-        '''SELECT rolname, rolsuper, rolinherit, rolcreaterole,
-        rolcreatedb, rolcatupdate, rolcanlogin, rolreplication,
-        rolconnlimit, rolvaliduntil, rolconfig, oid
-        FROM pg_roles'''
-    )
-    cmd = _psql_cmd('-c', query,
+    ret = {}
+    header = ['name',
+              'superuser',
+              'inherits privileges',
+              'can create roles',
+              'can create databases',
+              'can update system catalogs',
+              'can login',
+              'replication',
+              'connections',
+              'expiry time',
+              'defaults variables']
+
+    ver = version().split('.')
+    if len(ver) >= 2 and ver[0] >= 9 and ver[1] >= 1:
+        query = (
+            'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
+            'rolcreatedb, rolcatupdate, rolcanlogin, rolreplication, '
+            'rolconnlimit, rolvaliduntil::timestamp(0), rolconfig '
+            'FROM pg_roles'
+        )
+    else:
+        query = (
+            'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
+            'rolcreatedb, rolcatupdate, rolcanlogin, NULL, '
+            'rolconnlimit, rolvaliduntil::timestamp(0), rolconfig '
+            'FROM pg_roles'
+        )
+    cmd = _psql_cmd('-c', query, '-t',
                     host=host, user=user, port=port, db=db)
 
-    cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split('|')) == 12]
-    log.debug(lines)
-    header = [x.strip() for x in lines[0].split('|')]
-    for line in lines[1:]:
-        line = [x.strip() for x in line.split('|')]
-        if not line[0] == '':
-            ret.append(list(zip(header[:-1], line[:-1])))
+    cmdret = __salt__['cmd.run_all'](cmd, runas=runas)
+
+    if cmdret['retcode'] > 0:
+        return ret
+
+    for line in cmdret['stdout'].splitlines():
+        comps = line.split('|')
+        # type casting
+        for i in range(1, 8):
+            if comps[i] == 't':
+                comps[i] = True
+            elif comps[i] == 'f':
+                comps[i] = False
+            else:
+                comps[i] = None
+        comps[8] = int(comps[8])
+        if comps[9]:
+            comps[9] = datetime.strptime(comps[9], '%Y-%m-%d %H:%M:%S')
+        else:
+            comps[9] = None
+        if not comps[10]:
+            comps[10] = None
+        ret[comps[0]] = dict(zip(header[1:], comps[1:]))
 
     return ret
 
@@ -261,21 +298,11 @@ def user_exists(name, user=None, host=None, port=None, db=None, runas=None):
         salt '*' postgres.user_exists 'username'
     '''
 
-    query = (
-        'SELECT true '
-        'FROM pg_roles '
-        'WHERE EXISTS '
-        '(SELECT rolname WHERE rolname=\'{role}\')'.format(role=name)
-    )
-    cmd = _psql_cmd('-c', query, host=host, user=user, port=port, db=db)
-    cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    log.debug(cmdret.splitlines())
-    try:
-        val = cmdret.splitlines()[1]
-    except IndexError:
-        log.error('Invalid PostgreSQL result: \'%s\'', cmdret)
-        return False
-    return True if val.strip() == 't' else False
+    return name in user_list(user=user,
+                             host=host,
+                             port=port,
+                             db=db,
+                             runas=runas)
 
 
 def _role_create(name,
