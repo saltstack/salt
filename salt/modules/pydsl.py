@@ -71,7 +71,6 @@ Example of a ``cmd`` state calling a python function::
 #TODOs:
 #
 #  - support exclude declarations
-#  - support include declarations with env
 #
 #  - allow this:
 #      state('X').cmd.run.cwd = '/'
@@ -92,8 +91,9 @@ try:
 except ImportError:
     Dict = dict
 
+from salt.state import HighState
 
-REQUISITES = set("require watch use require_in watch_in use_in".split())
+REQUISITES = set('require watch use require_in watch_in use_in'.split())
 class PyDslError(Exception):
     pass
 
@@ -102,31 +102,77 @@ class Options(dict):
         return self.get(name)
 
 
-def sls(sls):
-    return Sls(sls)
+SLS_MATCHES = None
+
+
+def sls(*args):
+    return Sls(*args)
 
 class Sls(object):
 
     # tracks all state declarations globally across sls files
     all_decls = weakref.WeakValueDictionary()
 
-    def __init__(self, sls):
+    # a stack of current rendering Sls objects, maintained and used by the pydsl renderer.
+    render_stack = [] 
+
+    def __init__(self, sls, mod, rendered_sls):
         self.name = sls
         self.includes = []
+        self.included_highstate = {}
         self.extends = []
         self.decls = []
         self.options = Options()
         self.funcs = []  # track the ordering of state func declarations
+        self.slsmod = mod  # the current rendering sls python module
+        self.rendered_sls = rendered_sls # a set of names of rendered sls modules
     
     def set(self, **options):
         self.options.update(options)
 
-    def include(self, *sls_names):
-        self.includes.extend(sls_names)
+    def include(self, *sls_names, **kws):
+        env = kws.get('env', self.slsmod.__env__)
+
+        if kws.get('delayed', False):
+            for incl in sls_names:
+                self.includes.append((env, incl))
+            return
+
+        HIGHSTATE = HighState.current
+        if not HIGHSTATE:
+            raise PyDslError('include() only works when running state.highstate!')
+
+        global SLS_MATCHES
+        if SLS_MATCHES is None:
+            SLS_MATCHES = HIGHSTATE.top_matches(HIGHSTATE.get_top())
+
+        highstate = self.included_highstate
+        slsmods = [] # a list of pydsl sls modules rendered.
+        for sls in sls_names:
+            if sls not in self.rendered_sls:
+                self.rendered_sls.add(sls) # needed in case the starting sls uses the pydsl renderer.
+                histates, errors = HIGHSTATE.render_state(sls, env, self.rendered_sls, SLS_MATCHES)
+                HIGHSTATE.merge_included_states(highstate, histates, errors)
+                if errors:
+                    raise PyDslError('\n'.join(errors))
+                HIGHSTATE.clean_duplicate_extends(highstate)
+
+            id = '_slsmod_'+sls
+            if id not in highstate:
+                slsmods.append(None)
+            else:
+                for arg in highstate[id]['stateconf']:
+                    if isinstance(arg, dict) and iter(arg).next() == 'slsmod':
+                        slsmods.append(arg['slsmod'])
+                        break
+
+        if not slsmods:
+            return None
+        return slsmods[0] if len(slsmods) == 1 else slsmods
 
     def extend(self, *state_funcs):
         if self.options.ordered and self.last_func():
-            raise PyDslError("Can't extend while the ordered option is turned on!")
+            raise PyDslError('Cannot extend() while the ordered option is turned on!')
         for f in state_funcs:
             id = f.mod._state_id
             self.extends.append(self.all_decls[id])
@@ -158,25 +204,32 @@ class Sls(object):
     def track_func(self, statefunc):
         self.funcs.append(statefunc)
 
-    def to_highstate(self, slsmod=None):
+    def to_highstate(self):
         # generate a state that uses the stateconf.set state, which
         # is a no-op state, to hold a reference to the sls module
         # containing the DSL statements. This is to prevent the module
         # from being GC'ed, so that objects defined in it will be
         # available while salt is executing the states.
-        if slsmod:
-            self.state().stateconf.set(slsmod=slsmod)
+        self.state('_slsmod_'+self.name).stateconf.set(slsmod=self.slsmod)
 
         highstate = Dict()
         if self.includes:
-            highstate['include'] = self.includes[:]
+            highstate['include'] = [{t[0]: t[1]} for t in self.includes]
         if self.extends:
             highstate['extend'] = extend = Dict()
-        for ext in self.extends:
-            extend[ext._id] = ext._repr(context='extend')
+            for ext in self.extends:
+                extend[ext._id] = ext._repr(context='extend')
         for decl in self.decls:
             highstate[decl._id] = decl._repr()
+
+
+        if self.included_highstate:
+            errors = []
+            HighState.current.merge_included_states(highstate, self.included_highstate, errors)
+            if errors:
+                raise PyDslError('\n'.join(errors))
         return highstate
+
 
     def load_highstate(self, highstate):
         for sid, decl in highstate.iteritems():
@@ -292,8 +345,8 @@ class StateFunction(object):
 
     def _repr(self, context=None):
         if not self.name and context != 'extend':
-            raise PyDslError("No state function specified for module: "
-                             "{0}".format(self.mod._name))
+            raise PyDslError('No state function specified for module: '
+                             '{0}'.format(self.mod._name))
         if not self.name and context == 'extend':
             return self.args
         return [self.name]+self.args
@@ -323,7 +376,7 @@ class StateFunction(object):
             ref = mod._state_id
         elif not (mod and ref):
             raise PyDslError(
-                    "Invalid a requisite reference declaration! {0}: {1}".format(
+                    'Invalid a requisite reference declaration! {0}: {1}'.format(
                     mod, ref))
         self.args.append({req_type: [{str(mod): str(ref)}]})
 
@@ -332,4 +385,5 @@ class StateFunction(object):
         ns[req_type] = _generate_requsite_method(req_type)
     del ns
     del req_type
+
 

@@ -107,7 +107,8 @@ state('H').cmd.run('echo world')
 include(
     'some.sls.file',
     'another.sls.file',
-    'more.sls.file'
+    'more.sls.file',
+    delayed=True
 )
 A = state('A').cmd.run('echo hoho', cwd='/')
 state('B').cmd.run('echo hehe', cwd='/')
@@ -120,7 +121,7 @@ extend(
 ''')
         self.assertEqual(len(result), 4)
         self.assertEqual(result['include'],
-                         'some.sls.file another.sls.file more.sls.file'.split())
+                [{'base': sls} for sls in 'some.sls.file another.sls.file more.sls.file'.split()])
         extend = result['extend']
         self.assertEqual(extend['X']['cmd'][0], 'run')
         self.assertEqual(extend['X']['cmd'][1]['cwd'], '/a/b/c')
@@ -249,6 +250,7 @@ state('B').file.managed(source='/a/b/c')
             yyy = os.path.join(dirpath, 'yyy.sls')
             with open(yyy, 'w') as yyy:
                 yyy.write('''#!pydsl|stateconf -ps
+__pydsl__.set(ordered=True)
 state('.D').cmd.run('echo D >> {0}', cwd='/')
 state('.E').cmd.run('echo E >> {1}', cwd='/')
 state('.F').cmd.run('echo F >> {2}', cwd='/')
@@ -259,10 +261,10 @@ state('.F').cmd.run('echo F >> {2}', cwd='/')
                 aaa.write('''#!pydsl|stateconf -ps
 include('xxx', 'yyy')
 
-# make all states in yyy run BEFORE states in this sls.
+# make all states in xxx run BEFORE states in this sls.
 extend(state('.start').stateconf.require(stateconf='xxx::goal'))
 
-# make all states in xxx run AFTER this sls.
+# make all states in yyy run AFTER this sls.
 extend(state('.goal').stateconf.require_in(stateconf='yyy::start'))
 
 __pydsl__.set(ordered=True)
@@ -272,17 +274,7 @@ state('.B').cmd.run('echo B >> {1}', cwd='/')
 state('.C').cmd.run('echo C >> {2}', cwd='/')
 '''.format(output, output, output))
 
-            OPTS['file_roots'] = dict(base=[dirpath])
-            HIGHSTATE = HighState(OPTS)
-            HIGHSTATE.state.load_modules()
-            sys.modules['salt.loaded.int.render.pydsl'].__salt__ = HIGHSTATE.state.functions
-
-            high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
-#            import pprint
-#            pprint.pprint(errors)
-#            pprint.pprint(high)
-            out = HIGHSTATE.state.call_high(high)
-#            pprint.pprint(out)
+            state_highstate({'base': ['aaa']}, dirpath)
             with open(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
@@ -290,4 +282,109 @@ state('.C').cmd.run('echo C >> {2}', cwd='/')
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
+    def test_rendering_includes(self):
+        if sys.version_info < (2, 7):
+            self.skipTest('OrderedDict is not available')
+        dirpath = tempfile.mkdtemp()
+        output = os.path.join(dirpath, 'output')
+        try:
+            aaa = os.path.join(dirpath, 'aaa.sls')
+            with open(aaa, 'w') as aaa:
+                aaa.write('''#!pydsl|stateconf -ps
+include('xxx')
+yyy = include('yyy')
 
+# ensure states in xxx are run first, then those in yyy and then those in aaa last.
+extend(state('yyy::start').stateconf.require(stateconf='xxx::goal'))
+extend(state('.start').stateconf.require(stateconf='yyy::goal'))
+
+extend(state('yyy::Y2').cmd.run('echo Y2 extended >> {0}'))
+
+__pydsl__.set(ordered=True)
+
+yyy.hello('red', 1)
+yyy.hello('green', 2)
+yyy.hello('blue', 3)
+'''.format(output))
+            xxx = os.path.join(dirpath, 'xxx.sls')
+            with open(xxx, 'w') as xxx:
+                xxx.write('''#!stateconf -os yaml . jinja
+include:
+  - yyy
+
+extend:
+  yyy::start:
+    stateconf.set:
+      - require:
+        - stateconf: .goal
+
+  yyy::Y1:
+    cmd.run:
+      - name: 'echo Y1 extended >> {0}'
+
+.X1:
+  cmd.run:
+    - name: echo X1 >> {1}
+    - cwd: /
+.X2:
+  cmd.run:
+    - name: echo X2 >> {2}
+    - cwd: /
+.X3:
+  cmd.run:
+    - name: echo X3 >> {3}
+    - cwd: /
+
+'''.format(output, output, output, output))
+
+            yyy = os.path.join(dirpath, 'yyy.sls')
+            with open(yyy, 'w') as yyy:
+                yyy.write('''#!pydsl|stateconf -ps
+include('xxx')
+__pydsl__.set(ordered=True)
+
+state('.Y1').cmd.run('echo Y1 >> {0}', cwd='/')
+state('.Y2').cmd.run('echo Y2 >> {1}', cwd='/')
+state('.Y3').cmd.run('echo Y3 >> {2}', cwd='/')
+
+def hello(color, number):
+    state(color).cmd.run('echo hello '+color+' '+str(number)+' >> {3}', cwd='/')
+'''.format(output, output, output, output))
+
+            state_highstate({'base': ['aaa']}, dirpath)
+            expected = '''
+X1
+X2
+X3
+Y1 extended
+Y2 extended
+Y3
+hello red 1
+hello green 2
+hello blue 3
+'''.lstrip()
+             
+            with open(output, 'r') as f:
+                self.assertEqual(f.read(), expected)
+
+        finally:
+            shutil.rmtree(dirpath, ignore_errors=True)
+
+
+
+def state_highstate(matches, dirpath):
+    OPTS['file_roots'] = dict(base=[dirpath])
+    HIGHSTATE = HighState(OPTS)
+    HighState.current = HIGHSTATE
+    HIGHSTATE.state.load_modules()
+    sys.modules['salt.loaded.int.render.pydsl'].__salt__ = \
+            HIGHSTATE.state.functions
+
+    high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
+    if errors:
+        import pprint
+        pprint.pprint('\n'.join(errors))
+        pprint.pprint(high)
+
+    out = HIGHSTATE.state.call_high(high)
+#    pprint.pprint(out)

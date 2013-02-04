@@ -152,7 +152,7 @@ state_id:
     - {0}:
       - cmd: .utils::some_state
 '''.format(req), sls='test.work')
-            self.assertEqual(result['include'][1], 'test.utils')
+            self.assertEqual(result['include'][1], {'base': 'test.utils'})
             self.assertEqual(result['state_id']['cmd.run'][2][req][0]['cmd'],
                          'test.utils::some_state')
 
