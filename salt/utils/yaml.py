@@ -12,7 +12,7 @@ try:
 except Exception:
     pass
 
-load = yaml.load  # pylint: disable-msg=C0103
+load = yaml.safe_load  # pylint: disable-msg=C0103
 
 
 class DuplicateKeyWarning(RuntimeWarning):
