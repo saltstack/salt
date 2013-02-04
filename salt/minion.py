@@ -743,7 +743,7 @@ class Minion(object):
             'minion_start'
         )
 
-        if self.opts['multiprocessing'] and not sys.platform.startswith('win'):
+        if self.opts['multiprocessing'] and not salt.utils.is_windows():
             signal.signal(signal.SIGCHLD, self.handle_sigchld)
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
