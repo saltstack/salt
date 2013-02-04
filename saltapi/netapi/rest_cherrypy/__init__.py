@@ -144,10 +144,11 @@ def hypermedia_handler(*args, **kwargs):
     # If we're being asked for HTML, try to serve index.html from the 'static'
     # directory; this is useful (as a random, non-specific example) for
     # bootstrapping the salt-ui app
-    index = os.path.join(cherrypy.config['static'], 'index.html')
 
-    if 'html' in wants_html() and os.path.exists(index):
-        return cherrypy.lib.static.serve_file(index)
+    if 'html' in wants_html(): 
+        index = os.path.join(cherrypy.config.get('static'), 'index.html')
+        if os.path.exists(index):
+            return cherrypy.lib.static.serve_file(index)
 
     # Execute the real handler. Handle or pass-through any errors we know how
     # to handle (auth & HTTP errors). Reformat any errors we don't know how to
