@@ -4,8 +4,8 @@ Package Providers
 
 This page contains guidelines for writing package providers.
 
-Functions
----------
+Package Functions
+-----------------
 
 One of the most important features of Salt is package management. There is no
 shortage of package managers, so in the interest of providing a consistent
@@ -141,3 +141,178 @@ remove
 ^^^^^^
 
 Removes the passed package and return a list of the packages removed.
+
+
+Package Repo Functions
+----------------------
+There are some functions provided by ``pkg`` which are specific to package
+repositories, and not to packages themselves. When writing modules for new
+package managers, these functions should be made available as stated below, in
+order to provide compatibility with the ``pkgrepo`` state.
+
+All repo functions should accept a basedir option, which defines which
+directory repository configuration should be found in. The default for this
+is dictated by the repo manager that is being used, and rarely needs to be
+changed.
+
+.. code-block:: python
+
+        basedir = '/etc/yum.repos.d'
+        __salt__['pkg.list_repos'](basedir)
+
+list_repos
+^^^^^^^^^^
+Lists the repositories that are currently configured on this system.
+
+.. code-block:: python
+
+    __salt__['pkg.list_repos']()
+
+Returns a dictionary, in the following format:
+
+.. code-block:: python
+
+    {'reponame': 'config_key_1': 'config value 1',
+                 'config_key_2': 'config value 2',
+                 'config_key_3': ['list item 1 (when appropriate)',
+                                  'list item 2 (when appropriate)]}
+
+get_repo
+^^^^^^^^
+Displays all local configuration for a specific repository.
+
+.. code-block:: python
+
+    __salt__['pkg.get_repo'](repo='myrepo')
+
+The information is formatted in much the same way as list_repos, but is
+specific to only one repo.
+
+.. code-block:: python
+
+    {'config_key_1': 'config value 1',
+     'config_key_2': 'config value 2',
+     'config_key_3': ['list item 1 (when appropriate)',
+                      'list item 2 (when appropriate)]}
+
+del_repo
+^^^^^^^^
+Removes the local configuration for a specific repository. Requires a `repo`
+argument, which must match the locally configured name. This function returns
+a string, which informs the user as to whether or not the operation was a
+success.
+
+.. code-block:: python
+
+    __salt__['pkg.del_repo'](repo='myrepo')
+
+mod_repo
+^^^^^^^^
+Modify the local configuration for one or more option for a conifigured repo.
+This is also the way to create new repository configuration on the local
+system; if a repo is specified which does not yet exist, it will be created.
+
+The options specified for this function are specific to the system; please
+refer to the documentation for your specific repo manager for specifics.
+
+.. code-block:: python
+
+    __salt__['pkg.mod_repo'](repo='myrepo', url='http://myurl.com/repo')
+
+
+Low-Package Functions
+---------------------
+In general, the standard package functions as describes above will meet your
+needs. These functions use the system's native repo manager (for instance,
+yum or the apt tools). In most cases, the repo manager is actually separate
+from the package manager. For instance, yum is usually a front-end for rpm, and
+apt is usually a front-end for dpkg. When possible, the package functions that
+use those package managers directly should do so through the low package
+functions.
+
+It is normal and sane for ``pkg`` to make calls to ``lowpkgs``, but ``lowpkg``
+must never make calls to ``pkg``. This is affects functions which are required
+by both ``pkg`` and ``lowpkg``, but the technique in ``pkg`` is more performant
+than what is available to ``lowpkg``. When this is the case, the ``lowpkg``
+function that requires that technique must still use the ``lowpkg`` version.
+
+list_pkgs
+^^^^^^^^^
+Returns a dict of packages installed, including the package name and version.
+Can accept a list of packages; if none are spcified, then all installed
+packages will be listed.
+
+.. code-block:: python
+
+    installed = __salt__['lowpkg.list_pkgs']('foo', 'bar')
+
+Example output:
+
+.. code-block:: python
+
+        {'foo': '1.2.3-4',
+         'bar': '5.6.7-8'}
+
+verify
+^^^^^^
+Many (but not all) package management systems provide a way to verify that the
+files installed by the package manager have or have not changed. This function
+accepts a list of packages; if none are specified, all packages will be
+included.
+
+.. code-block:: python
+
+    installed = __salt__['lowpkg.verify']('httpd')
+
+Example output:
+
+.. code-block:: python
+
+    {'/etc/httpd/conf/httpd.conf': {'mismatch': ['size', 'md5sum', 'mtime'],
+                                    'type': 'config'}}
+
+file_list
+^^^^^^^^^
+Lists all of the files installed by all packages specified. If not packages are
+specified, then all files for all known packages are returned.
+
+.. code-block:: python
+
+    installed = __salt__['lowpkg.file_list']('httpd', 'apache')
+
+This function does not return which files belong to which packages; all files
+are returned as one giant list (hence the `file_list` function name. However,
+This information is still returned inside of a dict, so that it can provide
+any errors to the user in a sane manner.
+
+.. code-block:: python
+
+    {'errors': ['package apache is not installed'],
+      'files': ['/etc/httpd',
+                '/etc/httpd/conf',
+                '/etc/httpd/conf.d',
+                '...SNIP...']}
+
+file_dict
+^^^^^^^^^
+Lists all of the files installed by all packages specified. If not packages are
+specified, then all files for all known packages are returned.
+
+.. code-block:: python
+
+    installed = __salt__['lowpkg.file_dict']('httpd', 'apache', 'kernel')
+
+Unlike `file_list`, this function will break down which files belong to which
+packages. It will also return errors in the same manner as `file_list`.
+
+.. code-block:: python
+
+    {'errors': ['package apache is not installed'],
+     'packages': {'httpd': ['/etc/httpd',
+                            '/etc/httpd/conf',
+                            '...SNIP...'],
+                  'kernel': ['/boot/.vmlinuz-2.6.32-279.el6.x86_64.hmac',
+                             '/boot/System.map-2.6.32-279.el6.x86_64',
+                             '...SNIP...']}}
+
+
