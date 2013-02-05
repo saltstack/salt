@@ -94,7 +94,10 @@ def high(data):
     conflict = running()
     if conflict:
         return conflict
-    st_ = salt.state.State(__opts__)
+    if salt.state.HighState.current:
+        st_ = salt.state.HighState.current.state
+    else:
+        st_ = salt.state.State(__opts__)
     return st_.call_high(data)
 
 
@@ -151,7 +154,10 @@ def highstate(test=None, **kwargs):
 
     st_ = salt.state.HighState(opts, pillar)
     salt.state.HighState.current = st_
-    ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
+    try:
+        ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
+    finally:
+        salt.state.HighState.current = None
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
