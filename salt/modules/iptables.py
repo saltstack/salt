@@ -116,7 +116,7 @@ def set_policy(table='filter', chain=None, policy=None):
     return out
 
 
-def save(filename):
+def save(filename=None):
     '''
     Save the current in-memory rules to disk
 
@@ -124,6 +124,9 @@ def save(filename):
 
         salt '*' iptables.save /etc/sysconfig/iptables
     '''
+    if _conf() and not filename:
+        filename = _conf()
+
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
@@ -250,6 +253,7 @@ def _parse_conf(conf_file=None, in_mem=False):
             ret[table][chain]['packet count'] = pcount
             ret[table][chain]['byte count'] = bcount
             ret[table][chain]['rules'] = []
+            ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
             parser = _parser()
             parsed_args = []
@@ -263,6 +267,9 @@ def _parse_conf(conf_file=None, in_mem=False):
             for arg in parsed_args:
                 if parsed_args[arg] and arg is not 'append':
                     ret_args[arg] = parsed_args[arg]
+            if parsed_args['comment'] is not None:
+                comment = parsed_args['comment'][0].strip('"')
+                ret[table][chain[0]]['rules_comment'][comment]=ret_args
             ret[table][chain[0]]['rules'].append(ret_args)
     return ret
 
