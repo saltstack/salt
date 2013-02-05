@@ -40,7 +40,7 @@ On the salt-master, run this:
 On each salt-minion, run this:
 .. code-block:: bash
 
-    yum install salt-master
+    yum install salt-minion
 
 Post-installation tasks
 =======================
