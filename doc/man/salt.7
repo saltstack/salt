@@ -604,6 +604,8 @@ Salt\-Minion\-0.11.1\-Setup\-amd64.exe /S /master=yoursaltmaster /minion\-name=y
 The Salt Windows installer is built with the open\-source NSIS compiler. The
 source for the installer is found in the pkg directory of the Salt repo here:
 \fI\%https://github.com/saltstack/salt/blob/develop/pkg/windows/installer/Salt-Minion-Setup.nsi\fP
+To create the installer run \fBpython setup.py bdist_esky\fP, extract the
+frozen archive from \fBdist/\fP into \fBpkg/windows/buildenv/\fP and run NSIS.
 .sp
 The NSIS installer can be found here: \fI\%http://nsis.sourceforge.net/Main_Page\fP
 .SS Installation from source
@@ -14158,7 +14160,7 @@ Remove a Mongodb user
 .UNINDENT
 .SS salt.modules.monit
 .sp
-Monit service module. This module will create a monit type 
+Monit service module. This module will create a monit type
 service watcher.
 .INDENT 0.0
 .TP
@@ -16734,7 +16736,7 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq pkgutil.remove <package name>
-salt \(aq*\(aq pkgutil.remove SMCliconv 
+salt \(aq*\(aq pkgutil.remove SMCliconv
 .ft P
 .fi
 .UNINDENT
@@ -34040,7 +34042,7 @@ def get_file(path, dest, env=\(aqbase\(aq):
 #   ext_nodes: <Shell command which returns yaml>
 #
 #master_tops: {}
-# 
+#
 # The external_nodes option allows Salt to gather data that would normally be
 # placed in a top file. The external_nodes option is the executable that will
 # return the ENC data. Remember that Salt will look for external nodes AND top
@@ -34059,7 +34061,7 @@ def get_file(path, dest, env=\(aqbase\(aq):
 # The state_verbose setting can be set to True or False, when set to False
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
-# 
+#
 # The state_output setting changes if the output is the full multi line
 # output for each changed state if set to \(aqfull\(aq, but if set to \(aqterse\(aq
 # the output will be shortened to a single line.
@@ -34131,7 +34133,7 @@ def get_file(path, dest, env=\(aqbase\(aq):
 # fileserver_backend:
 #   \- git
 #   \- roots
-#fileserver_backend: 
+#fileserver_backend:
 #   \- roots
 #
 # Git fileserver backend configuration
@@ -34260,7 +34262,7 @@ def get_file(path, dest, env=\(aqbase\(aq):
 #log_fmt_logfile: \(aq%(asctime)s,%(msecs)03.0f [%(name)\-17s][%(levelname)\-8s] %(message)s\(aq
 #
 # This can be used to control logging levels more specificically.  This
-# example sets the main salt library at the \(aqwarning\(aq level, but sets 
+# example sets the main salt library at the \(aqwarning\(aq level, but sets
 # \(aqsalt.modules\(aq to log at the \(aqdebug\(aq level:
 #   log_granular_levels:
 #     \(aqsalt\(aq: \(aqwarning\(aq,
@@ -34296,7 +34298,7 @@ def get_file(path, dest, env=\(aqbase\(aq):
 #
 # List of git repositories to include with the local repo
 # win_gitrepos:
-#   \- \(aqhttps://github.com/saltstack/salt\-winrepo.git\(aq 
+#   \- \(aqhttps://github.com/saltstack/salt\-winrepo.git\(aq
 
 .ft P
 .fi
@@ -34508,11 +34510,11 @@ def get_file(path, dest, env=\(aqbase\(aq):
 # Run states when the minion daemon starts. To enable, set startup_states to:
 # \(aqhighstate\(aq \-\- Execute state.highstate
 # \(aqsls\(aq \-\- Read in the sls_list option and execute the named sls files
-# \(aqtop\(aq \-\- Read top_file option and execute based on that file on the Master 
+# \(aqtop\(aq \-\- Read top_file option and execute based on that file on the Master
 #startup_states: \(aq\(aq
 #
 # list of states to run when the minion starts up if startup_states is \(aqsls\(aq
-#sls_list: 
+#sls_list:
 #  \- edit.vim
 #  \- hyper
 #
@@ -34634,7 +34636,7 @@ def get_file(path, dest, env=\(aqbase\(aq):
 #log_fmt_logfile: \(aq%(asctime)s,%(msecs)03.0f [%(name)\-17s][%(levelname)\-8s] %(message)s\(aq
 #
 # This can be used to control logging levels more specificically.  This
-# example sets the main salt library at the \(aqwarning\(aq level, but sets 
+# example sets the main salt library at the \(aqwarning\(aq level, but sets
 # \(aqsalt.modules\(aq to log at the \(aqdebug\(aq level:
 #   log_granular_levels:
 #     \(aqsalt\(aq: \(aqwarning\(aq,
@@ -34685,12 +34687,12 @@ def get_file(path, dest, env=\(aqbase\(aq):
 # without informing either party that their connection has been taken away.
 # Enabling TCP Keepalives prevents this from happening.
 #
-# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False) 
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
 # or leave to the OS defaults (\-1), on linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
 # How long before the first keepalive should be sent in seconds. Default 300
-# to send the first keepalive after 5 minutes, OS default (\-1) is typically 7200 seconds 
+# to send the first keepalive after 5 minutes, OS default (\-1) is typically 7200 seconds
 # on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
 #tcp_keepalive_idle: 300
 #
@@ -34698,8 +34700,8 @@ def get_file(path, dest, env=\(aqbase\(aq):
 # to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
 #tcp_keepalive_cnt: \-1
 #
-# How often, in seconds, to send keepalives after the first one. Default \-1 to 
-# use OS defaults, typically 75 seconds on Linux, see 
+# How often, in seconds, to send keepalives after the first one. Default \-1 to
+# use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: \-1
 
@@ -40467,5 +40469,5 @@ Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors fil
 .SH COPYRIGHT
 2013, Thomas S. Hatch
 .\" Generated by docutils manpage writer.
-.\" 
+.\"
 .
