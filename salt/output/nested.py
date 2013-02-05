@@ -29,7 +29,7 @@ class NestDisplay(object):
                     prefix,
                     ret,
                     self.colors['ENDC'])
-        elif isinstance(ret, str):
+        elif isinstance(ret, basestring):
             lines = ret.split('\n')
             for line in lines:
                 out += '{0}{1}{2}{3}{4}\n'.format(
