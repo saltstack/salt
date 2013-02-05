@@ -86,11 +86,15 @@ Viewing Minion Pillar
 =====================
 
 Once the pillar is set up the data can be viewed on the minion via the
-``pillar.data`` module:
+``pillar`` module, the pillar module comes with two functions, ``pillar.data``
+and ``pillar.raw``. ``pillar.data`` will return a freshly reloaded pillar and
+``pillar.raw`` wil return the current pillar without a refresh:
 
 .. code-block:: bash
 
     # salt '*' pillar.data
+
+
 
 Footnotes
 ---------
@@ -106,6 +110,9 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 .. code-block:: yaml
 
     salt '*' saltutil.refresh_pillar
+
+This function triggers the minion to refresh the pillar and will always return
+``True``
 
 Targeting with Pillar
 =====================
