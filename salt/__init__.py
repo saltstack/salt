@@ -19,7 +19,7 @@ try:
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
-
+from salt.exceptions import SaltSystemExit
 
 logger = logging.getLogger(__name__)
 
@@ -187,11 +187,14 @@ class Minion(parsers.MinionOptionParser):
         try:
             if check_user(self.config['user']):
                 self.minion.tune_in()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SaltSystemExit) as e:
             logger.warn('Stopping the Salt Minion')
-            self.shutdown()
+            if isinstance(e, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(e))
         finally:
-            raise SystemExit('\nExiting on Ctrl-c')
+            self.shutdown()
 
     def shutdown(self):
         '''
