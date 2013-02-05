@@ -18,7 +18,6 @@ from salt.utils.dictupdate import update
 
 log = logging.getLogger(__name__)
 
-PILLAR = None
 def get_pillar(opts, grains, id_, env=None):
     '''
     Return the correct pillar driver based on the file_client option
