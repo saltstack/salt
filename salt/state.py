@@ -1936,6 +1936,7 @@ class BaseHighState(object):
         high data structure.
         '''
         highstate = {}
+        all_errors = []
         for env, states in matches.items():
             mods = set()
             for sls_match in states:
@@ -1943,9 +1944,10 @@ class BaseHighState(object):
                     state, errors = self.render_state(sls, env, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
+                    all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
-        return highstate, errors
+        return highstate, all_errors
 
 
     def clean_duplicate_extends(self, highstate):
