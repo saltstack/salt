@@ -171,21 +171,17 @@ class Sls(object):
         return slsmods[0] if len(slsmods) == 1 else slsmods
 
     def extend(self, *state_funcs):
-        if self.options.ordered and self.last_func():
-            raise PyDslError('Cannot extend() while the ordered option is turned on!')
+        if self.options.ordered or self.last_func():
+            raise PyDslError('Cannot extend() after the ordered option was turned on!')
         for f in state_funcs:
             id = f.mod._state_id
-            self.extends.append(self.all_decls[id])
+            self.extends.append(self.all_decls.pop(id))
             i = len(self.decls)
             for decl in reversed(self.decls):
                 i -= 1
                 if decl._id == id:
                     del self.decls[i]
                     break
-            try:
-                self.funcs.remove(f) # untrack it
-            except ValueError:
-                pass
         
     def state(self, id=None):
         if not id:
@@ -275,6 +271,41 @@ class StateDeclaration(object):
     def _repr(self, context=None):
         return dict(m._repr(context) for m in self)
 
+    def __call__(self, check=True):
+        sls = self._sls
+        last_func = sls.last_func()
+        if last_func and self._mods[-1]._func is not last_func:
+            raise PyDslError(
+                    ('Cannot run state({0}: {1}) that is required by a runtime '
+                     'state({2}: {3}), at compile time.').format(
+                          self._mods[-1]._name, self._id,
+                          last_func.mod, last_func.mod._state_id
+                      )
+                  )
+        sls.all_decls.pop(self._id)
+        sls.decls.remove(self)
+        self._mods[0]._func._remove_auto_require()
+        for m in self._mods:
+            try:
+                sls.funcs.remove(m._func)
+            except ValueError:
+                pass
+
+        result = __salt__['state.high']({self._id: self._repr()})
+        result = sorted(result.iteritems(), key=lambda t: t[1]['__run_num__'])
+        if check:
+            for k, v in result:
+                if not v['result']:
+                    import pprint
+                    raise PyDslError(
+                            'Failed executing low state at compile time:\n{0}'
+                             .format(pprint.pformat({k:v})))
+        return result            
+        
+
+        
+
+
 
 
 class StateModule(object):
@@ -332,12 +363,21 @@ class StateFunction(object):
         self.name = name
         self.args = []
 
+        # track the position of the auto-added require for easy
+        # removal if run at compile time.
+        self.require_index = None
+
         sls = Sls.all_decls[parent_mod._state_id]._sls
         if sls.options.ordered:
             last_f = sls.last_func()
             if last_f:
                 self.require(last_f.mod)
+                self.require_index = len(self.args) - 1
             sls.track_func(self)
+
+    def _remove_auto_require(self):
+        if self.require_index is not None:
+            del self.args[self.require_index]
 
     def __call__(self, *args, **kws):
         self.configure(args, kws)

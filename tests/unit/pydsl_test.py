@@ -371,6 +371,32 @@ hello blue 3
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
+    def test_compile_time_state_execution(self):
+        if sys.version_info < (2, 7):
+            self.skipTest('OrderedDict is not available')
+        dirpath = tempfile.mkdtemp()
+        output = os.path.join(dirpath, 'output')
+        try:
+            aaa = os.path.join(dirpath, 'aaa.sls')
+            with open(aaa, 'w') as aaa:
+                aaa.write('''#!pydsl
+__pydsl__.set(ordered=True)
+A = state('A')
+A.cmd.run('echo hehe > {0}/zzz.txt', cwd='/')
+A.file.managed('{1}/yyy.txt', source='salt://zzz.txt')
+A()
+
+state().cmd.run('echo hoho >> {2}/yyy.txt', cwd='/')
+'''.format(dirpath, dirpath, dirpath))
+            state_highstate({'base': ['aaa']}, dirpath)
+            with open(os.path.join(dirpath, 'yyy.txt'), 'r') as f:
+
+                self.assertEqual(f.read(), 'hehe\nhoho\n')
+        finally:
+            shutil.rmtree(dirpath, ignore_errors=True)
+
+
+
 
 def state_highstate(matches, dirpath):
     OPTS['file_roots'] = dict(base=[dirpath])
