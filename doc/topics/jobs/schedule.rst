@@ -1,18 +1,18 @@
 ================
-Salt Scheduleing
+Salt Scheduling
 ================
 
-Introduced in Salt 0.12.0, the scheduling system is a powerful tool for
-creating incremental executions on minions or the master. The schedule system
-exposes the execution of any execution function on minions or any runner on
-the master.
+In Salt versions greater than 0.12.0, the scheduling system allows incremental 
+executions on minions or the master. The schedule system exposes the execution 
+of any execution function on minions or any runner on the master.
 
 To set up the scheduler on the master add the schedule option to the master
-config file, to set up the scheduler on the minion add the schedule option to
+config file. 
+
+To set up the scheduler on the minion add the schedule option to
 the minion config file or to the minion's pillar.
 
-The schedule option defines jobs which execute at certain intervals. The salt
-scheduler only supports interval assignments in 0.12.0. To set up a highstate
+The schedule option defines jobs which execute at certain intervals. To set up a highstate
 to run on a minion every 60 minutes set this in the minion config or pillar:
 
 .. code-block:: yaml
