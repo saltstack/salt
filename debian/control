@@ -22,9 +22,9 @@ Depends: ${python:Depends},
          python,
          python-libcloud,
          python-boto,
-         python-paramiko,
          python-yaml,
-         salt-common
+         salt-common,
+         sshpass
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly 
  controlled profile and mapping system.
