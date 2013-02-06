@@ -314,6 +314,7 @@ class Master(SMaster):
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
             clean_proc(reqserv.eventpublisher)
+            clean_proc(reqserv.reactor)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
