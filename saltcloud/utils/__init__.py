@@ -321,25 +321,25 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # Minion configuration
             if minion_pem:
-                sftp_file(sftp, host, '/tmp/minion.pem', minion_pem)
+                sftp_file(sftp, host, '/tmp/minion.pem', minion_pem, kwargs)
                 ssh.exec_command('chmod 600 /tmp/minion.pem')
             if minion_pub:
-                sftp_file(sftp, host, '/tmp/minion.pub', minion_pub)
+                sftp_file(sftp, host, '/tmp/minion.pub', minion_pub, kwargs)
             if minion_conf:
-                sftp_file(sftp, host, '/tmp/minion', minion_conf)
+                sftp_file(sftp, host, '/tmp/minion', minion_conf, kwargs)
 
             # Master configuration
             if master_pem:
-                sftp_file(sftp, host, '/tmp/master.pem', master_pem)
+                sftp_file(sftp, host, '/tmp/master.pem', master_pem, kwargs)
                 ssh.exec_command('chmod 600 /tmp/master.pem')
             if master_pub:
-                sftp_file(sftp, host, '/tmp/master.pub', master_pub)
+                sftp_file(sftp, host, '/tmp/master.pub', master_pub, kwargs)
             if master_conf:
-                sftp_file(sftp, host, '/tmp/master', master_conf)
+                sftp_file(sftp, host, '/tmp/master', master_conf, kwargs)
 
             # The actual deploy script
             if script:
-                sftp_file(sftp, host, '/tmp/deploy.sh', script)
+                sftp_file(sftp, host, '/tmp/deploy.sh', script, kwargs)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
@@ -438,7 +438,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
     return False
 
 
-def sftp_file(transport, host, dest_path, contents):
+def sftp_file(transport, host, dest_path, contents, kwargs):
     '''
     Given an established sftp session, this function will copy a file to a
     server using said sftp transport
@@ -448,7 +448,17 @@ def sftp_file(transport, host, dest_path, contents):
     tmpfile.write(contents)
     tmpfile.close()
     log.debug('Uploading {0} to {1}'.format(dest_path, host))
-    transport.put(tmppath, dest_path)
+    cmd = 'scp -oStrictHostKeyChecking=no {0} {1}@{2}:{3}'.format(
+        tmppath,
+        kwargs['username'],
+        kwargs['hostname'],
+        dest_path
+    )
+    if 'key_filename' in kwargs:
+        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
+    elif 'password' in kwargs:
+        cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
+    subprocess.call(cmd, shell=True)
     os.remove(tmppath)
 
 
