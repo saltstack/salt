@@ -9,6 +9,14 @@ import re
 import salt.utils
 from salt.utils.socket_util import sanitize_host
 
+# Import 3rd party libraries
+HAS_WMI = False
+try:
+    import wmi
+    HAS_WMI = True
+except ImportError:
+    pass
+
 
 def __virtual__():
     '''
@@ -208,6 +216,23 @@ def _interfaces_ipconfig(out):
 
 
 def interfaces():
-    cmd = __salt__['cmd.run']('ipconfig /all')
-    ifaces = _interfaces_ipconfig(cmd)
+    c = wmi.WMI()
+    ifaces = {}
+    for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
+        ifaces[iface.Description] = dict()
+        if iface.MACAddress:
+            ifaces[iface.Description]['hwaddr'] = iface.MACAddress
+        if iface.IPEnabled:
+            ifaces[iface.Description]['up'] = True
+            ifaces[iface.Description]['inet'] = []
+            for ip in iface.IPAddress:
+                item = {}
+                item['broadcast'] = iface.DefaultIPGateway[0]
+                item['netmask'] = iface.IPSubnet[0]
+                item['label'] = iface.Description
+                item['address'] = ip
+                ifaces[iface.Description]['inet'].append(item)
+        else:
+            ifaces[iface.Description]['up'] = False
     return ifaces
+
