@@ -319,7 +319,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Minion configuration
             if minion_pem:
                 scp_file('/tmp/minion.pem', minion_pem, kwargs)
-                ssh.exec_command('chmod 600 /tmp/minion.pem')
+                root_cmd('chmod 600 /tmp/minion.pem', tty, sudo, **kwargs)
             if minion_pub:
                 scp_file('/tmp/minion.pub', minion_pub, kwargs)
             if minion_conf:
@@ -328,7 +328,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Master configuration
             if master_pem:
                 scp_file('/tmp/master.pem', master_pem, kwargs)
-                ssh.exec_command('chmod 600 /tmp/master.pem')
+                root_cmd('chmod 600 /tmp/master.pem', tty, sudo, **kwargs)
             if master_pub:
                 scp_file('/tmp/master.pub', master_pub, kwargs)
             if master_conf:
@@ -337,7 +337,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # The actual deploy script
             if script:
                 scp_file('/tmp/deploy.sh', script, kwargs)
-            ssh.exec_command('chmod +x /tmp/deploy.sh')
+            root_cmd('chmod +x /tmp/deploy.sh', tty, sudo, **kwargs)
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -369,7 +369,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
                 # Remove the deploy script
                 if not keep_tmp:
-                    ssh.exec_command('rm /tmp/deploy.sh')
+                    root_cmd('rm /tmp/deploy.sh', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/deploy.sh')
 
             if keep_tmp:
@@ -378,25 +378,25 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Remove minion configuration
             if not keep_tmp:
                 if minion_pub:
-                    ssh.exec_command('rm /tmp/minion.pub')
+                    root_cmd('rm /tmp/minion.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pub')
                 if minion_pem:
-                    ssh.exec_command('rm /tmp/minion.pem')
+                    root_cmd('rm /tmp/minion.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pem')
                 if minion_conf:
-                    ssh.exec_command('rm /tmp/minion')
+                    root_cmd('rm /tmp/minion', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion')
 
             # Remove master configuration
             if not keep_tmp:
                 if master_pub:
-                    ssh.exec_command('rm /tmp/master.pub')
+                    root_cmd('rm /tmp/master.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pub')
                 if master_pem:
-                    ssh.exec_command('rm /tmp/master.pem')
+                    root_cmd('rm /tmp/master.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pem')
                 if master_conf:
-                    ssh.exec_command('rm /tmp/master')
+                    root_cmd('rm /tmp/master', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master')
 
             if start_action:
