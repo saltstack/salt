@@ -27,6 +27,19 @@ __outputter__ = {
 log = logging.getLogger(__name__)
 
 
+def __resolve_struct(value, kwval_as):
+    '''
+    Take a string representing a structure and safely serialize it with the
+    specified medium
+    '''
+    if kwval_as == 'yaml':
+        return  _yaml_load(value, _YamlCustomLoader)
+    elif kwval_as == 'json':
+        return json.loads(value)
+    elif kwval_as is None or kwval_as == 'verbatim':
+        return value
+
+
 def running():
     '''
     Return a dict of state return data if a state function is already running.
@@ -132,7 +145,12 @@ def highstate(test=None, **kwargs):
     if not test is None:
         opts['test'] = test
 
-    st_ = salt.state.HighState(opts)
+    pillar = __resolve_struct(
+            kwargs.get('pillar', ''),
+            kwargs.get('kwval_as', 'yaml'))
+
+    st_ = salt.state.HighState(opts, pillar)
+    salt.state.HighState.current = st_
     ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
@@ -166,8 +184,12 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if not test is None:
         opts['test'] = test
 
+    pillar = __resolve_struct(
+            kwargs.get('pillar', ''),
+            kwargs.get('kwval_as', 'yaml'))
+
     salt.utils.daemonize_if(opts, **kwargs)
-    st_ = salt.state.HighState(opts)
+    st_ = salt.state.HighState(opts, pillar)
 
     if isinstance(mods, string_types):
         mods = mods.split(',')

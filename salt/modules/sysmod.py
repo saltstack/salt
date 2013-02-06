@@ -12,14 +12,23 @@ def __virtual__():
 
 def doc(module=''):
     '''
-    Return the docstrings for all modules, these strings are aggregated into
-    a single document on the master for easy reading.
+    Return the docstrings for all modules. Optionally, specify a module or a
+    function to narrow te selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
 
     CLI Example::
 
         salt \* sys.doc
+        salt \* sys.doc sys
+        salt \* sys.doc sys.doc
     '''
     docs = {}
+    if module:
+        # allow both "sys" and "sys." to match sys, without also matching
+        # sysctl
+        module = module + '.' if not module.endswith('.') else module
     for fun in __salt__:
         if fun.startswith(module):
             docs[fun] = __salt__[fun].__doc__
@@ -28,18 +37,21 @@ def doc(module=''):
 
 def list_functions(module=''):
     '''
-    List the functions.  Optionally, specify a module to list from.
+    List the functions for all modules. Optionally, specify a module to list
+    from.
 
     CLI Example::
 
         salt \* sys.list_functions
+        salt \* sys.list_functions sys
     '''
     names = set()
+    if module:
+        # allow both "sys" and "sys." to match sys, without also matching
+        # sysctl
+        module = module + '.' if not module.endswith('.') else module
     for func in __salt__:
-        if module:
-            if func.startswith('{0}.'.format(module)):
-                names.add(func)
-        else:
+        if func.startswith(module):
             names.add(func)
     return sorted(names)
 

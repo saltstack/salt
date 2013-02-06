@@ -29,7 +29,7 @@ class NestDisplay(object):
                     prefix,
                     ret,
                     self.colors['ENDC'])
-        elif isinstance(ret, str):
+        elif isinstance(ret, basestring):
             lines = ret.split('\n')
             for line in lines:
                 out += '{0}{1}{2}{3}{4}\n'.format(
@@ -40,7 +40,14 @@ class NestDisplay(object):
                         self.colors['ENDC'])
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
-                out = self.display(ind, indent, '- ', out)
+                if isinstance(ind, list) or isinstance(ind, tuple):
+                    out += '{0}{1}|_{2}\n'.format(
+                            self.colors['GREEN'],
+                            ' ' * indent,
+                            self.colors['ENDC'])
+                    out = self.display(ind, indent + 2, '- ', out)
+                else:
+                    out = self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
             if indent:
                 out += '{0}{1}{2}{3}\n'.format(

@@ -17,3 +17,6 @@ key_logfile: key
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 
 file_buffer_size: 8192
+
+ext_pillar:
+  - cmd_yaml: cat ext.yaml

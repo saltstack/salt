@@ -3,25 +3,37 @@ Set up the version of Salt
 '''
 
 # Import python libs
-import os
-import re
 import sys
-import warnings
-import subprocess
+
 
 __version_info__ = (0, 12, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
-GIT_DESCRIBE_RE = re.compile(
+GIT_DESCRIBE_REGEX = (
     r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
     r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
 )
 
 
-def __get_version_info_from_git(version, version_info):
+def __get_version(version, version_info):
     '''
-    If we can get a version from Git use that instead, otherwise we carry on
+    If we can get a version provided at installation time or from Git, use
+    that instead, otherwise we carry on.
     '''
+    try:
+        # Try to import the version information provided at install time
+        from salt._version import __version__, __version_info__
+        return __version__, __version_info__
+    except ImportError:
+        pass
+
+    # This might be a 'python setup.py develop' installation type. Let's
+    # discover the version information at runtime.
+    import os
+    import re
+    import warnings
+    import subprocess
+
     try:
         kwargs = dict(
             stdout=subprocess.PIPE,
@@ -39,7 +51,7 @@ def __get_version_info_from_git(version, version_info):
         if not out.strip() or err.strip():
             return version, version_info
 
-        match = GIT_DESCRIBE_RE.search(out.strip())
+        match = re.search(GIT_DESCRIBE_REGEX, out.strip())
         if not match:
             return version, version_info
 
@@ -68,18 +80,17 @@ def __get_version_info_from_git(version, version_info):
         return parsed_version, parsed_version_info
     except OSError, err:
         if err.errno != 2:
-            # If the errno is not 2(The system cannot find the file specified),
-            # raise the exception so it can be catch by the developers
+            # If the errno is not 2(The system cannot find the file
+            # specified), raise the exception so it can be catch by the
+            # developers
             raise
-        # Popen child exceptions are not raised
     return version, version_info
 
 
-# Get version information from git if available
-__version__, __version_info__ = \
-    __get_version_info_from_git(__version__, __version_info__)
+# Get additional version information if available
+__version__, __version_info__ = __get_version(__version__, __version_info__)
 # This function has executed once, we're done with it. Delete it!
-del __get_version_info_from_git
+del __get_version
 
 
 def versions_report():

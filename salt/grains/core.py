@@ -9,9 +9,6 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
 
-# TODO: This needs some refactoring, I made it "as fast as I could" and could
-# be a lot clearer, so far it is spaghetti code
-
 # Import python libs
 import os
 import socket
@@ -25,7 +22,7 @@ import locale
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'enterprise', 'ovs', 'system', 'mint')
+                     'slamd64', 'ovs', 'system', 'mint', 'oracle')
 
 # Import salt libs
 import salt.log
@@ -299,6 +296,8 @@ def _virtual(osdata):
 
         if ret['retcode'] > 0:
             if salt.log.is_logging_configured():
+                if salt.utils.is_windows():
+                    continue
                 log.warn(
                     'Although \'{0}\' was found in path, the current user '
                     'cannot execute it. Grains output might not be '
@@ -507,6 +506,7 @@ _OS_NAME_MAP = {
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
+    'oracleserv': 'OEL',
 }
 
 # Map the 'os' grain to the 'os_family' grain

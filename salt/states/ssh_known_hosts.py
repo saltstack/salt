@@ -30,6 +30,10 @@ def present(
     '''
     Verifies that the specified host is known by the specified user
 
+    On many systems, specifically those running with openssh 4 or older, the
+    ``enc`` option must be set, only openssh 5 and above can detect the key
+    type.
+
     name
         The name of the remote host (i.e. "github.com")
 
