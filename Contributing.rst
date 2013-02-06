@@ -3,8 +3,8 @@ Reporting issues
 
 The Salt issue tracker is used for feature requests and bug reports.
 
-Bugs:
------
+Bugs
+----
 
 A bug is a *demonstrable problem* that is caused by the code in the repository.
 
@@ -33,8 +33,8 @@ assess and fix any potential bugs.
 Valid bugs will be categorized for the next release and worked on as quickly
 as resources can be reasonably allocated
 
-Features:
----------
+Features
+--------
 
 Salt is always working to be more powerful. Feature additions and requests are
 welcomed. When requesting a feature it will be categorized for a release or
@@ -68,6 +68,6 @@ salt's code.
 .. _`report an issue`: https://github.com/saltstack/salt/issues
 .. _`Salt's documentation`: http://docs.saltstack.org/en/latest/index.html
 .. _`Developing Salt`: http://docs.saltstack.org/en/latest/topics/community.html#developing-salt
-.. _`pull request`: http://docs.saltstack.org/en/latest/topics/community.html#setting-a-github-pull-request
+.. _`pull request`: http://docs.saltstack.org/en/latest/topics/community.html#sending-a-github-pull-request
 
 .. vim: fenc=utf-8 spell spl=en
