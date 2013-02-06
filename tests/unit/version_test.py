@@ -10,6 +10,9 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+# Import python libs
+import re
+
 # Import salt libs
 from saltunittest import TestCase, TestLoader, TextTestRunner
 import salt.version
@@ -27,7 +30,7 @@ class VersionTestCase(TestCase):
 
         for vs, groups in expect:
             self.assertEqual(
-                groups, salt.version.GIT_DESCRIBE_RE.search(vs).groups()
+                groups, re.search(salt.version.GIT_DESCRIBE_REGEX, vs).groups()
             )
 
 if __name__ == "__main__":
