@@ -2,87 +2,95 @@
 Set up the version of Salt
 '''
 
-try:
-    # Try to import the version information provided at install time
-    from ._version import __version__, __version_info__
-except ImportError:
-    # This might be a 'python setup.py develop' installation time. Let's
-    # discover that information at runtime.
+# Import python libs
+import sys
+
+
+__version_info__ = (0, 12, 0)
+__version__ = '.'.join(map(str, __version_info__))
+
+
+def __get_version(version, version_info):
+    '''
+    If we can get a version provided at installation time or from Git, use
+    that instead, otherwise we carry on.
+    '''
+    try:
+        # Try to import the version information provided at install time
+        from ._version import __version__, __version_info__
+        return __version__, __version_info__
+    except ImportError:
+        pass
+
+    # This might be a 'python setup.py develop' installation type. Let's
+    # discover the version information at runtime.
+    import os
     import re
-    import sys
     import warnings
     import subprocess
-    __version_info__ = (0, 12, 0)
-    __version__ = '.'.join(map(str, __version_info__))
 
     GIT_DESCRIBE_RE = re.compile(
         r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
         r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
     )
 
+    try:
+        kwargs = dict(
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=os.path.abspath(os.path.dirname(__file__))
+        )
 
-    def __get_version_info_from_git(version, version_info):
-        '''
-        If we can get a version from Git use that instead, otherwise we carry on
-        '''
-        try:
-            kwargs = dict(
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=os.path.abspath(os.path.dirname(__file__))
+        if not sys.platform.startswith('win'):
+            # Let's not import `salt.utils` for the above check
+            kwargs['close_fds'] = True
+
+        process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
+        out, err = process.communicate()
+
+        if not out.strip() or err.strip():
+            return version, version_info
+
+        match = GIT_DESCRIBE_RE.search(out.strip())
+        if not match:
+            return version, version_info
+
+        parsed_version = '{0}.{1}.{2}-{3}-{4}'.format(
+            match.group('major'),
+            match.group('minor'),
+            match.group('bugfix'),
+            match.group('noc'),
+            match.group('sha')
+        )
+        parsed_version_info = tuple([
+            int(g) for g in match.groups()[:3] if g.isdigit()
+        ])
+        if parsed_version_info != version_info:
+            warnings.warn(
+                'In order to get the proper salt version with the '
+                'git hash you need to update salt\'s local git '
+                'tags. Something like: \'git fetch --tags\' or '
+                '\'git fetch --tags upstream\' if you followed '
+                'salt\'s contribute documentation. The version '
+                'string WILL NOT include the git hash.',
+                UserWarning,
+                stacklevel=2
             )
-
-            if not sys.platform.startswith('win'):
-                # Let's not import `salt.utils` for the above check
-                kwargs['close_fds'] = True
-
-            process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
-            out, err = process.communicate()
-
-            if not out.strip() or err.strip():
-                return version, version_info
-
-            match = GIT_DESCRIBE_RE.search(out.strip())
-            if not match:
-                return version, version_info
-
-            parsed_version = '{0}.{1}.{2}-{3}-{4}'.format(
-                match.group('major'),
-                match.group('minor'),
-                match.group('bugfix'),
-                match.group('noc'),
-                match.group('sha')
-            )
-            parsed_version_info = tuple([
-                int(g) for g in match.groups()[:3] if g.isdigit()
-            ])
-            if parsed_version_info != version_info:
-                warnings.warn(
-                    'In order to get the proper salt version with the '
-                    'git hash you need to update salt\'s local git '
-                    'tags. Something like: \'git fetch --tags\' or '
-                    '\'git fetch --tags upstream\' if you followed '
-                    'salt\'s contribute documentation. The version '
-                    'string WILL NOT include the git hash.',
-                    UserWarning,
-                    stacklevel=2
-                )
-                return version, version_info
-            return parsed_version, parsed_version_info
-        except OSError, err:
-            if err.errno != 2:
-                # If the errno is not 2(The system cannot find the file
-                # specified), raise the exception so it can be catch by the
-                # developers
-                raise
-        return version, version_info
+            return version, version_info
+        return parsed_version, parsed_version_info
+    except OSError, err:
+        if err.errno != 2:
+            # If the errno is not 2(The system cannot find the file
+            # specified), raise the exception so it can be catch by the
+            # developers
+            raise
+    return version, version_info
 
 
-    # Get version information from git if available
-    __version__, __version_info__ = \
-        __get_version_info_from_git(__version__, __version_info__)
-    # This function has executed once, we're done with it. Delete it!
-    del __get_version_info_from_git
+# Get additional version information if available
+__version__, __version_info__ = __get_version(__version__, __version_info__)
+# This function has executed once, we're done with it. Delete it!
+del __get_version
 
 
 def versions_report():
