@@ -321,25 +321,25 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # Minion configuration
             if minion_pem:
-                sftp_file(sftp, host, '/tmp/minion.pem', minion_pem, kwargs)
+                scp_file('/tmp/minion.pem', minion_pem, kwargs)
                 ssh.exec_command('chmod 600 /tmp/minion.pem')
             if minion_pub:
-                sftp_file(sftp, host, '/tmp/minion.pub', minion_pub, kwargs)
+                scp_file('/tmp/minion.pub', minion_pub, kwargs)
             if minion_conf:
-                sftp_file(sftp, host, '/tmp/minion', minion_conf, kwargs)
+                scp_file('/tmp/minion', minion_conf, kwargs)
 
             # Master configuration
             if master_pem:
-                sftp_file(sftp, host, '/tmp/master.pem', master_pem, kwargs)
+                scp_file('/tmp/master.pem', master_pem, kwargs)
                 ssh.exec_command('chmod 600 /tmp/master.pem')
             if master_pub:
-                sftp_file(sftp, host, '/tmp/master.pub', master_pub, kwargs)
+                scp_file('/tmp/master.pub', master_pub, kwargs)
             if master_conf:
-                sftp_file(sftp, host, '/tmp/master', master_conf, kwargs)
+                scp_file('/tmp/master', master_conf, kwargs)
 
             # The actual deploy script
             if script:
-                sftp_file(sftp, host, '/tmp/deploy.sh', script, kwargs)
+                scp_file('/tmp/deploy.sh', script, kwargs)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
@@ -438,16 +438,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
     return False
 
 
-def sftp_file(transport, host, dest_path, contents, kwargs):
+def scp_file(dest_path, contents, kwargs):
     '''
-    Given an established sftp session, this function will copy a file to a
-    server using said sftp transport
+    Use scp to copy a file to a server    
     '''
     tmpfh, tmppath = tempfile.mkstemp()
     tmpfile = open(tmppath, 'w')
     tmpfile.write(contents)
     tmpfile.close()
-    log.debug('Uploading {0} to {1}'.format(dest_path, host))
+    log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
     cmd = 'scp -oStrictHostKeyChecking=no {0} {1}@{2}:{3}'.format(
         tmppath,
         kwargs['username'],
