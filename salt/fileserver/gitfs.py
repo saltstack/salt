@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     '''
     Only load if git-python is available
-    Try: pip install -U gitpython.
+    Try: pip install -U gitpython
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
