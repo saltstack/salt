@@ -132,7 +132,7 @@ def save(filename):
     return out
 
 
-def append(table='filter', chain, rule=None):
+def append(table='filter', chain=None, rule=None):
     '''
     Append a rule to the specified table/chain.
 
@@ -145,6 +145,8 @@ def append(table='filter', chain, rule=None):
 
         salt '*' iptables.append filter INPUT '-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
+    if not chain:
+        return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
 
