@@ -315,9 +315,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 for line in stdout:
                     sys.stdout.write(line)
                 ssh.connect(**kwargs)
-            sftp = ssh.get_transport()
-            sftp.open_session()
-            sftp = paramiko.SFTPClient.from_transport(sftp)
 
             # Minion configuration
             if minion_pem:
