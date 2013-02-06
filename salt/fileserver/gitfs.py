@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if gitpython is available
+    Only load if git-python is available
+    Try: pip install -U gitpython.
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
@@ -36,7 +37,8 @@ def __virtual__():
         return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
-                  'could not be loaded, is git-python installed?')
+                  'could not be loaded, is git-python installed?'
+                  'Try: pip install -U gitpython')
         return False
     return 'git'
 
@@ -54,7 +56,7 @@ def _get_ref(repo, short):
 
 def _wait_lock(lk_fn, dest):
     '''
-    if the write lock is there check to see if the file is acctually being
+    if the write lock is there check to see if the file is actually being
     written, if there is no change in the file size after a short sleep then
     remove the lock and move forward.
     '''
