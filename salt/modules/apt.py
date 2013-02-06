@@ -373,7 +373,8 @@ def upgrade(refresh=True, **kwargs):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -q -y -o DPkg::Options::=--force-confold -o DPkg::Options::=--force-confdef dist-upgrade'
+    cmd = ('apt-get -q -y -o DPkg::Options::=--force-confold '
+           '-o DPkg::Options::=--force-confdef dist-upgrade')
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
@@ -731,7 +732,8 @@ def del_repo(repo, refresh=False):
                 msg = 'Repo "{0}" has been removed from {1}.\n'
                 if c == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
-                        msg = 'File {1} containing repo "{0}" has been removed.\n'
+                        msg = ('File {1} containing repo "{0}" has been '
+                               'removed.\n')
                         try:
                             os.remove(repo_file)
                         except OSError, e:
@@ -824,12 +826,19 @@ def mod_repo(repo, refresh=False, **kwargs):
                     cmd = 'apt-key export {0}'.format(keyid)
                     output = __salt__['cmd.run_stdout'](cmd)
                     if not imported:
-                        cmd = 'apt-key adv --keyserver {0} --logger-fd 1 --recv-keys {1}'
-                        out = __salt__['cmd.run_stdout'](cmd.format(keyid, fp))
+                        cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
+                               '--recv-keys {1}')
+                        out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid))
                         if not out.find('imported') or out.find('not changed'):
                             error_str = 'Error: key retrieval failed: {0}'
-                            raise Exception(error_str.format(cmd.format(ks,
-                                                                        keyid)))
+                            raise Exception(
+                                error_str.format(
+                                    cmd.format(
+                                        ks,
+                                        keyid
+                                    )
+                                )
+                            )
             elif 'key_url' in kwargs:
                 key_url = kwargs.pop('key_url', None)
                 cmd = 'wget -q -O- {0} | apt-key add -'.format(key_url)
