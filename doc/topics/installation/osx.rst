@@ -2,8 +2,6 @@
 OS X
 ====
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
-
 Dependency Installation
 -----------------------
 
@@ -20,35 +18,23 @@ Using macports, you may need to install zmq and swig this way:
 
 .. code-block:: bash
 
-  sudo port install pyzmq
-  sudo port install py27-m2crypto
-  sudo port install py27-crypto
-  sudo port install py27-msgpack
-  sudo port install python-swig
+    sudo port install pyzmq
+    sudo port install py27-m2crypto
+    sudo port install py27-crypto
+    sudo port install py27-msgpack
+    sudo port install python-swig
 
 Now if you are using the OSX system python, you'll need to pip install using 'sudo':
 
 .. code-block:: bash
 
-  sudo pip install -U salt
-
-Or alternatively, you can explicitly specify the list of dependencies:
-
-.. code-block:: bash
-
-    sudo pip install M2Crypto pyzmq PyYAML pycrypto msgpack-python jinja2 psutil salt
+    sudo pip install salt
 
 If you have `python installed via homebrew`_, you shouldn't need sudo:
 
 .. code-block:: bash
 
-    pip install -U salt
-
-Or alternatively, you can explicitly specify the list of dependencies:
-
-.. code-block:: bash
-
-    pip install M2Crypto pyzmq PyYAML pycrypto msgpack-python jinja2 psutil salt
+    pip install salt
 
 .. _`python installed via homebrew`: https://github.com/mxcl/homebrew/wiki/Homebrew-and-Python
 
