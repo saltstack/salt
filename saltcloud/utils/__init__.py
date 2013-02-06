@@ -19,13 +19,6 @@ import re
 # Get logging started
 log = logging.getLogger(__name__)
 
-try:
-    import paramiko
-except:
-    raise ImportError(
-        'Cannot import paramiko. Please make sure it is correctly installed.'
-    )
-
 # Import salt libs
 import salt.crypt
 import salt.client
@@ -210,7 +203,7 @@ def wait_for_ssh(host, port=22, timeout=900):
 
 
 def wait_for_passwd(host, port=22, timeout=900, username='root',
-                    password=None, key_filename=None, maxtries=50,
+                    password=None, key_filename=None, maxtries=15,
                     trysleep=1):
     '''
     Wait until ssh connection can be accessed via password or ssh key
@@ -219,8 +212,6 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     while trycount < maxtries:
         connectfail = False
         try:
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             kwargs = {'hostname': host,
                       'port': 22,
                       'username': username,
@@ -229,28 +220,23 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 kwargs['password'] = password
             if key_filename:
                 kwargs['key_filename'] = key_filename
-            try:
-                ssh.connect(**kwargs)
-            except (paramiko.AuthenticationException,
-                    paramiko.SSHException) as authexc:
-                connectfail = True
-                ssh.close()
-                trycount += 1
-                log.debug(
-                    'Attempting to authenticate (try {0} of {1}): {2}'.format(
-                        trycount, maxtries, authexc
-                    )
+
+            trycount += 1
+            log.debug(
+                'Attempting to authenticate as {0} (try {1} of {2})'.format(
+                    username, trycount, maxtries
                 )
+            )
+
+            status = root_cmd('date', tty=False, sudo=False, **kwargs)
+            if status != 0:
+                connectfail = True
                 if trycount < maxtries:
                     time.sleep(trysleep)
                     continue
                 else:
-                    log.error('Authentication failed: {0}'.format(authexc))
+                    log.error('Authentication failed: status code {0}'.format(status))
                     return False
-            except Exception as exc:
-                log.error(
-                    'There was an error in wait_for_passwd: {0}'.format(exc)
-                )
             if connectfail is False:
                 return True
             return False
@@ -337,7 +323,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
             # for the minion to check in, and then fire a startup event.
-            # Unfortunately, it doesn't currently work with Paramiko.
             if start_action:
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
@@ -474,8 +459,7 @@ def root_cmd(command, tty, sudo, **kwargs):
     if not tty:
         cmd = cmd.replace(' -t', '')
 
-    print(cmd)
-    subprocess.call(cmd, shell=True)
+    return subprocess.call(cmd, shell=True)
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
