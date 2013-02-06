@@ -285,8 +285,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 )
             )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             kwargs = {'hostname': host,
                       'port': 22,
                       'username': username,
@@ -298,7 +296,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
             try:
-                ssh.connect(**kwargs)
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
                 log.error(
