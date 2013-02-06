@@ -858,44 +858,23 @@ def directory(name,
                     # Remove 'group' from list of recurse targets
                     targets = list(x for x in targets if x != 'group')
 
-            needs_fixed = {}
-            if targets:
-                file_tree = __salt__['file.find'](name)
-                for path in file_tree:
-                    fstat = os.lstat(path)
-                    if 'user' in targets and fstat.st_uid != uid:
-                        needs_fixed['user'] = True
-                        if needs_fixed.get('group'):
-                            break
-                    if 'group' in targets and fstat.st_gid != gid:
-                        needs_fixed['group'] = True
-                        if needs_fixed.get('user'):
-                            break
-
-            if needs_fixed.get('user'):
-                # Make sure the 'recurse' subdict exists
-                ret['changes'].setdefault('recurse', {})
-                if 'user' in targets:
-                    if __salt__['cmd.retcode']('chown -R {0} "{1}"'.format(
-                            user, name)) != 0:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to enforce ownership on ' \
-                                         '{0} for user {1}'.format(name, group)
-                    else:
-                        ret['changes']['recurse']['user'] = \
-                                __salt__['file.uid_to_user'](uid)
-            if needs_fixed.get('group'):
-                ret['changes'].setdefault('recurse', {})
-                if 'group' in targets:
-                    if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
-                            group, name)) != 0:
-                        ret['result'] = False
-                        ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'on {0} for group ' \
-                                         '{1}'.format(name, group)
-                    else:
-                        ret['changes']['recurse']['group'] = \
-                                __salt__['file.gid_to_group'](gid)
+            for root, dirs, files in os.walk(name):
+                for fn_ in files:
+                    full = os.path.join(root, fn_)
+                    ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            mode)
+                for dir_ in dirs:
+                    full = os.path.join(root, dir_)
+                    ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            mode)
 
     if clean:
         keep = _gen_keep_files(name, require)
