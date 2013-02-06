@@ -9,6 +9,11 @@ import sys
 __version_info__ = (0, 12, 0)
 __version__ = '.'.join(map(str, __version_info__))
 
+GIT_DESCRIBE_REGEX = (
+    r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
+    r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
+)
+
 
 def __get_version(version, version_info):
     '''
@@ -29,11 +34,6 @@ def __get_version(version, version_info):
     import warnings
     import subprocess
 
-    GIT_DESCRIBE_RE = re.compile(
-        r'(?P<major>[\d]{1,2}).(?P<minor>[\d]{1,2}).(?P<bugfix>[\d]{1,2})'
-        r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
-    )
-
     try:
         kwargs = dict(
             stdout=subprocess.PIPE,
@@ -51,7 +51,7 @@ def __get_version(version, version_info):
         if not out.strip() or err.strip():
             return version, version_info
 
-        match = GIT_DESCRIBE_RE.search(out.strip())
+        match = re.search(GIT_DESCRIBE_REGEX, out.strip())
         if not match:
             return version, version_info
 
