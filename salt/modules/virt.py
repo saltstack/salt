@@ -27,13 +27,13 @@ from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError
 
 
-VIRT_STATE_NAME_MAP = {0: "running",
-                       1: "running",
-                       2: "running",
-                       3: "paused",
-                       4: "shutdown",
-                       5: "shutdown",
-                       6: "crashed"}
+VIRT_STATE_NAME_MAP = {0: 'running',
+                       1: 'running',
+                       2: 'running',
+                       3: 'paused',
+                       4: 'shutdown',
+                       5: 'shutdown',
+                       6: 'crashed'}
 
 
 def __virtual__():
@@ -50,7 +50,7 @@ def __get_conn():
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
     try:
-        conn = libvirt.open("qemu:///system")
+        conn = libvirt.open('qemu:///system')
     except Exception:
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
@@ -82,13 +82,13 @@ def _libvirt_creds():
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
     except IndexError:
-        group = "root"
+        group = 'root'
     try:
         user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
     except IndexError:
-        user = "root"
+        user = 'root'
     return {'user': user, 'group': group}
 
 def _get_migrate_command():
@@ -247,17 +247,17 @@ def get_nics(vm_):
     '''
     nics = {}
     doc = minidom.parse(_StringIO(get_xml(vm_)))
-    for node in doc.getElementsByTagName("devices"):
-        i_nodes = node.getElementsByTagName("interface")
+    for node in doc.getElementsByTagName('devices'):
+        i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
             nic = {}
             nic['type'] = i_node.getAttribute('type')
             for v_node in i_node.getElementsByTagName('*'):
-                if v_node.tagName == "mac":
+                if v_node.tagName == 'mac':
                     nic['mac'] = v_node.getAttribute('address')
-                if v_node.tagName == "model":
+                if v_node.tagName == 'model':
                     nic['model'] = v_node.getAttribute('type')
-                if v_node.tagName == "target":
+                if v_node.tagName == 'target':
                     nic['target'] = v_node.getAttribute('dev')
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
@@ -267,7 +267,7 @@ def get_nics(vm_):
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
                 # type attribute of the virtualport itself
-                if v_node.tagName == "virtualport":
+                if v_node.tagName == 'virtualport':
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
                     for key in v_node.attributes.keys():
@@ -289,8 +289,8 @@ def get_macs(vm_):
     '''
     macs = []
     doc = minidom.parse(_StringIO(get_xml(vm_)))
-    for node in doc.getElementsByTagName("devices"):
-        i_nodes = node.getElementsByTagName("interface")
+    for node in doc.getElementsByTagName('devices'):
+        i_nodes = node.getElementsByTagName('interface')
         for i_node in i_nodes:
             for v_node in i_node.getElementsByTagName('mac'):
                 macs.append(v_node.getAttribute('address'))
@@ -313,8 +313,8 @@ def get_graphics(vm_):
     xml = get_xml(vm_)
     ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
-    for node in doc.getElementsByTagName("domain"):
-        g_nodes = node.getElementsByTagName("graphics")
+    for node in doc.getElementsByTagName('domain'):
+        g_nodes = node.getElementsByTagName('graphics')
         for g_node in g_nodes:
             for key in g_node.attributes.keys():
                 out[key] = g_node.getAttribute(key)
