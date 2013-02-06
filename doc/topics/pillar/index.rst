@@ -8,6 +8,12 @@ the Salt State Tree.
 
 Pillar was added to Salt in version 0.9.8
 
+.. note:: Storing sensitive data
+
+    Unlike state tree, pillar data is only available for the targetted
+    minion specified by the matcher type.  This makes it useful for
+    storing sensitive data specific to a particular minion.
+
 Declaring the Master Pillar
 ===========================
 
