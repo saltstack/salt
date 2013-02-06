@@ -470,27 +470,22 @@ def root_cmd(command, tty, sudo, **kwargs):
         log.debug('Using sudo to run command')
 
     log.debug('Executing command: {0}'.format(command))
-    if tty:
-        # Tried this with paramiko's invoke_shell(), and got tired of
-        # fighting with it
-        log.debug(
-            'Using ssh command to simulate tty session, to execute command'
-        )
-        cmd = 'ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"'.format(
-            kwargs['key_filename'],
-            kwargs['username'],
-            kwargs['hostname'],
-            command
-        )
-        subprocess.call(cmd, shell=True)
-    else:
-        log.debug('Using paramiko to execute command')
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(**kwargs)
-        stdin, stdout, stderr = ssh.exec_command(command)
-        for line in stdout:
-            sys.stdout.write(line)
+    cmd = 'ssh -oStrictHostKeyChecking=no -t {0}@{1} "{2}"'.format(
+        kwargs['username'],
+        kwargs['hostname'],
+        command
+    )
+
+    if 'key_filename' in kwargs:
+        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
+    elif 'password' in kwargs:
+        cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
+
+    if not tty:
+        cmd = cmd.replace(' -t', '')
+
+    print(cmd)
+    subprocess.call(cmd, shell=True)
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
