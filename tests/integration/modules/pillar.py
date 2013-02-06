@@ -18,6 +18,14 @@ class PillarModuleTest(integration.ModuleCase):
         else:
             self.assertEqual(pillar['class'], 'other')
 
+    def test_ext_cmd_yaml(self):
+        '''
+        pillar.data for ext_pillar cmd.yaml
+        '''
+        self.assertEqual(
+                self.run_function('pillar.data')['ext_spam'], 'eggs'
+                )
+
 
 if __name__ == '__main__':
     from integration import run_tests
