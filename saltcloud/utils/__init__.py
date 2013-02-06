@@ -305,16 +305,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     'There was an error in deploy_script: {0}'.format(exc)
                 )
             if provider == 'ibmsce':
-                ssh.exec_command(
-                    'sudo sed -i "s/#Subsystem/Subsystem/" '
+                subsys_command = (
+                    'sed -i "s/#Subsystem/Subsystem/" '
                     '/etc/ssh/sshd_config'
                 )
-                stdin, stdout, stderr = ssh.exec_command(
-                    'sudo service sshd restart'
-                )
-                for line in stdout:
-                    sys.stdout.write(line)
-                ssh.connect(**kwargs)
+                root_cmd(subsys_command, tty, sudo, **kwargs)
+                root_cmd('service sshd restart', tty, sudo, **kwargs)
 
             # Minion configuration
             if minion_pem:
