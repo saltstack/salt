@@ -132,7 +132,7 @@ def save(filename):
     return out
 
 
-def append(table='filter', chain, rule=None):
+def append(table='filter', chain=None, rule=None):
     '''
     Append a rule to the specified table/chain.
 
