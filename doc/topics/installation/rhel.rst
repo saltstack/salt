@@ -33,11 +33,13 @@ Stable Release
 Salt is packaged separately for the minion and the master. It is necessary only to install the appropriate package for the role the machine will play. Typically, there will be one master and multiple minions.
 
 On the salt-master, run this:
+
 .. code-block:: bash
 
     yum install salt-master
 
 On each salt-minion, run this:
+
 .. code-block:: bash
 
     yum install salt-minion
