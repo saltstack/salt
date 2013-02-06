@@ -4,3 +4,4 @@ PyYAML
 apache-libcloud
 paramiko
 botocore
+sshpass
