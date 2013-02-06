@@ -14,7 +14,7 @@ Using homebrew:
     brew install swig
     brew install zmq
 
-Using macports, you may need to install zmq and swig this way:
+Using macports, zmq and swig may need to be installed this way:
 
 .. code-block:: bash
 
@@ -24,13 +24,13 @@ Using macports, you may need to install zmq and swig this way:
     sudo port install py27-msgpack
     sudo port install python-swig
 
-Now if you are using the OSX system python, you'll need to pip install using 'sudo':
+For installs using the OSX system python, pip install needs to use 'sudo':
 
 .. code-block:: bash
 
     sudo pip install salt
 
-If you have `python installed via homebrew`_, you shouldn't need sudo:
+For installs using `python installed via homebrew`_, sudo should be unnecessary:
 
 .. code-block:: bash
 
@@ -41,13 +41,19 @@ If you have `python installed via homebrew`_, you shouldn't need sudo:
 Salt-Master Customizations
 --------------------------
 
-If you want to run salt-master on OSX, you need to change the maxfiles limit for the root user:
+To run salt-master on OSX, the root user maxfiles limit must be increased:
 
 .. code-block:: bash
 
-    sudo launchctl limit maxfiles 100000
+    sudo launchctl limit maxfiles 10000
 
-Now you should be able to run the salt-master without errors:
+And add this configuration option to the /etc/salt/master file:
+
+.. code-block:: bash
+
+    max_open_files: 10000
+
+Now the salt-master should run without errors:
 
 .. code-block:: bash
 
