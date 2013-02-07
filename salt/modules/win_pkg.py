@@ -438,7 +438,7 @@ def _get_package_info(name):
                 repodata = msgpack.loads(repofile.read()) or {}
             except:
                 return 'Windows package repo not available'
-    except IOError as exc:
+    except IOError:
         log.debug('Not able to read repo file')
         return 'Windows package repo not available'
     if not repodata:
