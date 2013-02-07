@@ -20,6 +20,7 @@ import getpass
 import resource
 import subprocess
 import multiprocessing
+import sys
 
 # Import third party libs
 import zmq
