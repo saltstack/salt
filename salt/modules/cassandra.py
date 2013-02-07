@@ -15,6 +15,9 @@ Cassandra NoSQL Database Module
 import logging
 log = logging.getLogger(__name__)
 
+# Import salt libs
+import salt.utils
+
 HAS_PYCASSA = False
 try:
     from pycassa.system_manager import SystemManager
