@@ -317,7 +317,6 @@ def group_install(name=None,
     if include:
         include = yaml.safe_load(include)
 
-    ret = {}
     pkgs = []
     for group in pkg_groups:
         group_detail = group_info(group)
