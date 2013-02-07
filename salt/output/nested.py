@@ -40,7 +40,7 @@ class NestDisplay(object):
                         self.colors['ENDC'])
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
-                if isinstance(ind, list) or isinstance(ind, tuple):
+                if isinstance(ind, (list, tuple)):
                     out += '{0}{1}|_{2}\n'.format(
                             self.colors['GREEN'],
                             ' ' * indent,
