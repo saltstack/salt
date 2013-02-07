@@ -853,7 +853,7 @@ def mod_repo(repo, refresh=False, **kwargs):
             else:
                 kwargs['comps'] = list(full_comp_list)
 
-            if 'architecturess' in kwargs:
+            if 'architectures' in kwargs:
                 kwargs['architectures'] = kwargs['architectures'].split(',')
 
             if 'disabled' in kwargs:
