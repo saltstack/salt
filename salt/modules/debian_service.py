@@ -156,6 +156,9 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
     '''
     cmd = 'update-rc.d {0} enable'.format(name)
+    osmajor = __grains__['osrelease'].split('.')[0]
+    if int(osmajor) >= 6:
+        cmd = 'insserv {0} && '.format(name) + cmd
     return not __salt__['cmd.retcode'](cmd)
 
 
