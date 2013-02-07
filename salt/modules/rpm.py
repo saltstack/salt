@@ -5,6 +5,8 @@ Support for rpm
 # Import python libs
 import logging
 
+# Import Salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
