@@ -637,7 +637,7 @@ def get_repo(repo):
     if repos:
         try:
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
-        except SyntaxError, e:
+        except SyntaxError:
             error_str = 'Error: repo "{0}" is not a well formatted definition'
             raise Exception(error_str.format(repo))
 
@@ -737,7 +737,7 @@ def del_repo(repo, refresh=False):
                                'removed.\n')
                         try:
                             os.remove(repo_file)
-                        except OSError, e:
+                        except OSError:
                             pass
                 ret += msg.format(repo, repo_file)
             if refresh or str(refresh).lower() == 'true':
@@ -780,7 +780,6 @@ def mod_repo(repo, refresh=False, **kwargs):
         if not ppa_format_support:
             error_str = 'cannot parse "ppa:" style repo definitions: {0}'
             raise Exception(error_str.format(repo))
-        ppa = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
         cmd = 'apt-add-repository -y {0}'.format(repo)
         out = __salt__['cmd.run_stdout'](cmd)
         if refresh is True or str(refresh).lower() == 'true':
@@ -865,7 +864,6 @@ def mod_repo(repo, refresh=False, **kwargs):
                     kwargs['disabled'] = False
 
             kw_type = kwargs.get('type')
-            kw_uri = kwargs.get('uri')
             kw_dist = kwargs.get('dist')
 
             for source in repos:
