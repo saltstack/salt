@@ -21,6 +21,7 @@ GRAINMAP = {
            'CloudLinux': '/etc/init.d',
            'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
+           'OEL': '/etc/init.d',
           }
 
 def __virtual__():
@@ -40,6 +41,7 @@ def __virtual__():
                'Debian',
                'Arch',
                'ALT',
+               'OEL',
               ]
     if __grains__['os'] in disable:
         return False
