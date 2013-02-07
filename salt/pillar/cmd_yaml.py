@@ -17,7 +17,6 @@ def ext_pillar(pillar, command):
     '''
     Execute a command and read the output as YAML
     '''
-    print 'running cmd_yaml'
     try:
         return yaml.safe_load(__salt__['cmd.run']('{0}'.format(command)))
     except Exception as exc:
