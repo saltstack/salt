@@ -8,7 +8,6 @@ import os
 import re
 import socket
 import logging
-import time
 import urlparse
 
 # import third party libs
@@ -24,7 +23,6 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.pillar
-from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
