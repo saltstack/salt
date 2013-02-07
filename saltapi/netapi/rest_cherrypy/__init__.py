@@ -2,7 +2,13 @@
 A hypermedia REST API for Salt using the CherryPy framework
 
 :depends:   - CherryPy Python module
-:configuration: The master config may contain the following options:
+:configuration: All authentication is done through Salt's :ref:`eauth
+    <acl-eauth>` system. Be sure that it is enabled and the user you are
+    authenticating as has permissions for all the functions you will be
+    running.
+
+    In addition to ``eauth`` the configuration for this module also resides in
+    the Salt master config file. All available options are detailed below.
 
     port
         Required
