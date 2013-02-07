@@ -19,7 +19,7 @@ def ext_pillar(pillar, command):
     '''
     try:
         return yaml.safe_load(__salt__['cmd.run']('{0}'.format(command)))
-    except Exception as exc:
+    except Exception:
         log.critical(
                 'YAML data from {0} failed to parse'.format(command)
                 )
