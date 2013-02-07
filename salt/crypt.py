@@ -27,13 +27,6 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-try:
-    import win32api
-    import win32con
-except ImportError:
-    pass
-
-
 def gen_keys(keydir, keyname, keysize):
     '''
     Generate a keypair for use with salt
