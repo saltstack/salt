@@ -11,6 +11,7 @@ import logging
 # that modules don't cause the build to fail
 from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
+import salt.master
 
 try:
     from salt.utils import parsers
