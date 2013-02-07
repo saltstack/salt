@@ -556,7 +556,8 @@ def _consolidate_repo_sources(sources):
     repos = filter(lambda s: not s.invalid, sources.list)
 
     for r in repos:
-        key = str((r.architectures, r.disabled, r.type, r.uri))
+        key = str((getattr(r, 'architectures', []),
+                   r.disabled, r.type, r.uri))
         if key in consolidated:
             combined = consolidated[key]
             combined_comps = set(r.comps).union(set(combined.comps))
@@ -602,7 +603,7 @@ def list_repos():
         repo['type'] = source.type
         repo['uri'] = source.uri
         repo['line'] = source.line
-        repo['architectures'] = source.architectures
+        repo['architectures'] = getattr(source, 'architectures', [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
 
@@ -914,7 +915,7 @@ def mod_repo(repo, refresh=False, **kwargs):
             if refresh is True or str(refresh).lower() == 'true':
                 refresh_db()
             return {repo: {
-                    'architectures': mod_source.architectures,
+                    'architectures': getattr(mod_source, 'architectures', []),
                     'comps': mod_source.comps,
                     'disabled': mod_source.disabled,
                     'file': mod_source.file,
