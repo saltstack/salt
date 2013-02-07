@@ -51,7 +51,7 @@ def install(name, link, path, priority):
 
     isinstalled = __salt__['alternatives.check_installed'](name, path)
     if not isinstalled:
-        install = __salt__['alternatives.install'](name, link, path, priority)
+        __salt__['alternatives.install'](name, link, path, priority)
         ret['comment'] = (
             'Setting alternative for {0} to {1} with priority {2}'
         ).format(name, path, priority)
