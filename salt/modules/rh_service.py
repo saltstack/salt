@@ -21,6 +21,7 @@ def __virtual__():
                'Amazon',
                'Fedora',
                'ALT',
+               'OEL',
               ]
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Fedora':
