@@ -1,5 +1,6 @@
 %if ! (0%{?rhel} >= 6 || 0%{?fedora} > 12)
 %global with_python26 1
+%global include_tests 0
 %define pybasever 2.6
 %define __python_ver 26
 %define __python %{_bindir}/python%{?pybasever}
@@ -9,8 +10,8 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.12.0
-Release: 2%{?dist}
+Version: 0.12.1
+Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -24,8 +25,6 @@ Source4: %{name}-master.service
 Source5: %{name}-syndic.service
 Source6: %{name}-minion.service
 Source7: README.fedora
-Patch0: 0003-Late-stage-jinja2-dependency.patch
-Patch1: 0004-Jinja2-no-longer-build-dep.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -44,7 +43,7 @@ BuildRequires: python26-devel
 BuildRequires: python26-PyYAML
 BuildRequires: python26-m2crypto
 BuildRequires: python26-msgpack
-BuildRequires: python26-unittest2
+BuildRequires: python26-jinja2
 
 Requires: python26-crypto
 Requires: python26-zmq
@@ -61,7 +60,11 @@ BuildRequires: python-devel
 BuildRequires: PyYAML
 BuildRequires: m2crypto
 BuildRequires: python-msgpack
+
+%if 0%{?include_tests}
 BuildRequires: python-unittest2
+%endif
+BuildRequires: python-jinja2
 
 Requires: python-crypto
 Requires: python-zmq
@@ -122,9 +125,6 @@ Salt minion is queried and controlled from the master.
 %prep
 %setup -q
 
-%patch0 -p1
-%patch1 -p1
-
 %build
 
 
@@ -150,8 +150,10 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
 install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
 
+%if 0%{?include_tests}
 %check
 %{__python} setup.py test
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -301,6 +303,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Sat Feb 02 2013 Clint Savage <herlo1@gmail.com> - 0.12.1-1
+- Remove patches and update to upstream patch release 0.12.1
+
 * Thu Jan 17 2013 Wendall Cada <wendallc@83864.com> - 0.12.0-2
 - Added unittest support
 
