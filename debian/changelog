@@ -1,3 +1,9 @@
+salt-cloud (0.8.4140-g6c27d50) unstable; urgency=low
+
+  * replace paramiko with sshpass
+
+ -- Sean Channel <pentabular@gmail.com>  Thu, 7 Feb 2013 13:01:23 -0800
+
 salt-cloud (0.8.4) unstable; urgency=low
 
   * require python-boto
