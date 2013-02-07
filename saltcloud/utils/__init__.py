@@ -245,9 +245,9 @@ def wait_for_passwd(host, port=22, timeout=15, username='root',
                 return True
             return False
         except Exception:
-            time.sleep(trysleep)
             if trycount >= maxtries:
                 return False
+            time.sleep(trysleep)
 
 
 def deploy_script(host, port=22, timeout=900, username='root',
@@ -448,21 +448,24 @@ def root_cmd(command, tty, sudo, **kwargs):
         command = 'sudo ' + command
         log.debug('Using sudo to run command')
 
-    log.debug('Executing command: {0}'.format(command))
-    cmd = 'ssh -oStrictHostKeyChecking=no -t {0}@{1} "{2}"'.format(
+    ssh_args = ' -oStrictHostKeyChecking=no'
+    ssh_args += ' -oUserKnownHostsFile=/dev/null'
+    if tty:
+        ssh_args += ' -t'
+    if 'key_filename' in kwargs:
+        ssh_args += ' -i {0}'.format(kwargs['key_filename'])
+
+    cmd = 'ssh {0} {1}@{2} "{3}"'.format(
+        ssh_args,
         kwargs['username'],
         kwargs['hostname'],
         command
     )
 
-    if 'key_filename' in kwargs:
-        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
-    elif 'password' in kwargs:
+    if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
-    if not tty:
-        cmd = cmd.replace(' -t', '')
-
+    log.debug('Executing command: {0}'.format(command))
     return subprocess.call(cmd, shell=True)
 
 
