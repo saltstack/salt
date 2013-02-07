@@ -120,7 +120,6 @@ import copy
 import json
 import shlex
 import logging
-import sys
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
