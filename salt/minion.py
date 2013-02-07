@@ -30,7 +30,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import (
     AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltSystemExit, SaltClientError
+    SaltInvocationError, SaltReqTimeoutError, SaltClientError
 )
 import salt.client
 import salt.crypt
