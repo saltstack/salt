@@ -31,7 +31,6 @@ set_file
             'ferm/enable': {'type': 'boolean', 'value': True}
 '''
 
-from salt._compat import string_types
 
 def __virtual__():
     '''
