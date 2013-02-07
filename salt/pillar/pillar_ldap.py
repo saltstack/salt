@@ -19,7 +19,6 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
     import ldap
-    import ldap.modlist
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
