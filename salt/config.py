@@ -142,6 +142,7 @@ DEFAULT_MASTER_OPTS = {
     'runner_dirs': [],
     'outputter_dirs': [],
     'client_acl': {},
+    'client_acl_blacklist': {},
     'external_auth': {},
     'token_expire': 43200,
     'file_buffer_size': 1048576,
