@@ -10,12 +10,12 @@ import logging
 import os
 import shutil
 import subprocess
-from functools import partial
+import functools
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
-from salt.grains.extra import shell as shell_grain
+import salt.grains.extra 
 
 # Only available on posix systems, nonfatal on windows
 try:
@@ -28,7 +28,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-DEFAULT_SHELL = shell_grain()['shell']
+DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
 
 def __virtual__():
@@ -208,7 +208,7 @@ def _run(cmd,
               'stderr': stderr}
 
     if runas:
-        kwargs['preexec_fn'] = partial(_chugid, runas)
+        kwargs['preexec_fn'] = functools.partial(_chugid, runas)
 
     if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
