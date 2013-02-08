@@ -196,6 +196,7 @@ def diff(cwd, targets=None, user=None, username=None, *opts):
     if targets:
         opts += tuple(shlex.split(targets))
     return _run_svn('diff', cwd, user, username, opts)
+    #def _run_svn(cmd, cwd, user, username, opts, **kwargs):
 
 
 def commit(cwd, targets=None, msg=None, user=None, username=None, *opts):
