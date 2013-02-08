@@ -114,7 +114,6 @@ class Swarm(object):
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
 
-        import sys
         minion_pkidir = os.path.join(dpath, 'pki')
         os.makedirs(minion_pkidir)
         minion_pem = os.path.join(self.pki, 'minion.pem')
