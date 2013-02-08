@@ -5,7 +5,6 @@ import shutil
 # Import salt libs
 import salt.utils
 import integration
-from saltunittest import skipIf
 
 
 class StateModuleTest(integration.ModuleCase,
