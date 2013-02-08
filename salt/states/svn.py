@@ -17,7 +17,7 @@ import os
 
 # Import salt libs
 from salt import exceptions
-from salt.states.git import _fail
+from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +79,19 @@ def latest(name,
                      'The path "{0}" exists and is not '
                      'a directory.'.format(target)
                      )
-
+    if __opts__['test']:
+        if not os.path.exists(target):
+            return _neutral_test(
+                    ret,
+                    ('{0} doesn\'t exist and is set to be checked out.').format(target))
+        svn_cmd = 'svn.diff' 
+        opts += ('-r',  'HEAD')
+        out = __salt__[svn_cmd](cwd, target, user, username, *opts)
+        return _neutral_test(
+                ret,
+                ('{0}').format(out))
     try:
-        __salt__['svn.info']('.', target, user=user)
+        __salt__['svn.info'](cwd, target, user=user)
         svn_cmd = 'svn.update'
     except exceptions.CommandExecutionError:
         pass
