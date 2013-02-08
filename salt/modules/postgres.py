@@ -20,7 +20,7 @@ import pipes
 import logging
 
 # Import salt libs
-from salt.utils import check_or_die
+import salt.utils
 from salt.exceptions import CommandNotFoundError
 
 log = logging.getLogger(__name__)
@@ -30,11 +30,9 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    try:
-        check_or_die('psql')
+    if salt.utils.which('psql'):
         return 'postgres'
-    except CommandNotFoundError:
-        return False
+    return False
 
 
 def version():
