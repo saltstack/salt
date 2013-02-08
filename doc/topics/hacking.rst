@@ -175,7 +175,7 @@ Install Salt (and dependencies) into the virtualenv::
 .. note:: Installing dependencies on OS X.
 
     You can install needed dependencies on OS X using homebrew or macports.
-    See :doc:`OS X Installation </topics/installation/osx`
+    See :doc:`OS X Installation </topics/installation/osx>`
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -263,7 +263,7 @@ and 103 characters on BSD-based systems.
         # use 'limit descriptors 2047' for c-shell
         ulimit -n 2047
 
-    To set file descriptors on OSX, refer to the :doc:`OS X Installation </topics/installation/osx` instructions.
+    To set file descriptors on OSX, refer to the :doc:`OS X Installation </topics/installation/osx>` instructions.
 
 Running the tests
 ~~~~~~~~~~~~~~~~~
