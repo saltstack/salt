@@ -80,6 +80,10 @@ def latest(name,
                      'a directory.'.format(target)
                      )
     if __opts__['test']:
+        if not os.path.exists(target):
+            return _neutral_test(
+                    ret,
+                    ('{0} doesn\'t exist and is set to be checked out.').format(target))
         svn_cmd = 'svn.diff' 
         opts += ('-r',  'HEAD')
         out = __salt__[svn_cmd](cwd, target, user, username, *opts)
