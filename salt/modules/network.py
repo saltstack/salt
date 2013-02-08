@@ -7,7 +7,7 @@ import re
 import logging
 
 # Import salt libs
-from salt.utils.socket_util import sanitize_host
+import salt.utils.socket_util
 
 
 log = logging.getLogger(__name__)
@@ -383,7 +383,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -c 4 {0}'.format(sanitize_host(host))
+    cmd = 'ping -c 4 {0}'.format(salt.utils.socket_util.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -436,7 +436,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'traceroute {0}'.format(sanitize_host(host))
+    cmd = 'traceroute {0}'.format(salt.utils.socket_util.sanitize_host(host))
     out = __salt__['cmd.run'](cmd)
 
     for line in out:
@@ -467,5 +467,5 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig {0}'.format(sanitize_host(host))
+    cmd = 'dig {0}'.format(salt.utils.socket_util.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
