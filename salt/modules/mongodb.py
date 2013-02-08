@@ -5,7 +5,7 @@ Module to provide MongoDB functionality to Salt
     parameters as well as configuration settings::
 
         mongodb.host: 'localhost'
-        mongodb.port: '27017'
+        mongodb.port: 27017
         mongodb.user: ''
         mongodb.password: ''
 
