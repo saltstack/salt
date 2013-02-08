@@ -279,7 +279,12 @@ or after a state in the including sls file.
 
 '''
 
+# Import python libs
 import imp
+
+# Import Salt libs
+import salt.utils.pydsl
+
 
 __all__ = ['render']
 
@@ -294,7 +299,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod
 
-    dsl_sls = __salt__['pydsl.sls'](sls, mod, rendered_sls)
+    dsl_sls = salt.utils.pydsl.sls(sls, mod, rendered_sls)
     mod.__dict__.update(
         __pydsl__=dsl_sls,
         include=_wrap_sls(dsl_sls.include),
