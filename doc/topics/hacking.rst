@@ -29,7 +29,7 @@ To generate a pull request, either for preliminary review,
 or for consideration of merging into the project, first push the local
 feature branch back up to GitHub::
 
-    git push origin fixed-broken-thing
+    git push --set-upstream origin fixed-broken-thing
     
 When looking at the fork on GitHub, this new branch will now be listed under
 the "Source" tab where it says "Switch Branches".  Select the feature branch 
