@@ -119,6 +119,13 @@ def status(name=None, user=None):
     return all_process
 
 def status_raw(name=None, user=None):
+    '''
+    Display the raw output of status
+
+    CLI Example::
+
+        salt '*' supervisord.status_raw
+    '''
     ret = __salt__['cmd.run_all'](_ctl_cmd('status', name), runas=user)
     return _get_return(ret)
 
