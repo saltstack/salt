@@ -88,6 +88,10 @@ def info(cwd, targets=None, user=None, username=None, fmt='str'):
     fmt : str
         How to fmt the output from info.
         (str, xml, list, dict)
+
+    CLI Example::
+
+        salt '*' svn.info /path/to/svn/repo
     '''
     opts = list()
     if fmt == 'xml':
@@ -129,6 +133,10 @@ def checkout(cwd, remote, target=None, user=None, username=None, *opts):
 
     username : None
         Connect to the Subversion server as another user
+
+    CLI Example::
+
+        salt '*' svn.checkout /path/to/repo svn://remote/repo
     '''
     opts += (remote,)
     if target:
@@ -153,6 +161,10 @@ def update(cwd, targets=None, user=None, *opts):
 
     username : None
         Connect to the Subversion server as another user
+
+    CLI Example::
+
+        salt '*' svn.update /path/to/repo
     '''
     if targets:
         opts += tuple(shlex.split(targets))
@@ -179,6 +191,10 @@ def commit(cwd, targets=None, msg=None, user=None, username=None, *opts):
 
     username : None
         Connect to the Subversion server as another user
+
+    CLI Example::
+
+        salt '*' svn.commit /path/to/repo
     '''
     if msg:
         opts += ('-m', msg)
@@ -199,6 +215,10 @@ def add(cwd, targets, user=None, *opts):
 
     user : None
         Run svn as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' svn.add /path/to/repo /path/to/new/file
     '''
     if targets:
         opts += tuple(shlex.split(targets))
@@ -223,6 +243,10 @@ def remove(cwd, targets, msg=None, user=None, username=None, *opts):
 
     username : None
         Connect to the Subversion server as another user
+
+    CLI Example::
+
+        salt '*' svn.remove /path/to/repo /path/to/repo/remove
     '''
     if msg:
         opts += ('-m', msg)
@@ -248,6 +272,10 @@ def status(cwd, targets=None, user=None, username=None, *opts):
 
     username : None
         Connect to the Subversion server as another user
+
+    CLI Example::
+
+        salt '*' svn.status /path/to/repo
     '''
     if targets:
         opts += tuple(shlex.split(targets))
