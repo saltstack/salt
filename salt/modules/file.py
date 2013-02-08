@@ -302,6 +302,10 @@ def get_hash(path, form='md5', chunk_size=4096):
         - It does not return a string on error. The returned value of
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
+
+    CLI Example::
+
+        salt '*' file.get_hash /etc/shadow
     '''
     try:
         hash_type = getattr(hashlib, form)
@@ -328,6 +332,10 @@ def check_hash(path, hash):
     hash
         A string in the form <hash_type>=<hash_value>. For example:
         ``md5=e138491e9d5b97023cea823fe17bac22``
+
+    CLI Example::
+
+        salt '*' file.check_hash /etc/fstab md5=<md5sum>
     '''
     hash_parts = hash.split('=', 1)
     if len(hash_parts) != 2:
@@ -649,7 +657,7 @@ def contains_regex(path, regex, lchar=''):
 
     CLI Example::
 
-        salt '*' /etc/crontab '^maint'
+        salt '*' file.contains_regex /etc/crontab '^maint'
     '''
     if not os.path.exists(path):
         return False
@@ -672,7 +680,7 @@ def contains_glob(path, glob):
 
     CLI Example::
 
-        salt '*' /etc/foobar '*cheese*'
+        salt '*' file.contains_glob /etc/foobar '*cheese*'
     '''
     if not os.path.exists(path):
         return False
@@ -797,6 +805,11 @@ def stats(path, hash_type='md5', follow_symlink=False):
 
 
 def remove(path):
+    '''
+    Remove the named file
+
+    salt '*' file.remove /tmp/foo
+    '''
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
@@ -842,7 +855,7 @@ def restorecon(path, recursive=False):
 
     CLI Example::
 
-         salt '*' selinux.restorecon /home/user/.ssh/authorized_keys
+         salt '*' file.restorecon /home/user/.ssh/authorized_keys
     '''
     if recursive:
         cmd = 'restorecon -FR {0}'.format(path)
@@ -857,7 +870,7 @@ def get_selinux_context(path):
 
     CLI Example::
 
-        salt '*' selinux.get_context /etc/hosts
+        salt '*' file.get_selinux_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
     return out.split(' ')[4]
@@ -869,7 +882,7 @@ def set_selinux_context(path, user=None, role=None, type=None, range=None):
 
     CLI Example::
 
-        salt '*' selinux.chcon path <role> <type> <range>
+        salt '*' file.set_selinux_context path <role> <type> <range>
     '''
     if not user and not role and not type and not range:
         return False
@@ -895,6 +908,9 @@ def set_selinux_context(path, user=None, role=None, type=None, range=None):
 def source_list(source, source_hash, env):
     '''
     Check the source list and return the source to use
+
+    CLI Example::
+        salt '*' file.source_list salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' base
     '''
     if isinstance(source, list):
         # get the master file list
@@ -942,6 +958,10 @@ def get_managed(
         **kwargs):
     '''
     Return the managed file data for file.managed
+
+    CLI Example::
+
+        salt '*' file.get_managed /etc/httpd/conf.d/httpd.conf jinja salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base None None
     '''
     # If the file is a template and the contents is managed
     # then make sure to copy it down and templatize  things.
@@ -1044,6 +1064,10 @@ def check_perms(name, ret, user, group, mode):
           specify mode 0777, for example, it must be specified as the string,
           '0777' otherwise, 0777 will be parsed as an octal and you'd get 511
           instead.
+
+    CLI Example::
+
+        salt '*' file.check_perms /etc/sudoers '{}' root root 400
     '''
     if not ret:
         ret = {'name': name,
@@ -1127,6 +1151,10 @@ def check_managed(
         **kwargs):
     '''
     Check to see what changes need to be made for a file
+
+    CLI Example::
+    
+        salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
@@ -1169,7 +1197,11 @@ def check_file_meta(
         mode,
         env):
     '''
-    Check for the changes in the file metadata
+    Check for the changes in the file metadata.
+
+    CLI Example::
+
+        salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
     '''
     changes = {}
     stats = __salt__['file.stats'](
@@ -1211,7 +1243,7 @@ def get_diff(
     '''
     Return unified diff of file compared to file on master
 
-    Example:
+    CLI Example::
 
         salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
@@ -1250,6 +1282,10 @@ def manage_file(name,
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
+
+    CLI Example::
+
+        salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
     '''
     if not ret:
         ret = {'name': name,
@@ -1401,6 +1437,10 @@ def manage_file(name,
 def makedirs(path, user=None, group=None, mode=None):
     '''
     Ensure that the directory containing this path is available.
+
+    CLI Example::
+
+        salt '*' file.makedirs /opt/code
     '''
     directory = os.path.dirname(path)
 
@@ -1421,6 +1461,10 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
     '''
     Taken and modified from os.makedirs to set user, group and mode for each
     directory created.
+
+    CLI Example::
+
+        salt '*' file.makedirs_perms /opt/code
     '''
     path = os.path
     mkdir = os.mkdir
