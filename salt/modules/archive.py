@@ -67,7 +67,7 @@ def gunzip(gzipfile, template=None):
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    CLI Example::
 
         salt '*' archive.gunzip template=jinja /tmp/{{grains.id}}.txt.gz
 
