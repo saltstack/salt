@@ -30,6 +30,10 @@ def command(settings_module,
             *args, **kwargs):
     '''
     Run arbitrary django management command
+    
+    CLI Example::
+
+        salt '*' django.command <settings_module> <command>
     '''
     dja = _get_django_admin(bin_env)
     cmd = '{0} {1} --settings={2}'.format(dja, command, settings_module)
