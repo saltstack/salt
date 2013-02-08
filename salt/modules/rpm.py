@@ -1,19 +1,12 @@
 '''
 Support for rpm
-
-:depends:   - rpmUtils Python module
 '''
 
 # Import python libs
-import os
 import logging
 
-# Import third party libs
-try:
-    from rpmUtils.arch import getBaseArch
-    HAS_RPMDEPS = True
-except (ImportError, AttributeError):
-    HAS_RPMDEPS = False
+# Import Salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +15,7 @@ def __virtual__():
     '''
     Confine this module to rpm based systems
     '''
-    if not HAS_RPMDEPS:
+    if not salt.utils.which('rpm'):
         return False
 
     # Work only on RHEL/Fedora based distros with python 2.6 or greater
@@ -56,7 +49,6 @@ def list_pkgs(*packages):
         salt '*' lowpkg.list_pkgs
     '''
     errors = []
-    ret = {}
     pkgs = {}
     if not packages:
         cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"

@@ -161,12 +161,12 @@ def managed(name, **kwargs):
             ret['changes'] = { 'repo': name }
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0}'.format(name)
-        return ret
-    except:
-        pass
-    ret['result'] = False
-    ret['comment'] = 'Failed to configure repo {0}'.format(name)
+    except Exception, e:
+        ret['result'] = False
+        ret['comment'] = 'Failed to confirm config of repo {0}: {1}'.format(
+            name, str(e))
     return ret
+
 
 def absent(name):
     '''

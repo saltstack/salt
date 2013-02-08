@@ -3,12 +3,8 @@ Support for DEB packages
 '''
 
 # Import python libs
-import os
-import re
 import logging
 
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 

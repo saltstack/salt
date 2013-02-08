@@ -136,7 +136,7 @@ class SaltEvent(object):
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
                 # Double check the tag
-                if tag != raw[:20].rstrip('|'):
+                if not raw[:20].rstrip('|').startswith(tag):
                     continue
                 data = self.serial.loads(raw[20:])
                 if full:
@@ -292,7 +292,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
     def __init__(self, opts):
         multiprocessing.Process.__init__(self)
         salt.state.Compiler.__init__(self, opts)
-        self.event = SaltEvent('master', self.opts['sock_dir'])
         self.wrap = ReactWrap(self.opts)
 
     def render_reaction(self, glob_ref, tag, data):
@@ -356,6 +355,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
+        self.event = SaltEvent('master', self.opts['sock_dir'])
         for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
             if not reactors:

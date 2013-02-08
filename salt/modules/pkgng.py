@@ -268,6 +268,7 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
     '''
 
     opts = ''
+    repo_opts = ''
     if orphan:
         opts += 'A'
     if force:
@@ -798,6 +799,7 @@ def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
     '''
 
     opts = ''
+    repo_opts = ''
     if all:
         opts += 'a'
     if quiet:

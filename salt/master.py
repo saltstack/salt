@@ -20,6 +20,7 @@ import getpass
 import resource
 import subprocess
 import multiprocessing
+import sys
 
 # Import third party libs
 import zmq
@@ -314,6 +315,8 @@ class Master(SMaster):
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
             clean_proc(reqserv.eventpublisher)
+            if hasattr(reqserv, 'reactor'):
+                clean_proc(reqserv.reactor)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
@@ -1557,6 +1560,31 @@ class ClearFuncs(object):
         by the LocalClient.
         '''
         extra = clear_load.get('kwargs', {})
+
+        # check blacklist/whitelist
+        good = True
+        # Check if the user is blacklisted
+        for user_re in self.opts['client_acl_blacklist'].get('users', []):
+            if re.match(user_re, clear_load['user']):
+                good = False
+                break
+
+        # check if the cmd is blacklisted
+        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
+            if re.match(module_re, clear_load['fun']):
+                good = False
+                break
+
+        if good is False:
+            err = ('{user} does not have permissions to run {function}. '
+                     'Please contact your local administrator if you believe '
+                     'this is in error.\n'.format(user=clear_load['user'],
+                                                  function=clear_load['fun']))
+            log.error(err)
+            return ''
+        # to make sure we dont' step on anyone else's toes
+        del(good)
+
         # Check for external auth calls
         if extra.get('token', False):
             # A token was passwd, check it

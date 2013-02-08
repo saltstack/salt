@@ -14,10 +14,6 @@ def __virtual__():
     '''
     Only work on posix-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
-    disable = [
-        'Windows',
-        ]
     if not salt.utils.which('showmount'):
         return False
     return 'nfs3'

@@ -556,7 +556,8 @@ def _consolidate_repo_sources(sources):
     repos = filter(lambda s: not s.invalid, sources.list)
 
     for r in repos:
-        key = str((r.architectures, r.disabled, r.type, r.uri))
+        key = str((getattr(r, 'architectures', []),
+                   r.disabled, r.type, r.uri))
         if key in consolidated:
             combined = consolidated[key]
             combined_comps = set(r.comps).union(set(combined.comps))
@@ -602,7 +603,7 @@ def list_repos():
         repo['type'] = source.type
         repo['uri'] = source.uri
         repo['line'] = source.line
-        repo['architectures'] = source.architectures
+        repo['architectures'] = getattr(source, 'architectures', [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
 
@@ -636,7 +637,7 @@ def get_repo(repo):
     if repos:
         try:
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
-        except SyntaxError, e:
+        except SyntaxError:
             error_str = 'Error: repo "{0}" is not a well formatted definition'
             raise Exception(error_str.format(repo))
 
@@ -736,7 +737,7 @@ def del_repo(repo, refresh=False):
                                'removed.\n')
                         try:
                             os.remove(repo_file)
-                        except OSError, e:
+                        except OSError:
                             pass
                 ret += msg.format(repo, repo_file)
             if refresh or str(refresh).lower() == 'true':
@@ -779,7 +780,6 @@ def mod_repo(repo, refresh=False, **kwargs):
         if not ppa_format_support:
             error_str = 'cannot parse "ppa:" style repo definitions: {0}'
             raise Exception(error_str.format(repo))
-        ppa = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
         cmd = 'apt-add-repository -y {0}'.format(repo)
         out = __salt__['cmd.run_stdout'](cmd)
         if refresh is True or str(refresh).lower() == 'true':
@@ -853,7 +853,7 @@ def mod_repo(repo, refresh=False, **kwargs):
             else:
                 kwargs['comps'] = list(full_comp_list)
 
-            if 'architecturess' in kwargs:
+            if 'architectures' in kwargs:
                 kwargs['architectures'] = kwargs['architectures'].split(',')
 
             if 'disabled' in kwargs:
@@ -864,7 +864,6 @@ def mod_repo(repo, refresh=False, **kwargs):
                     kwargs['disabled'] = False
 
             kw_type = kwargs.get('type')
-            kw_uri = kwargs.get('uri')
             kw_dist = kwargs.get('dist')
 
             for source in repos:
@@ -914,7 +913,7 @@ def mod_repo(repo, refresh=False, **kwargs):
             if refresh is True or str(refresh).lower() == 'true':
                 refresh_db()
             return {repo: {
-                    'architectures': mod_source.architectures,
+                    'architectures': getattr(mod_source, 'architectures', []),
                     'comps': mod_source.comps,
                     'disabled': mod_source.disabled,
                     'file': mod_source.file,

@@ -121,12 +121,9 @@ def verify_files(files, user):
         if os.environ['os'].startswith('Windows'):
             return True
     import pwd  # after confirming not running Windows
-    import grp
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
-        gid = pwnam[3]
-        groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
 
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '

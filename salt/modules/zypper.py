@@ -56,7 +56,7 @@ def list_upgrades(refresh=True):
         try:
             status, repo, name, cur, avail, arch = \
                 [x.strip() for x in line.split('|')]
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             continue
         if status == 'v':
             ret[name] = avail

@@ -10,11 +10,7 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
-# Import python libs
-import logging
-
 # Import salt libs
-from salt import log as saltlog
 from saltunittest import (
     TestCase, TestLoader, TextTestRunner, TestsLoggingHandler
 )
