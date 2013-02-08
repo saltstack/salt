@@ -44,6 +44,10 @@ DEFAULTS = {'mongo.db': 'salt',
 def backup_mode(backup=''):
     '''
     Return the backup mode
+
+    CLI Example::
+
+        salt '*' config.backup_mode
     '''
     if backup:
         return backup
@@ -53,6 +57,10 @@ def backup_mode(backup=''):
 def manage_mode(mode):
     '''
     Return a mode value, normalized to a string
+
+    CLI Example::
+
+        salt '*' config.manage_mode
     '''
     if mode:
         mode = str(mode).lstrip('0')
@@ -67,6 +75,10 @@ def valid_fileproto(uri):
     '''
     Returns a boolean value based on whether or not the URI passed has a valid
     remote file protocol designation
+
+    CLI Example::
+
+        salt '*' config.valid_fileproto salt://path/to/file
     '''
     try:
         return bool(re.match('^(?:salt|https?|ftp)://', uri))
@@ -82,6 +94,10 @@ def option(
         omit_pillar=False):
     '''
     Pass in a generic option and receive the value that will be assigned
+
+    CLI Example::
+
+        salt '*' config.option redis.host
     '''
     if not omit_opts:
         if value in __opts__:
@@ -101,6 +117,10 @@ def dot_vals(value):
     '''
     Pass in a configuration value that should be preceded by the module name
     and a dot, this will return a list of all read key/value pairs
+
+    CLI Example::
+
+        salt '*' config.dot_vals host
     '''
     ret = {}
     for key, val in __pillar__.get('master', {}).items():
