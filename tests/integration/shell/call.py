@@ -14,9 +14,6 @@ import sys
 import yaml
 from datetime import datetime
 
-# Import salt libs
-from salt import version
-
 # Import salt test libs
 import integration
 from saltunittest import (
