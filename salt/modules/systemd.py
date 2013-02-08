@@ -134,6 +134,10 @@ def available(name):
     '''
     Check that the given service is available taking into account
     template units.
+
+    CLI Example::
+
+        salt '*' service.available sshd
     '''
     return _canonical_template_unit_name(name) in get_all()
 
