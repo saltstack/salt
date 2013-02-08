@@ -65,7 +65,7 @@ class PipModuleTest(integration.ModuleCase):
         # Create the testing virtualenv
         self.run_function('virtualenv.create', [self.venv_dir])
         ret = self.run_function(
-                'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
+            'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
         )
         self.assertEqual(ret['retcode'], 0)
         self.assertIn('installed pep8', ret['stdout'])
