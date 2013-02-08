@@ -47,7 +47,7 @@ def gzip(sourcefile, template=None):
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
-    For example::
+    CLI Example::
 
         salt '*' archive.gzip template=jinja /tmp/{{grains.id}}.txt
 
