@@ -55,6 +55,9 @@ def managed(name, **kwargs):
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
 
+    Additional configuration values, such as gpgkey or gpgcheck, are used
+    verbatim to update the options for the yum repo in question.
+
 
     For apt-based systems, take note of the following configuration values:
 
