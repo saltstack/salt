@@ -103,6 +103,10 @@ def pack_pkgs(pkgs):
 
     Example: '["foo", {"bar": 1.2}, "baz"]' would become
              {'foo': None, 'bar': 1.2, 'baz': None}
+
+    CLI Example::
+
+        salt '*' pkg_resource.pack_pkgs '["foo", {"bar": 1.2}, "baz"]'
     '''
     if isinstance(pkgs, basestring):
         try:
@@ -138,6 +142,10 @@ def pack_sources(sources):
 
     Example: '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]' would
     become {"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}
+
+    CLI Example::
+
+        salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
     if isinstance(sources, basestring):
         try:
@@ -187,6 +195,10 @@ def check_desired(desired=None):
     '''
     Examines desired package names to make sure they were formatted properly.
     Returns a list of problems encountered.
+
+    CLI Examples::
+
+        salt '*' pkg_resource.check_desired
     '''
     problems = []
 
@@ -214,6 +226,10 @@ def parse_targets(name=None, pkgs=None, sources=None):
     Parses the input to pkg.install and returns back the package(s) to be
     installed. Returns a list of packages, as well as a string noting whether
     the packages are to come from a repository or a binary package.
+
+    CLI Example::
+
+        salt '*' pkg_resource.parse_targets
     '''
 
     # For Solaris, there is no repository, and only the "sources" param can be
@@ -292,6 +308,10 @@ def parse_targets(name=None, pkgs=None, sources=None):
 def add_pkg(pkgs, name, version):
     '''
     Add a package to a dict of installed packages.
+
+    CLI Example::
+
+        salt '*' pkg_resource.add_pkg '{}' bind 9
     '''
 
     ''' multiple-version support (not yet implemented)
@@ -311,6 +331,10 @@ def sort_pkglist(pkgs):
     Accepts a dict obtained from pkg.list_pkgs() and sorts in place the list of
     versions for any packages that have multiple versions installed, so that
     two package lists can be compared to one another.
+
+    CLI Example::
+
+        salt '*' pkg_resource.sort_pkglist '["3.45", "2.13"]'
     '''
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
@@ -323,6 +347,10 @@ def find_changes(old=None, new=None):
     '''
     Compare before and after results from pkg.list_pkgs() to determine what
     changes were made to the packages installed on the minion.
+
+    CLI Example::
+
+        salt '*' pkg_resource.find_changes
     '''
     pkgs = {}
     for npkg in set((new or {}).keys()).union((old or {}).keys()):
@@ -348,6 +376,10 @@ def perform_cmp(pkg1='', pkg2=''):
     built into them.  Return -1 if version1 < version2, 0 if version1 ==
     version2, and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg_resource.perform_cmp
     '''
     try:
         if distutils.version.LooseVersion(pkg1) < \
@@ -367,6 +399,10 @@ def perform_cmp(pkg1='', pkg2=''):
 def compare(pkg1='', oper='==', pkg2=''):
     '''
     Package version comparison function.
+
+    CLI Example::
+
+        salt '*' pkg_resource.compare
     '''
     cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
                '>=': (0, 1), '>': (1,)}
