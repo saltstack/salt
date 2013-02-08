@@ -35,6 +35,10 @@ def _rvm_do(ruby, command, runas=None):
 def is_installed():
     '''
     Check if RVM is installed.
+    
+    CLI Example::
+
+        salt '*' rvm.is_installed
     '''
     return __salt__['cmd.has_exec']('/usr/local/rvm/bin/rvm')
 
@@ -42,6 +46,10 @@ def is_installed():
 def install():
     '''
     Install RVM system wide.
+
+    CLI Example::
+
+        salt '*' rvm.install
     '''
     # RVM dependencies on Ubuntu 10.04:
     #   bash coreutils gzip bzip2 gawk sed curl git-core subversion
@@ -59,6 +67,10 @@ def install_ruby(ruby, runas=None):
         The version of ruby to install.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.install_ruby 1.9.3-p385
     '''
     # MRI/RBX/REE dependencies for Ubuntu 10.04:
     #   build-essential openssl libreadline6 libreadline6-dev curl
@@ -76,6 +88,10 @@ def reinstall_ruby(ruby, runas=None):
         The version of ruby to reinstall.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.reinstall_ruby 1.9.3-p385
     '''
     return _rvm('reinstall', ruby, runas=runas)
 
@@ -86,6 +102,10 @@ def list(runas=None):
 
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.list
     '''
     rubies = []
 
@@ -106,6 +126,10 @@ def set_default(ruby, runas=None):
         The version of ruby to make the default.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.set_default 2.0.0
     '''
     return _rvm('alias', 'create default {ruby}'.format(ruby=ruby), runas=runas)
 
@@ -118,6 +142,10 @@ def get(version='stable', runas=None):
         Which version of RVM to install, e.g. stable or head.
     ruby
         The version of ruby to reinstall.
+
+    CLI Example::
+
+        salt '*' rvm.get
     '''
     return _rvm('get', version, runas=runas)
 
@@ -134,6 +162,10 @@ def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
         The user to run rvm as.
     binaries : None
         The names of the binaries to create wrappers for. When nothing is given, wrappers for ruby, gem, rake, irb, rdoc, ri and testrb are generated.
+
+    CLI Example::
+    
+        salt '*' rvm.wrapper <ruby_string> <wrapper_prefix>
     '''
     return _rvm('wrapper', '{ruby_string} {wrapper_prefix} {binaries}'.
                 format(ruby_string=ruby_string,
@@ -151,6 +183,10 @@ def rubygems(ruby, version, runas=None):
         The version of rubygems to install or 'remove' to use the version that ships with 1.9
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.rubygems 2.0.0 1.8.24
     '''
     return _rvm_do(ruby, 'rubygems', version, runas=runas)
 
@@ -165,6 +201,10 @@ def gemset_create(ruby, gemset, runas=None):
         The name of the gemset to create.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_create 2.0.0 foobar
     '''
     return _rvm_do(ruby, 'rvm gemset create {gemset}'.format(gemset=gemset), runas=runas)
 
@@ -177,6 +217,10 @@ def gemset_list(ruby='default', runas=None):
         The ruby version to list the gemsets for
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_list
     '''
     gemsets = []
     for line in _rvm_do(ruby, 'rvm gemset list', runas=runas).splitlines():
@@ -196,6 +240,10 @@ def gemset_delete(ruby, gemset, runas=None):
         The gemset to delete.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_delete 2.0.0 foobar
     '''
     return _rvm_do(ruby, 'rvm --force gemset delete {gemset}'.format(gemset=gemset), runas=runas)
 
@@ -210,6 +258,10 @@ def gemset_empty(ruby, gemset, runas=None):
         The gemset to empty.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_empty 2.0.0 foobar
     '''
     return _rvm_do(ruby, 'rvm --force gemset empty', gemset, runas=runas)
 
@@ -224,6 +276,10 @@ def gemset_copy(source, destination, runas=None):
         The destination gemset.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_copy foobar bazquo
     '''
     return _rvm('gemset copy', source, destination, runas=runas)
 
@@ -236,6 +292,10 @@ def gemset_list_all(runas=None):
 
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_list_all
     '''
     gemsets = {}
     current_ruby = None
@@ -260,5 +320,9 @@ def do(ruby, command, runas=None):  # pylint: disable-msg=C0103
         The command to execute.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.do 2.0.0 <command>
     '''
     return _rvm_do(ruby, command, runas=runas)
