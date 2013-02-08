@@ -3,6 +3,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
+import re
 import logging
 
 # Import salt libs
@@ -70,7 +71,6 @@ def _interfaces_ip(out):
     Uses ip to return a dictionary of interfaces with various information about
     each (up/down state, ip address, netmask, and hwaddr)
     '''
-    import re
     ret = dict()
 
     def parse_network(value, cols):
@@ -160,7 +160,6 @@ def _interfaces_ifconfig(out):
     Uses ifconfig to return a dictionary of interfaces with various information
     about each (up/down state, ip address, netmask, and hwaddr)
     '''
-    import re
     ret = dict()
 
     piface = re.compile('^(\S+):?')
@@ -271,6 +270,10 @@ def _ipv4_to_bits(ipaddr):
 def subnets():
     '''
     Returns a list of subnets to which the host belongs
+
+    CLI Example::
+
+        salt '*' network.subnets
     '''
     ifaces = interfaces()
     subnets = []
@@ -287,6 +290,10 @@ def subnets():
 def in_subnet(cidr):
     '''
     Returns True if host is within specified subnet, otherwise False
+
+    CLI Example::
+
+        salt '*' network.in_subnet 10.0.0.0/16
     '''
     try:
         netstart, netsize = cidr.split('/')
@@ -319,6 +326,10 @@ def ip_addrs(interface=None, include_loopback=False):
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
+
+    CLI Example::
+
+        salt '*' network.ip_addrs
     '''
     ret = []
     ifaces = interfaces()
@@ -342,6 +353,10 @@ def ip_addrs6(interface=None, include_loopback=False):
     Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
+
+    CLI Example::
+
+        salt '*' network.ip_addrs6
     '''
     ret = []
     ifaces = interfaces()
