@@ -344,6 +344,10 @@ def submodule(cwd, init=True, opts=None, user=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.submodule /path/to/repo.git/sub/repo
     '''
     _check_git()
 
