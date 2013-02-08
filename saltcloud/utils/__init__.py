@@ -222,8 +222,6 @@ def wait_for_passwd(host, port=22, timeout=15, username='root',
             elif password:
                 kwargs['password'] = password
                 log.debug('Using {0} as the password'.format(password))
-            else:
-                raise Exception("Must specify either ssh key or password.")
 
             trycount += 1
             log.debug(
@@ -276,15 +274,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
             )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             kwargs = {'hostname': host,
-                      'port': 22,
+                      'port': port,
                       'username': username,
                       'timeout': 15}
-            if password and not key_filename:
-                log.debug('Using {0} as the password'.format(password))
-                kwargs['password'] = password
-            elif key_filename:
+            if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
+            elif password:
+                log.debug('Using {0} as the password'.format(password))
+                kwargs['password'] = password
             try:
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
