@@ -171,6 +171,34 @@ def update(cwd, targets=None, user=None, *opts):
     return _run_svn('update', cwd, user, None, opts)
 
 
+def diff(cwd, targets=None, user=None, username=None, *opts):
+    '''
+    Return the diff of the current directory, files, or directories from
+    the remote Subversion repository
+
+    cwd
+        The path to the Subversion repository
+
+    targets : None
+        files and directories to pass to the command as arguments
+        Default: svn uses '.'
+
+    user : None
+        Run svn as a user other than what the minion runs as
+
+    username : None
+        Connect to the Subversion server as another user
+
+    CLI Example::
+
+        salt '*' svn.diff /path/to/repo
+    '''
+    if targets:
+        opts += tuple(shlex.split(targets))
+    return _run_svn('diff', cwd, user, username, opts)
+    #def _run_svn(cmd, cwd, user, username, opts, **kwargs):
+
+
 def commit(cwd, targets=None, msg=None, user=None, username=None, *opts):
     '''
     Commit the current directory, files, or directories to
