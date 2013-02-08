@@ -28,6 +28,8 @@ class SysModuleTest(integration.ModuleCase):
         docs = self.run_function('sys.doc')
         bad = set()
         for fun in docs:
+            if fun.startswith('pydsl'):
+                continue
             if fun.startswith('runtests_helpers'):
                 continue
             if not isinstance(docs[fun], basestring):
