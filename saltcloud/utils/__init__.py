@@ -202,7 +202,7 @@ def wait_for_ssh(host, port=22, timeout=900):
                 return False
 
 
-def wait_for_passwd(host, port=22, timeout=15, username='root',
+def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
                     trysleep=1):
     '''
@@ -215,7 +215,7 @@ def wait_for_passwd(host, port=22, timeout=15, username='root',
             kwargs = {'hostname': host,
                       'port': port,
                       'username': username,
-                      'timeout': timeout}
+                      'timeout': ssh_timeout}
             if key_filename:
                 kwargs['key_filename'] = key_filename
                 log.debug('Using {0} as the key_filename'.format(key_filename))
@@ -255,7 +255,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
-                  keep_tmp=False, script_args=None):
+                  keep_tmp=False, script_args=None, ssh_timeout=15):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -266,7 +266,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
-                           timeout=newtimeout):
+                           ssh_timeout=ssh_timeout):
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -276,7 +276,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             kwargs = {'hostname': host,
                       'port': port,
                       'username': username,
-                      'timeout': 15}
+                      'timeout': ssh_timeout}
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
