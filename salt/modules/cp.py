@@ -20,6 +20,10 @@ def recv(files, dest):
     Used with salt-cp, pass the files dict, and the destination.
 
     This function receives small fast copy files from the master via salt-cp
+
+    CLI Example::
+
+        This function does not work via the CLI
     '''
     ret = {}
     for path, data in files.items():
@@ -313,7 +317,7 @@ def list_master_dirs(env='base'):
     '''
     List all of the directories stored on the master
 
-    CLI Exmaple::
+    CLI Example::
 
         salt '*' cp.list_master_dirs
     '''
