@@ -52,7 +52,7 @@ class EventModuleTest(integration.ModuleCase):
         with self.assertRaises(Empty):
             eventfired = events.get(block=True, timeout=10)
 
-    def test_event_fire(self):
+    def __test_event_fire(self):
         events = Queue()
 
         def get_event(events):
