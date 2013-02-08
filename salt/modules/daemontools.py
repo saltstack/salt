@@ -31,6 +31,7 @@ def start(name, enable=None, sig=None):
     Starts service via daemontools
 
     CLI Example::
+
         salt '*' daemontools.start <service name>
     '''
     __salt__['file.remove']('{0}/down'.format(_service_path(name)))
@@ -44,6 +45,7 @@ def stop(name, enable=None, sig=None):
     Stops service via daemontools
 
     CLI Example::
+
         salt '*' daemontools.stop <service name>
     '''
     __salt__['file.touch']('{0}/down'.format(_service_path(name)))
@@ -56,6 +58,7 @@ def term(name):
     Send a TERM to service via daemontools
 
     CLI Example::
+
         salt '*' daemontools.term <service name>
     '''
     cmd = 'svc -t {0}'.format(_service_path(name))
@@ -67,8 +70,9 @@ def reload(name):
     '''
     Wrapper for term()
 
-    CLI Example:
-    salt '*' daemontools.reload <service name>
+    CLI Example::
+    
+        salt '*' daemontools.reload <service name>
     '''
     term(name)
 
@@ -78,8 +82,9 @@ def restart(name):
     '''
     Restart service via daemontools. This will stop/start service
 
-    CLI Example:
-     salt '*' daemontools.restart <service name>
+    CLI Example::
+
+        salt '*' daemontools.restart <service name>
     '''
     ret = 'restart False'
     if stop(name) and start(name):
@@ -89,7 +94,13 @@ def restart(name):
 
 #-- states.service compatible
 def full_restart(name):
-    ''' Calls daemontools.restart() function '''
+    '''
+    Calls daemontools.restart() function
+    
+    CLI Example::
+
+        salt '*' daemontools.full_restart <service name>
+    '''
     restart(name)
 
 
@@ -117,6 +128,7 @@ def get_all():
     Return a list of all available services
 
     CLI Example::
+
         salt '*' daemontools.get_all
     '''
     #- List all daemontools services in
