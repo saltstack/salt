@@ -69,5 +69,9 @@ def _parse(contents=None, file_name=None):
 def read_file(file_name):
     '''
     This is just a test function, to make sure parsing works
+
+    CLI Example::
+
+        salt '*' pam.read_file /etc/pam.d/login
     '''
     return _parse(file_name=file_name)
