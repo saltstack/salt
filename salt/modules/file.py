@@ -7,7 +7,7 @@ data
 # some time in the future
 
 # Import python libs
-from contextlib import nested  # For < 2.7 compat
+import contextlib  # For < 2.7 compat
 import os
 import re
 import time
@@ -29,9 +29,9 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.find
-from salt.utils.filebuffer import BufferedReader
+import salt.utils.filebuffer
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types, urlparse
+import salt._compat
 
 
 def __virtual__():
@@ -633,7 +633,7 @@ def contains(path, text):
 
     stripped_text = text.strip()
     try:
-        with BufferedReader(path) as breader:
+        with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
                 if stripped_text in chunk:
                     return True
@@ -655,7 +655,7 @@ def contains_regex(path, regex, lchar=''):
         return False
 
     try:
-        with BufferedReader(path) as breader:
+        with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
                 if lchar:
                     chunk = chunk.lstrip(lchar)
@@ -678,7 +678,7 @@ def contains_glob(path, glob):
         return False
 
     try:
-        with BufferedReader(path) as breader:
+        with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
                 if fnmatch.fnmatch(chunk, glob):
                     return True
@@ -908,7 +908,7 @@ def source_list(source, source_hash, env):
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src]
-                proto = urlparse(single_src).scheme
+                proto = salt._compat.urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src in mfiles:
                         source = single_src
@@ -921,7 +921,7 @@ def source_list(source, source_hash, env):
                         source = single_src
                         source_hash = single_hash
                         break
-            elif isinstance(single, string_types):
+            elif isinstance(single, salt._compat.string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
                     source = single
                     break
@@ -985,13 +985,13 @@ def get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse(source).scheme == 'salt':
+            if salt._compat.urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
-                if urlparse(source_hash).scheme in protos:
+                if salt._compat.urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
@@ -1183,7 +1183,7 @@ def check_file_meta(
             if not sfn and source:
                 sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
-                with nested(salt.utils.fopen(sfn, 'rb'),
+                with contextlib.nested(salt.utils.fopen(sfn, 'rb'),
                             salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
@@ -1223,7 +1223,7 @@ def get_diff(
 
     sfn = __salt__['cp.cache_file'](masterfile, env)
     if sfn:
-        with nested(salt.utils.fopen(sfn, 'r'),
+        with contextlib.nested(salt.utils.fopen(sfn, 'r'),
                     salt.utils.fopen(minionfile, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
@@ -1271,7 +1271,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
+            if salt._compat.urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
@@ -1288,7 +1288,7 @@ def manage_file(name,
             if _is_bin(sfn) or _is_bin(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
-                with nested(salt.utils.fopen(sfn, 'rb'),
+                with contextlib.nested(salt.utils.fopen(sfn, 'rb'),
                             salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
@@ -1330,7 +1330,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
+            if salt._compat.urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
