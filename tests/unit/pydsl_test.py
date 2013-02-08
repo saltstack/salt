@@ -412,5 +412,4 @@ def state_highstate(matches, dirpath):
         pprint.pprint('\n'.join(errors))
         pprint.pprint(high)
 
-    out = HIGHSTATE.state.call_high(high)
-#    pprint.pprint(out)
+    HIGHSTATE.state.call_high(high)
