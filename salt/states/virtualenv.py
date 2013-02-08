@@ -127,8 +127,8 @@ def managed(name,
         before = set(__salt__['pip.freeze'](bin_env=name))
         _ret = __salt__['pip.install'](
             requirements=requirements, bin_env=name, runas=runas, cwd=cwd,
-            index_url=None,
-            extra_index_url=None,
+            index_url=index_url,
+            extra_index_url=extra_index_url,
             __env__=__env__
         )
         ret['result'] &= _ret['retcode'] == 0
