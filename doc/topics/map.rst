@@ -47,6 +47,14 @@ that exist but are not specified in the map file will be destroyed:
 
     $ salt-cloud -m /path/to/mapfile -P -H
 
+Be careful with this argument, it is very dangerous! In fact, it is so
+dangerous that in order to use it, you must explicitly enable it in the main
+configuration file.
+
+.. code-block:: yaml
+
+    enable_hard_maps: True
+
 A map file can include grains:
 
 .. code-block:: yaml
