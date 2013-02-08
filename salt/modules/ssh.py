@@ -169,14 +169,14 @@ def _validate_keys(key_file):
 
 
 def _fingerprint(public_key):
-    """
+    '''
     Return a public key fingerprint based on its base64-encoded representation
 
     The fingerprint string is formatted according to RFC 4716 (ch.4), that is,
     in the form "xx:xx:...:xx"
 
     If the key is invalid (incorrect base64 string), return None
-    """
+    '''
     try:
         raw_key = public_key.decode('base64')
     except binascii.Error:
@@ -238,6 +238,10 @@ def check_key_file(user, keysource, config='.ssh/authorized_keys', env='base'):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
+
+    CLI Example::
+
+        salt '*' root salt://ssh/keyfile
     '''
     ret = {}
     keyfile = __salt__['cp.cache_file'](keysource, env)
