@@ -72,8 +72,6 @@ def latest(name,
 
     svn_cmd = 'svn.checkout'
     cwd, basename = os.path.split(target)
-    print 'cwd:      ', cwd
-    print 'basename: ', basename
     opts = tuple()
 
     if os.path.exists(target) and not os.path.isdir(target):
@@ -85,12 +83,10 @@ def latest(name,
         svn_cmd = 'svn.diff' 
         opts += ('-r',  'HEAD')
         out = __salt__[svn_cmd](cwd, target, user, username, *opts)
-        #out = __salt__[svn_cmd](cwd, name, basename, user, username, *opts)
         return _neutral_test(
                 ret,
                 ('{0}').format(out))
     try:
-        #__salt__['svn.info']('.', target, user=user)
         __salt__['svn.info'](cwd, target, user=user)
         svn_cmd = 'svn.update'
     except exceptions.CommandExecutionError:
