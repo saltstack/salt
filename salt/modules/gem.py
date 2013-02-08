@@ -44,6 +44,10 @@ def install(gems,           # pylint: disable-msg=C0103
         Generate RDoc documentation for the gem(s).
     ri : False
         Generate RI documentation for the gem(s).
+
+    CLI Example::
+
+        salt '*' gem.install vagrant
     '''
     options = ''
     if version:
@@ -68,6 +72,10 @@ def uninstall(gems, ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        salt '*' gem.uninstall vagrant
     '''
     return _gem('uninstall {gems}'.format(gems=gems), ruby, runas=runas)
 
@@ -82,6 +90,10 @@ def update(gems, ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        salt '*' gem.update vagrant
     '''
     return _gem('update {gems}'.format(gems=gems), ruby, runas=runas)
 
@@ -96,6 +108,10 @@ def update_system(version='', ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        salt '*' gem.update_system
     '''
     return _gem('update --system {version}'.
                 format(version=version), ruby, runas=runas)
@@ -111,6 +127,10 @@ def list(prefix='', ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        gem.list
     '''
     gems = {}
     stdout = _gem('list {prefix}'.format(prefix=prefix),
@@ -137,6 +157,10 @@ def sources_add(source_uri, ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        salt '*' gem.sources_add http://rubygems.org/
     '''
     return _gem('sources --add {source_uri}'.
                 format(source_uri=source_uri), ruby, runas=runas)
@@ -152,6 +176,10 @@ def sources_remove(source_uri, ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        salt '*' gem.sources_remove http://rubygems.org/
     '''
     return _gem('sources --remove {source_uri}'.
                 format(source_uri=source_uri), ruby, runas=runas)
@@ -165,5 +193,9 @@ def sources_list(ruby=None, runas=None):
         If RVM is installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
+
+    CLI Example::
+
+        salt '*' gem.sources_list
     '''
     return _gem('sources', ruby, runas=runas).splitlines()[2:]
