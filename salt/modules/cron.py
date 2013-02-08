@@ -58,6 +58,10 @@ def _get_cron_cmdstr(user, path):
 def write_cron_file(user, path):
     '''
     Writes the contents of a file to a user's crontab
+
+    CLI Example::
+
+        salt '*' cron.write_cron_file root /tmp/new_cron
     '''
     return __salt__['cmd.retcode'](_get_cron_cmdstr(user, path)) == 0
 
