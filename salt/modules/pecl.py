@@ -30,6 +30,10 @@ def install(pecls):
 
     pecls
         The pecl extensions to install.
+
+    CLI Example::
+
+        salt '*' pecl.install fuse
     '''
     return _pecl('install {0}'.format(pecls))
 
@@ -40,6 +44,10 @@ def uninstall(pecls):
 
     pecls
         The pecl extensions to uninstall.
+
+    CLI Example::
+
+        salt '*' pecl.uninstall fuse
     '''
     return _pecl('uninstall {0}'.format(pecls))
 
@@ -50,6 +58,10 @@ def update(pecls):
 
     pecls
         The pecl extensions to update.
+
+    CLI Example::
+
+        salt '*' pecl.update fuse
     '''
     return _pecl('install -U {0}'.format(pecls))
 
@@ -57,8 +69,11 @@ def update(pecls):
 def list():
     '''
     List installed pecl extensions.
-    '''
 
+    CLI Example::
+
+        salt '*' pecl.list
+    '''
     pecls = {}
     lines = _pecl('list').splitlines()
     lines.pop(0)
