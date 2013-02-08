@@ -2077,12 +2077,33 @@ class HighState(BaseHighState):
     compound state derived from a group of template files stored on the
     salt master or in the local cache.
     '''
-    current = None  # Current active HighState object during a state.highstate run.
+    stack = [] # a stack of active HighState objects during a state.highstate run.
+
     def __init__(self, opts, pillar=None):
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
         self.state = State(self.opts, pillar)
         self.matcher = salt.minion.Matcher(self.opts)
+
+        # tracks all pydsl state declarations globally across sls files
+        self._pydsl_all_decls = {}
+
+        # a stack of current rendering Sls objects, maintained and used by the pydsl renderer.
+        self._pydsl_render_stack = []
+
+    def push_active(self):
+        self.stack.append(self)
+
+    @classmethod
+    def pop_active(self):
+        self.stack.pop()
+
+    @classmethod
+    def get_active(klass):
+        try:
+            return klass.stack[-1]
+        except IndexError:
+            return None
 
 
 class MasterState(State):

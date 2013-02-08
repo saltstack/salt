@@ -9,6 +9,7 @@ from saltunittest import TestCase
 import salt.loader
 import salt.config
 from salt.state import State, HighState
+from salt.utils.pydsl import PyDslError
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
@@ -18,23 +19,24 @@ OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
-STATE = State(OPTS)
-
-
-def render_sls(content, sls='', env='base', **kws):
-    return STATE.rend['pydsl'](
-                StringIO(content), env=env, sls=sls,
-                **kws)
 
 class PyDSLRendererTestCase(TestCase):
 
     def setUp(self):
-        STATE.load_modules()
-        sys.modules['salt.loaded.int.render.pydsl'].__salt__ = STATE.functions
-        self.PyDslError = sys.modules['salt.loaded.int.module.pydsl'].PyDslError
+        self.HIGHSTATE = HighState(OPTS)
+        self.HIGHSTATE.push_active()
+
+    def tearDown(self):
+        self.HIGHSTATE.pop_active()
+
+    def render_sls(self, content, sls='', env='base', **kws):
+        return self.HIGHSTATE.state.rend['pydsl'](
+                    StringIO(content), env=env, sls=sls,
+                    **kws)
+
 
     def test_state_declarations(self):
-        result = render_sls('''
+        result = self.render_sls('''
 state('A').cmd.run('ls -la', cwd='/var/tmp')
 state().file.managed('myfile.txt', source='salt://path/to/file')
 state('X').cmd('run', 'echo hello world', cwd='/')
@@ -76,7 +78,7 @@ state('A').service.running(name='apache')
 
 
     def test_requisite_declarations(self):
-        result = render_sls('''
+        result = self.render_sls('''
 state('X').cmd.run('echo hello')
 state('A').cmd.run('mkdir tmp', cwd='/var')
 state('B').cmd.run('ls -la', cwd='/var/tmp') \
@@ -103,7 +105,7 @@ state('H').cmd.run('echo world')
 
 
     def test_include_extend(self):
-        result = render_sls('''
+        result = self.render_sls('''
 include(
     'some.sls.file',
     'another.sls.file',
@@ -136,7 +138,7 @@ extend(
 
 
     def test_cmd_call(self):
-        result = STATE.call_template_str('''#!pydsl
+        result = self.HIGHSTATE.state.call_template_str('''#!pydsl
 state('A').cmd.run('echo this is state A', cwd='/')
 
 some_var = 12345
@@ -158,22 +160,22 @@ state('G').cmd.wait('echo this is state G', cwd='/') \
 
 
     def test_multiple_state_func_in_state_mod(self):
-        with self.assertRaisesRegexp(self.PyDslError, 'Multiple state functions'):
-            render_sls('''
+        with self.assertRaisesRegexp(PyDslError, 'Multiple state functions'):
+            self.render_sls('''
 state('A').cmd.run('echo hoho')
 state('A').cmd.wait('echo hehe')
 ''')
 
 
     def test_no_state_func_in_state_mod(self):
-        with self.assertRaisesRegexp(self.PyDslError, 'No state function specified'):
-            render_sls('''
+        with self.assertRaisesRegexp(PyDslError, 'No state function specified'):
+            self.render_sls('''
 state('B').cmd.require(cmd='hoho')
 ''')
 
 
     def test_load_highstate(self):
-        result = render_sls('''
+        result = self.render_sls('''
 import yaml
 __pydsl__.load_highstate(yaml.load("""
 A:
@@ -210,7 +212,7 @@ state('A').cmd.run(name='echo hello world')
     def test_ordered_states(self):
         if sys.version_info < (2, 7):
             self.skipTest('OrderedDict is not available')
-        result = render_sls('''
+        result = self.render_sls('''
 __pydsl__.set(ordered=True)
 A = state('A')
 state('B').cmd.run('echo bbbb')
@@ -231,9 +233,8 @@ state('B').file.managed(source='/a/b/c')
         dirpath = tempfile.mkdtemp()
         output = os.path.join(dirpath, 'output')
         try:
-            xxx = os.path.join(dirpath, 'xxx.sls')
-            with open(xxx, 'w') as xxx:
-                xxx.write('''#!stateconf -os yaml . jinja
+            write_to(os.path.join(dirpath, 'xxx.sls'),
+'''#!stateconf -os yaml . jinja
 .X:
   cmd.run:
     - name: echo X >> {0}
@@ -247,18 +248,18 @@ state('B').file.managed(source='/a/b/c')
     - name: echo Z >> {2}
     - cwd: /
 '''.format(output, output, output))
-            yyy = os.path.join(dirpath, 'yyy.sls')
-            with open(yyy, 'w') as yyy:
-                yyy.write('''#!pydsl|stateconf -ps
+            write_to(os.path.join(dirpath, 'yyy.sls'),
+'''#!pydsl|stateconf -ps
+
 __pydsl__.set(ordered=True)
 state('.D').cmd.run('echo D >> {0}', cwd='/')
 state('.E').cmd.run('echo E >> {1}', cwd='/')
 state('.F').cmd.run('echo F >> {2}', cwd='/')
 '''.format(output, output, output))
 
-            aaa = os.path.join(dirpath, 'aaa.sls')
-            with open(aaa, 'w') as aaa:
-                aaa.write('''#!pydsl|stateconf -ps
+            write_to(os.path.join(dirpath, 'aaa.sls'),
+'''#!pydsl|stateconf -ps
+
 include('xxx', 'yyy')
 
 # make all states in xxx run BEFORE states in this sls.
@@ -288,9 +289,9 @@ state('.C').cmd.run('echo C >> {2}', cwd='/')
         dirpath = tempfile.mkdtemp()
         output = os.path.join(dirpath, 'output')
         try:
-            aaa = os.path.join(dirpath, 'aaa.sls')
-            with open(aaa, 'w') as aaa:
-                aaa.write('''#!pydsl|stateconf -ps
+            write_to(os.path.join(dirpath, 'aaa.sls'),
+'''#!pydsl|stateconf -ps
+
 include('xxx')
 yyy = include('yyy')
 
@@ -306,9 +307,10 @@ yyy.hello('red', 1)
 yyy.hello('green', 2)
 yyy.hello('blue', 3)
 '''.format(output))
-            xxx = os.path.join(dirpath, 'xxx.sls')
-            with open(xxx, 'w') as xxx:
-                xxx.write('''#!stateconf -os yaml . jinja
+
+            write_to(os.path.join(dirpath, 'xxx.sls'),
+'''#!stateconf -os yaml . jinja
+
 include:
   - yyy
 
@@ -337,9 +339,9 @@ extend:
 
 '''.format(output, output, output, output))
 
-            yyy = os.path.join(dirpath, 'yyy.sls')
-            with open(yyy, 'w') as yyy:
-                yyy.write('''#!pydsl|stateconf -ps
+            write_to(os.path.join(dirpath, 'yyy.sls'), 
+'''#!pydsl|stateconf -ps
+
 include('xxx')
 __pydsl__.set(ordered=True)
 
@@ -377,9 +379,9 @@ hello blue 3
         dirpath = tempfile.mkdtemp()
         output = os.path.join(dirpath, 'output')
         try:
-            aaa = os.path.join(dirpath, 'aaa.sls')
-            with open(aaa, 'w') as aaa:
-                aaa.write('''#!pydsl
+            write_to(os.path.join(dirpath, 'aaa.sls'),
+'''#!pydsl
+
 __pydsl__.set(ordered=True)
 A = state('A')
 A.cmd.run('echo hehe > {0}/zzz.txt', cwd='/')
@@ -396,21 +398,52 @@ state().cmd.run('echo hoho >> {2}/yyy.txt', cwd='/')
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
+    def test_nested_high_state_execution(self):
+        dirpath = tempfile.mkdtemp()
+        output = os.path.join(dirpath, 'output')
+        try:
+            write_to(os.path.join(dirpath, 'aaa.sls'),
+'''#!pydsl
+__salt__['state.sls']('bbb')
+state().cmd.run('echo bbbbbb', cwd='/')
+''')
+            write_to(os.path.join(dirpath, 'bbb.sls'),
+'''
+# {{ salt['state.sls']('ccc')
+test:
+  cmd.run:
+    - name: echo bbbbbbb
+    - cwd: /
+''')
+            write_to(os.path.join(dirpath, 'ccc.sls'),
+'''
+#!pydsl
+state().cmd.run('echo ccccc', cwd='/')
+''')
+            state_highstate({'base': ['aaa']}, dirpath)
+        finally:
+            shutil.rmtree(dirpath, ignore_errors=True)
+
+
+
+
+def write_to(fpath, content):
+    with open(fpath, 'w') as f:
+        f.write(content)
 
 
 def state_highstate(matches, dirpath):
     OPTS['file_roots'] = dict(base=[dirpath])
     HIGHSTATE = HighState(OPTS)
-    HighState.current = HIGHSTATE
-    HIGHSTATE.state.load_modules()
-    sys.modules['salt.loaded.int.render.pydsl'].__salt__ = \
-            HIGHSTATE.state.functions
+    HIGHSTATE.push_active()
+    try:
+        high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
+        if errors:
+            import pprint
+            pprint.pprint('\n'.join(errors))
+            pprint.pprint(high)
 
-    high, errors = HIGHSTATE.render_highstate({'base': ['aaa']})
-    if errors:
-        import pprint
-        pprint.pprint('\n'.join(errors))
-        pprint.pprint(high)
-
-    out = HIGHSTATE.state.call_high(high)
-#    pprint.pprint(out)
+        out = HIGHSTATE.state.call_high(high)
+        # pprint.pprint(out)
+    finally:
+        HIGHSTATE.pop_active()
