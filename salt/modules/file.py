@@ -808,9 +808,7 @@ def remove(path):
     '''
     Remove the named file
 
-    CLI Example::
-    
-        salt '*' file.remove /tmp/foo
+    salt '*' file.remove /tmp/foo
     '''
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
