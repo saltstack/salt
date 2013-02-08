@@ -28,6 +28,7 @@ import sys
 try:
     import MySQLdb
     import MySQLdb.cursors
+    import MySQLdb.converters
     HAS_MYSQLDB = True
 except ImportError:
     HAS_MYSQLDB = False
@@ -106,6 +107,7 @@ def connect(**kwargs):
     _connarg('pass', 'passwd')
     _connarg('port')
     _connarg('db')
+    _connarg('conv')
     _connarg('unix_socket')
     _connarg('default_file', 'read_default_file')
 
@@ -150,8 +152,15 @@ def query(database, query):
     # Doesn't do anything about sql warnings, e.g. empty values on an insert.
     # I don't think it handles multiple queries at once, so adding "commit"
     # might not work.
+
+    # The following 3 lines stops MySQLdb from converting the MySQL results
+    # into Python objects. It leaves them as strings.
+    orig_conv = MySQLdb.converters.conversions
+    conv_iter = iter(orig_conv)
+    conv = dict(zip(conv_iter,[str,] * len(orig_conv.keys())))
+
     ret = {}
-    dbc = connect(**{'db': database})
+    dbc = connect(**{'db': database, 'conv': conv})
     cur = dbc.cursor()
     start = time.time()
     affected = cur.execute(query)
