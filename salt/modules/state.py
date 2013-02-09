@@ -150,8 +150,11 @@ def highstate(test=None, **kwargs):
             kwargs.get('kwval_as', 'yaml'))
 
     st_ = salt.state.HighState(opts, pillar)
-    salt.state.HighState.current = st_
-    ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
+    st_.push_active()
+    try:
+        ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
+    finally:
+        st_.pop_active()
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
@@ -194,19 +197,23 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if isinstance(mods, string_types):
         mods = mods.split(',')
 
-    high, errors = st_.render_highstate({env: mods})
+    st_.push_active()
+    try:
+        high, errors = st_.render_highstate({env: mods})
 
-    if errors:
-        return errors
+        if errors:
+            return errors
 
-    if exclude:
-        if isinstance(exclude, str):
-            exclude = exclude.split(',')
-        if '__exclude__' in high:
-            high['__exclude__'].extend(exclude)
-        else:
-            high['__exclude__'] = exclude
-    ret = st_.state.call_high(high)
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(',')
+            if '__exclude__' in high:
+                high['__exclude__'].extend(exclude)
+            else:
+                high['__exclude__'] = exclude
+        ret = st_.state.call_high(high)
+    finally:
+        st_.pop_active()
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     try:
@@ -230,8 +237,12 @@ def top(topfn):
     if conflict:
         return conflict
     st_ = salt.state.HighState(__opts__)
+    st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
-    return st_.call_highstate()
+    try:
+        return st_.call_highstate()
+    finally:
+        st_.pop_active()
 
 
 def show_highstate():

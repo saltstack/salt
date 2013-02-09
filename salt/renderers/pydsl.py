@@ -280,6 +280,7 @@ or after a state in the including sls file.
 '''
 
 import imp
+from salt.utils import pydsl
 
 __all__ = ['render']
 
@@ -294,7 +295,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod
 
-    dsl_sls = __salt__['pydsl.sls'](sls, mod, rendered_sls)
+    dsl_sls = pydsl.Sls(sls, env, rendered_sls)
     mod.__dict__.update(
         __pydsl__=dsl_sls,
         include=_wrap_sls(dsl_sls.include),
@@ -308,16 +309,17 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
         __sls__=sls,
         __file__=tmplpath,
         **kws)
-    dsl_sls.render_stack.append(dsl_sls)
+
+    dsl_sls.get_render_stack().append(dsl_sls)
     exec template.read() in mod.__dict__
-    highstate = dsl_sls.to_highstate()
-    dsl_sls.render_stack.pop()
+    highstate = dsl_sls.to_highstate(mod)
+    dsl_sls.get_render_stack().pop()
     return highstate
     
 
 def _wrap_sls(method):
     def _sls_method(*args, **kws):
-        sls = method.im_class.render_stack[-1]
+        sls = pydsl.Sls.get_render_stack()[-1]
         return getattr(sls, method.__name__)(*args, **kws)
     return _sls_method
 
