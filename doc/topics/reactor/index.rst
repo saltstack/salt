@@ -121,7 +121,7 @@ execute a remote command it looks like this:
 
 The `arg` option takes a list of arguments as they would be presented on the
 command line, so the above declaration is the same as running this salt
-command:
+command::
 
     salt \* cmd.run 'rm -rf /tmp/*'
 
