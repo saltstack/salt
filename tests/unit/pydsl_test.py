@@ -1,3 +1,6 @@
+'''
+Test PyDSL
+'''
 # Import Python libs
 import sys, os
 import shutil
