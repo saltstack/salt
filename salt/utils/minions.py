@@ -151,18 +151,24 @@ class CkMinions(object):
                     # We are matching a single component to a single list member
                     found = False
                     for member in grains[comps[0]]:
-                        if re.match(comps[1].lower(), str(member).lower()):
-                            found = True
+                        try:
+                            if re.match(comps[1].lower(), str(member).lower()):
+                                found = True
+                        except Exception:
+                            log.error('Invalid Regex in grain match')
                     if found:
                         continue
                     minions.remove(id_)
                     continue
-                if re.match(
-                    comps[1].lower(),
-                    str(grains[comps[0]]).lower()
-                    ):
-                    continue
-                else:
+                try:
+                    if re.match(
+                        comps[1].lower(),
+                        str(grains[comps[0]]).lower()
+                        ):
+                        continue
+                    else:
+                        minions.remove(id_)
+                except Exception:
                     minions.remove(id_)
         return list(minions)
 
