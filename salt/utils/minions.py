@@ -246,10 +246,13 @@ class CkMinions(object):
         if isinstance(fun, str):
             fun = [fun]
         for func in fun:
-            if re.match(regex, func):
-                vals.append(True)
-            else:
-                vals.append(False)
+            try:
+                if re.match(regex, func):
+                    vals.append(True)
+                else:
+                    vals.append(False)
+            except Exception:
+                log.error('Invalid regular expression: {0}'.format(regex))
         return all(vals)
 
     def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
