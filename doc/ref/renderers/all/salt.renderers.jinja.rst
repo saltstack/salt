@@ -159,7 +159,7 @@ Jinja_ can be used in the same way in managed files:
     # lib.sls
     {% set port = 6379 %}
 
-.. code-block:: config
+.. code-block:: ini
 
     # redis.conf
     {% from 'lib.sls' import port with context %}
