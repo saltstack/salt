@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 try:
     import pythoncom
     import wmi
+    import salt.utils.winapi
     has_required_packages = True
 except ImportError:
     if salt.utils.is_windows():
@@ -43,8 +44,7 @@ def procs():
 
         salt '*' status.procs
     '''
-    pythoncom.CoInitialize()  # need to call if not in main thread
-    try:
+    with salt.utils.winapi.Com():
         wmi_obj = wmi.WMI()
         processes = wmi_obj.win32_process()
 
@@ -53,8 +53,6 @@ def procs():
             process_info[proc.ProcessId] = _get_process_info(proc)
 
         return process_info
-    finally:
-        pythoncom.CoUninitialize()
 
 
 def _get_process_info(proc):

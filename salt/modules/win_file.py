@@ -26,6 +26,9 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from file import check_hash, check_managed, check_perms, contains_regex,\
+        directory_exists, get_managed, makedirs, makedirs_perms, manage_file,\
+        patch, remove, source_list, stats
 
 
 log = logging.getLogger(__name__)

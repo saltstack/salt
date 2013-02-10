@@ -45,6 +45,7 @@ if salt.utils.is_windows():
     # the Windows minion uses WMI for some of its grains
     try:
         import wmi
+        import salt.utils.winapi
         HAS_WMI = True
     except ImportError:
         log.exception("Unable to import Python wmi module, some core grains "
@@ -266,13 +267,14 @@ def _memdata(osdata):
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
-        wmi_c = wmi.WMI()
-        # this is a list of each stick of ram in a system
-        # WMI returns it as the string value of the number of bytes
-        tot_bytes = sum(map(lambda x: int(x.Capacity),
-                            wmi_c.Win32_PhysicalMemory()), 0)
-        # return memory info in gigabytes
-        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+        with salt.utils.winapi.Com():
+            wmi_c = wmi.WMI()
+            # this is a list of each stick of ram in a system
+            # WMI returns it as the string value of the number of bytes
+            tot_bytes = sum(map(lambda x: int(x.Capacity),
+                                wmi_c.Win32_PhysicalMemory()), 0)
+            # return memory info in gigabytes
+            grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
 
@@ -454,32 +456,33 @@ def _windows_platform_data(osdata):
     if not HAS_WMI:
         return {}
 
-    wmi_c = wmi.WMI()
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
-    systeminfo = wmi_c.Win32_ComputerSystem()[0]
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
-    osinfo = wmi_c.Win32_OperatingSystem()[0]
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
-    biosinfo = wmi_c.Win32_BIOS()[0]
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
-    timeinfo = wmi_c.Win32_TimeZone()[0]
+    with salt.utils.winapi.Com():
+        wmi_c = wmi.WMI()
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
+        systeminfo = wmi_c.Win32_ComputerSystem()[0]
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
+        osinfo = wmi_c.Win32_OperatingSystem()[0]
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
+        biosinfo = wmi_c.Win32_BIOS()[0]
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
+        timeinfo = wmi_c.Win32_TimeZone()[0]
 
-    # the name of the OS comes with a bunch of other data about the install
-    # location. For example:
-    # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
-    (osfullname, _) = osinfo.Name.split('|', 1)
-    osfullname = osfullname.strip()
-    grains = {
-        'osmanufacturer': osinfo.Manufacturer,
-        'manufacturer': systeminfo.Manufacturer,
-        'productname': systeminfo.Model,
-        # bios name had a bunch of whitespace appended to it in my testing
-        # 'PhoenixBIOS 4.0 Release 6.0     '
-        'biosversion': biosinfo.Name.strip(),
-        'osfullname': osfullname,
-        'timezone': timeinfo.Description,
-        'windowsdomain': systeminfo.Domain,
-    }
+        # the name of the OS comes with a bunch of other data about the install
+        # location. For example:
+        # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
+        (osfullname, _) = osinfo.Name.split('|', 1)
+        osfullname = osfullname.strip()
+        grains = {
+            'osmanufacturer': osinfo.Manufacturer,
+            'manufacturer': systeminfo.Manufacturer,
+            'productname': systeminfo.Model,
+            # bios name had a bunch of whitespace appended to it in my testing
+            # 'PhoenixBIOS 4.0 Release 6.0     '
+            'biosversion': biosinfo.Name.strip(),
+            'osfullname': osfullname,
+            'timezone': timeinfo.Description,
+            'windowsdomain': systeminfo.Domain,
+        }
 
     return grains
 
