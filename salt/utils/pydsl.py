@@ -272,23 +272,24 @@ class StateDeclaration(object):
 
     def __call__(self, check=True):
         sls = Sls.get_render_stack()[-1]
-        last_func = sls.last_func()
-        if last_func and self._mods[-1]._func is not last_func:
-            raise PyDslError(
-                    ('Cannot run state({0}: {1}) that is required by a runtime '
-                     'state({2}: {3}), at compile time.').format(
-                          self._mods[-1]._name, self._id,
-                          last_func.mod, last_func.mod._state_id
+        if self._id in sls.get_all_decls():
+            last_func = sls.last_func()
+            if last_func and self._mods[-1]._func is not last_func:
+                raise PyDslError(
+                        ('Cannot run state({0}: {1}) that is required by a runtime '
+                         'state({2}: {3}), at compile time.').format(
+                              self._mods[-1]._name, self._id,
+                              last_func.mod, last_func.mod._state_id
+                          )
                       )
-                  )
-        sls.get_all_decls().pop(self._id)
-        sls.decls.remove(self)
-        self._mods[0]._func._remove_auto_require()
-        for m in self._mods:
-            try:
-                sls.funcs.remove(m._func)
-            except ValueError:
-                pass
+            sls.get_all_decls().pop(self._id)
+            sls.decls.remove(self)
+            self._mods[0]._func._remove_auto_require()
+            for m in self._mods:
+                try:
+                    sls.funcs.remove(m._func)
+                except ValueError:
+                    pass
 
         result = HighState.get_active().state.functions['state.high']({self._id: self._repr()})
         result = sorted(result.iteritems(), key=lambda t: t[1]['__run_num__'])
@@ -377,6 +378,7 @@ class StateFunction(object):
     def _remove_auto_require(self):
         if self.require_index is not None:
             del self.args[self.require_index]
+            self.require_index = None
 
     def __call__(self, *args, **kws):
         self.configure(args, kws)

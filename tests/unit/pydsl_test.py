@@ -387,13 +387,19 @@ A = state('A')
 A.cmd.run('echo hehe > {0}/zzz.txt', cwd='/')
 A.file.managed('{1}/yyy.txt', source='salt://zzz.txt')
 A()
+A()
 
 state().cmd.run('echo hoho >> {2}/yyy.txt', cwd='/')
-'''.format(dirpath, dirpath, dirpath))
+
+A.file.managed('{3}/xxx.txt', source='salt://zzz.txt')
+A()
+'''.format(dirpath, dirpath, dirpath, dirpath))
             state_highstate({'base': ['aaa']}, dirpath)
             with open(os.path.join(dirpath, 'yyy.txt'), 'r') as f:
 
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
+            with open(os.path.join(dirpath, 'xxx.txt'), 'r') as f:
+                self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
