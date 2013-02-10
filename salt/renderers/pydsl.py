@@ -244,6 +244,35 @@ to a :term:`function declaration` object that requires the last
 This means later calls(perhaps to update the function's :term:`function arg declaration`) to a previously created function declaration will not change the order.
 
 
+Render time state execution
+-------------------------------------
+When Salt processes a salt formula file(`.sls`), the file is rendered to salt's
+high state data representation by a renderer before the states can be executed.
+In the case of the `pydsl` renderer, the .sls file is executed as a python module
+as it is being rendered which makes it easy to execute a state at render time.
+In `pydsl`, executing one or more states at render time can be done by calling a
+configured :term:`ID declaration` object.
+
+.. code-block:: python
+
+    #!pydsl
+    
+    s = state() # save for later invocation
+
+    # configure it
+    s.cmd.run('echo at render time', cwd='/')
+    s.file.managed('target.txt', source='salt://source.txt')
+
+    s() # execute the two states now
+
+Once an :term:`ID declaration` is called at render time it is detached from the
+sls module as if it was never defined.
+
+.. note::
+    If `implicit ordering` is enabled(ie, via ``__pydsl__.set(ordered=True)``) then
+    the *first* invocation of a :term:`ID declaration` object must be done before a
+    new :term:`function declaration` is created.
+
 
 Integration with the stateconf renderer
 -----------------------------------------
