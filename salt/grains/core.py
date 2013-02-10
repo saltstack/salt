@@ -45,6 +45,7 @@ if salt.utils.is_windows():
     # the Windows minion uses WMI for some of its grains
     try:
         import wmi
+        import salt.utils.winapi
         HAS_WMI = True
     except ImportError:
         log.exception("Unable to import Python wmi module, some core grains "
@@ -266,13 +267,14 @@ def _memdata(osdata):
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
-        wmi_c = wmi.WMI()
-        # this is a list of each stick of ram in a system
-        # WMI returns it as the string value of the number of bytes
-        tot_bytes = sum(map(lambda x: int(x.Capacity),
-                            wmi_c.Win32_PhysicalMemory()), 0)
-        # return memory info in gigabytes
-        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+        with salt.utils.winapi.Com():
+            wmi_c = wmi.WMI()
+            # this is a list of each stick of ram in a system
+            # WMI returns it as the string value of the number of bytes
+            tot_bytes = sum(map(lambda x: int(x.Capacity),
+                                wmi_c.Win32_PhysicalMemory()), 0)
+            # return memory info in gigabytes
+            grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
 
