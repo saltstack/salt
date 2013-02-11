@@ -1,6 +1,11 @@
 '''
 Return data to a postgresql server
 
+:maintainer:    None
+:maturity:      New 
+:depends:       psycopg2
+:platform:      all
+
 To enable this returner the minion will need the psycopg2 installed and
 the following values configured in the minion or master config::
 
@@ -30,32 +35,20 @@ correctly::
     );
 
     --
-    -- Table structure for table 'returns'
+    -- Table structure for table 'salt_returns'
     --
 
-    DROP TABLE IF EXISTS returns;
-    CREATE TABLE returns (
+    DROP TABLE IF EXISTS salt_returns;
+    CREATE TABLE salt_returns (
       fun       text NOT NULL,
       jid       varchar(20) NOT NULL,
       return    text NOT NULL,
       id        text NOT NULL,
       success   boolean
     );
-    CREATE INDEX ON returns (id);
-    CREATE INDEX ON returns (jid);
-    CREATE INDEX ON returns (fun);
-
-    DROP TABLE IF EXISTS highstate;
-    -- CREATE TABLE highstate (
-    --   jid       bigint PRIMARY KEY,
-    --   resource  text NOT NULL,
-    --   return    hstore
-    -- );
-    CREATE INDEX return_idx_gist
-      ON highstate
-      USING gist
-      (return);
-    EOF
+    CREATE INDEX ON salt_returns (id);
+    CREATE INDEX ON salt_returns (jid);
+    CREATE INDEX ON salt_returns (fun);
 
 Required python modules: psycopg2
 '''
@@ -101,7 +94,7 @@ def returner(ret):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''INSERT INTO returns
+    sql = '''INSERT INTO salt_returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)'''
     cur.execute(
