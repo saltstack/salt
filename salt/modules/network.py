@@ -239,6 +239,17 @@ def interfaces():
     return ifaces
 
 
+def hwaddr(iface):
+    '''
+    Return the hardware address (a.k.a. MAC address) for a given interface
+
+    CLI Example::
+
+        salt '*' network.hwaddr eth0
+    '''
+    return interfaces().get(iface, {}).get('hwaddr', '')
+
+
 def _get_net_start(ipaddr, netmask):
     ipaddr_octets = ipaddr.split('.')
     netmask_octets = netmask.split('.')
