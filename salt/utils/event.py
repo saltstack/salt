@@ -422,7 +422,7 @@ class ReactWrap(object):
         '''
         kwargs['fun'] = fun
         wheel = salt.wheel.Wheel(self.opts)
-        return wheel.master_call(**kwargs)
+        return wheel.call_func(**kwargs)
 
 
 class StateFire(object):
