@@ -18,6 +18,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'script': 'bootstrap-salt',
     'start_action': None,
     'enable_hard_maps': False,
+    'delete_sshkeys': False,
     # Logging defaults
     'log_file': '/var/log/salt/cloud',
     'log_level': None,

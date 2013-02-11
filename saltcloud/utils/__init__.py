@@ -542,3 +542,14 @@ def namespaced_function(function, global_dict, defaults=None):
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
+
+
+def remove_sshkey(host,
+                  known_hosts='{0}/known_hosts'.format(os.environ['HOME'])):
+    '''
+    Remove a host from the known_hosts file
+    '''
+    log.debug('Removing ssh key for {0} from known '
+              'hosts file {1}'.format(host, known_hosts))
+    cmd = 'ssh-keygen -R {0}'.format(host)
+    subprocess.call(cmd, shell=True)
