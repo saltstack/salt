@@ -338,7 +338,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Executing /tmp/deploy.sh')
                 if make_master:
                     deploy_command += ' -m'
-                if 'bootstrap-salt-minion' in script:
+                if 'bootstrap-salt' in script:
                     deploy_command += ' -c /tmp/'
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
