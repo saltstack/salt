@@ -49,17 +49,13 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.options.update_bootstrap:
             import urllib
-            branch = 'develop'
-            url = (
-                'https://raw.github.com/saltstack/salt-bootstrap/{0}/'
-                'bootstrap-salt-minion.sh'.format(branch)
-            )
+            url = 'http://bootstrap.saltstack.org'
             req = urllib.urlopen(url)
             deploy_path = os.path.join(
                 os.path.dirname(os.path.dirname(__file__)),
-                'saltcloud', 'deploy', 'bootstrap-salt-minion.sh'
+                'saltcloud', 'deploy', 'bootstrap-salt.sh'
             )
-            print('Updating bootstrap-salt-minion.sh.'
+            print('Updating bootstrap-salt.sh.'
                   '\n\tSource:      {0}'
                   '\n\tDestination: {1}'.format(url, deploy_path))
             with salt.utils.fopen(deploy_path, 'w') as fp_:

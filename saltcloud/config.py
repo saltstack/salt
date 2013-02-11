@@ -15,7 +15,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'ssh_auth': '',
     'keysize': 4096,
     'os': '',
-    'script': 'bootstrap-salt-minion',
+    'script': 'bootstrap-salt',
     'start_action': None,
     'enable_hard_maps': False,
     # Logging defaults
