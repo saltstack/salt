@@ -8,8 +8,8 @@ Salt modules are the functions called by the :command:`salt` command.
 
     Salt ships with many modules that cover a wide variety of tasks.
 
-Easy Modules to write
-=====================
+Modules Are Easy to Write!
+==========================
 
 Salt modules are amazingly simple to write. Just write a regular Python module
 or a regular `Cython`_ module and place it in the ``salt/modules`` directory.
@@ -201,8 +201,8 @@ to the calling terminal.
 
 .. _`Python docstring`: #term-docstring
 
-Add Module meta data
---------------------
+Add Module metadata
+-------------------
 
 Add information about the module using the following field lists:
 
