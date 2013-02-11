@@ -20,6 +20,10 @@ state will download fewer files and will run substantially faster.
 Windows Improvements
 --------------------
 
+Minion stability has improved. Many file operations, including file.recurse,
+have been fixed and improved. The network module works better, to include
+network.interfaces.
+
 Nodegroup Targetting in Peer System
 -----------------------------------
 
