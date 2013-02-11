@@ -5,8 +5,8 @@ State Modules
 State Modules are the components that map to actual enforcement and management
 of Salt states.
 
-States are - Easy to Write!
-===========================
+States are Easy to Write!
+=========================
 
 State Modules should be easy to write and straightforward. The information
 passed to the SLS data structures will map directly to the states modules.
