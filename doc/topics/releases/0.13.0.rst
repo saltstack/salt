@@ -1,0 +1,19 @@
+=========================
+Salt 0.13.0 Release Notes
+=========================
+
+The lucky number 13 has turned the corner! From cli notifications when quitting
+a salt command, to substantial improvements on Windows, Salt 0.13.0 has
+arrived!
+
+Major Features
+==============
+
+Improved file.recuse Performance
+--------------------------------
+
+The file.recurse system has been deployed and used in a vast array of
+situations. Fixes to the file state and module have led towards opening up
+new ways of running file.recuse to make it faster. Now the file.recurse
+state will download fewer files and will run substantially faster.
+
