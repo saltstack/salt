@@ -21,6 +21,7 @@ GRAINMAP = {
            'CloudLinux': '/etc/init.d',
            'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
+           'SUSE  Enterprise Server': '/etc/init.d',
            'OEL': '/etc/init.d',
           }
 
