@@ -144,7 +144,7 @@ class Client(object):
             )
         )
         for fn_ in self.file_list(env):
-            if fn_.startswith(path):
+            if fn_.startswith('{0}{1}'.format(path, os.path.sep)):
                 local = self.cache_file('salt://{0}'.format(fn_), env)
                 if not fn_.strip():
                     continue
