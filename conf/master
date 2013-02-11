@@ -150,12 +150,17 @@
 #
 
 # Blacklist any of the following users or modules
-client_acl_blacklist:
-  users:
-    - root
-    - '^(?!sudo_).*$'   #  all non sudo users
-  modules:
-    - cmd
+#
+# This example would blacklist all non sudo users, including root from running
+# any commands. It would also blacklist any use of the "cmd" module
+# This is completely disabled by default
+#
+# client_acl_blacklist:
+#   users:
+#     - root
+#     - '^(?!sudo_).*$'   #  all non sudo users
+#   modules:
+#     - cmd
 
 
 # The external auth system uses the Salt auth modules to authenticate and
