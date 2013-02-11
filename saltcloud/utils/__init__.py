@@ -202,7 +202,7 @@ def wait_for_ssh(host, port=22, timeout=900):
                 return False
 
 
-def wait_for_passwd(host, port=22, timeout=900, username='root',
+def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
                     trysleep=1):
     '''
@@ -213,13 +213,15 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
         connectfail = False
         try:
             kwargs = {'hostname': host,
-                      'port': 22,
+                      'port': port,
                       'username': username,
-                      'timeout': 15}
-            if password and not key_filename:
-                kwargs['password'] = password
+                      'timeout': ssh_timeout}
             if key_filename:
                 kwargs['key_filename'] = key_filename
+                log.debug('Using {0} as the key_filename'.format(key_filename))
+            elif password:
+                kwargs['password'] = password
+                log.debug('Using {0} as the password'.format(password))
 
             trycount += 1
             log.debug(
@@ -241,9 +243,9 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 return True
             return False
         except Exception:
-            time.sleep(trysleep)
             if trycount >= maxtries:
                 return False
+            time.sleep(trysleep)
 
 
 def deploy_script(host, port=22, timeout=900, username='root',
@@ -253,7 +255,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
-                  keep_tmp=False, script_args=None):
+                  keep_tmp=False, script_args=None, ssh_timeout=15):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -264,7 +266,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
-                           timeout=newtimeout):
+                           ssh_timeout=ssh_timeout):
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -272,15 +274,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
             )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             kwargs = {'hostname': host,
-                      'port': 22,
+                      'port': port,
                       'username': username,
-                      'timeout': 15}
-            if password and not key_filename:
-                log.debug('Using {0} as the password'.format(password))
-                kwargs['password'] = password
+                      'timeout': ssh_timeout}
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
+            elif password:
+                log.debug('Using {0} as the password'.format(password))
+                kwargs['password'] = password
             try:
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
@@ -444,21 +446,24 @@ def root_cmd(command, tty, sudo, **kwargs):
         command = 'sudo ' + command
         log.debug('Using sudo to run command')
 
-    log.debug('Executing command: {0}'.format(command))
-    cmd = 'ssh -oStrictHostKeyChecking=no -t {0}@{1} "{2}"'.format(
+    ssh_args = ' -oStrictHostKeyChecking=no'
+    ssh_args += ' -oUserKnownHostsFile=/dev/null'
+    if tty:
+        ssh_args += ' -t'
+    if 'key_filename' in kwargs:
+        ssh_args += ' -i {0}'.format(kwargs['key_filename'])
+
+    cmd = 'ssh {0} {1}@{2} "{3}"'.format(
+        ssh_args,
         kwargs['username'],
         kwargs['hostname'],
         command
     )
 
-    if 'key_filename' in kwargs:
-        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
-    elif 'password' in kwargs:
+    if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
-    if not tty:
-        cmd = cmd.replace(' -t', '')
-
+    log.debug('Executing command: {0}'.format(command))
     return subprocess.call(cmd, shell=True)
 
 
