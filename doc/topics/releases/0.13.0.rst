@@ -22,7 +22,7 @@ Windows Improvements
 
 Minion stability has improved. Many file operations, including file.recurse,
 have been fixed and improved. The network module works better, to include
-network.interfaces.
+network.interfaces. Both 32bit and 64bit installers are now available.
 
 Nodegroup Targetting in Peer System
 -----------------------------------
