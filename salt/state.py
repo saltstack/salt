@@ -1851,7 +1851,7 @@ class BaseHighState(object):
         return state, errors
 
 
-    def _handle_state_decls(self, state, env, sls, errors):
+    def _handle_state_decls(self, state, sls, env, errors):
         for name in state:
             if not isinstance(state[name], dict):
                 if name == '__extend__':
