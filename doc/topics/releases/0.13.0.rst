@@ -14,18 +14,22 @@ Improved file.recuse Performance
 
 The file.recurse system has been deployed and used in a vast array of
 situations. Fixes to the file state and module have led towards opening up
-new ways of running file.recuse to make it faster. Now the file.recurse
+new ways of running file.recurse to make it faster. Now the file.recurse
 state will download fewer files and will run substantially faster.
 
 Windows Improvements
 --------------------
 
-Nodegroup Targetting in Peer System
+Minion stability on Windows has improved. Many file operations, including
+file.recurse, have been fixed and improved. The network module works better, to
+include network.interfaces. Both 32bit and 64bit installers are now available.
+
+Nodegroup Targeting in Peer System
 -----------------------------------
 
-In the past nodegroups were not abvailable for targeting via the peer system.
-This has been fixed allowing the new nodegroup expr_form argument for the
-pulish.publish function:
+In the past, nodegroups were not available for targeting via the peer system.
+This has been fixed, allowing the new nodegroup expr_form argument for the
+publish.publish function:
 
     salt-call publish.publish group1 test.ping expr_form=nodegroup
 
@@ -33,7 +37,7 @@ Blacklist Additions
 -------------------
 
 Additions allowing more granular blacklisting are available in 0.13.0. The
-ability to blacklist users and function in client acl have been added, as
+ability to blacklist users and functions in client_acl have been added, as
 well as the ability to exclude state formulas from the command line. 
 
 Command Line Pillar Embedding
