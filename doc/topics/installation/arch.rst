@@ -72,14 +72,14 @@ files need to be copied as follows:
 Note: only the configuration files for the services to be run need be
 copied.
 
-**rc.conf**
+**systemd**
 
-Activate the Salt Master and/or Minion in ``/etc/rc.conf`` as follows:
+Activate the Salt Master and/or Minion via ``systemctl`` as follows:
 
-.. code-block:: diff
+.. code-block:: bash
 
-    -DAEMONS=(syslog-ng network crond)
-    +DAEMONS=(syslog-ng network crond @salt-master @salt-minion)
+    systemctl enable salt-master.service
+    systemctl enable salt-minion.service
 
 **Start the Master**
 
@@ -89,7 +89,7 @@ seen here:
 
 .. code-block:: bash
 
-    rc.d start salt-master
+    systemctl start salt-master
 
 Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 
