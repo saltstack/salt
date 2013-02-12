@@ -11,7 +11,7 @@ import StringIO
 
 # import third party libs
 import jinja2
-import jinja2.exceptions.TemplateNotFound
+import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
