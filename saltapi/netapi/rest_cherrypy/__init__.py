@@ -12,16 +12,20 @@ A hypermedia REST API for Salt using the CherryPy framework
 
     port
         **Required**
+
         The port for the webserver to listen on.
     debug : ``False``
         Starts a for-development web server instead of the production-ready web
         server.
+
         Does not use SSL and ignores the certificate configuration options.
     ssl_crt
         Required when ``debug`` is ``False``
+
         The path to a SSL certificate. (See below)
     ssl_key
         Required when ``debug`` is ``False``
+
         The path to the private key for your SSL certificate. (See below)
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
