@@ -84,7 +84,6 @@ import logging
 import copy
 import re
 import fnmatch
-import warnings
 
 # Import salt libs
 import salt.utils
@@ -382,25 +381,21 @@ def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     return ret
 
 
-def _test_owner(kwargs, default=None):
-    """
+def _test_owner(kwargs, user=None):
+    '''
     Convert owner to user, since other config management tools use owner,
     no need to punish people coming from other systems.
     PLEASE DO NOT DOCUMENT THIS! WE USE USER, NOT OWNER!!!!
-    """
+    '''
+    if user:
+        return user
     if 'owner' in kwargs:
-        message = 'Please use "user" instead of "owner"'
-
-        # TODO: this should change to an exception after the next release
-        #raise SaltException(message)
-        warnings.warn(message, DeprecationWarning)
-
-        if default:
-            raise SaltException('user and owner defined')
-
+        msg = ('Use of argument owner found, "owner" is invalid, please use'
+               ' "user"')
+        log.warning(msg)
         return kwargs['owner']
 
-    return default
+    return user
 
 
 def symlink(
@@ -431,7 +426,7 @@ def symlink(
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
     '''
-    user = _test_owner(kwargs, default=user)
+    user = _test_owner(kwargs, user=user)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -639,7 +634,7 @@ def managed(name,
     backup
         Overrides the default backup mode for this specific file
     '''
-    user = _test_owner(kwargs, default=user)
+    user = _test_owner(kwargs, user=user)
     # Initial set up
     mode = __salt__['config.manage_mode'](mode)
     ret = {'changes': {},
@@ -785,7 +780,7 @@ def directory(name,
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
     '''
-    user = _test_owner(kwargs, default=user)
+    user = _test_owner(kwargs, user=user)
     mode = __salt__['config.manage_mode'](mode)
     ret = {'name': name,
            'changes': {},
@@ -995,7 +990,7 @@ def recurse(name,
           - exclude: APPDATA*               :: glob matches APPDATA.01, APPDATA.02,.. for exclusion
           - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion
     '''
-    user = _test_owner(kwargs, default=user)
+    user = _test_owner(kwargs, user=user)
     ret = {'name': name,
            'changes': {},
            'result': True,
