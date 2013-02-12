@@ -237,7 +237,6 @@ def create(vm_):
     kwargs['size'] = get_size(conn, vm_)
     kwargs['location'] = get_availability_zone(conn, vm_)
     ex_keyname = keyname(vm_)
-    log.error('Salt vm_ {0}'.format(vm_))
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
     ex_securitygroup = securitygroup(vm_)
