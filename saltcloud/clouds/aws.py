@@ -271,7 +271,7 @@ def create(vm_):
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
-                    host=ip_address, username=user, timeout=60,
+                    host=ip_address, username=user, ssh_timeout=60,
                     key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
