@@ -344,7 +344,7 @@ def wait_script(name,
 def run(name,
         onlyif=None,
         unless=None,
-        cwd='/root',
+        cwd=None,
         user=None,
         group=None,
         shell=None,
@@ -392,7 +392,7 @@ def run(name,
            'result': False,
            'comment': ''}
 
-    if not os.path.isdir(cwd):
+    if cwd and not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
 
