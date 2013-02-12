@@ -63,6 +63,21 @@ remote executions to also quit. Now a message is displayed showing what
 command can be used to track the execution and what the job id is for the
 execution.
 
+Version Specification in Muliple-Package States
+-----------------------------------------------
+
+Versions can now be specified within multiple-package :mod:`pkg.installed
+<salt.states.pkg.installed>` states. An example can be found below:
+
+.. code-block:: yaml
+
+    mypkgs:
+      pkg.installed:
+        - pkgs:
+          - foo
+          - bar: 1.2.3-4
+          - baz
+
 Noteworthy Changes
 ==================
 
