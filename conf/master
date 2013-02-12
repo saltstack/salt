@@ -297,7 +297,7 @@
 # defined. The user running the salt master will need read access to the repo.
 # gitfs_remotes:
 #   - git://github.com/saltstack/salt-states.git
-#   - git://github.com/saltstack/prod-states.git
+#   - file:///var/git/saltmaster
 # The repos will be searched in order to find the file requested by a client
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
