@@ -8,9 +8,9 @@
 # Set the size of minion keys to generate, defaults to 2048
 #keysize: 2048
 #
-# Set the default os being deployed, this sets which deployment script to
-# apply, this must be set here or in all vm configurations
-#os: RHEL6
+# Set the default os being deployed. This sets which deployment script to
+# apply. This argument is optional.
+#script: bootstrap-salt
 
 #####    Cloud Provider Settings     #####
 ##########################################
@@ -79,3 +79,8 @@
 #     'saltcloud': 'info'
 #
 #log_granular_levels: {}
+
+# Whether or not to remove the accompnaying SSH key from the known_hosts file
+# when an instance is destroyed.
+#delete_sshkeys: False
+
