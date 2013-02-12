@@ -223,6 +223,8 @@ def destroy(name, conn=None):
             __opts__['sock_dir']
         )
         event.fire_event('{0} has been destroyed'.format(name), 'salt-cloud')
+        if __opts__['delete_sshkeys'] is True:
+            saltcloud.utils.remove_sshkey(node.public_ips[0])
         return True
     else:
         log.error('Failed to Destroy VM: {0}'.format(name))

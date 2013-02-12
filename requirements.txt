@@ -2,4 +2,4 @@
 salt
 PyYAML
 apache-libcloud
-paramiko
+botocore

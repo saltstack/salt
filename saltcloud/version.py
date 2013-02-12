@@ -8,7 +8,6 @@ def versions_report():
     libs = (
         ("Salt", "salt", "__version__"),
         ("Apache Libcloud", "libcloud", "__version__"),
-        ("Paramiko", "paramiko", "__version__"),
         ("PyYAML", "yaml", "__version__"),
     )
 

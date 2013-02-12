@@ -19,13 +19,6 @@ import re
 # Get logging started
 log = logging.getLogger(__name__)
 
-try:
-    import paramiko
-except:
-    raise ImportError(
-        'Cannot import paramiko. Please make sure it is correctly installed.'
-    )
-
 # Import salt libs
 import salt.crypt
 import salt.client
@@ -93,8 +86,10 @@ def accept_key(pki_dir, pub, id_):
     the opts directory, this method places the pub key in the accepted
     keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
-    if not os.path.exists(pki_dir):
-        os.makedirs(pki_dir)
+    for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+        key_path = os.path.join(pki_dir, key_dir)
+        if not os.path.exists(key_path):
+            os.makedirs(key_path)
 
     key = os.path.join(
         pki_dir,
@@ -207,8 +202,8 @@ def wait_for_ssh(host, port=22, timeout=900):
                 return False
 
 
-def wait_for_passwd(host, port=22, timeout=900, username='root',
-                    password=None, key_filename=None, maxtries=50,
+def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
+                    password=None, key_filename=None, maxtries=15,
                     trysleep=1):
     '''
     Wait until ssh connection can be accessed via password or ssh key
@@ -217,45 +212,40 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     while trycount < maxtries:
         connectfail = False
         try:
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             kwargs = {'hostname': host,
-                      'port': 22,
+                      'port': port,
                       'username': username,
-                      'timeout': 15}
-            if password and not key_filename:
-                kwargs['password'] = password
+                      'timeout': ssh_timeout}
             if key_filename:
                 kwargs['key_filename'] = key_filename
-            try:
-                ssh.connect(**kwargs)
-            except (paramiko.AuthenticationException,
-                    paramiko.SSHException) as authexc:
-                connectfail = True
-                ssh.close()
-                trycount += 1
-                log.debug(
-                    'Attempting to authenticate (try {0} of {1}): {2}'.format(
-                        trycount, maxtries, authexc
-                    )
+                log.debug('Using {0} as the key_filename'.format(key_filename))
+            elif password:
+                kwargs['password'] = password
+                log.debug('Using {0} as the password'.format(password))
+
+            trycount += 1
+            log.debug(
+                'Attempting to authenticate as {0} (try {1} of {2})'.format(
+                    username, trycount, maxtries
                 )
+            )
+
+            status = root_cmd('date', tty=False, sudo=False, **kwargs)
+            if status != 0:
+                connectfail = True
                 if trycount < maxtries:
                     time.sleep(trysleep)
                     continue
                 else:
-                    log.error('Authentication failed: {0}'.format(authexc))
+                    log.error('Authentication failed: status code {0}'.format(status))
                     return False
-            except Exception as exc:
-                log.error(
-                    'There was an error in wait_for_passwd: {0}'.format(exc)
-                )
             if connectfail is False:
                 return True
             return False
         except Exception:
-            time.sleep(trysleep)
             if trycount >= maxtries:
                 return False
+            time.sleep(trysleep)
 
 
 def deploy_script(host, port=22, timeout=900, username='root',
@@ -265,7 +255,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
-                  keep_tmp=False):
+                  keep_tmp=False, script_args=None, ssh_timeout=15):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -276,76 +266,65 @@ def deploy_script(host, port=22, timeout=900, username='root',
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
-                           timeout=newtimeout):
+                           ssh_timeout=ssh_timeout):
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
                 )
             )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             kwargs = {'hostname': host,
-                      'port': 22,
+                      'port': port,
                       'username': username,
-                      'timeout': 15}
-            if password and not key_filename:
-                log.debug('Using {0} as the password'.format(password))
-                kwargs['password'] = password
+                      'timeout': ssh_timeout}
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
+            elif password:
+                log.debug('Using {0} as the password'.format(password))
+                kwargs['password'] = password
             try:
-                ssh.connect(**kwargs)
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
                 log.error(
                     'There was an error in deploy_script: {0}'.format(exc)
                 )
             if provider == 'ibmsce':
-                ssh.exec_command(
-                    'sudo sed -i "s/#Subsystem/Subsystem/" '
+                subsys_command = (
+                    'sed -i "s/#Subsystem/Subsystem/" '
                     '/etc/ssh/sshd_config'
                 )
-                stdin, stdout, stderr = ssh.exec_command(
-                    'sudo service sshd restart'
-                )
-                for line in stdout:
-                    sys.stdout.write(line)
-                ssh.connect(**kwargs)
-            sftp = ssh.get_transport()
-            sftp.open_session()
-            sftp = paramiko.SFTPClient.from_transport(sftp)
+                root_cmd(subsys_command, tty, sudo, **kwargs)
+                root_cmd('service sshd restart', tty, sudo, **kwargs)
 
             # Minion configuration
             if minion_pem:
-                sftp_file(sftp, host, '/tmp/minion.pem', minion_pem)
-                ssh.exec_command('chmod 600 /tmp/minion.pem')
+                scp_file('/tmp/minion.pem', minion_pem, kwargs)
+                root_cmd('chmod 600 /tmp/minion.pem', tty, sudo, **kwargs)
             if minion_pub:
-                sftp_file(sftp, host, '/tmp/minion.pub', minion_pub)
+                scp_file('/tmp/minion.pub', minion_pub, kwargs)
             if minion_conf:
-                sftp_file(sftp, host, '/tmp/minion', minion_conf)
+                scp_file('/tmp/minion', minion_conf, kwargs)
 
             # Master configuration
             if master_pem:
-                sftp_file(sftp, host, '/tmp/master.pem', master_pem)
-                ssh.exec_command('chmod 600 /tmp/master.pem')
+                scp_file('/tmp/master.pem', master_pem, kwargs)
+                root_cmd('chmod 600 /tmp/master.pem', tty, sudo, **kwargs)
             if master_pub:
-                sftp_file(sftp, host, '/tmp/master.pub', master_pub)
+                scp_file('/tmp/master.pub', master_pub, kwargs)
             if master_conf:
-                sftp_file(sftp, host, '/tmp/master', master_conf)
+                scp_file('/tmp/master', master_conf, kwargs)
 
             # The actual deploy script
             if script:
-                sftp_file(sftp, host, '/tmp/deploy.sh', script)
-            ssh.exec_command('chmod +x /tmp/deploy.sh')
+                scp_file('/tmp/deploy.sh', script, kwargs)
+            root_cmd('chmod +x /tmp/deploy.sh', tty, sudo, **kwargs)
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
             # for the minion to check in, and then fire a startup event.
-            # Unfortunately, it doesn't currently work with Paramiko.
             if start_action:
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
@@ -361,14 +340,16 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Executing /tmp/deploy.sh')
                 if make_master:
                     deploy_command += ' -m'
-                if 'bootstrap-salt-minion' in script:
+                if 'bootstrap-salt' in script:
                     deploy_command += ' -c /tmp/'
+                if script_args:
+                    deploy_command += ' {0}'.format(script_args)
                 root_cmd(deploy_command, tty, sudo, **kwargs)
-                log.debug('Executed /tmp/deploy.sh')
+                log.debug('Executed command {0}'.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
-                    ssh.exec_command('rm /tmp/deploy.sh')
+                    root_cmd('rm /tmp/deploy.sh', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/deploy.sh')
 
             if keep_tmp:
@@ -377,25 +358,25 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Remove minion configuration
             if not keep_tmp:
                 if minion_pub:
-                    ssh.exec_command('rm /tmp/minion.pub')
+                    root_cmd('rm /tmp/minion.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pub')
                 if minion_pem:
-                    ssh.exec_command('rm /tmp/minion.pem')
+                    root_cmd('rm /tmp/minion.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion.pem')
                 if minion_conf:
-                    ssh.exec_command('rm /tmp/minion')
+                    root_cmd('rm /tmp/minion', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion')
 
             # Remove master configuration
             if not keep_tmp:
                 if master_pub:
-                    ssh.exec_command('rm /tmp/master.pub')
+                    root_cmd('rm /tmp/master.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pub')
                 if master_pem:
-                    ssh.exec_command('rm /tmp/master.pem')
+                    root_cmd('rm /tmp/master.pem', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pem')
                 if master_conf:
-                    ssh.exec_command('rm /tmp/master')
+                    root_cmd('rm /tmp/master', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master')
 
             if start_action:
@@ -434,17 +415,26 @@ def deploy_script(host, port=22, timeout=900, username='root',
     return False
 
 
-def sftp_file(transport, host, dest_path, contents):
+def scp_file(dest_path, contents, kwargs):
     '''
-    Given an established sftp session, this function will copy a file to a
-    server using said sftp transport
+    Use scp to copy a file to a server    
     '''
     tmpfh, tmppath = tempfile.mkstemp()
     tmpfile = open(tmppath, 'w')
     tmpfile.write(contents)
     tmpfile.close()
-    log.debug('Uploading {0} to {1}'.format(dest_path, host))
-    transport.put(tmppath, dest_path)
+    log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
+    cmd = 'scp -oStrictHostKeyChecking=no {0} {1}@{2}:{3}'.format(
+        tmppath,
+        kwargs['username'],
+        kwargs['hostname'],
+        dest_path
+    )
+    if 'key_filename' in kwargs:
+        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
+    elif 'password' in kwargs:
+        cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
+    subprocess.call(cmd, shell=True)
     os.remove(tmppath)
 
 
@@ -456,28 +446,25 @@ def root_cmd(command, tty, sudo, **kwargs):
         command = 'sudo ' + command
         log.debug('Using sudo to run command')
 
-    log.debug('Executing command: {0}'.format(command))
+    ssh_args = ' -oStrictHostKeyChecking=no'
+    ssh_args += ' -oUserKnownHostsFile=/dev/null'
     if tty:
-        # Tried this with paramiko's invoke_shell(), and got tired of
-        # fighting with it
-        log.debug(
-            'Using ssh command to simulate tty session, to execute command'
-        )
-        cmd = 'ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"'.format(
-            kwargs['key_filename'],
-            kwargs['username'],
-            kwargs['hostname'],
-            command
-        )
-        subprocess.call(cmd, shell=True)
-    else:
-        log.debug('Using paramiko to execute command')
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(**kwargs)
-        stdin, stdout, stderr = ssh.exec_command(command)
-        for line in stdout:
-            sys.stdout.write(line)
+        ssh_args += ' -t'
+    if 'key_filename' in kwargs:
+        ssh_args += ' -i {0}'.format(kwargs['key_filename'])
+
+    cmd = 'ssh {0} {1}@{2} "{3}"'.format(
+        ssh_args,
+        kwargs['username'],
+        kwargs['hostname'],
+        command
+    )
+
+    if 'password' in kwargs:
+        cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
+
+    log.debug('Executing command: {0}'.format(command))
+    return subprocess.call(cmd, shell=True)
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
@@ -560,3 +547,14 @@ def namespaced_function(function, global_dict, defaults=None):
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
+
+
+def remove_sshkey(host,
+                  known_hosts='{0}/known_hosts'.format(os.environ['HOME'])):
+    '''
+    Remove a host from the known_hosts file
+    '''
+    log.debug('Removing ssh key for {0} from known '
+              'hosts file {1}'.format(host, known_hosts))
+    cmd = 'ssh-keygen -R {0}'.format(host)
+    subprocess.call(cmd, shell=True)

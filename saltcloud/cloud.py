@@ -4,6 +4,7 @@ correct cloud modules
 '''
 # Import python libs
 import os
+import sys
 import copy
 import multiprocessing
 import logging
@@ -399,8 +400,15 @@ class Map(Cloud):
                     if prov != 'aws' or pmap['aws'][name]['state'] != 2:
                         ret['create'].pop(name)
         if self.opts['hard']:
-            # Look for the items to delete
-            ret['destroy'] = exist.difference(defined)
+            if self.opts['enable_hard_maps'] is True:
+                # Look for the items to delete
+                ret['destroy'] = exist.difference(defined)
+            else:
+                print('The --hard map can be extremely dangerous to use, and '
+                      'therefore must explicitly be enabled in the main'
+                      'configuration file, by setting enable_hard_maps to '
+                      'True')
+                sys.exit(1)
         return ret
 
     def run_map(self, dmap):

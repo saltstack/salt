@@ -246,9 +246,12 @@ def create(vm_):
         'keep_tmp': __opts__['keep_tmp'],
     }
 
+    if 'script_args' in vm_:
+        deploy_kwargs['script_args'] = vm_['script_args']
+
     deployargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
     if 'ssh_username' in vm_:
-        deployargs['deploy_command'] = 'sudo /tmp/deploy.sh'
+        deployargs['deploy_command'] = '/tmp/deploy.sh'
         deployargs['username'] = vm_['ssh_username']
         deployargs['tty'] = True
     else:

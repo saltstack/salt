@@ -301,6 +301,9 @@ def create(vm_):
             __opts__, vm_
         )
 
+        if 'script_args' in vm_:
+            deploy_kwargs['script_args'] = vm_['script_args']
+
         # Deploy salt-master files, if necessary
         if 'make_master' in vm_ and vm_['make_master'] is True:
             deploy_kwargs['master_pub'] = vm_['master_pub']

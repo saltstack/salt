@@ -5,6 +5,7 @@ Maintainer: Sean Channel <pentabular@gmail.com>
 Build-Depends: debhelper (>= 7.0.50),
                python | python-all | python-dev | python-all-dev,
                python-libcloud,
+               python-boto,
                python-setuptools,
                python-sphinx,
                python-yaml
@@ -20,9 +21,10 @@ Depends: ${python:Depends},
          ${shlibs:Depends},
          python,
          python-libcloud,
-         python-paramiko,
+         python-boto,
          python-yaml,
-         salt-common
+         salt-common,
+         sshpass
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly 
  controlled profile and mapping system.
