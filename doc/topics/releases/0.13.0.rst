@@ -9,8 +9,8 @@ arrived!
 Major Features
 ==============
 
-Improved file.recuse Performance
---------------------------------
+Improved file.recurse Performance
+---------------------------------
 
 The file.recurse system has been deployed and used in a vast array of
 situations. Fixes to the file state and module have led towards opening up
