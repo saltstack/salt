@@ -6,7 +6,7 @@ arch_aws:
   provider: aws
   image: ami-6ee95107
   size: Micro Instance
-  os: Arch
+  script: Arch
   ssh_username: root
   location: us-east-1
   minion:
@@ -17,7 +17,7 @@ arch_cloud-init_aws:
   provider: aws
   image: ami-596de730
   size: Micro Instance
-  os: Arch
+  script: Arch
   ssh_username: root
   location: us-east-1
   minion:
@@ -30,7 +30,7 @@ centos_6:
   provider: aws
   image: ami-86e15bef
   size: Micro Instance
-  os: Centos
+  script: Centos
   ssh_username: root
   location: us-east-1
   minion:
@@ -43,7 +43,7 @@ debian_squeeze_aws:
   provider: aws
   image: ami-a121a6c8
   size: Micro Instance
-  os: Debian
+  script: Debian
   ssh_username: admin
   location: us-east-1
   minion:
@@ -56,7 +56,7 @@ fedora_17_aws:
   provider: aws
   image: ami-2ea50247
   size: Micro Instance
-  os: Fedora
+  script: Fedora
   ssh_username: ec2-user
   location: us-east-1
   minion:
@@ -67,7 +67,7 @@ fedora_18_aws:
   provider: aws
   image: ami-6145cc08
   size: Micro Instance
-  os: Fedora
+  script: Fedora
   ssh_username: ec2-user
   location: us-east-1
   minion:
@@ -82,7 +82,7 @@ freebsd_91_aws:
   provider: aws
   image: ami-5339bb3a
   size: Micro Instance
-  os: FreeBSD
+  script: FreeBSD
   ssh_username: ec2-user
   location: us-east-1
   minion:
@@ -93,7 +93,7 @@ freebsd_91_4XL_aws:
   provider: aws
   image: ami-79088510
   size: Cluster Compute 4XL
-  os: FreeBSD
+  script: FreeBSD
   ssh_username: ec2-user
   location: us-east-1
   minion:
@@ -106,7 +106,7 @@ ubuntu_lucid_aws:
   provider: aws
   image: ami-21e47148
   size: Micro Instance
-  os: Ubuntu
+  script: Ubuntu
   ssh_username: ubuntu
   location: us-east-1
   minion:
@@ -117,7 +117,7 @@ ubuntu_precise_aws:
   provider: aws
   image: ami-3fec7956
   size: Micro Instance
-  os: Ubuntu
+  script: Ubuntu
   ssh_username: ubuntu
   location: us-east-1
   minion:

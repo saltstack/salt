@@ -528,7 +528,7 @@ centos_rackspace:
   provider: rackspace
   image: CentOS 6.2
   size: 1024 server
-  os: RHEL6
+  script: RHEL6
   minion:
     grains:
         role: webserver
@@ -813,7 +813,7 @@ vm_profile:
   provider: gogrid
   size: 512MB
   image: CentOS 6.2 (64\-bit) w/ None
-  os: RHEL6
+  script: RHEL6
   minion:
     master: salt.mycompany.com
   grains:
@@ -910,7 +910,7 @@ micro_amazon:
   provider: aws
   image: ami\-e565ba8c
   size: Micro Instance
-  os: RHEL6
+  script: RHEL6
   securitygroup:
       \- default
       \- extra
@@ -1346,7 +1346,7 @@ centos_rackspace:
   provider: rackspace
   image: CentOS 6.2
   size: 1024 server
-  os: RHEL6
+  script: RHEL6
   minion:
     grains:
         role: webserver
