@@ -42,7 +42,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       provider: aws
       image: ami-e565ba8c
       size: Micro Instance
-      os: RHEL6
+      script: RHEL6
 
 The profile can be realized now with a salt command:
 

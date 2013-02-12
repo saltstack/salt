@@ -2,7 +2,7 @@ base_aws:
   provider: aws
   image: ami-e565ba8c
   size: Micro Instance
-  os: RHEL
+  script: python-bootstrap
   minion:
       cheese: edam
 
@@ -10,7 +10,7 @@ ubuntu_rs:
   provider: rackspace
   image: Ubuntu 12.04 LTS
   size: 256 server
-  os: Ubuntu
+  script: Ubuntu
   minion:
       cheese: edam
 
@@ -18,6 +18,6 @@ fedora_rs:
   provider: rackspace
   image: Fedora 17
   size: 256 server
-  os: Fedora
+  script: Fedora
   minion:
       cheese: edam

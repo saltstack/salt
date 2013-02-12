@@ -8,9 +8,10 @@
 # Set the size of minion keys to generate, defaults to 2048
 #keysize: 2048
 #
-# Set the default os being deployed, this sets which deployment script to
-# apply, this must be set here or in all vm configurations
-#os: RHEL6
+# Optionally set the default deployment script, out of the scripts in the
+# salt-cloud 'deploy' folder. 
+# Default: 'bootstrap-salt-minion'
+#script: python-bootstrap
 
 #####    Cloud Provider Settings     #####
 ##########################################
