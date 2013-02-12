@@ -1,8 +1,11 @@
 '''
-The backend for the git based file server system. This system allows for salt
-to directly reference a remote git repository as the source of truth for files.
+The backend for the git based file server system. 
 
-When using the git file server backend,
+After enabling this backend, branches and tags in a remote git repository 
+are exposed to salt as different environments. This feature is managed by 
+the fileserver_backend option in the salt master config.
+
+:depends: git-python Python module
 '''
 
 # Import python libs
@@ -28,7 +31,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if gitpython is available
+    Only load if git-python is available
     '''
     if not isinstance(__opts__['gitfs_remotes'], list):
         return False
@@ -54,8 +57,8 @@ def _get_ref(repo, short):
 
 def _wait_lock(lk_fn, dest):
     '''
-    if the write lock is there check to see if the file is acctually being
-    written, if there is no change in the file size after a short sleep then
+    If the write lock is there, check to see if the file is actually being
+    written. If there is no change in the file size after a short sleep,
     remove the lock and move forward.
     '''
     if not os.path.isfile(lk_fn):
