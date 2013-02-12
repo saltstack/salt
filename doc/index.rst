@@ -12,10 +12,23 @@ Websocket API.
 Getting started
 ===============
 
-Running :command:`salt-api` will automatically start any netapi modules that
-have been configured in your Salt master config file. Consult the documentation
-for each netapi module for what options are required. :command:`salt-api` must
-be run on the same machine as your Salt master.
+1.  Install :command:`salt-api` on the same machine as your Salt master.
+2.  Edit your Salt master config file for all required options for each netapi
+    module you wish to run.
+3.  Install any required additional libraries or software for each netapi
+    module you wish to run.
+4.  Run :command:`salt-api` which will then start all configured netapi
+    modules.
+
+.. note::
+
+    Each ``netapi`` module will have differing configuration requirements and
+    differing required software libraries.
+
+    Exactly like the various module types in Salt (:term:`execution modules`,
+    :term:`renderer modules`, :term:`returner modules`, etc.), :term:`netapi
+    modules` in :program:`salt-api` will *not* be loaded into memory or started
+    if all requirements are not met.
 
 netapi modules
 ==============
