@@ -30,6 +30,14 @@ Getting started
     modules` in :program:`salt-api` will *not* be loaded into memory or started
     if all requirements are not met.
 
+Development quickstart
+======================
+
+.. toctree::
+    :maxdepth: 1
+
+    topics/quickstart
+
 netapi modules
 ==============
 
