@@ -7,17 +7,22 @@ A hypermedia REST API for Salt using the CherryPy framework
     authenticating as has permissions for all the functions you will be
     running.
 
-    In addition to ``eauth`` the configuration for this module also resides in
-    the Salt master config file. All available options are detailed below.
+    The configuration options for this module resides in the Salt master config
+    file. All available options are detailed below.
 
     port
-        Required
+        **Required**
+        The port for the webserver to listen on.
     debug : ``False``
-        Used during development; does not use SSL
+        Starts a for-development web server instead of the production-ready web
+        server.
+        Does not use SSL and ignores the certificate configuration options.
     ssl_crt
         Required when ``debug`` is ``False``
+        The path to a SSL certificate. (See below)
     ssl_key
         Required when ``debug`` is ``False``
+        The path to the private key for your SSL certificate. (See below)
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
         If this directory contains a ``index.html`` file, it will be served at
@@ -29,7 +34,7 @@ A hypermedia REST API for Salt using the CherryPy framework
 
     .. _`salt-ui`: https://github.com/saltstack/salt-ui
 
-    For example:
+    Example production configuration block:
 
     .. code-block:: yaml
 
