@@ -12,7 +12,6 @@ from datetime import datetime
 from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
-from distutils.command.install import install
 from distutils.sysconfig import get_python_lib, PREFIX
 
 # Change to salt source's directory prior to running any command
@@ -27,12 +26,14 @@ with_setuptools = False
 if 'USE_SETUPTOOLS' in os.environ:
     try:
         from setuptools import setup
+        from setuptools.command.install import install
         with_setuptools = True
     except:
         with_setuptools = False
 
 if with_setuptools is False:
     import warnings
+    from distutils.command.install import install
     from distutils.core import setup
     warnings.filterwarnings(
         'ignore',
