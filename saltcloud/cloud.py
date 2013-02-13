@@ -318,6 +318,14 @@ class Map(Cloud):
         dmap = self.read()
         for profile, vmap in dmap.items():
             provider = self.profile_provider(profile)
+            if provider is None:
+                log.info(
+                    'No provider for the mapped {0!r} profile was '
+                    'found.'.format(
+                        profile
+                    )
+                )
+                continue
             vms = [i.keys() if type(i) == dict else [i] for i in vmap]
             vms = [item for sublist in vms for item in sublist]
             for vm in vms:
