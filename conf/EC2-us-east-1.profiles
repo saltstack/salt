@@ -106,7 +106,7 @@ ubuntu_lucid_aws:
 
 ubuntu_precise_aws:
   provider: aws
-  image: ami-3fec7956
+  image: ami-0145d268
   size: Micro Instance
   ssh_username: ubuntu
   location: us-east-1

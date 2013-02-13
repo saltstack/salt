@@ -86,7 +86,7 @@ freebsd_91_aws:
 # http://cloud-images.ubuntu.com/releases/
 ubuntu_lucid_aws:
   provider: aws
-  image: ami-bb88acfe
+  image: ami-e63013a3
   size: Micro Instance
   ssh_username: ubuntu
   location: us-west-1
@@ -96,7 +96,7 @@ ubuntu_lucid_aws:
 
 ubuntu_precise_aws:
   provider: aws
-  image: ami-b87252fd
+  image: ami-3ed8fb7b 
   size: Micro Instance
   ssh_username: ubuntu
   location: us-west-1
