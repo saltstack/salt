@@ -37,6 +37,9 @@ from saltcloud.libcloudfuncs import *
 # Import salt libs
 from salt.exceptions import SaltException
 
+# Import botocore
+import botocore.session
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -485,11 +488,12 @@ def destroy(name):
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
     conn = get_conn(location=location)
+    libcloudfuncs_destroy = namespaced_function(libcloudfuncs_destroy, globals(), (conn,))
     try:
         libcloudfuncs_destroy(name, conn)
     except Exception as e:
         if e.message.startswith('OperationNotPermitted'):
-            log.warning('Failed: termination protection is enabled on {0}'.format(name))
+            log.info('Failed: termination protection is enabled on {0}'.format(name))
         else:
             raise e
 
@@ -497,6 +501,10 @@ def destroy(name):
 def enable_term_protect(name):
     '''
     Enable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a enable_term_protect mymachine
     '''
     _toggle_term_protect(name, True)
 
@@ -504,6 +512,10 @@ def enable_term_protect(name):
 def disable_term_protect(name):
     '''
     Disable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a disable_term_protect mymachine
     '''
     _toggle_term_protect(name, False)
 
@@ -512,12 +524,6 @@ def _toggle_term_protect(name, enabled):
     '''
     Toggle termination protection on a node
     '''
-    try:
-        import botocore.session
-    except ImportError:
-        log.error('You must install module botocore')
-        return
-
     # region is required for all boto queries
     region = get_location(None)
 
@@ -532,17 +538,11 @@ def _toggle_term_protect(name, enabled):
     endpoint = service.get_endpoint(region)
 
     # get the instance-id for the supplied node name
-    client = salt.client.LocalClient()
-    ret = client.cmd(name, 'grains.item', ['instanceId'])
-
-    if ret[name] == "":
-        log.error("Couldn't get instance_id for {0}".format(name))
-        return
-    else:
-        instance_id = ret[name]
+    conn = get_conn(location=region)
+    node = get_node(conn, name)
 
     params = {
-        'instance_id': instance_id,
+        'instance_id': node.id,
         'attribute': 'disableApiTermination',
         'value': 'true' if enabled else 'false',
     }
