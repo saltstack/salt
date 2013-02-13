@@ -160,6 +160,9 @@ effortless, simultaneous configuration of thousands of hosts.
         A dry vocabulary and technical representation of the configuration
         format that states represent.
 
+    :doc:`Writing states <ref/states/writing>`
+        A guide on how to write Salt states.
+
 **Renderers**
     Write state configuration files in the language, templating engine, or
     file type of your choice. The world doesn't need yet another DSL.
