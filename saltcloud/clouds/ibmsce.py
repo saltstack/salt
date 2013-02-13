@@ -79,7 +79,6 @@ def create(vm_):
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
-    deploy_script = script(vm_)
     kwargs = {}
     vm_['location'] = __opts__['IBMSCE.location']
     kwargs['name'] = vm_['name']
@@ -130,6 +129,7 @@ def create(vm_):
         time.sleep(15)
 
     if __opts__['deploy'] is True:
+        deploy_script = script(vm_)
         log.debug(
             'Deploying {0} using IP address {1}'.format(
                 vm_['name'],

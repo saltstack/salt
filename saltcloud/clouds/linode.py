@@ -100,7 +100,6 @@ def create(vm_):
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
-    deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
     kwargs['image'] = get_image(conn, vm_)
@@ -120,6 +119,7 @@ def create(vm_):
         return False
 
     if __opts__['deploy'] is True:
+        deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],
             'username': 'root',

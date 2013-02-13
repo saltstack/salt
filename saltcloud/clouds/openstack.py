@@ -153,7 +153,6 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], '[a-z0-9_-]')
     conn = get_conn()
-    deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
 
@@ -237,7 +236,6 @@ def create(vm_):
 
     deployargs = {
         'host': ip_address,
-        'script': deploy_script.script,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
         'start_action': __opts__['start_action'],
@@ -270,6 +268,9 @@ def create(vm_):
         log.debug('Running root commands using sudo')
 
     if __opts__['deploy'] is True:
+        deploy_script = script(vm_)
+        deployargs['script'] = deploy_script.script
+
         deployed = saltcloud.utils.deploy_script(**deployargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
@@ -279,4 +280,3 @@ def create(vm_):
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
         log.info('  {0}: {1}'.format(key, val))
-
