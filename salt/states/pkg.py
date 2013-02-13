@@ -299,19 +299,10 @@ def installed(
     elif sources:
         sources = [x for x in sources if x.keys()[0] in targets]
 
-    if sources:
-        modified = [x for x in changes.keys() if x in targets]
-        not_modified = [x for x in desired if x not in targets]
-        failed = [x for x in targets if x not in modified]
-    else:
-        ok, failed = _verify_install(desired, __salt__['pkg.list_pkgs']())
-        modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok if x not in targets]
-
     if __opts__['test']:
         if targets:
             if sources:
-                summary = ', '.join(modified)
+                summary = ', '.join(sources)
             else:
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])
@@ -342,6 +333,15 @@ def installed(
                                           pkgs=pkgs,
                                           sources=sources,
                                           **kwargs)
+
+    if sources:
+        modified = [x for x in changes.keys() if x in targets]
+        not_modified = [x for x in desired if x not in targets]
+        failed = [x for x in targets if x not in modified]
+    else:
+        ok, failed = _verify_install(desired, __salt__['pkg.list_pkgs']())
+        modified = [x for x in ok if x in targets]
+        not_modified = [x for x in ok if x not in targets]
 
     comment = []
     if modified:
