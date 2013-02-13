@@ -63,6 +63,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.selected_query_option is not None:
             if self.config.get('map', None):
+                log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
                     query_map = mapper.interpolated_map(
                         query=self.selected_query_option
@@ -130,6 +131,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.options.destroy and (self.config.get('names', None) or
                                      self.config.get('map', None)):
             if self.config.get('map', None):
+                log.info('Applying map from {0!r}.'.format(self.config['map']))
                 names = mapper.delete_map(query='list_nodes')
             else:
                 names = self.config.get('names', None)
@@ -153,6 +155,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.options.action and (self.config.get('names', None) or
                                     self.config.get('map', None)):
             if self.config.get('map', None):
+                log.info('Applying map from {0!r}.'.format(self.config['map']))
                 names = mapper.delete_map(query='list_nodes')
             else:
                 names = self.config.get('names', None)
@@ -201,6 +204,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.exit(0)
             try:
                 dmap = mapper.map_data()
+                log.info('Applying map from {0!r}.'.format(self.config['map']))
 
                 msg = 'The following virtual machines are set to be created:\n'
                 for name in dmap['create']:
