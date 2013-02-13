@@ -131,51 +131,26 @@ are provided here as a reference for those who are interested, and contain no
 warranty (express or implied) from anyone affiliated with Salt Stack. Most of
 them have never been used, much less tested, by the Salt Stack team.
 
-Arch Linux
+* `Arch Linux`__
+.. __: https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
 
-.. code-block:: yaml
+* `FreeBSD`__
+.. __: http://www.daemonology.net/freebsd-on-ec2/
 
-    https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
+* `Fedora`__
+.. __: https://fedoraproject.org/wiki/Cloud_images
 
-FreeBSD
+* `CentOS`__
+.. __: http://wiki.centos.org/Cloud/AWS
 
-.. code-block:: yaml
+* `Ubuntu`__
+.. __: http://cloud-images.ubuntu.com/locator/ec2/
 
-    http://www.daemonology.net/freebsd-on-ec2/
+* `Debian`__
+.. __: http://wiki.debian.org/Cloud/AmazonEC2Image
 
-Fedora
+* `Gentoo`__
+.. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
 
-.. code-block:: yaml
-
-    https://fedoraproject.org/wiki/Cloud_images
-
-CentOS
-
-.. code-block:: yaml
-
-    http://wiki.centos.org/Cloud/AWS
-
-Ubuntu
-
-.. code-block:: yaml
-
-    http://cloud-images.ubuntu.com/locator/ec2/
-
-Debian
-
-.. code-block:: yaml
-
-    http://wiki.debian.org/Cloud/AmazonEC2Image
-
-Gentoo
-
-.. code-block:: yaml
-
-    https://aws.amazon.com/amis?platform=Gentoo&selection=platform
-
-All Images on Amazon
-
-.. code-block:: yaml
-
-    https://aws.amazon.com/amis
-
+* `All Images on Amazon`__
+.. __: https://aws.amazon.com/amis
