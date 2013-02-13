@@ -24,6 +24,9 @@ class CloudConfigMixIn(object):
     _mixin_prio_ = -1000    # First options seen
 
     def _mixin_setup(self):
+        self.master_config = {}
+        self.cloud_config = {}
+        self.profiles_config = {}
         group = self.config_group = optparse.OptionGroup(
             self,
             "Configuration Options",
@@ -36,16 +39,16 @@ class CloudConfigMixIn(object):
         )
         group.add_option(
             '-M', '--master-config',
-            default='/etc/salt/master',
+            default=None,
             help='The location of the salt master config file. '
-                 'Default: %default'
+                 'Default: /etc/salt/master'
         )
         group.add_option(
             '-V', '--profiles', '--vm_config',
             dest='vm_config',
-            default='/etc/salt/cloud.profiles',
+            default=None,
             help='The location of the saltcloud VM config file. '
-                 'Default: %default'
+                 'Default: /etc/salt/cloud.profiles'
         )
         self.add_option_group(group)
 
@@ -68,13 +71,18 @@ class CloudConfigMixIn(object):
 
         # Grab data from the 4 sources
         # 1st - Master config
-        # Done in CloudConfigMixIn.process_master_config()
+        # Loaded in CloudConfigMixIn.process_master_config()
+        # Start our configuration with a copy of the masters configuration
+        self.config = self.master_config.copy()
 
         # 2nd Override master config with salt-cloud config
-        # Done in CloudConfigMixIn.process_cloud_config()
+        # Loaded in CloudConfigMixIn.process_cloud_config()
+        # Let's override with the cloud's loaded settings.
+        self.config.update(self.cloud_config)
 
         # 3rd - Include VM config
-        # Done in CloudConfigMixIn.process_vm_config()
+        # Loaded in CloudConfigMixIn.process_vm_config()
+        self.config['vm'] = self.profiles_config
 
         # 4th - Override config with cli options
         # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
@@ -91,18 +99,34 @@ class CloudConfigMixIn(object):
         '''
         return {}
 
+    def process_cloud_config(self):
+        self.cloud_config = config.cloud_config(self.options.cloud_config)
+        if self.options.master_config is None:
+            # No master config was provided from cli
+            # Set the master configuration file path to the one provided in
+            # the cloud's configuration or the default path.
+            self.options.master_config = self.cloud_config.get(
+                'master_config', '/etc/salt/master'
+            )
+        if self.options.vm_config is None:
+            # No profiles config was provided from cli
+            # Set the profiles configuration file path to the one provided in
+            # the cloud's configuration or the default path.
+            self.options.vm_config = self.cloud_config.get(
+                'vm_config', '/etc/salt/cloud.profiles'
+            )
+
     def process_master_config(self):
-        self.config = salt.config.master_config(
+        self.master_config = salt.config.master_config(
             self.options.master_config
         )
-
-    def process_cloud_config(self):
-        self.config.update(config.cloud_config(self.options.cloud_config))
-    # Force process_cloud_config to run AFTER process_master_config
-    process_cloud_config._mixin_prio_ = -999
+    # Force process_master_config to run AFTER process_cloud_config
+    process_master_config._mixin_prio_ = -999
 
     def process_vm_config(self):
-        self.config['vm'] = config.vm_profiles_config(self.options.vm_config)
+        self.profiles_config = config.vm_profiles_config(
+            self.options.vm_config
+        )
     # Force process_vm_config to run AFTER process_cloud_config
     process_vm_config._mixin_prio_ = -998
 
