@@ -133,49 +133,49 @@ them have never been used, much less tested, by the Salt Stack team.
 
 Arch Linux
 
-.. code-block::
+.. code-block:: yaml
 
     https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
 
 FreeBSD
 
-.. code-block::
+.. code-block:: yaml
 
     http://www.daemonology.net/freebsd-on-ec2/
 
 Fedora
 
-.. code-block::
+.. code-block:: yaml
 
     https://fedoraproject.org/wiki/Cloud_images
 
 CentOS
 
-.. code-block::
+.. code-block:: yaml
 
     http://wiki.centos.org/Cloud/AWS
 
 Ubuntu
 
-.. code-block::
+.. code-block:: yaml
 
     http://cloud-images.ubuntu.com/locator/ec2/
 
 Debian
 
-.. code-block::
+.. code-block:: yaml
 
     http://wiki.debian.org/Cloud/AmazonEC2Image
 
 Gentoo
 
-.. code-block::
+.. code-block:: yaml
 
     https://aws.amazon.com/amis?platform=Gentoo&selection=platform
 
 All Images on Amazon
 
-.. code-block::
+.. code-block:: yaml
 
     https://aws.amazon.com/amis
 
