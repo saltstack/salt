@@ -104,7 +104,7 @@ def vm_info(name, quiet=False):
             return ret
 
 
-def destroy(name):
+def purge(name):
     '''
     Destroy the named vm
     '''
@@ -113,10 +113,9 @@ def destroy(name):
     if not data:
         return
     hyper = data.keys()[0]
-    vm_ = data[hyper].keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.purge',
-            [vm_, True],
+            [name, True],
             timeout=600)
     
