@@ -91,17 +91,76 @@ def _libvirt_creds():
         user = 'root'
     return {'user': user, 'group': group}
 
+
 def _get_migrate_command():
     '''
     Returns the command shared by the differnt migration types
     '''
     return 'virsh migrate --live --persistent --undefinesource '
 
+
 def _get_target(target, ssh):
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
     return ' %s://%s/%s' %(proto, target, 'system')
+
+
+def _gen_xml(name, cpu, mem, vda):
+    '''
+    Generate the xml string to define a libvirt vm
+    '''
+    mem = mem * 1024
+    data = '''
+<domain type='kvm'>
+        <name>%%NAME%%</name>
+        <vcpu>%%CPU%%</vcpu>
+        <memory>%%MEM%%</memory>
+        <os>
+                <type>hvm</type>
+                <boot dev='hd'/>
+        </os>
+        <devices>
+                <disk type='file' device='disk'>
+                        <source file='%%VDA%%'/>
+                        <target dev='vda' bus='virtio'/>
+                        <driver name='qemu' cache='writeback' io='native'/>
+                </disk>
+                <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
+        </devices>
+        <features>
+                <acpi/>
+        </features>
+</domain>
+'''
+    data = data.replace('%%NAME%%', name)
+    data = data.replace('%%CPU%%', str(cpu))
+    data = data.replace('%%MEM%%', str(mem))
+    data = data.replace('%%VDA%%', vda)
+    return data
+
+
+def init(name, cpu, mem, image):
+    '''
+    Initialize a new vm
+
+    CLI Example::
+
+        salt 'hypervisor' vm_name 4 512 salt://path/to/image.raw
+    '''
+    img_dir = os.path.join(__salt__['config.option']('virt.images'), name)
+    img_dest = os.path.join(
+            __salt__['config.option']('virt.images'),
+            name,
+            'vda')
+    sfn = __salt__['cp.cache_file'](image)
+    if not os.path.isdir(img_dir):
+        os.makedirs(img_dir)
+    salt.utils.copyfile(sfn, img_dest)
+    xml = _gen_xml(name, cpu, mem, img_dest)
+    define_xml_str(xml)
+    create(name)
+
 
 def list_vms():
     '''
