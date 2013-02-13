@@ -62,7 +62,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 fp_.write(req.read())
 
         if self.selected_query_option is not None:
-            if self.options.map:
+            if self.config.get('map', None):
                 try:
                     query_map = mapper.interpolated_map(
                         query=self.selected_query_option
@@ -128,8 +128,8 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(0)
 
         if self.options.destroy and (self.config.get('names', None) or
-                                     self.options.map):
-            if self.options.map:
+                                     self.config.get('map', None)):
+            if self.config.get('map', None):
                 names = mapper.delete_map(query='list_nodes')
             else:
                 names = self.config.get('names', None)
@@ -151,8 +151,8 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(0)
 
         if self.options.action and (self.config.get('names', None) or
-                                    self.options.map):
-            if self.options.map:
+                                    self.config.get('map', None)):
+            if self.config.get('map', None):
                 names = mapper.delete_map(query='list_nodes')
             else:
                 names = self.config.get('names', None)
@@ -195,7 +195,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error('There was a profile error: {0}'.format(exc))
             self.exit(0)
 
-        if self.options.map and self.selected_query_option is None:
+        if self.config.get('map', None) and self.selected_query_option is None:
             if len(mapper.map) == 0:
                 print('Nothing to do')
                 self.exit(0)
