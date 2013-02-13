@@ -19,8 +19,12 @@
 #
 # processname: /usr/bin/salt-minion
 
-SALTMINION=/usr/bin/salt-minion
-PYTHON=/usr/bin/python
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTMINION=/usr/bin/salt-minion
+    PYTHON=/usr/bin/python
+fi
 
 # Sanity checks.
 [ -x $SALTMINION ] || exit 0

@@ -19,8 +19,12 @@
 #
 # processname: /usr/bin/salt-syndic
 
-SALTSYNDIC=/usr/bin/salt-syndic
-PYTHON=/usr/bin/python
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTSYNDIC=/usr/bin/salt-syndic
+    PYTHON=/usr/bin/python
+fi
 
 # Sanity checks.
 [ -x $SALTSYNDIC ] || exit 0
