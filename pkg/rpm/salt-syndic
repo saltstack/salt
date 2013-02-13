@@ -6,21 +6,31 @@
 # LSB header
 
 ### BEGIN INIT INFO
-# Provides: salt-syndic
-# Required-Start: network
-# Short-Description: salt syndic master-minion passthrough daemon
-# Description: This is a daemon that controls the salt syndic
+# Provides:          salt-syndic
+# Required-Start:    $all
+# Required-Stop:     
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Salt syndic master-minion passthrough daemon
+# Description:       This is a the Salt syndic daemon that enables Salt master-minion
+#                    remote control passthrough.
 ### END INIT INFO
+
 
 # chkconfig header
 
 # chkconfig: 345 99 99 
-# description:  This is a daemon that controls the salt mininons
+# description:  This is a the Salt syndic daemon that enables Salt master-minion remote control passthrough.
 #
 # processname: /usr/bin/salt-syndic
 
-SALTSYNDIC=/usr/bin/salt-syndic
-PYTHON=/usr/bin/python
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTSYNDIC=/usr/bin/salt-syndic
+    PYTHON=/usr/bin/python
+fi
 
 # Sanity checks.
 [ -x $SALTSYNDIC ] || exit 0
