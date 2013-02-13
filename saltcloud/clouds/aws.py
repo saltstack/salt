@@ -488,11 +488,12 @@ def destroy(name):
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
     conn = get_conn(location=location)
+    libcloudfuncs_destroy = namespaced_function(libcloudfuncs_destroy, globals(), (conn,))
     try:
         libcloudfuncs_destroy(name, conn)
     except Exception as e:
         if e.message.startswith('OperationNotPermitted'):
-            log.warning('Failed: termination protection is enabled on {0}'.format(name))
+            log.info('Failed: termination protection is enabled on {0}'.format(name))
         else:
             raise e
 
