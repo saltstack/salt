@@ -501,6 +501,10 @@ def destroy(name):
 def enable_term_protect(name):
     '''
     Enable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a enable_term_protect mymachine
     '''
     _toggle_term_protect(name, True)
 
@@ -508,6 +512,10 @@ def enable_term_protect(name):
 def disable_term_protect(name):
     '''
     Disable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a disable_term_protect mymachine
     '''
     _toggle_term_protect(name, False)
 
