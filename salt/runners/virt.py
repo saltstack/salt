@@ -104,18 +104,68 @@ def vm_info(name, quiet=False):
             return ret
 
 
+def start(name):
+    '''
+    Start a named virtual machine
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = vm_info(name, quiet=True)
+    if not data:
+        print('Failed to find vm {0} to start'.format(name))
+        return ret
+    hyper = data.keys()[0]
+    cmd_ret = client.cmd_iter(
+            hyper,
+            'virt.start',
+            [name],
+            timeout=600)
+    for comp in cmd_ret:
+        ret.update(comp)
+    print(ret)
+    return ret
+    
+
+
+def force_off(name):
+    '''
+    Force power down the named virtual machine
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = vm_info(name, quiet=True)
+    if not data:
+        print('Failed to find vm {0} to destroy'.format(name))
+        return ret
+    hyper = data.keys()[0]
+    cmd_ret = client.cmd_iter(
+            hyper,
+            'virt.destroy',
+            [name],
+            timeout=600)
+    for comp in cmd_ret:
+        ret.update(comp)
+    print(ret)
+    return ret
+
+
 def purge(name):
     '''
     Destroy the named vm
     '''
+    ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
-        return
+        print('Failed to find vm {0} to purge'.format(name))
+        return ret
     hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.purge',
             [name, True],
             timeout=600)
-    
+    for comp in cmd_ret:
+        ret.update(comp)
+    print(ret)
+    return ret
