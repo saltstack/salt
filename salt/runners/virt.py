@@ -64,7 +64,7 @@ def init(name, cpu, mem, image, hyper=None):
     '''
     Initialize a new vm
     '''
-    data = query(hyper)
+    data = query(hyper, quiet=True)
     if hyper:
         if not hyper in data:
             return
@@ -87,3 +87,36 @@ def init(name, cpu, mem, image, hyper=None):
 
     return ret
 
+
+def vm_info(name, quiet=False):
+    '''
+    Return the information on the named vm
+    '''
+    data = query(quiet=True)
+    for hv_ in data:
+        if name in data[hv_].get('vm_info', {}):
+            ret = {hv_: {name: data[hv_]['vm_info'][name]}}
+            if not quiet:
+                salt.output.display_output(
+                        ret,
+                        'nested',
+                        __opts__)
+            return ret
+
+
+def destroy(name):
+    '''
+    Destroy the named vm
+    '''
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = vm_info(name, quiet=True)
+    if not data:
+        return
+    hyper = data.keys()[0]
+    vm_ = data[hyper].keys()[0]
+    cmd_ret = client.cmd_iter(
+            hyper,
+            'virt.purge',
+            [vm_, True],
+            timeout=600)
+    

@@ -867,6 +867,7 @@ def purge(vm_, dirs=False):
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
+    undefine(vm_)
     return True
 
 
