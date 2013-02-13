@@ -529,17 +529,11 @@ def _toggle_term_protect(name, enabled):
     endpoint = service.get_endpoint(region)
 
     # get the instance-id for the supplied node name
-    client = salt.client.LocalClient()
-    ret = client.cmd(name, 'grains.item', ['instanceId'])
-
-    if ret[name] == "":
-        log.error("Couldn't get instance_id for {0}".format(name))
-        return
-    else:
-        instance_id = ret[name]
+    conn = get_conn(location=region)
+    node = get_node(conn, name)
 
     params = {
-        'instance_id': instance_id,
+        'instance_id': node.id,
         'attribute': 'disableApiTermination',
         'value': 'true' if enabled else 'false',
     }
