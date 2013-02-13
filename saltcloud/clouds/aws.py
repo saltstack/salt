@@ -234,7 +234,6 @@ def create(vm_):
     usernames = ssh_username(vm_)
     kwargs = {'ssh_key': __opts__['AWS.private_key']}
     kwargs['name'] = vm_['name']
-    deploy_script = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
     kwargs['location'] = get_availability_zone(conn, vm_)
@@ -282,6 +281,7 @@ def create(vm_):
         sudo = vm_['sudo']
 
     if __opts__['deploy'] is True:
+        deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
