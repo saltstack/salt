@@ -37,6 +37,9 @@ from saltcloud.libcloudfuncs import *
 # Import salt libs
 from salt.exceptions import SaltException
 
+# Import botocore
+import botocore.session
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -512,12 +515,6 @@ def _toggle_term_protect(name, enabled):
     '''
     Toggle termination protection on a node
     '''
-    try:
-        import botocore.session
-    except ImportError:
-        log.error('You must install module botocore')
-        return
-
     # region is required for all boto queries
     region = get_location(None)
 
