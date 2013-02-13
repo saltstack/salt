@@ -10,6 +10,7 @@ The postgres_group module is used to create and manage Postgres groups.
       postgres_group.present
 '''
 
+
 def present(name,
             createdb=False,
             createuser=False,
@@ -107,6 +108,7 @@ def absent(name, runas=None):
             ret['changes'][name] = 'Absent'
             return ret
     else:
-        ret['comment'] = 'Group {0} is not present, so it cannot be removed'.format(name)
+        ret['comment'] = 'Group {0} is not present, so it cannot ' \
+                         'be removed'.format(name)
 
     return ret
