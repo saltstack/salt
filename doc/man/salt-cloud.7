@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "January 21, 2013" "0.8.4" "salt-cloud"
+.TH "SALT-CLOUD" "7" "February 14, 2013" "0.8.5" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -177,6 +177,16 @@ $ salt\-cloud \-m /path/to/mapfile \-P \-H
 .ft P
 .fi
 .sp
+Be careful with this argument, it is very dangerous! In fact, it is so
+dangerous that in order to use it, you must explicitly enable it in the main
+configuration file.
+.sp
+.nf
+.ft C
+enable_hard_maps: True
+.ft P
+.fi
+.sp
 A map file can include grains:
 .sp
 .nf
@@ -339,6 +349,61 @@ script: None
 .fi
 .sp
 This is the slowest option, since it still uploads the None deploy script and executes it.
+.SS Updating Salt Bootstrap
+.sp
+Salt Bootstrap can be updated automatically with salt\-cloud:
+.sp
+.nf
+.ft C
+salt\-cloud \-u
+salt\-cloud \-\-update\-bootstrap
+.ft P
+.fi
+.sp
+Bear in mind that this updates to the latest (unstable) version, so use with
+caution.
+.SS Keeping /tmp/ Files
+.sp
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt\-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
+can be added:
+.sp
+.nf
+.ft C
+salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
+.ft P
+.fi
+.sp
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+.SS Deploy Script Arguments
+.sp
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt\-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map
+file, to pass arguments to the deploy script:
+.sp
+.nf
+.ft C
+aws\-amazon:
+    provider: aws
+    image: ami\-1624987f
+    size: Micro Instance
+    ssh_username: ec2\-user
+    script: bootstrap\-salt
+    script_args: \-c /tmp/
+.ft P
+.fi
+.sp
+This has also been tested to work with pipes, if needed:
+.sp
+.nf
+.ft C
+script_args: | head
+.ft P
+.fi
 .SH CORE CONFIGURATION
 .sp
 A number of core configuration options and some options that are global to
@@ -481,6 +546,27 @@ IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
 IBMSCE.location: Raleigh
 .ft P
 .fi
+.SH MISCELLANEOUS SALT CLOUD OPTIONS
+.sp
+This page describes various miscellaneous options available in Salt Cloud
+.SS Delete SSH Keys
+.sp
+When Salt Cloud deploys an instance, the SSH pub key for the instance is added
+to the known_hosts file for the user that ran the salt\-cloud command. When an
+instance is deployed, a cloud provider generally recycles the IP address for
+the instance.  When Salt Cloud attempts to deploy an instance using a recycled
+IP address that has previously been accessed from the same machine, the old key
+in the known_hosts file will cause a conflict.
+.sp
+In order to mitigate this issue, Salt Cloud can be configured to remove old
+keys from the known_hosts file when destroying the node. In order to do this,
+the following line needs to be added to the main cloud configuration file:
+.sp
+.nf
+.ft C
+delete_sshkeys: True
+.ft P
+.fi
 .SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
 .SS Salt Cloud 0.6.0 Release Notes
 .sp
@@ -528,7 +614,7 @@ centos_rackspace:
   provider: rackspace
   image: CentOS 6.2
   size: 1024 server
-  script: RHEL6
+  os: RHEL6
   minion:
     grains:
         role: webserver
@@ -813,7 +899,7 @@ vm_profile:
   provider: gogrid
   size: 512MB
   image: CentOS 6.2 (64\-bit) w/ None
-  script: RHEL6
+  os: RHEL6
   minion:
     master: salt.mycompany.com
   grains:
@@ -910,7 +996,7 @@ micro_amazon:
   provider: aws
   image: ami\-e565ba8c
   size: Micro Instance
-  script: RHEL6
+  os: RHEL6
   securitygroup:
       \- default
       \- extra
@@ -1300,6 +1386,174 @@ your saltcloud source tree:
 These are example scripts which were designed to be customized, adapted, and
 refit to meet your needs. One important use of them is to pass options to
 the salt\-bootstrap script, such as updating to specific git tags.
+.SS Salt Cloud 0.8.5 Release Notes
+.sp
+Welcome to 0.8.5! Some important things have happened in this release, that
+you\(aqll want to take note of. The first thing that may trip you up when
+installing directly is that Paramiko is no longer a dependency, and botocore
+and sshpass are new dependencies. Read on to see what else has happened.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.5.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Salt Bootstrap
+.sp
+In 0.8.4, the default deploy script was set to bootstrap\-salt\-minion. Since
+then, the Salt Boostrap script has been extended to be able to install more
+than just minions, and as such, has been renamed. It is now called
+bootstrap\-salt, and has been renamed in Salt Cloud accordingly. Check out the
+salt\-bootstrap project for more details:
+.sp
+\fI\%https://github.com/saltstack/salt-bootstrap\fP
+.sp
+Just another reminder: For those of you still using "os" in your profiles, this
+option was renamed to "script" in 0.8.2, and your configuration should be
+updated accordingly.
+.SS Updating Salt Bootstrap
+.sp
+If you like running the latest and greatest version of salt\-bootstrap, but
+you\(aqre sick of tracking down the source directory to update it, a new option
+has been added to update it for you.
+.sp
+.nf
+.ft C
+salt\-cloud \-u
+salt\-cloud \-\-update\-bootstrap
+.ft P
+.fi
+.sp
+Bear in mind that this updates to the latest (unstable) version, so use with
+caution.
+.SS Modify AWS Tags
+.sp
+One of the features of AWS is the ability to tag resources. In fact, under the
+hood, the names given to EC2 instances by salt\-cloud are actually just stored
+as a tag called Name. The ability to manage tags on AWS instances has now been
+added to Salt Cloud.
+.sp
+.nf
+.ft C
+salt\-cloud \-a get_tags mymachine
+salt\-cloud \-a set_tags mymachine tag1=somestuff tag2=\(aqOther stuff\(aq
+salt\-cloud \-a del_tags mymachine tag1,tag2,tag3
+.ft P
+.fi
+.SS Rename AWS Instances
+.sp
+As mentioned above, AWS instances are named via a tag. However, renaming an
+instance by renaming its tag will cause the salt keys to mismatch. A rename
+function has been added which renames both the instance, and the salt keys.
+.sp
+.nf
+.ft C
+salt\-cloud \-a rename mymachine newname=yourmachine
+.ft P
+.fi
+.SS AWS Termination Protection
+.sp
+AWS allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed.
+.sp
+.nf
+.ft C
+salt\-cloud \-a enable_term_protect mymachine
+salt\-cloud \-a disable_term_protect mymachine
+.ft P
+.fi
+.SS Setting up New Salt Masters
+.sp
+It has become increasingly common for users to set up multi\-hierarchal
+infrastructures using Salt Cloud. This sometimes involves setting up an
+instance to be a master in addition to a minion. With that in mind, you can
+now law down master configuration on a machine by specifying master options
+in the profile or map file.
+.sp
+.nf
+.ft C
+make_master: True
+.ft P
+.fi
+.sp
+This will cause Salt Cloud to generate master keys for the instance, and tell
+salt\-bootstrap to install the salt\-master package, in addition to the
+salt\-minion package.
+.sp
+The default master configuration is usually appropriate for most users, and
+will not be changed unless specific master configuration has been added to the
+profile or map:
+.sp
+.nf
+.ft C
+master:
+    user: root
+    interface: 0.0.0.0
+.ft P
+.fi
+.SS Keeping /tmp/ Files
+.sp
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt\-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
+can be added:
+.sp
+.nf
+.ft C
+salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
+.ft P
+.fi
+.sp
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+.SS Deploy Script Arguments
+.sp
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt\-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map
+file, to pass arguments to the deploy script:
+.sp
+.nf
+.ft C
+aws\-amazon:
+    provider: aws
+    image: ami\-1624987f
+    size: Micro Instance
+    ssh_username: ec2\-user
+    script: bootstrap\-salt
+    script_args: \-c /tmp/
+.ft P
+.fi
+.sp
+This has also been tested to work with pipes, if needed:
+.sp
+.nf
+.ft C
+script_args: | head
+.ft P
+.fi
+.SS Remove Old SSH Keys
+.sp
+When an instance is destroyed, its IP address is usually recycled back into
+the IP pool. When such an IP is reassigned to you, and the old key is still in
+your known_hosts file, the deploy script will fail due to mismatched SSH keys.
+To mitigate this, add the following to your main cloud configuration:
+.sp
+.nf
+.ft C
+delete_sshkeys: True
+.ft P
+.fi
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
@@ -1346,7 +1600,7 @@ centos_rackspace:
   provider: rackspace
   image: CentOS 6.2
   size: 1024 server
-  script: RHEL6
+  os: RHEL6
   minion:
     grains:
         role: webserver

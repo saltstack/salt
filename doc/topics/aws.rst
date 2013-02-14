@@ -123,6 +123,38 @@ Multiple security groups can also be specified in the same fashion:
       - default
       - extra
 
+Modify AWS Tags
+===============
+One of the features of AWS is the ability to tag resources. In fact, under the
+hood, the names given to EC2 instances by salt-cloud are actually just stored
+as a tag called Name. Salt Cloud has the ability to manage these tags:
+
+.. code-block:: bash
+
+    salt-cloud -a get_tags mymachine
+    salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
+    salt-cloud -a del_tags mymachine tag1,tag2,tag3
+
+Rename AWS Instances
+====================
+As mentioned above, AWS instances are named via a tag. However, renaming an
+instance by renaming its tag will cause the salt keys to mismatch. A rename
+function exists which renames both the instance, and the salt keys.
+
+.. code-block:: bash
+
+    salt-cloud -a rename mymachine newname=yourmachine
+
+AWS Termination Protection
+==========================
+AWS allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed.
+
+.. code-block:: bash
+
+    salt-cloud -a enable_term_protect mymachine
+    salt-cloud -a disable_term_protect mymachine
+
 EC2 Images
 ==========
 The following are lists of available AMI images, generally sorted by OS. These
