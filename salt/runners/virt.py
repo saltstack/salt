@@ -104,6 +104,29 @@ def vm_info(name, quiet=False):
             return ret
 
 
+def reset(name):
+    '''
+    Force power down and restart an existing vm
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = vm_info(name, quiet=True)
+    if not data:
+        print('Failed to find vm {0} to destroy'.format(name))
+        return ret
+    hyper = data.keys()[0]
+    cmd_ret = client.cmd_iter(
+            hyper,
+            'virt.reset',
+            [name],
+            timeout=600)
+    for comp in cmd_ret:
+        ret.update(comp)
+    print(ret)
+    return ret
+
+
+
 def start(name):
     '''
     Start a named virtual machine
