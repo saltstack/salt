@@ -106,7 +106,7 @@ def _get_target(target, ssh):
     return ' %s://%s/%s' %(proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda):
+def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
     '''
     Generate the xml string to define a libvirt vm
     '''
@@ -126,6 +126,7 @@ def _gen_xml(name, cpu, mem, vda):
                         <target dev='vda' bus='virtio'/>
                         <driver name='qemu' cache='writeback' io='native'/>
                 </disk>
+                %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
         </devices>
         <features>
@@ -137,10 +138,43 @@ def _gen_xml(name, cpu, mem, vda):
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
     data = data.replace('%%VDA%%', vda)
+    nic_str = ''
+    for dev, args in nicp.items():
+        nic_t = '''
+                <interface type='%%TYPE%%'>
+                    <source %%SOURCE%%/>
+                    <mac address='%%MAC%%'/>
+                    <model type='%%MODEL%%'/>
+                </interface>
+'''
+        if 'bridge' in args:
+            nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
+            nic_t = nic_t.replace('%%TYPE%%', 'bridge')
+        elif 'network' in args:
+            nic_t = nic_t.replace('%%SOURCE%%', 'network=\'{0}\''.format(args['network']))
+            nic_t = nic_t.replace('%%TYPE%%', 'network')
+        if 'model' in args:
+            nic_t = nic_t.replace('%%MODEL%%', args['model'])
+        dmac = '{0}_mac'.format(dev)
+        if dmac in kwargs:
+            nic_t = nic_t.replace('%%MAC%%', kwargs[dmac])
+        else:
+            nic_t = nic_t.replace('%%MAC%%', salt.utils.gen_mac())
+        nic_str += nic_t
+    data = data.replace('%%NICS%%', nic_str)
+    print(data)
     return data
 
 
-def init(name, cpu, mem, image):
+def _nic_profile(nic):
+    '''
+    Gather the nic profile from the config or apply the default
+    '''
+    default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
+    return __salt__['config.option']('virt.nic', {}).get(nic, default)
+
+
+def init(name, cpu, mem, image, nic='default', **kwargs):
     '''
     Initialize a new vm
 
@@ -156,8 +190,9 @@ def init(name, cpu, mem, image):
     sfn = __salt__['cp.cache_file'](image)
     if not os.path.isdir(img_dir):
         os.makedirs(img_dir)
+    nicp = _nic_profile(nic)
     salt.utils.copyfile(sfn, img_dest)
-    xml = _gen_xml(name, cpu, mem, img_dest)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, **kwargs)
     define_xml_str(xml)
     create(name)
 
