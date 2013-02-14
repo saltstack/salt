@@ -101,6 +101,11 @@ class CloudConfigMixIn(object):
 
     def process_cloud_config(self):
         self.cloud_config = config.cloud_config(self.options.cloud_config)
+
+        # Store a temporary config dict with just the cloud settings so the
+        # logging level can be retrieved in LogLevelMixIn.process_log_level()
+        self.config = self.cloud_config
+
         if self.options.master_config is None:
             # No master config was provided from cli
             # Set the master configuration file path to the one provided in
