@@ -23,6 +23,7 @@ def _determine_hyper(data):
             hyper = hv_
     return hyper
 
+
 def query(hyper=None, quiet=False):
     '''
     Query the virtual machines
@@ -67,7 +68,8 @@ def init(name, cpu, mem, image, hyper=None):
     data = query(hyper, quiet=True)
     if hyper:
         if not hyper in data:
-            return
+            print('Hypervisor {0} was not found'.format(hyper))
+            return 'fail'
     else:
         hyper = _determine_hyper(data)
     
@@ -79,13 +81,10 @@ def init(name, cpu, mem, image, hyper=None):
             [name, cpu, mem, image],
             timeout=600)
 
-    ret = {}
-
     for info in cmd_ret:
-        print(info)
-        ret.update(info)
+        print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
 
-    return ret
+    return 'good'
 
 
 def vm_info(name, quiet=False):
@@ -102,6 +101,7 @@ def vm_info(name, quiet=False):
                         'nested',
                         __opts__)
             return ret
+    return {}
 
 
 def reset(name):
@@ -112,8 +112,8 @@ def reset(name):
     client = salt.client.LocalClient(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
-        print('Failed to find vm {0} to destroy'.format(name))
-        return ret
+        print('Failed to find vm {0} to reset'.format(name))
+        return 'fail'
     hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
@@ -122,9 +122,8 @@ def reset(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print(ret)
+    print('Reset VM {0}'.format(name))
     return ret
-
 
 
 def start(name):
@@ -136,7 +135,10 @@ def start(name):
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to start'.format(name))
-        return ret
+        return 'fail'
+    if data[hyper][name]['state'] == 'running':
+        print('VM {0} is already running'.format(name))
+        return 'bad state'
     hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
@@ -145,9 +147,8 @@ def start(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print(ret)
-    return ret
-    
+    print('Started VM {0}'.format(name))
+    return 'good'
 
 
 def force_off(name):
@@ -159,7 +160,10 @@ def force_off(name):
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
-        return ret
+        return 'fail'
+    if data[hyper][name]['state'] == 'shutdown':
+        print('VM {0} is already shutdown'.format(name))
+        return'bad state'
     hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
@@ -168,8 +172,8 @@ def force_off(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print(ret)
-    return ret
+    print('Powered off VM {0}'.format())
+    return 'good'
 
 
 def purge(name):
@@ -181,7 +185,7 @@ def purge(name):
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to purge'.format(name))
-        return ret
+        return 'fail'
     hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
@@ -190,5 +194,55 @@ def purge(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print(ret)
-    return ret
+    print('Purged VM {0}'.format(name))
+    return 'good'
+
+
+def pause(name):
+    '''
+    Pause the named vm
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = vm_info(name, quiet=True)
+    if not data:
+        print('Failed to find VM {0} to pause'.format(name))
+        return 'fail'
+    hyper = data.keys()[0]
+    if data[hyper][name]['state'] == 'paused':
+        print('VM {0} is already paused'.format(name))
+        return 'bad state'
+    cmd_ret = client.cmd_iter(
+            hyper,
+            'virt.pause',
+            [name],
+            timeout=600)
+    for comp in cmd_ret:
+        ret.update(comp)
+    print('Paused VM {0}'.format(name))
+    return 'good'
+
+
+def resume(name):
+    '''
+    Resume a paused vm
+    '''
+    ret = {}
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = vm_info(name, quiet=True)
+    if not data:
+        print('Failed to find VM {0} to pause'.format(name))
+        return 'not found'
+    hyper = data.keys()[0]
+    if data[hyper][name]['state'] != 'paused':
+        print('VM {0} is not paused'.format(name))
+        return 'bad state'
+    cmd_ret = client.cmd_iter(
+            hyper,
+            'virt.resume',
+            [name],
+            timeout=600)
+    for comp in cmd_ret:
+        ret.update(comp)
+    print('Resumed VM {0}'.format(name))
+    return 'good'
