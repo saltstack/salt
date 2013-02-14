@@ -18,6 +18,8 @@ def _determine_hyper(data):
     bestmem = 0
     bestcpu = 0
     for hv_, comps in data.items():
+        if not isinstance(comps, dict):
+            continue
         if comps.get('freemem', 0) > bestmem:
             bestmem = comps['freemem']
             hyper = hv_
