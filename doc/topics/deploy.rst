@@ -99,3 +99,53 @@ In the profile, you may also set the script option to None:
 
 This is the slowest option, since it still uploads the None deploy script and executes it.
 
+Updating Salt Bootstrap
+=======================
+Salt Bootstrap can be updated automatically with salt-cloud:
+
+.. code-block:: bash
+
+    salt-cloud -u
+    salt-cloud --update-bootstrap
+
+Bear in mind that this updates to the latest (unstable) version, so use with
+caution.
+
+Keeping /tmp/ Files
+===================
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the --keep-tmp option
+can be added:
+
+.. code-block:: bash
+
+    salt-cloud -p myprofile mymachine --keep-tmp
+
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+
+Deploy Script Arguments
+=======================
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map
+file, to pass arguments to the deploy script:
+
+.. code-block:: yaml
+
+    aws-amazon:
+        provider: aws
+        image: ami-1624987f
+        size: Micro Instance
+        ssh_username: ec2-user
+        script: bootstrap-salt
+        script_args: -c /tmp/
+
+This has also been tested to work with pipes, if needed:
+
+.. code-block:: yaml
+
+    script_args: | head
+
