@@ -124,7 +124,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
                 <disk type='file' device='disk'>
                         <source file='%%VDA%%'/>
                         <target dev='vda' bus='virtio'/>
-                        <driver name='qemu' cache='writeback' io='native'/>
+                        <driver name='qemu' type='%%DISKTYPE%%' cache='writeback' io='native'/>
                 </disk>
                 %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
@@ -138,6 +138,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
     data = data.replace('%%VDA%%', vda)
+    data = data.replace('%%DISKTYPE%%', _image_type(vda))
     nic_str = ''
     for dev, args in nicp.items():
         nic_t = '''
@@ -164,6 +165,17 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
     data = data.replace('%%NICS%%', nic_str)
     print(data)
     return data
+
+
+def _image_type(vda):
+    '''
+    Detect what driver needs to be used for the given image
+    '''
+    out = __salt__['cmd.run']('file {0}'.format(vda))
+    if 'Qcow' in out and 'Version: 2' in out:
+        return 'qcow2'
+    else:
+        return 'raw'
 
 
 def _nic_profile(nic):
