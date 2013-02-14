@@ -858,8 +858,12 @@ def purge(vm_, dirs=False):
         salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
-    if not destroy(vm_):
-        return False
+    try:
+        if not destroy(vm_):
+            return False
+    except libvirt.libvirtError:
+        # This is thrown if the machine is already shut down
+        pass
     directories = set()
     for disk in disks:
         os.remove(disks[disk]['file'])
