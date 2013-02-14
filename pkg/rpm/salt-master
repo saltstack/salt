@@ -27,8 +27,8 @@
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
-    SALTMASTER=/usr/bin/salt-master
-    PYTHON=/usr/bin/python
+    SALTMASTER=$(which salt-master)
+    PYTHON=$(which python)
 fi
 
 # Sanity checks.
