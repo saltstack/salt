@@ -43,6 +43,20 @@ the other way around. The vim package is saying "/etc/vimrc depends on me".
 In the end a single dependency map is created and everything is executed in a
 finite and predictable order.
 
+.. note:: Requisite matching
+
+    Requisites match on both the ID Declaration and the ``name`` parameter.
+    This means that in the example above, the ``require_in`` requisite would
+    also have been matched if the ``/etc/vimrc`` state was written as follows:
+
+    .. code-block:: yaml
+
+        vimrc:
+          file.managed:
+            - name: /etc/vimrc
+            - source: salt://edit/vimrc
+
+
 Requisite and Requisite in types
 ================================
 
