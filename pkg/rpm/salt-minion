@@ -28,8 +28,8 @@
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
-    SALTMINION=/usr/bin/salt-minion
-    PYTHON=/usr/bin/python
+    SALTMINION=$(which salt-minion)
+    PYTHON=$(which python)
 fi
 
 # Sanity checks.
