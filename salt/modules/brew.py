@@ -137,8 +137,8 @@ def install(name=None, pkgs=None, **kwargs):
 
     formulas = ' '.join(pkg_params)
     old = list_pkgs()
-    homebrew_prefix = __salt__['cmd.run']('brew --prefix')
-    user = __salt__['file.get_user'](homebrew_prefix)
+    homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
+    user = __salt__['file.get_user'](homebrew_binary)
     cmd = 'brew install {0}'.format(formulas)
     if user != __opts__['user']:
         __salt__['cmd.run'](cmd, runas=user)
