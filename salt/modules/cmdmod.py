@@ -139,12 +139,15 @@ def _run(cmd,
          env=(),
          rstrip=True,
          retcode=False,
-         template=None):
+         template=None,
+         daemon=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
     # Set the default working directory to the home directory
     # of the user salt-minion is running as.  Default:  /root
+    if daemon:
+        salt.utils.daemonize_if(__opts__)
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
 
@@ -257,7 +260,7 @@ def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), templ
 
 
 def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-        template=None, rstrip=True):
+        template=None, rstrip=True, daemon=False):
     '''
     Execute the passed command and return the output as a string
 
@@ -274,13 +277,13 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
     '''
     out = _run(cmd, runas=runas, shell=shell, cwd=cwd,
                stderr=subprocess.STDOUT, env=env, template=template,
-               rstrip=rstrip)['stdout']
+               rstrip=rstrip, daemon=daemon)['stdout']
     log.debug('output: {0}'.format(out))
     return out
 
 
 def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True):
+               template=None, rstrip=True, daemon=False):
     '''
     Execute a command, and only return the standard out
 
@@ -296,13 +299,13 @@ def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
     '''
     stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip)["stdout"]
+                  template=template, rstrip=rstrip, daemon=daemon)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
 def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True):
+               template=None, rstrip=True, daemon=False):
     '''
     Execute a command and only return the standard error
 
@@ -318,13 +321,13 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
     '''
     stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip)["stderr"]
+                  template=template, rstrip=rstrip, daemon=daemon)["stderr"]
     log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
 def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, rstrip=True):
+            template=None, rstrip=True, daemon=False):
     '''
     Execute the passed command and return a dict of return data
 
@@ -340,7 +343,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
     '''
     ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-               template=template, rstrip=rstrip)
+               template=template, rstrip=rstrip, daemon=daemon)
 
     if ret['retcode'] != 0:
         rcode = ret['retcode']
@@ -360,7 +363,8 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+            template=None, daemon=daemon):
     '''
     Execute a shell command and return the command's return code.
 
@@ -382,7 +386,8 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=Non
             shell=shell,
             env=env,
             retcode=True,
-            template=template
+            template=template,
+            daemon=daemon,
             )['retcode']
 
 
