@@ -376,7 +376,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name, version=None, **kwargs):
+def remove(name, version=None, msiexec=False, **kwargs):
     '''
     Remove a single package
 
@@ -404,6 +404,8 @@ def remove(name, version=None, **kwargs):
         cached_pkg = cached_pkg.replace('(x86)', '')
     cmd = '"' + str(os.path.expandvars(
         cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
+    if msiexec:
+        cmd = 'msiexec /x ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
@@ -411,7 +413,7 @@ def remove(name, version=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name, version=None, msiexec=False, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it
@@ -422,7 +424,7 @@ def purge(name, **kwargs):
 
         salt '*' pkg.purge <package name>
     '''
-    return remove(name)
+    return remove(name, version=None, msiexec=False, **kwargs)
 
 
 def _get_package_info(name):
