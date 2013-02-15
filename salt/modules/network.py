@@ -480,3 +480,20 @@ def dig(host):
     '''
     cmd = 'dig {0}'.format(salt.utils.socket_util.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
+
+def arp():
+    '''
+    Return the arp table from the minion
+
+    CLI Example::
+
+        salt '*' \* network.arp
+    '''
+    ret = {}
+    out = __salt__['cmd.run']('arp -an')
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 4:
+            continue
+        ret[comps[3]] = comps[1].strip('(').strip(')')
+    return ret
