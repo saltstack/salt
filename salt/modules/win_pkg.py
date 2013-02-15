@@ -376,7 +376,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name, version=None, msiexec=False, **kwargs):
+def remove(name, version=None, **kwargs):
     '''
     Remove a single package
 
@@ -404,7 +404,7 @@ def remove(name, version=None, msiexec=False, **kwargs):
         cached_pkg = cached_pkg.replace('(x86)', '')
     cmd = '"' + str(os.path.expandvars(
         cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
-    if msiexec:
+    if pkginfo[msiexec]:
         cmd = 'msiexec /x ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
