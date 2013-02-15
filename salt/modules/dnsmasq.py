@@ -64,6 +64,11 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
     does not find it inside any files, it will append it to the main config
     file. Setting follow to False will turn off this behavior.
 
+    If a config option currently appears multiple times (such as dhcp-host,
+    which is specified at least once per host), the new option will be added
+    to the end of the main config file (and not to any includes). If you need
+    an option added to a specific include file, specify it as the config_file.
+
     CLI Examples::
 
         salt '*' dnsmasq.set_config domain=mydomain.com
