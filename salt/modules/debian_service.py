@@ -75,7 +75,7 @@ def get_all():
         # Remove README.  If it's an enabled service, it will be added back in.
         if service != 'README':
             ret.add(service)
-    return sorted(ret + get_enabled())
+    return sorted(ret | set(get_enabled()))
 
 
 def start(name):
