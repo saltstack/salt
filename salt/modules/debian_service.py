@@ -68,7 +68,11 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(get_enabled() + get_disabled())
+    ret = set()
+    lines = glob.glob('/etc/init.d/*')
+    for line in lines:
+        ret.add(line.split('/etc/init.d/')[1])
+    return sorted(ret)
 
 
 def start(name):
