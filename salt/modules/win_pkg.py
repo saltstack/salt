@@ -344,7 +344,7 @@ def install(name=None, refresh=False, **kwargs):
         cached_pkg = pkginfo[version]['installer']
     cached_pkg = cached_pkg.replace('/', '\\')
     cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version]['install_flags'])
-    if pkginfo[msiexec]:
+    if pkginfo['msiexec']:
         cmd = 'msiexec /i ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
@@ -404,7 +404,7 @@ def remove(name, version=None, **kwargs):
         cached_pkg = cached_pkg.replace('(x86)', '')
     cmd = '"' + str(os.path.expandvars(
         cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
-    if pkginfo[msiexec]:
+    if pkginfo['msiexec']:
         cmd = 'msiexec /x ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
@@ -413,7 +413,7 @@ def remove(name, version=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, version=None, msiexec=False, **kwargs):
+def purge(name, version=None, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it
@@ -424,7 +424,7 @@ def purge(name, version=None, msiexec=False, **kwargs):
 
         salt '*' pkg.purge <package name>
     '''
-    return remove(name, version=None, msiexec=False, **kwargs)
+    return remove(name, version, **kwargs)
 
 
 def _get_package_info(name):
