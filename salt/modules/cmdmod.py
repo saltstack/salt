@@ -364,7 +364,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
 
 def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, daemon=daemon):
+            template=None, daemon=False):
     '''
     Execute a shell command and return the command's return code.
 
