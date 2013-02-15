@@ -71,8 +71,11 @@ def get_all():
     ret = set()
     lines = glob.glob('/etc/init.d/*')
     for line in lines:
-        ret.add(line.split('/etc/init.d/')[1])
-    return sorted(ret)
+        service = line.split('/etc/init.d/')[1]
+        # Remove README.  If it's an enabled service, it will be added back in.
+        if service != 'README':
+            ret.add(service)
+    return sorted(ret + get_enabled())
 
 
 def start(name):
