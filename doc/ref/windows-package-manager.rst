@@ -41,7 +41,8 @@ The package definition file should look similar to this example for Firefox:
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
         uninstall_flags: ' /S'
 
-Add ``msiexec: True`` if using an msi installer requiring the use of msiexec.
+Add ``msiexec: True`` if using an msi installer requiring the use of ``msiexec
+/i`` to install and ``msiexec /x`` to uninstall.
 ``/srv/salt/win/repo/7zip/init.sls``
 
 .. code-block:: yaml
