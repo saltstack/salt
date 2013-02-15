@@ -52,12 +52,7 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    prefix = '/etc/rc{0}.d/K'.format(_get_runlevel())
-    ret = set()
-    lines = glob.glob('{0}*'.format(prefix))
-    for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
-    return sorted(ret)
+    return sorted(set(get_all()) - set(get_enabled()))
 
 
 def get_all():
