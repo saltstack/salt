@@ -310,7 +310,7 @@ def refresh_db():
     return True
 
 
-def install(name=None, refresh=False, msiexec=False, **kwargs):
+def install(name=None, refresh=False, **kwargs):
     '''
     Install the passed package
 
@@ -344,7 +344,7 @@ def install(name=None, refresh=False, msiexec=False, **kwargs):
         cached_pkg = pkginfo[version]['installer']
     cached_pkg = cached_pkg.replace('/', '\\')
     cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version]['install_flags'])
-    if msiexec:
+    if pkginfo[msiexec]:
         cmd = 'msiexec /i ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
