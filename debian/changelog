@@ -1,4 +1,11 @@
-salt-cloud (0.8.4140-g6c27d50) unstable; urgency=low
+salt-cloud (0.8.5) unstable; urgency=low
+
+  * new release
+  * replace boto dep with recommended botocore
+
+ -- Sean Channel <pentabular@gmail.com>  Sat, 16 Feb 2013 07:39:46 -0800
+
+salt-cloud (0.8.4-193-g47cf390raring) raring; urgency=low
 
   * replace paramiko with sshpass
 
