@@ -9,6 +9,7 @@ are used here to build up kvm images.
 # Import python libs
 import os
 import glob
+import tempfile
 
 # Import salt libs
 import salt.utils
@@ -70,7 +71,7 @@ def nbd_mount(image):
                 tempfile.gettempdir(),
                 'nbd',
                 os.path.basename(nbd))
-        m_pt = os.path.join(root, os.path.baseame(part))
+        m_pt = os.path.join(root, os.path.basename(part))
         mnt = __salt__['mount.mount'](m_pt, part, True)
         if not mnt is True:
             continue
