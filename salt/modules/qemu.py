@@ -10,6 +10,7 @@ are used here to build up kvm images.
 import os
 import glob
 import tempfile
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -90,6 +91,8 @@ def nbd_clear(mnt):
 
         salt '*' qemu.nbd_clear '{/mnt/foo: /dev/nbd0p1}'
     '''
+    if isinstance(mnt, str):
+        mnt = yaml.load(mnt)
     ret = {}
     nbds = set()
     for m_pt, dev in mnt.items():
