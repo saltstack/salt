@@ -32,6 +32,11 @@ import saltcloud.utils
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
 
+# Import libcloud_aws, required to latter patch __opts__
+from saltcloud.clouds import libcloud_aws
+# Now let's import each of the defined module's functions and attributes
+from saltcloud.clouds.libcloud_aws import *
+
 # Import salt libs
 from salt.exceptions import SaltException
 
@@ -52,11 +57,8 @@ def __virtual__():
         # instead.
         return False
 
-    from saltcloud.clouds import libcloud_aws
     # "Patch" the imported libcloud_aws to have the current __opts__
     libcloud_aws.__opts__ = __opts__
-    # Now let's import each of the defined module's functions and attributes
-    from saltcloud.clouds.libcloud_aws import *
 
     confs = [
         'AWS.id',
