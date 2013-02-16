@@ -3,6 +3,12 @@ The sys module provides information about the available functions on the
 minion.
 '''
 
+# Import python libs
+import logging
+
+log = logging.getLogger(__name__)
+
+
 def __virtual__():
     '''
     Return as sys
@@ -28,9 +34,11 @@ def doc(module=''):
     if module:
         # allow both "sys" and "sys." to match sys, without also matching
         # sysctl
-        module = module + '.' if not module.endswith('.') else module
+        target_mod = module + '.' if not module.endswith('.') else module
+    else:
+        target_mod = ''
     for fun in __salt__:
-        if fun.startswith(module):
+        if fun == module or fun.startswith(target_mod):
             docs[fun] = __salt__[fun].__doc__
     return docs
 
