@@ -38,8 +38,8 @@ def make_image(location, size, fmt):
         return ''
     if not os.path.isdir(os.path.dirname(location)):
         return ''
-    if __salt__['cmd.retcode'](
-            'qemu-img create -O {0} {1} {2}M'.format(
+    if not __salt__['cmd.retcode'](
+            'qemu-img create -f {0} {1} {2}M'.format(
                 fmt,
                 location,
                 size)):
