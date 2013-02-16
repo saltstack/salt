@@ -1,3 +1,9 @@
+salt (0.13.1) unstable; urgency=low
+
+  * bugfix release
+
+ -- Sean Channel <pentabular@gmail.com>  Sat, 16 Feb 2013 12:02:54 -0800
+
 salt (0.13.0) unstable; urgency=low
 
   * new release
