@@ -47,26 +47,32 @@ def make_image(location, size, fmt):
     return ''
 
 
-def nbd_mount(image):
+def nbd_connect(image):
     '''
-    Mount the named image via qemu-nbd and return the mounted roots
+    Activate nbd for an image file
+    '''
+    if not os.path.isfile(image):
+        return ''
+    __salt__['cmd.run']('modprobe nbd max_part=63')
+    for nbd in glob.glob('/dev/nbd?'):
+        if __salt__['cmd.retcode']('fdisk -l {0}'.format(nbd)):
+            __salt__['cmd.run'](
+                    'qemu-nbd -c {0} {1}'.format(nbd, image)
+                    )
+            return nbd
+    return ''
+
+
+def nbd_mount(nbd):
+    '''
+    Pass in the nbd connection device location, mount all partitions and return
+    a dict of mount points
 
     CLI Example::
 
-        salt '*' qemu.nbd_mount /srv/image.qcow2
+        salt '*' qemu.nbd_mount /dev/nbd0
     '''
     ret = {}
-    if not os.path.isfile(image):
-        return ret
-    __salt__['cmd.run']('modprobe nbd max_part=63')
-    nbd = ''
-    for q_nbd in glob.glob('/dev/nbd?'):
-        if __salt__['cmd.run']('fdisk -l {0}'.format(q_nbd)):
-            nbd = q_nbd
-            break
-    if not nbd:
-        return ret
-    __salt__['cmd.run']('qemu-nbd -c {0} {1}'.format(nbd, image))
     for part in glob.glob('{0}p*'.format(nbd)):
         root = os.path.join(
                 tempfile.gettempdir(),
@@ -78,6 +84,20 @@ def nbd_mount(image):
             continue
         ret[m_pt] = part
     return ret
+    
+
+def nbd_init(image):
+    '''
+    Mount the named image via qemu-nbd and return the mounted roots
+
+    CLI Example::
+
+        salt '*' qemu.nbd_init /srv/image.qcow2
+    '''
+    nbd = nbd_connect(image)
+    if not nbd:
+        return ''
+    return nbd_mount(nbd)
 
 
 def nbd_clear(mnt):
@@ -105,3 +125,29 @@ def nbd_clear(mnt):
     for nbd in nbds:
         __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
     return ret
+
+
+def bootstrap(location, size, fmt):
+    '''
+    HIGHLY EXPERIMENTAL
+    Bootstrap a virtual machine image
+    
+    location:
+        The location to create the image
+
+    size:
+        The size of the image to create in megabytes
+
+    fmt:
+        The image format, raw or qcow2
+    '''
+    location = make_image(location, size, fmt)
+    if not location:
+        return ''
+    nbd = nbd_connect(location)
+    __salt__['partition.mklabel'](nbd, 'msdos')
+    __salt__['partition.mkpart'](nbd, 'primary', 'ext4', 1, -1)
+    __salt__['partition.probe'](nbd)
+    __salt__['partition.mkfs']('{0}p1'.format(nbd), 'ext4')
+    mnt = nbd_mount(nbd)
+    #return __salt__['pkg.bootstrap'](nbd, mnt.keys()[0])
