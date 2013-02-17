@@ -5,7 +5,8 @@ python:
   - '2.7'
 
 before_install:
-  - sudo add-apt-repository -y ppa:saltstack/salt
+  - apt-get install -y -o DPkg::Options::=--force-confold python-software-properties || apt-get install -y -o DPkg::Options::=--force-confold software-properties-common
+  - sudo add-apt-repository -y ppa:saltstack/salt || sudo add-apt-repository ppa:saltstack/salt
   - sudo apt-get update && sudo apt-get install git swig supervisor rabbitmq-server ruby zeromq3
   - (git describe && git fetch --tags) || (git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream)
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
