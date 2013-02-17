@@ -37,9 +37,6 @@ from saltcloud.libcloudfuncs import *
 # Import salt libs
 from salt.exceptions import SaltException
 
-# Import botocore
-import botocore.session
-
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -49,6 +46,13 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
+    try:
+        import botocore
+        # Since we have botocore, we won't load the libcloud AWS module
+        return False
+    except ImportError:
+        pass
+
     confs = [
         'AWS.id',
         'AWS.key',
@@ -58,6 +62,9 @@ def __virtual__():
     ]
     for conf in confs:
         if conf not in __opts__:
+            log.warning(
+                '{0!r} not found in options. Not loading module.'.format(conf)
+            )
             return False
 
     if not os.path.exists(__opts__['AWS.private_key']):
@@ -71,7 +78,8 @@ def __virtual__():
     )
     if keymode not in ('0400', '0600'):
         raise SaltException(
-            'The AWS key file {0} needs to be set to mode 0400 or 0600\n'.format(
+            'The AWS key file {0} needs to be set to mode 0400 or '
+            '0600\n'.format(
                 __opts__['AWS.private_key']
             )
         )
@@ -90,7 +98,7 @@ def __virtual__():
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
-    log.debug('Loading AWS cloud module')
+    log.debug('Loading Libcloud AWS cloud module')
     return 'aws'
 
 
@@ -483,7 +491,8 @@ def rename(name, kwargs):
 
 def destroy(name):
     '''
-    Wrap core libcloudfuncs destroy method, adding check for termination protection
+    Wrap core libcloudfuncs destroy method, adding check for termination
+    protection
     '''
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
@@ -496,65 +505,3 @@ def destroy(name):
             log.info('Failed: termination protection is enabled on {0}'.format(name))
         else:
             raise e
-
-
-def enable_term_protect(name):
-    '''
-    Enable termination protection on a node
-
-    CLI Example::
-
-        salt-cloud -a enable_term_protect mymachine
-    '''
-    _toggle_term_protect(name, True)
-
-
-def disable_term_protect(name):
-    '''
-    Disable termination protection on a node
-
-    CLI Example::
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
-    _toggle_term_protect(name, False)
-
-
-def _toggle_term_protect(name, enabled):
-    '''
-    Toggle termination protection on a node
-    '''
-    # region is required for all boto queries
-    region = get_location(None)
-
-    # init botocore
-    session = botocore.session.get_session()
-    session.set_credentials(
-        access_key=__opts__['AWS.id'],
-        secret_key=__opts__['AWS.key'],
-        )
-
-    service = session.get_service('ec2')
-    endpoint = service.get_endpoint(region)
-
-    # get the instance-id for the supplied node name
-    conn = get_conn(location=region)
-    node = get_node(conn, name)
-
-    params = {
-        'instance_id': node.id,
-        'attribute': 'disableApiTermination',
-        'value': 'true' if enabled else 'false',
-    }
-
-    # get instance information
-    operation = service.get_operation('modify-instance-attribute')
-    http_response, response_data = operation.call(endpoint, **params)
-
-    if http_response.status_code == 200:
-        if enabled:
-            log.info('Termination protection successfully enabled on {0}'.format(name))
-        else:
-            log.info('Termination protection successfully disabled on {0}'.format(name))
-    else:
-        log.error('Bad response from AWS: {0}'.format(http_response.status_code))

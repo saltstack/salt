@@ -2,4 +2,3 @@
 salt
 PyYAML
 apache-libcloud
-botocore
