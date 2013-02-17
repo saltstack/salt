@@ -39,8 +39,8 @@ look like this:
         - mode: 755
         - makedirs: True
 
-If you need to enforce user and/or group ownership recursively on the
-directory's contents, you can do so by adding a ``recurse`` directive:
+If you need to enforce user and/or group ownership or permissions recursively
+on the directory's contents, you can do so by adding a ``recurse`` directive:
 
 .. code-block:: yaml
 
@@ -53,6 +53,7 @@ directory's contents, you can do so by adding a ``recurse`` directive:
         - recurse:
           - user
           - group
+          - mode
 
 Symlinks can be easily created, the symlink function is very simple and only
 takes a few arguments:
@@ -238,11 +239,14 @@ def _check_directory(
     '''
     changes = {}
     if recurse:
-        if not set(['user', 'group']) >= set(recurse):
-            return False, 'Types for "recurse" limited to "user" and "group"'
+        if not set(['user', 'group', 'mode']) >= set(recurse):
+            return False, 'Types for "recurse" limited to "user", ' \
+                             '"group" and "mode"'
         if not 'user' in recurse:
             user = None
         if not 'group' in recurse:
+            group = None
+        if not 'mode' in recurse:
             group = None
         for root, dirs, files in os.walk(name):
             for fname in files:
@@ -253,11 +257,13 @@ def _check_directory(
                     fchange['user'] = user
                 if not group is None and group != stats['group']:
                     fchange['group'] = group
+                if not mode is None and mode != stats['mode']:
+                    fchange['mode'] = mode
                 if fchange:
                     changes[path] = fchange
             for name in dirs:
                 path = os.path.join(root, name)
-                fchange = _check_dir_meta(path, user, group, None)
+                fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
     if not os.path.isdir(name):
@@ -757,7 +763,7 @@ def directory(name,
         salt is running as on the minion
 
     recurse
-        Enforce user/group ownership of directory recursively
+        Enforce user/group ownership and mode of directory recursively
 
     mode
         The permissions to set on this directory, aka 755
@@ -825,10 +831,10 @@ def directory(name,
     ret, perms = __salt__['file.check_perms'](name, ret, user, group, mode)
 
     if recurse:
-        if not set(['user', 'group']) >= set(recurse):
+        if not set(['user', 'group', 'mode']) >= set(recurse):
             ret['result'] = False
-            ret['comment'] = 'Types for "recurse" limited to "user" and ' \
-                             '"group"'
+            ret['comment'] = 'Types for "recurse" limited to "user", ' \
+                             '"group" and "mode"'
         else:
             targets = copy.copy(recurse)
             if 'user' in targets:
@@ -1017,7 +1023,7 @@ def recurse(name,
 
     # Verify the source exists.
     _src_proto, _src_path = source.split('://', 1)
-    
+
     if not _src_path:
         pass
     elif _src_path.strip(os.path.sep) not in __salt__['cp.list_master_dirs'](env):
@@ -1069,7 +1075,7 @@ def recurse(name,
                 _ret['changes'] = {'diff': 'Replaced directory with a new file'}
                 merge_ret(path, _ret)
 
-        # Conflicts can occur is some kwargs are passed in here
+        # Conflicts can occur if some kwargs are passed in here
         pass_kwargs = {}
         faults = ['mode', 'makedirs', 'replace']
         for key in kwargs:
