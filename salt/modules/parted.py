@@ -184,7 +184,7 @@ def set_id(device, minor, system_id):
     return out
 
 
-def mkfs(device, minor, fs_type):
+def mkfs(device, fs_type):
     '''
     partition.mkfs device minor fs_type
 
@@ -197,7 +197,7 @@ def mkfs(device, minor, fs_type):
 
         salt '*' partition.mkfs 2 fat32
     '''
-    cmd = 'parted -m -s {0} mklabel {1}'.format(device, fs_type)
+    cmd = 'mkfs.{0} {1}'.format(fs_type, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -231,7 +231,7 @@ def mkpart(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
     '''
-    cmd = 'parted -m -s {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -250,7 +250,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
     '''
-    cmd = 'parted -m -s {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -303,7 +303,7 @@ def resize(device, minor, start, end):
         salt '*' partition.resize /dev/sda 3 200 850
     '''
     out = __salt__['cmd.run'](
-        'parted -m -s {0} resize {1} {2} {3}'.format(device, minor, start, end)
+        'parted -m -s -- {0} resize {1} {2} {3}'.format(device, minor, start, end)
     )
     return out.splitlines()
 
