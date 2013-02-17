@@ -6,7 +6,6 @@ Compendium of generic DNS utilities
 import salt.utils
 
 # Import python libs
-import os
 import logging
 
 log = logging.getLogger(__name__)
@@ -69,10 +68,10 @@ def parse_zone(zonefile=None, zone=None):
             zonedict['SOURCE'] = comps[3]
             zonedict['CONTACT'] = comps[4].replace('.','@',1)
             zonedict['SERIAL'] = comps[5]
-            zonedict['REFRESH'] = _to_seconds(comps[6]) # Should be in seconds
-            zonedict['RETRY'] = _to_seconds(comps[7]) # Should be in seconds
-            zonedict['EXPIRE'] = _to_seconds(comps[8]) # Should be in seconds
-            zonedict['MINTTL'] = _to_seconds(comps[9]) # Should be in seconds
+            zonedict['REFRESH'] = _to_seconds(comps[6])
+            zonedict['RETRY'] = _to_seconds(comps[7])
+            zonedict['EXPIRE'] = _to_seconds(comps[8])
+            zonedict['MINTTL'] = _to_seconds(comps[9])
             continue
         if comps[0] == 'IN':
             comps.insert(0, zonedict['ORIGIN']) 
