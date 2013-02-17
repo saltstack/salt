@@ -1,3 +1,4 @@
+import re
 import integration
 
 
@@ -33,7 +34,7 @@ class SysModuleTest(integration.ModuleCase):
                 continue
             if not isinstance(docs[fun], basestring):
                 nodoc.add(fun)
-            elif 'Example::' not in docs[fun]:
+            elif not re.search(r'(Example(?:s)?)+(?:.*)::', docs[fun]):
                 noexample.add(fun)
 
         if not nodoc and not noexample:
