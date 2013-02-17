@@ -16,7 +16,7 @@ Module to provide Postgres compatibility to salt.
 '''
 
 # Import python libs
-from datetime import datetime
+import datetime
 import pipes
 import logging
 
@@ -288,7 +288,9 @@ def user_list(user=None, host=None, port=None, db=None, runas=None):
                 comps[i] = None
         comps[8] = int(comps[8])
         if comps[9]:
-            comps[9] = datetime.strptime(comps[9], '%Y-%m-%d %H:%M:%S')
+            comps[9] = datetime.datetime.strptime(
+                comps[9], '%Y-%m-%d %H:%M:%S'
+            )
         else:
             comps[9] = None
         if not comps[10]:
