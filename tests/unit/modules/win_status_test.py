@@ -176,16 +176,16 @@ class TestEmptyCommandLine(TestProcsBase):
         self.assertEqual(self.proc['cmd'], '')
 
 
-class TestProcsComInitialization(TestProcsBase):
-    def setUp(self):
-        call_count = 5
-        for _ in range(call_count):
-            self.call_procs()
-        self.expected_calls = [call()] * call_count
-
-    def test_initialize_and_unintialize_called(self):
-        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
-        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
+#class TestProcsComInitialization(TestProcsBase):
+#    def setUp(self):
+#        call_count = 5
+#        for _ in range(call_count):
+#            self.call_procs()
+#        self.expected_calls = [call()] * call_count
+#
+#    def test_initialize_and_unintialize_called(self):
+#        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
+#        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
 
 
 if __name__ == "__main__":
