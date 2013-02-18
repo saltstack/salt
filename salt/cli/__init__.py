@@ -37,9 +37,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(
-                self.get_config_file_path('master')
-            )
+            local = salt.client.LocalClient(self.get_config_file_path())
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
