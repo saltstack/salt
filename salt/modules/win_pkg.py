@@ -119,17 +119,16 @@ def list_pkgs(*args):
 
             salt '*' pkg.list_pkgs
     '''
-    pythoncom.CoInitialize()
-    if len(args) == 0:
-        pkgs = dict(
-            list(_get_reg_software().items()) +
-            list(_get_msi_software().items()))
-    else:
-        # get package version for each package in *args
-        pkgs = {}
-        for arg in args:
-            pkgs.update(_search_software(arg))
-    pythoncom.CoUninitialize()
+    with salt.utils.winapi.Com():
+        if len(args) == 0:
+            pkgs = dict(
+                list(_get_reg_software().items()) +
+                list(_get_msi_software().items()))
+        else:
+            # get package version for each package in *args
+            pkgs = {}
+            for arg in args:
+                pkgs.update(_search_software(arg))
     return pkgs
 
 
