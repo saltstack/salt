@@ -69,9 +69,9 @@ def minion_mods(opts, context=None, whitelist=None):
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     functions = load.gen_functions(
-                    pack,
-                    whitelist=whitelist
-                )
+        pack,
+        whitelist=whitelist
+    )
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
             for mod, provider in opts['providers'].items():
@@ -500,8 +500,8 @@ class Loader(object):
                     )
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
-                    or (cython_enabled and fn_.endswith('.pyx'))
-                    or os.path.isdir(os.path.join(mod_dir, fn_))):
+                        or (cython_enabled and fn_.endswith('.pyx'))
+                        or os.path.isdir(os.path.join(mod_dir, fn_))):
 
                     extpos = fn_.rfind('.')
                     if extpos > 0:
@@ -547,11 +547,15 @@ class Loader(object):
                     for submodule in submodules:
                         try:
                             smname = '{0}.{1}.{2}'.format(
-                                    LOADED_BASE_NAME,
-                                    self.tag,
-                                    name)
-                            smfile = os.path.splitext(submodule.__file__)[0] + '.py'
-                            if submodule.__name__.startswith(smname) and os.path.isfile(smfile):
+                                LOADED_BASE_NAME,
+                                self.tag,
+                                name
+                            )
+                            smfile = '{0}.py'.format(
+                                os.path.splitext(submodule.__file__)[0]
+                            )
+                            if submodule.__name__.startswith(smname) and \
+                                    os.path.isfile(smfile):
                                 reload(submodule)
                         except AttributeError:
                             continue
@@ -757,7 +761,7 @@ class Loader(object):
                 trb = traceback.format_exc()
                 log.critical(
                     'Failed to load grains defined in grain file {0} in '
-                    'function {1}, error:\n{2}').format(
+                    'function {1}, error:\n{2}'.format(
                         key, fun, trb
                     )
                 )
