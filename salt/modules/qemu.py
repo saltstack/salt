@@ -10,6 +10,7 @@ are used here to build up kvm images.
 import os
 import glob
 import tempfile
+import time
 import yaml
 
 # Import salt libs
@@ -83,6 +84,7 @@ def nbd_mount(nbd):
                 'nbd',
                 os.path.basename(nbd))
         m_pt = os.path.join(root, os.path.basename(part))
+        time.sleep(1)
         mnt = __salt__['mount.mount'](m_pt, part, True)
         if not mnt is True:
             continue
@@ -129,6 +131,42 @@ def nbd_clear(mnt):
     for nbd in nbds:
         __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
     return ret
+
+
+def seed(location):
+    '''
+    Make sure that the image at the given location is mounted, salt is
+    installed, keys are seeded, and execute a state run
+
+    CLI Example::
+
+        salt '*' qemu.seed /tmp/image.qcow2
+    '''
+    mnt = nbd_init(location)
+    mpt = mnt.keys()[0]
+    __salt__['mount.mount'](
+            os.path.join(mpt, 'dev'),
+            'udev',
+            fstype='devtmpfs')
+    # Generate the minion's key
+    # Send the key to the master for approval
+    # Execute chroot routine
+    sh_ = '/bin/sh'
+    dl_ = 'curl'
+    if os.path.isfile(os.path.join(mpt, '/usr/bin/curl')):
+        dl_ = '/usr/bin/curl -L http://bootstrap.saltstack.org > bootstrap.sh && sh bootstrap.sh'
+    elif os.path.isfile(os.path.join(mpt, '/bin/curl')):
+        dl_ = '/bin/curl -L http://bootstrap.saltstack.org > bootstrap.sh && sh bootstrap.sh'
+    if os.path.isfile(os.path.join(mpt, 'bin/bash')):
+        sh_ = '/bin/bash'
+
+    cmd = 'chroot {0} {1} -c \'{2}\''.format(
+            mpt,
+            sh_,
+            dl_)
+    __salt__['cmd.run'](cmd)
+    __salt__['mount.umount'](os.path.join(mpt, 'dev'))
+    nbd_clear(mnt)
 
 
 def bootstrap(location, size, fmt):
