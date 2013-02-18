@@ -2,10 +2,10 @@
 Interaction with Git repositories.
 ==================================
 
-NOTE: This modules is under heavy development and the API is subject to change.
+NOTE: This module is under heavy development and the API is subject to change.
 It may be replaced with a generic VCS module if this proves viable.
 
-Important, before using git over ssh, make sure your remote host fingerprint
+Important: Before using git over ssh, make sure your remote host fingerprint
 exists in "~/.ssh/known_hosts" file.
 
 .. code-block:: yaml
