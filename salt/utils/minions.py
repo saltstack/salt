@@ -201,8 +201,8 @@ class CkMinions(object):
 
     def validate_tgt(self, valid, expr, expr_form):
         '''
-        Return a Bool. This function returns if the expresion sent in is within
-        the scope of the valid expression
+        Return a Bool. This function returns if the expression sent in is
+        within the scope of the valid expression
         '''
         ref = {'G': 'grain',
                'P': 'grain_pcre',
