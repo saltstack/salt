@@ -140,7 +140,7 @@ def format_log(ret):
                                     pkg, old, chg[pkg]['new'])
             if not msg:
                 msg = str(ret['changes'])
-            if ret['result'] == True or ret['result'] == None:
+            if ret['result'] is True or ret['result'] is None:
                 log.info(msg)
             else:
                 log.error(msg)
