@@ -52,7 +52,8 @@ def nbd_connect(image):
     Activate nbd for an image file.
 
     CLI Example::
-        @todo
+        
+        salt '*' qemu.nbd_connect /tmp/image.raw
     '''
     if not os.path.isfile(image):
         return ''
