@@ -169,7 +169,10 @@ class LocalClient(object):
             )
 
         # Failed to connect to the master and send the pub
-        if not 'jid' in pub_data or pub_data['jid'] == '0':
+        if not 'jid' in pub_data:
+            return {}
+        if pub_data['jid'] == '0':
+            print('Failed to connect to the Master, is the Salt Master running?')
             return {}
 
         return pub_data
