@@ -644,12 +644,23 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        log.info(
-            '{0} is starting as user \'{1}\''.format(
-                self.__class__.__name__,
-                getpass.getuser()
+        try:
+            log.info(
+                '{0} is starting as user \'{1}\''.format(
+                    self.__class__.__name__,
+                    getpass.getuser()
+                )
             )
-        )
+        except Exception, err:
+            # Only windows is allowed to fail here. See #3189. Log as debug in
+            # that case. Else, error.
+            log.log(
+                salt.utils.is_windows() and logging.DEBUG or logging.ERROR,
+                'Failed to get the user who is starting {0}'.format(
+                    self.__class__.__name__
+                ),
+                exc_info=err
+            )
         log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
