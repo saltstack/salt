@@ -222,7 +222,7 @@ Standard labels will be determined.
 The depends field is a comma-delimited list of modules that this module depends
 on.
 
-The platform field is a comma-delimited list of platforms that this modules is
+The platform field is a comma-delimited list of platforms that this module is
 known to run on.
 
 How Functions are Read
