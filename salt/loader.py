@@ -430,11 +430,18 @@ class Loader(object):
                 except TypeError:
                     pass
         funcs = {}
-        mod_provides_all = hasattr(mod, '__all__')
-        for attr in getattr(mod, '__all__', dir(mod)):
-            if attr.startswith('_') and not mod_provides_all:
-                # private functions are skipped if not provided in that
-                # module's __all__
+        mod_name = mod.__name__[mod.__name__.rindex('.') + 1:]
+        mod_provides_load = hasattr(mod, '__load__')
+        if mod_provides_load:
+            log.info(
+                'The functions from module {0!r} are being loaded from the '
+                'provided __load__ attribute'.format(
+                    mod_name
+                )
+            )
+        for attr in getattr(mod, '__load__', dir(mod)):
+            if attr.startswith('_'):
+                # private functions are skipped
                 continue
             if callable(getattr(mod, attr)):
                 func = getattr(mod, attr)
@@ -443,11 +450,7 @@ class Loader(object):
                         # the callable object is an exception, don't load it
                         continue
 
-                funcs[
-                    '{0}.{1}'.format(
-                        mod.__name__[mod.__name__.rindex('.') + 1:], attr
-                    )
-                ] = func
+                funcs['{0}.{1}'.format(mod_name, attr)] = func
                 self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
