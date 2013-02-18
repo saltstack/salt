@@ -1701,6 +1701,7 @@ class ClearFuncs(object):
             return {
                 'enc': 'clear',
                 'load': {
+                    'jid': None,
                     'minions': minions
                 }
             }
