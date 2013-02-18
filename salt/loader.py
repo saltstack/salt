@@ -390,14 +390,20 @@ class Loader(object):
                     ), fn_, path, desc
                 )
         except ImportError as exc:
-            log.debug('Failed to import {0} {1}: {2}'.format(
-                self.tag, name, exc)
+            log.debug(
+                'Failed to import {0} {1}: {2}'.format(
+                    self.tag, name, exc
                 )
+            )
             return mod
         except Exception:
             trb = traceback.format_exc()
-            log.warning('Failed to import {0} {1}, this is due most likely '
-                        'to a syntax error: {2}'.format(self.tag, name, trb))
+            log.warning(
+                'Failed to import {0} {1}, this is due most likely to a '
+                'syntax error: {2}'.format(
+                    self.tag, name, trb
+                )
+            )
             return mod
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -424,8 +430,11 @@ class Loader(object):
                 except TypeError:
                     pass
         funcs = {}
-        for attr in dir(mod):
-            if attr.startswith('_'):
+        mod_provides_all = hasattr(mod, '__all__')
+        for attr in getattr(mod, '__all__', dir(mod)):
+            if attr.startswith('_') and not mod_provides_all:
+                # private functions are skipped if not provided in that
+                # module's __all__
                 continue
             if callable(getattr(mod, attr)):
                 func = getattr(mod, attr)
@@ -465,12 +474,18 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
-                log.debug(('Skipping {0}, it is not an abosolute '
-                           'path').format(mod_dir))
+                log.debug(
+                    'Skipping {0}, it is not an absolute path'.format(
+                        mod_dir
+                    )
+                )
                 continue
             if not os.path.isdir(mod_dir):
-                log.debug(('Skipping {0}, it is not a '
-                           'directory').format(mod_dir))
+                log.debug(
+                    'Skipping {0}, it is not a directory'.format(
+                        mod_dir
+                    )
+                )
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
@@ -478,8 +493,11 @@ class Loader(object):
                     # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
-                    log.debug(('Skipping {0}, it is disabled by '
-                               'configuration').format(fn_))
+                    log.debug(
+                        'Skipping {0}, it is disabled by configuration'.format(
+                            fn_
+                        )
+                    )
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))
@@ -492,8 +510,12 @@ class Loader(object):
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
-                    log.debug(('Skipping {0}, it does not end with an '
-                               'expected extension').format(fn_))
+                    log.debug(
+                        'Skipping {0}, it does not end with an expected '
+                        'extension'.format(
+                            fn_
+                        )
+                    )
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
@@ -534,15 +556,21 @@ class Loader(object):
                         except AttributeError:
                             continue
             except ImportError as exc:
-                log.debug('Failed to import {0} {1}, this is most likely '
-                          'NOT a problem: {2}'.format(self.tag, name, exc))
+                log.debug(
+                    'Failed to import {0} {1}, this is most likely NOT a '
+                    'problem: {2}'.format(
+                        self.tag, name, exc
+                    )
+                )
                 continue
             except Exception:
                 trb = traceback.format_exc()
-                log.warning('Failed to import {0} {1}, this is due most '
-                            'likely to a syntax error: {2}'.format(
-                                self.tag, name, trb)
-                            )
+                log.warning(
+                    'Failed to import {0} {1}, this is due most likely to a '
+                    'syntax error: {2}'.format(
+                        self.tag, name, trb
+                    )
+                )
                 continue
             modules.append(mod)
         for mod in modules:
@@ -627,8 +655,12 @@ class Loader(object):
                 except Exception:
                     # If the module throws an exception during __virtual__()
                     # then log the information and continue to the next.
-                    log.exception(('Failed to read the virtual function for '
-                                   '{0}: {1}').format(self.tag, module_name))
+                    log.exception(
+                        'Failed to read the virtual function for '
+                        '{0}: {1}'.format(
+                            self.tag, module_name
+                        )
+                    )
                     continue
 
             if whitelist:
@@ -723,9 +755,12 @@ class Loader(object):
                 ret = fun()
             except Exception:
                 trb = traceback.format_exc()
-                log.critical(('Failed to load grains defined in grain file '
-                              '{0} in function {1}, error:\n{2}').format(
-                                  key, fun, trb))
+                log.critical(
+                    'Failed to load grains defined in grain file {0} in '
+                    'function {1}, error:\n{2}').format(
+                        key, fun, trb
+                    )
+                )
                 continue
             if not isinstance(ret, dict):
                 continue
