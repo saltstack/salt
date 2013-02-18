@@ -49,7 +49,10 @@ def make_image(location, size, fmt):
 
 def nbd_connect(image):
     '''
-    Activate nbd for an image file
+    Activate nbd for an image file.
+
+    CLI Example::
+        @todo
     '''
     if not os.path.isfile(image):
         return ''
@@ -84,7 +87,7 @@ def nbd_mount(nbd):
             continue
         ret[m_pt] = part
     return ret
-    
+
 
 def nbd_init(image):
     '''
@@ -131,7 +134,7 @@ def bootstrap(location, size, fmt):
     '''
     HIGHLY EXPERIMENTAL
     Bootstrap a virtual machine image
-    
+
     location:
         The location to create the image
 
@@ -140,6 +143,9 @@ def bootstrap(location, size, fmt):
 
     fmt:
         The image format, raw or qcow2
+
+    CLI Example::
+        @todo
     '''
     location = make_image(location, size, fmt)
     if not location:
