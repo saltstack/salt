@@ -168,6 +168,11 @@ class LocalClient(object):
                 'commands?'
             )
 
+        if not pub_data['minions']:
+            print('No minions matched the target. '
+                  'No command was sent, no jid was assigned.')
+            return {}
+
         # Failed to connect to the master and send the pub
         if not 'jid' in pub_data:
             return {}
