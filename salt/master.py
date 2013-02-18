@@ -1691,6 +1691,21 @@ class ClearFuncs(object):
             if not clear_load.pop('key') == self.key[getpass.getuser()]:
                 log.warning('Authentication failure of type "other" ocurred.')
                 return ''
+        # Retrieve the minions list
+        minions = self.ckminions.check_minions(
+                clear_load['tgt'],
+                clear_load.get('tgt_type', 'glob')
+                )
+        # Check for no minions
+        if not minions:
+            return {
+                'enc': 'clear',
+                'load': {
+                    'jid': 0,
+                    'minions': minions
+                }
+            }
+        # Retrieve the jid
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
@@ -1766,10 +1781,6 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
         pub_sock.send(self.serial.dumps(payload))
-        minions = self.ckminions.check_minions(
-                load['tgt'],
-                load.get('tgt_type', 'glob')
-                )
         return {
             'enc': 'clear',
             'load': {
