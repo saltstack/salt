@@ -1123,11 +1123,11 @@ def recurse(name,
 
     keep = set()
     vdir = set()
+    srcpath = source[7:]
     for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
             continue
-        srcpath = source[7:]
-        if not fn_.startswith(srcpath):
+        if not fn_.startswith('{0}{1}'.format(srcpath, os.path.sep)):
             continue
         # fn_ here is the absolute source path of the file to copy from;
         # it is either a normal file or an empty dir(if include_empty==true).
