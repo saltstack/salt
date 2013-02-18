@@ -606,17 +606,22 @@ class Loader(object):
                                     log.warning(
                                         '{0}.__virtual__() is wrongly '
                                         'returning `None`. It should either '
-                                        'return `True` or `False`. If '
-                                        'you\'re the developer of the module '
-                                        '{1!r}, please fix this.'.format(
+                                        'return `True`, `False` or a new '
+                                        'name. If you\'re the developer '
+                                        'of the module {1!r}, please fix '
+                                        'this.'.format(
                                             mod.__name__,
                                             module_name
                                         )
                                     )
                                 continue
 
-                            if module_name != virtual:
-                                # update the module name with the new name
+                            if virtual is not True and module_name != virtual:
+                                # If __virtual__ returned True the module will
+                                # be loaded with the same name, if it returned
+                                # other value than `True`, it should be a new
+                                # name for the module.
+                                # Update the module name with the new name
                                 log.debug(
                                     'Loaded {0} as virtual {1}'.format(
                                         module_name, virtual
