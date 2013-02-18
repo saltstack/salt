@@ -1054,9 +1054,11 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
         self.add_option(
             '-m', '--module-dirs',
-            default='',
-            help=('Specify an additional directories to pull modules from, '
-                  'multiple directories can be delimited by commas')
+            default=[],
+            action='append',
+            help=('Specify an additional directory to pull modules from. '
+                  'Multiple directories can be provided by passing '
+                  '`-m/--module-dirs` multiple times.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -1099,8 +1101,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def process_module_dirs(self):
-        if self.options.module_dirs:
-            self.config['module_dirs'] = self.options.module_dirs.split(',')
+        for module_dir in self.options.module_dirs:
+            # Provide some backwards compatibility with previous comma
+            # delimited format
+            if ',' in module_dir:
+                self.config.setdefault('module_dirs', []).extend(
+                    module_dir.split(',')
+                )
+                continue
+            self.config.setdefault('module_dirs', []).append(module_dir)
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
