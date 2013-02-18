@@ -139,11 +139,12 @@ vhosts file is changed:
 .. code-block:: yaml
 
     include:
-      - apache
+      - apache.apache
 
     extend:
       apache:
         service:
+          - running
           - watch:
             - file: /etc/httpd/extra/httpd-vhosts.conf
 
@@ -166,11 +167,12 @@ rewritten as follows:
     :emphasize-lines: 8,10,12
 
     include:
-      - apache
+      - apache.apache
 
     extend:
       apache:
         service:
+          - running
           - watch:
             - file: mywebsite
 
