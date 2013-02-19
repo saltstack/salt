@@ -206,6 +206,8 @@ def init(name, cpu, mem, image, nic='default', **kwargs):
     salt.utils.copyfile(sfn, img_dest)
     xml = _gen_xml(name, cpu, mem, img_dest, nicp, **kwargs)
     define_xml_str(xml)
+    if kwargs.get('seed'):
+        __salt__['qemu.seed'](img_dest, name, kwargs.get('config'))
     create(name)
 
 
