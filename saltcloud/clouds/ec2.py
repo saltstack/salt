@@ -633,35 +633,6 @@ def show_image(name, kwargs):
     log.info(result)
 
 
-def get_instance(name=None, kwargs=None):
-    '''
-    Show the details from EC2 concerning an AMI
-    '''
-    nodes = list_nodes_full()
-    return nodes[name]
-
-    params = {'Action': 'DescribeInstances'}
-    if type(kwargs) is dict and 'instance' in kwargs:
-        params['InstanceId.1'] = kwargs['instance']
-
-    instances = query(params)
-    if name:
-        print('hello')
-        for instance in instances:
-            pprint.pprint(instance['instancesSet']['item'])
-            if 'tagSet' in instance['instancesSet']['item']:
-                if type(instance['instancesSet']['item']['tagSet']) is not list:
-                    tempvar = instance['instancesSet']['item']['tagSet']
-                    instance['instancesSet']['item']['tagSet'] = [tempvar]
-                for tag in len(instance['instancesSet']['item']['tagSet']):
-                    if instance['instancesSet']['item']['tagSet']['item'][tag]['key'] == 'Name':
-                        nametag = instance['instancesSet']['item']['tagSet']['item'][tag]['value']
-                if name == nametag:
-                    return [instance]
-    else:
-        return instances
-
-
 def show_instance(name):
     '''
     Show the details from EC2 concerning an AMI
