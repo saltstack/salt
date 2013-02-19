@@ -122,15 +122,15 @@ def list_pkgs(*args):
     pkgs = {}
     with salt.utils.winapi.Com():
         if len(args) == 0:
-            for key, val in _get_reg_software.iteritems():
+            for key, val in _get_reg_software().iteritems():
                 __salt__['pkg_resource.add_pkg'](pkgs, key, val)
-            for key, val in _get_msi_software.iteritems():
+            for key, val in _get_msi_software().iteritems():
                 __salt__['pkg_resource.add_pkg'](pkgs, key, val)
         else:
             # get package version for each package in *args
             for arg in args:
                 for key, val in _search_software(arg).iteritems():
-                  __salt__['pkg_resource.add_pkg'](pkgs, key, val)
+                    __salt__['pkg_resource.add_pkg'](pkgs, key, val)
     return pkgs
 
 
