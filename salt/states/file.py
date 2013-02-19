@@ -1151,6 +1151,8 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](env)
         for mdir in mdirs:
+            if not mdir.startswith('{0}{1}'.format(srcpath, os.path.sep)):
+                continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
 
