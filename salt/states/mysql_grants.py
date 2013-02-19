@@ -73,7 +73,7 @@ def present(name,
         The user to apply the grant to
 
     host
-        The MySQL server
+        The network/host that the grant should apply to
 
     grant_option
         Adds the WITH GRANT OPTION to the defined grant. default: False
@@ -134,7 +134,7 @@ def absent(name,
         The user to apply the grant to
 
     host
-        The MySQL server
+        The network/host that the grant should apply to
     '''
     ret = {'name': name,
            'changes': {},
