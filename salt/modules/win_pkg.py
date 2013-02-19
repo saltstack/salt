@@ -131,6 +131,7 @@ def list_pkgs(*args):
             for arg in args:
                 for key, val in _search_software(arg).iteritems():
                     __salt__['pkg_resource.add_pkg'](pkgs, key, val)
+    __salt__['pkg_resource.sort_pkglist'](pkgs)
     return pkgs
 
 
