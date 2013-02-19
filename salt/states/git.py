@@ -111,7 +111,7 @@ def latest(name,
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
                 if 0 == retcode:
                     __salt__['git.fetch' if bare else 'git.pull'](
-                        target, user=runas)
+                        target, user=runas, identity=identity)
 
                 if submodules:
                     __salt__['git.submodule'](target, user=runas,
