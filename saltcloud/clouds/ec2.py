@@ -28,6 +28,7 @@ import sys
 import stat
 import time
 import logging
+import pprint
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -44,6 +45,7 @@ from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
 
 # Import salt libs
+import salt.output
 from salt.exceptions import SaltException
 
 # Get logging started
@@ -102,7 +104,7 @@ def __virtual__():
         )
 
     global avail_images, avail_sizes, script, destroy
-    global list_nodes_full, list_nodes_select
+    global list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
@@ -111,7 +113,6 @@ def __virtual__():
     avail_images = namespaced_function(avail_images, globals(), (conn,))
     avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
-    list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
     log.debug('Loading EC2 cloud compute module')
@@ -148,11 +149,16 @@ def _xml_to_dict(xmltree):
                 xmldict[name] = _xml_to_dict(item)
             else:
                 xmldict[name] = item.text
+        else:
+            if type(xmldict[name]) is not list:
+                tempvar = xmldict[name]
+                xmldict[name] = []
+                xmldict[name].append(tempvar)
+            xmldict[name].append(_xml_to_dict(item))
     return xmldict
 
 
 def query(params, setname=None):
-    import pprint
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -355,8 +361,6 @@ def create(vm_):
         kwargs['ex_securitygroup'] = ex_securitygroup
         params['SecurityGroup.1'] = ex_securitygroup
 
-    import pprint
-    import sys
     pprint.pprint(kwargs)
     pprint.pprint(params)
     try:
@@ -374,6 +378,7 @@ def create(vm_):
         return False
     pprint.pprint(data)
     sys.exit(0)
+    # At this point, need to assign a Name tag to the node
     log.info('Created node {0}'.format(vm_['name']))
     waiting_for_ip = 0
     while not data.public_ips:
@@ -543,7 +548,7 @@ def get_tags(name):
               'Filter.1.Name': 'resource-id',
               'Filter.1.Value': instance_id}
     result = query(params, setname='tagSet')
-    log.info(result)
+    pprint.pprint(result)
     return result
 
 
@@ -555,22 +560,19 @@ def del_tags(name, kwargs):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
-    location = get_location()
-    conn = get_conn(location=location)
-    node = get_node(conn, name)
-    current_tags = conn.ex_describe_tags(resource=node)
-
-    tags = {}
+    instances = get_instance(name=name)
+    if not instances:
+        kwargs = {'instance': name}
+        instances = get_instance(kwargs=kwargs)
+    instance_id = instances[0]['instancesSet']['item']['instanceId']
+    params = {'Action': 'DeleteTags',
+              'ResourceId.1': instance_id}
+    count = 1
     for tag in kwargs['tags'].split(','):
-        tags[tag] = current_tags[tag]
-
-    try:
-        conn.ex_delete_tags(resource=node, tags=tags)
-        log.info('Deleting tags from {0}'.format(name))
-        get_tags(name)
-    except Exception as exc:
-        log.error('Failed to delete tags from {0}'.format(name))
-        log.error(exc)
+        params['Tag.{0}.Key'.format(count)] = tag
+        count += 1
+    result = query(params, setname='tagSet')
+    return get_tags(name)
 
 
 def rename(name, kwargs):
@@ -614,8 +616,7 @@ def destroy(name):
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
     result = query(params)
-    import pprint
-    pprint.pprint(result)
+    log.info(result)
 
 
 def show_image(name, kwargs):
@@ -638,9 +639,16 @@ def get_instance(name=None, kwargs=None):
 
     instances = query(params)
     if name:
+        print('hello')
         for instance in instances:
+            pprint.pprint(instance['instancesSet']['item'])
             if 'tagSet' in instance['instancesSet']['item']:
-                nametag = instance['instancesSet']['item']['tagSet']['item']['value']
+                if type(instance['instancesSet']['item']['tagSet']) is not list:
+                    tempvar = instance['instancesSet']['item']['tagSet']
+                    instance['instancesSet']['item']['tagSet'] = [tempvar]
+                for tag in len(instance['instancesSet']['item']['tagSet']):
+                    if instance['instancesSet']['item']['tagSet']['item'][tag]['key'] == 'Name':
+                        nametag = instance['instancesSet']['item']['tagSet']['item'][tag]['value']
                 if name == nametag:
                     return [instance]
     else:
@@ -652,20 +660,66 @@ def show_instance(name=None, kwargs=None):
     Show the details from EC2 concerning an AMI
     '''
     result = get_instance(name, kwargs)
-    log.info(result)
-    import pprint
     pprint.pprint(result)
     return result
 
 
-def list_nodes(name=None):
+def list_nodes_full(name=None, kwargs=None):
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
-    instances = get_instance()
+
+    params = {'Action': 'DescribeInstances'}
+    if type(kwargs) is dict and 'instance' in kwargs:
+        params['InstanceId.1'] = kwargs['instance']
+
+    instances = query(params)
     for instance in instances:
-        name = instance['instancesSet']['item']['tagSet']['item']['value']
+        if 'tagSet' in instance['instancesSet']['item']:
+            tagset = instance['instancesSet']['item']['tagSet']
+            if type(tagset['item']) is list:
+                for tag in tagset['item']:
+                    if tag['key'] == 'Name':
+                        name = tag['value']
+            else:
+                name = instance['instancesSet']['item']['tagSet']['item']['value']
+        else:
+            name = instance['instancesSet']['item']['instanceId']
+        ret[name] = instance['instancesSet']['item']
+        ret[name]['id'] = instance['instancesSet']['item']['instanceId'],
+        ret[name]['image'] = instance['instancesSet']['item']['imageId'],
+        ret[name]['size'] = instance['instancesSet']['item']['instanceType'],
+        ret[name]['state'] = instance['instancesSet']['item']['instanceState']['name']
+        if 'privateIpAddress' in instance['instancesSet']['item']:
+            ret[name]['private_ips'] = [instance['instancesSet']['item']['privateIpAddress']]
+        if 'ipAddress' in instance['instancesSet']['item']:
+            ret[name]['public_ips'] = [instance['instancesSet']['item']['ipAddress']]
+    return ret
+
+
+def list_nodes(name=None, kwargs=None):
+    '''
+    Return a list of the VMs that are on the provider
+    '''
+    ret = {}
+
+    params = {'Action': 'DescribeInstances'}
+    if type(kwargs) is dict and 'instance' in kwargs:
+        params['InstanceId.1'] = kwargs['instance']
+
+    instances = query(params)
+    for instance in instances:
+        if 'tagSet' in instance['instancesSet']['item']:
+            tagset = instance['instancesSet']['item']['tagSet']
+            if type(tagset['item']) is list:
+                for tag in tagset['item']:
+                    if tag['key'] == 'Name':
+                        name = tag['value']
+            else:
+                name = instance['instancesSet']['item']['tagSet']['item']['value']
+        else:
+            name = instance['instancesSet']['item']['instanceId']
         ret[name] = {
             'id': instance['instancesSet']['item']['instanceId'],
             'image': instance['instancesSet']['item']['imageId'],
