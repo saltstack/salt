@@ -119,6 +119,7 @@ def list_pkgs(*args):
 
             salt '*' pkg.list_pkgs
     '''
+    pkgs = {}
     with salt.utils.winapi.Com():
         if len(args) == 0:
             pkgs = dict(
@@ -126,7 +127,6 @@ def list_pkgs(*args):
                 list(_get_msi_software().items()))
         else:
             # get package version for each package in *args
-            pkgs = {}
             for arg in args:
                 pkgs.update(_search_software(arg))
     return pkgs
