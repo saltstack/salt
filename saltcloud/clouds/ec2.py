@@ -189,6 +189,7 @@ def query(params, setname=None):
     log.debug('EC2 Request: {0}'.format(requesturl))
     result = urllib2.urlopen(requesturl)
     response = result.read()
+    log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
     result.close()
     
     root = ET.fromstring(response)
@@ -376,9 +377,11 @@ def create(vm_):
         sys.stderr.write(err)
         log.error(err)
         return False
-    pprint.pprint(data)
-    sys.exit(0)
     # At this point, need to assign a Name tag to the node
+    pprint.pprint(data)
+    instance_id = data[0]['instanceId']
+    set_tags(instance_id, {'Name': vm_['name']})
+    sys.exit(0)
     log.info('Created node {0}'.format(vm_['name']))
     waiting_for_ip = 0
     while not data.public_ips:
@@ -482,32 +485,32 @@ def stop(name):
     '''
     Stop a node
     '''
-    location = get_location()
-    conn = get_conn(location=location)
-    node = get_node(conn, name)
-    try:
-        data = conn.ex_stop_node(node=node)
-        log.debug(data)
-        log.info('Stopped node {0}'.format(name))
-    except Exception as exc:
-        log.error('Failed to stop node {0}'.format(name))
-        log.error(exc)
+    log.info('Stopping node {0}'.format(name))
+
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
+
+    params = {'Action': 'StopInstances',
+              'InstanceId.1': instance_id}
+    result = query(params)
+
+    pprint.pprint(result)
 
 
 def start(name):
     '''
     Start a node
     '''
-    location = get_location()
-    conn = get_conn(location=location)
-    node = get_node(conn, name)
-    try:
-        data = conn.ex_start_node(node=node)
-        log.debug(data)
-        log.info('Started node {0}'.format(name))
-    except Exception as exc:
-        log.error('Failed to start node {0}'.format(name))
-        log.error(exc)
+    log.info('Starting node {0}'.format(name))
+
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
+
+    params = {'Action': 'StartInstances',
+              'InstanceId.1': instance_id}
+    result = query(params)
+
+    pprint.pprint(result)
 
 
 def set_tags(name, tags):
@@ -518,32 +521,34 @@ def set_tags(name, tags):
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
-    location = get_location()
-    conn = get_conn(location=location)
-    node = get_node(conn, name)
-    try:
-        log.info('Setting tags for {0}'.format(name))
-        conn.ex_create_tags(resource=node, tags=tags)
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
+    params = {'Action': 'CreateTags',
+              'ResourceId.1': instance_id}
+    count = 1
+    for tag in tags:
+        params['Tag.{0}.Key'.format(count)] = tag
+        params['Tag.{0}.Value'.format(count)] = tags[tag]
+        count += 1
+    result = query(params, setname='tagSet')
 
-        # print the new tags- with special handling for renaming of a node
-        if 'Name' in tags:
-            get_tags(tags['Name'])
-        else:
-            get_tags(name)
-    except Exception as exc:
-        log.error('Failed to set tags for {0}'.format(name))
-        log.error(exc)
+    if 'Name' in tags:
+        return get_tags(tags['Name'])
+
+    return get_tags(name)
 
 
 def get_tags(name):
     '''
     Retrieve tags for a node
     '''
-    instances = get_instance(name=name)
-    if not instances:
-        kwargs = {'instance': name}
-        instances = get_instance(kwargs=kwargs)
-    instance_id = instances[0]['instancesSet']['item']['instanceId']
+    if ',' in name:
+        names = name.split(',')
+    else:
+        names = [name]
+
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
     params = {'Action': 'DescribeTags',
               'Filter.1.Name': 'resource-id',
               'Filter.1.Value': instance_id}
@@ -560,11 +565,8 @@ def del_tags(name, kwargs):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
-    instances = get_instance(name=name)
-    if not instances:
-        kwargs = {'instance': name}
-        instances = get_instance(kwargs=kwargs)
-    instance_id = instances[0]['instancesSet']['item']['instanceId']
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
     count = 1
@@ -583,23 +585,15 @@ def rename(name, kwargs):
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
-    location = get_location()
-    conn = get_conn(location=location)
-    node = get_node(conn, name)
-    tags = {'Name': kwargs['newname']}
-    try:
-        log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
-        conn.ex_create_tags(resource=node, tags=tags)
-        saltcloud.utils.rename_key(
-            __opts__['pki_dir'], name, kwargs['newname']
-        )
-    except Exception as exc:
-        log.error(
-            'Failed to rename {0} to {1}'.format(
-                name, kwargs['newname']
-            )
-        )
-        log.error(exc)
+    log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
+
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
+
+    set_tags(name, {'Name': kwargs['newname']})
+    saltcloud.utils.rename_key(
+        __opts__['pki_dir'], name, kwargs['newname']
+    )
 
 
 def destroy(name):
@@ -607,16 +601,14 @@ def destroy(name):
     Wrap core libcloudfuncs destroy method, adding check for termination
     protection
     '''
-    instances = get_instance(name=name)
-    if not instances:
-        kwargs = {'instance': name}
-        instances = get_instance(kwargs=kwargs)
-    instance_id = instances[0]['instancesSet']['item']['instanceId']
+    nodes = list_nodes_full()
+    instance_id = nodes[name]['instanceId']
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
     result = query(params)
     log.info(result)
+    pprint.pprint(result)
 
 
 def show_image(name, kwargs):
@@ -633,6 +625,9 @@ def get_instance(name=None, kwargs=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
+    nodes = list_nodes_full()
+    return nodes[name]
+
     params = {'Action': 'DescribeInstances'}
     if type(kwargs) is dict and 'instance' in kwargs:
         params['InstanceId.1'] = kwargs['instance']
@@ -655,26 +650,24 @@ def get_instance(name=None, kwargs=None):
         return instances
 
 
-def show_instance(name=None, kwargs=None):
+def show_instance(name):
     '''
     Show the details from EC2 concerning an AMI
     '''
-    result = get_instance(name, kwargs)
-    pprint.pprint(result)
-    return result
+    nodes = list_nodes_full()
+    pprint.pprint(nodes[name])
+    return nodes[name]
 
 
-def list_nodes_full(name=None, kwargs=None):
+def list_nodes_full():
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
 
     params = {'Action': 'DescribeInstances'}
-    if type(kwargs) is dict and 'instance' in kwargs:
-        params['InstanceId.1'] = kwargs['instance']
-
     instances = query(params)
+
     for instance in instances:
         if 'tagSet' in instance['instancesSet']['item']:
             tagset = instance['instancesSet']['item']['tagSet']
@@ -691,44 +684,31 @@ def list_nodes_full(name=None, kwargs=None):
         ret[name]['image'] = instance['instancesSet']['item']['imageId'],
         ret[name]['size'] = instance['instancesSet']['item']['instanceType'],
         ret[name]['state'] = instance['instancesSet']['item']['instanceState']['name']
+        ret[name]['private_ips'] = []
+        ret[name]['public_ips'] = []
         if 'privateIpAddress' in instance['instancesSet']['item']:
-            ret[name]['private_ips'] = [instance['instancesSet']['item']['privateIpAddress']]
+            ret[name]['private_ips'].append(instance['instancesSet']['item']['privateIpAddress'])
         if 'ipAddress' in instance['instancesSet']['item']:
-            ret[name]['public_ips'] = [instance['instancesSet']['item']['ipAddress']]
+            ret[name]['public_ips'].append(instance['instancesSet']['item']['ipAddress'])
     return ret
 
 
-def list_nodes(name=None, kwargs=None):
+def list_nodes():
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
 
-    params = {'Action': 'DescribeInstances'}
-    if type(kwargs) is dict and 'instance' in kwargs:
-        params['InstanceId.1'] = kwargs['instance']
-
-    instances = query(params)
-    for instance in instances:
-        if 'tagSet' in instance['instancesSet']['item']:
-            tagset = instance['instancesSet']['item']['tagSet']
-            if type(tagset['item']) is list:
-                for tag in tagset['item']:
-                    if tag['key'] == 'Name':
-                        name = tag['value']
-            else:
-                name = instance['instancesSet']['item']['tagSet']['item']['value']
-        else:
-            name = instance['instancesSet']['item']['instanceId']
-        ret[name] = {
-            'id': instance['instancesSet']['item']['instanceId'],
-            'image': instance['instancesSet']['item']['imageId'],
-            'size': instance['instancesSet']['item']['instanceType'],
-            'state': instance['instancesSet']['item']['instanceState']['name']
+    nodes = list_nodes_full()
+    for node in nodes:
+        ret[node] = {
+            'id': nodes[node]['id'],
+            'image': nodes[node]['image'],
+            'size': nodes[node]['size'],
+            'state': nodes[node]['state'],
+            'private_ips': nodes[node]['private_ips'],
+            'public_ips': nodes[node]['public_ips'],
         }
-        if 'privateIpAddress' in instance['instancesSet']['item']:
-            ret[name]['private_ips'] = [instance['instancesSet']['item']['privateIpAddress']]
-        if 'ipAddress' in instance['instancesSet']['item']:
-            ret[name]['public_ips'] = [instance['instancesSet']['item']['ipAddress']]
+
     return ret
 
