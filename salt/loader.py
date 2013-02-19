@@ -430,13 +430,12 @@ class Loader(object):
                 except TypeError:
                     pass
         funcs = {}
-        mod_name = mod.__name__[mod.__name__.rindex('.') + 1:]
-        mod_provides_load = hasattr(mod, '__load__')
-        if mod_provides_load:
+        module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
+        if getattr(mod, '__load__', False) is not False:
             log.info(
                 'The functions from module {0!r} are being loaded from the '
                 'provided __load__ attribute'.format(
-                    mod_name
+                    module_name
                 )
             )
         for attr in getattr(mod, '__load__', dir(mod)):
@@ -450,7 +449,7 @@ class Loader(object):
                         # the callable object is an exception, don't load it
                         continue
 
-                funcs['{0}.{1}'.format(mod_name, attr)] = func
+                funcs['{0}.{1}'.format(module_name, attr)] = func
                 self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
@@ -681,7 +680,14 @@ class Loader(object):
                 if module_name not in whitelist:
                     continue
 
-            for attr in dir(mod):
+            if getattr(mod, '__load__', False) is not False:
+                log.info(
+                    'The functions from module {0!r} are being loaded from '
+                    'the provided __load__ attribute'.format(
+                        module_name
+                    )
+                )
+            for attr in getattr(mod, '__load__', dir(mod)):
                 # functions are namespaced with their module name
                 attr_name = '{0}.{1}'.format(module_name, attr)
 
