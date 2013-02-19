@@ -158,7 +158,7 @@ def _xml_to_dict(xmltree):
     return xmldict
 
 
-def query(params, setname=None):
+def query(params=None, setname=None):
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -183,6 +183,7 @@ def query(params, setname=None):
     sig = binascii.b2a_base64(hashed.digest())
     params['Signature'] = sig.strip()
     
+    pprint.pprint(params)
     querystring = urllib.urlencode(params)
     requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
 
@@ -356,7 +357,7 @@ def create(vm_):
     # aren't ex_keyname and ssh_key the same thing?
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
-        #params['KeyName'] = ex_keyname
+        params['KeyName'] = ex_keyname
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
@@ -377,24 +378,35 @@ def create(vm_):
         sys.stderr.write(err)
         log.error(err)
         return False
-    # At this point, need to assign a Name tag to the node
     pprint.pprint(data)
     instance_id = data[0]['instanceId']
     set_tags(instance_id, {'Name': vm_['name']})
-    sys.exit(0)
     log.info('Created node {0}'.format(vm_['name']))
     waiting_for_ip = 0
-    while not data.public_ips:
-        time.sleep(0.5)
+
+    params = {'Action': 'DescribeInstances',
+              'InstanceId.1': instance_id}
+    data = query(params)
+    #pprint.pprint(data)
+
+    pprint.pprint(data[0]['instancesSet']['item'])
+    while 'ipAddress' not in data[0]['instancesSet']['item']:
+        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
+        time.sleep(5)
         waiting_for_ip += 1
-        data = get_node(conn, vm_['name'])
-        log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
+        data = query(params)
+
+    set_tags(instance_id, {'Name': vm_['name']})
+    print('JOY!')
+    sys.exit(0)
+
     if ssh_interface(vm_) == "private_ips":
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
         ip_address = data.private_ips[0]
     else:
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
+
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
