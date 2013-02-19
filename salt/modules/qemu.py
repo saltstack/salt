@@ -184,12 +184,12 @@ def seed(location, id_='', config=None):
     if os.path.isfile(os.path.join(mpt, 'bin/bash')):
         sh_ = '/bin/bash'
     # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp', bs_))
+    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
     if not 'master' in config:
         config['master'] = __opts__['master']
     if id_:
         config['id'] = id_
-    with open(os.path.join(mpt_tmp, 'minion')) as fp_:
+    with open(os.path.join(mpt_tmp, 'minion'), 'w+') as fp_:
         fp_.write(yaml.dump(config, default_flow_style=False))
     # Generate the chroot command
     c_cmd = 'sh /tmp/bootstrap.sh'
