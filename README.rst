@@ -13,7 +13,7 @@ providers. Currently supported providers are:
     - Joyent
     - Linode
     - OpenStack
-    - Rackspace
+    - Rackspace (using OpenStack)
 
 The salt-cloud command can be used to query configured providers, create VMs on
 them, deploy salt-minion on those VMs and destroy them when no longer needed.
