@@ -286,6 +286,9 @@ def installed(
     '''
     rtag = __gen_rtag()
 
+    if not isinstance(version, basestring) and version is not None:
+        version = str(version)
+
     result = _find_install_targets(name, version, pkgs, sources)
     try:
         desired, targets = result
