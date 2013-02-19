@@ -108,7 +108,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
             except (SaltInvocationError, EauthAuthenticationError) as exc:
-                ret = exc
+                ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
 
