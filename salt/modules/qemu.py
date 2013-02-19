@@ -11,10 +11,15 @@ import os
 import glob
 import tempfile
 import time
+import urllib
+import shutil
+
+# Import third party tools
 import yaml
 
 # Import salt libs
 import salt.utils
+import salt.crypt
 
 def __virtual__():
     '''
@@ -23,6 +28,23 @@ def __virtual__():
     if salt.utils.which('qemu-img') and salt.utils.which('qemu-nbd'):
         return 'qemu'
     return False
+
+
+def gather_bootstrap_script(replace=False):
+    '''
+    Download the salt-bootstrap script, set replace to True to refresh the
+    script if it has already been downloaded
+
+    CLI Example::
+
+        salt '*' qemu.gather_bootstrap_script True
+    '''
+    fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
+    if not replace and os.path.isfile(fn_):
+        return fn_
+    with open(fn_, 'w+') as fp_:
+        fp_.write(urllib.urlopen("http://bootstrap.saltstack.org").read())
+    return fn_
 
 
 def make_image(location, size, fmt):
@@ -133,7 +155,7 @@ def nbd_clear(mnt):
     return ret
 
 
-def seed(location):
+def seed(location, id_='', config=None):
     '''
     Make sure that the image at the given location is mounted, salt is
     installed, keys are seeded, and execute a state run
@@ -142,28 +164,39 @@ def seed(location):
 
         salt '*' qemu.seed /tmp/image.qcow2
     '''
+    if config is None:
+        config = {}
     mnt = nbd_init(location)
     mpt = mnt.keys()[0]
+    mpt_tmp = os.path.join(mpt, 'tmp')
     __salt__['mount.mount'](
             os.path.join(mpt, 'dev'),
             'udev',
             fstype='devtmpfs')
+    # Verify that the boostrap script is downloaded
+    bs_ = gather_bootstrap_script()
+    # Apply the minion config
     # Generate the minion's key
-    # Send the key to the master for approval
+    salt.crypt.gen_keys(mpt_tmp, 'minion', 2048)
+    # TODO Send the key to the master for approval
     # Execute chroot routine
     sh_ = '/bin/sh'
-    dl_ = 'curl'
-    if os.path.isfile(os.path.join(mpt, '/usr/bin/curl')):
-        dl_ = '/usr/bin/curl -L http://bootstrap.saltstack.org > bootstrap.sh && sh bootstrap.sh'
-    elif os.path.isfile(os.path.join(mpt, '/bin/curl')):
-        dl_ = '/bin/curl -L http://bootstrap.saltstack.org > bootstrap.sh && sh bootstrap.sh'
     if os.path.isfile(os.path.join(mpt, 'bin/bash')):
         sh_ = '/bin/bash'
-
+    # Copy script into tmp
+    shutil.copy(bs_, os.path.join(mpt, 'tmp', bs_))
+    if not 'master' in config:
+        config['master'] = __opts__['master']
+    if id_:
+        config['id'] = id_
+    with open(os.path.join(mpt_tmp, 'minion')) as fp_:
+        fp_.write(yaml.dump(config, default_flow_style=False))
+    # Generate the chroot command
+    c_cmd = 'sh /tmp/bootstrap.sh'
     cmd = 'chroot {0} {1} -c \'{2}\''.format(
             mpt,
             sh_,
-            dl_)
+            c_cmd)
     __salt__['cmd.run'](cmd)
     __salt__['mount.umount'](os.path.join(mpt, 'dev'))
     nbd_clear(mnt)
