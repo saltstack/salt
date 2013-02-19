@@ -57,11 +57,15 @@ class Fileserver(object):
         '''
         Return the backend list
         '''
+        ret = []
         if not back:
             back = self.opts['fileserver_backend']
         if isinstance(back, str):
             back = [back]
-        return back
+        for sub in back:
+            if '{0}.envs'.format(sub) in self.servers:
+                ret.append(sub)
+        return ret
 
     def update(self, back=None):
         '''

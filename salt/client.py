@@ -169,7 +169,17 @@ class LocalClient(object):
             )
 
         # Failed to connect to the master and send the pub
-        if not 'jid' in pub_data or pub_data['jid'] == '0':
+        if not 'jid' in pub_data:
+            return {}
+        if pub_data['jid'] == '0':
+            print('Failed to connect to the Master, '
+                  'is the Salt Master running?')
+            return {}
+
+        # Check for no minions
+        if not pub_data['minions']:
+            print('No minions matched the target. '
+                  'No command was sent, no jid was assigned.')
             return {}
 
         return pub_data
@@ -338,8 +348,8 @@ class LocalClient(object):
             except KeyboardInterrupt:
                 msg = ('Exiting on Ctrl-C\nThis job\'s jid is:\n{0}\n'
                        'The minions may not have all finished running and any '
-                       'remaining minions will return upon completion. To look '
-                       'up the return data for this job later run:\n'
+                       'remaining minions will return upon completion. To '
+                       'look up the return data for this job later run:\n'
                        'salt-run jobs.lookup_jid {0}').format(pub_data['jid'])
                 raise SystemExit(msg)
 
