@@ -101,7 +101,7 @@ def __virtual__():
             )
         )
 
-    global avail_images, avail_sizes, script, destroy, list_nodes
+    global avail_images, avail_sizes, script, destroy
     global list_nodes_full, list_nodes_select
 
     # open a connection in a specific region
@@ -111,7 +111,6 @@ def __virtual__():
     avail_images = namespaced_function(avail_images, globals(), (conn,))
     avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
-    list_nodes = namespaced_function(list_nodes, globals(), (conn,))
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
@@ -535,16 +534,17 @@ def get_tags(name):
     '''
     Retrieve tags for a node
     '''
-    location = get_location()
-    conn = get_conn(location=location)
-    node = get_node(conn, name)
-    try:
-        log.info('Retrieving tags from {0}'.format(name))
-        data = conn.ex_describe_tags(resource=node)
-        log.info(data)
-    except Exception as exc:
-        log.error('Failed to retrieve tags from {0}'.format(name))
-        log.error(exc)
+    instances = get_instance(name=name)
+    if not instances:
+        kwargs = {'instance': name}
+        instances = get_instance(kwargs=kwargs)
+    instance_id = instances[0]['instancesSet']['item']['instanceId']
+    params = {'Action': 'DescribeTags',
+              'Filter.1.Name': 'resource-id',
+              'Filter.1.Value': instance_id}
+    result = query(params, setname='tagSet')
+    log.info(result)
+    return result
 
 
 def del_tags(name, kwargs):
@@ -605,10 +605,10 @@ def destroy(name):
     Wrap core libcloudfuncs destroy method, adding check for termination
     protection
     '''
-    instances = show_instance(name=name)
+    instances = get_instance(name=name)
     if not instances:
         kwargs = {'instance': name}
-        instances = show_instance(kwargs=kwargs)
+        instances = get_instance(kwargs=kwargs)
     instance_id = instances[0]['instancesSet']['item']['instanceId']
 
     params = {'Action': 'TerminateInstances',
@@ -618,17 +618,17 @@ def destroy(name):
     pprint.pprint(result)
 
 
-def showimage(name, kwargs):
+def show_image(name, kwargs):
     '''
     Show the details from EC2 concerning an AMI
     '''
     params = {'ImageId.1': kwargs['image'],
               'Action': 'DescribeImages'}
-    import pprint
-    pprint.pprint(query(params))
+    result = query(params)
+    log.info(result)
 
 
-def show_instance(name=None, kwargs=None):
+def get_instance(name=None, kwargs=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
@@ -645,4 +645,36 @@ def show_instance(name=None, kwargs=None):
                     return [instance]
     else:
         return instances
+
+
+def show_instance(name=None, kwargs=None):
+    '''
+    Show the details from EC2 concerning an AMI
+    '''
+    result = get_instance(name, kwargs)
+    log.info(result)
+    import pprint
+    pprint.pprint(result)
+    return result
+
+
+def list_nodes(name=None):
+    '''
+    Return a list of the VMs that are on the provider
+    '''
+    ret = {}
+    instances = get_instance()
+    for instance in instances:
+        name = instance['instancesSet']['item']['tagSet']['item']['value']
+        ret[name] = {
+            'id': instance['instancesSet']['item']['instanceId'],
+            'image': instance['instancesSet']['item']['imageId'],
+            'size': instance['instancesSet']['item']['instanceType'],
+            'state': instance['instancesSet']['item']['instanceState']['name']
+        }
+        if 'privateIpAddress' in instance['instancesSet']['item']:
+            ret[name]['private_ips'] = [instance['instancesSet']['item']['privateIpAddress']]
+        if 'ipAddress' in instance['instancesSet']['item']:
+            ret[name]['public_ips'] = [instance['instancesSet']['item']['ipAddress']]
+    return ret
 
