@@ -4,12 +4,40 @@ Support for the Git SCM
 
 # Import python libs
 import os
+import tempfile
 
 # Import salt libs
 from salt import utils, exceptions
 
+def _git_ssh_helper(identity):
+    '''
+    Returns the path to a helper script which can be used in the GIT_SSH env var
+    to use a custom private key file.
+    '''
+    opts = {
+        'StrictHostKeyChecking': 'no',
+        'PasswordAuthentication': 'no',
+        'KbdInteractiveAuthentication': 'no',
+        'ChallengeResponseAuthentication': 'no',
+    }
 
-def _git_run(cmd, cwd=None, **kwargs):
+    helper = tempfile.NamedTemporaryFile(delete=False)
+
+    helper.writelines([
+        '#!/bin/sh\n',
+        'exec ssh {opts} -i {identity} $*\n'.format(
+            opts=' '.join('-o%s=%s' % (key, value) for key, value in opts.items()),
+            identity=identity,
+        )
+    ])
+
+    helper.close()
+
+    os.chmod(helper.name, 0755)
+
+    return helper.name
+
+def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -17,7 +45,19 @@ def _git_run(cmd, cwd=None, **kwargs):
     'cmd.run_all', and used as an alternative to 'cmd.run_all'. Some
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
-    result = __salt__['cmd.run_all'](cmd, cwd=cwd, **kwargs)
+    env = {}
+
+    if identity:
+        helper = _git_ssh_helper(identity)
+
+        env = {
+            'GIT_SSH': helper
+        }
+
+    result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=runas, env=env, **kwargs)
+
+    if identity:
+        os.unlink(helper)
 
     retcode = result['retcode']
 
@@ -68,7 +108,7 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     cmd = 'git rev-parse {0}{1}'.format('--short ' if short else '', rev)
     return _git_run(cmd, cwd, runas=user)
 
-def clone(cwd, repository, opts=None, user=None):
+def clone(cwd, repository, opts=None, user=None, identity=None):
     '''
     Clone a new repository
 
@@ -84,6 +124,9 @@ def clone(cwd, repository, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    identity : None
+        A path to a private key to use over SSH
+
     CLI Example::
 
         salt '*' git.clone /path/to/repo git://github.com/saltstack/salt.git
@@ -98,7 +141,7 @@ def clone(cwd, repository, opts=None, user=None):
         opts = ''
     cmd = 'git clone {0} {1} {2}'.format(repository, cwd, opts)
 
-    return _git_run(cmd, runas=user)
+    return _git_run(cmd, runas=user, identity=identity)
 
 def describe(cwd, rev='HEAD', user=None):
     '''
@@ -164,7 +207,7 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
 
     return _git_run(cmd, cwd=cwd, runas=user)
 
-def fetch(cwd, opts=None, user=None):
+def fetch(cwd, opts=None, user=None, identity=None):
     '''
     Perform a fetch on the given repository
 
@@ -176,6 +219,9 @@ def fetch(cwd, opts=None, user=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    identity : None
+        A path to a private key to use over SSH
 
     CLI Example::
 
@@ -189,9 +235,9 @@ def fetch(cwd, opts=None, user=None):
         opts = ''
     cmd = 'git fetch {0}'.format(opts)
 
-    return _git_run(cmd, cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
 
-def pull(cwd, opts=None, user=None):
+def pull(cwd, opts=None, user=None, identity=None):
     '''
     Perform a pull on the given repository
 
@@ -204,6 +250,9 @@ def pull(cwd, opts=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    identity : None
+        A path to a private key to use over SSH
+
     CLI Example::
 
         salt '*' git.pull /path/to/repo opts='--rebase origin master'
@@ -212,7 +261,7 @@ def pull(cwd, opts=None, user=None):
 
     if not opts:
         opts = ''
-    return _git_run('git pull {0}'.format(opts), cwd=cwd, runas=user)
+    return _git_run('git pull {0}'.format(opts), cwd=cwd, runas=user, identity=identity)
 
 def rebase(cwd, rev='master', opts=None, user=None):
     '''
