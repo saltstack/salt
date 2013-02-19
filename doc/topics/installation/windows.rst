@@ -18,6 +18,11 @@ A Salt Minion Windows installer can be found here:
 
 .. admonition:: Download here
 
+    * 0.13.1
+    * http://saltstack.org/static/downloads/Salt-Minion-0.13.1-Setup-amd64.exe
+    * http://saltstack.org/static/downloads/Salt-Minion-0.13.1-Setup-win32.exe
+
+    * 0.12.1  
     * http://saltstack.org/static/downloads/Salt-Minion-0.12.1-Setup-amd64.exe
     * http://saltstack.org/static/downloads/Salt-Minion-0.12.1-Setup-win32.exe
 

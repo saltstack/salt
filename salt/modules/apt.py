@@ -15,7 +15,7 @@ except ImportError:
     apt_support = False
 
 try:
-    from softwareproperties.ppa import expand_ppa_line
+    import softwareproperties.ppa
     ppa_format_support = True
 except ImportError:
     ppa_format_support = False
@@ -630,7 +630,9 @@ def get_repo(repo):
         if not ppa_format_support:
             error_str = 'cannot parse "ppa:" style repos definitions: {0}'
             raise Exception(error_str.format(repo))
-        repo = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
+        repo = softwareproperties.ppa.expand_ppa_line(
+                repo,
+                __grains__['lsb_codename'])[0]
 
     repos = list_repos()
 
@@ -682,7 +684,9 @@ def del_repo(repo, refresh=False):
         if not ppa_format_support:
             error_str = 'Error: cannot parse "ppa:" style repo definition: {0}'
             return error_str.format(repo)
-        repo = expand_ppa_line(repo, __grains__['lsb_codename'])[0]
+        repo = softwareproperties.ppa.expand_ppa_line(
+                repo,
+                __grains__['lsb_codename'])[0]
 
     sources = sourceslist.SourcesList()
     repos = filter(lambda s: not s.invalid, sources.list)

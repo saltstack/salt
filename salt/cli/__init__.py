@@ -37,9 +37,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(
-                self.get_config_file_path('master')
-            )
+            local = salt.client.LocalClient(self.get_config_file_path())
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
@@ -108,7 +106,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
             except (SaltInvocationError, EauthAuthenticationError) as exc:
-                ret = exc
+                ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
 

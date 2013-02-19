@@ -38,6 +38,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
+            'virt.images': '/srv/salt-images',
             }
 
 

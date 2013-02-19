@@ -40,6 +40,23 @@ def __resolve_struct(value, kwval_as):
         return value
 
 
+def _filter_running(running):
+    '''
+    Filter out the result: True + no chnages data
+    '''
+    ret = {}
+    for tag in running:
+        if running[tag]['result']:
+            # It is true
+            if running[tag]['changes']:
+                # It is blue
+                ret[tag] = running[tag]
+                continue
+        else:
+            ret[tag] = running[tag]
+    return ret
+
+
 def running():
     '''
     Return a dict of state return data if a state function is already running.
@@ -155,6 +172,8 @@ def highstate(test=None, **kwargs):
         ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
     finally:
         st_.pop_active()
+    if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
+        ret = _filter_running(ret)
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
@@ -214,6 +233,8 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         ret = st_.state.call_high(high)
     finally:
         st_.pop_active()
+    if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
+        ret = _filter_running(ret)
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     try:

@@ -501,6 +501,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
+    limit = _sed_esc(limit, escape_all)
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 

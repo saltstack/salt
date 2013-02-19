@@ -91,17 +91,123 @@ def _libvirt_creds():
         user = 'root'
     return {'user': user, 'group': group}
 
+
 def _get_migrate_command():
     '''
     Returns the command shared by the differnt migration types
     '''
     return 'virsh migrate --live --persistent --undefinesource '
 
+
 def _get_target(target, ssh):
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
     return ' %s://%s/%s' %(proto, target, 'system')
+
+
+def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
+    '''
+    Generate the xml string to define a libvirt vm
+    '''
+    mem = mem * 1024
+    data = '''
+<domain type='kvm'>
+        <name>%%NAME%%</name>
+        <vcpu>%%CPU%%</vcpu>
+        <memory>%%MEM%%</memory>
+        <os>
+                <type>hvm</type>
+                <boot dev='hd'/>
+        </os>
+        <devices>
+                <disk type='file' device='disk'>
+                        <source file='%%VDA%%'/>
+                        <target dev='vda' bus='virtio'/>
+                        <driver name='qemu' type='%%DISKTYPE%%' cache='writeback' io='native'/>
+                </disk>
+                %%NICS%%
+                <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
+        </devices>
+        <features>
+                <acpi/>
+        </features>
+</domain>
+'''
+    data = data.replace('%%NAME%%', name)
+    data = data.replace('%%CPU%%', str(cpu))
+    data = data.replace('%%MEM%%', str(mem))
+    data = data.replace('%%VDA%%', vda)
+    data = data.replace('%%DISKTYPE%%', _image_type(vda))
+    nic_str = ''
+    for dev, args in nicp.items():
+        nic_t = '''
+                <interface type='%%TYPE%%'>
+                    <source %%SOURCE%%/>
+                    <mac address='%%MAC%%'/>
+                    <model type='%%MODEL%%'/>
+                </interface>
+'''
+        if 'bridge' in args:
+            nic_t = nic_t.replace('%%SOURCE%%', 'bridge=\'{0}\''.format(args['bridge']))
+            nic_t = nic_t.replace('%%TYPE%%', 'bridge')
+        elif 'network' in args:
+            nic_t = nic_t.replace('%%SOURCE%%', 'network=\'{0}\''.format(args['network']))
+            nic_t = nic_t.replace('%%TYPE%%', 'network')
+        if 'model' in args:
+            nic_t = nic_t.replace('%%MODEL%%', args['model'])
+        dmac = '{0}_mac'.format(dev)
+        if dmac in kwargs:
+            nic_t = nic_t.replace('%%MAC%%', kwargs[dmac])
+        else:
+            nic_t = nic_t.replace('%%MAC%%', salt.utils.gen_mac())
+        nic_str += nic_t
+    data = data.replace('%%NICS%%', nic_str)
+    print(data)
+    return data
+
+
+def _image_type(vda):
+    '''
+    Detect what driver needs to be used for the given image
+    '''
+    out = __salt__['cmd.run']('file {0}'.format(vda))
+    if 'Qcow' in out and 'Version: 2' in out:
+        return 'qcow2'
+    else:
+        return 'raw'
+
+
+def _nic_profile(nic):
+    '''
+    Gather the nic profile from the config or apply the default
+    '''
+    default = {'eth0': {'bridge': 'br0', 'model': 'virtio'}}
+    return __salt__['config.option']('virt.nic', {}).get(nic, default)
+
+
+def init(name, cpu, mem, image, nic='default', **kwargs):
+    '''
+    Initialize a new vm
+
+    CLI Example::
+
+        salt 'hypervisor' vm_name 4 512 salt://path/to/image.raw
+    '''
+    img_dir = os.path.join(__salt__['config.option']('virt.images'), name)
+    img_dest = os.path.join(
+            __salt__['config.option']('virt.images'),
+            name,
+            'vda')
+    sfn = __salt__['cp.cache_file'](image)
+    if not os.path.isdir(img_dir):
+        os.makedirs(img_dir)
+    nicp = _nic_profile(nic)
+    salt.utils.copyfile(sfn, img_dest)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, **kwargs)
+    define_xml_str(xml)
+    create(name)
+
 
 def list_vms():
     '''
@@ -799,8 +905,12 @@ def purge(vm_, dirs=False):
         salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
-    if not destroy(vm_):
-        return False
+    try:
+        if not destroy(vm_):
+            return False
+    except libvirt.libvirtError:
+        # This is thrown if the machine is already shut down
+        pass
     directories = set()
     for disk in disks:
         os.remove(disks[disk]['file'])
@@ -808,6 +918,7 @@ def purge(vm_, dirs=False):
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
+    undefine(vm_)
     return True
 
 

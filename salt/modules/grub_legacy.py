@@ -6,7 +6,7 @@ Support for GRUB Legacy
 import os
 
 # Import salt libs
-from salt.utils import fopen, memoize
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 
@@ -20,7 +20,7 @@ def __virtual__():
     return False
 
 
-@memoize
+@salt.utils.memoize
 def _detect_conf():
     '''
     GRUB conf location differs depending on distro
@@ -58,7 +58,7 @@ def conf():
     ret = {}
     pos = 0
     try:
-        with fopen(_detect_conf(), 'r') as _fp:
+        with salt.utils.fopen(_detect_conf(), 'r') as _fp:
             for line in _fp:
                 if line.startswith('#'):
                     continue

@@ -67,14 +67,14 @@ def present(name,
         ret['comment'] = 'Database {0} is set to be created'.format(name)
         return ret
     if __salt__['postgres.db_create'](name,
-                                    tablespace=tablespace,
-                                    encoding=encoding,
-                                    locale=locale,
-                                    lc_collate=lc_collate,
-                                    lc_ctype=lc_ctype,
-                                    owner=owner,
-                                    template=template,
-                                    runas=runas):
+                                      tablespace=tablespace,
+                                      encoding=encoding,
+                                      locale=locale,
+                                      lc_collate=lc_collate,
+                                      lc_ctype=lc_ctype,
+                                      owner=owner,
+                                      template=template,
+                                      runas=runas):
         ret['comment'] = 'The database {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:
@@ -111,7 +111,6 @@ def absent(name, runas=None):
             return ret
 
     # fallback
-    ret['comment'] = (
-            'Database {0} is not present, so it cannot be removed'
-            ).format(name)
+    ret['comment'] = 'Database {0} is not present, so it cannot ' \
+                     'be removed'.format(name)
     return ret

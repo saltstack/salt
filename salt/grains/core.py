@@ -666,6 +666,7 @@ def os_data():
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD'):
         grains.update(_bsd_cpudata(grains))
+        grains['osrelease'] = grains['kernelrelease'].split('-')[0]
     if not grains['os']:
         grains['os'] = 'Unknown {0}'.format(grains['kernel'])
         grains['os_family'] = 'Unknown'

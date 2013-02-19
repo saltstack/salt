@@ -8,8 +8,8 @@ Salt modules are the functions called by the :command:`salt` command.
 
     Salt ships with many modules that cover a wide variety of tasks.
 
-Easy Modules to write
-=====================
+Modules Are Easy to Write!
+==========================
 
 Salt modules are amazingly simple to write. Just write a regular Python module
 or a regular `Cython`_ module and place it in the ``salt/modules`` directory.
@@ -201,8 +201,8 @@ to the calling terminal.
 
 .. _`Python docstring`: #term-docstring
 
-Add Module meta data
---------------------
+Add Module metadata
+-------------------
 
 Add information about the module using the following field lists:
 
@@ -213,7 +213,7 @@ Add information about the module using the following field lists:
     :depends:       python-mysqldb
     :platform:      all
 
-The maintaner field is a comma-delimited list of developers who help maintain
+The maintainer field is a comma-delimited list of developers who help maintain
 this module.
 
 The maturity field indicates the level of quality and testing for this module.
@@ -222,7 +222,7 @@ Standard labels will be determined.
 The depends field is a comma-delimited list of modules that this module depends
 on.
 
-The platform field is a comma-delimited list of platforms that this modules is
+The platform field is a comma-delimited list of platforms that this module is
 known to run on.
 
 How Functions are Read

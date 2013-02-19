@@ -144,7 +144,7 @@ class Client(object):
             )
         )
         for fn_ in self.file_list(env):
-            if fn_.startswith(path):
+            if fn_.startswith('{0}{1}'.format(path, os.path.sep)):
                 local = self.cache_file('salt://{0}'.format(fn_), env)
                 if not fn_.strip():
                     continue
@@ -160,7 +160,7 @@ class Client(object):
             #else:
             #    prefix = separated[0]
             for fn_ in self.file_list_emptydirs(env):
-                if fn_.startswith(path):
+                if fn_.startswith('{0}{1}'.format(path, os.path.sep)):
                     dest = salt.utils.path_join(
                         self.opts['cachedir'],
                         'files',

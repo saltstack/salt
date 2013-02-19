@@ -54,7 +54,7 @@ def uninstall(pecls):
 
 def update(pecls):
     '''
-    Update one or several pecl exntesions.
+    Update one or several pecl extensions.
 
     pecls
         The pecl extensions to update.

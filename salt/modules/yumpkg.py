@@ -13,7 +13,7 @@ import logging
 # Import third party libs
 try:
     import yum
-    from rpmUtils.arch import getBaseArch
+    import rpmUtils.arch
     HAS_YUMDEPS = True
 except (ImportError, AttributeError):
     HAS_YUMDEPS = False
@@ -130,7 +130,7 @@ def list_upgrades(refresh=True):
                 pkglist, [pkg]
             )
             for pkg in exactmatch:
-                if pkg.arch == getBaseArch() or pkg.arch == 'noarch':
+                if pkg.arch == rpmUtils.arch.getBaseArch() or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join(
                         [pkg['version'], pkg['release']]
                     )
@@ -168,7 +168,7 @@ def available_version(*names):
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-                    and (pkg.arch == getBaseArch() or pkg.arch == 'noarch'):
+                    and (pkg.arch == rpmUtils.arch.getBaseArch() or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
     # Return a string if only one package name passed

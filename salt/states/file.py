@@ -89,6 +89,7 @@ import fnmatch
 import salt.utils
 import salt.utils.templates
 from salt._compat import string_types
+from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
@@ -380,6 +381,23 @@ def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     return ret
 
 
+def _test_owner(kwargs, user=None):
+    '''
+    Convert owner to user, since other config management tools use owner,
+    no need to punish people coming from other systems.
+    PLEASE DO NOT DOCUMENT THIS! WE USE USER, NOT OWNER!!!!
+    '''
+    if user:
+        return user
+    if 'owner' in kwargs:
+        msg = ('Use of argument owner found, "owner" is invalid, please use'
+               ' "user"')
+        log.warning(msg)
+        return kwargs['owner']
+
+    return user
+
+
 def symlink(
         name,
         target,
@@ -408,9 +426,7 @@ def symlink(
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
     '''
-    if 'owner' in kwargs:
-        if user is None:
-            user = kwargs['owner']
+    user = _test_owner(kwargs, user=user)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -618,12 +634,7 @@ def managed(name,
     backup
         Overrides the default backup mode for this specific file
     '''
-    # Convert owner to user, since other config management tools use owner,
-    # no need to punish people coming from other systems.
-    # PLEASE DO NOT DOCUMENT THIS! WE USE USER, NOT OWNER!!!!
-    if 'owner' in kwargs:
-        if user is None:
-            user = kwargs['owner']
+    user = _test_owner(kwargs, user=user)
     # Initial set up
     mode = __salt__['config.manage_mode'](mode)
     ret = {'changes': {},
@@ -769,9 +780,7 @@ def directory(name,
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
     '''
-    if 'owner' in kwargs:
-        if user is None:
-            user = kwargs['owner']
+    user = _test_owner(kwargs, user=user)
     mode = __salt__['config.manage_mode'](mode)
     ret = {'name': name,
            'changes': {},
@@ -981,9 +990,7 @@ def recurse(name,
           - exclude: APPDATA*               :: glob matches APPDATA.01, APPDATA.02,.. for exclusion
           - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion
     '''
-    if 'owner' in kwargs:
-        if user is None:
-            user = kwargs['owner']
+    user = _test_owner(kwargs, user=user)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -1116,11 +1123,11 @@ def recurse(name,
 
     keep = set()
     vdir = set()
+    srcpath = source[7:]
     for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
             continue
-        srcpath = source[7:]
-        if not fn_.startswith(srcpath):
+        if not fn_.startswith('{0}{1}'.format(srcpath, os.path.sep)):
             continue
         # fn_ here is the absolute source path of the file to copy from;
         # it is either a normal file or an empty dir(if include_empty==true).

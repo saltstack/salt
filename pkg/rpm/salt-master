@@ -6,21 +6,30 @@
 # LSB header
 
 ### BEGIN INIT INFO
-# Description: This is a daemon that controls the salt minions
-# Provides: salt-master
-# Required-Start: network
-# Short-Description: salt master control daemon
+# Provides:          salt-master
+# Required-Start:    $all
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Salt master control daemon
+# Description:       This is a daemon that controls the Salt minions.
 ### END INIT INFO
+
 
 # chkconfig header
 
-# chkconfig: 345 99 99 
-# description:  This is a daemon that controls the salt minions
+# chkconfig: 345 96 05
+# description:  This is a daemon that controls the Salt minions
 #
 # processname: /usr/bin/salt-master
 
-SALTMASTER=/usr/bin/salt-master
-PYTHON=/usr/bin/python
+
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+    SALTMASTER=/usr/bin/salt-master
+    PYTHON=/usr/bin/python
+fi
 
 # Sanity checks.
 [ -x $SALTMASTER ] || exit 0

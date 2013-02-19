@@ -11,7 +11,7 @@ import StringIO
 
 # import third party libs
 import jinja2
-from jinja2.exceptions import TemplateNotFound
+import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
@@ -766,7 +766,7 @@ def build_bond(iface, settings):
     opts = _parse_settings_bond(settings, iface)
     try:
         template = ENV.get_template('conf.jinja')
-    except TemplateNotFound:
+    except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template conf.jinja')
         return ''
     data = template.render({'name': iface, 'bonding': opts})
@@ -824,7 +824,7 @@ def build_interface(iface, iface_type, enabled, settings):
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = ENV.get_template('rh{0}_eth.jinja'.format(rh_major))
-        except TemplateNotFound:
+        except jinja2.exceptions.TemplateNotFound:
             log.error(
                 'Could not load template rh{0}_eth.jinja'.format(
                     rh_major
@@ -941,7 +941,7 @@ def build_network_settings(settings):
     opts = _parse_network_settings(settings, current_network_settings)
     try:
         template = ENV.get_template('network.jinja')
-    except TemplateNotFound:
+    except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template network.jinja')
         return ''
     network = template.render(opts)

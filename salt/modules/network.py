@@ -239,6 +239,17 @@ def interfaces():
     return ifaces
 
 
+def hwaddr(iface):
+    '''
+    Return the hardware address (a.k.a. MAC address) for a given interface
+
+    CLI Example::
+
+        salt '*' network.hwaddr eth0
+    '''
+    return interfaces().get(iface, {}).get('hwaddr', '')
+
+
 def _get_net_start(ipaddr, netmask):
     ipaddr_octets = ipaddr.split('.')
     netmask_octets = netmask.split('.')
@@ -469,3 +480,20 @@ def dig(host):
     '''
     cmd = 'dig {0}'.format(salt.utils.socket_util.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
+
+def arp():
+    '''
+    Return the arp table from the minion
+
+    CLI Example::
+
+        salt '*' \* network.arp
+    '''
+    ret = {}
+    out = __salt__['cmd.run']('arp -an')
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 4:
+            continue
+        ret[comps[3]] = comps[1].strip('(').strip(')')
+    return ret

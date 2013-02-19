@@ -49,7 +49,7 @@ def __virtual__():
 
 
 def __check_table(name, table):
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = 'CHECK TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(query))
@@ -60,7 +60,7 @@ def __check_table(name, table):
 
 
 def __repair_table(name, table):
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = 'REPAIR TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(query))
@@ -71,7 +71,7 @@ def __repair_table(name, table):
 
 
 def __optimize_table(name, table):
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = 'OPTIMIZE TABLE `{0}`.`{1}`'.format(name, table)
     log.debug('Doing query: {0}'.format(query))
@@ -81,7 +81,7 @@ def __optimize_table(name, table):
     return results
 
 
-def connect(**kwargs):
+def _connect(**kwargs):
     '''
     wrap authentication credentials here
     '''
@@ -160,7 +160,7 @@ def query(database, query):
     conv = dict(zip(conv_iter,[str,] * len(orig_conv.keys())))
 
     ret = {}
-    dbc = connect(**{'db': database, 'conv': conv})
+    dbc = _connect(**{'db': database, 'conv': conv})
     cur = dbc.cursor()
     start = time.time()
     affected = cur.execute(query)
@@ -195,7 +195,7 @@ def status():
         salt '*' mysql.status
     '''
     ret = {}
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     cur.execute('SHOW STATUS')
     for _ in range(cur.rowcount):
@@ -213,7 +213,7 @@ def version():
 
         salt '*' mysql.version
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
@@ -231,7 +231,7 @@ def slave_lag():
 
         salt '*' mysql.slave_lag
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     cur.execute('show slave status')
     results = cur.fetchone()
@@ -252,8 +252,12 @@ def slave_lag():
 def free_slave():
     '''
     Frees a slave from its master.  This is a WIP, do not use.
+
+    CLI Example::
+
+        salt \* mysql.free_slave
     '''
-    slave_db = connect()
+    slave_db = _connect()
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
     slave_cur.execute("show slave status")
     slave_status = slave_cur.fetchone()
@@ -265,7 +269,7 @@ def free_slave():
         # I am also assuming that the admin password is the same on both
         # servers here, and only overriding the host option in the connect
         # function.
-        master_db = connect(**master)
+        master_db = _connect(**master)
         master_cur = master_db.cursor()
         master_cur.execute("flush logs")
         master_db.close()
@@ -295,7 +299,7 @@ def db_list():
         salt '*' mysql.db_list
     '''
     ret = []
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     cur.execute('SHOW DATABASES')
     results = cur.fetchall()
@@ -319,7 +323,7 @@ def db_tables(name):
         return False
 
     ret = []
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'SHOW TABLES IN {0}'.format(name)
     log.debug('Doing query: {0}'.format(query))
@@ -340,7 +344,7 @@ def db_exists(name):
 
         salt '*' mysql.db_exists 'dbname'
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'SHOW DATABASES LIKE \'{0}\''.format(name)
     log.debug('Doing query: {0}'.format(query))
@@ -363,7 +367,7 @@ def db_create(name):
         return False
 
     # db doesnt exist, proceed
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'CREATE DATABASE `{0}`;'.format(name)
     log.debug('Query: {0}'.format(query))
@@ -391,7 +395,7 @@ def db_remove(name):
         return False
 
     # db doesnt exist, proceed
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'DROP DATABASE `{0}`;'.format(name)
     log.debug('Doing query: {0}'.format(query))
@@ -414,7 +418,7 @@ def user_list():
 
         salt '*' mysql.user_list
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     cur.execute('SELECT User,Host FROM mysql.user')
     results = cur.fetchall()
@@ -430,7 +434,7 @@ def user_exists(user, host='localhost'):
 
         salt '*' mysql.user_exists 'username' 'hostname'
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
              'Host = \'{1}\''.format(user, host))
@@ -447,7 +451,7 @@ def user_info(user, host='localhost'):
 
         salt '*' mysql.user_info root localhost
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
     query = ('SELECT * FROM mysql.user WHERE User = \'{0}\' AND '
              'Host = \'{1}\''.format(user, host))
@@ -475,7 +479,7 @@ def user_create(user,
         log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
         return False
 
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'CREATE USER \'{0}\'@\'{1}\''.format(user, host)
     if password is not None:
@@ -515,7 +519,7 @@ def user_chpass(user,
     elif password_hash is not None:
         password_sql = '"{0}"'.format(password_hash)
 
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = ('UPDATE mysql.user SET password={0} WHERE User=\'{1}\' AND '
              'Host = \'{2}\';'.format(password_sql, user, host))
@@ -544,7 +548,7 @@ def user_remove(user,
 
         salt '*' mysql.user_remove frank localhost
     '''
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'DROP USER \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Query: {0}'.format(query))
@@ -680,7 +684,7 @@ def user_grants(user,
         return False
 
     ret = []
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     query = 'SHOW GRANTS FOR \'{0}\'@\'{1}\''.format(user, host)
     log.debug('Doing query: {0}'.format(query))
@@ -699,6 +703,13 @@ def grant_exists(grant,
                 host='localhost',
                 grant_option=False,
                 escape=True):
+    '''
+    Checks to see if a grant exists in the database
+
+    CLI Example::
+
+        salt \* mysql.grant_exists 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
+    '''
     # TODO: This function is a bit tricky, since it requires the ordering to
     #       be exactly the same. Perhaps should be replaced/reworked with a
     #       better/cleaner solution.
@@ -731,7 +742,7 @@ def grant_add(grant,
         salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
 
     query = __grant_generate(grant, database, user, host, grant_option, escape)
@@ -767,7 +778,7 @@ def grant_revoke(grant,
         salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
 
     if grant_option:
@@ -809,7 +820,8 @@ def processlist():
                           'User': 'root',
                           'db': 'mysql'}
 
-    CLI Example:
+    CLI Example::
+
         salt '*' mysql.processlist
 
     '''
@@ -818,7 +830,7 @@ def processlist():
            'Info', 'Rows_sent', 'Rows_examined', 'Rows_read')
 
     log.debug('MySQL Process List:\n{0}'.format(processlist()))
-    dbc = connect()
+    dbc = _connect()
     cur = dbc.cursor()
     cur.execute("SHOW FULL PROCESSLIST")
     for _ in range(cur.rowcount):
@@ -890,13 +902,14 @@ def get_master_status():
                          'File': 'mysql-bin.000021',
                          'Position': 107}}
 
-    CLI Example:
+    CLI Example::
+
         salt '*' mysql.get_master_status
 
     '''
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
-    conn = connect()
+    conn = _connect()
     rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
     conn.close()
 
@@ -962,7 +975,7 @@ def get_slave_status():
     '''
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
-    conn = connect()
+    conn = _connect()
     rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
     conn.close()
 

@@ -18,6 +18,7 @@ Full list of builtin state modules
     file
     gem
     git
+    grains
     group
     hg
     host

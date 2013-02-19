@@ -11,29 +11,36 @@ There are a number of ways to contribute to salt development.
 Sending a Github pull request
 -----------------------------
 
-This is the preferred method for contributions, simply create a Github
+This is the preferred method for contributions. Simply create a Github
 fork, commit changes to the fork, and then open up a pull request.
 
 The following is an example (from `Open Comparison Contributing Docs`_ ) 
 of an efficient workflow for forking, cloning, branching, committing, and 
 sending a pull request for a github repository.
 
-Once the salt github repo is cloned locally and changes are ready to submit, do the following::
+First, make a local clone of your github fork of the salt github repo and make edits and 
+changes locally.
+
+Then, create a new branch on your clone by entering the following commands::
 
     git checkout -b fixed-broken-thing
+
     Switched to a new branch 'fixed-broken-thing'
 
 Choose a name for your branch that describes its purpose.  
 
-To generate a pull request, either for preliminary review,
-or for consideration of merging into the project, first push the local
-feature branch back up to GitHub::
+Now commit your changes to this new branch with the following command::
 
-    git push origin fixed-broken-thing
+    #add and commit all changes at once
+    git commit -a -m 'description of my fixes for the broken thing'
+
+And then push your locally committed changes back up to GitHub::
+
+    git push --set-upstream origin fixed-broken-thing
     
-When looking at the fork on GitHub, this new branch will now be listed under
-the "Source" tab where it says "Switch Branches".  Select the feature branch 
-from this list, and then click the "Pull request" button.
+Now go look at your fork of the salt repo on the GitHub website. The new 
+branch will now be listed under the "Source" tab where it says "Switch Branches".
+Select the new branch from this list, and then click the "Pull request" button.
 
 Put in a descriptive comment, and include links to any project issues related to the pull request.
 

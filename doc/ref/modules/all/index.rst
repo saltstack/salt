@@ -28,7 +28,6 @@ Full list of builtin execution modules
     brew
     butterkvm
     cassandra
-    cluster
     cmdmod
     config
     cp
