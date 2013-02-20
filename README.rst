@@ -1,5 +1,5 @@
 ==========
-salt-cloud
+Salt Cloud
 ==========
 
 Salt Cloud is a tool for provisioning salted minions across various cloud
