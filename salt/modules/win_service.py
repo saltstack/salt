@@ -82,6 +82,44 @@ def get_all():
     '''
     return sorted(get_enabled() + get_disabled())
 
+def get_service_name(*args):
+    '''
+    If no args are passed, return a dict of all services where the keys are the
+    service Display Names and the values are the service names.
+
+    If arguments are passed, create a dict of Display Names and service names
+
+    CLI Example::
+
+        salt '*' service.get_service_name
+
+        salt '*' service.get_service_name 'Google Update Service (gupdate)' 'DHCP Client'
+    '''
+    ret = {}
+    services = []
+    display_names = []
+    cmd = 'sc query type= service state= all'
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'SERVICE_NAME:' in line:
+            comps = line.split(':', 1)
+            if not len(comps) > 1:
+                continue
+            services.append(comps[1].strip())
+        if 'DISPLAY_NAME:' in line:
+            comps = line.split(':', 1)
+            if not len(comps) > 1:
+                continue
+            display_names.append(comps[1].strip())
+    if len(services) == len(display_names):
+        service_dict = dict(zip(display_names, services))
+    else:
+        return 'Service Names and Display Names mismatch'
+    if len(args) == 0:
+        return service_dict
+    for arg in args:
+        ret[arg] = service_dict[arg]
+    return ret
 
 def start(name):
     '''
