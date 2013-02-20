@@ -84,10 +84,16 @@ def get_all():
 
 def get_service_name(*args):
     '''
-    If no args are passed, return a dict of all services where the keys are the
-    service Display Names and the values are the service names.
+    The Display Name is what is displayed in Windows when services.msc is
+    executed.  Each Display Name has an associated Service Name which is the
+    actual name of the service.  This function allows you to discover the
+    Service Name by returning a dictionary of Display Names and Service Names,
+    or filter by adding arguments of Display Names.
 
-    If arguments are passed, create a dict of Display Names and service names
+    If no args are passed, return a dict of all services where the keys are the
+    service Display Names and the values are the Service Names.
+
+    If arguments are passed, create a dict of Display Names and Service Names
 
     CLI Example::
 
