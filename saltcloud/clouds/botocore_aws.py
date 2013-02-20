@@ -34,8 +34,11 @@ from saltcloud.libcloudfuncs import *
 
 # Import libcloud_aws, required to latter patch __opts__
 from saltcloud.clouds import libcloud_aws
-# Now let's import each of the defined module's functions and attributes
+# Import libcloud_aws, storing pre and post locals so we can namespace any
+# callable to this module.
+PRE_IMPORT_LOCALS_KEYS = locals().copy()
 from saltcloud.clouds.libcloud_aws import *
+POST_IMPORT_LOCALS_KEYS = locals().copy()
 
 # Import salt libs
 from salt.exceptions import SaltException
@@ -89,6 +92,26 @@ def __virtual__():
             '0600\n'.format(
                 __opts__['AWS.private_key']
             )
+        )
+
+    # Let's bring the functions imported from libcloud_aws to the current
+    # namespace.
+    keysdiff = set(POST_IMPORT_LOCALS_KEYS.keys()).difference(
+        PRE_IMPORT_LOCALS_KEYS
+    )
+    for key in keysdiff:
+        if not callable(POST_IMPORT_LOCALS_KEYS[key]):
+            continue
+        # skip callables that might be exceptions
+        if any(['Error' in POST_IMPORT_LOCALS_KEYS[key].__name__,
+                'Exception' in POST_IMPORT_LOCALS_KEYS[key].__name__]):
+            continue
+        globals().update(
+            {
+                key: namespaced_function(
+                    POST_IMPORT_LOCALS_KEYS[key], globals(), ()
+                )
+            }
         )
 
     global avail_images, avail_sizes, script, destroy, list_nodes
