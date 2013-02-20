@@ -118,7 +118,8 @@ def get_service_name(*args):
     if len(args) == 0:
         return service_dict
     for arg in args:
-        ret[arg] = service_dict[arg]
+        if arg in service_dict:
+            ret[arg] = service_dict[arg]
     return ret
 
 def start(name):
