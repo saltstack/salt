@@ -124,9 +124,6 @@ class Minion(parsers.MinionOptionParser):
         '''
         self.parse_args()
 
-        import pprint
-        pprint.pprint(self.config)
-
         try:
             if self.config['verify_env']:
                 confd = os.path.join(
