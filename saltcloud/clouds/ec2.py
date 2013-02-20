@@ -727,17 +727,21 @@ def enable_term_protect(name):
 
         salt-cloud -a enable_term_protect mymachine
     '''
-    instances = list_nodes_full()
-    instance_id = instances[name]['instanceId']
-    params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'DisableApiTermination.Value': 'true'}
-    result = query(params, return_root=True)
-
-    show_term_protect(name, instance_id)
+    _toggle_term_protect(name, 'true')
 
 
 def disable_term_protect(name):
+    '''
+    Disable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a disable_term_protect mymachine
+    '''
+    _toggle_term_protect(name, 'false')
+
+
+def _toggle_term_protect(name, value):
     '''
     Disable termination protection on a node
 
@@ -749,7 +753,7 @@ def disable_term_protect(name):
     instance_id = instances[name]['instanceId']
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id,
-              'DisableApiTermination.Value': 'false'}
+              'DisableApiTermination.Value': value}
     result = query(params, return_root=True)
 
     show_term_protect(name, instance_id)
