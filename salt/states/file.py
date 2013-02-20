@@ -533,7 +533,7 @@ def absent(name):
 def exists(name):
     '''
     Verify that the named file or directory is present or exists.
-    Ensures pre-requisites outside of salts per-vue have been previously
+    Ensures pre-requisites outside of salts purview have been previously
     satisified (aka, keytabs, private keys, etc.) before deployment
 
     name
