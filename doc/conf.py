@@ -93,7 +93,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'salt-cloud'
-copyright = u'2012, SaltStack, Inc.'
+copyright = u'2012 - 2013, Salt Stack, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
