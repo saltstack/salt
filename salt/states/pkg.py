@@ -286,6 +286,9 @@ def installed(
     '''
     rtag = __gen_rtag()
 
+    if not isinstance(version, basestring) and version is not None:
+        version = str(version)
+
     result = _find_install_targets(name, version, pkgs, sources)
     try:
         desired, targets = result
@@ -302,7 +305,7 @@ def installed(
     if __opts__['test']:
         if targets:
             if sources:
-                summary = ', '.join(sources)
+                summary = ', '.join(targets)
             else:
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])

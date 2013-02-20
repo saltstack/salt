@@ -83,9 +83,13 @@ def nbd_connect(image):
     __salt__['cmd.run']('modprobe nbd max_part=63')
     for nbd in glob.glob('/dev/nbd?'):
         if __salt__['cmd.retcode']('fdisk -l {0}'.format(nbd)):
-            __salt__['cmd.run'](
-                    'qemu-nbd -c {0} {1}'.format(nbd, image)
-                    )
+            while True:
+                # Sometime nbd does not "take hold", loop until we can verify
+                __salt__['cmd.run'](
+                        'qemu-nbd -c {0} {1}'.format(nbd, image)
+                        )
+                if not __salt__['cmd.retcode']('fdisk -l {0}'.format(nbd)):
+                    break
             return nbd
     return ''
 

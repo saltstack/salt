@@ -4,6 +4,8 @@ What is Salt?
 
 .. rubric:: We are not just talking about NaCl.
 
+Join us in #salt on freenode!
+
 Distributed Remote Execution
 ============================
 
