@@ -159,7 +159,8 @@ def _xml_to_dict(xmltree):
     return xmldict
 
 
-def query(params=None, setname=None, requesturl=None, return_url=False):
+def query(params=None, setname=None, requesturl=None, return_url=False,
+          return_root=False):
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -196,6 +197,8 @@ def query(params=None, setname=None, requesturl=None, return_url=False):
     
     root = ET.fromstring(response)
     items = root[1]
+    if return_root is True:
+        items = root
 
     if setname:
         for item in range(0, len(root.getchildren())):
@@ -339,7 +342,6 @@ def create(vm_):
     '''
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
-    conn = get_conn(location=location)
     usernames = ssh_username(vm_)
     kwargs = {'ssh_key': __opts__['EC2.private_key']}
     params = {'Action': 'RunInstances',
@@ -461,8 +463,6 @@ def create(vm_):
     log.info(
         'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
-    #for key, val in data.__dict__.items():
-    #    log.info('  {0}: {1}'.format(key, val))
     pprint.pprint(data[0]['instancesSet']['item'])
     volumes = vm_.get('map_volumes')
     if volumes:
@@ -693,4 +693,68 @@ def list_nodes():
         }
 
     return ret
+
+
+def show_term_protect(name, instance_id=None):
+    '''
+    Show the details from EC2 concerning an AMI
+    '''
+    if not instance_id:
+        instances = list_nodes_full()
+        instance_id = instances[name]['instanceId']
+    params = {'Action': 'DescribeInstanceAttribute',
+              'InstanceId': instance_id,
+              'Attribute': 'disableApiTermination'}
+    result = query(params, return_root=True)
+
+    disable_protect = False
+    for item in result:
+        if 'value' in item:
+            disable_protect = item['value']
+            break
+    
+    if disable_protect == 'true':
+        print('Termination Protection is enabled for {0}'.format(name))
+    else:
+        print('Termination Protection is disabled for {0}'.format(name))
+
+
+def enable_term_protect(name):
+    '''
+    Enable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a enable_term_protect mymachine
+    '''
+    _toggle_term_protect(name, 'true')
+
+
+def disable_term_protect(name):
+    '''
+    Disable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a disable_term_protect mymachine
+    '''
+    _toggle_term_protect(name, 'false')
+
+
+def _toggle_term_protect(name, value):
+    '''
+    Disable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a disable_term_protect mymachine
+    '''
+    instances = list_nodes_full()
+    instance_id = instances[name]['instanceId']
+    params = {'Action': 'ModifyInstanceAttribute',
+              'InstanceId': instance_id,
+              'DisableApiTermination.Value': value}
+    result = query(params, return_root=True)
+
+    show_term_protect(name, instance_id)
 
