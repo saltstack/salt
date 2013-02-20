@@ -1,17 +1,18 @@
 '''
-The AWS Cloud Module
+The EC2 Cloud Module
 ====================
 
-The AWS cloud module is used to interact with the Amazon Web Services system.
+The EC2 cloud module is used to interact with the Amazon Elastic Cloud
+Computing. This driver is highly experimental! Use at your own risk!
 
-To use the AWS cloud module the following configuration parameters need to be
+To use the EC2 cloud module the following configuration parameters need to be
 set in the main cloud config:
 
 .. code-block:: yaml
 
-    # The AWS API authentication id
+    # The EC2 API authentication id
     EC2.id: GKTADJGHEIQSXMKKRBJ08H
-    # The AWS API authentication key
+    # The EC2 API authentication key
     EC2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
     # The ssh keyname to use
     EC2.keyname: default
@@ -67,10 +68,10 @@ size_map = {
     'Cluster Compute Eight Extra Large Instance': 'cc2.8xlarge',
 }
 
-# Only load in this module if the AWS configurations are in place
+# Only load in this module if the EC2 configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for AWS configs
+    Set up the libcloud funcstions and check for EC2 configs
     '''
     confs = [
         'EC2.id',
@@ -88,7 +89,7 @@ def __virtual__():
 
     if not os.path.exists(__opts__['EC2.private_key']):
         raise SaltException(
-            'The AWS key file {0} does not exist\n'.format(
+            'The EC2 key file {0} does not exist\n'.format(
                 __opts__['EC2.private_key']
             )
         )
@@ -97,7 +98,7 @@ def __virtual__():
     )
     if keymode not in ('0400', '0600'):
         raise SaltException(
-            'The AWS key file {0} needs to be set to mode 0400 or '
+            'The EC2 key file {0} needs to be set to mode 0400 or '
             '0600\n'.format(
                 __opts__['EC2.private_key']
             )
@@ -299,7 +300,7 @@ def ssh_interface(vm_):
 #NO CHANGES NEEDED
 def get_location(vm_=None):
     '''
-    Return the AWS region to use, in this order:
+    Return the EC2 region to use, in this order:
         - CLI parameter
         - Cloud profile setting
         - Global salt-cloud config
@@ -372,7 +373,7 @@ def create(vm_):
         data = query(params, 'instancesSet')
     except Exception as exc:
         err = (
-            'Error creating {0} on AWS\n\n'
+            'Error creating {0} on EC2\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}').format(
                 vm_['name'], exc
