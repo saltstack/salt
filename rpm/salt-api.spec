@@ -1,6 +1,5 @@
 %if ! (0%{?rhel} >= 6 || 0%{?fedora} > 12)
 %global with_python26 1
-%global include_tests 0
 %define pybasever 2.6
 %define __python_ver 26
 %define __python %{_bindir}/python%{?pybasever}
@@ -79,8 +78,9 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc LICENSE
-%{python_sitelib}/%{name}/*
-%{python_sitelib}/%{name}-%{version}-py?.?.egg-info
+%{_bindir}/%{name}
+%{python_sitelib}/saltapi/*
+%{python_sitelib}/salt_api-%{version}-py?.?.egg-info
 %doc %{_mandir}/man1/salt-api.1.*
 %doc %{_mandir}/man7/salt-api.7.*
 
@@ -94,23 +94,23 @@ rm -rf $RPM_BUILD_ROOT
 # not sure if RHEL 7 will use systemd yet
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 
-%preun -n salt-api
+%preun
   if [ $1 -eq 0 ] ; then
       /sbin/service salt-api stop >/dev/null 2>&1
       /sbin/chkconfig --del salt-api
   fi
 
-%post -n salt-api
+%post
   /sbin/chkconfig --add salt-api
 
-%postun -n salt-api
+%postun
   if [ "$1" -ge "1" ] ; then
       /sbin/service salt-api condrestart >/dev/null 2>&1 || :
   fi
 
 %else
 
-%preun -n salt-api
+%preun
 %if 0%{?systemd_preun:1}
   %systemd_preun salt-api.service
 %else
@@ -121,14 +121,14 @@ rm -rf $RPM_BUILD_ROOT
   fi
 %endif
 
-%post -n salt-api
+%post
 %if 0%{?systemd_post:1}
   %systemd_post salt-api.service
 %else
   /bin/systemctl daemon-reload &>/dev/null || :
 %endif
 
-%postun -n salt-api
+%postun
 %if 0%{?systemd_post:1}
   %systemd_postun salt-api.service
 %else
