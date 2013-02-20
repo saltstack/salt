@@ -158,34 +158,34 @@ def _xml_to_dict(xmltree):
     return xmldict
 
 
-def query(params=None, setname=None):
+def query(params=None, setname=None, requesturl=None, return_url=False):
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     
-    location = get_location()
-    method = 'GET'
-    endpoint = 'ec2.{0}.amazonaws.com'.format(location)
-    params['AWSAccessKeyId'] = '{0}'.format(keyid)
-    params['SignatureVersion'] = '2'
-    params['SignatureMethod'] = 'HmacSHA256'
-    params['Timestamp'] = '{0}'.format(timestamp)
-    params['Version'] = '2010-08-31'
-    keys = sorted(params.keys())
-    values = map(params.get, keys)
-    querystring = urllib.urlencode( list(zip(keys,values)) )
-    
-    uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                   endpoint.encode('utf-8'),
-                                   querystring.encode('utf-8'))
-    
-    hashed = hmac.new(key, uri, hashlib.sha256)
-    sig = binascii.b2a_base64(hashed.digest())
-    params['Signature'] = sig.strip()
-    
-    pprint.pprint(params)
-    querystring = urllib.urlencode(params)
-    requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
+    if not requesturl:
+        location = get_location()
+        method = 'GET'
+        endpoint = 'ec2.{0}.amazonaws.com'.format(location)
+        params['AWSAccessKeyId'] = '{0}'.format(keyid)
+        params['SignatureVersion'] = '2'
+        params['SignatureMethod'] = 'HmacSHA256'
+        params['Timestamp'] = '{0}'.format(timestamp)
+        params['Version'] = '2010-08-31'
+        keys = sorted(params.keys())
+        values = map(params.get, keys)
+        querystring = urllib.urlencode( list(zip(keys,values)) )
+        
+        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
+                                       endpoint.encode('utf-8'),
+                                       querystring.encode('utf-8'))
+        
+        hashed = hmac.new(key, uri, hashlib.sha256)
+        sig = binascii.b2a_base64(hashed.digest())
+        params['Signature'] = sig.strip()
+        
+        querystring = urllib.urlencode(params)
+        requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
 
     log.debug('EC2 Request: {0}'.format(requesturl))
     result = urllib2.urlopen(requesturl)
@@ -206,6 +206,8 @@ def query(params=None, setname=None):
     for item in items:
         ret.append(_xml_to_dict(item))
 
+    if return_url is True:
+        return ret, requesturl
     return ret
 
 
@@ -386,26 +388,21 @@ def create(vm_):
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
-    data = query(params)
-    #pprint.pprint(data)
+    data, requesturl = query(params, return_url=True)
 
-    pprint.pprint(data[0]['instancesSet']['item'])
+    #pprint.pprint(data[0]['instancesSet']['item'])
     while 'ipAddress' not in data[0]['instancesSet']['item']:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
         time.sleep(5)
         waiting_for_ip += 1
-        data = query(params)
-
-    set_tags(instance_id, {'Name': vm_['name']})
-    print('JOY!')
-    sys.exit(0)
+        data = query(params, requesturl=requesturl)
 
     if ssh_interface(vm_) == "private_ips":
-        log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
-        ip_address = data.private_ips[0]
+        ip_address = data[0]['instancesSet']['item']['privateIpAddress']
+        log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
-        log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
-        ip_address = data.public_ips[0]
+        ip_address = data[0]['instancesSet']['item']['ipAddress']
+        log.info('Salt node data. Public_ip: {0}'.format(ip_address))
 
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
@@ -463,8 +460,9 @@ def create(vm_):
     log.info(
         'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
-    for key, val in data.__dict__.items():
-        log.info('  {0}: {1}'.format(key, val))
+    #for key, val in data.__dict__.items():
+    #    log.info('  {0}: {1}'.format(key, val))
+    pprint.pprint(data[0]['instancesSet']['item'])
     volumes = vm_.get('map_volumes')
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
