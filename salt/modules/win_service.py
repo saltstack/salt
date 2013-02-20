@@ -26,7 +26,7 @@ def get_enabled():
     '''
     ret = set()
     services = []
-    cmd = 'sc query type= service'
+    cmd = 'sc query type= service state= all'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
@@ -53,7 +53,7 @@ def get_disabled():
     '''
     ret = set()
     services = []
-    cmd = 'sc query type= service'
+    cmd = 'sc query type= service state= all'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
