@@ -109,7 +109,7 @@ def __virtual__():
     return 'aws'
 
 
-def enable_term_protect(name):
+def enable_term_protect(arg, name):
     '''
     Enable termination protection on a node
 
@@ -117,10 +117,14 @@ def enable_term_protect(name):
 
         salt-cloud -a enable_term_protect mymachine
     '''
+    if arg != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     _toggle_term_protect(name, True)
 
 
-def disable_term_protect(name):
+def disable_term_protect(arg, name):
     '''
     Disable termination protection on a node
 
@@ -128,6 +132,10 @@ def disable_term_protect(name):
 
         salt-cloud -a disable_term_protect mymachine
     '''
+    if arg != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     _toggle_term_protect(name, False)
 
 
