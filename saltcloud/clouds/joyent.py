@@ -120,11 +120,11 @@ def create(vm_):
         log.info('  {0}: {1}'.format(key, val))
 
 
-def stop(arg, name):
+def stop(name, call=None):
     '''
     Stop a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 

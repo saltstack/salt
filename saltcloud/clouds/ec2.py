@@ -492,11 +492,11 @@ def create_attach_volumes(volumes, location, data):
             )
 
 
-def stop(arg, name):
+def stop(name, call=None):
     '''
     Stop a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -512,11 +512,11 @@ def stop(arg, name):
     pprint.pprint(result)
 
 
-def start(arg, name):
+def start(name, call=None):
     '''
     Start a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -532,7 +532,7 @@ def start(arg, name):
     pprint.pprint(result)
 
 
-def set_tags(arg, name, tags):
+def set_tags(name, tags, call=None):
     '''
     Set tags for a node
 
@@ -540,7 +540,7 @@ def set_tags(arg, name, tags):
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -561,11 +561,11 @@ def set_tags(arg, name, tags):
     return get_tags(name)
 
 
-def get_tags(arg, name):
+def get_tags(name, call=None):
     '''
     Retrieve tags for a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -584,7 +584,7 @@ def get_tags(arg, name):
     return result
 
 
-def del_tags(arg, name, kwargs):
+def del_tags(name, kwargs, call=None):
     '''
     Delete tags for a node
 
@@ -592,7 +592,7 @@ def del_tags(arg, name, kwargs):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -608,7 +608,7 @@ def del_tags(arg, name, kwargs):
     return get_tags(name)
 
 
-def rename(arg, name, kwargs):
+def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
@@ -616,7 +616,7 @@ def rename(arg, name, kwargs):
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -631,7 +631,7 @@ def rename(arg, name, kwargs):
     )
 
 
-def destroy(arg, name):
+def destroy(name, call=None):
     '''
     Wrap core libcloudfuncs destroy method, adding check for termination
     protection
@@ -646,11 +646,11 @@ def destroy(arg, name):
     pprint.pprint(result)
 
 
-def show_image(arg, kwargs):
+def show_image(kwargs, call=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
-    if arg != 'function':
+    if call != 'function':
         print('This function must be called with -f or --function.')
         sys.exit(1)
 
@@ -661,11 +661,11 @@ def show_image(arg, kwargs):
     pprint.pprint(result)
 
 
-def show_instance(arg, name):
+def show_instance(name, call=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -728,11 +728,11 @@ def list_nodes():
     return ret
 
 
-def show_term_protect(arg, name, instance_id=None):
+def show_term_protect(name, instance_id=None, call=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -756,7 +756,7 @@ def show_term_protect(arg, name, instance_id=None):
         print('Termination Protection is disabled for {0}'.format(name))
 
 
-def enable_term_protect(arg, name):
+def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
 
@@ -764,14 +764,14 @@ def enable_term_protect(arg, name):
 
         salt-cloud -a enable_term_protect mymachine
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
     _toggle_term_protect(name, 'true')
 
 
-def disable_term_protect(arg, name):
+def disable_term_protect(name, call=None):
     '''
     Disable termination protection on a node
 
@@ -779,7 +779,7 @@ def disable_term_protect(arg, name):
 
         salt-cloud -a disable_term_protect mymachine
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 

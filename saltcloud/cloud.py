@@ -292,9 +292,9 @@ class Cloud(object):
                 if name in names_:
                     fun = '{0}.{1}'.format(prov, self.opts['action'])
                     if kwargs:
-                        self.clouds[fun]('action', name, kwargs)
+                        self.clouds[fun](name, kwargs, call='action')
                     else:
-                        self.clouds[fun]('action', name)
+                        self.clouds[fun](name, call='action')
                     completed.append(name)
 
         for name in names:
@@ -310,9 +310,9 @@ class Cloud(object):
         '''
         fun = '{0}.{1}'.format(prov, func)
         if kwargs:
-            self.clouds[fun]('function', kwargs)
+            self.clouds[fun](call='function', kwargs=kwargs)
         else:
-            self.clouds[fun]('function')
+            self.clouds[fun](call='function')
 
 
 class Map(Cloud):

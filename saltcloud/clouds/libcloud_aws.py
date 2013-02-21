@@ -363,11 +363,11 @@ def create_attach_volumes(volumes, location, data):
             )
 
 
-def stop(arg, name):
+def stop(name, call=None):
     '''
     Stop a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -383,11 +383,11 @@ def stop(arg, name):
         log.error(exc)
 
 
-def start(arg, name):
+def start(name, call=None):
     '''
     Start a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -403,7 +403,7 @@ def start(arg, name):
         log.error(exc)
 
 
-def set_tags(arg, name, tags):
+def set_tags(name, tags, call=None):
     '''
     Set tags for a node
 
@@ -411,7 +411,7 @@ def set_tags(arg, name, tags):
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -432,11 +432,11 @@ def set_tags(arg, name, tags):
         log.error(exc)
 
 
-def get_tags(arg, name):
+def get_tags(name, call=None):
     '''
     Retrieve tags for a node
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -452,7 +452,7 @@ def get_tags(arg, name):
         log.error(exc)
 
 
-def del_tags(arg, name, kwargs):
+def del_tags(name, kwargs, call=None):
     '''
     Delete tags for a node
 
@@ -460,7 +460,7 @@ def del_tags(arg, name, kwargs):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
@@ -482,7 +482,7 @@ def del_tags(arg, name, kwargs):
         log.error(exc)
 
 
-def rename(arg, name, kwargs):
+def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
@@ -490,7 +490,7 @@ def rename(arg, name, kwargs):
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
-    if arg != 'action':
+    if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
