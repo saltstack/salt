@@ -779,7 +779,7 @@ example sets the main salt library at the 'warning' level, but sets
 
 Default: ``master.d/*.conf``
 
-The minion can include configuration from other files. Per default the
-minion will automatically include all config files from `master.d/*.conf`
-where minion.d is relative to the directory of the minion configuration
+The master can include configuration from other files. Per default the
+master will automatically include all config files from `master.d/*.conf`
+where master.d is relative to the directory of the master configuration
 file.
