@@ -190,6 +190,29 @@ class SaltCloud(parsers.SaltCloudParser):
                 )
             self.exit(0)
 
+        if self.options.function:
+            prov = self.config.get('function', None)
+
+            names = self.config.get('names', None)
+            func = ''
+            kwargs = {}
+
+            if not names:
+                self.error('Not enough arguments were given.')
+
+            for name in names:
+                if '=' in name:
+                    comps = name.split('=')
+                    kwargs[comps[0]] = comps[1]
+                else:
+                    func = name
+
+            if not func:
+                self.error('A function name was not specified.')
+
+            mapper.do_function(prov, func, kwargs)
+            self.exit(0)
+
         if self.options.profile and self.config.get('names', False):
             try:
                 mapper.run_profile()
