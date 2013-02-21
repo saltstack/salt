@@ -55,6 +55,23 @@ on the directory's contents, you can do so by adding a ``recurse`` directive:
           - group
           - mode
 
+As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``, to
+specify both directory and file permissions, use this form:
+
+.. code-block:: yaml
+
+    /srv/stuff/substuf:
+      file.directory:
+        - user: fred
+        - group: users
+        - file_mode: 744
+        - dir_mode: 755
+        - makedirs: True
+        - recurse:
+          - user
+          - group
+          - mode
+
 Symlinks can be easily created, the symlink function is very simple and only
 takes a few arguments:
 
@@ -742,7 +759,8 @@ def directory(name,
               user=None,
               group=None,
               recurse=None,
-              mode=None,
+              dir_mode=None,
+              file_mode=None,
               makedirs=False,
               clean=False,
               require=None,
@@ -765,8 +783,12 @@ def directory(name,
     recurse
         Enforce user/group ownership and mode of directory recursively
 
-    mode
-        The permissions to set on this directory, aka 755
+    dir_mode / mode
+        The permissions mode to set any directories created.
+
+    file_mode
+        The permissions mode to set any files created if 'mode' is ran in
+        'recurse'. This defaults to dir_mode.
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -787,7 +809,16 @@ def directory(name,
         and preserve in the destination.
     '''
     user = _test_owner(kwargs, user=user)
-    mode = __salt__['config.manage_mode'](mode)
+
+    if 'mode' in kwargs and not dir_mode:
+        dir_mode = kwargs.get('mode', [])
+
+    if not file_mode:
+        file_mode = dir_mode
+
+    dir_mode = __salt__['config.manage_mode'](dir_mode)
+    file_mode = __salt__['config.manage_mode'](file_mode)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -808,7 +839,7 @@ def directory(name,
                 user,
                 group,
                 recurse or [],
-                mode,
+                dir_mode,
                 clean,
                 require)
         return ret
@@ -818,7 +849,7 @@ def directory(name,
         if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
                 __salt__['file.makedirs'](name, user=user,
-                                          group=group, mode=mode)
+                                          group=group, mode=dir_mode)
             else:
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
@@ -828,7 +859,7 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name, ret, user, group, mode)
+    ret, perms = __salt__['file.check_perms'](name, ret, user, group, dir_mode)
 
     if recurse:
         if not set(['user', 'group', 'mode']) >= set(recurse):
@@ -881,7 +912,7 @@ def directory(name,
                             ret,
                             user,
                             group,
-                            mode)
+                            file_mode)
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
                     ret, perms = __salt__['file.check_perms'](
@@ -889,7 +920,7 @@ def directory(name,
                             ret,
                             user,
                             group,
-                            mode)
+                            dir_mode)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -1118,7 +1149,8 @@ def recurse(name,
             user=user,
             group=group,
             recurse=[],
-            mode=dir_mode,
+            dir_mode=dir_mode,
+            file_mode=None,
             makedirs=True,
             clean=False,
             require=None)
