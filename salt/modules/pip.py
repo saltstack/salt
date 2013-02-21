@@ -98,7 +98,8 @@ def install(pkgs=None,
     timeout
         Set the socket timeout (default 15 seconds)
     editable
-        install something editable(ie git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
+        install something editable (i.e.
+        git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
     find_links
         URL to look for packages at
     index_url
@@ -122,7 +123,8 @@ def install(pkgs=None,
     upgrade
         Upgrade all packages to the newest available version
     force_reinstall
-        When upgrading, reinstall all packages even if they are already up-to-date.
+        When upgrading, reinstall all packages even if they are already
+        up-to-date.
     ignore_installed
         Ignore the installed packages (reinstalling instead)
     no_deps
