@@ -39,8 +39,8 @@ look like this:
         - mode: 755
         - makedirs: True
 
-If you need to enforce user and/or group ownership recursively on the
-directory's contents, you can do so by adding a ``recurse`` directive:
+If you need to enforce user and/or group ownership or permissions recursively
+on the directory's contents, you can do so by adding a ``recurse`` directive:
 
 .. code-block:: yaml
 
@@ -53,6 +53,24 @@ directory's contents, you can do so by adding a ``recurse`` directive:
         - recurse:
           - user
           - group
+          - mode
+
+As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``, to
+specify both directory and file permissions, use this form:
+
+.. code-block:: yaml
+
+    /srv/stuff/substuf:
+      file.directory:
+        - user: fred
+        - group: users
+        - file_mode: 744
+        - dir_mode: 755
+        - makedirs: True
+        - recurse:
+          - user
+          - group
+          - mode
 
 Symlinks can be easily created, the symlink function is very simple and only
 takes a few arguments:
@@ -238,11 +256,14 @@ def _check_directory(
     '''
     changes = {}
     if recurse:
-        if not set(['user', 'group']) >= set(recurse):
-            return False, 'Types for "recurse" limited to "user" and "group"'
+        if not set(['user', 'group', 'mode']) >= set(recurse):
+            return False, 'Types for "recurse" limited to "user", ' \
+                             '"group" and "mode"'
         if not 'user' in recurse:
             user = None
         if not 'group' in recurse:
+            group = None
+        if not 'mode' in recurse:
             group = None
         for root, dirs, files in os.walk(name):
             for fname in files:
@@ -253,11 +274,13 @@ def _check_directory(
                     fchange['user'] = user
                 if not group is None and group != stats['group']:
                     fchange['group'] = group
+                if not mode is None and mode != stats['mode']:
+                    fchange['mode'] = mode
                 if fchange:
                     changes[path] = fchange
             for name in dirs:
                 path = os.path.join(root, name)
-                fchange = _check_dir_meta(path, user, group, None)
+                fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
     if not os.path.isdir(name):
@@ -736,7 +759,8 @@ def directory(name,
               user=None,
               group=None,
               recurse=None,
-              mode=None,
+              dir_mode=None,
+              file_mode=None,
               makedirs=False,
               clean=False,
               require=None,
@@ -757,10 +781,14 @@ def directory(name,
         salt is running as on the minion
 
     recurse
-        Enforce user/group ownership of directory recursively
+        Enforce user/group ownership and mode of directory recursively
 
-    mode
-        The permissions to set on this directory, aka 755
+    dir_mode / mode
+        The permissions mode to set any directories created.
+
+    file_mode
+        The permissions mode to set any files created if 'mode' is ran in
+        'recurse'. This defaults to dir_mode.
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -781,7 +809,16 @@ def directory(name,
         and preserve in the destination.
     '''
     user = _test_owner(kwargs, user=user)
-    mode = __salt__['config.manage_mode'](mode)
+
+    if 'mode' in kwargs and not dir_mode:
+        dir_mode = kwargs.get('mode', [])
+
+    if not file_mode:
+        file_mode = dir_mode
+
+    dir_mode = __salt__['config.manage_mode'](dir_mode)
+    file_mode = __salt__['config.manage_mode'](file_mode)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -802,7 +839,7 @@ def directory(name,
                 user,
                 group,
                 recurse or [],
-                mode,
+                dir_mode,
                 clean,
                 require)
         return ret
@@ -812,7 +849,7 @@ def directory(name,
         if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
                 __salt__['file.makedirs'](name, user=user,
-                                          group=group, mode=mode)
+                                          group=group, mode=dir_mode)
             else:
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
@@ -822,13 +859,13 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name, ret, user, group, mode)
+    ret, perms = __salt__['file.check_perms'](name, ret, user, group, dir_mode)
 
     if recurse:
-        if not set(['user', 'group']) >= set(recurse):
+        if not set(['user', 'group', 'mode']) >= set(recurse):
             ret['result'] = False
-            ret['comment'] = 'Types for "recurse" limited to "user" and ' \
-                             '"group"'
+            ret['comment'] = 'Types for "recurse" limited to "user", ' \
+                             '"group" and "mode"'
         else:
             targets = copy.copy(recurse)
             if 'user' in targets:
@@ -875,7 +912,7 @@ def directory(name,
                             ret,
                             user,
                             group,
-                            mode)
+                            file_mode)
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
                     ret, perms = __salt__['file.check_perms'](
@@ -883,7 +920,7 @@ def directory(name,
                             ret,
                             user,
                             group,
-                            mode)
+                            dir_mode)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -1017,7 +1054,7 @@ def recurse(name,
 
     # Verify the source exists.
     _src_proto, _src_path = source.split('://', 1)
-    
+
     if not _src_path:
         pass
     elif _src_path.strip(os.path.sep) not in __salt__['cp.list_master_dirs'](env):
@@ -1069,7 +1106,7 @@ def recurse(name,
                 _ret['changes'] = {'diff': 'Replaced directory with a new file'}
                 merge_ret(path, _ret)
 
-        # Conflicts can occur is some kwargs are passed in here
+        # Conflicts can occur if some kwargs are passed in here
         pass_kwargs = {}
         faults = ['mode', 'makedirs', 'replace']
         for key in kwargs:
@@ -1112,7 +1149,8 @@ def recurse(name,
             user=user,
             group=group,
             recurse=[],
-            mode=dir_mode,
+            dir_mode=dir_mode,
+            file_mode=None,
             makedirs=True,
             clean=False,
             require=None)
