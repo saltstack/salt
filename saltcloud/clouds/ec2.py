@@ -336,10 +336,14 @@ def get_availability_zone(conn, vm_):
             return loc
 
 
-def create(vm_):
+def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
     '''
+    if call:
+        log.error('You cannot create an instance with -a or -f.')
+        sys.exit(1)
+
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
@@ -347,19 +351,12 @@ def create(vm_):
     params = {'Action': 'RunInstances',
               'MinCount': '1',
               'MaxCount': '1'}
-    #kwargs['name'] = vm_['name']
-    # The name tag will have to happen in a separate query
-    #kwargs['image'] = get_image(conn, vm_)
     params['ImageId'] = vm_['image']
-    #kwargs['size'] = get_size(conn, vm_)
     if vm_['size'] in size_map:
         params['InstanceType'] = size_map[vm_['size']]
     else:
         params['InstanceType'] = vm_['size']
-    #kwargs['location'] = get_availability_zone(conn, vm_)
-    # location translates to endpoint, which is already in the query
     ex_keyname = keyname(vm_)
-    # aren't ex_keyname and ssh_key the same thing?
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
         params['KeyName'] = ex_keyname
@@ -368,10 +365,7 @@ def create(vm_):
         kwargs['ex_securitygroup'] = ex_securitygroup
         params['SecurityGroup.1'] = ex_securitygroup
 
-    pprint.pprint(kwargs)
-    pprint.pprint(params)
     try:
-        #data = conn.create_node(**kwargs)
         data = query(params, 'instancesSet')
     except Exception as exc:
         err = (
@@ -383,7 +377,7 @@ def create(vm_):
         sys.stderr.write(err)
         log.error(err)
         return False
-    pprint.pprint(data)
+
     instance_id = data[0]['instanceId']
     set_tags(instance_id, {'Name': vm_['name']}, call='action')
     log.info('Created node {0}'.format(vm_['name']))
@@ -393,7 +387,6 @@ def create(vm_):
               'InstanceId.1': instance_id}
     data, requesturl = query(params, return_url=True)
 
-    #pprint.pprint(data[0]['instancesSet']['item'])
     while 'ipAddress' not in data[0]['instancesSet']['item']:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
         time.sleep(5)
