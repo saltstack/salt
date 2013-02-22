@@ -365,6 +365,16 @@ def create(vm_=None, call=None):
         kwargs['ex_securitygroup'] = ex_securitygroup
         params['SecurityGroup.1'] = ex_securitygroup
 
+    if 'delvol_on_destroy' in vm_:
+        value = vm_['delvol_on_destroy']
+        if value is True:
+            value = 'true'
+        elif value is False:
+            value = 'false'
+
+        params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
+        params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = value
+
     try:
         data = query(params, 'instancesSet')
     except Exception as exc:
@@ -797,5 +807,68 @@ def _toggle_term_protect(name, value):
               'DisableApiTermination.Value': value}
     result = query(params, return_root=True)
 
-    show_term_protect(name, instance_id)
+    show_term_protect(name, instance_id, call='action')
+
+
+def keepvol_on_destroy(name, call=None):
+    '''
+    Do not delete root EBS volume upon instance termination
+
+    CLI Example::
+
+        salt-cloud -a keepvol_on_destroy mymachine
+    '''
+    if call != 'action':
+        print('The keepvol_on_destroy action must be called with '
+              '-a or --action.')
+        sys.exit(1)
+
+    _toggle_delvol(name=name, value='false')
+
+
+def delvol_on_destroy(name, call=None):
+    '''
+    Delete root EBS volume upon instance termination
+
+    CLI Example::
+
+        salt-cloud -a delvol_on_destroy mymachine
+    '''
+    if call != 'action':
+        print('The delvol_on_destroy action must be called with '
+              '-a or --action.')
+        sys.exit(1)
+
+    _toggle_delvol(name=name, value='true')
+
+
+def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
+    '''
+    Disable termination protection on a node
+
+    CLI Example::
+
+        salt-cloud -a disable_term_protect mymachine
+    '''
+    if not instance_id:
+        instances = list_nodes_full()
+        instance_id = instances[name]['instanceId']
+
+    if requesturl:
+        data = query(requesturl=requesturl)
+    else:
+        params = {'Action': 'DescribeInstances',
+                  'InstanceId.1': instance_id}
+        data, requesturl = query(params, return_url=True)
+
+    blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
+    device_name = blockmap['item']['deviceName']
+
+    params = {'Action': 'ModifyInstanceAttribute',
+              'InstanceId': instance_id,
+              'BlockDeviceMapping.1.DeviceName': device_name,
+              'BlockDeviceMapping.1.Ebs.DeleteOnTermination': value}
+    result = query(params, return_root=True)
+
+    pprint.pprint(query(requesturl=requesturl))
 
