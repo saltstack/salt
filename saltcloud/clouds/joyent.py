@@ -120,10 +120,14 @@ def create(vm_):
         log.info('  {0}: {1}'.format(key, val))
 
 
-def stop(name):
+def stop(name, call=None):
     '''
     Stop a node
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     conn = get_conn()
     node = get_node(conn, name)
     try:

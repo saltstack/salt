@@ -149,68 +149,78 @@ class ExecutionOptionsMixIn(object):
         group.add_option(
             '-L', '--location',
             default='',
-            help='Specify which region to connect'
+            help='Specify which region to connect to.'
         )
         group.add_option(
             '-a', '--action',
             default='',
-            help=('Perform an action that may be specific to this cloud'
-                  'provider')
+            help=('Perform an action that may be specific to this cloud '
+                  'provider. This argument requires one or more instance '
+                  'names to be specified.')
+        )
+        group.add_option(
+            '-f', '--function',
+            default='',
+            help=('Perform an function that may be specific to this cloud '
+                  'provider, that does not apply to an instance. This argument '
+                  'requires a provider to be specified (i.e.: nova).')
         )
         group.add_option(
             '-p', '--profile',
             default='',
-            help='Specify a profile to use for the VMs'
+            help='Create an instance using the specified profile.'
         )
         group.add_option(
             '-m', '--map',
             default='',
-            help='Specify a cloud map file to use for deployment'
+            help='Specify a cloud map file to use for deployment. This option '
+                 'may be used alone, or in conjunction with -Q, -F, -S or -d.'
         )
         group.add_option(
             '-H', '--hard',
             default=False,
             action='store_true',
-            help='Delete all VMs that are not defined in the map file '
-                 'CAUTION!!! This operation can irrevocably destroy VMs!'
+            help='Delete all VMs that are not defined in the map file. '
+                 'CAUTION!!! This operation can irrevocably destroy VMs! It '
+                 'must be explicitly enabled in the cloud config file.'
         )
         group.add_option(
             '-d', '--destroy',
             default=False,
             action='store_true',
-            help='Specify a VM to destroy'
+            help='Destroy the specified instance(s).'
         )
         group.add_option(
             '--no-deploy',
             default=True,
             dest='deploy',
             action='store_false',
-            help='Don\'t run a deploy script after VM creation'
+            help='Don\'t run a deploy script after instance creation.'
         )
         group.add_option(
             '-P', '--parallel',
             default=False,
             action='store_true',
-            help='Build all of the specified virtual machines in parallel'
+            help='Build all of the specified instances in parallel.'
         )
         group.add_option(
             '-u', '--update-bootstrap',
             default=False,
             action='store_true',
             help='Update salt-bootstrap to the latest develop version on '
-                 'GitHub'
+                 'GitHub.'
         )
         group.add_option(
             '-y', '--assume-yes',
             default=False,
             action='store_true',
-            help='Default yes in answer to all confirmation questions'
+            help='Default yes in answer to all confirmation questions.'
         )
         group.add_option(
-            '--keep-tmp',
+            '-k', '--keep-tmp',
             default=False,
             action='store_true',
-            help='Do not remove files from /tmp/ after deploy.sh finishes'
+            help='Do not remove files from /tmp/ after deploy.sh finishes.'
         )
         self.add_option_group(group)
 

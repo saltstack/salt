@@ -292,9 +292,9 @@ class Cloud(object):
                 if name in names_:
                     fun = '{0}.{1}'.format(prov, self.opts['action'])
                     if kwargs:
-                        self.clouds[fun](name, kwargs)
+                        self.clouds[fun](name, kwargs, call='action')
                     else:
-                        self.clouds[fun](name)
+                        self.clouds[fun](name, call='action')
                     completed.append(name)
 
         for name in names:
@@ -302,6 +302,17 @@ class Cloud(object):
                 print('{0} was not found, not running {1} action'.format(
                     name, self.opts['action'])
                 )
+
+
+    def do_function(self, prov, func, kwargs):
+        '''
+        Perform an action which may be specific to this cloud provider
+        '''
+        fun = '{0}.{1}'.format(prov, func)
+        if kwargs:
+            self.clouds[fun](call='function', kwargs=kwargs)
+        else:
+            self.clouds[fun](call='function')
 
 
 class Map(Cloud):

@@ -492,10 +492,14 @@ def create_attach_volumes(volumes, location, data):
             )
 
 
-def stop(name):
+def stop(name, call=None):
     '''
     Stop a node
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     log.info('Stopping node {0}'.format(name))
 
     instances = list_nodes_full()
@@ -508,10 +512,14 @@ def stop(name):
     pprint.pprint(result)
 
 
-def start(name):
+def start(name, call=None):
     '''
     Start a node
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     log.info('Starting node {0}'.format(name))
 
     instances = list_nodes_full()
@@ -524,7 +532,7 @@ def start(name):
     pprint.pprint(result)
 
 
-def set_tags(name, tags):
+def set_tags(name, tags, call=None):
     '''
     Set tags for a node
 
@@ -532,6 +540,10 @@ def set_tags(name, tags):
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     instances = list_nodes_full()
     instance_id = instances[name]['instanceId']
     params = {'Action': 'CreateTags',
@@ -549,10 +561,14 @@ def set_tags(name, tags):
     return get_tags(name)
 
 
-def get_tags(name):
+def get_tags(name, call=None):
     '''
     Retrieve tags for a node
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     if ',' in name:
         names = name.split(',')
     else:
@@ -568,7 +584,7 @@ def get_tags(name):
     return result
 
 
-def del_tags(name, kwargs):
+def del_tags(name, kwargs, call=None):
     '''
     Delete tags for a node
 
@@ -576,6 +592,10 @@ def del_tags(name, kwargs):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     instances = list_nodes_full()
     instance_id = instances[name]['instanceId']
     params = {'Action': 'DeleteTags',
@@ -588,7 +608,7 @@ def del_tags(name, kwargs):
     return get_tags(name)
 
 
-def rename(name, kwargs):
+def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
@@ -596,6 +616,10 @@ def rename(name, kwargs):
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
 
     instances = list_nodes_full()
@@ -607,7 +631,7 @@ def rename(name, kwargs):
     )
 
 
-def destroy(name):
+def destroy(name, call=None):
     '''
     Wrap core libcloudfuncs destroy method, adding check for termination
     protection
@@ -622,20 +646,29 @@ def destroy(name):
     pprint.pprint(result)
 
 
-def show_image(name, kwargs):
+def show_image(kwargs, call=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
+    if call != 'function':
+        print('This function must be called with -f or --function.')
+        sys.exit(1)
+
     params = {'ImageId.1': kwargs['image'],
               'Action': 'DescribeImages'}
     result = query(params)
     log.info(result)
+    pprint.pprint(result)
 
 
-def show_instance(name):
+def show_instance(name, call=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     nodes = list_nodes_full()
     pprint.pprint(nodes[name])
     return nodes[name]
@@ -695,10 +728,14 @@ def list_nodes():
     return ret
 
 
-def show_term_protect(name, instance_id=None):
+def show_term_protect(name, instance_id=None, call=None):
     '''
     Show the details from EC2 concerning an AMI
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     if not instance_id:
         instances = list_nodes_full()
         instance_id = instances[name]['instanceId']
@@ -719,7 +756,7 @@ def show_term_protect(name, instance_id=None):
         print('Termination Protection is disabled for {0}'.format(name))
 
 
-def enable_term_protect(name):
+def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
 
@@ -727,10 +764,14 @@ def enable_term_protect(name):
 
         salt-cloud -a enable_term_protect mymachine
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     _toggle_term_protect(name, 'true')
 
 
-def disable_term_protect(name):
+def disable_term_protect(name, call=None):
     '''
     Disable termination protection on a node
 
@@ -738,6 +779,10 @@ def disable_term_protect(name):
 
         salt-cloud -a disable_term_protect mymachine
     '''
+    if call != 'action':
+        print('This action must be called with -a or --action.')
+        sys.exit(1)
+
     _toggle_term_protect(name, 'false')
 
 
