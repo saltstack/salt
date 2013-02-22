@@ -15,11 +15,4 @@ wget -q -O- "http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0x4759FA
 apt-get update
 apt-get install -y -o DPkg::Options::=--force-confold salt-minion
 
-# minion will be started automatically by install, except on Lucid
-if [ `lsb_release -sc` = "lucid" ]; then
-    pgrep -fl salt > /dev/null
-    if [ "$?" = "1" ]; then
-        sync
-        start salt-minion
-    fi
-fi
+# minion will be started automatically by install
