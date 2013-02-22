@@ -641,6 +641,14 @@ def destroy(name, call=None):
     '''
     nodes = list_nodes_full()
     instance_id = nodes[name]['instanceId']
+    protected = show_term_protect(instance_id=instance_id,
+                             call='action',
+                             quiet=True)
+    if protected == 'true':
+        print('This instance has been protected from being destroyed. Use the '
+              'following command to disable protection:\n\n'
+              'salt-cloud -a disable_term_protect {0}'.format(name)) 
+        exit(0)
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
@@ -731,7 +739,7 @@ def list_nodes():
     return ret
 
 
-def show_term_protect(name, instance_id=None, call=None):
+def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
     Show the details from EC2 concerning an AMI
     '''
@@ -754,10 +762,13 @@ def show_term_protect(name, instance_id=None, call=None):
             disable_protect = item['value']
             break
     
-    if disable_protect == 'true':
-        print('Termination Protection is enabled for {0}'.format(name))
-    else:
-        print('Termination Protection is disabled for {0}'.format(name))
+    if quiet is False:
+        if disable_protect == 'true':
+            print('Termination Protection is enabled for {0}'.format(name))
+        else:
+            print('Termination Protection is disabled for {0}'.format(name))
+
+    return disable_protect
 
 
 def enable_term_protect(name, call=None):
