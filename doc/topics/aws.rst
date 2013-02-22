@@ -186,3 +186,47 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `All Images on Amazon`__
 .. __: https://aws.amazon.com/amis
+
+Experimental EC2 Driver
+=======================
+An experimental driver has been added to Salt Cloud called EC2. The
+configuration for this driver is the same as for AWS, but with EC2 in the
+argument names:
+
+.. code-block:: yaml
+
+    # Set the EC2 login data
+    EC2.id: HJGRYCILJLKJYG
+    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+    EC2.keyname: test
+    EC2.securitygroup: quick-start
+    EC2.private_key: /root/test.pem
+
+This driver contains optimizations over the old AWS driver, which increase
+speed and functionality. However, because this is a new driver, it is currently
+considered to be experimental, and as such, the old AWS driver may still be
+used as before.
+
+The remainder of this document describes settings which may be used with the
+EC2 driver.
+
+delvol_on_destroy
+=================
+This argument overrides the default DeleteOnTermination setting in the AMI for
+the root EBS volume for an instance. Many AMIs contain 'false' as a default,
+resulting in orphaned volumes in the EC2 account, which may unknowingly be
+charged to the account. This setting can be added to the profile or map file
+for an instance.
+
+.. code-block:: yaml
+
+    delvol_on_destroy: True
+
+The setting for this may be changed on an existing instance using one of the
+following commands:
+
+.. code-block:: bash
+
+    salt-cloud -a delvol_on_destroy myinstance
+    salt-cloud -a keepvol_on_destroy myinstance
+
