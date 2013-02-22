@@ -160,10 +160,12 @@ class ExecutionOptionsMixIn(object):
         )
         group.add_option(
             '-f', '--function',
+            nargs=2,
             default='',
+            metavar='<PROVIDER> <FUNC-NAME>',
             help=('Perform an function that may be specific to this cloud '
-                  'provider, that does not apply to an instance. This argument '
-                  'requires a provider to be specified (i.e.: nova).')
+                  'provider, that does not apply to an instance. This '
+                  'argument requires a provider to be specified (i.e.: nova).')
         )
         group.add_option(
             '-p', '--profile',
@@ -223,6 +225,15 @@ class ExecutionOptionsMixIn(object):
             help='Do not remove files from /tmp/ after deploy.sh finishes.'
         )
         self.add_option_group(group)
+
+    def process_function(self):
+        if self.options.function:
+            self.function_provider, self.function_name = self.options.function
+            if self.function_name.startswith('-') or '=' in self.function_name:
+                self.error(
+                    '--function expects two arguments: <provider> '
+                    '<function-name>'
+                )
 
 
 class CloudQueriesMixIn(object):

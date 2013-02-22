@@ -89,7 +89,6 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
             salt.output.display_output(query_map, '', self.config)
 
-
         if self.options.list_locations is not None:
             try:
                 saltcloud.output.double_layer(
@@ -191,26 +190,26 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(0)
 
         if self.options.function:
-            prov = self.config.get('function', None)
+            prov_func = '{0}.{1}'.format(
+                self.function_provider, self.function_name
+            )
+            if prov_func not in mapper.clouds:
+                self.error(
+                    'The {0!r} provider does not define the function '
+                    '{1!r}'.format(
+                        self.function_provider, self.function_name
+                    )
+                )
 
-            names = self.config.get('names', None)
-            func = ''
             kwargs = {}
+            for arg in self.args:
+                if '=' in arg:
+                    key, value = arg.split('=')
+                    kwargs[key] = value
 
-            if not names:
-                self.error('Not enough arguments were given.')
-
-            for name in names:
-                if '=' in name:
-                    comps = name.split('=')
-                    kwargs[comps[0]] = comps[1]
-                else:
-                    func = name
-
-            if not func:
-                self.error('A function name was not specified.')
-
-            mapper.do_function(prov, func, kwargs)
+            mapper.do_function(
+                self.function_provider, self.function_name, kwargs
+            )
             self.exit(0)
 
         if self.options.profile and self.config.get('names', False):

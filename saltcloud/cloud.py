@@ -303,7 +303,6 @@ class Cloud(object):
                     name, self.opts['action'])
                 )
 
-
     def do_function(self, prov, func, kwargs):
         '''
         Perform an action which may be specific to this cloud provider
