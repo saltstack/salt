@@ -210,6 +210,26 @@ used as before.
 The remainder of this document describes settings which may be used with the
 EC2 driver.
 
+show_image
+==========
+This is a function that describes an AMI on EC2. This will give insight as to
+the defaults that will be applied to an instance using a particular AMI.
+
+.. code-block:: bash
+
+    $ salt-cloud -f ec2 show_image image=ami-fd20ad94
+
+show_instance
+=============
+This action is a thin wrapper around --full-query, which displays details on a
+single instance only. In an environment with several machines, this will save
+a user from having to sort through all instance data, just to examine a
+single instance.
+
+.. code-block:: bash
+
+    $ salt-cloud -a show_instance myinstance
+
 delvol_on_destroy
 =================
 This argument overrides the default DeleteOnTermination setting in the AMI for
@@ -229,4 +249,16 @@ following commands:
 
     salt-cloud -a delvol_on_destroy myinstance
     salt-cloud -a keepvol_on_destroy myinstance
+
+EC2 Termination Protection
+==========================
+AWS allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed. The EC2
+driver adds a show_term_protect action to the regular AWS functionality.
+
+.. code-block:: bash
+
+    salt-cloud -a show_term_protect mymachine
+    salt-cloud -a enable_term_protect mymachine
+    salt-cloud -a disable_term_protect mymachine
 
