@@ -9,5 +9,5 @@ provider, that provider must be specified.
 
 .. code-block:: bash
 
-    $ salt-cloud -f aws show_image image=ami-fd20ad94
+    $ salt-cloud -f ec2 show_image image=ami-fd20ad94
 
