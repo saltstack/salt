@@ -648,7 +648,7 @@ def destroy(name, call=None):
         print('This instance has been protected from being destroyed. Use the '
               'following command to disable protection:\n\n'
               'salt-cloud -a disable_term_protect {0}'.format(name)) 
-        exit(0)
+        exit(1)
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
