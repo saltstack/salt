@@ -500,7 +500,7 @@ def stop(name, call=None):
     Stop a node
     '''
     if call != 'action':
-        print('The stop action must be called with -a or --action.')
+        log.error('The stop action must be called with -a or --action.')
         sys.exit(1)
 
     log.info('Stopping node {0}'.format(name))
@@ -520,7 +520,7 @@ def start(name, call=None):
     Start a node
     '''
     if call != 'action':
-        print('The start action must be called with -a or --action.')
+        log.error('The start action must be called with -a or --action.')
         sys.exit(1)
 
     log.info('Starting node {0}'.format(name))
@@ -544,7 +544,7 @@ def set_tags(name, tags, call=None):
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
     if call != 'action':
-        print('The set_tags action must be called with -a or --action.')
+        log.error('The set_tags action must be called with -a or --action.')
         sys.exit(1)
 
     instances = list_nodes_full()
@@ -569,7 +569,7 @@ def get_tags(name, call=None):
     Retrieve tags for a node
     '''
     if call != 'action':
-        print('The get_tags action must be called with -a or --action.')
+        log.error('The get_tags action must be called with -a or --action.')
         sys.exit(1)
 
     if ',' in name:
@@ -596,7 +596,7 @@ def del_tags(name, kwargs, call=None):
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
     if call != 'action':
-        print('The del_tags action must be called with -a or --action.')
+        log.error('The del_tags action must be called with -a or --action.')
         sys.exit(1)
 
     instances = list_nodes_full()
@@ -620,7 +620,7 @@ def rename(name, kwargs, call=None):
         salt-cloud -a rename mymachine newname=yourmachine
     '''
     if call != 'action':
-        print('The rename action must be called with -a or --action.')
+        log.error('The rename action must be called with -a or --action.')
         sys.exit(1)
 
     log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
@@ -641,6 +641,14 @@ def destroy(name, call=None):
     '''
     nodes = list_nodes_full()
     instance_id = nodes[name]['instanceId']
+    protected = show_term_protect(instance_id=instance_id,
+                             call='action',
+                             quiet=True)
+    if protected == 'true':
+        log.error('This instance has been protected from being destroyed. '
+                  'Use the following command to disable protection:\n\n'
+                  'salt-cloud -a disable_term_protect {0}'.format(name)) 
+        exit(1)
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
@@ -669,7 +677,7 @@ def show_instance(name, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'action':
-        print('The show_instance action must be called with -a or --action.')
+        log.error('The show_instance action must be called with -a or --action.')
         sys.exit(1)
 
     nodes = list_nodes_full()
@@ -731,12 +739,12 @@ def list_nodes():
     return ret
 
 
-def show_term_protect(name, instance_id=None, call=None):
+def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
     Show the details from EC2 concerning an AMI
     '''
     if call != 'action':
-        print('The show_term_protect action must be called with '
+        log.error('The show_term_protect action must be called with '
               '-a or --action.')
         sys.exit(1)
 
@@ -754,10 +762,15 @@ def show_term_protect(name, instance_id=None, call=None):
             disable_protect = item['value']
             break
     
-    if disable_protect == 'true':
-        print('Termination Protection is enabled for {0}'.format(name))
-    else:
-        print('Termination Protection is disabled for {0}'.format(name))
+    log.log(
+        logging.DEBUG if quiet is True else logging.INFO,
+        'Termination Protection is {0} for {1}'.format(
+            disable_protect == 'true' and 'enabled' or 'disabled',
+            name
+        )
+    )
+
+    return disable_protect
 
 
 def enable_term_protect(name, call=None):
@@ -769,7 +782,7 @@ def enable_term_protect(name, call=None):
         salt-cloud -a enable_term_protect mymachine
     '''
     if call != 'action':
-        print('The enable_term_protect action must be called with '
+        log.error('The enable_term_protect action must be called with '
               '-a or --action.')
         sys.exit(1)
 
@@ -785,7 +798,7 @@ def disable_term_protect(name, call=None):
         salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
-        print('The disable_term_protect action must be called with '
+        log.error('The disable_term_protect action must be called with '
               '-a or --action.')
         sys.exit(1)
 
@@ -819,7 +832,7 @@ def keepvol_on_destroy(name, call=None):
         salt-cloud -a keepvol_on_destroy mymachine
     '''
     if call != 'action':
-        print('The keepvol_on_destroy action must be called with '
+        log.error('The keepvol_on_destroy action must be called with '
               '-a or --action.')
         sys.exit(1)
 
@@ -835,7 +848,7 @@ def delvol_on_destroy(name, call=None):
         salt-cloud -a delvol_on_destroy mymachine
     '''
     if call != 'action':
-        print('The delvol_on_destroy action must be called with '
+        log.error('The delvol_on_destroy action must be called with '
               '-a or --action.')
         sys.exit(1)
 
