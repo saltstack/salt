@@ -8,7 +8,7 @@ state can tell a command to run under certain circumstances.
 Available Functions
 -------------------
 
-The cmd state only has a single function, the ``run`` function
+The ``run`` function
 
 run
     Execute a command given certain conditions
@@ -21,7 +21,7 @@ run
         cmd:
             - run
 
-Only run if another execution returns successfully, in this case truncate
+Only run if another execution failed, in this case truncate
 syslog if there is no disk space:
 
 .. code-block:: yaml
