@@ -22,3 +22,26 @@ the following line needs to be added to the main cloud configuration file:
 
     delete_sshkeys: True
 
+Sync After Install
+==================
+
+Salt allows users to create custom modules, grains and states which can be 
+synchronised to minions to extend Salt with further functionality.
+
+This option will inform Salt Cloud to synchronise your custom modules, grains,
+states or all these to the minion just after it has been created. For this to 
+happen, the following line needs to be added to the main cloud 
+configuration file:
+
+.. code-block:: yaml
+
+    sync_after_install: all
+
+The available options for this setting are:
+
+.. code-block:: yaml
+
+    modules
+    grains
+    states
+    all
