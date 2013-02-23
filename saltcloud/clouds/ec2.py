@@ -104,13 +104,12 @@ def __virtual__():
             )
         )
 
-    global avail_images, script, list_nodes_select
+    global script, list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
-    avail_images = namespaced_function(avail_images, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
@@ -333,6 +332,16 @@ def avail_sizes():
     return sizes
 
 
+def avail_images():
+    '''
+    Return a dict of all available VM images on the cloud provider.
+    '''
+    ret = {}
+    params = {'Action': 'DescribeImages'}
+    images = query(params)
+    for image in images:
+        ret[image['imageId']] = image
+    return ret
 
 
 def get_conn(**kwargs):
