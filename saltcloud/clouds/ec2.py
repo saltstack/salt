@@ -216,7 +216,9 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
 def avail_sizes():
     '''
     Return a dict of all available VM images on the cloud provider with
-    relevant data
+    relevant data. Latest version can be found at:
+
+    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html
     '''
     sizes = {
         'Cluster Compute': {
