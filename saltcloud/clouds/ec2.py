@@ -104,13 +104,8 @@ def __virtual__():
             )
         )
 
-    global script
-
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
-
-    # Init the libcloud functions
-    script = namespaced_function(script, globals(), (conn,))
 
     log.debug('Loading EC2 cloud compute module')
     return 'ec2'
@@ -343,6 +338,24 @@ def avail_images():
     return ret
 
 
+def script(vm_):
+    '''
+    Return the script deployment object
+    '''
+    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
+    script = saltcloud.utils.os_script(
+        saltcloud.utils.get_option(
+            'os',
+            __opts__,
+            vm_
+        ),
+        vm_,
+        __opts__,
+        minion,
+    )
+    return script
+
+
 def get_conn(**kwargs):
     '''
     Return a conn object for the passed VM data
@@ -444,7 +457,6 @@ def get_location(vm_=None):
         return __opts__.get('EC2.location', DEFAULT_LOCATION)
 
 
-#NO CHANGES NEEDED
 def get_availability_zone(conn, vm_):
     '''
     Return the availability zone to use
@@ -557,7 +569,7 @@ def create(vm_=None, call=None):
             'key_filename': __opts__['EC2.private_key'],
             'deploy_command': 'bash /tmp/deploy.sh',
             'tty': True,
-            'script': deploy_script.script,
+            'script': deploy_script,
             'name': vm_['name'],
             'sudo': sudo,
             'start_action': __opts__['start_action'],
