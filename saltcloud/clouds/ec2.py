@@ -223,92 +223,110 @@ def avail_sizes():
     sizes = {
         'Cluster Compute': {
             'cc2.8xlarge': {
-                'disk': '3360 GiB (4 x 840 GiB)',
                 'id': 'cc2.8xlarge',
+                'cores': '16 (2 x Intel Xeon E5-2670, eight-core with hyperthread)',
+                'disk': '3360 GiB (4 x 840 GiB)',
                 'ram': '60.5 GiB'},
             'cc1.4xlarge': {
-                'disk': '1690 GiB (2 x 840 GiB)',
                 'id': 'cc1.4xlarge',
+                'cores': '8 (2 x Intel Xeon X5570, quad-core with hyperthread)',
+                'disk': '1690 GiB (2 x 840 GiB)',
                 'ram': '22.5 GiB'},
             },
         'Cluster CPU': {
             'cg1.4xlarge': {
-                'disk': '1680 GiB (2 x 840 GiB)',
                 'id': 'cg1.4xlarge',
+                'cores': '8 (2 x Intel Xeon X5570, quad-core with hyperthread), plus 2 NVIDIA Tesla M2050 GPUs',
+                'disk': '1680 GiB (2 x 840 GiB)',
                 'ram': '22.5 GiB'},
             },
         'High CPU': {
             'c1.xlarge': {
-                'disk': '1680 GiB (4 x 420 GiB)',
                 'id': 'c1.xlarge',
+                'cores': '8 (with 2.5 ECUs each)',
+                'disk': '1680 GiB (4 x 420 GiB)',
                 'ram': '8 GiB'},
             'c1.medium': {
-                'disk': '340 GiB (1 x 340 GiB)',
                 'id': 'c1.medium',
+                'cores': '2 (with 2.5 ECUs each)',
+                'disk': '340 GiB (1 x 340 GiB)',
                 'ram': '1.7 GiB'},
             },
         'High I/O': {
             'hi1.4xlarge': {
-                'disk': '2 TiB',
                 'id': 'hi1.4xlarge',
+                'cores': '8 (with 4.37 ECUs each)',
+                'disk': '2 TiB',
                 'ram': '60.5 GiB'},
             },
         'High Memory': {
             'm2.2xlarge': {
-                'disk': '840 GiB (1 x 840 GiB)',
                 'id': 'm2.2xlarge',
+                'cores': '4 (with 3.25 ECUs each)',
+                'disk': '840 GiB (1 x 840 GiB)',
                 'ram': '34.2 GiB'},
             'm2.xlarge': {
-                'disk': '410 GiB (1 x 410 GiB)',
                 'id': 'm2.xlarge',
+                'cores': '2 (with 3.25 ECUs each)',
+                'disk': '410 GiB (1 x 410 GiB)',
                 'ram': '17.1 GiB'},
             'm2.4xlarge': {
-                'disk': '1680 GiB (2 x 840 GiB)',
                 'id': 'm2.4xlarge',
+                'cores': '8 (with 3.25 ECUs each)',
+                'disk': '1680 GiB (2 x 840 GiB)',
                 'ram': '68.4 GiB'},
             },
         'High-Memory Cluster': {
             'cr1.8xlarge': {
-                'disk': '240 GiB (2 x 120 GiB SSD)',
                 'id': 'cr1.8xlarge',
+                'cores': '16 (2 x Intel Xeon E5-2670, eight-core)',
+                'disk': '240 GiB (2 x 120 GiB SSD)',
                 'ram': '244 GiB'},
             },
         'High Storage': {
             'hs1.8xlarge': {
-                'disk': '48 TiB (24 x 2 TiB hard disk drives)',
                 'id': 'hs1.8xlarge',
+                'cores': '16 (8 cores + 8 hyperthreads)',
+                'disk': '48 TiB (24 x 2 TiB hard disk drives)',
                 'ram': '117 GiB'},
             },
         'Micro': {
             't1.micro': {
-                'disk': 'EBS',
                 'id': 't1.micro',
+                'cores': '1',
+                'disk': 'EBS',
                 'ram': '615 MiB'},
             },
         'Standard': {
             'm1.xlarge': {
+                'id': 'm1.xlarge',
+                'cores': '4 (with 2 ECUs each)',
                 'disk': '1680 GB (4 x 420 GiB)',
-                'id': 'm1.large',
                 'ram': '15 GiB'},
             'm1.large': {
-                'disk': '840 GiB (2 x 420 GiB)',
                 'id': 'm1.large',
+                'cores': '2 (with 2 ECUs each)',
+                'disk': '840 GiB (2 x 420 GiB)',
                 'ram': '7.5 GiB'},
             'm1.medium': {
-                'disk': '400 GiB',
                 'id': 'm1.medium',
+                'cores': '1',
+                'disk': '400 GiB',
                 'ram': '3.75 GiB'},
             'm1.small': {
-                'disk': '150 GiB',
                 'id': 'm1.small',
+                'cores': '1',
+                'disk': '150 GiB',
                 'ram': '1.7 GiB'},
             'm3.2xlarge': {
-                'disk': 'EBS',
                 'id': 'm3.2xlarge',
+                'cores': '8 (with 3.25 ECUs each)',
+                'disk': 'EBS',
                 'ram': '30 GiB'},
             'm3.xlarge': {
-                'disk': 'EBS',
                 'id': 'm3.xlarge',
+                'cores': '4 (with 3.25 ECUs each)',
+                'disk': 'EBS',
                 'ram': '15 GiB'},
             }
     }
