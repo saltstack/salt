@@ -104,15 +104,13 @@ def __virtual__():
             )
         )
 
-    global avail_images, avail_sizes, script, destroy
-    global list_nodes_select
+    global avail_images, script, list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
     avail_images = namespaced_function(avail_images, globals(), (conn,))
-    avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
@@ -213,6 +211,108 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
     if return_url is True:
         return ret, requesturl
     return ret
+
+
+def avail_sizes():
+    '''
+    Return a dict of all available VM images on the cloud provider with
+    relevant data
+    '''
+    sizes = {
+        'Cluster Compute': {
+            'cc2.8xlarge': {
+                'disk': '3360 GiB (4 x 840 GiB)',
+                'id': 'cc2.8xlarge',
+                'ram': '60.5 GiB'},
+            'cc1.4xlarge': {
+                'disk': '1690 GiB (2 x 840 GiB)',
+                'id': 'cc1.4xlarge',
+                'ram': '22.5 GiB'},
+            },
+        'Cluster CPU': {
+            'cg1.4xlarge': {
+                'disk': '1680 GiB (2 x 840 GiB)',
+                'id': 'cg1.4xlarge',
+                'ram': '22.5 GiB'},
+            },
+        'High CPU': {
+            'c1.xlarge': {
+                'disk': '1680 GiB (4 x 420 GiB)',
+                'id': 'c1.xlarge',
+                'ram': '8 GiB'},
+            'c1.medium': {
+                'disk': '340 GiB (1 x 340 GiB)',
+                'id': 'c1.medium',
+                'ram': '1.7 GiB'},
+            },
+        'High I/O': {
+            'hi1.4xlarge': {
+                'disk': '2 TiB',
+                'id': 'hi1.4xlarge',
+                'ram': '60.5 GiB'},
+            },
+        'High Memory': {
+            'm2.2xlarge': {
+                'disk': '840 GiB (1 x 840 GiB)',
+                'id': 'm2.2xlarge',
+                'ram': '34.2 GiB'},
+            'm2.xlarge': {
+                'disk': '410 GiB (1 x 410 GiB)',
+                'id': 'm2.xlarge',
+                'ram': '17.1 GiB'},
+            'm2.4xlarge': {
+                'disk': '1680 GiB (2 x 840 GiB)',
+                'id': 'm2.4xlarge',
+                'ram': '68.4 GiB'},
+            },
+        'High-Memory Cluster': {
+            'cr1.8xlarge': {
+                'disk': '240 GiB (2 x 120 GiB SSD)',
+                'id': 'cr1.8xlarge',
+                'ram': '244 GiB'},
+            },
+        'High Storage': {
+            'hs1.8xlarge': {
+                'disk': '48 TiB (24 x 2 TiB hard disk drives)',
+                'id': 'hs1.8xlarge',
+                'ram': '117 GiB'},
+            },
+        'Micro': {
+            't1.micro': {
+                'disk': 'EBS',
+                'id': 't1.micro',
+                'ram': '615 MiB'},
+            },
+        'Standard': {
+            'm1.xlarge': {
+                'disk': '1680 GB (4 x 420 GiB)',
+                'id': 'm1.large',
+                'ram': '15 GiB'},
+            'm1.large': {
+                'disk': '840 GiB (2 x 420 GiB)',
+                'id': 'm1.large',
+                'ram': '7.5 GiB'},
+            'm1.medium': {
+                'disk': '400 GiB',
+                'id': 'm1.medium',
+                'ram': '3.75 GiB'},
+            'm1.small': {
+                'disk': '150 GiB',
+                'id': 'm1.small',
+                'ram': '1.7 GiB'},
+            'm3.2xlarge': {
+                'disk': 'EBS',
+                'id': 'm3.2xlarge',
+                'ram': '30 GiB'},
+            'm3.xlarge': {
+                'disk': 'EBS',
+                'id': 'm3.xlarge',
+                'ram': '15 GiB'},
+            }
+    }
+    return sizes
+
+
 
 
 def get_conn(**kwargs):
