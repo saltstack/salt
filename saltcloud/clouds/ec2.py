@@ -104,14 +104,13 @@ def __virtual__():
             )
         )
 
-    global script, list_nodes_select
+    global script
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
     script = namespaced_function(script, globals(), (conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
     log.debug('Loading EC2 cloud compute module')
     return 'ec2'
@@ -865,6 +864,24 @@ def list_nodes():
             'public_ips': nodes[node]['public_ips'],
         }
 
+    return ret
+
+
+def list_nodes_select():
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    ret = {}
+
+    nodes = list_nodes_full()
+    for node in nodes:
+        pairs = {}
+        data = nodes[node]
+        for key in data:
+            if str(key) in __opts__['query.selection']:
+                value = data[key]
+                pairs[key] = value
+        ret[node] = pairs
     return ret
 
 
