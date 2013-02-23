@@ -457,25 +457,6 @@ def get_location(vm_=None):
         return __opts__.get('EC2.location', DEFAULT_LOCATION)
 
 
-def get_availability_zone(conn, vm_):
-    '''
-    Return the availability zone to use
-    '''
-    locations = conn.list_locations()
-    avz = None
-    if 'availability_zone' in vm_:
-        avz = vm_['availability_zone']
-    elif 'EC2.availability_zone' in __opts__:
-        avz = __opts__['EC2.availability_zone']
-
-    if avz is None:
-        # Default to first zone
-        return locations[0]
-    for loc in locations:
-        if loc.availability_zone.name == avz:
-            return loc
-
-
 def avail_locations():
     '''
     List all available locations
