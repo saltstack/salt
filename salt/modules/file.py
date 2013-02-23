@@ -810,7 +810,7 @@ def remove(path):
     Remove the named file
 
     CLI Example::
-    
+
         salt '*' file.remove /tmp/foo
     '''
     if not os.path.isabs(path):
@@ -1156,7 +1156,7 @@ def check_managed(
     Check to see what changes need to be made for a file
 
     CLI Example::
-    
+
         salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
     # If the source is a list then find which file exists
@@ -1445,7 +1445,7 @@ def makedirs(path, user=None, group=None, mode=None):
 
         salt '*' file.makedirs /opt/code
     '''
-    directory = os.path.dirname(path)
+    directory = os.path.dirname(os.path.normpath(path))
 
     if not os.path.isdir(directory):
         # turn on the executable bits for user, group and others.
