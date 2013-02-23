@@ -8,6 +8,7 @@ import sys
 import copy
 import multiprocessing
 import logging
+import time
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -214,6 +215,21 @@ class Cloud(object):
         saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
         try:
             self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+
+            if 'sync_after_install' in self.opts:
+                if self.opts['sync_after_install'] not in (
+                    'all', 'modules', 'states', 'grains'):
+                    log.error('Bad option for sync_after_install')
+                else:
+                    # a small pause makes the sync work reliably
+                    time.sleep(3)
+                    client = salt.client.LocalClient()
+                    ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
+                        self.opts['sync_after_install']
+                    ))
+                    log.info('Synchronized the following dynamic modules:')
+                    log.info('  {0}'.format(ret))
+
         except KeyError as exc:
             log.error(
                 'Failed to create VM {0}. Configuration value {1} needs '
