@@ -476,6 +476,24 @@ def get_availability_zone(conn, vm_):
             return loc
 
 
+def avail_locations():
+    '''
+    List all available locations
+    '''
+    ret = {}
+
+    params = {'Action': 'DescribeRegions'}
+    result = query(params)
+
+    for region in result:
+        ret[region['regionName']] = {
+            'name': region['regionName'],
+            'endpoint': region['regionEndpoint'],
+        }
+
+    return ret
+
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
