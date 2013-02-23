@@ -11,6 +11,8 @@ Salt Cloud Table of Contents
     topics/cloud
     topics/deploy
     topics/config
+    topics/action
+    topics/function
     topics/misc
 
     ref/cli/man/salt-cloud

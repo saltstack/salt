@@ -51,6 +51,16 @@ on it, depending on the specific cloud provider.
 
 * :doc:`Actions <topics/action>`
 
+Depending on your cloud provider, a number of functions may also be available
+which do not require a VM to be specified.
+
+* :doc:`Functions <topics/function>`
+
+Miscellaneous Options
+=====================
+
+* :doc:`Miscellaneous <topics/misc>`
+
 Extending Salt Cloud
 ====================
 
