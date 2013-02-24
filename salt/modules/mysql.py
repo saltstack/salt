@@ -427,18 +427,26 @@ def user_list():
     return results
 
 
-def user_exists(user, host='localhost'):
+def user_exists(user, host='localhost', password=None, password_hash=None):
     '''
     Checks if a user exists on the  MySQL server.
 
     CLI Example::
 
-        salt '*' mysql.user_exists 'username' 'hostname'
+        salt '*' mysql.user_exists 'username' 'hostname' 'password'
+
+        salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
     '''
     dbc = _connect()
     cur = dbc.cursor()
     query = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
              'Host = \'{1}\''.format(user, host))
+
+    if password:
+        query = query + ' AND password = PASSWORD(\'{0}\')'.format(password)
+    elif password_hash:
+        query = query + ' AND password = \'{0}\''.format(password_hash)
+
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
     return cur.rowcount == 1
@@ -491,7 +499,7 @@ def user_create(user,
     log.debug('Query: {0}'.format(query))
     cur.execute(query)
 
-    if user_exists(user, host):
+    if user_exists(user, host, password, password_hash):
         log.info('User \'{0}\'@\'{1}\' has been created'.format(user, host))
         return True
 
