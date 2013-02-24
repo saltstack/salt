@@ -104,15 +104,13 @@ def __virtual__():
             )
         )
 
-    global avail_images, avail_sizes, script, destroy
-    global list_nodes_select
+    global avail_images, script, list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
     avail_images = namespaced_function(avail_images, globals(), (conn,))
-    avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
     list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
@@ -213,6 +211,128 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
     if return_url is True:
         return ret, requesturl
     return ret
+
+
+def avail_sizes():
+    '''
+    Return a dict of all available VM images on the cloud provider with
+    relevant data. Latest version can be found at:
+
+    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html
+    '''
+    sizes = {
+        'Cluster Compute': {
+            'cc2.8xlarge': {
+                'id': 'cc2.8xlarge',
+                'cores': '16 (2 x Intel Xeon E5-2670, eight-core with hyperthread)',
+                'disk': '3360 GiB (4 x 840 GiB)',
+                'ram': '60.5 GiB'},
+            'cc1.4xlarge': {
+                'id': 'cc1.4xlarge',
+                'cores': '8 (2 x Intel Xeon X5570, quad-core with hyperthread)',
+                'disk': '1690 GiB (2 x 840 GiB)',
+                'ram': '22.5 GiB'},
+            },
+        'Cluster CPU': {
+            'cg1.4xlarge': {
+                'id': 'cg1.4xlarge',
+                'cores': '8 (2 x Intel Xeon X5570, quad-core with hyperthread), plus 2 NVIDIA Tesla M2050 GPUs',
+                'disk': '1680 GiB (2 x 840 GiB)',
+                'ram': '22.5 GiB'},
+            },
+        'High CPU': {
+            'c1.xlarge': {
+                'id': 'c1.xlarge',
+                'cores': '8 (with 2.5 ECUs each)',
+                'disk': '1680 GiB (4 x 420 GiB)',
+                'ram': '8 GiB'},
+            'c1.medium': {
+                'id': 'c1.medium',
+                'cores': '2 (with 2.5 ECUs each)',
+                'disk': '340 GiB (1 x 340 GiB)',
+                'ram': '1.7 GiB'},
+            },
+        'High I/O': {
+            'hi1.4xlarge': {
+                'id': 'hi1.4xlarge',
+                'cores': '8 (with 4.37 ECUs each)',
+                'disk': '2 TiB',
+                'ram': '60.5 GiB'},
+            },
+        'High Memory': {
+            'm2.2xlarge': {
+                'id': 'm2.2xlarge',
+                'cores': '4 (with 3.25 ECUs each)',
+                'disk': '840 GiB (1 x 840 GiB)',
+                'ram': '34.2 GiB'},
+            'm2.xlarge': {
+                'id': 'm2.xlarge',
+                'cores': '2 (with 3.25 ECUs each)',
+                'disk': '410 GiB (1 x 410 GiB)',
+                'ram': '17.1 GiB'},
+            'm2.4xlarge': {
+                'id': 'm2.4xlarge',
+                'cores': '8 (with 3.25 ECUs each)',
+                'disk': '1680 GiB (2 x 840 GiB)',
+                'ram': '68.4 GiB'},
+            },
+        'High-Memory Cluster': {
+            'cr1.8xlarge': {
+                'id': 'cr1.8xlarge',
+                'cores': '16 (2 x Intel Xeon E5-2670, eight-core)',
+                'disk': '240 GiB (2 x 120 GiB SSD)',
+                'ram': '244 GiB'},
+            },
+        'High Storage': {
+            'hs1.8xlarge': {
+                'id': 'hs1.8xlarge',
+                'cores': '16 (8 cores + 8 hyperthreads)',
+                'disk': '48 TiB (24 x 2 TiB hard disk drives)',
+                'ram': '117 GiB'},
+            },
+        'Micro': {
+            't1.micro': {
+                'id': 't1.micro',
+                'cores': '1',
+                'disk': 'EBS',
+                'ram': '615 MiB'},
+            },
+        'Standard': {
+            'm1.xlarge': {
+                'id': 'm1.xlarge',
+                'cores': '4 (with 2 ECUs each)',
+                'disk': '1680 GB (4 x 420 GiB)',
+                'ram': '15 GiB'},
+            'm1.large': {
+                'id': 'm1.large',
+                'cores': '2 (with 2 ECUs each)',
+                'disk': '840 GiB (2 x 420 GiB)',
+                'ram': '7.5 GiB'},
+            'm1.medium': {
+                'id': 'm1.medium',
+                'cores': '1',
+                'disk': '400 GiB',
+                'ram': '3.75 GiB'},
+            'm1.small': {
+                'id': 'm1.small',
+                'cores': '1',
+                'disk': '150 GiB',
+                'ram': '1.7 GiB'},
+            'm3.2xlarge': {
+                'id': 'm3.2xlarge',
+                'cores': '8 (with 3.25 ECUs each)',
+                'disk': 'EBS',
+                'ram': '30 GiB'},
+            'm3.xlarge': {
+                'id': 'm3.xlarge',
+                'cores': '4 (with 3.25 ECUs each)',
+                'disk': 'EBS',
+                'ram': '15 GiB'},
+            }
+    }
+    return sizes
+
+
 
 
 def get_conn(**kwargs):
