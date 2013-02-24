@@ -110,6 +110,7 @@ def _connect(**kwargs):
     _connarg('conv')
     _connarg('unix_socket')
     _connarg('default_file', 'read_default_file')
+    _connarg('default_group', 'read_default_group')
 
     dbc = MySQLdb.connect(**connargs)
     dbc.autocommit(True)
