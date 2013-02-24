@@ -47,21 +47,43 @@ def present(name,
            'changes': {},
            'result': True,
            'comment': 'User {0}@{1} is already present'.format(name, host)}
-    # check if user exists
-    if __salt__['mysql.user_exists'](name, host):
+
+    # check if user exists with the same password
+    if __salt__['mysql.user_exists'](name, host, password, password_hash):
         return ret
 
-    # The user is not present, make it!
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'User {0}@{1} is set to be added'.format(name, host)
-        return ret
-    if __salt__['mysql.user_create'](name, host, password, password_hash):
-        ret['comment'] = 'The user {0}@{1} has been added'.format(name, host)
-        ret['changes'][name] = 'Present'
+    # check if user exists with a different password
+    if __salt__['mysql.user_exists'](name, host):
+
+        # The user is present, change the password
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('Password for user {0}@{1} is set '
+                              'to be changed'.format(name, host))
+            return ret
+
+        if __salt__['mysql.user_chpass'](name, host, password, password_hash):
+            ret['comment'] = ('Password for user {0}@{1} has '
+                              'been changed'.format(name, host))
+            ret['changes'][name] = 'Updated'
+        else:
+            ret['comment'] = ('Failed to change password for '
+                              'user {0}@{1}'.format(name, host))
+            ret['result'] = False
     else:
-        ret['comment'] = 'Failed to create user {0}@{1}'.format(name, host)
-        ret['result'] = False
+
+        # The user is not present, make it!
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'User {0}@{1} is set to be added'.format(name, host)
+            return ret
+
+        if __salt__['mysql.user_create'](name, host, password, password_hash):
+            ret['comment'] = 'The user {0}@{1} has been added'.format(name, host)
+            ret['changes'][name] = 'Present'
+        else:
+            ret['comment'] = 'Failed to create user {0}@{1}'.format(name, host)
+            ret['result'] = False
 
     return ret
 
