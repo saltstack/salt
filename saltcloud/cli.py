@@ -244,7 +244,9 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     mapper.run_map(dmap)
 
-                log.info('Complete')
+                if self.config.get('parallel', False) == False:
+                    log.info('Complete')
+
             except Exception as exc:
                 log.debug('There was a query error.', exc_info=True)
                 self.error('There was a query error: {0}'.format(exc))
