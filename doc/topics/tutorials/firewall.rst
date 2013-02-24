@@ -61,12 +61,12 @@ to allow traffic on ``tcp/4505`` and ``tcp/4506``:
 
 **Ubuntu**
 
-Create a file named ``/etc/ufw/applications.d/salt-master`` ::
+The salt master installs a file named `salt-master.ufw`_ which allows the
+firewall to be enabled with the command::
 
-        [Salt Master]
-        title=Salt master
-        description=Salt is a remote execution and configuration management tool.
-        ports=4505,4506/tcp
+        ufw enable saltmaster
+
+.. _`salt-master.ufw`: http://github.com/saltstack/salt/blob/develop/pkg/salt-master.ufw
 
 .. _`iptables`: http://www.netfilter.org/
 
