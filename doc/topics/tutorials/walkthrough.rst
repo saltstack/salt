@@ -201,3 +201,10 @@ These functions cover everything from shelling out to package management to
 manipulating database servers. These functions comprise a powerful system
 management API which is the backbone to Salt configuration management and many
 other aspects of Salt.
+
+.. note::
+
+    Salt comes with many plugin systems, the functions that are available
+    via the salt command are called `Execution Modules`.
+
+
