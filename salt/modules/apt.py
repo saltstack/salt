@@ -1014,6 +1014,9 @@ def get_selections(pattern=None, state=None):
             return {state: []}
     return ret
 
+# TODO: allow state=None to be set, and that *args will be set to that state
+# TODO: maybe use something similar to pkg_resources.pack_pkgs to allow a list passed to selection, with the default state set to whatever is passed by the above, but override that if explicitly specified
+# TODO: creat a pkg.hold alias, instead of the above?
 def set_selections(path=None, selection=None, clear=False):
     '''
     Change package state in the dpkg database.
