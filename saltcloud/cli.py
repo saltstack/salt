@@ -222,10 +222,14 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.config.get('map', None) and self.selected_query_option is None:
             if len(mapper.map) == 0:
-                print('Nothing to do')
+                print('No nodes defined in this map')
                 self.exit(0)
             try:
                 dmap = mapper.map_data()
+                if 'destroy' not in dmap and len(dmap['create']) == 0:
+                    print('All nodes in this map already exist')
+                    self.exit(0)
+
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
 
                 msg = 'The following virtual machines are set to be created:\n'
@@ -239,6 +243,8 @@ class SaltCloud(parsers.SaltCloudParser):
 
                 if self.print_confirm(msg):
                     mapper.run_map(dmap)
+
+                log.info('Complete')
             except Exception as exc:
                 log.debug('There was a query error.', exc_info=True)
                 self.error('There was a query error: {0}'.format(exc))
