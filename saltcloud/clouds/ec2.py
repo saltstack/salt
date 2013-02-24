@@ -104,15 +104,8 @@ def __virtual__():
             )
         )
 
-    global avail_images, script, list_nodes_select
-
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
-
-    # Init the libcloud functions
-    avail_images = namespaced_function(avail_images, globals(), (conn,))
-    script = namespaced_function(script, globals(), (conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
 
     log.debug('Loading EC2 cloud compute module')
     return 'ec2'
@@ -333,6 +326,34 @@ def avail_sizes():
     return sizes
 
 
+def avail_images():
+    '''
+    Return a dict of all available VM images on the cloud provider.
+    '''
+    ret = {}
+    params = {'Action': 'DescribeImages'}
+    images = query(params)
+    for image in images:
+        ret[image['imageId']] = image
+    return ret
+
+
+def script(vm_):
+    '''
+    Return the script deployment object
+    '''
+    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
+    script = saltcloud.utils.os_script(
+        saltcloud.utils.get_option(
+            'os',
+            __opts__,
+            vm_
+        ),
+        vm_,
+        __opts__,
+        minion,
+    )
+    return script
 
 
 def get_conn(**kwargs):
@@ -358,7 +379,6 @@ def get_conn(**kwargs):
     )
 
 
-#NO CHANGES NEEDED
 def keyname(vm_):
     '''
     Return the keyname
@@ -366,7 +386,6 @@ def keyname(vm_):
     return str(vm_.get('keyname', __opts__.get('EC2.keyname', '')))
 
 
-#NO CHANGES NEEDED
 def securitygroup(vm_):
     '''
     Return the security group
@@ -385,7 +404,6 @@ def securitygroup(vm_):
     return securitygroups
 
 
-#NO CHANGES NEEDED
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to 'ec2-user'.
@@ -409,7 +427,6 @@ def ssh_username(vm_):
     return usernames
 
 
-#NO CHANGES NEEDED
 def ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
@@ -420,7 +437,6 @@ def ssh_interface(vm_):
     )
 
 
-#NO CHANGES NEEDED
 def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
@@ -436,24 +452,22 @@ def get_location(vm_=None):
         return __opts__.get('EC2.location', DEFAULT_LOCATION)
 
 
-#NO CHANGES NEEDED
-def get_availability_zone(conn, vm_):
+def avail_locations():
     '''
-    Return the availability zone to use
+    List all available locations
     '''
-    locations = conn.list_locations()
-    avz = None
-    if 'availability_zone' in vm_:
-        avz = vm_['availability_zone']
-    elif 'EC2.availability_zone' in __opts__:
-        avz = __opts__['EC2.availability_zone']
+    ret = {}
 
-    if avz is None:
-        # Default to first zone
-        return locations[0]
-    for loc in locations:
-        if loc.availability_zone.name == avz:
-            return loc
+    params = {'Action': 'DescribeRegions'}
+    result = query(params)
+
+    for region in result:
+        ret[region['regionName']] = {
+            'name': region['regionName'],
+            'endpoint': region['regionEndpoint'],
+        }
+
+    return ret
 
 
 def create(vm_=None, call=None):
@@ -549,7 +563,7 @@ def create(vm_=None, call=None):
             'key_filename': __opts__['EC2.private_key'],
             'deploy_command': 'bash /tmp/deploy.sh',
             'tty': True,
-            'script': deploy_script.script,
+            'script': deploy_script,
             'name': vm_['name'],
             'sudo': sudo,
             'start_action': __opts__['start_action'],
@@ -856,6 +870,24 @@ def list_nodes():
             'public_ips': nodes[node]['public_ips'],
         }
 
+    return ret
+
+
+def list_nodes_select():
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+    '''
+    ret = {}
+
+    nodes = list_nodes_full()
+    for node in nodes:
+        pairs = {}
+        data = nodes[node]
+        for key in data:
+            if str(key) in __opts__['query.selection']:
+                value = data[key]
+                pairs[key] = value
+        ret[node] = pairs
     return ret
 
 
