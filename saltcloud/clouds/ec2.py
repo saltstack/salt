@@ -394,15 +394,6 @@ def securitygroup(vm_):
         'securitygroup', __opts__.get('EC2.securitygroup', 'default')
     )
 
-    # XXX: This code won't get executed. On purpose?
-    securitygroups = vm_.get(
-        'securitygroup', __opts__.get('EC2.securitygroup', 'default')
-    )
-    if not isinstance(securitygroups, list):
-        securitygroup = securitygroups
-        securitygroups = [securitygroup]
-    return securitygroups
-
 
 def ssh_username(vm_):
     '''
@@ -494,7 +485,11 @@ def create(vm_=None, call=None):
         params['KeyName'] = ex_keyname
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
-        params['SecurityGroup.1'] = ex_securitygroup
+        if not isinstance(ex_securitygroup, list):
+            params['SecurityGroup.1'] = ex_securitygroup
+        else:
+            for (counter, sg) in enumerate(ex_securitygroup):
+                params['SecurityGroup.{0}'.format(counter)] = sg
 
     if 'delvol_on_destroy' in vm_:
         value = vm_['delvol_on_destroy']
