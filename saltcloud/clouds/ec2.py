@@ -379,7 +379,6 @@ def get_conn(**kwargs):
     )
 
 
-#NO CHANGES NEEDED
 def keyname(vm_):
     '''
     Return the keyname
@@ -387,7 +386,6 @@ def keyname(vm_):
     return str(vm_.get('keyname', __opts__.get('EC2.keyname', '')))
 
 
-#NO CHANGES NEEDED
 def securitygroup(vm_):
     '''
     Return the security group
@@ -406,7 +404,6 @@ def securitygroup(vm_):
     return securitygroups
 
 
-#NO CHANGES NEEDED
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to 'ec2-user'.
@@ -430,7 +427,6 @@ def ssh_username(vm_):
     return usernames
 
 
-#NO CHANGES NEEDED
 def ssh_interface(vm_):
     '''
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
@@ -441,7 +437,6 @@ def ssh_interface(vm_):
     )
 
 
-#NO CHANGES NEEDED
 def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
