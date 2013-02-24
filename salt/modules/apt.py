@@ -6,6 +6,10 @@ Support for APT (Advanced Packaging Tool)
 import os
 import re
 import logging
+from types import StringTypes
+
+# Import third party libs
+import yaml
 
 #import aptsources.sourceslist
 try:
@@ -956,3 +960,146 @@ def file_dict(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_dict'](*packages)
+
+def _parse_selections(dpkgselection):
+    '''
+    Parses the format from ``dpkg --get-selections`` and return a format that
+    pkg.get_selections and pkg.set_selections work with.
+    '''
+    ret = {}
+    if type(dpkgselection) in StringTypes:
+        dpkgselection = dpkgselection.split('\n')
+    for line in dpkgselection:
+        if line:
+            _pkg, _state = line.split()
+            if _state in ret:
+                ret[_state].append(_pkg)
+            else:
+                ret[_state] = [_pkg]
+    return ret
+
+def get_selections(pattern=None, state=None):
+    '''
+    View package state from the dpkg database.
+
+    Returns a dict of dicts containing the state, and package names::
+
+        {'<host>':
+            {'<state>': ['pkg1',
+                         ...
+                        ]
+            },
+            ...
+        }
+
+    CLI Example::
+
+        salt '*' pkg.get_selections
+        salt '*' pkg.get_selections 'python-*'
+        salt '*' pkg.get_selections state=hold
+        salt '*' pkg.get_selections 'openssh*' state=hold
+    '''
+    ret = {}
+    cmd = 'dpkg --get-selections'
+    if pattern:
+        cmd += ' "{0}"'.format(pattern)
+    else:
+        cmd += ' "*"'
+    stdout = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    ret = _parse_selections(stdout)
+    if state:
+        try:
+            return {state: ret[state]}
+        except KeyError:
+            return {state: []}
+    return ret
+
+def set_selections(path=None, selection=None, clear=False):
+    '''
+    Change package state in the dpkg database.
+
+    The state can be any one of, documented in dpkg(1):
+
+     - install
+     - hold
+     - deinstall
+     - purge
+
+    This command is commonly used to mark specific packages to be held from
+    being upgraded, that is, to be kept at a certain version. When a state is
+    changed to anything but being held, then it is typically followed by
+    ``apt-get -u dselect-upgrade``.
+
+    Note: Be careful with the ``clear`` argument, since it will start
+    with setting all packages to deinstall state.
+
+    Returns a dict of dicts containing the package names, and the new and old
+    versions::
+
+        {'<host>':
+            {'<package>': {'new': '<new-state>',
+                           'old': '<old-state>'}
+            },
+            ...
+        }
+
+    CLI Example::
+
+        salt '*' pkg.set_selections selection='{"install": ["netcat"]}'
+        salt '*' pkg.set_selections selection='{"hold": ["openssh-server", "openssh-client"]}'
+        salt '*' pkg.set_selections salt://path/to/file
+        salt '*' pkg.set_selections salt://path/to/file clear=True
+    '''
+    ret = {}
+    if not path and not selection:
+        return ret
+    if path and selection:
+        log.error('"selection" and "path" cannot be set at the same time with '
+                  'pkg.set_selections')
+        return ret
+
+    if type(selection) in StringTypes:
+        try:
+            selection = yaml.safe(selection)
+        except yaml.parser.ParserError as e:
+            log.error(e)
+            selection = {}
+
+    if path:
+        path = __salt__['cp.cache_file'](path)
+        with salt.utils.fopen(path, 'r') as ifile:
+            content = ifile.readlines()
+        selection = _parse_selections(content)
+
+    if selection:
+        if clear:
+            cmd = 'dpkg --clear-selections'
+            if not __opts__['test']:
+                retcode = __salt__['cmd.retcode'](cmd)
+                if retcode:
+                    log.error('failed to clear selections')
+
+        for _state, _pkgs in selection.items():
+            for _pkg in _pkgs:
+                sel = __salt__['pkg.get_selections'](pattern=_pkg)
+                old_state = '-'
+                for k, v in sel.items():
+                    if k in ['install', 'hold', 'deinstall', 'purge']:
+                        old_state = k
+                if _state == old_state:
+                    continue
+                ret[_pkg] = {'old': old_state,
+                             'new': _state}
+
+                cmd = 'echo {0} {1} | dpkg --set-selections'.format(
+                    _pkg,
+                    _state
+                    )
+                if not __opts__['test']:
+                    retcode = __salt__['cmd.retcode'](cmd)
+                    if retcode:
+                        log.error('failed to set state {0} for package {1}'.format(
+                            _state,
+                            _pkg
+                            ))
+    return ret
