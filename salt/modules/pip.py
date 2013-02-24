@@ -235,8 +235,14 @@ def install(pkgs=None,
             cmd=cmd, timeout=timeout)
 
     if editable:
-        if editable.find('egg') == -1:
-            raise Exception('You must specify an egg for this editable')
+        # Is the editable local?
+        if not editable.startswith(('file://', '/')):
+            import re
+            match = re.search(r'(?:#|#.*?&)egg=([^&]*)', editable)
+
+            if not match or not match.group(1):
+                # Missing #egg=theEggName
+                raise Exception('You must specify an egg for this editable')
         cmd = '{0} install --editable={editable}'.format(
             _get_pip_bin(bin_env), editable=editable)
 
