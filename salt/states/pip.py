@@ -70,8 +70,8 @@ def installed(name,
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if ignore_installed == False and name.lower() in (p.lower() for p in pip_list):
-        if force_reinstall == False and upgrade == False:
+    if ignore_installed is False and name.lower() in (p.lower() for p in pip_list):
+        if force_reinstall is False and upgrade is False:
             ret['result'] = True
             ret['comment'] = 'Package already installed'
             return ret
