@@ -177,9 +177,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     machines.append(name)
             names = machines
 
+            ret = {}
             try:
                 if self.print_confirm(msg):
-                    mapper.do_action(names, kwargs)
+                    ret = mapper.do_action(names, kwargs)
             except Exception as exc:
                 log.debug(
                     'There was a error actioning machines.', exc_info=True
@@ -187,6 +188,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error actioning machines: {0}'.format(exc)
                 )
+
+            salt.output.display_output(ret, '', self.config)
             self.exit(0)
 
         if self.options.function:
@@ -213,14 +216,19 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(0)
 
         if self.options.profile and self.config.get('names', False):
+            ret = {}
+
             try:
-                mapper.run_profile()
+                ret = mapper.run_profile()
             except Exception as exc:
                 log.debug('There was a profile error.', exc_info=True)
                 self.error('There was a profile error: {0}'.format(exc))
+
+            salt.output.display_output(ret, '', self.config)
             self.exit(0)
 
         if self.config.get('map', None) and self.selected_query_option is None:
+            ret = {}
             if len(mapper.map) == 0:
                 print('No nodes defined in this map')
                 self.exit(0)
@@ -242,7 +250,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         msg += '  {0}\n'.format(name)
 
                 if self.print_confirm(msg):
-                    mapper.run_map(dmap)
+                    ret = mapper.run_map(dmap)
 
                 if self.config.get('parallel', False) == False:
                     log.info('Complete')
@@ -250,6 +258,8 @@ class SaltCloud(parsers.SaltCloudParser):
             except Exception as exc:
                 log.debug('There was a query error.', exc_info=True)
                 self.error('There was a query error: {0}'.format(exc))
+
+            salt.output.display_output(ret, '', self.config)
             self.exit(0)
 
     def print_confirm(self, msg):

@@ -29,7 +29,6 @@ import sys
 import stat
 import time
 import logging
-import pprint
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -649,11 +648,14 @@ def create(vm_=None, call=None):
     log.info(
         'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
-    pprint.pprint(data[0]['instancesSet']['item'])
+    ret = (data[0]['instancesSet']['item'])
+
     volumes = vm_.get('map_volumes')
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
+
+    return ret
 
 
 def create_attach_volumes(volumes, location, data):
@@ -695,7 +697,7 @@ def stop(name, call=None):
               'InstanceId.1': instance_id}
     result = query(params)
 
-    pprint.pprint(result)
+    return result
 
 
 def start(name, call=None):
@@ -715,7 +717,7 @@ def start(name, call=None):
               'InstanceId.1': instance_id}
     result = query(params)
 
-    pprint.pprint(result)
+    return result
 
 
 def set_tags(name, tags, call=None):
@@ -766,7 +768,7 @@ def get_tags(name, call=None):
               'Filter.1.Name': 'resource-id',
               'Filter.1.Value': instance_id}
     result = query(params, setname='tagSet')
-    pprint.pprint(result)
+
     return result
 
 
@@ -791,6 +793,7 @@ def del_tags(name, kwargs, call=None):
         params['Tag.{0}.Key'.format(count)] = tag
         count += 1
     result = query(params, setname='tagSet')
+
     return get_tags(name)
 
 
@@ -840,7 +843,8 @@ def destroy(name, call=None):
               'InstanceId.1': instance_id}
     result = query(params)
     log.info(result)
-    pprint.pprint(result)
+
+    return result
 
 
 def reboot(name, call=None):
@@ -859,6 +863,8 @@ def reboot(name, call=None):
     if result == []:
         log.info("Complete")
 
+    return {'Reboot': 'Complete'}
+
 
 def show_image(kwargs, call=None):
     '''
@@ -872,7 +878,8 @@ def show_image(kwargs, call=None):
               'Action': 'DescribeImages'}
     result = query(params)
     log.info(result)
-    pprint.pprint(result)
+
+    return result
 
 
 def show_instance(name, call=None):
@@ -884,7 +891,7 @@ def show_instance(name, call=None):
         sys.exit(1)
 
     nodes = list_nodes_full()
-    pprint.pprint(nodes[name])
+
     return nodes[name]
 
 
@@ -919,6 +926,7 @@ def list_nodes_full():
             ret[name]['private_ips'].append(instance['instancesSet']['item']['privateIpAddress'])
         if 'ipAddress' in instance['instancesSet']['item']:
             ret[name]['public_ips'].append(instance['instancesSet']['item']['ipAddress'])
+
     return ret
 
 
@@ -957,6 +965,7 @@ def list_nodes_select():
                 value = data[key]
                 pairs[key] = value
         ret[node] = pairs
+
     return ret
 
 
@@ -1007,7 +1016,7 @@ def enable_term_protect(name, call=None):
               '-a or --action.')
         sys.exit(1)
 
-    _toggle_term_protect(name, 'true')
+    return _toggle_term_protect(name, 'true')
 
 
 def disable_term_protect(name, call=None):
@@ -1023,7 +1032,7 @@ def disable_term_protect(name, call=None):
               '-a or --action.')
         sys.exit(1)
 
-    _toggle_term_protect(name, 'false')
+    return _toggle_term_protect(name, 'false')
 
 
 def _toggle_term_protect(name, value):
@@ -1041,7 +1050,7 @@ def _toggle_term_protect(name, value):
               'DisableApiTermination.Value': value}
     result = query(params, return_root=True)
 
-    show_term_protect(name, instance_id, call='action')
+    return show_term_protect(name, instance_id, call='action')
 
 
 def keepvol_on_destroy(name, call=None):
@@ -1057,7 +1066,7 @@ def keepvol_on_destroy(name, call=None):
               '-a or --action.')
         sys.exit(1)
 
-    _toggle_delvol(name=name, value='false')
+    return _toggle_delvol(name=name, value='false')
 
 
 def delvol_on_destroy(name, call=None):
@@ -1073,7 +1082,7 @@ def delvol_on_destroy(name, call=None):
               '-a or --action.')
         sys.exit(1)
 
-    _toggle_delvol(name=name, value='true')
+    return _toggle_delvol(name=name, value='true')
 
 
 def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
@@ -1104,5 +1113,5 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
               'BlockDeviceMapping.1.Ebs.DeleteOnTermination': value}
     result = query(params, return_root=True)
 
-    pprint.pprint(query(requesturl=requesturl))
+    return query(requesturl=requesturl)
 
