@@ -213,9 +213,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     key, value = arg.split('=')
                     kwargs[key] = value
 
-            mapper.do_function(
+            ret = mapper.do_function(
                 self.function_provider, self.function_name, kwargs
             )
+            salt.output.display_output(ret, '', self.config)
             self.exit(0)
 
         if self.options.profile and self.config.get('names', False):
