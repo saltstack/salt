@@ -231,9 +231,18 @@ class SaltCloud(parsers.SaltCloudParser):
                     key, value = arg.split('=')
                     kwargs[key] = value
 
-            ret = mapper.do_function(
-                self.function_provider, self.function_name, kwargs
-            )
+            try:
+                ret = mapper.do_function(
+                    self.function_provider, self.function_name, kwargs
+                )
+            except Exception as exc:
+                log.debug(
+                    'There was a error running the function.', exc_info=True
+                )
+                self.error(
+                    'There was an error running the function: {0}'.format(exc)
+                )
+                self.exit(1)
 
         elif self.options.profile and self.config.get('names', False):
             try:
