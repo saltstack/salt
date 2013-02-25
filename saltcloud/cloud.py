@@ -143,8 +143,12 @@ class Cloud(object):
         '''
         Create/Verify the VMs in the VM data
         '''
+        ret = {}
+
         for vm_ in self.opts['vm']:
-            self.create(vm_)
+            ret = self.create(vm_)
+
+        return ret
 
     def destroy(self, names):
         '''
@@ -183,6 +187,8 @@ class Cloud(object):
         '''
         Create a single VM
         '''
+        output = {}
+
         if 'minion' in vm_ and vm_['minion'] is None:
             vm_['minion'] = {}
         fun = '{0}.create'.format(self.provider(vm_))
@@ -214,7 +220,7 @@ class Cloud(object):
 
         saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
         try:
-            self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+            output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
 
             if 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
@@ -238,6 +244,8 @@ class Cloud(object):
                 )
             )
 
+        return output
+
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
             if definition['profile'] == profile:
@@ -251,6 +259,7 @@ class Cloud(object):
         Parse over the options passed on the command line and determine how to
         handle them
         '''
+        ret = {}
         pmap = self.map_providers()
 
         current_boxen = {}
@@ -278,11 +287,13 @@ class Cloud(object):
                             target=lambda: self.create(vm_),
                         ).start()
                     else:
-                        self.create(vm_)
+                        ret = self.create(vm_)
         if not found:
             log.error(
                 'Profile {0} is not defined'.format(self.opts['profile'])
             )
+
+        return ret
 
     def do_action(self, names, kwargs):
         '''
@@ -302,15 +313,16 @@ class Cloud(object):
                 if node in names:
                     acts[prov].append(node)
 
+        ret = {}
         completed = []
         for prov, names_ in acts.items():
             for name in names:
                 if name in names_:
                     fun = '{0}.{1}'.format(prov, self.opts['action'])
                     if kwargs:
-                        self.clouds[fun](name, kwargs, call='action')
+                        ret = self.clouds[fun](name, kwargs, call='action')
                     else:
-                        self.clouds[fun](name, call='action')
+                        ret = self.clouds[fun](name, call='action')
                     completed.append(name)
 
         for name in names:
@@ -319,15 +331,19 @@ class Cloud(object):
                     name, self.opts['action'])
                 )
 
+        return ret
+
     def do_function(self, prov, func, kwargs):
         '''
         Perform a function against a cloud provider
         '''
         fun = '{0}.{1}'.format(prov, func)
         if kwargs:
-            self.clouds[fun](call='function', kwargs=kwargs)
+            ret = self.clouds[fun](call='function', kwargs=kwargs)
         else:
-            self.clouds[fun](call='function')
+            ret = self.clouds[fun](call='function')
+
+        return ret
 
 
 class Map(Cloud):
