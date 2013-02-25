@@ -158,7 +158,7 @@ def install(pkgs=None,
 
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
-    Comlicated CLI example::
+    Complicated CLI example::
 
         salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
