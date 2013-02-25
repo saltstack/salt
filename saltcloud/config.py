@@ -7,6 +7,7 @@ import salt.config
 
 
 CLOUD_CONFIG_DEFAULTS = {
+    'verify_env': True,
     'default_include': 'cloud.d/*.conf',
     # Provider defaults
     'provider': '',
