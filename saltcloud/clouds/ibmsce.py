@@ -167,8 +167,12 @@ def create(vm_):
                 'Failed to start Salt on Cloud VM {0}'.format(vm_['name'])
             )
 
+    ret = {}
     log.info(
         'Created Cloud VM {0} with the following values:'.format(vm_['name'])
     )
     for key, val in data.__dict__.items():
+        ret[key] = val
         log.info('  {0}: {1}'.format(key, val))
+
+    return ret
