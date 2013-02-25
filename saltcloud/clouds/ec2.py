@@ -843,6 +843,23 @@ def destroy(name, call=None):
     pprint.pprint(result)
 
 
+def reboot(name, call=None):
+    '''
+    Reboot a node.
+
+    CLI Example::
+
+        salt-cloud -a reboot mymachine
+    '''
+    nodes = list_nodes_full()
+    instance_id = nodes[name]['instanceId']
+    params = {'Action': 'RebootInstances',
+              'InstanceId.1': instance_id}
+    result = query(params)
+    if result == []:
+        log.info("Complete")
+
+
 def show_image(kwargs, call=None):
     '''
     Show the details from EC2 concerning an AMI
