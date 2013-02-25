@@ -129,6 +129,8 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.options.destroy and (self.config.get('names', None) or
                                      self.config.get('map', None)):
+            ret = {}
+
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 names = mapper.delete_map(query='list_nodes')
@@ -141,7 +143,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
             try:
                 if self.print_confirm(msg):
-                    mapper.destroy(names)
+                    ret = mapper.destroy(names)
             except Exception as exc:
                 log.debug(
                     'There was an error destroying machines.', exc_info=True
@@ -149,6 +151,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error destroy machines: {0}'.format(exc)
                 )
+            salt.output.display_output(ret, '', self.config)
             self.exit(0)
 
         if self.options.action and (self.config.get('names', None) or

@@ -115,15 +115,21 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
+    ret = {}
     log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
     for key, val in data.__dict__.items():
+        ret[key] = val
         log.info('  {0}: {1}'.format(key, val))
+
+    return ret
 
 
 def stop(name, call=None):
     '''
     Stop a node
     '''
+    data = {}
+
     if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
@@ -137,3 +143,6 @@ def stop(name, call=None):
     except Exception as exc:
         log.error('Failed to stop node {0}'.format(name))
         log.error(exc)
+
+    return data
+

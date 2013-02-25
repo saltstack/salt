@@ -154,6 +154,8 @@ class Cloud(object):
         '''
         Destroy the named VMs
         '''
+        ret = []
+
         pmap = self.map_providers()
         dels = {}
         for prov, nodes in pmap.items():
@@ -164,8 +166,12 @@ class Cloud(object):
         for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
             for name in names_:
-                if self.clouds[fun](name):
+                delret = self.clouds[fun](name)
+                ret.append(delret)
+                if delret:
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
+
+        return ret
 
     def reboot(self, names):
         '''

@@ -144,7 +144,7 @@ def enable_term_protect(name, call=None):
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
-    _toggle_term_protect(name, True)
+    return _toggle_term_protect(name, True)
 
 
 def disable_term_protect(name, call=None):
@@ -159,7 +159,7 @@ def disable_term_protect(name, call=None):
         print('This action must be called with -a or --action.')
         sys.exit(1)
 
-    _toggle_term_protect(name, False)
+    return _toggle_term_protect(name, False)
 
 
 def _toggle_term_protect(name, enabled):
@@ -194,15 +194,19 @@ def _toggle_term_protect(name, enabled):
     http_response, response_data = operation.call(endpoint, **params)
 
     if http_response.status_code == 200:
-        log.info(
+        msg = (
             'Termination protection successfully {0} on {1}'.format(
                 enabled and 'enabled' or 'disabled',
                 name
             )
         )
+        log.info(msg)
+        return msg
     else:
-        log.error(
+        msg = (
             'Bad response from AWS: {0}'.format(
                 http_response.status_code
             )
         )
+        log.error(msg)
+        return msg
