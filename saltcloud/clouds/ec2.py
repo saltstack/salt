@@ -819,8 +819,11 @@ def rename(name, kwargs, call=None):
 
 def destroy(name, call=None):
     '''
-    Wrap core libcloudfuncs destroy method, adding check for termination
-    protection
+    Destroy a node. Will check termination protection and warn if enabled.
+
+    CLI Example::
+
+        salt-cloud --destroy mymachine
     '''
     nodes = list_nodes_full()
     instance_id = nodes[name]['instanceId']
