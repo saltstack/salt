@@ -23,7 +23,7 @@ if setup_dirname != '':
 # This ensures consistent behavior but allows for advanced usage with
 # virtualenv, buildout, and others.
 with_setuptools = False
-if 'USE_SETUPTOOLS' in os.environ:
+if 'USE_SETUPTOOLS' in os.environ or 'pip' in __file__:
     try:
         from setuptools import setup
         from setuptools.command.install import install
