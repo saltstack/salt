@@ -176,6 +176,10 @@ def install(pkgs=None,
 
     if pkgs:
         pkg = pkgs.replace(',', ' ')
+        # It's possible we replaced version-range commas with semicolons so
+        # they would survive the previous line (in the pip.installed state).
+        # Put the commas back in
+        pkg = pkg.replace(';', ',')
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
