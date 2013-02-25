@@ -207,4 +207,16 @@ other aspects of Salt.
     Salt comes with many plugin systems, the functions that are available
     via the salt command are called `Execution Modules`.
 
+Some Functions to Know
+~~~~~~~~~~~~~~~~~~~~~~
 
+Some functions to be familiar with are around basic system management. Functions
+to shell out on minions such as ``cmd.run`` and ``cmd.run_all``:
+
+    # salt \* cmd.run 'ls -l /etc'
+
+The pkg functions will automatically map local system package managers to the
+same salt functions. This means that ``pkg.install`` will wrap to installing
+packages via yum on Red Hat based systems and apt on Debian systems etc.
+
+    # salt \* pkg.install vim
