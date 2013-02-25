@@ -461,6 +461,63 @@ def avail_locations():
     return ret
 
 
+def get_availability_zone(vm_):
+    '''
+    Return the availability zone to use
+    '''
+    avz = None
+    if 'availability_zone' in vm_:
+        avz = vm_['availability_zone']
+    elif 'EC2.availability_zone' in __opts__:
+        avz = __opts__['EC2.availability_zone']
+
+    zones = list_availability_zones()
+
+    if avz is None:
+        # Default to first valid zone
+        for zone in zones.keys():
+            if zones[zone] == 'available':
+                return zone
+    else:
+        # Validate user-specified AZ
+        if avz not in zones.keys():
+            raise SaltException(
+                'The specified availability zone isn\'t valid in this region: '
+                '{0}\n'.format(
+                    avz
+                )
+            )
+
+        # check specified AZ is available
+        elif zones[avz] != 'available':
+            raise SaltException(
+                'The specified availability zone isn\'t currently available: '
+                '{0}\n'.format(
+                    avz
+                )
+            )
+
+    return avz
+
+
+
+def list_availability_zones():
+    '''
+    List all availability zones in the current region
+    '''
+    ret = {}
+
+    params = {'Action': 'DescribeAvailabilityZones',
+              'Filter.0.Name': 'region-name',
+              'Filter.0.Value.0': get_location()}
+    result = query(params)
+
+    for zone in result:
+        ret[zone['zoneName']] = zone['zoneState']
+
+    return ret
+
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -490,6 +547,8 @@ def create(vm_=None, call=None):
         else:
             for (counter, sg) in enumerate(ex_securitygroup):
                 params['SecurityGroup.{0}'.format(counter)] = sg
+
+    params['Placement.AvailabilityZone'] = get_availability_zone(vm_)
 
     if 'delvol_on_destroy' in vm_:
         value = vm_['delvol_on_destroy']
