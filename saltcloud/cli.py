@@ -45,8 +45,8 @@ class SaltCloud(parsers.SaltCloudParser):
         try:
             if self.config['verify_env']:
                 verify_env(
-                    [os.path.dirname(self.config['conf_file'])]
-                    getpass.getuser(),
+                    [os.path.dirname(self.config['conf_file'])],
+                    getpass.getuser()
                 )
                 logfile = self.config['log_file']
                 if logfile is not None and (
