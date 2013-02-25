@@ -155,7 +155,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-    
+
     if not requesturl:
         location = get_location()
         method = 'GET'
@@ -168,15 +168,15 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
         keys = sorted(params.keys())
         values = map(params.get, keys)
         querystring = urllib.urlencode( list(zip(keys,values)) )
-        
+
         uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                       endpoint.encode('utf-8'),
-                                       querystring.encode('utf-8'))
-        
+                                        endpoint.encode('utf-8'),
+                                        querystring.encode('utf-8'))
+
         hashed = hmac.new(key, uri, hashlib.sha256)
         sig = binascii.b2a_base64(hashed.digest())
         params['Signature'] = sig.strip()
-        
+
         querystring = urllib.urlencode(params)
         requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
 
@@ -185,7 +185,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
     response = result.read()
     log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
     result.close()
-    
+
     root = ET.fromstring(response)
     items = root[1]
     if return_root is True:
@@ -196,7 +196,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
             comps = root[item].tag.split('}')
             if comps[1] == setname:
                 items = root[item]
-    
+
     ret = []
     for item in items:
         ret.append(_xml_to_dict(item))
@@ -394,15 +394,6 @@ def securitygroup(vm_):
         'securitygroup', __opts__.get('EC2.securitygroup', 'default')
     )
 
-    # XXX: This code won't get executed. On purpose?
-    securitygroups = vm_.get(
-        'securitygroup', __opts__.get('EC2.securitygroup', 'default')
-    )
-    if not isinstance(securitygroups, list):
-        securitygroup = securitygroups
-        securitygroups = [securitygroup]
-    return securitygroups
-
 
 def ssh_username(vm_):
     '''
@@ -470,6 +461,63 @@ def avail_locations():
     return ret
 
 
+def get_availability_zone(vm_):
+    '''
+    Return the availability zone to use
+    '''
+    avz = None
+    if 'availability_zone' in vm_:
+        avz = vm_['availability_zone']
+    elif 'EC2.availability_zone' in __opts__:
+        avz = __opts__['EC2.availability_zone']
+
+    zones = list_availability_zones()
+
+    if avz is None:
+        # Default to first valid zone
+        for zone in zones.keys():
+            if zones[zone] == 'available':
+                return zone
+    else:
+        # Validate user-specified AZ
+        if avz not in zones.keys():
+            raise SaltException(
+                'The specified availability zone isn\'t valid in this region: '
+                '{0}\n'.format(
+                    avz
+                )
+            )
+
+        # check specified AZ is available
+        elif zones[avz] != 'available':
+            raise SaltException(
+                'The specified availability zone isn\'t currently available: '
+                '{0}\n'.format(
+                    avz
+                )
+            )
+
+    return avz
+
+
+
+def list_availability_zones():
+    '''
+    List all availability zones in the current region
+    '''
+    ret = {}
+
+    params = {'Action': 'DescribeAvailabilityZones',
+              'Filter.0.Name': 'region-name',
+              'Filter.0.Value.0': get_location()}
+    result = query(params)
+
+    for zone in result:
+        ret[zone['zoneName']] = zone['zoneState']
+
+    return ret
+
+
 def create(vm_=None, call=None):
     '''
     Create a single VM from a data dict
@@ -481,7 +529,6 @@ def create(vm_=None, call=None):
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
-    kwargs = {'ssh_key': __opts__['EC2.private_key']}
     params = {'Action': 'RunInstances',
               'MinCount': '1',
               'MaxCount': '1'}
@@ -492,12 +539,16 @@ def create(vm_=None, call=None):
         params['InstanceType'] = vm_['size']
     ex_keyname = keyname(vm_)
     if ex_keyname:
-        kwargs['ex_keyname'] = ex_keyname
         params['KeyName'] = ex_keyname
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
-        kwargs['ex_securitygroup'] = ex_securitygroup
-        params['SecurityGroup.1'] = ex_securitygroup
+        if not isinstance(ex_securitygroup, list):
+            params['SecurityGroup.1'] = ex_securitygroup
+        else:
+            for (counter, sg) in enumerate(ex_securitygroup):
+                params['SecurityGroup.{0}'.format(counter)] = sg
+
+    params['Placement.AvailabilityZone'] = get_availability_zone(vm_)
 
     if 'delvol_on_destroy' in vm_:
         value = vm_['delvol_on_destroy']
@@ -513,12 +564,10 @@ def create(vm_=None, call=None):
         data = query(params, 'instancesSet')
     except Exception as exc:
         err = (
-            'Error creating {0} on EC2\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'Error creating {0} on EC2 when trying to '
             'run the initial deployment: \n{1}').format(
                 vm_['name'], exc
         )
-        sys.stderr.write(err)
         log.error(err)
         return False
 
@@ -770,8 +819,11 @@ def rename(name, kwargs, call=None):
 
 def destroy(name, call=None):
     '''
-    Wrap core libcloudfuncs destroy method, adding check for termination
-    protection
+    Destroy a node. Will check termination protection and warn if enabled.
+
+    CLI Example::
+
+        salt-cloud --destroy mymachine
     '''
     nodes = list_nodes_full()
     instance_id = nodes[name]['instanceId']
@@ -789,6 +841,23 @@ def destroy(name, call=None):
     result = query(params)
     log.info(result)
     pprint.pprint(result)
+
+
+def reboot(name, call=None):
+    '''
+    Reboot a node.
+
+    CLI Example::
+
+        salt-cloud -a reboot mymachine
+    '''
+    nodes = list_nodes_full()
+    instance_id = nodes[name]['instanceId']
+    params = {'Action': 'RebootInstances',
+              'InstanceId.1': instance_id}
+    result = query(params)
+    if result == []:
+        log.info("Complete")
 
 
 def show_image(kwargs, call=None):
@@ -913,7 +982,7 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
         if 'value' in item:
             disable_protect = item['value']
             break
-    
+
     log.log(
         logging.DEBUG if quiet is True else logging.INFO,
         'Termination Protection is {0} for {1}'.format(

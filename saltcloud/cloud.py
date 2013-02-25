@@ -286,7 +286,7 @@ class Cloud(object):
 
     def do_action(self, names, kwargs):
         '''
-        Perform an action which may be specific to this cloud provider
+        Perform an action on a VM which may be specific to this cloud provider
         '''
         pmap = self.map_providers()
 
@@ -321,7 +321,7 @@ class Cloud(object):
 
     def do_function(self, prov, func, kwargs):
         '''
-        Perform an action which may be specific to this cloud provider
+        Perform a function against a cloud provider
         '''
         fun = '{0}.{1}'.format(prov, func)
         if kwargs:
