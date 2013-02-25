@@ -202,11 +202,11 @@
 # Run states when the minion daemon starts. To enable, set startup_states to:
 # 'highstate' -- Execute state.highstate
 # 'sls' -- Read in the sls_list option and execute the named sls files
-# 'top' -- Read top_file option and execute based on that file on the Master 
+# 'top' -- Read top_file option and execute based on that file on the Master
 #startup_states: ''
 #
 # list of states to run when the minion starts up if startup_states is 'sls'
-#sls_list: 
+#sls_list:
 #  - edit.vim
 #  - hyper
 #
@@ -300,9 +300,9 @@
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-#	log_file: /var/log/salt/minion
-#	log_file: file:///dev/log
-#	log_file: udp://loghost:10514
+#log_file: /var/log/salt/minion
+#log_file: file:///dev/log
+#log_file: udp://loghost:10514
 #
 #log_file: /var/log/salt/minion
 #key_logfile: /var/log/salt/key
@@ -323,12 +323,12 @@
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
-# be seen here	http://docs.python.org/library/logging.html#logrecord-attributes
+# be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 #
 # This can be used to control logging levels more specificically.  This
-# example sets the main salt library at the 'warning' level, but sets 
+# example sets the main salt library at the 'warning' level, but sets
 # 'salt.modules' to log at the 'debug' level:
 #   log_granular_levels:
 #     'salt': 'warning',
@@ -379,12 +379,12 @@
 # without informing either party that their connection has been taken away.
 # Enabling TCP Keepalives prevents this from happening.
 #
-# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False) 
+# Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
 # or leave to the OS defaults (-1), on linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
 # How long before the first keepalive should be sent in seconds. Default 300
-# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds 
+# to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds
 # on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
 #tcp_keepalive_idle: 300
 #
@@ -392,8 +392,8 @@
 # to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
 #tcp_keepalive_cnt: -1
 #
-# How often, in seconds, to send keepalives after the first one. Default -1 to 
-# use OS defaults, typically 75 seconds on Linux, see 
+# How often, in seconds, to send keepalives after the first one. Default -1 to
+# use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
 
