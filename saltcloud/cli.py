@@ -96,6 +96,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             exc
                         )
                     )
+                    self.exit(1)
             else:
                 try:
                     query_map = mapper.map_providers(
@@ -106,6 +107,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.error(
                         'There was an error with a map: {0}'.format(exc)
                     )
+                    self.exit(1)
             salt.output.display_output(query_map, '', self.config)
 
         if self.options.list_locations is not None:
@@ -120,6 +122,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error listing locations: {0}'.format(exc)
                 )
+                self.exit(1)
             self.exit(0)
 
         if self.options.list_images is not None:
@@ -132,6 +135,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error listing images: {0}'.format(exc)
                 )
+                self.exit(1)
             self.exit(0)
 
         if self.options.list_sizes is not None:
@@ -144,6 +148,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error listing sizes: {0}'.format(exc)
                 )
+                self.exit(1)
             self.exit(0)
 
         if self.options.destroy and (self.config.get('names', None) or
@@ -170,6 +175,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error destroy machines: {0}'.format(exc)
                 )
+                self.exit(1)
+
             salt.output.display_output(ret, '', self.config)
             self.exit(0)
 
@@ -210,6 +217,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error(
                     'There was an error actioning machines: {0}'.format(exc)
                 )
+                self.exit(1)
 
             salt.output.display_output(ret, '', self.config)
             self.exit(0)
@@ -246,6 +254,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except Exception as exc:
                 log.debug('There was a profile error.', exc_info=True)
                 self.error('There was a profile error: {0}'.format(exc))
+                self.exit(1)
 
             salt.output.display_output(ret, '', self.config)
             self.exit(0)
@@ -254,12 +263,12 @@ class SaltCloud(parsers.SaltCloudParser):
             ret = {}
             if len(mapper.map) == 0:
                 print('No nodes defined in this map')
-                self.exit(0)
+                self.exit(1)
             try:
                 dmap = mapper.map_data()
                 if 'destroy' not in dmap and len(dmap['create']) == 0:
                     print('All nodes in this map already exist')
-                    self.exit(0)
+                    self.exit(1)
 
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
 
@@ -281,6 +290,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except Exception as exc:
                 log.debug('There was a query error.', exc_info=True)
                 self.error('There was a query error: {0}'.format(exc))
+                self.exit(1)
 
             salt.output.display_output(ret, '', self.config)
             self.exit(0)
