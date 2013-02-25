@@ -333,12 +333,16 @@ def create(vm_):
     log.info(
         'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
+    ret = {}
     for key, val in data.__dict__.items():
-        log.info('  {0}: {1}'.format(key, val))
+        ret[key] = val
+        log.debug('  {0}: {1}'.format(key, val))
     volumes = vm_.get('map_volumes')
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
+
+    return ret
 
 
 def create_attach_volumes(volumes, location, data):
@@ -367,6 +371,8 @@ def stop(name, call=None):
     '''
     Stop a node
     '''
+    data = {}
+
     if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
@@ -382,11 +388,15 @@ def stop(name, call=None):
         log.error('Failed to stop node {0}'.format(name))
         log.error(exc)
 
+    return data
+
 
 def start(name, call=None):
     '''
     Start a node
     '''
+    data = {}
+
     if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
@@ -401,6 +411,8 @@ def start(name, call=None):
     except Exception as exc:
         log.error('Failed to start node {0}'.format(name))
         log.error(exc)
+
+    return data
 
 
 def set_tags(name, tags, call=None):
@@ -424,9 +436,9 @@ def set_tags(name, tags, call=None):
 
         # print the new tags- with special handling for renaming of a node
         if 'Name' in tags:
-            get_tags(tags['Name'])
+            return get_tags(tags['Name'])
         else:
-            get_tags(name)
+            return get_tags(name)
     except Exception as exc:
         log.error('Failed to set tags for {0}'.format(name))
         log.error(exc)
@@ -436,6 +448,8 @@ def get_tags(name, call=None):
     '''
     Retrieve tags for a node
     '''
+    data = {}
+
     if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
@@ -451,6 +465,8 @@ def get_tags(name, call=None):
         log.error('Failed to retrieve tags from {0}'.format(name))
         log.error(exc)
 
+    return data
+
 
 def del_tags(name, kwargs, call=None):
     '''
@@ -460,6 +476,8 @@ def del_tags(name, kwargs, call=None):
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
+    ret = {}
+
     if call != 'action':
         print('This action must be called with -a or --action.')
         sys.exit(1)
@@ -476,10 +494,12 @@ def del_tags(name, kwargs, call=None):
     try:
         conn.ex_delete_tags(resource=node, tags=tags)
         log.info('Deleting tags from {0}'.format(name))
-        get_tags(name)
+        ret = get_tags(name)
     except Exception as exc:
         log.error('Failed to delete tags from {0}'.format(name))
         log.error(exc)
+
+    return ret
 
 
 def rename(name, kwargs, call=None):
@@ -518,14 +538,20 @@ def destroy(name):
     Wrap core libcloudfuncs destroy method, adding check for termination
     protection
     '''
+    ret = {}
+
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
     conn = get_conn(location=location)
     libcloudfuncs_destroy = namespaced_function(libcloudfuncs_destroy, globals(), (conn,))
     try:
-        libcloudfuncs_destroy(name, conn)
+        result = libcloudfuncs_destroy(name, conn)
+        ret[name] = result
     except Exception as e:
         if e.message.startswith('OperationNotPermitted'):
             log.info('Failed: termination protection is enabled on {0}'.format(name))
         else:
             raise e
+
+    return ret
+
