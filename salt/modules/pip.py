@@ -175,7 +175,7 @@ def install(pkgs=None,
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
 
     if pkgs:
-        pkg = pkgs.replace(",", " ")
+        pkg = pkgs.replace(',', ' ')
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
@@ -249,19 +249,19 @@ def install(pkgs=None,
             _get_pip_bin(bin_env), editable=editable)
 
     if find_links:
-        if not find_links.startswith("http://"):
+        if not find_links.startswith('http://'):
             raise Exception('\'{0}\' must be a valid url'.format(find_links))
         cmd = '{cmd} --find-links={find_links}'.format(
             cmd=cmd, find_links=find_links)
 
     if index_url:
-        if not index_url.startswith("http://"):
+        if not index_url.startswith('http://'):
             raise Exception('\'{0}\' must be a valid url'.format(index_url))
         cmd = '{cmd} --index-url="{index_url}" '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
-        if not extra_index_url.startswith("http://"):
+        if not extra_index_url.startswith('http://'):
             raise Exception(
                 '\'{0}\' must be a valid url'.format(extra_index_url)
             )
@@ -272,7 +272,7 @@ def install(pkgs=None,
         cmd = '{cmd} --no-index '.format(cmd=cmd)
 
     if mirrors:
-        if not mirrors.startswith("http://"):
+        if not mirrors.startswith('http://'):
             raise Exception('\'{0}\' must be a valid url'.format(mirrors))
         cmd = '{cmd} --use-mirrors --mirrors={mirrors} '.format(
             cmd=cmd, mirrors=mirrors)
@@ -393,7 +393,7 @@ def uninstall(pkgs=None,
     cmd = '{0} uninstall -y '.format(_get_pip_bin(bin_env))
 
     if pkgs:
-        pkg = pkgs.replace(",", " ")
+        pkg = pkgs.replace(',', ' ')
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
@@ -509,9 +509,9 @@ def list(prefix='',
             line, name = line.split('#egg=')
             packages[name] = line
 
-        elif len(line.split("==")) >= 2:
-            name = line.split("==")[0]
-            version = line.split("==")[1]
+        elif len(line.split('==')) >= 2:
+            name = line.split('==')[0]
+            version = line.split('==')[1]
             if prefix:
                 if line.lower().startswith(prefix.lower()):
                     packages[name] = version
