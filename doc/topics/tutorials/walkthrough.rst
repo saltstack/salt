@@ -159,7 +159,7 @@ The easiest way to accept the minion key is to just accept all pending keys:
     minions.
 
 Sending the First Commands
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now that the minion is connected to the master and authenticated, the master 
 can start to command the minion. Salt commands allow for a vast set of
@@ -220,3 +220,70 @@ same salt functions. This means that ``pkg.install`` will wrap to installing
 packages via yum on Red Hat based systems and apt on Debian systems etc.
 
     # salt \* pkg.install vim
+
+Grains
+~~~~~~
+
+Salt uses a system called `Grains` to build up static data about minions. This
+data includes information about the operating system that is running, cpu
+architecture and many more. The grains system is used througout Salt to
+deliver platform data to many components and to users.
+
+Grains can also be statically set, this makes it easy to assign values to
+minions for grouping and managing. A common practice is to assign grains to
+minions to specify what the role or roles a minion might be. These static
+grains can be set in the minion configuration file or via the ``grains.set``
+function.
+
+Targetting
+~~~~~~~~~~
+
+Salt allows for minions to be targeted based on a wide range of criteria.
+The default targeting system uses globular expressions to match minions, hence
+if there are minions named `larry1`, `larry2`, `curly1` and `curly2`, a glob
+of `larry*` will match `larry1` and `larry2`, and a glob of `*1` will match
+`larry1` and `curly1`.
+
+Many other targeting systems can be used other than globs, these systems
+include:
+
+Regular Expressions
+    Target using pcre compliant regular expressions:
+    :doc:`Targeting with Regular Expressions</topics/targeting/pcre>`
+
+Grains
+    Target based on grains data:
+    :doc:`Targeting with Grains</topics/targeting/grains>`
+
+Pillar
+    Target based on pillar data:
+    :doc:`Targeting with Pillar</topics/targeting/pillar>`
+
+IP
+    Target based on ip addr/subnet/range:
+    :doc:`Targeting with ipcidr</topics/targeting/ipcidr>`
+
+Compound
+    Create logic to target based on multiple targets:
+    :doc:`Targeting with Compond</topics/targeting/compound>`
+
+Nodegroup
+    Target with nodegroups:
+    :doc:`Targeting with Nodegroup</topics/targeting/nodegroups>`
+
+The concepts of targets are used on the command line with salt, but also
+function in many other areas as well, including the state system and the
+systems used for acls and user permission restrictions.
+
+Salt States
+===========
+
+Now that the basics are covered the time has come to evaluate `States`.
+Salt `States`, or the `State System` is the component of Salt made for
+configuration management. The State system is a fully functional configuration
+management system which has been designed to be exceptionally powerful while
+sill being simple to use, fast, lightweight, deterministic and with salty
+levels of flexibility.
+
+The state system is already available with a basic salt setup, no additional
+configuration is available, states can be set up immediately without
