@@ -518,17 +518,16 @@ def is_public_ip(ip):
     return True
 
 
-def check_name(name, pattern):
+def check_name(name, safe_chars):
     '''
     Check whether the specified name contains invalid characters
     '''
-    regexp = re.compile(pattern)
-    filtered = ''.join(regexp.findall(name))
-    if name != filtered:
+    regexp = re.compile('[^{0}]'.format(safe_chars))
+    if regexp.search(name):
         raise SaltException(
             '{0} contains characters not supported by this cloud provider. '
             'Valid characters are: {1}'.format(
-                name, pattern
+                name, safe_chars
             )
         )
 
