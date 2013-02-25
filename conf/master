@@ -307,9 +307,9 @@
 #####         Pillar settings        #####
 ##########################################
 # Salt Pillars allow for the building of global data that can be made selectively
-# available to different minions based on minion grain filtering. The Salt 
-# Pillar is laid out in the same fashion as the file server, with environments, 
-# a top file and sls files. However, pillar data does not need to be in the 
+# available to different minions based on minion grain filtering. The Salt
+# Pillar is laid out in the same fashion as the file server, with environments,
+# a top file and sls files. However, pillar data does not need to be in the
 # highstate format, and is generally just key/value pairs.
 
 #pillar_roots:
@@ -393,9 +393,9 @@
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-#	log_file: /var/log/salt/master
-#	log_file: file:///dev/log
-#	log_file: udp://loghost:10514
+#log_file: /var/log/salt/master
+#log_file: file:///dev/log
+#log_file: udp://loghost:10514
 
 #log_file: /var/log/salt/master
 #key_logfile: /var/log/salt/key
@@ -414,7 +414,7 @@
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 # The format of the console logging messages. Allowed formatting options can
-# be seen here	http://docs.python.org/library/logging.html#logrecord-attributes
+# be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
