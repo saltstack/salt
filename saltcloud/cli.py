@@ -86,7 +86,7 @@ class SaltCloud(parsers.SaltCloudParser):
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
-                    query_map = mapper.interpolated_map(
+                    ret = mapper.interpolated_map(
                         query=self.selected_query_option
                     )
                 except Exception as exc:
@@ -101,7 +101,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.exit(1)
             else:
                 try:
-                    query_map = mapper.map_providers(
+                    ret = mapper.map_providers(
                         query=self.selected_query_option
                     )
                 except Exception as exc:
@@ -111,9 +111,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                     self.exit(1)
 
-            salt.output.display_output(query_map, '', self.config)
-
-        if self.options.list_locations is not None:
+        elif self.options.list_locations is not None:
             try:
                 saltcloud.output.double_layer(
                     mapper.location_list(self.options.list_locations)
