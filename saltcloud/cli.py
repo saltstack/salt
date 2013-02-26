@@ -12,6 +12,8 @@ Primary interfaces for the salt-cloud system
 
 # Import python libs
 import os
+import sys
+import getpass
 import logging
 
 # Import salt libs
@@ -20,6 +22,7 @@ import saltcloud.output
 import salt.config
 import salt.output
 import salt.utils
+from salt.utils.verify import verify_env, verify_files
 
 # Import saltcloud libs
 from saltcloud.utils import parsers
@@ -38,6 +41,22 @@ class SaltCloud(parsers.SaltCloudParser):
 
         # Parse shell arguments
         self.parse_args()
+
+        try:
+            if self.config['verify_env']:
+                verify_env(
+                    [os.path.dirname(self.config['conf_file'])],
+                    getpass.getuser()
+                )
+                logfile = self.config['log_file']
+                if logfile is not None and (
+                        not logfile.startswith('tcp://') or
+                        not logfile.startswith('udp://') or
+                        not logfile.startswith('file://')):
+                    # Logfile is not using Syslog, verify
+                    verify_files([logfile], getpass.getuser())
+        except OSError as err:
+            sys.exit(err.errno)
 
         # Setup log file logging
         self.setup_logfile_logger()
@@ -256,7 +275,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     ret = mapper.run_map(dmap)
 
-                if self.config.get('parallel', False) == False:
+                if self.config.get('parallel', False) is False:
                     log.info('Complete')
 
             except Exception as exc:
