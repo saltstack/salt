@@ -129,6 +129,13 @@ def _xml_to_dict(xmltree):
     ''' 
     Convery an XML tree into a dict
     '''
+    if len(xmltree.getchildren()) < 1:
+        name = xmltree.tag
+        if '}' in name:
+            comps = name.split('}')
+            name = comps[1]
+        return {name: xmltree.text}
+
     xmldict = {}
     for item in xmltree:
         name = item.tag
@@ -202,6 +209,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
 
     if return_url is True:
         return ret, requesturl
+
     return ret
 
 
@@ -871,7 +879,7 @@ def show_image(kwargs, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'function':
-        print('This function must be called with -f or --function.')
+        log.error('The show_image function must be called with -f or --function.')
         sys.exit(1)
 
     params = {'ImageId.1': kwargs['image'],
@@ -1115,3 +1123,34 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
 
     return query(requesturl=requesturl)
 
+
+def create_volume(kwargs=None, call=None):
+    '''
+    Create a volume
+    '''
+    if call != 'function':
+        log.error('The create_volume function must be called with '
+                  '-f or --function.')
+        return False
+
+    if not 'zone' in kwargs:
+        log.error('An availability zone must be specified to create a volume.')
+        return False
+
+    if not 'size' in kwargs and not 'snapshot' in kwargs:
+        # This number represents GiB
+        kwargs['size'] = '10'
+
+    params = {'Action': 'CreateVolume',
+              'AvailabilityZone': kwargs['zone']}
+
+    if 'size' in kwargs:
+        params['Size'] = kwargs['size']
+
+    if 'snapshot' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
