@@ -722,6 +722,16 @@ def hostname():
     return grains
 
 
+def append_domain():
+    '''
+    Return append_domain if set
+    '''
+    grain = {}
+    if 'append_domain' in __opts__:
+        grain['append_domain'] = __opts__['append_domain']
+    return grain
+
+
 def path():
     '''
     Return the path
