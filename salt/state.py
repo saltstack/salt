@@ -127,7 +127,7 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(chg[x], dict) for x in iter(chg)]):
+                if all([isinstance(x, dict) for x in chg.values()]):
                     if all([('old' in x and 'new' in x)
                             for x in chg.values()]):
                         # This is the return data from a package install
