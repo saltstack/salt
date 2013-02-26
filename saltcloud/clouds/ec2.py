@@ -1254,3 +1254,26 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
     data = query(params, return_root=True)
     return data
 
+
+def create_keypair(kwargs=None, call=None):
+    '''
+    Create an SSH keypair
+    '''
+    if call != 'function':
+        log.error('The create_volume function must be called with '
+                  '-f or --function.')
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if not 'keyname' in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    params = {'Action': 'CreateKeyPair',
+              'KeyName': kwargs['keyname']}
+
+    data = query(params, return_root=True)
+    return data
+
