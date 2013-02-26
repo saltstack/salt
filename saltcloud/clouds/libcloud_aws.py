@@ -282,8 +282,10 @@ def create(vm_):
                     failures
                 )
             )
-        else:
-            failures = 0
+            continue
+        failures = 0
+        if data.public_ips:
+            break
         log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
     if ssh_interface(vm_) == "private_ips":
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
@@ -298,8 +300,6 @@ def create(vm_):
                     key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
-    if data.public_ips:
-        break
 
     sudo = True
     if 'sudo' in vm_.keys():
