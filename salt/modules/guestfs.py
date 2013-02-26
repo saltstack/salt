@@ -4,6 +4,12 @@ Interact with virtual machine images via libguestfs
 :depends:   - libguestfs
 '''
 
+# Import Python libs
+import os
+import tempfile
+import hashlib
+import random
+
 # Import Salt libs
 import salt.utils
 
@@ -16,15 +22,27 @@ def __virtual__():
     return False
 
 
-def seed(location, id_='', config=None):
+def mount(location, access='rw'):
     '''
-    Seed a vm image before booting it
-
-    CLI Example::
-
-        salt '*' guestfs.seed /tmp/image.qcow2
+    Mount an image
     '''
-    if config is None:
-        config = {}
-    
-    
+    root = os.path.join(
+            tempfile.gettempdir(),
+            'guest',
+            location.lstrip(os.sep).replace('/', '.')
+            )
+    if not os.path.isdir(root):
+        os.makedirs(root)
+    while True:
+        if os.listdir(root):
+            # Stuf is in there, don't use it
+            rand = hashlib.md5(str(random.randint(1, 1000000))).hexdigest()
+            root = os.path.join(
+                tempfile.gettempdir(),
+                'guest',
+                location.lstrip(os.sep).replace('/', '.') + rand
+                )
+        else:
+            break
+    cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)
+    __salt__['cmd.run'](cmd)
