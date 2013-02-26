@@ -2,6 +2,13 @@
 Virtual machine image management tools
 '''
 
+# Import python libs
+import os
+import shutil
+
+# Import salt libs
+import salt.crypt
+
 def mnt_image(location):
     '''
     Mount the named image and return the mount point
