@@ -174,7 +174,7 @@ start with looks like this:
 
     # salt '*' test.ping
 
-The `\*` is the target, which specifies all minions, and `test.ping` tells the
+The ``*`` is the target, which specifies all minions, and `test.ping` tells the
 minion to run the test.ping function. This ``salt`` command will tell all of
 the minions to execute the `test.ping` in parallel and return the result.
 
@@ -298,7 +298,7 @@ configuration is required, states can be set up immediately.
     exeute each state function. Then more logical layers are built on top of
     each other. The high layers of the state system which this tutorial will
     cover consists of everything that needs to be known to use states, the two
-    high layers covered here are the `sls` later and the highest layer
+    high layers covered here are the `sls` layer and the highest layer
     `highstate`.
 
     Again, knowing that there are many layers of data management will help with
