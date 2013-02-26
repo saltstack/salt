@@ -228,7 +228,7 @@ class Cloud(object):
         try:
             output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
 
-            if 'sync_after_install' in self.opts:
+            if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
                     'all', 'modules', 'states', 'grains'):
                     log.error('Bad option for sync_after_install')
@@ -471,7 +471,7 @@ class Map(Cloud):
         '''
         Execute the contents of the VM map
         '''
-        # We are good to go, execute!
+        output = {}
         # Generate the fingerprint of the master pubkey in
         #     order to mitigate man-in-the-middle attacks
         master_pub = self.opts['pki_dir'] + '/master.pub'
@@ -496,6 +496,7 @@ class Map(Cloud):
                     target=lambda: self.create(tvm)
                 ).start()
             else:
-                self.create(tvm)
+                output[name] = self.create(tvm)
         for name in dmap.get('destroy', set()):
-            self.destroy(name)
+            output[name] = self.destroy(name)
+        return output
