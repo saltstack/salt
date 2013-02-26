@@ -50,7 +50,7 @@ up Salt should be as easy as installing Salt via distribution packages on Linux
 or via the Windows installer. The installation documents cover specific platform
 installation in depth:
 
-:doc:`Instalation </topics/installation/index>`
+:doc:`Installation </topics/installation/index>`
 
 Starting Salt
 -------------
