@@ -286,4 +286,159 @@ sill being simple to use, fast, lightweight, deterministic and with salty
 levels of flexibility.
 
 The state system is already available with a basic salt setup, no additional
-configuration is available, states can be set up immediately without
+configuration is required, states can be set up immediately.
+
+
+.. note::
+
+    Before diving into the state system, a brief overview of how states are
+    constructed will make many of the concepts clearer. Salt states are based
+    on data modeling, and build on a low level data structure that is used to
+    exeute each state function. Then more logical layers are built on top of
+    each other. The high layers of the state system which this tutorial will
+    cover consists of everything that needs to be known to use states, the two
+    high layers covered here are the `sls` later and the highest layer
+    `highstate`.
+
+    Again, knowing that there are many layers of data management will help with
+    understanding states, but they never need to be used. Just as understanding
+    how a compiler functions when learning a programming language,
+    understanding what is going on under the hood of a configuration management
+    system will also prove to be a valuable asset.
+
+The First SLS Formula
+---------------------
+
+The state system is built on sls formulas, these formulas are built out in
+files on Salt's file server. To make a very basic sls formula open up a file
+under /srv/salt named vim.sls and get vim installed:
+
+/srv/salt/vim.sls
+.. code-block:: yaml
+
+    vim:
+      pkg.installed
+
+Now install vim on the minions by calling the sls directly:
+
+    # salt \* state.sls vim
+
+This command will invoke the state system and run the named sls which was just
+created "vim".
+
+Now to beef up the vim sls formula a vimrc can be added:
+
+/srv/salt/vim.sls
+.. code-block:: yaml
+
+    vim:
+      pkg.installed
+
+    /etc/vimrc:
+      file.managed:
+        - source: salt://vimrc
+        - mode: 644
+        - user: root
+        - group: root
+
+Now the desired vimrc needs to be coppied into the Salt file server to
+/srv/salt/vimrc, in Salt everything is a file, so no path redirection needs
+to be accounted for. The vimrc file is placed right next to the vim.sls file.
+The same command as above can be executed to all the vim sls formula and now
+include managing the file.
+
+.. note::
+
+    Salt does not need to be restarted/reloaded or have the master manipulated
+    in any way when changing sls formulas, they are instantly available.
+
+Adding Some Depth
+-----------------
+
+Obviously maintaining sls formulas right in the root of the file server will
+not scale out to resonably sized deployments. This is why more depth is
+required. Start by making an nginx formula a better way, make a nginx
+subdirectory and add an init.sls file:
+
+/srv/salt/nginx/init.sls
+.. code-block:: yaml
+
+    nginx:
+      pkg:
+        - installed
+      service:
+        - running
+        - require:
+          - pkg: nginx
+
+A few things are introduced in this sls formula, first is the service statement
+which ensures that the nginx service is running, but the nginx service can't be
+started unless the package is installed, hence the `require`. The `require`
+statement makes sure that the required component is executed before and that
+it results in sucess.
+
+.. note::
+
+    The `require` option belongs to a family of options called `requisites`.
+    Requisites are a powerful component of Salt States, for more information
+    on how requisites work and what is available see:
+    :doc:`Requisites</ref/states/requisites>`
+    Also evaluation ordering is available in Salt as well:
+    :doc:`Ordering States</ref/states/ordering>`
+
+Now this new sls formula has a special name, `init.sls`, when a sls formula is
+named `init.sls` it inherits the name of the directory path that contains it,
+so this formula can be referenced via the following command:
+
+    # salt \*  state.sls nginx
+
+Now that subdirectories can be used the vim.sls formula can be cleaned up, but
+to make things more flexible (and to illistrate another pont of course), move
+the vim.sls and vimrc into a new subdirectory called `edit` and change the
+vim.sls file to reflect the change:
+
+/srv/salt/edit/vim.sls
+.. code-block:: yaml
+
+    vim:
+      pkg.installed
+
+    /etc/vimrc:
+      file.managed:
+        - source: salt://edit/vimrc
+        - mode: 644
+        - user: root
+        - group: root
+
+The only change in the file is fixing the source path for the vimrc file. Now
+the formula is referenced as `edit.vim` because it resides in the edit
+subdirectory. Now the edit subdirectory can contain formulas for emacs, nano,
+joe or any other editor that may need to be deployed.
+
+So Much More!
+=============
+
+This concludes the initial Salt walkthrough, but there are many more things to
+yet learn! These documents will cover important core aspects of Salt:
+
+Pillar
+    Paramaters and minion private data (pillar is a core component of states):
+    :doc:`Pillar</topics/pillar>`
+
+Job Management
+    Information on how Salt manages jobs:
+    :doc:`Job Management</topics/jobs>`
+
+And many more tutorials are also available:
+
+Remote Excution Tutorial
+    :doc:`Remote Execution Tutorial</topics/tutorials/modules>`
+
+Thomas' Original States Tutorial
+    :doc:`How Do I Use Salt States</topics/tutorials/starting_states>`
+
+States Tutorial Series
+    :doc:`States Tutorial</topics/tutorials/states_pt1>`
+
+Standalone Minion
+    :doc:`Standalone Minion</topics/tutorials/standalone_minion>`
