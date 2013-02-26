@@ -129,6 +129,13 @@ def _xml_to_dict(xmltree):
     ''' 
     Convery an XML tree into a dict
     '''
+    if len(xmltree.getchildren()) < 1:
+        name = xmltree.tag
+        if '}' in name:
+            comps = name.split('}')
+            name = comps[1]
+        return {name: xmltree.text}
+
     xmldict = {}
     for item in xmltree:
         name = item.tag
@@ -202,6 +209,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
 
     if return_url is True:
         return ret, requesturl
+
     return ret
 
 
@@ -871,7 +879,7 @@ def show_image(kwargs, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'function':
-        print('This function must be called with -f or --function.')
+        log.error('The show_image function must be called with -f or --function.')
         sys.exit(1)
 
     params = {'ImageId.1': kwargs['image'],
@@ -1114,4 +1122,135 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
     result = query(params, return_root=True)
 
     return query(requesturl=requesturl)
+
+
+def create_volume(kwargs=None, call=None):
+    '''
+    Create a volume
+    '''
+    if call != 'function':
+        log.error('The create_volume function must be called with '
+                  '-f or --function.')
+        return False
+
+    if not 'zone' in kwargs:
+        log.error('An availability zone must be specified to create a volume.')
+        return False
+
+    if not 'size' in kwargs and not 'snapshot' in kwargs:
+        # This number represents GiB
+        kwargs['size'] = '10'
+
+    params = {'Action': 'CreateVolume',
+              'AvailabilityZone': kwargs['zone']}
+
+    if 'size' in kwargs:
+        params['Size'] = kwargs['size']
+
+    if 'snapshot' in kwargs:
+        params['SnapshotId'] = kwargs['snapshot']
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
+def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Attach a volume to an instance
+    '''
+    if call != 'action':
+        log.error('The attach_volume action must be called with '
+                  '-a or --action.')
+        sys.exit(1)
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if name and not instance_id:
+        instances = list_nodes_full()
+        instance_id = instances[name]['instanceId']
+
+    if not name and not instance_id:
+        log.error('Either a name or an instance_id is required.')
+        return False
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    if not 'device' in kwargs:
+        log.error('A device is required (ex. /dev/sdb1).')
+        return False
+
+    params = {'Action': 'AttachVolume',
+              'VolumeId': kwargs['volume_id'],
+              'InstanceId': instance_id,
+              'Device': kwargs['device']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def show_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Show volume details
+    '''
+    if not kwargs:
+        kwargs = {}
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    params = {'Action': 'DescribeVolumes',
+              'VolumeId.1': kwargs['volume_id']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Detach a volume from an instance
+    '''
+    if call != 'action':
+        log.error('The detach_volume action must be called with '
+                  '-a or --action.')
+        sys.exit(1)
+
+    if not kwargs:
+        kwargs = {}
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    params = {'Action': 'DetachVolume',
+              'VolumeId': kwargs['volume_id']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Delete a volume
+    '''
+    if not kwargs:
+        kwargs = {}
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    params = {'Action': 'DeleteVolume',
+              'VolumeId': kwargs['volume_id']}
+
+    data = query(params, return_root=True)
+    return data
 
