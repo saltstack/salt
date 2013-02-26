@@ -1155,6 +1155,7 @@ def recurse(name,
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
+            keep.add(mdest)
 
     keep = list(keep)
     if clean:
