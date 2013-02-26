@@ -50,7 +50,7 @@ up Salt should be as easy as installing Salt via distribution packages on Linux
 or via the Windows installer. The installation documents cover specific platform
 installation in depth:
 
-:doc:`Instalation </topics/installation>`
+:doc:`Instalation </topics/installation/index>`
 
 Starting Salt
 -------------
@@ -117,7 +117,7 @@ configuration file will need to be edited, edit the configuration option
     platforms adhere to this convention, but platforms such as FreeBSD and
     Microsoft Windows place this file in different locations.
 
-/etc/salt/minion:
+`/etc/salt/minion:`
 
 .. code-block:: yaml
 
@@ -172,7 +172,7 @@ The ``salt`` command is comprised of command options, target specification,
 the function to execute, and arguments to the function. A simple command to
 start with looks like this:
 
-    # salt \* test.ping
+    # salt '*' test.ping
 
 The `\*` is the target, which specifies all minions, and `test.ping` tells the
 minion to run the test.ping function. This ``salt`` command will tell all of
@@ -191,12 +191,12 @@ Salt comes with a vast library of functions available for execution, and Salt
 functions are self documenting. To see what functions are available on the
 minions execute the `sys.doc` function:
 
-    # salt \* sys.doc
+    # salt '*' sys.doc
 
 This will display a very large list of available functions and documentation
 on them, this documentation is also available online:
 
-    :doc:`Full List of Execution Modules</ref/modules>`
+    :doc:`Full List of Execution Modules</ref/modules/all/index>`
 
 These functions cover everything from shelling out to package management to
 manipulating database servers. These functions comprise a powerful system
@@ -214,13 +214,13 @@ Some Functions to Know
 Some functions to be familiar with are around basic system management. Functions
 to shell out on minions such as ``cmd.run`` and ``cmd.run_all``:
 
-    # salt \* cmd.run 'ls -l /etc'
+    # salt '*' cmd.run 'ls -l /etc'
 
 The pkg functions will automatically map local system package managers to the
 same salt functions. This means that ``pkg.install`` will wrap to installing
 packages via yum on Red Hat based systems and apt on Debian systems etc.
 
-    # salt \* pkg.install vim
+    # salt '*' pkg.install vim
 
 Grains
 ~~~~~~
@@ -314,7 +314,8 @@ The state system is built on sls formulas, these formulas are built out in
 files on Salt's file server. To make a very basic sls formula open up a file
 under /srv/salt named vim.sls and get vim installed:
 
-/srv/salt/vim.sls
+`/srv/salt/vim.sls`
+
 .. code-block:: yaml
 
     vim:
@@ -322,14 +323,15 @@ under /srv/salt named vim.sls and get vim installed:
 
 Now install vim on the minions by calling the sls directly:
 
-    # salt \* state.sls vim
+    # salt '*' state.sls vim
 
 This command will invoke the state system and run the named sls which was just
 created "vim".
 
 Now to beef up the vim sls formula a vimrc can be added:
 
-/srv/salt/vim.sls
+`/srv/salt/vim.sls`
+
 .. code-block:: yaml
 
     vim:
@@ -361,7 +363,8 @@ not scale out to resonably sized deployments. This is why more depth is
 required. Start by making an nginx formula a better way, make a nginx
 subdirectory and add an init.sls file:
 
-/srv/salt/nginx/init.sls
+`/srv/salt/nginx/init.sls`
+
 .. code-block:: yaml
 
     nginx:
@@ -391,14 +394,15 @@ Now this new sls formula has a special name, `init.sls`, when a sls formula is
 named `init.sls` it inherits the name of the directory path that contains it,
 so this formula can be referenced via the following command:
 
-    # salt \*  state.sls nginx
+    # salt '*'  state.sls nginx
 
 Now that subdirectories can be used the vim.sls formula can be cleaned up, but
 to make things more flexible (and to illistrate another pont of course), move
 the vim.sls and vimrc into a new subdirectory called `edit` and change the
 vim.sls file to reflect the change:
 
-/srv/salt/edit/vim.sls
+`/srv/salt/edit/vim.sls`
+
 .. code-block:: yaml
 
     vim:
@@ -416,6 +420,22 @@ the formula is referenced as `edit.vim` because it resides in the edit
 subdirectory. Now the edit subdirectory can contain formulas for emacs, nano,
 joe or any other editor that may need to be deployed.
 
+Getting Deeper Into States
+--------------------------
+
+Two more in depth states tutorials exist which move much more deeply into states
+functionality, Thomas' original states tutorial covers much more to get off the
+ground with States:
+
+    :doc:`How Do I Use Salt States</topics/tutorials/starting_states>`
+
+The States Tutorial also provides a fantastic introduction to states:
+
+    :doc:`States Tutorial</topics/tutorials/states_pt1>`
+
+These tutorials include much more in depth information including templating
+sls formulas etc.
+
 So Much More!
 =============
 
@@ -424,22 +444,23 @@ yet learn! These documents will cover important core aspects of Salt:
 
 Pillar
     Paramaters and minion private data (pillar is a core component of states):
-    :doc:`Pillar</topics/pillar>`
+    :doc:`Pillar</topics/pillar/index>`
 
 Job Management
     Information on how Salt manages jobs:
-    :doc:`Job Management</topics/jobs>`
+    :doc:`Job Management</topics/jobs/index>`
 
-And many more tutorials are also available:
+A few more tutorials are also available:
 
 Remote Excution Tutorial
     :doc:`Remote Execution Tutorial</topics/tutorials/modules>`
 
-Thomas' Original States Tutorial
-    :doc:`How Do I Use Salt States</topics/tutorials/starting_states>`
-
-States Tutorial Series
-    :doc:`States Tutorial</topics/tutorials/states_pt1>`
-
 Standalone Minion
     :doc:`Standalone Minion</topics/tutorials/standalone_minion>`
+
+This still is only scratching the surface, many components such as the reactor
+and event systems, extending Salt, modular components and more are not covered
+here. For an overview of all Salt features and documentation look at the table
+of contents:
+
+    :doc:`Table Of Contents</contents>`
