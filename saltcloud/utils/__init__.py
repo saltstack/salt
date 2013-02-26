@@ -255,7 +255,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
-                  keep_tmp=False, script_args=None, ssh_timeout=15):
+                  keep_tmp=False, script_args=None, ssh_timeout=15,
+                  display_ssh_output=True):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -276,7 +277,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
             kwargs = {'hostname': host,
                       'port': port,
                       'username': username,
-                      'timeout': ssh_timeout}
+                      'timeout': ssh_timeout,
+                      'display_ssh_output': display_ssh_output}
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 kwargs['key_filename'] = key_filename
@@ -344,6 +346,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     deploy_command += ' -c /tmp/'
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
+
                 root_cmd(deploy_command, tty, sudo, **kwargs)
                 log.debug('Executed command {0}'.format(deploy_command))
 
@@ -434,7 +437,10 @@ def scp_file(dest_path, contents, kwargs):
         cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
     elif 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
-    subprocess.call(cmd, shell=True)
+    proc = subprocess.Popen(cmd, shell=True,
+                            stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE)
+    proc.communicate()
     os.remove(tmppath)
 
 
@@ -464,7 +470,15 @@ def root_cmd(command, tty, sudo, **kwargs):
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
     log.debug('Executing command: {0}'.format(command))
-    return subprocess.call(cmd, shell=True)
+
+    if 'display_ssh_output' in kwargs and kwargs['display_ssh_output']:
+        return subprocess.call(cmd, shell=True)
+    else:
+        proc = subprocess.Popen(cmd, shell=True,
+                                stderr=subprocess.PIPE,
+                                stdout=subprocess.PIPE)
+        proc.communicate()
+        return proc.returncode
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):

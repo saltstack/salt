@@ -629,6 +629,9 @@ def create(vm_=None, call=None):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
         }
+        if 'display_ssh_output' in __opts__:
+            deploy_kwargs['display_ssh_output'] = __opts__['display_ssh_output']
+
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
