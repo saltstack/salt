@@ -1236,3 +1236,21 @@ def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     data = query(params, return_root=True)
     return data
 
+
+def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Delete a volume
+    '''
+    if not kwargs:
+        kwargs = {}
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    params = {'Action': 'DeleteVolume',
+              'VolumeId': kwargs['volume_id']}
+
+    data = query(params, return_root=True)
+    return data
+
