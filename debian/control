@@ -28,6 +28,7 @@ Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends},
          python-yaml,
          python-zmq,
          msgpack-python
+Recommends: dmidecode, pciutils, debconf-utils
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -72,7 +73,6 @@ Package: salt-minion
 Architecture: all
 Depends: ${misc:Depends}, python, python-support, python-pkg-resources,
 Pre-Depends: salt-common (= ${source:Version})
-Recommends: dmidecode, pciutils
 Description: This package represents the client package for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
