@@ -12,8 +12,8 @@ software available to manage computers of almost any kind. I hope you enjoy
 working with Salt and that the software can solve your real world needs!
 
 - Thomas S Hatch
-  Salt creator and chief developer
-  CTO of Salt Stack, Inc.
+- Salt creator and chief developer
+- CTO of Salt Stack, Inc.
 
 
 Getting Started
@@ -47,10 +47,10 @@ Installing Salt
 
 Salt Stack has been made to be very easy to install and get started. Setting
 up Salt should be as easy as installing Salt via distribution packages on Linux
-or via the Windows installer. The installation documents covers specific platform
+or via the Windows installer. The installation documents cover specific platform
 installation in depth:
 
-:doc:`Instalation </topics/instilation>`
+:doc:`Instalation </topics/installation>`
 
 Starting Salt
 -------------
@@ -117,7 +117,8 @@ configuration file will need to be edited, edit the configuration option
     platforms adhere to this convention, but platforms such as FreeBSD and
     Microsoft Windows place this file in different locations.
 
-/etc/salt/minion
+/etc/salt/minion:
+
 .. code-block:: yaml
 
     master: saltmaster.example.com
