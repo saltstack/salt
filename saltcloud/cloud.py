@@ -228,7 +228,7 @@ class Cloud(object):
         try:
             output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
 
-            if 'sync_after_install' in self.opts:
+            if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
                     'all', 'modules', 'states', 'grains'):
                     log.error('Bad option for sync_after_install')
