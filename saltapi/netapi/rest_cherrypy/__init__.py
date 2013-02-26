@@ -71,10 +71,16 @@ import signal
 import os
 import json
 
-# Import third-party libs
-import cherrypy
-import cherrypy.wsgiserver as wsgiserver
-import cherrypy.wsgiserver.ssl_builtin
+# Import CherryPy without traceback so we can provide an intelligent log
+# message in the __virtual__ function
+try:
+    import cherrypy
+    import cherrypy.wsgiserver as wsgiserver
+    import cherrypy.wsgiserver.ssl_builtin
+
+    cpy_error = None
+except ImportError as exc:
+    cpy_error = exc
 
 import yaml
 
@@ -87,18 +93,39 @@ import salt.output
 import saltapi
 
 logger = salt.log.logging.getLogger(__name__)
+cpy_min = '3.2.2'
 
 
 def __virtual__():
-    setting_name = __name__.rsplit('.')[-1]
-    if 'port' in __opts__.get(setting_name, {}):
-        return 'rest'
-    logger.warning(
-        'Not loading \'saltapi.netapi.rest\' since the \'port\' setting under '
-        '{0} is not set.'.format(
-            setting_name
-        )
-    )
+    short_name = __name__.rsplit('.')[-1]
+    mod_opts = __opts__.get(short_name, {})
+
+    if mod_opts:
+        # User has a rest_cherrypy section in config; assume the user wants to
+        # run the module and increase logging severity to be helpful
+
+        # Everything looks good; return the module name
+        if not cpy_error and 'port' in mod_opts:
+            return 'rest'
+
+        # CherryPy wasn't imported; explain why
+        if cpy_error:
+            from distutils.version import LooseVersion as V
+
+            if 'cherrypy' in globals() and V(cherrypy.__version__) < V(cpy_min):
+                error_msg = ("Required version of CherryPy is {0} or "
+                        "greater.".format(cpy_min))
+            else:
+                error_msg = cpy_error
+
+            logger.error("Not loading '%s'. Error loading CherryPy: %s",
+                    __name__, error_msg)
+
+        # Missing port config
+        if not 'port' in mod_opts:
+            logger.error("Not loading '%s'. 'port' not specified in config",
+                    __name__)
+
     return False
 
 
