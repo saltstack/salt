@@ -1154,3 +1154,43 @@ def create_volume(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
+
+
+def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Attach a volume to an instance
+    '''
+    if call != 'action':
+        log.error('The attach_volume action must be called with '
+                  '-a or --action.')
+        sys.exit(1)
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if name and not instance_id:
+        instances = list_nodes_full()
+        instance_id = instances[name]['instanceId']
+
+    if not name and not instance_id:
+        log.error('Either a name or an instance_id is required.')
+        return False
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    if not 'device' in kwargs:
+        log.error('A device is required (ex. /dev/sdb1).')
+        return False
+
+    params = {'Action': 'AttachVolume',
+              'VolumeId': kwargs['volume_id'],
+              'InstanceId': instance_id,
+              'Device': kwargs['device']}
+
+    data = query(params, return_root=True)
+    return data
