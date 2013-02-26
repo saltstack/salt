@@ -441,8 +441,9 @@ def symlink(
 
     force
         If the location of the symlink exists and is not a symlink then the
-        state will fail, set force to True and any file or directory in the way
-        of the symlink file will be deleted to make room for the symlink
+        state will fail. If force is set to True, a backup of the file or directory
+        will be created with a .salt.bak extension. Then the file or directory in the way
+        of the symlink file will be deleted, and the symlink will be created
 
     makedirs
         If the location of the symlink does not already have a parent directory
@@ -488,6 +489,7 @@ def symlink(
     elif os.path.isfile(name):
         # Since it is not a link, and is a file, error out
         if force:
+            shutil.copy(name,name+'.salt.bak')
             os.remove(name)
         else:
             return _error(ret, ('File exists where the symlink {0} should be'
@@ -495,6 +497,7 @@ def symlink(
     elif os.path.isdir(name):
         # It is not a link or a file, it is a dir, error out
         if force:
+            shutil.copytree(name,name+'.salt.bak')
             shutil.rmtree(name)
         else:
             return _error(ret, 'Directory exists where the symlink {0} '
