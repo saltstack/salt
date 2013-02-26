@@ -144,8 +144,7 @@ html_additional_pages = {
 }
 
 html_sidebars = {
-    'ref/**/all/salt.*': [
-        'autosummarysidebar.html',
+    '**': [
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
