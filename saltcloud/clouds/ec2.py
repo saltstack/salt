@@ -1196,12 +1196,30 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     return data
 
 
+def show_volume(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Show volume details
+    '''
+    if not kwargs:
+        kwargs = {}
+
+    if not 'volume_id' in kwargs:
+        log.error('A volume_id is required.')
+        return False
+
+    params = {'Action': 'DescribeVolumes',
+              'VolumeId.1': kwargs['volume_id']}
+
+    data = query(params, return_root=True)
+    return data
+
+
 def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     '''
     Detach a volume from an instance
     '''
     if call != 'action':
-        log.error('The attach_volume action must be called with '
+        log.error('The detach_volume action must be called with '
                   '-a or --action.')
         sys.exit(1)
 
