@@ -2,7 +2,9 @@
 Qemu-img Command Wrapper
 ========================
 
-The qemu 
+The qemu img command is wrapped for specific functions
+
+:depends: qemu-img
 '''
 
 # Import python libs
