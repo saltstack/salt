@@ -1260,7 +1260,7 @@ def create_keypair(kwargs=None, call=None):
     Create an SSH keypair
     '''
     if call != 'function':
-        log.error('The create_volume function must be called with '
+        log.error('The create_keypair function must be called with '
                   '-f or --function.')
         return False
 
@@ -1273,6 +1273,29 @@ def create_keypair(kwargs=None, call=None):
 
     params = {'Action': 'CreateKeyPair',
               'KeyName': kwargs['keyname']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def show_keypair(kwargs=None, call=None):
+    '''
+    Show the details of an SSH keypair
+    '''
+    if call != 'function':
+        log.error('The show_keypair function must be called with '
+                  '-f or --function.')
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if not 'keyname' in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    params = {'Action': 'DescribeKeyPairs',
+              'KeyName.1': kwargs['keyname']}
 
     data = query(params, return_root=True)
     return data
