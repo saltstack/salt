@@ -264,12 +264,28 @@ def create(vm_):
         sys.stderr.write(err)
         log.error(err)
         return False
+
     log.info('Created node {0}'.format(vm_['name']))
     waiting_for_ip = 0
-    while not data.public_ips:
+    failures = 0
+    while True:
         time.sleep(0.5)
         waiting_for_ip += 1
         data = get_node(conn, vm_['name'])
+        if data is None:
+            failures += 1
+            if failures > 3:
+                log.error('Failed to get node data after 3 attempts')
+                return False
+            log.info(
+                'Failed to get node data. Attempts: {0}'.format(
+                    failures
+                )
+            )
+            continue
+        failures = 0
+        if data.public_ips:
+            break
         log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
     if ssh_interface(vm_) == "private_ips":
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
@@ -284,6 +300,7 @@ def create(vm_):
                     key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
+
     sudo = True
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']
