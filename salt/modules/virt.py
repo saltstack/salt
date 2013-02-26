@@ -163,7 +163,6 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
             nic_t = nic_t.replace('%%MAC%%', salt.utils.gen_mac())
         nic_str += nic_t
     data = data.replace('%%NICS%%', nic_str)
-    print(data)
     return data
 
 
