@@ -171,10 +171,10 @@ def force_off(name):
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
         return 'fail'
+    hyper = data.keys()[0]
     if data[hyper][name]['state'] == 'shutdown':
         print('VM {0} is already shutdown'.format(name))
         return'bad state'
-    hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.destroy',
