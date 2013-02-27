@@ -67,6 +67,7 @@ def init(name, cpu, mem, image, hyper=None, seed=True):
     '''
     Initialize a new vm
     '''
+    print('Searching for Hypervisors')
     data = query(hyper, quiet=True)
     # Check if the name is already deployed
     for hyper in data:
@@ -83,6 +84,7 @@ def init(name, cpu, mem, image, hyper=None, seed=True):
     
     client = salt.client.LocalClient(__opts__['conf_file'])
 
+    print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.init',
