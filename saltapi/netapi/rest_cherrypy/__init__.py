@@ -88,10 +88,19 @@ import saltapi
 
 logger = salt.log.logging.getLogger(__name__)
 
+
 def __virtual__():
-    if 'port' in __opts__.get(__name__.rsplit('.')[-1], {}):
+    setting_name = __name__.rsplit('.')[-1]
+    if 'port' in __opts__.get(setting_name, {}):
         return 'rest'
+    logger.warning(
+        'Not loading \'saltapi.netapi.rest\' since the \'port\' setting under '
+        '{0} is not set.'.format(
+            setting_name
+        )
+    )
     return False
+
 
 def salt_token_tool():
     '''
@@ -103,6 +112,7 @@ def salt_token_tool():
     # X-Auth-Token header trumps session cookie
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
+
 
 def salt_auth_tool():
     '''
@@ -120,6 +130,7 @@ def salt_auth_tool():
 
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
+
 
 def wants_html():
     '''
@@ -146,6 +157,7 @@ ct_out_map = (
     ('application/json', json.dumps),
     ('application/x-yaml', yaml.dump),
 )
+
 
 def hypermedia_handler(*args, **kwargs):
     '''
@@ -194,6 +206,7 @@ def hypermedia_handler(*args, **kwargs):
     out = cherrypy.response.processors[best]
     return out(ret)
 
+
 def hypermedia_out():
     '''
     Wrap the normal handler and transform the output from that handler into the
@@ -208,6 +221,7 @@ def hypermedia_out():
     # Alternates: {"paper.1" 0.9 {type text/html} {language en}},
     #          {"paper.2" 0.7 {type text/html} {language fr}},
     #          {"paper.3" 1.0 {type application/postscript} {language en}}
+
 
 def urlencoded_processor(entity):
     '''
@@ -236,6 +250,7 @@ def urlencoded_processor(entity):
     # Finally, make a Low State and put it in request
     cherrypy.request.lowstate = [lowdata]
 
+
 def json_processor(entity):
     '''
     Unserialize raw POST data in JSON format to a Python datastructure.
@@ -248,6 +263,7 @@ def json_processor(entity):
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
+
 def yaml_processor(entity):
     '''
     Unserialize raw POST data in YAML format to a Python datastructure.
@@ -259,6 +275,7 @@ def yaml_processor(entity):
         cherrypy.serving.request.lowstate = yaml.load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
+
 
 def hypermedia_in():
     '''
@@ -282,6 +299,7 @@ def hypermedia_in():
     cherrypy.request.body.default_proc = cherrypy.HTTPError(
             406, 'Content type not supported')
     cherrypy.request.body.processors = ct_in_map
+
 
 class LowDataAdapter(object):
     '''
@@ -419,6 +437,7 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate()),
         }
 
+
 class Minions(LowDataAdapter):
     def GET(self, mid=None):
         '''
@@ -524,6 +543,7 @@ class Minions(LowDataAdapter):
             'return': job_data,
         }]
 
+
 class Jobs(LowDataAdapter):
     def GET(self, jid=None):
         '''
@@ -601,6 +621,7 @@ class Jobs(LowDataAdapter):
         return {
             'return': list(self.exec_lowstate()),
         }
+
 
 class Login(LowDataAdapter):
     '''
@@ -710,6 +731,7 @@ class Login(LowDataAdapter):
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
         raise cherrypy.HTTPRedirect('/', 302)
 
+
 class API(object):
     '''
     Collect configuration and URL map for building the CherryPy app
@@ -765,6 +787,7 @@ class API(object):
 
         conf['global'].update(apiopts)
         return conf
+
 
 def start():
     '''
