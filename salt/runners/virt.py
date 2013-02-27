@@ -63,6 +63,18 @@ def next_hyper():
     return hyper
 
 
+def hyper_info(hyper=None):
+    '''
+    Return information about the hypervisors connected to this master
+    '''
+    data = query(hyper, quiet=True)
+    for id_ in data:
+        if 'vm_info' in data[id_]:
+            data[id_].pop('vm_info')
+    salt.output.display_output(data, 'nested', __opts__)
+    return data
+
+
 def init(name, cpu, mem, image, hyper=None, seed=True):
     '''
     Initialize a new vm
