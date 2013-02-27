@@ -33,7 +33,7 @@ def show():
     '''
     cmd = 'sysctl -a'
     ret = {}
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         if not line or ' = ' not in line:
             continue
         comps = line.split(' = ', 1)
