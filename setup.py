@@ -65,7 +65,7 @@ setup(name=NAME,
                 'saltcloud/clouds',
                 ],
       package_data={
-          'saltcloud': ['deploy/*'],
+          'saltcloud': ['deploy/*.sh'],
           },
       data_files=[('share/man/man1', ['doc/man/salt-cloud.1']),
                   ('share/man/man7', ['doc/man/salt-cloud.7'])
