@@ -5,6 +5,7 @@ Virtual machine image management tools
 # Import python libs
 import os
 import shutil
+import yaml
 
 # Import salt libs
 import salt.crypt
