@@ -69,10 +69,11 @@ def init(name, cpu, mem, image, hyper=None, seed=True):
     '''
     data = query(hyper, quiet=True)
     # Check if the name is already deployed
-    for hyper, vms in data.items():
-        if name in vms:
-            print('Virtual machine {0} is already deployed'.format(name))
-            return 'fail'
+    for hyper in data:
+        if 'vm_info' in data[hyper]:
+            if name in data[hyper]['vm_info']:
+                print('Virtual machine {0} is already deployed'.format(name))
+                return 'fail'
     if hyper:
         if not hyper in data:
             print('Hypervisor {0} was not found'.format(hyper))
