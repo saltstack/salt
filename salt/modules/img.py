@@ -59,6 +59,10 @@ def seed(location, id_='', config=None):
             os.path.join(mpt, 'dev'),
             'udev',
             fstype='devtmpfs')
+    __salt__['mount.mount'](
+            os.path.join(mpt, 'proc'),
+            'proc',
+            fstype='proc')
     # Verify that the boostrap script is downloaded
     bs_ = __salt__['config.gather_bootstrap_script']()
     # Apply the minion config
@@ -84,6 +88,7 @@ def seed(location, id_='', config=None):
             sh_,
             c_cmd)
     __salt__['cmd.run'](cmd)
+    __salt__['mount.umount'](os.path.join(mpt, 'proc'))
     __salt__['mount.umount'](os.path.join(mpt, 'dev'))
     umount_image(mpt)
 

@@ -146,10 +146,10 @@ def start(name):
     if not data:
         print('Failed to find vm {0} to start'.format(name))
         return 'fail'
+    hyper = data.keys()[0]
     if data[hyper][name]['state'] == 'running':
         print('VM {0} is already running'.format(name))
         return 'bad state'
-    hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.start',
