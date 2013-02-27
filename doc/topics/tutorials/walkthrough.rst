@@ -283,7 +283,7 @@ Now that the basics are covered the time has come to evaluate `States`.
 Salt `States`, or the `State System` is the component of Salt made for
 configuration management. The State system is a fully functional configuration
 management system which has been designed to be exceptionally powerful while
-sill being simple to use, fast, lightweight, deterministic and with salty
+still being simple to use, fast, lightweight, deterministic and with salty
 levels of flexibility.
 
 The state system is already available with a basic salt setup, no additional
