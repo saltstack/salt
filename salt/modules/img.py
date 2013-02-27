@@ -42,7 +42,6 @@ def umount_image(mnt):
     __salt__['mount.umount'](mnt)
 
 
-
 def seed(location, id_='', config=None):
     '''
     Make sure that the image at the given location is mounted, salt is
