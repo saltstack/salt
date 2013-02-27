@@ -805,7 +805,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Build a list of keys to be deleted
     todelete = []
     for key in kwargs.keys():
-        if not kwargs[key]:
+        if kwargs[key] != 0 and not kwargs[key]:
             del kwargs[key]
             todelete.append(key)
 
