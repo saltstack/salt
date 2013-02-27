@@ -82,7 +82,7 @@ def seed(location, id_='', config=None):
     with open(os.path.join(mpt_tmp, 'minion'), 'w+') as fp_:
         fp_.write(yaml.dump(config, default_flow_style=False))
     # Generate the chroot command
-    c_cmd = 'sh /tmp/bootstrap.sh -c'
+    c_cmd = 'sh /tmp/bootstrap.sh -c /tmp'
     cmd = 'chroot {0} {1} -c \'{2}\''.format(
             mpt,
             sh_,
