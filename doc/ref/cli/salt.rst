@@ -35,7 +35,7 @@ Options
     timeout number specifes how long the command line client will wait to
     query the minions and check on running jobs.
 
-.. option:: -s STATIC, --static=STATIC
+.. option:: -s, --static
 
     By default as of version 0.9.8 the salt command returns data to the
     console as it is received from minions, but previous releases would return
