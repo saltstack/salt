@@ -153,14 +153,17 @@ class SREQ(object):
             polled = self.poller.poll(timeout * 1000)
             tried += 1
             if polled:
-                break
+                ret = self.serial.loads(self.socket.recv())
+                self.poller.unregister(self.socket)
+                return ret
             elif tried >= tries:
+                self.poller.unregister(self.socket)
                 raise SaltReqTimeoutError(
                     'Waited {0} seconds'.format(
                         timeout * tried
                     )
                 )
-        return self.serial.loads(self.socket.recv())
+        return None
 
     def send_auto(self, payload):
         '''
