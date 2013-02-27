@@ -203,6 +203,9 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
+        32-bit packages can be installed on 64-bit systems by appending
+        ``.i686`` to the end of the package name.
+
         CLI Example::
             salt '*' pkg.install <package name>
 
@@ -250,7 +253,7 @@ def install(name=None,
         or local path to the package.
 
         CLI Example::
-            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
     Returns a dict containing the new package names and versions::
