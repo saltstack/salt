@@ -176,7 +176,7 @@ Salt is many splendid things.
     A tutorial covering how to properly firewall a Salt Master server.
 
 :doc:`Scheduling Executions (like states)<topics/jobs/schedule>`
-    The schedule system in Salt allows for eecutions to be run of all sorts
+    The schedule system in Salt allows for executions to be run of all sorts
     from the master or minion at automatic intervals.
 
 :doc:`Network topology <ref/topology>`
