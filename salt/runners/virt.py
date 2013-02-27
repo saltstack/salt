@@ -182,7 +182,7 @@ def force_off(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Powered off VM {0}'.format())
+    print('Powered off VM {0}'.format(name))
     return 'good'
 
 
