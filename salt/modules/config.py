@@ -4,6 +4,8 @@ Return config information
 
 # Import python libs
 import re
+import os
+import urllib
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
