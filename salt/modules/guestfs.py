@@ -46,3 +46,4 @@ def mount(location, access='rw'):
             break
     cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)
     __salt__['cmd.run'](cmd)
+    return root
