@@ -3,20 +3,22 @@ CLI entry-point for salt-api
 '''
 # Import salt libs
 from salt.utils.parsers import (
-        ConfigDirMixIn,
-        DaemonMixIn,
-        LogLevelMixIn,
-        OptionParser,
-        OptionParserMeta,
-        PidfileMixin)
+    ConfigDirMixIn,
+    DaemonMixIn,
+    LogLevelMixIn,
+    MergeConfigMixIn,
+    OptionParser,
+    OptionParserMeta,
+    PidfileMixin)
 
 # Import salt-api libs
 import saltapi.client
 import saltapi.config
 import saltapi.version
 
+
 class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
-        DaemonMixIn):
+              DaemonMixIn, MergeConfigMixIn):
     '''
     The cli parser object used to fire up the salt api system.
     '''
