@@ -143,8 +143,15 @@ html_additional_pages = {
     '404': '404.html',
 }
 
+html_default_sidebars = [
+    'localtoc.html',
+    'relations.html',
+    'sourcelink.html',
+    'searchbox.html',
+]
 html_sidebars = {
-    '**': [
+    'ref/**/all/salt.*': [
+        'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
