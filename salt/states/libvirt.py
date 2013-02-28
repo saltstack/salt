@@ -2,6 +2,10 @@
 Manage libvirt certs
 '''
 
+# Import python libs
+import os
+
+
 def keys(name, basepath='/etc/pki'):
     '''
     Manage libvirt keys
@@ -19,7 +23,7 @@ def keys(name, basepath='/etc/pki'):
     pillar = __salt__['pillar.ext']({'libvirt': '_'})
     paths = {
             'serverkey': os.path.join(
-                basebath,
+                basepath,
                 'libvirt',
                 'private',
                 'serverkey.pem'),
@@ -44,8 +48,8 @@ def keys(name, basepath='/etc/pki'):
         p_key = 'libvirt.{0}.pem'.format(key)
         if not p_key in pillar:
             continue
-        if not os.path.isdir(os.path.basename(paths[key])):
-            os.makedirs(os.path.basename(paths[key]))
+        if not os.path.isdir(os.path.dirname(paths[key])):
+            os.makedirs(os.path.dirname(paths[key]))
         if os.path.isfile(paths[key]):
             with open(paths[key], 'r') as fp_:
                 if not fp_.read() == pillar[p_key]:
