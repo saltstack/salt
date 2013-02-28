@@ -16,6 +16,9 @@ def ext_pillar(pillar, command):
             __opts__['pki_dir'],
             'libvirt',
             __grains__['id'])
+    cacert = os.path.join(__opts__['pki_dir'],
+            'libvirt',
+            'cacert.pem')
     if not os.path.isdir(key_dir):
         # No keys have been generated
         gen_hyper_keys()
@@ -26,6 +29,8 @@ def ext_pillar(pillar, command):
         fn_ = os.path.join(key_dir, key)
         with open(fn_, 'r') as fp_:
             ret['libvirt.{0}'.format(key)] = fp_.read()
+    with open(cacert, 'r') as fp_:
+        ret['libvirt.cacert.pem'] = fp_.read()
     return ret
 
 
@@ -69,7 +74,8 @@ def gen_hyper_keys(
     if not os.path.isfile(srvinfo):
         with open(srvinfo, 'w+') as fp_:
             infodat = ('organization = salted\ncn = {0}\ntls_www_server'
-                       '\nencryption_key\nsigning_key').format(
+                       '\nencryption_key\nsigning_key'
+                       '\ndigitalSignature').format(
                                __grains__['fqdn'])
             fp_.write(infodat)
     if not os.path.isfile(priv):
