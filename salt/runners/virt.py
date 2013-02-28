@@ -2,6 +2,10 @@
 Control virtual machines via Salt
 '''
 
+# Import python libs
+import os
+import subprocess
+
 # Import Salt libs
 import salt.client
 import salt.output
@@ -24,6 +28,68 @@ def _determine_hyper(data):
             bestmem = comps['freemem']
             hyper = hv_
     return hyper
+
+
+def gen_hyper_keys(
+        country='US',
+        state='Utah',
+        locality='Salt Lake City',
+        organization = 'Salted'):
+    '''
+    Generate the keys to be used by libvirt hypervisors, this routine gens
+    the keys and applies them to the pillar for the hypervisor minions
+    '''
+    key_dir = os.path.join(
+            __opts__['pki_dir'],
+            'master',
+            'libvirt')
+    if not os.path.isdir(key_dir):
+        os.makedir(key_dir)
+    cakey = os.path.join(key_dir, 'cakey.pem')
+    cacert = os.path.join(key_dir, 'cacert.pem')
+    cainfo = os.path.join(key_dir, 'ca.info')
+    if not os.path.isfile(cainfo):
+        with open(cainfo, 'w+') as fp_:
+            fp_.write('cn = salted\nca\ncert_signing_key')
+    if not os.path.isfile(cakey):
+        subprocess.call(
+                'certtool --generate-privkey > {0}'.format(cakey),
+                shell=True)
+    if not os.path.isfile(cacert):
+        subprocess.call('certtool --generate-self-signed --load-privkey {0} --template {1} --outfile {2}'.format(cakey, cainfo, cacert), shell=True)
+    hypers = set()
+    for info in client.cmd_iter('virtual:physical', 'virt.freecpu', expr_form='grain'):
+        if not info:
+            continue
+        if not isinstance(info, dict):
+            continue
+        hypers.add(data.keys()[0])
+    for grains in client.cmd_iter(list(hypers), 'grains.items', expr_form='list'):
+        sub_dir = os.path.join(key_dir, grains['id'])
+        if not os.path.isdir(sub_dir):
+            os.makedirs(sub_dir)
+        priv = os.path.join(sub_dir, 'serverkey.pem')
+        cert = os.path.join(sub_dir, 'servercert.pem')
+        srvinfo = os.path.join(sub_dir, 'server.info')
+        cpriv = os.path.join(sub_dir, 'clientkey.pem')
+        ccert = os.path.join(sub_dir, 'clientcert.pem')
+        clientinfo = os.path.join(sub_dir, 'client.info')
+        if not os.path.isfile(srvinfo):
+            with open(srvinfo, 'w+') as fp_:
+                fp_.write('organization = salted\ncn = {0}\ntls_www_server\nencryption_key\nsigning_key'.format(grains['fqdn']))
+        if not os.path.isfile(priv):
+            subprocess.call('certtool --generate-privkey > {0}'.format(priv), shell=True)
+        if not os.path.isfile(cert):
+            cmd = 'certtool --generate-certificate --load-privkey {0} --load-ca-certificate {1} --load-ca-privkey {2} --template {3} --outfile {4}'.format(priv, cacert, cakey, srvinfo, cert)
+            subprocess.call(cmd, shell=True)
+        if not os.path.isfile(clientinfo):
+            with open(clientinfo, 'w+') as fp_:
+                fp_.write('country = {0}\nstate = {1}\nlocality = {2}\norganization = {3}\ncn = {4}\ntls_www_client\nencryption_key\nsigning_key'.format(country, state, locality, organization, grains['fqdn']))
+        if not os.path.isfile(cpriv):
+            subprocess.call('certtool --generate-privkey > {0}'.format(cpriv), shell=True)
+        if not os.path.isfile(ccert):
+            cmd = 'certtool --generate-certificate --load-privkey clientkey.pem --load-ca-certificate cacert.pem --load-ca-privkey cakey.pem --template client.info --outfile clientcert.pem'.format(cpriv, cacert, cakey, clientinfo, ccert)
+            subprocess.call(cmd, shell=True)
 
 
 def query(hyper=None, quiet=False):
