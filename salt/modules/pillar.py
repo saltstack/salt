@@ -2,6 +2,9 @@
 Extract the pillar data for this minion
 '''
 
+# Import third party libs
+import yaml
+
 # Import salt libs
 import salt.pillar
 
@@ -62,3 +65,23 @@ def raw(key=''):
         ret = __pillar__
 
     return ret
+
+
+def ext(external):
+    '''
+    Generate the pillar and apply an explicit external pillar
+    '''
+    external = yaml.load(external)
+    pillar = salt.pillar.get_pillar(
+            __opts__,
+            __grains__,
+            __opts__['id'],
+            __opts__['environment'],
+            external)
+
+    compiled_pillar = pillar.compile_pillar()
+
+    ret = compiled_pillar
+
+    return ret
+

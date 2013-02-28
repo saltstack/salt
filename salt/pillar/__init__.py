@@ -18,14 +18,14 @@ from salt.utils.dictupdate import update
 
 log = logging.getLogger(__name__)
 
-def get_pillar(opts, grains, id_, env=None):
+def get_pillar(opts, grains, id_, env=None, ext=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
     return {
             'remote': RemotePillar,
             'local': Pillar
-            }.get(opts['file_client'], Pillar)(opts, grains, id_, env)
+            }.get(opts['file_client'], Pillar)(opts, grains, id_, env, ext)
 
 
 class RemotePillar(object):
