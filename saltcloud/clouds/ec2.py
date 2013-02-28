@@ -127,7 +127,7 @@ if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
 
 def _xml_to_dict(xmltree):
     ''' 
-    Convery an XML tree into a dict
+    Convert an XML tree into a dict
     '''
     if len(xmltree.getchildren()) < 1:
         name = xmltree.tag
