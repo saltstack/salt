@@ -71,7 +71,8 @@ def ext(external):
     '''
     Generate the pillar and apply an explicit external pillar
     '''
-    external = yaml.load(external)
+    if isinstance(external, basestring):
+        external = yaml.load(external)
     pillar = salt.pillar.get_pillar(
             __opts__,
             __grains__,
