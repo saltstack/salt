@@ -11,6 +11,8 @@ import os
 import shutil
 import subprocess
 import functools
+import sys
+import json
 
 # Import salt libs
 import salt.utils
@@ -184,6 +186,22 @@ def _run(cmd,
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
+        try:
+            # Getting the environment for the runas user
+            # There must be a better way to do this.
+            env_cmd = ('su - {0} -c "{1} -c \'import os, json;'
+                       'print(json.dumps(os.environ.__dict__))\'"').format(
+                               runas, sys.executable)
+            env = json.loads(
+                    subprocess.Popen(
+                        env_cmd, 
+                        shell=True, 
+                        stdout=subprocess.PIPE
+                        ).communicate()[0])['data']
+        except ValueError:
+            msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
+            raise CommandExecutionError(msg)
+
 
     if not quiet:
         # Put the most common case first
