@@ -21,6 +21,10 @@ set in the main cloud config:
     # The location of the private key which corresponds to the keyname
     EC2.private_key: /root/default.pem
 
+    # Be default, service_url is set to amazonaws.com. If you are using this
+    # driver for something other than Amazon EC2, change it here:
+    EC2.service_url: amazonaws.com
+
 '''
 
 # Import python libs
@@ -160,12 +164,16 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
           return_root=False):
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
+    if 'EC2.service_url' in __opts__:
+        service_url = __opts__['EC2.service_url']
+    else:
+        service_url = 'amazonaws.com'
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
     if not requesturl:
         location = get_location()
         method = 'GET'
-        endpoint = 'ec2.{0}.amazonaws.com'.format(location)
+        endpoint = 'ec2.{0}.{1}'.format(location, service_url)
         params['AWSAccessKeyId'] = '{0}'.format(keyid)
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
