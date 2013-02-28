@@ -344,7 +344,7 @@ Now to beef up the vim sls formula a vimrc can be added:
         - user: root
         - group: root
 
-Now the desired vimrc needs to be coppied into the Salt file server to
+Now the desired vimrc needs to be copied into the Salt file server to
 /srv/salt/vimrc, in Salt everything is a file, so no path redirection needs
 to be accounted for. The vimrc file is placed right next to the vim.sls file.
 The same command as above can be executed to all the vim sls formula and now
