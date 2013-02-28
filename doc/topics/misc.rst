@@ -29,7 +29,6 @@ This has also been tested to work with pipes, if needed:
 
 Sync After Install
 ==================
-
 Salt allows users to create custom modules, grains and states which can be 
 synchronised to minions to extend Salt with further functionality.
 
@@ -79,7 +78,6 @@ profile or map:
 
 Delete SSH Keys
 ===============
-
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
 to the known_hosts file for the user that ran the salt-cloud command. When an
 instance is deployed, a cloud provider generally recycles the IP address for
@@ -109,3 +107,14 @@ can be added:
 For those wondering why /tmp/ was used instead of /root/, this had to be done
 for images which require the use of sudo, and therefore do not allow remote
 root logins, even for file transfers (which makes /root/ unavailable).
+
+Hide Output From Minion Install
+===============================
+By default Salt Cloud will stream the output from the minion deploy script 
+directly to STDOUT. Although this can been very useful, in certain cases you 
+may wish to switch this off. The following config option is there to enable or 
+disable this output:
+
+.. code-block:: yaml
+
+    display_ssh_output: False

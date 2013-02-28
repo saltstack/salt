@@ -252,12 +252,12 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.config.get('map', None) and self.selected_query_option is None:
             if len(mapper.map) == 0:
-                print('No nodes defined in this map')
+                sys.stderr.write('No nodes defined in this map')
                 self.exit(1)
             try:
                 dmap = mapper.map_data()
                 if 'destroy' not in dmap and len(dmap['create']) == 0:
-                    print('All nodes in this map already exist')
+                    sys.stderr.write('All nodes in this map already exist')
                     self.exit(1)
 
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
