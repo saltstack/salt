@@ -43,7 +43,7 @@ def is_installed():
     return __salt__['cmd.has_exec']('/usr/local/rvm/bin/rvm')
 
 
-def install():
+def install(runas=None):
     '''
     Install RVM system wide.
 
@@ -56,7 +56,7 @@ def install():
     installer = 'https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer'
     return 0 == __salt__['cmd.retcode'](
         # the RVM installer automatically does a multi-user install when it is invoked with root privileges
-        'curl -s {installer} | bash -s stable'.format(installer=installer))
+        'curl -s {installer} | bash -s stable'.format(installer=installer), runas=runas)
 
 
 def install_ruby(ruby, runas=None):
