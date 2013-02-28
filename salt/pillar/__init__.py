@@ -32,9 +32,10 @@ class RemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, env):
+    def __init__(self, opts, grains, id_, env, ext=None):
         self.opts = opts
         self.opts['environment'] = env
+        self.ext = ext
         self.grains = grains
         self.id_ = id_
         self.serial = salt.payload.Serial(self.opts)
@@ -50,6 +51,8 @@ class RemotePillar(object):
                 'env': self.opts['environment'],
                 'ver': '2',
                 'cmd': '_pillar'}
+        if self.ext:
+            load['ext'] = self.ext
         ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
@@ -61,9 +64,9 @@ class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
     '''
-    def __init__(self, opts, grains, id_, env):
+    def __init__(self, opts, grains, id_, env, ext=None):
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, id_, env)
+        self.opts = self.__gen_opts(opts, grains, id_, env, ext)
         self.client = salt.fileclient.get_file_client(self.opts)
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
@@ -74,7 +77,7 @@ class Pillar(object):
         self.rend = salt.loader.render(self.opts, self.functions)
         self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
 
-    def __gen_opts(self, opts_in, grains, id_, env=None):
+    def __gen_opts(self, opts_in, grains, id_, env=None, ext=None):
         '''
         The options need to be altered to conform to the file client
         '''
@@ -91,6 +94,11 @@ class Pillar(object):
             opts['state_top'] = os.path.join('salt://', opts['state_top'][1:])
         else:
             opts['state_top'] = os.path.join('salt://', opts['state_top'])
+        if ext:
+            if 'ext_pillar'  in opts:
+                opts['ext_pillar'].append(ext)
+            else:
+                opts['ext_pillar'].append(ext)
         return opts
 
     def _get_envs(self):
@@ -329,7 +337,12 @@ class Pillar(object):
                         ext = self.ext_pillars[key](pillar, val)
                     update(pillar, ext)
                 except Exception as exc:
-                    log.exception('Failed to load ext_pillar {0}: {1}'.format(key, exc))
+                    log.exception(
+                            'Failed to load ext_pillar {0}: {1}'.format(
+                                key,
+                                exc
+                                )
+                            )
         return pillar
 
     def compile_pillar(self):
