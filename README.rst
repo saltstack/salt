@@ -8,6 +8,7 @@ providers. Currently supported providers are:
 .. code-block:: yaml
 
     - Amazon EC2
+    - Eucalyptus (using EC2)
     - GoGrid
     - HP Cloud (using OpenStack)
     - Joyent
