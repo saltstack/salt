@@ -4,11 +4,17 @@ Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 
 # Import python libs
 import re
+import os
 
 __opts__ = {
     'rvm.runas': None,
 }
 
+def _get_rvm_location(runas=None):
+    if runas:
+        rvmpath = '~{0}/.rvm/bin/rvm'.format(runas)
+        return os.path.expanduser(rvmpath)
+    return '/usr/local/rvm/bin/rvm'
 
 def _rvm(command, arguments='', runas=None):
     if not runas:
@@ -17,8 +23,8 @@ def _rvm(command, arguments='', runas=None):
         return False
 
     ret = __salt__['cmd.run_all'](
-        '/usr/local/rvm/bin/rvm {command} {arguments}'.
-        format(command=command, arguments=arguments),
+        '{rvmpath} {command} {arguments}'.
+        format(rvmpath=_get_rvm_location(runas), command=command, arguments=arguments),
         runas=runas)
     if ret['retcode'] == 0:
         return ret['stdout']
@@ -32,7 +38,7 @@ def _rvm_do(ruby, command, runas=None):
                 runas=runas)
 
 
-def is_installed():
+def is_installed(runas=None):
     '''
     Check if RVM is installed.
     
@@ -40,10 +46,10 @@ def is_installed():
 
         salt '*' rvm.is_installed
     '''
-    return __salt__['cmd.has_exec']('/usr/local/rvm/bin/rvm')
+    return __salt__['cmd.has_exec'](_get_rvm_location(runas))
 
 
-def install():
+def install(runas=None):
     '''
     Install RVM system wide.
 
@@ -56,7 +62,7 @@ def install():
     installer = 'https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer'
     return 0 == __salt__['cmd.retcode'](
         # the RVM installer automatically does a multi-user install when it is invoked with root privileges
-        'curl -s {installer} | bash -s stable'.format(installer=installer))
+        'curl -s {installer} | bash -s stable'.format(installer=installer), runas=runas)
 
 
 def install_ruby(ruby, runas=None):
