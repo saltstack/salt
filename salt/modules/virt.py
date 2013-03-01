@@ -96,7 +96,7 @@ def _get_migrate_command():
     '''
     Returns the command shared by the differnt migration types
     '''
-    return 'virsh migrate --live --persistent --undefinesource '
+    return 'virsh migrate --p2p --tunnelled --live --persistent --undefinesource '
 
 
 def _get_target(target, ssh):
