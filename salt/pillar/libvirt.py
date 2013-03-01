@@ -92,7 +92,8 @@ def gen_hyper_keys(
         with open(clientinfo, 'w+') as fp_:
             infodat = ('country = {0}\nstate = {1}\nlocality = '
                        '{2}\norganization = {3}\ncn = {4}\n'
-                       'tls_www_client\nencryption_key\nsigning_key'
+                       'tls_www_client\nencryption_key\nsigning_key\n'
+                       'digitalSignature'
                        ).format(
                                country,
                                state,
