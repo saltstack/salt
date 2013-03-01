@@ -124,7 +124,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
                 <disk type='file' device='disk'>
                         <source file='%%VDA%%'/>
                         <target dev='vda' bus='virtio'/>
-                        <driver name='qemu' type='%%DISKTYPE%%' cache='writeback' io='native'/>
+                        <driver name='qemu' type='%%DISKTYPE%%' cache='none' io='native'/>
                 </disk>
                 %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
