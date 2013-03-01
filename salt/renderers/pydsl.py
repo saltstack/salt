@@ -1,4 +1,6 @@
 '''
+A Python-based DSL
+
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
 :platform: all
