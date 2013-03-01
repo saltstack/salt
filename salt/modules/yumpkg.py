@@ -94,16 +94,10 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    # Force input to be a list so below loop works
-    if not isinstance(old, list):
-        old = [old]
-    if not isinstance(new, list):
-        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
             pkgs.append(pkg)
-
     return pkgs
 
 
@@ -224,10 +218,13 @@ def list_pkgs():
     ret = {}
     yb = yum.YumBase()
     for p in yb.rpmdb:
+        name = p.name
+        if __grains__.get('cpuarch', '') == 'x86_64' and p.arch == 'i686':
+            name += '.i686'
         pkgver = p.version
         if p.release:
             pkgver += '-{0}'.format(p.release)
-        __salt__['pkg_resource.add_pkg'](ret, p.name, pkgver)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
     __salt__['pkg_resource.sort_pkglist'](ret)
     return ret
 
@@ -276,7 +273,7 @@ def group_install(name=None,
         The names of multiple packages which are to be installed.
 
         CLI Example::
-    
+
             salt '*' pkg.groupinstall groups='["Group 1", "Group 2"]'
 
     skip
@@ -285,7 +282,7 @@ def group_install(name=None,
         be installed.
 
         CLI Examples::
-    
+
             salt '*' pkg.groupinstall 'My Group' skip='["foo", "bar"]'
 
     include
@@ -295,7 +292,7 @@ def group_install(name=None,
         are not members of the specified groups, they will still be installed.
 
         CLI Examples::
-    
+
             salt '*' pkg.groupinstall 'My Group' include='["foo", "bar"]'
 
     other arguments
@@ -350,6 +347,9 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
+        32-bit packages can be installed on 64-bit systems by appending
+        ``.i686`` to the end of the package name.
+
         CLI Example::
             salt '*' pkg.install <package name>
 
@@ -397,7 +397,7 @@ def install(name=None,
         or local path to the package.
 
         CLI Example::
-            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
     Returns a dict containing the new package names and versions::
@@ -456,21 +456,30 @@ def install(name=None,
         return {}
 
     try:
-        for target in pkg_params:
+        for pkgname in pkg_params:
             if pkg_type == 'file':
                 log.info(
-                    'Selecting "{0}" for local installation'.format(target)
+                    'Selecting "{0}" for local installation'.format(pkgname)
                 )
-                installed = yumbase.installLocal(target)
+                installed = yumbase.installLocal(pkgname)
                 # if yum didn't install anything, maybe its a downgrade?
                 log.debug('Added {0} transactions'.format(len(installed)))
-                if len(installed) == 0 and target not in old.keys():
+                if len(installed) == 0 and pkgname not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    yumbase.downgradeLocal(target)
+                    yumbase.downgradeLocal(pkgname)
             else:
-                version = pkg_params[target]
+                version = pkg_params[pkgname]
                 if version is not None:
-                    target = '{0}-{1}'.format(target, version)
+                    if __grains__.get('cpuarch', '') == 'x86_64' \
+                            and pkgname.endswith('.i686'):
+                        # Remove '.i686' from pkgname
+                        pkgname = pkgname[:-5]
+                        arch = '.i686'
+                    else:
+                        arch = ''
+                    target = '{0}-{1}{2}'.format(pkgname, version, arch)
+                else:
+                    target = pkgname
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
                 installed = yumbase.install(pattern=target)
@@ -553,11 +562,17 @@ def remove(pkgs, **kwargs):
     yumbase = yum.YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
     pkgs = pkgs.split(',')
-    old = version(*pkgs)
+    old = list_pkgs()
 
     # same comments as in upgrade for remove.
     for pkg in pkgs:
-        yumbase.remove(name=pkg)
+        if __grains__.get('cpuarch', '') == 'x86_64' \
+                and pkg.endswith('.i686'):
+            pkg = pkg[:-5]
+            arch = 'i686'
+        else:
+            arch = None
+        yumbase.remove(name=pkg, arch=arch)
 
     log.info('Resolving dependencies')
     yumbase.resolveDeps()
@@ -567,7 +582,7 @@ def remove(pkgs, **kwargs):
     yumlogger.log_accumulated_errors()
     yumbase.closeRpmDB()
 
-    new = version(*pkgs)
+    new = list_pkgs()
 
     return _list_removed(old, new)
 
@@ -805,7 +820,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Build a list of keys to be deleted
     todelete = []
     for key in kwargs.keys():
-        if not kwargs[key]:
+        if kwargs[key] != 0 and not kwargs[key]:
             del kwargs[key]
             todelete.append(key)
 
@@ -949,7 +964,6 @@ def file_list(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_list'](*packages)
-
 
 
 def file_dict(*packages):

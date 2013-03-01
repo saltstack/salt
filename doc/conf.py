@@ -125,8 +125,12 @@ extlinks = {
 
 
 ### HTML options
-html_theme = 'default'
+if on_rtd:
+    html_theme = 'default'
+else:
+    html_theme = 'saltstack'
 
+html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
 
@@ -139,9 +143,15 @@ html_additional_pages = {
     '404': '404.html',
 }
 
+html_default_sidebars = [
+    'localtoc.html',
+    'relations.html',
+    'sourcelink.html',
+    'searchbox.html',
+]
 html_sidebars = {
     'ref/**/all/salt.*': [
-        'autosummarysidebar.html',
+        'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
@@ -150,6 +160,7 @@ html_sidebars = {
 }
 
 html_context = {
+    'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',

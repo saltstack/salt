@@ -105,11 +105,11 @@ configuration could look like:
 import re
 
 
-def _check_rvm(ret):
+def _check_rvm(ret, runas=None):
     '''
     Check to see if rvm is installed.
     '''
-    if not __salt__['rvm.is_installed']():
+    if not __salt__['rvm.is_installed'](runas):
         ret['result'] = False
         ret['comment'] = 'RVM is not installed.'
     return ret
@@ -183,9 +183,9 @@ def installed(name, default=False, runas=None):
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
         return ret
 
-    ret = _check_rvm(ret)
+    ret = _check_rvm(ret, runas)
     if ret['result'] == False:
-        if not __salt__['rvm.install']():
+        if not __salt__['rvm.install'](runas=runas):
             ret['comment'] = 'RVM failed to install.'
             return ret
         else:
@@ -207,7 +207,7 @@ def gemset_present(name, ruby='default', runas=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    ret = _check_rvm(ret)
+    ret = _check_rvm(ret, runas)
     if ret['result'] is False:
         return ret
 

@@ -55,11 +55,6 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    # Force input to be a list so below loop works
-    if not isinstance(old, list):
-        old = [old]
-    if not isinstance(new, list):
-        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -142,9 +137,17 @@ def list_pkgs():
         salt '*' pkg.list_pkgs
     '''
     ret = {}
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
+        try:
+            name, version, rel, arch = line.split('_|-')
+        # Handle unpack errors (should never happen with the queryformat we are
+        # using, but can't hurt to be careful).
+        except ValueError:
+            continue
+        # Support 32-bit packages on x86_64 systems
+        if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
+            name += '.i686'
         pkgver = version
         if rel:
             pkgver += '-{0}'.format(rel)
@@ -200,6 +203,9 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
+        32-bit packages can be installed on 64-bit systems by appending
+        ``.i686`` to the end of the package name.
+
         CLI Example::
             salt '*' pkg.install <package name>
 
@@ -247,7 +253,7 @@ def install(name=None,
         or local path to the package.
 
         CLI Example::
-            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
     Returns a dict containing the new package names and versions::
@@ -299,12 +305,19 @@ def install(name=None,
     downgrade = []
     if pkg_type == 'repository':
         targets = []
-        for param, version in pkg_params.iteritems():
+        for pkgname, version in pkg_params.iteritems():
             if version is None:
-                targets.append(param)
+                targets.append(pkgname)
             else:
-                pkgstr = '"{0}-{1}"'.format(param, version)
-                cver = old.get(param, '')
+                cver = old.get(pkgname, '')
+                if __grains__.get('cpuarch', '') == 'x86_64' \
+                        and pkgname.endswith('.i686'):
+                    # Remove '.i686' from pkgname
+                    pkgname = pkgname[:-5]
+                    arch = '.i686'
+                else:
+                    arch = ''
+                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version, arch)
                 if not cver or __salt__['pkg.compare'](pkg1=version,
                                                        oper='>=',
                                                        pkg2=cver):
@@ -382,7 +395,7 @@ def remove(pkg, **kwargs):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'yum -q -y remove ' + pkg
+    cmd = 'yum -q -y remove "{0}"'.format(pkg)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)

@@ -462,10 +462,10 @@ def _get_upgradable():
     # rexp parses lines that look like the following:
     ## Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
     rexp = re.compile('(?m)^Conf '
-                      '([^ ]+) '                # Package name
-                      '\(([^ ]+) '              # Version
-                      '([^ ]+)'                 # Release
-                      '(?: \[([^\]]+)\])?\)$')  # Arch
+                      '([^ ]+) '          # Package name
+                      '\(([^ ]+) '        # Version
+                      '(.+) '             # Release
+                      '\[([^\]]+)\]\)$')  # Arch
     keys = ['name', 'version', 'release', 'arch']
     _get = lambda l, k: l[keys.index(k)]
 
@@ -631,8 +631,8 @@ def get_repo(repo):
             error_str = 'cannot parse "ppa:" style repos definitions: {0}'
             raise Exception(error_str.format(repo))
         repo = softwareproperties.ppa.expand_ppa_line(
-                repo,
-                __grains__['lsb_codename'])[0]
+            repo,
+            __grains__['lsb_codename'])[0]
 
     repos = list_repos()
 
@@ -685,8 +685,8 @@ def del_repo(repo, refresh=False):
             error_str = 'Error: cannot parse "ppa:" style repo definition: {0}'
             return error_str.format(repo)
         repo = softwareproperties.ppa.expand_ppa_line(
-                repo,
-                __grains__['lsb_codename'])[0]
+            repo,
+            __grains__['lsb_codename'])[0]
 
     sources = sourceslist.SourcesList()
     repos = filter(lambda s: not s.invalid, sources.list)
