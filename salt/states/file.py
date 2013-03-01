@@ -1255,9 +1255,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     ret['result'] = __salt__['file.contains_regex'](name, after)
     if slines != nlines:
         # Changes happened, add them
-        ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(slines, nlines))
-                )
+        ret['changes']['diff'] = ''.join(difflib.unified_diff(slines, nlines))
 
     if ret['result']:
         ret['comment'] = 'File successfully edited'
