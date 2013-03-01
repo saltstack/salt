@@ -69,9 +69,9 @@ You can confirm this by running the following on the salt master.
 
 .. code-block:: bash
 
-    # salt 'foo' test.ping
+    # salt 'foo' cmd.run 'uname -a'
 
-You should see your new node responding with a True.
+You should see your new node responding.
 
 Optional Settings
 =================
