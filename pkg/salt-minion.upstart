@@ -8,4 +8,7 @@ stop on runlevel [!2345]
 # work-around for unpredictable exit codes
 normal exit 0 1 2 6 9 15 143 SIGTERM SIGKILL SIGINT SIGABRT
 
+script
+export PATH=/usr/bin:$PATH
 exec /usr/bin/salt-minion >/dev/null 2>&1
+end script
