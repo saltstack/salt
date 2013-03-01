@@ -1290,7 +1290,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         nlines = fp_.readlines()
 
     # check the result
-    ret['result'] = __salt__['file.contains'](name, after)
+    ret['result'] = __salt__['file.contains_regex'](name, after)
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
