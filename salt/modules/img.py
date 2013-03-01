@@ -4,6 +4,7 @@ Virtual machine image management tools
 
 # Import python libs
 import os
+import urlparse
 import shutil
 import yaml
 
@@ -91,6 +92,19 @@ def seed(location, id_='', config=None):
     __salt__['mount.umount'](os.path.join(mpt, 'proc'))
     __salt__['mount.umount'](os.path.join(mpt, 'dev'))
     umount_image(mpt)
+
+
+def get_image(name):
+    '''
+    Download a vm image from a remote source and add it to the image cache
+    system
+    '''
+    cache_dir = os.path.join(__salt__['config.option']('img.cache'), 'src')
+    parse = urlparse.urlparse(name)
+    if __salt__['config.valid_file_proto'](parse.scheme):
+        # Valid scheme to download
+        dest = os.path.join(cache_dir, parse.netloc)
+        sfn = __salt__['file.get_managed'](dest, None, name, )
 
 
 def bootstrap(location, size, fmt):
