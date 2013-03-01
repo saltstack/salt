@@ -10,4 +10,7 @@ normal exit 0 1 2 6 9 15 143 SIGKILL SIGINT SIGABRT
 respawn
 respawn limit 10 5
 
+script
+export PATH=/usr/bin:$PATH
 exec /usr/bin/salt-minion >/dev/null 2>&1
+end script
