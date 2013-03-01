@@ -32,7 +32,11 @@ def mount(location, access='rw'):
             location.lstrip(os.sep).replace('/', '.')
             )
     if not os.path.isdir(root):
-        os.makedirs(root)
+        try:
+            os.makedirs(root)
+        except OSError:
+            # somehow the directory already exists
+            pass
     while True:
         if os.listdir(root):
             # Stuf is in there, don't use it
