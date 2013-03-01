@@ -32,7 +32,7 @@ def _determine_hyper(data, omit=''):
     return hyper
 
 
-def _find_vm(name, data):
+def _find_vm(name, data, quiet=False):
     '''
     Scan the query data for the named vm
     '''
@@ -135,7 +135,7 @@ def vm_info(name, quiet=False):
     Return the information on the named vm
     '''
     data = query(quiet=True)
-    return _find_vm(name, data)
+    return _find_vm(name, data, quiet)
 
 
 def reset(name):
@@ -289,9 +289,9 @@ def migrate(name, target=''):
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     data = query(quiet=True)
-    origin_data = _find_vm(name, data)
+    origin_data = _find_vm(name, data, quiet=True)
     origin_hyper = origin_data.keys()[0]
-    disks = origin_data[origin_hyper]['vm_info']['disks']
+    disks = origin_data[origin_hyper][name]['disks']
     if not origin_data:
         print('Named vm {0} was not found to migrate'.format(name))
         return ''
