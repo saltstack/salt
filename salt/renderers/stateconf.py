@@ -1,4 +1,6 @@
 '''
+A flexible renderer that takes a templating engine and a data format
+
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
 :platform: all
