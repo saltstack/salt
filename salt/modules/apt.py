@@ -845,7 +845,7 @@ def mod_repo(repo, refresh=False, **kwargs):
                             )
             elif 'key_url' in kwargs:
                 key_url = kwargs.pop('key_url', None)
-                cmd = 'wget -q -O- {0} | apt-key add -'.format(key_url)
+                cmd = 'wget -q -O- "{0}" | apt-key add -'.format(key_url)
                 out = __salt__['cmd.run_stdout'](cmd)
                 if not out.upper().startswith('OK'):
                     error_str = 'Error: key retrieval failed: {0}'
