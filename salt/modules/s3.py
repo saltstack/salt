@@ -36,7 +36,14 @@ def __virtual__():
 
 def get(bucket, path=None, return_bin=False):
     '''
-    List the contents of a bucket
+    List the contents of a bucket, or return an object from a bucket. Set
+    return_bin to True in order to retreive an object wholesale. Otherwise,
+    Salt will attempt to parse an XML response.
+
+    CLI Examples::
+
+        salt myminion s3.get mybucket
+        salt myminion s3.get mybucket myfile.png return_bin=True
     '''
     return _query(bucket=bucket, path=path, return_bin=return_bin)
 
