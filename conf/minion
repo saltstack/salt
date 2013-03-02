@@ -28,7 +28,7 @@
 # allow_multiple is a boolean - True means that the filter will be allowed to
 # have multiple matches and will return one at random.  This can be used to 
 # emulate round robin DNS.  If it's set to False, having more than one match
-# raises an error
+# raises an error. Defaults to False
 #
 # access_key and secret_key are your AWS keys that allow you to list EC2 regions,
 # list all EC2 instances, and access tags.  There should be no write access on
