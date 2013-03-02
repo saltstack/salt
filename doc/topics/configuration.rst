@@ -58,6 +58,15 @@ configuration file, typically ``/etc/salt/minion``, as follows:
    - #master: salt
    + master: 10.0.0.1
 
+Alternatively, if you're hosted at EC2 you can use EC2 tags to facilitate
+auto-discovery of your master and even emulate round robin DNS.
+
+.. code-block::
+    master: ec2
+
+More information on EC2 configuration can be found on the :doc:`minion 
+configuration reference </ref/configuration/minion>` page.
+
 After updating the configuration file, restart the Salt minion.
 See the :doc:`minion configuration reference </ref/configuration/minion>`
 for more details about other configurable options.
