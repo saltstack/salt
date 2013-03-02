@@ -10,6 +10,42 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# Alternatively, you can set master to ec2 and provide additional info/config
+# settings in ec2_info to resolve your master automatically inside ec2.
+#master: ec2
+
+# In the example below:
+# tags is a dict of Tag: Values that an instance must completely match in 
+# order to return.  Default is no filter
+# 
+# resolve_via is what attribute of the boto Instance object will be used to 
+# resolve the master IP, this can be any of public_dns_name, dns_name,
+# ip_address, private_ip_address, private_dns_name, etc.  Default is 
+# public_dns_name
+#
+# region is the region you'd like to connect to.  Default is us-east-1
+# 
+# allow_multiple is a boolean - True means that the filter will be allowed to
+# have multiple matches and will return one at random.  This can be used to 
+# emulate round robin DNS.  If it's set to False, having more than one match
+# raises an error. Defaults to False
+#
+# access_key and secret_key are your AWS keys that allow you to list EC2 regions,
+# list all EC2 instances, and access tags.  There should be no write access on
+# the keys.  You can also omit these completely and boto will try and use IAM
+# roles to gain the necessary access.
+
+#ec2_info:
+#  tags:
+#    Type: SaltMaster
+#    Environment: Production
+#    App: YourApp 
+#  resolve_via: public_dns_name
+#  region: us-east-1
+#  allow_multiple: True
+#  access_key: AAAAAAAAAAAAAAAAA
+#  secret_key: MySuperSecretKeyFromAWS
+
 # Set the number of seconds to wait before attempting to resolve
 # the master hostname if name resolution fails. Defaults to 30 seconds.
 # Set to zero if the minion should shutdown and not retry.

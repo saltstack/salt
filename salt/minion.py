@@ -51,46 +51,80 @@ log = logging.getLogger(__name__)
 # 5. connect to the publisher
 # 6. handle publications
 
-def resolve_dns(opts):
+def find_master(opts):
     '''
     Resolves the master_ip and master_uri options
     '''
+
     ret = {}
-    check_dns = True
-    if opts.get('file_client', 'remote') == 'local' and check_dns:
-        check_dns = False
 
-    if check_dns is True:
-        # Because I import salt.log below I need to re-import salt.utils here
-        import salt.utils
-        try:
-            ret['master_ip'] = salt.utils.dns_check(opts['master'], True)
-        except SaltClientError:
-            if opts['retry_dns']:
-                while True:
-                    import salt.log
-                    msg = ('Master hostname: {0} not found. Retrying in {1} '
-                           'seconds').format(opts['master'], opts['retry_dns'])
-                    if salt.log.is_console_configured():
-                        log.warn(msg)
-                    else:
-                        print('WARNING: {0}'.format(msg))
-                    time.sleep(opts['retry_dns'])
-                    try:
-                        ret['master_ip'] = salt.utils.dns_check(
-                            opts['master'], True
-                        )
-                        break
-                    except SaltClientError:
-                        pass
-            else:
-                ret['master_ip'] = '127.0.0.1'
+    if opts.get('file_client', 'remote') == 'local':
+        ret['master_ip'] = '127.0.0.1'    
     else:
-        ret['master_ip'] = '127.0.0.1'
+        if opts['master'] == 'ec2':
+            import salt.utils.ec2
+            try:
+                master_ip = salt.utils.ec2.get_master_dns(opts['ec2_info'])
+                ret['master_ip'] = master_ip
+            except SaltClientError:
+                if opts['retry_dns']:
+                    import salt.log
+                    while True:
+                        msg = ('Master not found given tags: {0}. Retrying in {1}'
+                               ' seconds.').format(opts['ec2_info']['tags'],
+                                                    opts['retry_dns'])
 
-    ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
-                                                    port=opts['master_port'])
+                        if salt.log.is_console_configured():
+                            log.warn(msg)
+                        else:
+                            print('WARNING: {0}'.format(msg))
+
+                        time.sleep(opts['retry_dns'])
+
+                        try:
+                            master_ip = salt.utils.ec2.get_master_dns(
+                                opts['ec2_info']
+                            )
+                            ret['master_ip'] = master_ip
+                            break
+                        except SaltClientError:
+                            pass
+        else:
+            import salt.utils
+            try:
+                master_ip = salt.utils.dns_check(opts['master'], True)
+                ret['master_ip'] = master_ip
+            except SaltClientError:
+                if opts['retry_dns']:
+                    import salt.log
+                    while true:
+                        msg = ('Master hostname: {0} not found. Retrying in {1} '
+                               'seconds').format(opts['master'], opts['retry_dns'])
+                        if salt.log.is_console_configured():
+                            log.warn(msg)
+                        else:
+                            print('WARNING: {0}'.format(msg))
+                        time.sleep(opts['retry_dns'])
+                        try:
+                            ret['master_ip'] = salt.utils.dns_check(
+                                opts['master'], True
+                            )
+                            break
+                        except SaltClientError:
+                            pass
+
+    ret['master_uri'] = create_master_uri(ret['master_ip'],
+                                            opts['master_port'])
+
     return ret
+
+
+def create_master_uri(master_ip, master_port):
+    '''
+    Create a master_uri
+    '''
+
+    return 'tcp://{ip}:{port}'.format(ip=master_ip, port=master_port)
 
 
 def get_proc_dir(cachedir):
@@ -154,7 +188,7 @@ class SMinion(object):
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         if self.opts.get('file_client', 'remote') == 'remote':
-            self.opts.update(resolve_dns(opts))
+            self.opts.update(find_master(opts))
         self.gen_modules()
 
     def gen_modules(self):
@@ -229,7 +263,7 @@ class Minion(object):
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
-        opts.update(resolve_dns(opts))
+        opts.update(find_master(opts))
         self.opts = opts
         self.authenticate()
         self.opts['pillar'] = salt.pillar.get_pillar(
