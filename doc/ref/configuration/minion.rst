@@ -25,11 +25,117 @@ Minion Primary Configuration
 
 Default: ``salt``
 
-The hostname or ipv4 of the master.
+The hostname or ipv4 of the master, or set to ``ec2`` to use EC2 auto-discovery.
 
 .. code-block:: yaml
 
     master: salt
+
+.. conf_minion:: ec2_info
+
+ec2_info
+------------
+
+This section configures EC2 auto-discovery, only applicable if you've set
+``master`` to ``ec2`` and are obviously running your infrastructure at EC2.  The
+boto_ library is required.  Everything in this section must be under the 
+``ec2_info`` stanza like so:
+
+.. _boto: http://boto.readthedocs.org/en/latest/
+
+.. code-block:: yaml
+    
+    ec2_info:
+      tags:
+        ILove: Salt
+
+.. conf_minion:: tags
+
+``tags``
+--------
+
+Default: No filters
+
+A dict of TagName: Values that instances must match.  Defaults to no filters.
+
+.. code-block:: yaml
+    
+    tags:
+      Type: SaltMaster
+      Environment: Production
+      App: YourApp
+
+.. conf_minion:: resolve_via
+
+``resolve_via``
+---------------
+
+Default: ``public_dns_name``
+
+What attribute to return to the minion on boto's Instance object. For a full list of attributes check `<http://boto.readthedocs.org/en/latest/ref/ec2.html#module-boto.ec2.instance>`_.
+
+.. code-block:: yaml
+    
+    resolve_via: public_dns_name
+
+.. conf_minion:: region
+
+``region``
+----------
+
+Default: ``us-east-1``
+
+The EC2 region to connect to when listing instances.
+
+.. code-block:: yaml
+    
+    region: us-east-1
+
+.. conf_minion:: allow_multiple
+
+``allow_multiple``
+------------------
+
+Default: ``False``
+
+When set to ``False``, this will throw an error whenever more than one instance
+matches the tags specified.  When set to ``True``, you can essentially emulate
+round robin DNS, as it will pick an instance from the matched set at random and
+return that value.
+
+.. code-block:: yaml
+    
+    allow_multiple: False
+
+.. conf_minion:: access_key
+
+``access_key``
+--------------
+
+Default: ``None``
+
+Your AWS access key.  This should have access to list EC2 regions as well as 
+your instances and tags.  If omitted, boto will try and resolve your credentials
+via IAM roles.
+
+.. code-block:: yaml
+    
+    access_key: AAAAAAAAAAAAAAAAA
+
+.. conf_minion:: secret_key
+
+``secret_key``
+--------------
+
+Default: ``None``
+
+Your AWS secret key.  This should have access to list EC2 regions as well as 
+your instances and tags.  If omitted, boto will try and resolve your credentials
+via IAM roles.
+
+.. code-block:: yaml
+    
+    secret_key: MySuperSecretKeyFromAWS
 
 .. conf_minion:: master_port
 
