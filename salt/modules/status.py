@@ -467,6 +467,12 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     '''
+    # Check whether the sig is already quoted (we check at the end in case they
+    # send a sig like `-E 'someregex'` to use egrep) and doesn't begin with a
+    # dash (again, like `-E someregex`).  Quote sigs that qualify.
+    if (not sig.endswith('"') and not sig.endswith("'") and
+            not sig.startswith('-')):
+        sig = "'" + sig + "'"
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
+        __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')
