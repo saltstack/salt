@@ -36,7 +36,6 @@
 # roles to gain the necessary access.
 
 #ec2_info:
-# The tags to filter on, an instance must have all these tags to be returned
 #  tags:
 #    Type: SaltMaster
 #    Environment: Production
