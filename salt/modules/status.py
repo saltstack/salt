@@ -467,6 +467,9 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     '''
+    if (not sig.endswith('"') and not sig.endswith("'") and
+            not sig.startswith('-')):
+        sig = "'" + sig + "'"
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
+        __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')
