@@ -26,6 +26,7 @@ Getting Started
 A quick guide covering getting started with Amazon AWS
 
 * :doc:`Getting Started With AWS <topics/aws>`
+* :doc:`Getting Started With Rackspace <topics/rackspace>`
 
 Core Configuration
 ==================

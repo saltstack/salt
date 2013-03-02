@@ -46,7 +46,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 The profile can be realized now with a salt command:
 
-.. code-block:: yaml
+.. code-block:: bash
 
     # salt-cloud -p base_aws ami.example.com
 

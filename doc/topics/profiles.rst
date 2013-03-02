@@ -28,6 +28,14 @@ public cloud provider. A number of additional parameters can also be inserted:
       grains:
         role: webserver
 
+The image must be selected from available images. Similarly, sizes must be selected
+from the list of sizes. To get a list of available images and sizes use the following
+command.
+
+.. code-block:: bash
+    salt-cloud --list-images openstack
+    salt-cloud --list-sizes openstack
+
 Some parameters can be specified in the main Salt cloud config file and then
 are applied to all cloud profiles. For instance if only a single cloud provider
 is being used then the provider option can be declared in the Salt cloud config
