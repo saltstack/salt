@@ -1,18 +1,31 @@
 '''
-Connection library for Amazon S3
+Connection module for Amazon S3
 
 :configuration: This module is not usable until the following are specified
     either in a pillar or in the minion's config file::
 
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-        s3.region: us-east-1
+
+    A service_url may also be specified in the configuration::
+
         s3.service_url: s3.amazonaws.com
+
+    If a service_url is not specified, the default is s3.amazonaws.com. This
+    may appear in various documentation as an "endpoint". A comprehensive list
+    for Amazon S3 may be found at::
+
+        http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+
+    The service_url will form the basis for the final endpoint that is used to
+    query the service.
+
+    This module should be usable to query other S3-like services, such as
+    OpenStack Swift.
 '''
 
-# Import python libs
+# Import Python libs
 import xml.etree.ElementTree as ET
-import salt.utils.xmlutil as xml
 import hmac
 import hashlib
 import binascii
@@ -20,6 +33,9 @@ import datetime
 import urllib
 import urllib2
 import logging
+
+# Import Salt libs
+import salt.utils.xmlutil as xml
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +49,8 @@ def __virtual__():
     return 's3'
 
 
-def get(bucket=None, path=None, return_bin=False, action=None):
+def get(bucket=None, path=None, return_bin=False, action=None,
+        local_file=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retreive an object wholesale. Otherwise,
@@ -50,6 +67,10 @@ def get(bucket=None, path=None, return_bin=False, action=None):
     To return the binary contents of an object::
 
         salt myminion s3.get mybucket myfile.png return_bin=True
+
+    To save the binary contents of an object to a local file::
+
+        salt myminion s3.get mybucket myfile.png local_file=/tmp/myfile.png
 
     It is also possible to perform an action on a bucket. Currently, S3
     supports the following actions::
@@ -71,15 +92,18 @@ def get(bucket=None, path=None, return_bin=False, action=None):
 
         salt myminion s3.get mybucket myfile.png action=acl
     '''
-    return _query(bucket=bucket,
+    return _query(method='GET',
+                  bucket=bucket,
                   path=path,
                   return_bin=return_bin,
+                  local_file=local_file,
                   action=action)
 
 
-def _query(params=None, headers=None, requesturl=None, return_url=False,
-           bucket=None, key=None, keyid=None, region=None, service_url=None,
-           path=None, return_bin=False, action=None):
+def _query(method='GET', params=None, headers=None, requesturl=None,
+           return_url=False, bucket=None, key=None, keyid=None, region=None,
+           service_url=None, path=None, return_bin=False, action=None,
+           local_file=None):
     '''
     Perform a query against an S3-like API
     '''
@@ -94,8 +118,12 @@ def _query(params=None, headers=None, requesturl=None, return_url=False,
 
     key = __salt__['config.option']('s3.key')
     keyid = __salt__['config.option']('s3.keyid')
-    region = __salt__['config.option']('s3.region')
-    service_url = __salt__['config.option']('s3.service_url')
+
+    if not service_url and __salt__['config.option']('s3.service_url'):
+        service_url = __salt__['config.option']('s3.service_url')
+
+    if not service_url:
+        service_url = 's3.amazonaws.com'
 
     if bucket:
         endpoint = '{0}.{1}'.format(bucket, service_url)
@@ -105,7 +133,6 @@ def _query(params=None, headers=None, requesturl=None, return_url=False,
     if not requesturl:
         timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         x_amz_date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
-        method = 'GET'
         content_type = 'text/plain'
         content_md5 = ''
         date = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -183,6 +210,12 @@ def _query(params=None, headers=None, requesturl=None, return_url=False,
     result.close()
 
     # This can be used to return a binary object wholesale
+    if local_file and method == 'GET':
+        out = open(local_file, 'w')
+        out.write(response)
+        out.close()
+        return 'Saved to local file: {0}'.format(local_file)
+
     if return_bin:
         return response
 
