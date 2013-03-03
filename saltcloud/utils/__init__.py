@@ -186,20 +186,22 @@ def wait_for_ssh(host, port=22, timeout=900):
     Wait until an ssh connection can be made on a specified host
     '''
     start = time.time()
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    log.debug('Attempting SSH connection to host {0} on port {1}'.format(host, port))
     trycount = 0
     while True:
         trycount += 1
         try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
             sock.shutdown(2)
             return True
-        except Exception:
+        except Exception as e:
+            log.debug('Caught exception in wait_for_ssh: {0}'.format(e))
             time.sleep(1)
-            log.debug('Retrying SSH connection (try {0})'.format(trycount))
             if time.time() - start > timeout:
                 log.error('SSH connection timed out: {0}'.format(timeout))
                 return False
+            log.debug('Retrying SSH connection (try {0})'.format(trycount))
 
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
@@ -420,7 +422,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
 def scp_file(dest_path, contents, kwargs):
     '''
-    Use scp to copy a file to a server    
+    Use scp to copy a file to a server
     '''
     tmpfh, tmppath = tempfile.mkstemp()
     tmpfile = open(tmppath, 'w')
