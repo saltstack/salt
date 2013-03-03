@@ -49,7 +49,8 @@ def __virtual__():
     return 's3'
 
 
-def get(bucket=None, path=None, return_bin=False, action=None):
+def get(bucket=None, path=None, return_bin=False, action=None,
+        local_file=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retreive an object wholesale. Otherwise,
@@ -91,12 +92,14 @@ def get(bucket=None, path=None, return_bin=False, action=None):
                   bucket=bucket,
                   path=path,
                   return_bin=return_bin,
+                  local_file=local_file,
                   action=action)
 
 
 def _query(method='GET', params=None, headers=None, requesturl=None,
            return_url=False, bucket=None, key=None, keyid=None, region=None,
-           service_url=None, path=None, return_bin=False, action=None):
+           service_url=None, path=None, return_bin=False, action=None,
+           local_file=None):
     '''
     Perform a query against an S3-like API
     '''
@@ -203,6 +206,12 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
     result.close()
 
     # This can be used to return a binary object wholesale
+    if local_file and method == 'GET':
+        out = open(local_file, 'w')
+        out.write(response)
+        out.close()
+        return 'Saved to local file: {0}'.format(local_file)
+
     if return_bin:
         return response
 
