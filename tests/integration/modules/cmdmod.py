@@ -1,5 +1,8 @@
 import os
 import integration
+import tempfile
+
+from flexmock import flexmock
 
 
 class CMDModuleTest(integration.ModuleCase):
@@ -16,6 +19,45 @@ class CMDModuleTest(integration.ModuleCase):
                 self.run_function('cmd.run',
                     ['echo $SHELL', 'shell={0}'.format(shell)]).rstrip(),
                 shell)
+
+    def test_os_environment_remains_intact(self):
+        '''
+        make sure the OS environment is not tainted after running a command that specifies runas.
+        '''
+        import json
+        import pwd
+        import subprocess
+
+        environment = os.environ.copy()
+
+        (flexmock(pwd)
+                .should_receive('getpwnam')
+                .once())
+
+        (flexmock(subprocess)
+                .should_receive('Popen')
+                .replace_with(lambda *args, **kwargs: flexmock(
+                    communicate=lambda *args, **kwags: [None, None],
+                    pid=lambda: 1,
+                    returncode=0))
+                .twice())
+
+        (flexmock(json)
+                .should_receive('loads')
+                .replace_with(lambda *args, **kwargs: {'data': {}})
+                .once())
+
+        from salt.modules import cmdmod
+
+        # inject grains via flexmock so cmdmod isn't tainted
+        cmdmod_mock = flexmock(cmdmod)
+        cmdmod_mock.__grains__ = { 'os': 'darwin' }
+
+        ret = cmdmod._run('ls', cwd=tempfile.gettempdir(), runas='foobar', shell='/bin/bash')
+
+        environment2 = os.environ.copy()
+
+        self.assertEquals(environment, environment2)
 
     def test_stdout(self):
         '''
