@@ -68,6 +68,10 @@ def get(bucket=None, path=None, return_bin=False, action=None,
 
         salt myminion s3.get mybucket myfile.png return_bin=True
 
+    To save the binary contents of an object to a local file::
+
+        salt myminion s3.get mybucket myfile.png local_file=/tmp/myfile.png
+
     It is also possible to perform an action on a bucket. Currently, S3
     supports the following actions::
 
