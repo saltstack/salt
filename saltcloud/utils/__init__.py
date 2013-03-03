@@ -187,7 +187,6 @@ def wait_for_ssh(host, port=22, timeout=900):
     '''
     start = time.time()
     log.debug('Attempting SSH connection to host {0} on port {1}'.format(host, port))
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     trycount = 0
     while True:
         trycount += 1
