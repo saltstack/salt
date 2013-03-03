@@ -7,7 +7,6 @@ Connection library for Amazon S3
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
         s3.region: us-east-1
-        s3.bucket: salttest
         s3.service_url: s3.amazonaws.com
 '''
 
@@ -40,10 +39,37 @@ def get(bucket=None, path=None, return_bin=False, action=None):
     return_bin to True in order to retreive an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
 
-    CLI Examples::
+    To list buckets::
+
+        salt myminion s3.get
+
+    To list the contents of a bucket::
 
         salt myminion s3.get mybucket
+
+    To return the binary contents of an object::
+
         salt myminion s3.get mybucket myfile.png return_bin=True
+
+    It is also possible to perform an action on a bucket. Currently, S3
+    supports the following actions::
+
+        acl
+        cors
+        lifecycle
+        policy
+        location
+        logging
+        notification
+        tagging
+        versions
+        requestPayment
+        versioning
+        website
+
+    To perform an action on a bucket::
+
+        salt myminion s3.get mybucket myfile.png action=acl
     '''
     return _query(bucket=bucket,
                   path=path,
