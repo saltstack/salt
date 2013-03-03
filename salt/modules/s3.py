@@ -7,7 +7,6 @@ Connection library for Amazon S3
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
         s3.region: us-east-1
-        s3.bucket: salttest
         s3.service_url: s3.amazonaws.com
 '''
 
@@ -34,23 +33,53 @@ def __virtual__():
     return 's3'
 
 
-def get(bucket, path=None, return_bin=False):
+def get(bucket=None, path=None, return_bin=False, action=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retreive an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
 
-    CLI Examples::
+    To list buckets::
+
+        salt myminion s3.get
+
+    To list the contents of a bucket::
 
         salt myminion s3.get mybucket
+
+    To return the binary contents of an object::
+
         salt myminion s3.get mybucket myfile.png return_bin=True
+
+    It is also possible to perform an action on a bucket. Currently, S3
+    supports the following actions::
+
+        acl
+        cors
+        lifecycle
+        policy
+        location
+        logging
+        notification
+        tagging
+        versions
+        requestPayment
+        versioning
+        website
+
+    To perform an action on a bucket::
+
+        salt myminion s3.get mybucket myfile.png action=acl
     '''
-    return _query(bucket=bucket, path=path, return_bin=return_bin)
+    return _query(bucket=bucket,
+                  path=path,
+                  return_bin=return_bin,
+                  action=action)
 
 
 def _query(params=None, headers=None, requesturl=None, return_url=False,
            bucket=None, key=None, keyid=None, region=None, service_url=None,
-           path=None, return_bin=False):
+           path=None, return_bin=False, action=None):
     '''
     Perform a query against an S3-like API
     '''
@@ -63,12 +92,15 @@ def _query(params=None, headers=None, requesturl=None, return_url=False,
     if path is None:
         path = ''
 
-    bucket = __salt__['config.option']('s3.bucket')
     key = __salt__['config.option']('s3.key')
     keyid = __salt__['config.option']('s3.keyid')
     region = __salt__['config.option']('s3.region')
     service_url = __salt__['config.option']('s3.service_url')
-    endpoint = '{0}.{1}'.format(bucket, service_url)
+
+    if bucket:
+        endpoint = '{0}.{1}'.format(bucket, service_url)
+    else:
+        endpoint = service_url
 
     if not requesturl:
         timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -77,7 +109,14 @@ def _query(params=None, headers=None, requesturl=None, return_url=False,
         content_type = 'text/plain'
         content_md5 = ''
         date = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        can_resource = '/{0}/{1}'.format(bucket, path)
+        if bucket:
+            can_resource = '/{0}/{1}'.format(bucket, path)
+        else:
+            can_resource = '/'
+
+        if action:
+            can_resource += '?{0}'.format(action)
+
         log.debug('CanonicalizedResource: {0}'.format(can_resource))
 
         headers['Host'] = endpoint
@@ -108,11 +147,16 @@ def _query(params=None, headers=None, requesturl=None, return_url=False,
         headers['Authorization'] = 'AWS {0}:{1}'.format(keyid, sig.strip())
 
         querystring = urllib.urlencode(params)
+        if action:
+            if querystring:
+                querystring = '{0}&{1}'.format(action, querystring)
+            else:
+                querystring = action
         requesturl = 'https://{0}/'.format(endpoint)
         if path:
             requesturl += path
         if querystring:
-            requesturl += '?{1}'.format(querystring)
+            requesturl += '?{0}'.format(querystring)
 
     req = urllib2.Request(url=requesturl)
 
