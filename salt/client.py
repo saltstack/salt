@@ -543,12 +543,11 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                    if tgt_type == 'glob' or tgt_type == 'pcre' or tgt_type == 'list':
                         if len(found.intersection(minions)) >= len(minions):
-                            print('\nThe following minions did not return:')
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
-                                print(minion)
+                                yield({minion: {'out': 'no_return', 'ret': 'Minion did not return'}})
                 break
             time.sleep(0.01)
 
@@ -774,12 +773,11 @@ class LocalClient(object):
                 continue
             if int(time.time()) > start + timeout:
                 if verbose:
-                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                    if tgt_type == 'glob' or tgt_type == 'pcre' or tgt_type == 'list':
                         if not len(found) >= len(minions):
-                            print('\nThe following minions did not return:')
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
-                                print(minion)
+                                yield({minion: {'out': 'no_return', 'ret': 'Minion did not return'}})
                 break
             time.sleep(0.01)
         return ret
@@ -861,12 +859,11 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                    if tgt_type == 'glob' or tgt_type == 'pcre' or tgt_type == 'list':
                         if not len(found) >= len(minions):
-                            print('\nThe following minions did not return:')
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
-                                print(minion)
+                                yield({minion: {'out': 'no_return', 'ret': 'Minion did not return'}})
                 break
             time.sleep(0.01)
 
