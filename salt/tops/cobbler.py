@@ -31,14 +31,16 @@ def __virtual__():
     return False
 
 
-def top(opts={}, host='http://localhost/', user=None, password=None, **kwargs):
+def top(**kwargs):
     '''
     Look up top data for a host in Cobbler
     '''
-    if not 'id' in opts:
-        return {}
+    host = __opts__['master_tops']['cobbler'].get('host', 'http://localhost/')
+    user = __opts__['master_tops']['cobbler'].get('user', None)
+    password = __opts__['master_tops']['cobbler'].get('password', None)
 
-    hostname = opts['id']
+    hostname = kwargs['opts']['id']
+
     log.info("Querying cobbler for information for %r", hostname)
     try:
         server = xmlrpclib.Server('%s/cobbler_api' % host, allow_none=True)
