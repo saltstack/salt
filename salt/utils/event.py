@@ -333,7 +333,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     )
         else:
             react_map = self.opts['reactor']
-        for ropt in self.opts['reactor']:
+        for ropt in react_map:
             if not isinstance(ropt, dict):
                 continue
             if not len(ropt) == 1:
