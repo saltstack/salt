@@ -543,11 +543,16 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type == 'glob' or tgt_type == 'pcre' or tgt_type == 'list':
+                    if tgt_type in ('glob', 'pcre', 'list'):
                         if len(found.intersection(minions)) >= len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
-                                yield({minion: {'out': 'no_return', 'ret': 'Minion did not return'}})
+                                yield({
+                                    minion: {
+                                        'out': 'no_return',
+                                        'ret': 'Minion did not return'
+                                    }
+                                })
                 break
             time.sleep(0.01)
 
@@ -773,11 +778,14 @@ class LocalClient(object):
                 continue
             if int(time.time()) > start + timeout:
                 if verbose:
-                    if tgt_type == 'glob' or tgt_type == 'pcre' or tgt_type == 'list':
+                    if tgt_type in ('glob', 'pcre', 'list'):
                         if not len(found) >= len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
-                                yield({minion: {'out': 'no_return', 'ret': 'Minion did not return'}})
+                                ret[minion] = {
+                                    'out': 'no_return',
+                                    'ret': 'Minion did not return'
+                                }
                 break
             time.sleep(0.01)
         return ret
@@ -859,11 +867,16 @@ class LocalClient(object):
                     timeout += inc_timeout
                     continue
                 if verbose:
-                    if tgt_type == 'glob' or tgt_type == 'pcre' or tgt_type == 'list':
+                    if tgt_type in ('glob', 'pcre', 'list'):
                         if not len(found) >= len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
-                                yield({minion: {'out': 'no_return', 'ret': 'Minion did not return'}})
+                                yield({
+                                    minion: {
+                                        'out': 'no_return',
+                                        'ret': 'Minion did not return'
+                                    }
+                                })
                 break
             time.sleep(0.01)
 
