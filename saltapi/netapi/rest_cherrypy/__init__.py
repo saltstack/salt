@@ -1,5 +1,6 @@
 '''
-A hypermedia REST API for Salt using the CherryPy framework
+A REST API for Salt
+===================
 
 :depends:   - CherryPy Python module
 :configuration: All authentication is done through Salt's :ref:`external auth
