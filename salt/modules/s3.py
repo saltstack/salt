@@ -58,7 +58,7 @@ def delete(bucket, path=None, action=None):
 
         salt myminion s3.delete mybucket
 
-    To upload an object to a bucket::
+    To delete an object from a bucket::
 
         salt myminion s3.delete mybucket remoteobject
     '''
