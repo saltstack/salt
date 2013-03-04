@@ -12,8 +12,8 @@ import json
 import salt.utils
 import salt.state
 import salt.payload
-from salt.utils.yaml import load as _yaml_load
-from salt.utils.yaml import CustomLoader as _YamlCustomLoader
+from salt.utils.yamlloader import load as _yaml_load
+from salt.utils.yamlloader import CustomLoader as _YamlCustomLoader
 from salt._compat import string_types
 
 
