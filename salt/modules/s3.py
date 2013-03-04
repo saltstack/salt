@@ -50,6 +50,24 @@ def __virtual__():
     return 's3'
 
 
+def delete(bucket, path=None, action=None):
+    '''
+    Delete a bucket, or delete an object from a bucket.
+
+    To delete a bucket::
+
+        salt myminion s3.delete mybucket
+
+    To upload an object to a bucket::
+
+        salt myminion s3.delete mybucket remoteobject
+    '''
+    return _query(method='DELETE',
+                  bucket=bucket,
+                  path=path,
+                  action=action)
+
+
 def get(bucket=None, path=None, return_bin=False, action=None,
         local_file=None):
     '''
@@ -175,7 +193,7 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
                 can_resource = '/{0}/{1}'.format(bucket, path)
             else:
                 can_resource = '/'
-        elif method == 'PUT' or method == 'HEAD':
+        elif method == 'PUT' or method == 'HEAD' or method == 'DELETE':
             if path:
                 can_resource = '/{0}/{1}'.format(bucket, path)
             else:
@@ -232,8 +250,10 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
                 data = ifile.read()
             req = urllib2.Request(url=requesturl, data=data)
         req.get_method = lambda: 'PUT'
-    if method == 'HEAD':
+    elif method == 'HEAD':
         req.get_method = lambda: 'HEAD'
+    elif method == 'DELETE':
+        req.get_method = lambda: 'DELETE'
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
@@ -272,6 +292,23 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
                                                     ))
             else:
                 log.debug('Failed to create bucket {0}'.format(bucket))
+        return
+
+    if method == 'DELETE':
+        if str(result.getcode()).startswith('2'):
+            if path:
+                log.debug('Deleted {0} from bucket {1}'.format(path, bucket))
+            else:
+                log.debug('Deleted bucket {0}'.format(bucket))
+        else:
+            if path:
+                log.debug('Failed to delete {0} from bucket {1}: {2}'.format(
+                                                    path,
+                                                    bucket,
+                                                    result.getcode(),
+                                                    ))
+            else:
+                log.debug('Failed to delete bucket {0}'.format(bucket))
         return
 
     # This can be used to save a binary object to disk
