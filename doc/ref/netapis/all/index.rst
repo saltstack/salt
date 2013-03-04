@@ -5,6 +5,6 @@ Full list of netapi modules
 ===========================
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     saltapi.netapi.rest_cherrypy
