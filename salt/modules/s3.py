@@ -101,6 +101,18 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                   action=action)
 
 
+def head(bucket, path=None):
+    '''
+    Return the metadata for a bucket, or an object in a bucket.
+
+    CLI Examples::
+
+        salt myminion s3.head mybucket
+        salt myminion s3.head mybucket myfile.png
+    '''
+    return _query(method='HEAD', bucket=bucket)
+
+
 def put(bucket, path=None, return_bin=False, action=None,
         local_file=None):
     '''
@@ -163,8 +175,11 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
                 can_resource = '/{0}/{1}'.format(bucket, path)
             else:
                 can_resource = '/'
-        elif method == 'PUT':
+        elif method == 'PUT' or method == 'HEAD':
+            if path:
                 can_resource = '/{0}/{1}'.format(bucket, path)
+            else:
+                can_resource = '/{0}/'.format(bucket)
 
         if action:
             can_resource += '?{0}'.format(action)
@@ -217,6 +232,8 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
                 data = ifile.read()
             req = urllib2.Request(url=requesturl, data=data)
         req.get_method = lambda: 'PUT'
+    if method == 'HEAD':
+        req.get_method = lambda: 'HEAD'
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
@@ -269,16 +286,19 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
     if return_bin:
         return response
 
-    import pprint
-    pprint.pprint(response)
-    items = ET.fromstring(response)
+    if response:
+        items = ET.fromstring(response)
 
-    ret = []
-    for item in items:
-        ret.append(xml.to_dict(item))
+        ret = []
+        for item in items:
+            ret.append(xml.to_dict(item))
 
-    if return_url is True:
-        return ret, requesturl
+        if return_url is True:
+            return ret, requesturl
+    else:
+        ret = {'headers': []}
+        for header in result.headers.headers:
+            ret['headers'].append(header.strip())
 
     return ret
 
