@@ -781,7 +781,22 @@ def directory(name,
         salt is running as on the minion
 
     recurse
-        Enforce user/group ownership and mode of directory recursively
+        Enforce user/group ownership and mode of directory recursively. Accepts
+        a list of strings representing what you would like to recurse.
+        Example::
+
+        .. code-block:: yaml
+
+            /var/log/httpd:
+              file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                  - user
+                  - group
+                  - mode
 
     dir_mode / mode
         The permissions mode to set any directories created.
