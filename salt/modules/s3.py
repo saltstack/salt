@@ -21,7 +21,7 @@ Connection module for Amazon S3
     query the service.
 
     This module should be usable to query other S3-like services, such as
-    OpenStack Swift.
+    Eucalyptus.
 '''
 
 # Import Python libs
@@ -35,6 +35,7 @@ import urllib2
 import logging
 
 # Import Salt libs
+import salt.utils
 import salt.utils.xmlutil as xml
 
 log = logging.getLogger(__name__)
@@ -100,6 +101,39 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                   action=action)
 
 
+def head(bucket, path=None):
+    '''
+    Return the metadata for a bucket, or an object in a bucket.
+
+    CLI Examples::
+
+        salt myminion s3.head mybucket
+        salt myminion s3.head mybucket myfile.png
+    '''
+    return _query(method='HEAD', bucket=bucket)
+
+
+def put(bucket, path=None, return_bin=False, action=None,
+        local_file=None):
+    '''
+    Create a new bucket, or upload an object to a bucket.
+
+    To create a bucket::
+
+        salt myminion s3.put mybucket
+
+    To upload an object to a bucket::
+
+        salt myminion s3.put mybucket remotepath local_path=/path/to/file
+    '''
+    return _query(method='PUT',
+                  bucket=bucket,
+                  path=path,
+                  return_bin=return_bin,
+                  local_file=local_file,
+                  action=action)
+
+
 def _query(method='GET', params=None, headers=None, requesturl=None,
            return_url=False, bucket=None, key=None, keyid=None, region=None,
            service_url=None, path=None, return_bin=False, action=None,
@@ -136,10 +170,16 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
         content_type = 'text/plain'
         content_md5 = ''
         date = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        if bucket:
-            can_resource = '/{0}/{1}'.format(bucket, path)
-        else:
-            can_resource = '/'
+        if method == 'GET':
+            if bucket:
+                can_resource = '/{0}/{1}'.format(bucket, path)
+            else:
+                can_resource = '/'
+        elif method == 'PUT' or method == 'HEAD':
+            if path:
+                can_resource = '/{0}/{1}'.format(bucket, path)
+            else:
+                can_resource = '/{0}/'.format(bucket)
 
         if action:
             can_resource += '?{0}'.format(action)
@@ -186,6 +226,14 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
             requesturl += '?{0}'.format(querystring)
 
     req = urllib2.Request(url=requesturl)
+    if method == 'PUT':
+        if local_file:
+            with salt.utils.fopen(local_file, 'r') as ifile:
+                data = ifile.read()
+            req = urllib2.Request(url=requesturl, data=data)
+        req.get_method = lambda: 'PUT'
+    if method == 'HEAD':
+        req.get_method = lambda: 'HEAD'
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
@@ -209,24 +257,48 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
     log.debug('S3 Response Status Code: {0}'.format(result.getcode()))
     result.close()
 
-    # This can be used to return a binary object wholesale
+    if method == 'PUT':
+        if result.getcode() == 200:
+            if local_file:
+                log.debug('Uploaded from {0} to {1}'.format(local_file, path))
+            else:
+                log.debug('Created bucket {0}'.format(bucket))
+        else:
+            if local_file:
+                log.debug('Failed to upload from {0} to {1}: {2}'.format(
+                                                    local_file,
+                                                    path,
+                                                    result.getcode(),
+                                                    ))
+            else:
+                log.debug('Failed to create bucket {0}'.format(bucket))
+        return
+
+    # This can be used to save a binary object to disk
     if local_file and method == 'GET':
+        log.debug('Saving to local file: {0}'.format(local_file))
         out = open(local_file, 'w')
         out.write(response)
         out.close()
         return 'Saved to local file: {0}'.format(local_file)
 
+    # This can be used to return a binary object wholesale
     if return_bin:
         return response
 
-    items = ET.fromstring(response)
+    if response:
+        items = ET.fromstring(response)
 
-    ret = []
-    for item in items:
-        ret.append(xml.to_dict(item))
+        ret = []
+        for item in items:
+            ret.append(xml.to_dict(item))
 
-    if return_url is True:
-        return ret, requesturl
+        if return_url is True:
+            return ret, requesturl
+    else:
+        ret = {'headers': []}
+        for header in result.headers.headers:
+            ret['headers'].append(header.strip())
 
     return ret
 
