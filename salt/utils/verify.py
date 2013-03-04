@@ -98,9 +98,11 @@ def verify_socket(interface, pub_port, ret_port):
         retsock.bind((interface, int(ret_port)))
         retsock.close()
         result = True
-    except Exception:
+    except Exception as e:
         msg = ("Unable to bind socket, this might not be a problem."
                " Is there another salt-master running?")
+        if e.args:
+            msg += " " + str(e)
         if is_console_configured():
             log.warn(msg)
         else:
