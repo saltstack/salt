@@ -154,10 +154,13 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
         content_type = 'text/plain'
         content_md5 = ''
         date = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        if bucket:
-            can_resource = '/{0}/{1}'.format(bucket, path)
-        else:
-            can_resource = '/'
+        if method == 'GET':
+            if bucket:
+                can_resource = '/{0}/{1}'.format(bucket, path)
+            else:
+                can_resource = '/'
+        elif method == 'PUT':
+                can_resource = '/{0}/{1}'.format(bucket, path)
 
         if action:
             can_resource += '?{0}'.format(action)
@@ -204,10 +207,11 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
             requesturl += '?{0}'.format(querystring)
 
     req = urllib2.Request(url=requesturl)
-    if local_file and method == 'PUT':
-        with salt.utils.fopen(local_file, 'r') as ifile:
-            data = ifile.read()
-        req = urllib2.Request(url=requesturl, data=data)
+    if method == 'PUT':
+        if local_file:
+            with salt.utils.fopen(local_file, 'r') as ifile:
+                data = ifile.read()
+            req = urllib2.Request(url=requesturl, data=data)
         req.get_method = lambda: 'PUT'
 
     log.debug('S3 Request: {0}'.format(requesturl))
