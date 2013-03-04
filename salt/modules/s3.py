@@ -21,7 +21,7 @@ Connection module for Amazon S3
     query the service.
 
     This module should be usable to query other S3-like services, such as
-    OpenStack Swift.
+    Eucalyptus.
 '''
 
 # Import Python libs
@@ -35,6 +35,7 @@ import urllib2
 import logging
 
 # Import Salt libs
+import salt.utils
 import salt.utils.xmlutil as xml
 
 log = logging.getLogger(__name__)
@@ -93,6 +94,23 @@ def get(bucket=None, path=None, return_bin=False, action=None,
         salt myminion s3.get mybucket myfile.png action=acl
     '''
     return _query(method='GET',
+                  bucket=bucket,
+                  path=path,
+                  return_bin=return_bin,
+                  local_file=local_file,
+                  action=action)
+
+
+def put(bucket, path=None, return_bin=False, action=None,
+        local_file=None):
+    '''
+    Upload an object to a bucket.
+
+    CLI Examples::
+
+        salt myminion s3.put mybucket remotepath local_path=/path/to/file
+    '''
+    return _query(method='PUT',
                   bucket=bucket,
                   path=path,
                   return_bin=return_bin,
@@ -186,6 +204,11 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
             requesturl += '?{0}'.format(querystring)
 
     req = urllib2.Request(url=requesturl)
+    if local_file and method == 'PUT':
+        with salt.utils.fopen(local_file, 'r') as ifile:
+            data = ifile.read()
+        req = urllib2.Request(url=requesturl, data=data)
+        req.get_method = lambda: 'PUT'
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
@@ -209,13 +232,26 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
     log.debug('S3 Response Status Code: {0}'.format(result.getcode()))
     result.close()
 
-    # This can be used to return a binary object wholesale
+    if method == 'PUT':
+        if result.getcode() == 200:
+            log.debug('Uploaded from {0} to {1}'.format(local_file, path))
+        else:
+            log.debug('Failed to upload from {0} to {1}: {2}'.format(
+                                                    local_file,
+                                                    path,
+                                                    result.getcode(),
+                                                    ))
+        return
+
+    # This can be used to save a binary object to disk
     if local_file and method == 'GET':
+        log.debug('Saving to local file: {0}'.format(local_file))
         out = open(local_file, 'w')
         out.write(response)
         out.close()
         return 'Saved to local file: {0}'.format(local_file)
 
+    # This can be used to return a binary object wholesale
     if return_bin:
         return response
 
