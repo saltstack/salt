@@ -50,7 +50,7 @@ def __virtual__():
     return 's3'
 
 
-def delete(bucket, path=None, action=None):
+def delete(bucket, path=None, action=None, key=None, keyid=None):
     '''
     Delete a bucket, or delete an object from a bucket.
 
@@ -65,11 +65,13 @@ def delete(bucket, path=None, action=None):
     return _query(method='DELETE',
                   bucket=bucket,
                   path=path,
-                  action=action)
+                  action=action,
+                  key=key,
+                  keyid=keyid)
 
 
 def get(bucket=None, path=None, return_bin=False, action=None,
-        local_file=None):
+        local_file=None, key=None, keyid=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retreive an object wholesale. Otherwise,
@@ -116,10 +118,12 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                   path=path,
                   return_bin=return_bin,
                   local_file=local_file,
-                  action=action)
+                  action=action,
+                  key=key,
+                  keyid=keyid)
 
 
-def head(bucket, path=None):
+def head(bucket, path=None, key=None, keyid=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
 
@@ -128,11 +132,11 @@ def head(bucket, path=None):
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
     '''
-    return _query(method='HEAD', bucket=bucket)
+    return _query(method='HEAD', bucket=bucket, key=key, keyid=keyid)
 
 
 def put(bucket, path=None, return_bin=False, action=None,
-        local_file=None):
+        local_file=None, key=None, keyid=None):
     '''
     Create a new bucket, or upload an object to a bucket.
 
@@ -149,11 +153,13 @@ def put(bucket, path=None, return_bin=False, action=None,
                   path=path,
                   return_bin=return_bin,
                   local_file=local_file,
-                  action=action)
+                  action=action,
+                  key=key,
+                  keyid=keyid)
 
 
 def _query(method='GET', params=None, headers=None, requesturl=None,
-           return_url=False, bucket=None, key=None, keyid=None, region=None,
+           return_url=False, bucket=None, key=None, keyid=None,
            service_url=None, path=None, return_bin=False, action=None,
            local_file=None):
     '''
@@ -168,8 +174,10 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
     if path is None:
         path = ''
 
-    key = __salt__['config.option']('s3.key')
-    keyid = __salt__['config.option']('s3.keyid')
+    if not key and __salt__['config.option']('s3.key'):
+        key = __salt__['config.option']('s3.key')
+    if not keyid and __salt__['config.option']('s3.keyid'):
+        keyid = __salt__['config.option']('s3.keyid')
 
     if not service_url and __salt__['config.option']('s3.service_url'):
         service_url = __salt__['config.option']('s3.service_url')
