@@ -104,9 +104,13 @@ def get(bucket=None, path=None, return_bin=False, action=None,
 def put(bucket, path=None, return_bin=False, action=None,
         local_file=None):
     '''
-    Upload an object to a bucket.
+    Create a new bucket, or upload an object to a bucket.
 
-    CLI Examples::
+    To create a bucket::
+
+        salt myminion s3.put mybucket
+
+    To upload an object to a bucket::
 
         salt myminion s3.put mybucket remotepath local_path=/path/to/file
     '''
