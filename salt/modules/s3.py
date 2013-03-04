@@ -238,13 +238,19 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
 
     if method == 'PUT':
         if result.getcode() == 200:
-            log.debug('Uploaded from {0} to {1}'.format(local_file, path))
+            if local_file:
+                log.debug('Uploaded from {0} to {1}'.format(local_file, path))
+            else:
+                log.debug('Created bucket {0}'.format(bucket))
         else:
-            log.debug('Failed to upload from {0} to {1}: {2}'.format(
+            if local_file:
+                log.debug('Failed to upload from {0} to {1}: {2}'.format(
                                                     local_file,
                                                     path,
                                                     result.getcode(),
                                                     ))
+            else:
+                log.debug('Failed to create bucket {0}'.format(bucket))
         return
 
     # This can be used to save a binary object to disk
@@ -259,6 +265,8 @@ def _query(method='GET', params=None, headers=None, requesturl=None,
     if return_bin:
         return response
 
+    import pprint
+    pprint.pprint(response)
     items = ET.fromstring(response)
 
     ret = []
