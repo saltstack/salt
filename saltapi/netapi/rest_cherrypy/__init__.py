@@ -58,12 +58,72 @@ A REST API for Salt
 
         % salt-call tls.create_self_signed_cert
 
+Usage
+-----
+
+You access a running Salt master via this module by sending HTTP requests to
+the URLs detailed below.
+
 .. admonition:: Content negotiation
 
-    You may request various output formats by sending the appropriate
-    :mailheader:`Accept` header. You may also send various formats in
-    :http:method:`post` and :http:method:`put` requests by specifying the
-    :mailheader:`Content-Type`.
+    This REST interface is flexible in what data formats it will accept as well
+    as what formats it will return (e.g., JSON, YAML, x-www-form-urlencoded).
+
+    * Specify the format of data you are sending in a request by including the
+      :mailheader:`Content-Type` header.
+    * Specify your desired output format for the response with the
+      :mailheader:`Accept` header.
+
+This REST interface expects data sent in :http:method:`post` and
+:http:method:`put` requests  to be in the format of a list of lowstate
+dictionaries. This allows you to specify multiple commands in a single request.
+
+.. glossary::
+
+    lowstate
+        A dictionary containing various keys that instruct Salt which command
+        to run, where that command lives, any parameters for that command, any
+        authentication credientials, what returner to use, etc.
+
+        Salt uses the lowstate data format internally in many places to pass
+        command data between functions. Salt also uses lowstate for the
+        :ref:`LocalClient() <python-api>` Python API interface.
+
+For example (in JSON format)::
+
+    [{
+        'client': 'local',
+        'tgt': '*',
+        'fun': 'test.fib',
+        'arg': ['10'],
+    }]
+
+.. admonition:: x-www-form-urlencoded
+
+    This REST interface accepts data in the x-www-form-urlencoded format. This
+    is the format used by HTML forms, the default format used by
+    :command:`curl`, the default format used by many JavaScript AJAX libraries
+    (such as jQuery), etc. This format will be converted to the
+    :term:`lowstate` format as best as possible with the caveats below. It is
+    always preferable to format data in the lowstate format directly in a more
+    capable format such as JSON or YAML.
+
+    * Only a single command may be sent in this format per HTTP request.
+    * Multiple ``arg`` params will be sent as a single list of params.
+
+      Note, some popular frameworks and languages (notably jQuery, PHP, and
+      Ruby on Rails) will automatically append empty brackets onto repeated
+      parameters. E.g., arg=one, arg=two will be sent as arg[]=one, arg[]=two.
+      Again, it is preferable to send lowstate via JSON or YAML directly by
+      specifying the :mailheader:`Content-Type` header in the request.
+
+URL reference
+-------------
+
+The main entry point is the root URL (``/``) and all functionality is available
+at that URL. The other URLs are largely convenience URLs that wrap that main
+entry point.
+
 '''
 # pylint: disable=W0212
 
@@ -331,11 +391,9 @@ def hypermedia_in():
 
 class LowDataAdapter(object):
     '''
-    The primary purpose of this handler is to provide a RESTful API to execute
-    Salt client commands and return the response as a data structure.
-
-    :param opts: A dictionary of options from Salt's master config (e.g.
-        Salt's, ``__opts__``)
+    The primary entry point to the REST API. All functionality is available
+    through this URL. The other available URLs provide convenience wrappers
+    around this URL.
     '''
     exposed = True
 
@@ -353,6 +411,10 @@ class LowDataAdapter(object):
     }
 
     def __init__(self, opts):
+        '''
+        :param opts: A dictionary of options from Salt's master config (e.g.
+            Salt's, ``__opts__``)
+        '''
         self.opts = opts
         self.api = saltapi.APIClient(opts)
 
@@ -373,8 +435,6 @@ class LowDataAdapter(object):
 
     def GET(self):
         '''
-        The API entry point
-
         .. http:get:: /
 
             An explanation of the API with links of where to go next.
@@ -407,12 +467,9 @@ class LowDataAdapter(object):
 
     def POST(self, **kwargs):
         '''
-        The primary execution vector for the rest of the API
+        The primary execution interface for the rest of the API
 
         .. http:post:: /
-
-            You must pass low-data in the requst body either from an HTML form
-            or as JSON or YAML.
 
             **Example request**::
 
@@ -451,8 +508,8 @@ class LowDataAdapter(object):
                   ms-3: true
                   ms-4: true
 
-        :form lowstate: lowstate data appropriate for the :ref:`client
-            <client-apis>` interface you are calling.
+        :form lowstate: A list of :term:`lowstate` data appropriate for the
+            :ref:`client <client-apis>` interface you are calling.
 
             Lowstate may be supplied in any supported format by specifying the
             :mailheader:`Content-Type` header in the request. Supported formats
