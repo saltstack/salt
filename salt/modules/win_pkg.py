@@ -71,7 +71,7 @@ def available_version(*names):
             continue
         if len(pkginfo) == 1:
             candidate = pkginfo.keys()[0]
-            name = pkginfo[0]['full_name']
+            name = pkginfo[candidate]['full_name']
             if name in pkgs:
                 version = pkgs[name]
             if __salt__['pkg_resource.perform_cmp'](str(candidate), 
