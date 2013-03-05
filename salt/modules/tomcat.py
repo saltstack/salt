@@ -77,7 +77,7 @@ def signal(signal=None):
                      'start': 'start',
                      'stop': 'stop'}
 
-    if not valid_signals[signal]:
+    if signal not in valid_signals:
         return
 
     cmd = '{0}/bin/catalina.sh {1}'.format(
