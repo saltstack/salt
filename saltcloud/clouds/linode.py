@@ -118,7 +118,14 @@ def create(vm_):
         log.error(err)
         return False
 
-    if vm_.get('deploy', __opts__['deploy']) is True:
+    deploy = vm_.get(
+        'deploy',
+        __opts__.get(
+            'LINODE.deploy',
+            __opts__['deploy']
+        )
+    )
+    if deploy is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],
@@ -139,7 +146,8 @@ def create(vm_):
             deploy_kwargs['script_args'] = vm_['script_args']
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
-            __opts__, vm_
+            __opts__,
+            vm_
         )
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:

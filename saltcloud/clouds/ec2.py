@@ -628,7 +628,8 @@ def create(vm_=None, call=None):
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']
 
-    if vm_.get('deploy', __opts__['deploy']) is True:
+    deploy = vm_.get('deploy', __opts__.get('EC2.deploy', __opts__['deploy']))
+    if deploy is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,

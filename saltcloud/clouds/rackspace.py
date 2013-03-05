@@ -171,7 +171,14 @@ def create(vm_):
     if not ip_address:
         raise
 
-    if vm_.get('deploy', __opts__['deploy']) is True:
+    deploy = vm_.get(
+        'deploy',
+        __opts__.get(
+            'RACKSPACE.deploy',
+            __opts__['deploy']
+        )
+    )
+    if deploy is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,

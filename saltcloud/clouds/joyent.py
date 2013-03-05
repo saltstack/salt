@@ -88,7 +88,15 @@ def create(vm_):
                        )
         log.error(err)
         return False
-    if vm_.get('deploy', __opts__['deploy']) is True:
+
+    deploy = vm_.get(
+        'deploy',
+        __opts__.get(
+            'JOYENT.deploy',
+            __opts__['deploy']
+        )
+    )
+    if deploy is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],
@@ -109,15 +117,26 @@ def create(vm_):
         if 'script_args' in vm_:
             deploy_kwargs['script_args'] = vm_['script_args']
 
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
+            __opts__,
+            vm_
+        )
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:
-            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+            log.error(
+                'Failed to start Salt on Cloud VM {0}'.format(
+                    vm_['name']
+                )
+            )
 
     ret = {}
-    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info(
+        'Created Cloud VM {0} with the following values:'.format(
+            vm_['name']
+        )
+    )
     for key, val in data.__dict__.items():
         ret[key] = val
         log.info('  {0}: {1}'.format(key, val))
@@ -146,4 +165,3 @@ def stop(name, call=None):
         log.error(exc)
 
     return data
-
