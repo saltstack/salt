@@ -273,6 +273,14 @@ for an instance.
 
     delvol_on_destroy: True
 
+
+This can also be set as a global setting in the EC2 cloud configuration:
+
+.. code-block:: yaml
+
+    EC2.delvol_on_destroy: True
+
+
 The setting for this may be changed on an existing instance using one of the
 following commands:
 
@@ -280,6 +288,7 @@ following commands:
 
     salt-cloud -a delvol_on_destroy myinstance
     salt-cloud -a keepvol_on_destroy myinstance
+
 
 EC2 Termination Protection
 ==========================
