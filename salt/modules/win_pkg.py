@@ -47,20 +47,52 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(name):
+def available_version(*names):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package1> <package2> <package3> ...
+
     '''
+    if len(names) == 0:
+        return ''
     ret = {}
-    pkginfo = _get_package_info(name)
-    if not pkginfo:
-        return ret
-    for key in _get_package_info(name):
-        ret[key] = pkginfo[key]['full_name']
+    pkgs = list_pkgs()
+    for name in names:
+        candidate = '0'
+        version = '0'
+        pkginfo = _get_package_info(name)
+        if not pkginfo:
+            # pkg not available in repo, skip
+            continue
+        if len(pkginfo) == 1:
+            candidate = pkginfo.keys()[0]
+            name = pkginfo[candidate]['full_name']
+            ret[name] = ''
+            if name in pkgs:
+                version = pkgs[name]
+            if __salt__['pkg_resource.perform_cmp'](str(candidate), 
+                                                    str(version)) > 0:
+                ret[name] = candidate
+            continue
+        for ver in pkginfo.keys():
+            if __salt__['pkg_resource.perform_cmp'](str(ver), str(candidate)) > 0:
+                candidate = ver
+        name = pkginfo[candidate]['full_name']
+        ret[name] = ''
+        if name in pkgs:
+            version = pkgs[name]
+        if __salt__['pkg_resource.perform_cmp'](str(candidate), 
+                                                str(version)) > 0:
+            ret[name] = candidate
     return ret
 
 
@@ -432,6 +464,7 @@ def purge(name, version=None, **kwargs):
 def _get_package_info(name):
     '''
     Return package info.
+    Returns empty string if package not available
     TODO: Add option for version
     '''
     repocache = __opts__['win_repo_cachefile']
@@ -443,17 +476,17 @@ def _get_package_info(name):
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
             except:
-                return 'Windows package repo not available'
+                return ''
     except IOError:
         log.debug('Not able to read repo file')
-        return 'Windows package repo not available'
+        return ''
     if not repodata:
-        return 'Windows package repo not available'
+        return ''
     if name in repodata:
         return repodata[name]
     else:
-        return False  # name, ' is not available.'
-    return False  # name, ' is not available.'
+        return ''
+    return ''
 
 
 def _reverse_cmp_pkg_versions(pkg1, pkg2):
