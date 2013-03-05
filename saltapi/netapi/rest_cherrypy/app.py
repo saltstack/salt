@@ -125,24 +125,15 @@ at that URL. The other URLs are largely convenience URLs that wrap that main
 entry point.
 
 '''
-# pylint: disable=W0212
+# We need a custom pylintrc here...
+# pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
 # Import Python libs
-import signal
 import os
 import json
 
-# Import CherryPy without traceback so we can provide an intelligent log
-# message in the __virtual__ function
-try:
-    import cherrypy
-    import cherrypy.wsgiserver as wsgiserver
-    import cherrypy.wsgiserver.ssl_builtin
-
-    cpy_error = None
-except ImportError as exc:
-    cpy_error = exc
-
+# Import third-party libs
+import cherrypy
 import yaml
 
 # Import Salt libs
@@ -154,40 +145,6 @@ import salt.output
 import saltapi
 
 logger = salt.log.logging.getLogger(__name__)
-cpy_min = '3.2.2'
-
-
-def __virtual__():
-    short_name = __name__.rsplit('.')[-1]
-    mod_opts = __opts__.get(short_name, {})
-
-    if mod_opts:
-        # User has a rest_cherrypy section in config; assume the user wants to
-        # run the module and increase logging severity to be helpful
-
-        # Everything looks good; return the module name
-        if not cpy_error and 'port' in mod_opts:
-            return 'rest'
-
-        # CherryPy wasn't imported; explain why
-        if cpy_error:
-            from distutils.version import LooseVersion as V
-
-            if 'cherrypy' in globals() and V(cherrypy.__version__) < V(cpy_min):
-                error_msg = ("Required version of CherryPy is {0} or "
-                        "greater.".format(cpy_min))
-            else:
-                error_msg = cpy_error
-
-            logger.error("Not loading '%s'. Error loading CherryPy: %s",
-                    __name__, error_msg)
-
-        # Missing port config
-        if not 'port' in mod_opts:
-            logger.error("Not loading '%s'. 'port' not specified in config",
-                    __name__)
-
-    return False
 
 
 def salt_token_tool():
@@ -833,30 +790,16 @@ class API(object):
         for url, cls in self.url_map.items():
             setattr(self, url, cls(self.opts))
 
-    def verify_certs(self, *args):
+    def get_conf(self, apiopts):
         '''
-        Sanity checking for the specified SSL certificates
+        Combine the CherryPy configuration with the rest_cherrypy config values
+        pulled from the master config and return the CherryPy configuration
         '''
-        msg = ("Could not find a certificate: {0}\n"
-                "If you want to quickly generate a self-signed certificate, "
-                "use the tls.create_self_signed_cert function in Salt")
-
-        for arg in args:
-            if not os.path.exists(arg):
-                raise Exception(msg.format(arg))
-
-    def get_conf(self):
-        '''
-        Combine the CherryPy configuration with config values pulled from the
-        master config
-        '''
-        apiopts = self.opts.get(__name__.rsplit('.', 1)[-1], {})
-
         conf = {
             'global': {
                 'server.socket_host': '0.0.0.0',
-                'server.socket_port': apiopts.pop('port', 8000),
-                'debug': apiopts.pop('debug', False),
+                'server.socket_port': apiopts.get('port', 8000),
+                'debug': apiopts.get('debug', False),
                 'static': apiopts.get('static'),
             },
             '/': {
@@ -871,19 +814,22 @@ class API(object):
         }
 
         conf['global'].update(apiopts)
+
+        # Add to global config
+        cherrypy.config.update(conf['global'])
+
         return conf
 
 
-def start():
+def get_app(opts):
     '''
-    Server loop here. Started in a multiprocess.
+    Returns a WSGI app and a configuration dictionary
     '''
-    root = API(__opts__)
-    conf = root.get_conf()
-    gconf = conf.get('global', {})
+    root = API(opts) # cherrypy app
+    apiopts = opts.get(__name__.rsplit('.', 2)[-2], {}) # rest_cherrypy opts
 
-    # Add to global config
-    cherrypy.config.update(gconf)
+    cpyopts = root.get_conf(apiopts) # cherrypy app opts
+    gconf = cpyopts.get('global', {}) # 'global' section of cpyopts
 
     # Register salt-specific hooks
     cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
@@ -895,21 +841,4 @@ def start():
     cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
             hypermedia_in)
 
-    # Start the development server or the production (SSL) server
-    if gconf['debug']:
-        cherrypy.quickstart(root, '/', conf)
-    else:
-        root.verify_certs(gconf['ssl_crt'], gconf['ssl_key'])
-
-        app = cherrypy.tree.mount(root, '/', config=conf)
-
-        ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
-                gconf['ssl_crt'], gconf['ssl_key'])
-        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': app})
-        server = wsgiserver.CherryPyWSGIServer(
-                ('0.0.0.0', gconf['server.socket_port']),
-                wsgi_app=wsgi_d)
-        server.ssl_adapter = ssl_a
-
-        signal.signal(signal.SIGINT, lambda *args: server.stop())
-        server.start()
+    return root, apiopts, cpyopts

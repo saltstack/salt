@@ -2,11 +2,11 @@
 rest_cherrypy
 =============
 
-.. automodule:: saltapi.netapi.rest_cherrypy
+.. automodule:: saltapi.netapi.rest_cherrypy.app
 
 .. ............................................................................
 
-.. py:currentmodule:: saltapi.netapi.rest_cherrypy
+.. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
 
 .. autoclass:: LowDataAdapter
     :members: GET, POST
