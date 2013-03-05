@@ -1064,6 +1064,8 @@ class State(object):
                                     extend[name] = {}
                                 if not _state in extend[name]:
                                     extend[name][_state] = []
+                                extend[name]['__env__'] = body['__env__']
+                                extend[name]['__sls__'] = body['__sls__']
                                 for ind in range(len(extend[name][_state])):
                                     if next(iter(
                                         extend[name][_state][ind])) == rkey:
@@ -1146,6 +1148,8 @@ class State(object):
                                     extend[name] = {}
                                 if not _state in extend[name]:
                                     extend[name][_state] = []
+                                extend[name]['__env__'] = body['__env__']
+                                extend[name]['__sls__'] = body['__sls__']
                                 for ind in range(len(extend[name][_state])):
                                     if next(iter(
                                         extend[name][_state][ind])) == rkey:
