@@ -63,6 +63,8 @@ def available_version(*names):
         ret[name] = ''
     pkgs = list_pkgs()
     for name in names:
+        if name not in pkgs:
+            continue
         pkginfo = _get_package_info(name)
         if not pkginfo:
             continue
