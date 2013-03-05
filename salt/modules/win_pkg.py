@@ -68,18 +68,25 @@ def available_version(*names):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
+    pkgs = list_pkgs()
     for name in names:
         pkginfo = _get_package_info(name)
         if not pkginfo:
             continue
         if len(pkginfo) == 1:
-            ret[name] = pkginfo.keys()[0]
+            candidate = pkginfo.keys()[0]
+            if __salt__['pkg_resource.perform_cmp'](str(candidate), 
+                                                    str(pkgs[name])) > 0:
+                ret[name] = candidate
             continue
         version = '0'
         for ver in pkginfo.keys():
             if __salt__['pkg_resource.perform_cmp'](str(ver), str(version)) > 0:
                 version = ver
-        ret[name] = version
+        candidate = version
+        if __salt__['pkg_resource.perform_cmp'](str(candidate), 
+                                                str(pkgs[name])) > 0:
+            ret[name] = candidate
     return ret
 
 
