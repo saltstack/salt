@@ -1497,25 +1497,35 @@ class ClearFuncs(object):
         '''
         # All wheel ops pass through eauth
         if not 'eauth' in clear_load:
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            msg = ('Authentication failure of type "eauth" ocurred for '
+                   'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+            log.warning(msg)
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            msg = ('Authentication failure of type "eauth" ocurred for '
+                   'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+            log.warning(msg)
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                msg = ('Authentication failure of type "eauth" ocurred for '
+                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
             if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                msg = ('Authentication failure of type "eauth" ocurred for '
+                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][clear_load['eauth']][name],
                     clear_load['fun'])
             if not good:
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                msg = ('Authentication failure of type "eauth" ocurred for '
+                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
