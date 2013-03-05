@@ -510,6 +510,7 @@ _OS_NAME_MAP = {
     'amazonami': 'Amazon',
     'alt': 'ALT',
     'oracleserv': 'OEL',
+    'cloudserve': 'CloudLinux',
 }
 
 # Map the 'os' grain to the 'os_family' grain
