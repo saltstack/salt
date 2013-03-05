@@ -71,6 +71,7 @@ def available_version(*names):
     pkgs = list_pkgs()
     for name in names:
         candidate = '0'
+        version = '0'
         pkginfo = _get_package_info(name)
         if not pkginfo:
             # pkg not available in repo, skip
