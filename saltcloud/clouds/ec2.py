@@ -130,7 +130,7 @@ if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
 
 
 def _xml_to_dict(xmltree):
-    ''' 
+    '''
     Convert an XML tree into a dict
     '''
     if len(xmltree.getchildren()) < 1:
@@ -619,7 +619,7 @@ def create(vm_=None, call=None):
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']
 
-    if __opts__['deploy'] is True:
+    if vm_.get('deploy', __opts__['deploy']) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
@@ -855,7 +855,7 @@ def destroy(name, call=None):
     if protected == 'true':
         log.error('This instance has been protected from being destroyed. '
                   'Use the following command to disable protection:\n\n'
-                  'salt-cloud -a disable_term_protect {0}'.format(name)) 
+                  'salt-cloud -a disable_term_protect {0}'.format(name))
         exit(1)
 
     params = {'Action': 'TerminateInstances',

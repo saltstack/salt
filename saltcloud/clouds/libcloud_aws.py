@@ -305,7 +305,7 @@ def create(vm_):
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']
 
-    if __opts__['deploy'] is True:
+    if vm_.get('deploy', __opts__['deploy']) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
@@ -560,15 +560,20 @@ def destroy(name):
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
     conn = get_conn(location=location)
-    libcloudfuncs_destroy = namespaced_function(libcloudfuncs_destroy, globals(), (conn,))
+    libcloudfuncs_destroy = namespaced_function(
+        libcloudfuncs_destroy, globals(), (conn,)
+    )
     try:
         result = libcloudfuncs_destroy(name, conn)
         ret[name] = result
     except Exception as e:
         if e.message.startswith('OperationNotPermitted'):
-            log.info('Failed: termination protection is enabled on {0}'.format(name))
+            log.info(
+                'Failed: termination protection is enabled on {0}'.format(
+                    name
+                )
+            )
         else:
             raise e
 
     return ret
-
