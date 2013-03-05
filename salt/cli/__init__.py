@@ -86,6 +86,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if self.config['async']:
                 jid = local.cmd_async(**kwargs)
                 print('Executed command with job ID: {0}'.format(jid))
+                return
             try:
                 # local will be None when there was an error
                 if local:
