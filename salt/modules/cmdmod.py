@@ -220,10 +220,8 @@ def _run(cmd,
         # Don't override if the user has passed LC_ALL
         env.setdefault('LC_ALL', 'C')
     else:
-        # On Windows set the codepage to US English.  the 'cls' is so that the
-        # codepage change doesn't show up in results. Remove the 'cls' if
-        # needed.
-        cmd = 'chcp 437 & cls & ' + cmd
+        # On Windows set the codepage to US English.
+        cmd = 'chcp 437 > nul & ' + cmd
 
     run_env = os.environ.copy()
     run_env.update(env)
