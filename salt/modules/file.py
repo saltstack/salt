@@ -1224,7 +1224,7 @@ def check_file_meta(
                     slines = src.readlines()
                     nlines = name_.readlines()
                 if __salt__['config.option']('obfuscate_templates'):
-                    ret['changes']['diff'] = '<Obfuscated Template>'
+                    changes['diff'] = '<Obfuscated Template>'
                 else:
                     changes['diff'] = (
                             ''.join(difflib.unified_diff(nlines, slines))
