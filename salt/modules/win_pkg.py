@@ -47,7 +47,7 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(name):
+def available_version(*names):
     '''
     The available version of the package in the repository
 
@@ -55,7 +55,17 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
+    if len(names) == 0:
+        return ''
     ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+    for name in names:
+        candidate = _get_package_info(name)
+        print 'info: ', candidate
+        
+
     pkginfo = _get_package_info(name)
     if not pkginfo:
         return ret
@@ -428,6 +438,7 @@ def purge(name, **kwargs):
 def _get_package_info(name):
     '''
     Return package info.
+    Returns empty string if package not available
     TODO: Add option for version
     '''
     repocache = __opts__['win_repo_cachefile']
@@ -439,17 +450,17 @@ def _get_package_info(name):
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
             except:
-                return 'Windows package repo not available'
+                return ''
     except IOError:
         log.debug('Not able to read repo file')
-        return 'Windows package repo not available'
+        return ''
     if not repodata:
-        return 'Windows package repo not available'
+        return ''
     if name in repodata:
         return repodata[name]
     else:
-        return False  # name, ' is not available.'
-    return False  # name, ' is not available.'
+        return ''
+    return ''
 
 
 def _reverse_cmp_pkg_versions(pkg1, pkg2):
