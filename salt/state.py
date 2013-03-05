@@ -908,6 +908,10 @@ class State(object):
                             if key == 'names':
                                 names.update(val)
                                 continue
+                            elif key == 'name':
+                                if not isinstance(val, string_types):
+                                    # Invalid name, fall back to ID
+                                    chunk[key] = name
                             else:
                                 chunk.update(arg)
                 if names:
