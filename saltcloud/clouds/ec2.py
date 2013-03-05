@@ -71,6 +71,7 @@ size_map = {
     'Cluster Compute Eight Extra Large Instance': 'cc2.8xlarge',
 }
 
+
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
     '''
@@ -130,7 +131,7 @@ if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
 
 
 def _xml_to_dict(xmltree):
-    ''' 
+    '''
     Convert an XML tree into a dict
     '''
     if len(xmltree.getchildren()) < 1:
@@ -181,7 +182,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
         params['Version'] = '2010-08-31'
         keys = sorted(params.keys())
         values = map(params.get, keys)
-        querystring = urllib.urlencode( list(zip(keys,values)) )
+        querystring = urllib.urlencode(list(zip(keys, values)))
 
         uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
                                         endpoint.encode('utf-8'),
@@ -232,19 +233,22 @@ def avail_sizes():
         'Cluster Compute': {
             'cc2.8xlarge': {
                 'id': 'cc2.8xlarge',
-                'cores': '16 (2 x Intel Xeon E5-2670, eight-core with hyperthread)',
+                'cores': '16 (2 x Intel Xeon E5-2670, eight-core with '
+                         'hyperthread)',
                 'disk': '3360 GiB (4 x 840 GiB)',
                 'ram': '60.5 GiB'},
             'cc1.4xlarge': {
                 'id': 'cc1.4xlarge',
-                'cores': '8 (2 x Intel Xeon X5570, quad-core with hyperthread)',
+                'cores': '8 (2 x Intel Xeon X5570, quad-core with '
+                         'hyperthread)',
                 'disk': '1690 GiB (2 x 840 GiB)',
                 'ram': '22.5 GiB'},
             },
         'Cluster CPU': {
             'cg1.4xlarge': {
                 'id': 'cg1.4xlarge',
-                'cores': '8 (2 x Intel Xeon X5570, quad-core with hyperthread), plus 2 NVIDIA Tesla M2050 GPUs',
+                'cores': '8 (2 x Intel Xeon X5570, quad-core with '
+                         'hyperthread), plus 2 NVIDIA Tesla M2050 GPUs',
                 'disk': '1680 GiB (2 x 840 GiB)',
                 'ram': '22.5 GiB'},
             },
@@ -515,7 +519,6 @@ def get_availability_zone(vm_):
     return avz
 
 
-
 def list_availability_zones():
     '''
     List all availability zones in the current region
@@ -565,15 +568,21 @@ def create(vm_=None, call=None):
 
     params['Placement.AvailabilityZone'] = get_availability_zone(vm_)
 
-    if 'delvol_on_destroy' in vm_:
-        value = vm_['delvol_on_destroy']
-        if value is True:
-            value = 'true'
-        elif value is False:
-            value = 'false'
+    delvol_on_destroy = vm_.get(
+        'delvol_on_destroy',            # Grab the value from the VM config
+        __opts__.get(
+            'EC2.delvol_on_destroy',    # If not available, try from the
+            None                        # provider config defaulting to None
+        )
+    )
+    if delvol_on_destroy is not None:
+        if not isinstance(delvol_on_destroy, bool):
+            raise ValueError('\'delvol_on_destroy\' should be a boolean value')
 
         params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
-        params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = value
+        params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
+            delvol_on_destroy
+        ).lower()
 
     try:
         data = query(params, 'instancesSet')
@@ -855,7 +864,7 @@ def destroy(name, call=None):
     if protected == 'true':
         log.error('This instance has been protected from being destroyed. '
                   'Use the following command to disable protection:\n\n'
-                  'salt-cloud -a disable_term_protect {0}'.format(name)) 
+                  'salt-cloud -a disable_term_protect {0}'.format(name))
         exit(1)
 
     params = {'Action': 'TerminateInstances',
@@ -890,7 +899,9 @@ def show_image(kwargs, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'function':
-        log.error('The show_image function must be called with -f or --function.')
+        log.error(
+            'The show_image function must be called with -f or --function.'
+        )
         sys.exit(1)
 
     params = {'ImageId.1': kwargs['image'],
@@ -906,7 +917,9 @@ def show_instance(name, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'action':
-        log.error('The show_instance action must be called with -a or --action.')
+        log.error(
+            'The show_instance action must be called with -a or --action.'
+        )
         sys.exit(1)
 
     nodes = list_nodes_full()
@@ -1333,4 +1346,3 @@ def delete_keypair(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
-
