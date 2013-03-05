@@ -77,7 +77,7 @@ def available_version(*names):
             print '-------------'
             print 'version: ', version
             print 'ver: ', ver
-            if __salt__['pkg_resource.perform_cmp'](version, ver):
+            if __salt__['pkg_resource.perform_cmp'](str(ver), str(ver)):
                 version = ver
         ret[name] = version
     return ret
