@@ -472,6 +472,8 @@ class Map(Cloud):
         Execute the contents of the VM map
         '''
         output = {}
+        if self.opts['parallel']:
+            parallel_data = []
         # Generate the fingerprint of the master pubkey in
         #     order to mitigate man-in-the-middle attacks
         master_pub = self.opts['pki_dir'] + '/master.pub'
@@ -492,11 +494,31 @@ class Map(Cloud):
                         if 'volumes' in miniondict[name]:
                             tvm['map_volumes'] = miniondict[name]['volumes']
             if self.opts['parallel']:
-                multiprocessing.Process(
-                    target=lambda: self.create(tvm)
-                ).start()
+                parallel_data.append({
+                    'opts': self.opts,
+                    'name': name,
+                    'profile': tvm,
+                })
             else:
                 output[name] = self.create(tvm)
         for name in dmap.get('destroy', set()):
             output[name] = self.destroy(name)
+        if self.opts['parallel'] and len(parallel_data) > 0:
+            output_multip = multiprocessing.Pool(len(parallel_data)).map(
+                func=create_multiprocessing,
+                iterable=parallel_data
+            )
+            for obj in output_multip:
+                output.update(obj)
         return output
+
+
+def create_multiprocessing(config):
+    """
+    This function will be called from another process when running a map in 
+    parallel mode. The result from the create is always a json object.
+    """
+    config['opts']['output'] = 'json'
+    cloud = Cloud(config['opts'])
+    output = cloud.create(config['profile'])
+    return {config['name']: output}
