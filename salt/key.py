@@ -279,7 +279,8 @@ class Key(object):
         for dir_ in acc, pre, rej:
             ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
-                ret[os.path.basename(dir_)].append(fn_)
+                if os.path.isfile(os.path.join(dir_, fn_)):
+                    ret[os.path.basename(dir_)].append(fn_)
         return ret
 
     def all_keys(self):
