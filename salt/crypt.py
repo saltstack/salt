@@ -378,6 +378,11 @@ class SAuth(Auth):
         while True:
             creds = self.sign_in()
             if creds == 'retry':
+                if self.opts.get('caller'):
+                    msg = ('Minion failed to authenticate with the master, '
+                           'has the minion key been accepted?')
+                    print(msg)
+                    sys.exit(2)
                 continue
             break
         return Crypticle(self.opts, creds['aes'])
