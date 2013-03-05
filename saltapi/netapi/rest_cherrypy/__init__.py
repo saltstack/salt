@@ -83,10 +83,11 @@ def start():
         # Start the development server
         cherrypy.quickstart(root, '/', conf)
     else:
-        # Mount and start the WSGI app using the production CherryPy server
-        verify_certs(apiconf['ssl_crt'], apiconf['ssl_key'])
+        from . import wsgi
+        application = wsgi.get_application(root, apiopts, conf)
 
-        app = cherrypy.tree.mount(app, '/', config=conf)
+        # Mount and start the WSGI app using the production CherryPy server
+        verify_certs(apiopts['ssl_crt'], apiopts['ssl_key'])
 
         ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
                 apiopts['ssl_crt'], apiopts['ssl_key'])
