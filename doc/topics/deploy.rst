@@ -55,6 +55,7 @@ saltcloud source tree:
     wget-bootstrap
     wget-bootstrap-git
 
+
 These are example scripts which were designed to be customized, adapted, and
 refit to meet your needs. One important use of them is to pass options to
 the salt-bootstrap script, such as updating to specific git tags.
@@ -63,13 +64,19 @@ the salt-bootstrap script, such as updating to specific git tags.
 Post-Deploy Commands
 ====================
 
-Once a minion has been deployed, it has the option to run a salt command. Normally, this would be the state.highstate command, which would finish provisioning the VM. Another common option is state.sls, or for just testing, test.ping. This is configured in the main cloud config file:
+Once a minion has been deployed, it has the option to run a salt command.  
+Normally, this would be the state.highstate command, which would finish 
+provisioning the VM. Another common option is state.sls, or for just testing, 
+test.ping. This is configured in the main cloud config file:
 
 .. code-block:: yaml
 
     start_action: state.highstate
 
-This is currently considered to be experimental functionality, and may not work well with all providers. If you experience problems with Salt Cloud hanging after Salt is deployed, consider using Startup States instead:
+
+This is currently considered to be experimental functionality, and may not work 
+well with all providers. If you experience problems with Salt Cloud hanging 
+after Salt is deployed, consider using Startup States instead:
 
 http://docs.saltstack.org/en/latest/ref/states/startup.html
 
@@ -77,11 +84,14 @@ http://docs.saltstack.org/en/latest/ref/states/startup.html
 Skipping the Deploy Script
 ==========================
 
-For whatever reason, you may want to skip the deploy script altogether. This results in a VM being spun up much faster, with absolutely no configuration. This can be set from the command line:
+For whatever reason, you may want to skip the deploy script altogether. This 
+results in a VM being spun up much faster, with absolutely no configuration.  
+This can be set from the command line:
 
 .. code-block:: bash
 
     salt-cloud --no-deploy -p micro_aws my_instance
+
 
 Or it can be set from the main cloud config file:
 
@@ -89,15 +99,39 @@ Or it can be set from the main cloud config file:
 
     deploy: False
 
+
+Or it can be set from the provider's configuration:
+
+.. code-block:: yaml
+
+    RACKSPACE.user: example_user
+    RACKSPACE.apikey: 123984bjjas87034
+    RACKSPACE.deploy: False
+
+
+Or even on the VM's profile settings:
+
+.. code-block:: yaml
+
+    ubuntu_aws:
+      provider: aws
+      image: ami-7e2da54e
+      size: Micro Instance
+      deploy: False
+
+
 The default for deploy is True.
 
-In the profile, you may also set the script option to None:
+In the profile, you may also set the script option to ``None``:
 
 .. code-block:: yaml
 
     script: None
 
-This is the slowest option, since it still uploads the None deploy script and executes it.
+
+This is the slowest option, since it still uploads the None deploy script and 
+executes it.
+
 
 Updating Salt Bootstrap
 =======================
@@ -107,6 +141,7 @@ Salt Bootstrap can be updated automatically with salt-cloud:
 
     salt-cloud -u
     salt-cloud --update-bootstrap
+
 
 Bear in mind that this updates to the latest (unstable) version, so use with
 caution.
@@ -122,9 +157,11 @@ can be added:
 
     salt-cloud -p myprofile mymachine --keep-tmp
 
+
 For those wondering why /tmp/ was used instead of /root/, this had to be done
 for images which require the use of sudo, and therefore do not allow remote
 root logins, even for file transfers (which makes /root/ unavailable).
+
 
 Deploy Script Arguments
 =======================
@@ -143,9 +180,9 @@ file, to pass arguments to the deploy script:
         script: bootstrap-salt
         script_args: -c /tmp/
 
+
 This has also been tested to work with pipes, if needed:
 
 .. code-block:: yaml
 
     script_args: | head
-
