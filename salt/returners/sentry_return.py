@@ -29,17 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 def __virtual__():
-    pillar_data = __salt__['pillar.data']()
     if not has_raven:
         logger.warning("Can't find raven client library")
         return False
-    if 'raven' not in pillar_data:
-        logger.warning("Missing pillar data 'raven'")
-        return False
-    for key in ('project', 'public_key', 'secret_key', 'servers'):
-        if key not in pillar_data['raven']:
-            logger.warning("Missing config '%s' in pillar 'raven'", key)
-            return False
     return 'sentry'
 
 
@@ -56,18 +48,24 @@ def returner(ret):
             'grains': __salt__['grains.items']()
         }
         servers = []
-        for server in pillar_data['raven']['servers']:
-            servers.append(server + '/api/store/')
         try:
+            for server in pillar_data['raven']['servers']:
+                servers.append(server + '/api/store/')
             client = Client(
                 servers=servers,
                 public_key=pillar_data['raven']['public_key'],
                 secret_key=pillar_data['raven']['secret_key'],
                 project=pillar_data['raven']['project'],
             )
-            client.captureMessage(ret['comment'], extra=sentry_data)
-        except Exception, err:
-            logger.error("Can't send message to sentry: %s", err, exc_info=True)
+        except KeyError, missing_key:
+            logger.error("Sentry returner need config '%s' in pillar",
+                         missing_key)
+        else:
+            try:
+                client.captureMessage(ret['comment'], extra=sentry_data)
+            except Exception, err:
+                logger.error("Can't send message to sentry: %s", err,
+                             exc_info=True)
 
     requisite_error = 'One or more requisite failed'
     try:
