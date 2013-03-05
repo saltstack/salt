@@ -1,24 +1,5 @@
 '''
-Connection module for Amazon S3
-
-:configuration: This module is not usable until the following are specified
-    either in a pillar or in the minion's config file::
-
-        s3.keyid: GKTADJGHEIQSXMKKRBJ08H
-        s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-
-    A service_url may also be specified in the configuration::
-
-        s3.service_url: s3.amazonaws.com
-
-    If a service_url is not specified, the default is s3.amazonaws.com. This
-    may appear in various documentation as an "endpoint". A comprehensive list
-    for Amazon S3 may be found at::
-
-        http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-
-    The service_url will form the basis for the final endpoint that is used to
-    query the service.
+Connection library for Amazon S3
 '''
 
 # Import Python libs
@@ -38,12 +19,28 @@ import salt.utils.xmlutil as xml
 log = logging.getLogger(__name__)
 
 
-def query(method='GET', params=None, headers=None, requesturl=None,
-          return_url=False, bucket=None, key=None, keyid=None,
-          service_url=None, path=None, return_bin=False, action=None,
-          local_file=None):
+def query(key, keyid, method='GET', params=None, headers=None,
+          requesturl=None, return_url=False, bucket=None, service_url=None,
+          path=None, return_bin=False, action=None, local_file=None):
     '''
-    Perform a query against an S3-like API
+    Perform a query against an S3-like API. This function requires that a
+    secret key and the id for that key are passed in. For instance:
+
+        s3.keyid: GKTADJGHEIQSXMKKRBJ08H
+        s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    
+    A service_url may also be specified in the configuration::
+    
+        s3.service_url: s3.amazonaws.com
+    
+    If a service_url is not specified, the default is s3.amazonaws.com. This
+    may appear in various documentation as an "endpoint". A comprehensive list
+    for Amazon S3 may be found at::
+    
+        http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+    
+    The service_url will form the basis for the final endpoint that is used to
+    query the service.
     '''
     if not headers:
         headers = {}
