@@ -74,6 +74,9 @@ def available_version(*names):
             ret[name] = pkginfo.keys()[0]
         version = 0
         for ver in pkginfo.keys():
+            print '-------------'
+            print 'version: ', version
+            print 'ver: ', ver
             if __salt__['pkg_resource.perform_cmp'](version, ver):
                 version = ver
         ret[name] = version
