@@ -1364,6 +1364,18 @@ class ClearFuncs(object):
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
+            if os.path.isdir(pubfn_pend):
+                # The key path is a directory, error out
+                log.info(
+                    'New public key id is a directory {id}'.format(**load)
+                )
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
+                return ret
             # This is a new key, stick it in pre
             log.info(
                 'New public key placed in pending for {id}'.format(**load)
