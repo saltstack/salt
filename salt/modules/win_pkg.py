@@ -65,14 +65,15 @@ def available_version(*names):
     if len(names) == 0:
         return ''
     ret = {}
-    version = '0'
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs()
     for name in names:
+        version = '0'
         pkginfo = _get_package_info(name)
         if not pkginfo:
+            # pkg not available in repo, skip
             continue
         if len(pkginfo) == 1:
             candidate = pkginfo.keys()[0]
