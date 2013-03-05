@@ -282,7 +282,14 @@ def create(vm_):
         deployargs['sudo'] = vm_['sudo']
         log.debug('Running root commands using sudo')
 
-    if vm_.get('deploy', __opts__['deploy']) is True:
+    deploy = vm_.get(
+        'deploy',
+        __opts__.get(
+            'OPENSTACK.deploy',
+            __opts__['deploy']
+        )
+    )
+    if deploy is True:
         deploy_script = script(vm_)
         deployargs['script'] = deploy_script.script
 

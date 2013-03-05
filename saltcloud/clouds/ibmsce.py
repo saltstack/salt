@@ -128,7 +128,14 @@ def create(vm_):
             not_ready = False
         time.sleep(15)
 
-    if vm_.get('deploy', __opts__['deploy']) is True:
+    deploy = vm_.get(
+        'deploy',
+        __opts__.get(
+            'IBMSCE.deploy',
+            __opts__['deploy']
+        )
+    )
+    if deploy is True:
         deploy_script = script(vm_)
         log.debug(
             'Deploying {0} using IP address {1}'.format(
