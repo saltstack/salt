@@ -63,6 +63,8 @@ def available_version(*names):
         ret[name] = ''
     for name in names:
         pkginfo = _get_package_info(name)
+        if not pkginfo:
+            continue
         if len(pkginfo) == 1:
             ret[name] = pkginfo.keys()[0]
             continue
