@@ -818,3 +818,23 @@ def check_ipc_path_max_len(uri):
                 uri, ipc_path_max_len
             )
         )
+
+
+def check_state_result(self, running):
+    '''
+    Check the total return value of the run and determine if the running
+    dict has any issues
+    '''
+    if not isinstance(running, dict):
+        return False
+    if not running:
+        return False
+    for host in running:
+        if not isinstance(running[host], dict):
+            return False
+        for tag, ret in running[host].items():
+            if not 'result' in ret:
+                return False
+            if ret['result'] is False:
+                return False
+    return True
