@@ -10,6 +10,7 @@ interact with kvm on behalf of the salt-virt interface
 
 
 # Import python libs
+import logging
 import os
 import shutil
 import string
@@ -27,6 +28,8 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt._compat import StringIO
+
+log = logging.getLogger(__name__)
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -56,11 +59,17 @@ def __virtual__():
         return False
     if not HAS_LIBVIRT:
         return False
+
+    #Libvirt is very noisy. This will quiet it down
+    def quiet_errors(ignored, err):
+        log.debug(err[2])
+
+    libvirt.registerErrorHandler(quiet_errors, None)
     try:
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()
         return 'hyper'
-    except Exception:
+    except libvirt.libvirtError:
         return False
 
 
