@@ -78,7 +78,7 @@ def available_version(*names):
             print '-------------'
             print 'version: ', version
             print 'ver: ', ver
-            if __salt__['pkg_resource.perform_cmp'](str(ver), str(version)):
+            if __salt__['pkg_resource.perform_cmp'](str(ver), str(version)) > 0:
                 print 'ver is bigger!: ', ver
                 version = ver
         ret[name] = version
