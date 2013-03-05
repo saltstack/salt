@@ -750,6 +750,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'all return.')
         )
         self.add_option(
+            '--async',
+            default=False,
+            dest='async',
+            action='store_true',
+            help=('Run the salt command but don\'t wait for a reply')
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
