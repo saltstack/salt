@@ -1180,7 +1180,7 @@ def check_managed(
         __clean_tmp(sfn)
         return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, env)
+                              group, mode, env, template)
     __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -1198,7 +1198,8 @@ def check_file_meta(
         user,
         group,
         mode,
-        env):
+        env,
+        template=None):
     '''
     Check for the changes in the file metadata.
 
@@ -1222,9 +1223,12 @@ def check_file_meta(
                             salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
-                changes['diff'] = (
-                        ''.join(difflib.unified_diff(nlines, slines))
-                        )
+                if __salt__['config.option']('obfuscate_templates'):
+                    ret['changes']['diff'] = '<Obfuscated Template>'
+                else:
+                    changes['diff'] = (
+                            ''.join(difflib.unified_diff(nlines, slines))
+                            )
             else:
                 changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
@@ -1281,7 +1285,8 @@ def manage_file(name,
         group,
         mode,
         env,
-        backup):
+        backup,
+        template=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -1331,10 +1336,13 @@ def manage_file(name,
                             salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
-                # Print a diff equivalent to diff -u old new
-                    ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(nlines,
-                                                                    slines)))
+                    # Print a diff equivalent to diff -u old new
+                    if __salt__['config.option']('obfuscate_templates'):
+                        ret['changes']['diff'] = '<Obfuscated Template>'
+                    else:
+                        ret['changes']['diff'] = (
+                                ''.join(difflib.unified_diff(nlines, slines))
+                                )
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(

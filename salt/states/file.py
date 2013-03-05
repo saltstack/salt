@@ -752,7 +752,8 @@ def managed(name,
                                             group,
                                             mode,
                                             env,
-                                            backup)
+                                            backup,
+                                            template)
 
 
 def directory(name,
