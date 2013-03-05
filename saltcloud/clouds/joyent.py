@@ -88,7 +88,7 @@ def create(vm_):
                        )
         log.error(err)
         return False
-    if __opts__['deploy'] is True:
+    if vm_.get('deploy', __opts__['deploy']) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],

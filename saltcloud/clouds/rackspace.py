@@ -171,7 +171,7 @@ def create(vm_):
     if not ip_address:
         raise
 
-    if __opts__['deploy'] is True:
+    if vm_.get('deploy', __opts__['deploy']) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
