@@ -146,14 +146,14 @@ def append(table='filter', chain=None, rule=None):
 
     CLI Example::
 
-        salt '*' iptables.append filter INPUT '-m state --state RELATED,ESTABLISHED -j ACCEPT'
+        salt '*' iptables.append filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = 'iptables -t {0} -A {1}'.format(table, rule)
+    cmd = 'iptables -t {0} -A {1} {2}'.format(table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -169,20 +169,21 @@ def insert(table='filter', chain=None, position=None, rule=None):
 
     CLI Examples::
 
-        salt '*' iptables.insert filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
         salt '*' iptables.insert filter INPUT position=3 rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
     if not chain:
         return 'Error: Chain needs to be specified'
+    if not position:
+        return 'Error: Position needs to be specified or use append (-A)'
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = 'iptables -t {0} -I {1}'.format(table, rule)
+    cmd = 'iptables -t {0} -I {1} {2} {3}'.format(table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
 
-def delete(table, chain, position=None, rule=None):
+def delete(table, chain=None, position=None, rule=None):
     '''
     Delete a rule from the specified table/chain, specifying either the rule
         in its entirety, or the rule's position in the chain.
@@ -198,13 +199,13 @@ def delete(table, chain, position=None, rule=None):
         salt '*' iptables.delete filter INPUT rule='-m state --state RELATED,ESTABLISHED -j ACCEPT'
     '''
 
-    cmd = ''
+    if position and rule:
+        return 'Error: Only specify a position or a rule, not both'
+
     if position:
-        cmd = 'iptables -t {0} -D {1}'.format(table, rule)
-    elif rule:
-        cmd = 'iptables -t {0} -D {1}'.format(table, position)
-    else:
-        return 'Error: Either rule or position needs to be specified'
+        rule = position
+
+    cmd = 'iptables -t {0} -D {1} {2}'.format(table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
