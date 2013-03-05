@@ -42,7 +42,7 @@ def __resolve_struct(value, kwval_as):
 
 def _filter_running(running):
     '''
-    Filter out the result: True + no chnages data
+    Filter out the result: True + no changes data
     '''
     ret = {}
     for tag in running:
