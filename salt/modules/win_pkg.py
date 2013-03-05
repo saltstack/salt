@@ -65,9 +65,6 @@ def available_version(*names):
     if len(names) == 0:
         return ''
     ret = {}
-    # Initialize the dict with empty strings
-    for name in names:
-        ret[name] = ''
     pkgs = list_pkgs()
     for name in names:
         candidate = '0'
