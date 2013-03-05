@@ -70,7 +70,7 @@ def available_version(*names):
         ret[name] = ''
     pkgs = list_pkgs()
     for name in names:
-        version = '0'
+        candidate = '0'
         pkginfo = _get_package_info(name)
         if not pkginfo:
             # pkg not available in repo, skip
@@ -84,11 +84,15 @@ def available_version(*names):
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
-            if __salt__['pkg_resource.perform_cmp'](str(ver), str(version)) > 0:
-                version = ver
-        candidate = version
+            print '-------------'
+            print 'ver: ', ver
+            print 'candidate: ', candidate
+            if __salt__['pkg_resource.perform_cmp'](str(ver), str(candidate)) > 0:
+                print 'ver is bigger!: ', ver
+                candidate= ver
         if name in pkgs:
             version = pkgs[name]
+            print 'version in pkgs: ', version
         if __salt__['pkg_resource.perform_cmp'](str(candidate), 
                                                 str(version)) > 0:
             ret[name] = candidate
