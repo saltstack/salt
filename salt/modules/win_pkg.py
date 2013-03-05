@@ -71,15 +71,12 @@ def available_version(*names):
     for name in names:
         pkginfo = _get_package_info(name)
         if len(pkginfo) == 1:
-            return pkginfo.keys()[0]
-        print 'info: ', candidate
-        
-
-    pkginfo = _get_package_info(name)
-    if not pkginfo:
-        return ret
-    for key in _get_package_info(name):
-        ret[key] = pkginfo[key]['full_name']
+            ret[name] = pkginfo.keys()[0]
+        version = 0
+        for ver in pkginfo.keys():
+            if __salt__['pkg_resource.perform_cmp'](ver, version):
+                version = ver
+        ret[name] = version
     return ret
 
 
