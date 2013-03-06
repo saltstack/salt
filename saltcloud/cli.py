@@ -149,6 +149,18 @@ class SaltCloud(parsers.SaltCloudParser):
                 )
                 self.exit(1)
 
+        elif self.options.list_providers is not None:
+            try:
+                saltcloud.output.double_layer(
+                    mapper.provider_list(self.options.list_providers)
+                )
+            except Exception as exc:
+                log.debug('There was an error listing providers.', exc_info=True)
+                self.error(
+                    'There was an error listing providers: {0}'.format(exc)
+                )
+                self.exit(1)
+
         elif self.options.destroy and (self.config.get('names', None) or
                                        self.config.get('map', None)):
             if self.config.get('map', None):

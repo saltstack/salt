@@ -139,6 +139,16 @@ class Cloud(object):
             sizes[prov] = self.clouds[fun]()
         return sizes
 
+    def provider_list(self, lookup='all'):
+        '''
+        Return a mapping of all image data for available providers
+        '''
+        provs = self.get_providers()
+        prov_list = {}
+        for prov in provs:
+            prov_list[prov] = {}
+        return prov_list
+
     def create_all(self):
         '''
         Create/Verify the VMs in the VM data
