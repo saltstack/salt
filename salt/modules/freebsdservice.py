@@ -294,7 +294,7 @@ def reload(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def status(name, **kwargs):
+def status(name, *args, **kwargs):
     '''
     Return the status for a service (True or False).
 
