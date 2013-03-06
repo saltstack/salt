@@ -907,13 +907,12 @@ class State(object):
                         for key, val in arg.items():
                             if key == 'names':
                                 names.update(val)
-                                continue
-                            elif key == 'name':
-                                if not isinstance(val, string_types):
-                                    # Invalid name, fall back to ID
-                                    chunk[key] = name
+                            elif (key == 'name' and
+                                  not isinstance(val, string_types)):
+                                # Invalid name, fall back to ID
+                                chunk[key] = name
                             else:
-                                chunk.update(arg)
+                                chunk[key] = val
                 if names:
                     for low_name in names:
                         live = copy.deepcopy(chunk)
