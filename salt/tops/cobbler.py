@@ -3,14 +3,16 @@ Cobbler Tops
 ============
 
 Cobbler Tops is a master tops subsystem used to look up mapping information
-from Cobbler via its API.
+from Cobbler via its API. The same cobbler.* parameters are used for both
+the Cobbler tops and Cobbler pillar modules.
 
 .. code-block:: yaml
     master_tops:
-      cobbler:
-        - host: https://example.com/ #default is http://localhost/
-        - user: username # default is no username
-        - password: password # default is no password
+      cobbler: {}
+
+    cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
+    cobbler.user: username # default is no username
+    cobbler.password: password # default is no password
 
 '''
 
@@ -22,31 +24,29 @@ import xmlrpclib
 # Set up logging
 log = logging.getLogger(__name__)
 
-def __virtual__():
-    '''
-    Only run if properly configured
-    '''
-    if __opts__['master_tops'].get('cobbler'):
-        return 'cobbler'
-    return False
+
+__opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
+            'cobbler.user': None,
+            'cobbler.password': None
+           }
 
 
 def top(**kwargs):
     '''
-    Look up top data for a host in Cobbler
+    Look up top data in Cobbler for for a minion.
     '''
-    host = __opts__['master_tops']['cobbler'].get('host', 'http://localhost/')
-    user = __opts__['master_tops']['cobbler'].get('user', None)
-    password = __opts__['master_tops']['cobbler'].get('password', None)
+    url = __opts__['cobbler.url']
+    user = __opts__['cobbler.user']
+    password = __opts__['cobbler.password']
 
-    hostname = kwargs['opts']['id']
+    minion_id = kwargs['opts']['id']
 
-    log.info("Querying cobbler for information for %r", hostname)
+    log.info("Querying cobbler for information for %r", minion_id)
     try:
-        server = xmlrpclib.Server('%s/cobbler_api' % host, allow_none=True)
+        server = xmlrpclib.Server(url, allow_none=True)
         if user:
             server = (server, server.login(user, password))
-        data = server.get_blended_data(None, hostname)
+        data = server.get_blended_data(None, minion_id)
     except Exception:
         log.exception(
             'Could not connect to cobbler.'
