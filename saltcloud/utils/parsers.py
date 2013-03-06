@@ -269,6 +269,12 @@ class CloudQueriesMixIn(object):
             help=('Execute a query and return select information about '
                   'the nodes running on configured cloud providers')
         )
+        group.add_option(
+            '--list-providers',
+            default=False,
+            action='store_false',
+            help=('Display a list of configured providers.')
+        )
         self.add_option_group(group)
         self._create_process_functions()
 
