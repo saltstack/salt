@@ -55,13 +55,21 @@ def __get_version(version, version_info):
         if not match:
             return version, version_info
 
-        parsed_version = '{0}.{1}.{2}-{3}-{4}'.format(
+        parsed_version = '{0}.{1}.{2}'.format(
             match.group('major'),
             match.group('minor'),
-            match.group('bugfix'),
-            match.group('noc'),
-            match.group('sha')
+            match.group('bugfix')
         )
+
+        if match.group('noc') is not None and match.group('sha') is not None:
+            # This is not the exact point where a tag was created.
+            # We have the extra information. Let's add it.
+            parsed_version = '{0}-{1}-{2}'.format(
+                parsed_version,
+                match.group('noc'),
+                match.group('sha')
+            )
+
         parsed_version_info = tuple([
             int(g) for g in match.groups()[:3] if g.isdigit()
         ])
