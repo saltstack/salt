@@ -9,6 +9,7 @@ import itertools
 import salt.client
 import salt.runner
 import salt.output
+import salt.wheel
 
 
 def __virtual__():
@@ -19,6 +20,15 @@ def runner():
     Return all inline documetation for runner modules
     '''
     client = salt.runner.RunnerClient(__opts__)
+    ret = client.get_docs()
+    salt.output.display_output(ret, '', __opts__)
+    return ret
+
+def wheel():
+    '''
+    Return all inline documentation for wheel modules
+    '''
+    client = salt.wheel.Wheel(__opts__)
     ret = client.get_docs()
     salt.output.display_output(ret, '', __opts__)
     return ret
