@@ -16,6 +16,15 @@ class Wheel(object):
         self.opts = opts
         self.w_funcs = salt.loader.wheels(opts)
 
+    def get_docs(self):
+        '''
+        Return a dictionary of functions and the inline documentation for each
+        '''
+        ret = [(fun, self.w_funcs[fun].__doc__)
+                for fun in sorted(self.w_funcs)]
+
+        return dict(ret)
+
     def call_func(self, fun, **kwargs):
         '''
         Execute a master control function
