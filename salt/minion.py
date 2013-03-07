@@ -1133,7 +1133,7 @@ class Matcher(object):
             ref['R'] = 'range'
         results = []
         opers = ['and', 'or', 'not', '(', ')']
-        tokens = re.findall(r'[^\s()]+|[()]', tgt)
+        tokens = tgt.split()
         for match in tokens:
             # Try to match tokens from the compound target, first by using
             # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
@@ -1164,7 +1164,12 @@ class Matcher(object):
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
-        return eval(' '.join(results))
+        try:
+            return eval(' '.join(results))
+        except Exception:
+            log.error('Invalid compound target: {0}'.format(tgt))
+            return False
+        return False
 
     def nodegroup_match(self, tgt, nodegroups):
         '''
