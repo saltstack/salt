@@ -295,7 +295,7 @@ configuration is required, states can be set up immediately.
     Before diving into the state system, a brief overview of how states are
     constructed will make many of the concepts clearer. Salt states are based
     on data modeling, and build on a low level data structure that is used to
-    exeute each state function. Then more logical layers are built on top of
+    execute each state function. Then more logical layers are built on top of
     each other. The high layers of the state system which this tutorial will
     cover consists of everything that needs to be known to use states, the two
     high layers covered here are the `sls` layer and the highest layer
