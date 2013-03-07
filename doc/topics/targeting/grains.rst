@@ -39,7 +39,7 @@ Available grains can be listed by using the 'grains.ls' module::
 
 Grains data can be listed by using the 'grains.items' module::
 
-    salt '*' grains.ls
+    salt '*' grains.items
 
 Grains in the Minion Config
 ===========================
