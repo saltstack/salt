@@ -38,6 +38,8 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.schedule
+# TODO: should probably use _getargs() from salt.utils?
+from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -424,6 +426,11 @@ class Minion(object):
                 ret['return'] = 'ERROR executing {0}: {1}'.format(
                     function_name, exc
                 )
+            except TypeError as exc:
+                aspec = _getargs(minion_instance.functions[data['fun']])
+                msg = 'Missing arguments executing "{0}": {1}'
+                log.warning(msg.format(function_name, aspec))
+                ret['return'] = msg.format(function_name, aspec)
             except Exception:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
