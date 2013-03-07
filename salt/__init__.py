@@ -71,7 +71,7 @@ class Master(parsers.MasterOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logger.warn('Setting up the Salt Master')
+        logger.info('Setting up the Salt Master')
 
         if not verify_socket(self.config['interface'],
                              self.config['publish_port'],
@@ -157,7 +157,7 @@ class Minion(parsers.MinionOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logger.warn(
+        logger.info(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
             )
@@ -241,7 +241,7 @@ class Syndic(parsers.SyndicOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logger.warn(
+        logger.info(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
             )
