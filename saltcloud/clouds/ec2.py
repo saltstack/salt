@@ -37,6 +37,7 @@ import os
 import sys
 import stat
 import time
+import uuid
 import logging
 
 # Import libs for talking to the EC2 API
