@@ -227,7 +227,7 @@ Grains
 
 Salt uses a system called `Grains` to build up static data about minions. This
 data includes information about the operating system that is running, cpu
-architecture and many more. The grains system is used througout Salt to
+architecture and many more. The grains system is used throughout Salt to
 deliver platform data to many components and to users.
 
 Grains can also be statically set, this makes it easy to assign values to
