@@ -127,7 +127,7 @@ def run(*args, **kwargs):
     '''
     _check_puppet()
 
-    salt.utils.daemonize_if(__opts__)
+    salt.utils.daemonize_if(__opts__, **kwargs)
 
     puppet = _Puppet()
 

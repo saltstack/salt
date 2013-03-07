@@ -89,7 +89,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
     Restart the named service
 
@@ -98,7 +98,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
+        salt.utils.daemonize_if(__opts__, **kwargs)
     cmd = '/etc/init.d/{0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
