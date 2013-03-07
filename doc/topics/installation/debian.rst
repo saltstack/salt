@@ -6,7 +6,7 @@ Currently the latest packages for Debian are published in Martin F. Krafft's
 personal debian.org repository. 
 
 Configure Apt
-------------
+-------------
 
 Setup apt to install Salt from the repository and use Debian's stable (squeeze)
 backports for dependencies:
