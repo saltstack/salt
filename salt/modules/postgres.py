@@ -249,10 +249,10 @@ def user_list(user=None, host=None, port=None, db=None, runas=None):
               'expiry time',
               'defaults variables']
 
-    ver = version(user=None,
-                  host=None,
-                  port=None,
-                  db=None,
+    ver = version(user=user,
+                  host=host,
+                  port=port,
+                  db=db,
                   runas=runas).split('.')
     if len(ver) >= 2 and ver[0] >= 9 and ver[1] >= 1:
         query = (
