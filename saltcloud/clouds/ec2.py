@@ -878,6 +878,13 @@ def destroy(name, call=None):
                   'salt-cloud -a disable_term_protect {0}'.format(name))
         exit(1)
 
+    if 'EC2.rename_on_destroy' in __opts__:
+        if __opts__['EC2.rename_on_destroy'] is True:
+            newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
+            rename(name, kwargs={'newname': newname}, call='action')
+            log.info('Machine will be identified as {0} until it has been '
+                     'cleaned up.')
+
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
     result = query(params)

@@ -559,6 +559,7 @@ def destroy(name):
     '''
     ret = {}
 
+    newname = name
     if 'AWS.rename_on_destroy' in __opts__:
         if __opts__['AWS.rename_on_destroy'] is True:
             newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
