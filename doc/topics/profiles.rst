@@ -2,16 +2,16 @@ VM Profiles
 ===========
 
 Salt cloud designates virtual machines inside the profile configuration file.
-The profile configuration file defaults to ``/etc/salt/cloud.profiles`` and is a
-yaml configuration. The syntax for declaring profiles is simple:
+The profile configuration file defaults to ``/etc/salt/cloud.profiles`` and is
+a yaml configuration. The syntax for declaring profiles is simple:
 
 .. code-block:: yaml
 
     fedora_rackspace:
-      provider: rackspace
-      image: Fedora 17
-      size: 256 server
-      script: Fedora
+        provider: rackspace
+        image: Fedora 17
+        size: 256 server
+        script: Fedora
 
 A few key peices of information need to be declared and can change based on the
 public cloud provider. A number of additional parameters can also be inserted:
@@ -19,20 +19,21 @@ public cloud provider. A number of additional parameters can also be inserted:
 .. code-block:: yaml
 
     centos_rackspace:
-      provider: rackspace
-      image: CentOS 6.2
-      size: 1024 server
-      script: RHEL6
-      minion:
-        master: salt.example.com
-      grains:
-        role: webserver
+        provider: rackspace
+        image: CentOS 6.2
+        size: 1024 server
+        script: RHEL6
+        minion:
+            master: salt.example.com
+        grains:
+            role: webserver
 
-The image must be selected from available images. Similarly, sizes must be selected
-from the list of sizes. To get a list of available images and sizes use the following
-command.
+The image must be selected from available images. Similarly, sizes must be
+selected from the list of sizes. To get a list of available images and sizes
+use the following command:
 
 .. code-block:: bash
+
     salt-cloud --list-images openstack
     salt-cloud --list-sizes openstack
 
@@ -47,51 +48,51 @@ Larger Example
 .. code-block:: yaml
 
     rhel_aws:
-      provider: aws
-      image: ami-e565ba8c
-      size: Micro Instance
-      script: RHEL6
-      minion:
-          cheese: edam
+        provider: aws
+        image: ami-e565ba8c
+        size: Micro Instance
+        script: RHEL6
+        minion:
+            cheese: edam
 
     ubuntu_aws:
-      provider: aws
-      image: ami-7e2da54e
-      size: Micro Instance
-      script: Ubuntu
-      minion:
-          cheese: edam
+        provider: aws
+        image: ami-7e2da54e
+        size: Micro Instance
+        script: Ubuntu
+        minion:
+            cheese: edam
 
     ubuntu_rackspace:
-      provider: rackspace
-      image: Ubuntu 12.04 LTS
-      size: 256 server
-      script: Ubuntu
-      minion:
-          cheese: edam
+        provider: rackspace
+        image: Ubuntu 12.04 LTS
+        size: 256 server
+        script: Ubuntu
+        minion:
+            cheese: edam
 
     fedora_rackspace:
-      provider: rackspace
-      image: Fedora 17
-      size: 256 server
-      script: Fedora
-      minion:
-          cheese: edam
+        provider: rackspace
+        image: Fedora 17
+        size: 256 server
+        script: Fedora
+        minion:
+            cheese: edam
 
     cent_linode:
-      provider: linode
-      image: CentOS 6.2 64bit
-      size: Linode 512
-      script: RHEL6
+        provider: linode
+        image: CentOS 6.2 64bit
+        size: Linode 512
+        script: RHEL6
 
     cent_gogrid:
-      provider: gogrid
-      image: 12834
-      size: 512MB
-      script: RHEL6
+        provider: gogrid
+        image: 12834
+        size: 512MB
+        script: RHEL6
 
     cent_joyent:
-      provider: joyent
-      image: centos-6
-      script: RHEL6
-      size: Small 1GB
+        provider: joyent
+        image: centos-6
+        script: RHEL6
+        size: Small 1GB
