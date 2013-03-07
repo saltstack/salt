@@ -149,6 +149,19 @@ def create(vm_):
             __opts__,
             vm_
         )
+
+        # Deploy salt-master files, if necessary
+        if 'make_master' in vm_ and vm_['make_master'] is True:
+            deploy_kwargs['make_master'] = True
+            deploy_kwargs['master_pub'] = vm_['master_pub']
+            deploy_kwargs['master_pem'] = vm_['master_pem']
+            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
+            if master_conf:
+                deploy_kwargs['master_conf'] = master_conf
+
+            if 'syndic_master' in master_conf:
+                deploy_kwargs['make_syndic'] = True
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
