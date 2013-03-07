@@ -665,3 +665,34 @@ def mod_watch(name, **kwargs):
                            kwargs['sfun']
                            ),
             'result': False}
+
+
+def donothing(name, comment='', **kwargs):
+    '''
+    Tie requisites together under a single name. 
+    
+    Does not change state. However donothing always reports itself changed in
+    order to pass on signals from states it's watching to other states watching
+    donothing itself.
+
+    name 
+        Identify this state (in addition to the state ID.) No other function.
+
+    comment 
+        Explain significance of state. May be used as a guide when reviewing
+        output from a large state transition.
+
+    Intended as a convenient and explicit way to order large setups. 
+
+    Also see the pydsl renderer's ordered option.
+    '''
+
+    # summarize requisites for changes
+    # TODO figure out how to report which watched states have changed (if possible.)
+    requisite_types = ['require', 'watch',]
+    requisites = {k: kwargs.get(k, []) for k in requisite_types if k in kwargs}
+
+    return {'name': name,
+            'changes': requisites,
+            'result': True,
+            'comment': comment,}
