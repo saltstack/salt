@@ -1509,25 +1509,25 @@ class ClearFuncs(object):
         '''
         # All wheel ops pass through eauth
         if not 'eauth' in clear_load:
-            msg = ('Authentication failure of type "eauth" ocurred for '
+            msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
             log.warning(msg)
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
-            msg = ('Authentication failure of type "eauth" ocurred for '
+            msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
             log.warning(msg)
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
-                msg = ('Authentication failure of type "eauth" ocurred for '
+                msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
             if not self.loadauth.time_auth(clear_load):
-                msg = ('Authentication failure of type "eauth" ocurred for '
+                msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
@@ -1535,7 +1535,7 @@ class ClearFuncs(object):
                     self.opts['external_auth'][clear_load['eauth']][name],
                     clear_load['fun'])
             if not good:
-                msg = ('Authentication failure of type "eauth" ocurred for '
+                msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
@@ -1555,19 +1555,19 @@ class ClearFuncs(object):
         contain the eauth key and the needed authentication creds.
         '''
         if not 'eauth' in clear_load:
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            log.warning('Authentication failure of type "eauth" occurred.')
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            log.warning('Authentication failure of type "eauth" occurred.')
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
@@ -1620,13 +1620,13 @@ class ClearFuncs(object):
                         )
                 return ''
             if not token:
-                log.warning('Authentication failure of type "token" ocurred.')
+                log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not token['eauth'] in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" ocurred.')
+                log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not token['name'] in self.opts['external_auth'][token['eauth']]:
-                log.warning('Authentication failure of type "token" ocurred.')
+                log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][token['eauth']][token['name']],
@@ -1636,20 +1636,20 @@ class ClearFuncs(object):
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
-                    log.warning('Authentication failure of type "token" ocurred.')
+                    log.warning('Authentication failure of type "token" occurred.')
                     return ''
         elif 'eauth' in extra:
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
                 if not name in self.opts['external_auth'][extra['eauth']]:
-                    log.warning('Authentication failure of type "eauth" ocurred.')
+                    log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
                 if not self.loadauth.time_auth(extra):
-                    log.warning('Authentication failure of type "eauth" ocurred.')
+                    log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
             except Exception as exc:
                 log.error(
@@ -1665,7 +1665,7 @@ class ClearFuncs(object):
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
-                    log.warning('Authentication failure of type "eauth" ocurred.')
+                    log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
@@ -1674,28 +1674,28 @@ class ClearFuncs(object):
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
                 elif not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning('Authentication failure of type "user" occurred.')
                     return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning('Authentication failure of type "user" occurred.')
                     return ''
             elif clear_load['user'] == 'root':
                 if not clear_load.pop('key') == self.key.get(self.opts.get('user', 'root')):
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning('Authentication failure of type "user" occurred.')
                     return ''
             elif clear_load['user'] == getpass.getuser():
                 if not clear_load.pop('key') == self.key.get(clear_load['user']):
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning('Authentication failure of type "user" occurred.')
                     return ''
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
-                        log.warning('Authentication failure of type "user" ocurred.')
+                        log.warning('Authentication failure of type "user" occurred.')
                         return ''
                     if not clear_load['user'] in self.opts['client_acl']:
-                        log.warning('Authentication failure of type "user" ocurred.')
+                        log.warning('Authentication failure of type "user" occurred.')
                         return ''
                     good = self.ckminions.auth_check(
                             self.opts['client_acl'][clear_load['user']],
@@ -1705,14 +1705,14 @@ class ClearFuncs(object):
                     if not good:
                         # Accept find_job so the cli will function cleanly
                         if not clear_load['fun'] == 'saltutil.find_job':
-                            log.warning('Authentication failure of type "user" ocurred.')
+                            log.warning('Authentication failure of type "user" occurred.')
                             return ''
                 else:
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning('Authentication failure of type "user" occurred.')
                     return ''
         else:
             if not clear_load.pop('key') == self.key[getpass.getuser()]:
-                log.warning('Authentication failure of type "other" ocurred.')
+                log.warning('Authentication failure of type "other" occurred.')
                 return ''
         # Retrieve the minions list
         minions = self.ckminions.check_minions(
