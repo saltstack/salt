@@ -281,6 +281,25 @@ def present(
                     ret['changes'][key] = spost[key]
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
+        changes = _changes(
+                name,
+                uid,
+                gid,
+                groups,
+                present_optgroups,
+                home,
+                password,
+                enforce_password,
+                shell,
+                unique,
+                fullname,
+                roomnumber,
+                workphone,
+                homephone)
+
+        if changes:
+            ret['comment'] = 'These values could not be changed: {0}'.format(changes)
+            ret['result'] = False
         return ret
 
     if changes is False:
@@ -314,6 +333,7 @@ def present(
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False
+
 
     return ret
 
