@@ -2,6 +2,7 @@
 A state module to manage installed NPM packages.
 '''
 
+# Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 def installed(name,
