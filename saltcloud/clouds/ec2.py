@@ -945,20 +945,24 @@ def list_nodes_full():
                     if tag['key'] == 'Name':
                         name = tag['value']
             else:
-                name = instance['instancesSet']['item']['tagSet']['item']['value']
+                name = (
+                   instance['instancesSet']['item']['tagSet']['item']['value'])
         else:
             name = instance['instancesSet']['item']['instanceId']
         ret[name] = instance['instancesSet']['item']
         ret[name]['id'] = instance['instancesSet']['item']['instanceId'],
         ret[name]['image'] = instance['instancesSet']['item']['imageId'],
         ret[name]['size'] = instance['instancesSet']['item']['instanceType'],
-        ret[name]['state'] = instance['instancesSet']['item']['instanceState']['name']
+        ret[name]['state'] = (
+                    instance['instancesSet']['item']['instanceState']['name'])
         ret[name]['private_ips'] = []
         ret[name]['public_ips'] = []
         if 'privateIpAddress' in instance['instancesSet']['item']:
-            ret[name]['private_ips'].append(instance['instancesSet']['item']['privateIpAddress'])
+            ret[name]['private_ips'].append(
+                        instance['instancesSet']['item']['privateIpAddress'])
         if 'ipAddress' in instance['instancesSet']['item']:
-            ret[name]['public_ips'].append(instance['instancesSet']['item']['ipAddress'])
+            ret[name]['public_ips'].append(
+                        instance['instancesSet']['item']['ipAddress'])
 
     return ret
 
