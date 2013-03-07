@@ -27,6 +27,7 @@ import os
 import sys
 import stat
 import time
+import uuid
 import logging
 
 # Import saltcloud libs
@@ -558,6 +559,14 @@ def destroy(name):
     '''
     ret = {}
 
+    newname = name
+    if 'AWS.rename_on_destroy' in __opts__:
+        if __opts__['AWS.rename_on_destroy'] is True:
+            newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
+            rename(name, kwargs={'newname': newname}, call='action')
+            log.info('Machine will be identified as {0} until it has been '
+                     'cleaned up by AWS.')
+
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
     conn = get_conn(location=location)
@@ -565,7 +574,7 @@ def destroy(name):
         libcloudfuncs_destroy, globals(), (conn,)
     )
     try:
-        result = libcloudfuncs_destroy(name, conn)
+        result = libcloudfuncs_destroy(newname, conn)
         ret[name] = result
     except Exception as e:
         if e.message.startswith('OperationNotPermitted'):

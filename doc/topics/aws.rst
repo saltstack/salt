@@ -186,6 +186,27 @@ instance. An instance with this protection enabled cannot be destroyed.
     salt-cloud -a enable_term_protect mymachine
     salt-cloud -a disable_term_protect mymachine
 
+Rename on Destroy
+=================
+When instances on AWS are destroyed, there will be a lag between the time that
+the action is sent, and the time that Amazon cleans up the instance. During this
+time, the instance still retails a Name tag, which will cause a collision if the
+creation of an instance with the same name is attempted before the cleanup
+occurs. In order to avoid such collisions, Salt Cloud can be configured to
+rename instances when they are destroyed. The new name will look something like:
+
+.. code-block::
+
+    myinstance-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
+
+In order to enable this, add AWS.rename_on_destroy line to the main
+configuration file:
+
+.. code-block:: yaml
+
+    AWS.rename_on_destroy: True
+
+
 EC2 Images
 ==========
 The following are lists of available AMI images, generally sorted by OS. These
