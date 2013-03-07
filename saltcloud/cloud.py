@@ -349,7 +349,7 @@ class Cloud(object):
 
         return ret
 
-    def do_function(self, prov, func, kwargs):
+    def do_function(self, func, prov, kwargs):
         '''
         Perform a function against a cloud provider
         '''

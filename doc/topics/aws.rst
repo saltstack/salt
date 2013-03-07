@@ -248,7 +248,7 @@ the defaults that will be applied to an instance using a particular AMI.
 
 .. code-block:: bash
 
-    $ salt-cloud -f ec2 show_image image=ami-fd20ad94
+    $ salt-cloud -f show_image ec2 image=ami-fd20ad94
 
 show_instance
 =============

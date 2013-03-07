@@ -225,7 +225,8 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.function:
             prov_func = '{0}.{1}'.format(
-                self.function_provider, self.function_name
+                self.function_name,
+                self.function_provider,
             )
             if prov_func not in mapper.clouds:
                 self.error(
