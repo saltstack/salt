@@ -250,7 +250,7 @@ class Minion(object):
 
     def __prep_mod_opts(self):
         '''
-        Returns a deep copy of the opts with key bits stripped out
+        Returns a copy of the opts with key bits stripped out
         '''
         mod_opts = {}
         for key, val in self.opts.items():
