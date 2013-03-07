@@ -25,6 +25,11 @@ set in the main cloud config:
     # driver for something other than Amazon EC2, change it here:
     EC2.service_url: amazonaws.com
 
+    # The endpoint that is ultimately used is usually formed using the region
+    # and the service_url. If you would like to override that entirely, you can
+    # explicitly define the endpoint:
+    EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+
 '''
 
 # Import python libs
@@ -174,7 +179,12 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
     if not requesturl:
         location = get_location()
         method = 'GET'
-        endpoint = 'ec2.{0}.{1}'.format(location, service_url)
+
+        if 'EC2.endpoint' in __opts__:
+            endpoint = __opts__['EC2.endpoint']
+        else:
+            endpoint = 'ec2.{0}.{1}'.format(location, service_url)
+
         params['AWSAccessKeyId'] = '{0}'.format(keyid)
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
