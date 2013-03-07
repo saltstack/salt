@@ -2,9 +2,10 @@
 Core Configuration
 ==================
 
-A number of core configuration options and some options that are global to
-the vm profiles can be set in the cloud config file. By default this file is
+A number of core configuration options and some options that are global to the
+VM profiles can be set in the cloud config file. By default this file is
 located at ``/etc/salt/cloud``.
+
 
 Minion Configuration
 ====================
@@ -15,9 +16,10 @@ minions that are created derive their configuration.
 .. code-block:: yaml
 
     minion:
-      master: saltmaster.example.com
+        master: saltmaster.example.com
 
 This is the location in particular to specify the location of the salt master.
+
 
 Cloud Configurations
 ====================
