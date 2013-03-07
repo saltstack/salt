@@ -115,8 +115,11 @@ def tops(opts):
     '''
     Returns the returner modules
     '''
+    if not 'master_tops' in opts:
+        return {}
+    whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
-    return load.filter_func('top')
+    return load.filter_func('top', whitelist=whitelist)
 
 
 def wheels(opts, whitelist=None):
@@ -728,13 +731,16 @@ class Loader(object):
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
-    def filter_func(self, name, pack=None):
+    def filter_func(self, name, pack=None, whitelist=None):
         '''
         Filter a specific function out of the functions, this is used to load
         the returners for the salt minion
         '''
         funcs = {}
-        gen = self.gen_functions(pack) if pack else self.gen_functions()
+        if pack:
+            gen = self.gen_functions(pack, whitelist=whitelist)
+        else:
+            gen = self.gen_functions(whitelist=whitelist)
         for key, fun in gen.items():
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
