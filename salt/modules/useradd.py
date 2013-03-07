@@ -92,13 +92,15 @@ def add(name,
     if groups:
         cmd += '-G "{0}" '.format(','.join(groups))
     if home:
-        if home is not True:
-            if system:
-                cmd += '-d {0} '.format(home)
-            else:
+        if system:
+            if home is not True:
                 cmd += '-m -d {0} '.format(home)
+            else:
+                cmd += '-d {0} '.format(home)
         else:
-            if not system:
+            if home is not True:
+                cmd += '-m -d {0} '.format(home)
+            else:
                 cmd += '-m '
     if not unique:
         cmd += '-o '
