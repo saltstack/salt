@@ -397,7 +397,7 @@ so this formula can be referenced via the following command:
     # salt '*'  state.sls nginx
 
 Now that subdirectories can be used the vim.sls formula can be cleaned up, but
-to make things more flexible (and to illistrate another pont of course), move
+to make things more flexible (and to illustrate another point of course), move
 the vim.sls and vimrc into a new subdirectory called `edit` and change the
 vim.sls file to reflect the change:
 
