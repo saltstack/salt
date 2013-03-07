@@ -676,6 +676,9 @@ def create(vm_=None, call=None):
             if master_conf:
                 deploy_kwargs['master_conf'] = master_conf
 
+            if 'syndic_master' in master_conf:
+                deploy_kwargs['make_syndic'] = True
+
         if username == 'root':
             deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
 
