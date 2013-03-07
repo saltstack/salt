@@ -1139,10 +1139,9 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             # delimited format
             if ',' in module_dir:
                 self.config.setdefault('module_dirs', []).extend(
-                    module_dir.split(',')
-                )
+                    os.path.abspath(x) for x in module_dir.split(','))
                 continue
-            self.config.setdefault('module_dirs', []).append(module_dir)
+            self.config.setdefault('module_dirs', []).append(os.path.abspath(module_dir))
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
