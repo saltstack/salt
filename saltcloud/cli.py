@@ -83,6 +83,17 @@ class SaltCloud(parsers.SaltCloudParser):
         ret = {}
 
         if self.selected_query_option is not None:
+            if self.selected_query_option == 'list_providers':
+                try:
+                    saltcloud.output.double_layer(
+                        mapper.provider_list()
+                    )
+                except Exception as exc:
+                    log.debug('There was an error listing providers.', exc_info=True)
+                    self.error(
+                        'There was an error listing providers: {0}'.format(exc)
+                    )
+                    self.exit(1)
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
@@ -146,18 +157,6 @@ class SaltCloud(parsers.SaltCloudParser):
                 log.debug('There was an error listing sizes.', exc_info=True)
                 self.error(
                     'There was an error listing sizes: {0}'.format(exc)
-                )
-                self.exit(1)
-
-        elif self.options.list_providers is not None:
-            try:
-                saltcloud.output.double_layer(
-                    mapper.provider_list(self.options.list_providers)
-                )
-            except Exception as exc:
-                log.debug('There was an error listing providers.', exc_info=True)
-                self.error(
-                    'There was an error listing providers: {0}'.format(exc)
                 )
                 self.exit(1)
 
