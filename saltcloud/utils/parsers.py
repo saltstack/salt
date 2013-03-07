@@ -272,7 +272,7 @@ class CloudQueriesMixIn(object):
         group.add_option(
             '--list-providers',
             default=False,
-            action='store_false',
+            action='store_true',
             help=('Display a list of configured providers.')
         )
         self.add_option_group(group)
@@ -287,6 +287,8 @@ class CloudQueriesMixIn(object):
                         query += '_full'
                     elif opt.dest == 'select_query':
                         query += '_select'
+                    elif opt.dest == 'list_providers':
+                        query = 'list_providers'
                     self.selected_query_option = query
 
             funcname = 'process_{0}'.format(option.dest)
