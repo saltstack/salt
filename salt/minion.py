@@ -771,6 +771,8 @@ class Minion(object):
 
         while True:
             try:
+                if self.opts['multiprocessing'] and not salt.utils.is_windows():
+                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
                 self.schedule.eval()
                 socks = dict(self.poller.poll(
                     self.opts['loop_interval'] * 1000)
@@ -778,18 +780,26 @@ class Minion(object):
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
+                if self.opts['multiprocessing'] and not salt.utils.is_windows():
+                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
                 time.sleep(0.05)
                 # Clean up the minion processes which have been executed and
                 # have finished
                 # Check if modules and grains need to be refreshed
                 self.passive_refresh()
+                if self.opts['multiprocessing'] and not salt.utils.is_windows():
+                    multiprocessing.active_children()
                 # Check the event system
+                if self.opts['multiprocessing'] and not salt.utils.is_windows():
+                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
                 if self.epoller.poll(1):
                     try:
                         package = self.epull_sock.recv(zmq.NOBLOCK)
                         self.epub_sock.send(package)
                     except Exception:
                         pass
+                if self.opts['multiprocessing'] and not salt.utils.is_windows():
+                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
             except zmq.ZMQError:
                 # This is thrown by the inturupt caused by python handling the
                 # SIGCHLD. This is a safe error and we just start the poll
