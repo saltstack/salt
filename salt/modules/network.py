@@ -162,7 +162,7 @@ def _interfaces_ifconfig(out):
     '''
     ret = dict()
 
-    piface = re.compile('^(\S+):?')
+    piface = re.compile('^([^\s:]+)')
     pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
