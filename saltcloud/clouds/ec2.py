@@ -37,6 +37,7 @@ import os
 import sys
 import stat
 import time
+import uuid
 import logging
 
 # Import libs for talking to the EC2 API
@@ -675,6 +676,9 @@ def create(vm_=None, call=None):
             if master_conf:
                 deploy_kwargs['master_conf'] = master_conf
 
+            if 'syndic_master' in master_conf:
+                deploy_kwargs['make_syndic'] = True
+
         if username == 'root':
             deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
 
@@ -853,7 +857,7 @@ def rename(name, kwargs, call=None):
     instances = list_nodes_full()
     instance_id = instances[name]['instanceId']
 
-    set_tags(name, {'Name': kwargs['newname']})
+    set_tags(name, {'Name': kwargs['newname']}, call='action')
     saltcloud.utils.rename_key(
         __opts__['pki_dir'], name, kwargs['newname']
     )
