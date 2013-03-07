@@ -8,10 +8,12 @@ import os
 import glob
 import fnmatch
 import re
+import logging
 
 # Import salt libs
 import salt.payload
 
+log = logging.getLogger(__name__)
 
 def nodegroup_comp(group, nodegroups, skip=None):
     '''
@@ -116,7 +118,7 @@ class CkMinions(object):
                     minions.remove(id_)
                     continue
                 if fnmatch.fnmatch(
-                    str(grains.get(comps[0], '').lower()),
+                    str(grains.get(comps[0], '')).lower(),
                     comps[1].lower(),
                     ):
                     continue
@@ -196,6 +198,8 @@ class CkMinions(object):
                        'compound': self._all_minions,
                       }[expr_form](expr)
         except Exception:
+            log.exception(('Failed matching available minions with {0} pattern: {1}'
+                           ).format(expr_form, expr))
             minions = expr
         return minions
 

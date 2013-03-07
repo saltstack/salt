@@ -928,15 +928,13 @@ class Matcher(object):
         data['foo']['bar']['baz'] if this value exists, and will otherwise
         return an empty dict.
         '''
-        target = target.split(delim)
-        ptr = data
         try:
-            for index in range(len(target)):
-                ptr = ptr.get(target[index], {})
-        except (SyntaxError, AttributeError):
-            # Encountered a non-dict value in the middle of traversing
+            for each in target.split(delim):
+                data = data[each]
+        except (KeyError, IndexError, TypeError):
+            # Encountered a non-indexable value in the middle of traversing
             return {}
-        return ptr
+        return data
 
     def confirm_top(self, match, data, nodegroups=None):
         '''
