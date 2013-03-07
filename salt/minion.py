@@ -924,8 +924,8 @@ class Matcher(object):
         try:
             for each in target.split(delim):
                 data = data[each]
-        except TypeError:
-            # Encountered a non-dict value in the middle of traversing
+        except (KeyError, IndexError, TypeError):
+            # Encountered a non-indexable value in the middle of traversing
             return {}
         return data
 
