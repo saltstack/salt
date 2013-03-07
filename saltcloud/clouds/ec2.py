@@ -854,7 +854,7 @@ def rename(name, kwargs, call=None):
     instances = list_nodes_full()
     instance_id = instances[name]['instanceId']
 
-    set_tags(name, {'Name': kwargs['newname']})
+    set_tags(name, {'Name': kwargs['newname']}, call='action')
     saltcloud.utils.rename_key(
         __opts__['pki_dir'], name, kwargs['newname']
     )
