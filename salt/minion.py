@@ -4,6 +4,7 @@ Routines to set up a minion
 '''
 
 # Import python libs
+import copy
 import logging
 import getpass
 import multiprocessing
@@ -252,11 +253,9 @@ class Minion(object):
         '''
         Returns a deep copy of the opts with key bits stripped out
         '''
-        mod_opts = {}
-        for key, val in self.opts.items():
-            if key == 'logger':
-                continue
-            mod_opts[key] = val
+        mod_opts = copy.deepcopy(self.opts)
+        if 'logger' in mod_opts:
+            del mod_opts['logger']
         return mod_opts
 
     def __load_modules(self):
