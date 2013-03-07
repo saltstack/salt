@@ -28,7 +28,7 @@ set in the main cloud config:
     # The endpoint that is ultimately used is usually formed using the region
     # and the service_url. If you would like to override that entirely, you can
     # explicitly define the endpoint:
-    EC2.endpoint: myendpoint.example.com:1138/services/Cloud/
+    EC2.endpoint: myendpoint.example.com:1138/services/Cloud
 
 '''
 

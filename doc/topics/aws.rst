@@ -302,3 +302,27 @@ driver adds a show_term_protect action to the regular AWS functionality.
     salt-cloud -a enable_term_protect mymachine
     salt-cloud -a disable_term_protect mymachine
 
+
+Alternate Endpoint
+==================
+Normally, ec2 endpoints are build using the region and the service_url. The
+resulting endpoint would follow this pattern:
+
+.. code-block::
+
+    ec2.<region>.<service_url>
+
+This results in an endpoint that looks like:
+
+.. code-block::
+
+    ec2.us-east-1.amazonaws.com
+
+There are other projects that support an EC2 compatibility layer, which this
+scheme does not account for. This can be overridden by specifying the endpoint
+directly in the main cloud configuration file:
+
+.. code-block:: yaml
+
+    EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+
