@@ -55,7 +55,8 @@ class SaltCloud(parsers.SaltCloudParser):
                         not logfile.startswith('file://')):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], getpass.getuser())
-        except OSError as err:
+        except (IOError, OSError) as err:
+            log.error('Error while verifying the environment: {0}'.format(err))
             sys.exit(err.errno)
 
         # Setup log file logging

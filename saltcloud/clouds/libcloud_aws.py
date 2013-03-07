@@ -274,9 +274,9 @@ def create(vm_):
         data = get_node(conn, vm_['name'])
         if data is None:
             failures += 1
-            if failures > 3:
-                log.error('Failed to get node data after 3 attempts')
-                return False
+            if failures > 10:
+                log.error('Failed to get node data after 10 attempts')
+                return {vm_['name']: False}
             log.info(
                 'Failed to get node data. Attempts: {0}'.format(
                     failures
