@@ -402,3 +402,96 @@ directly in the main cloud configuration file:
 
     EC2.endpoint: myendpoint.example.com:1138/services/Cloud
 
+
+Volume Management
+=================
+The EC2 driver has several functions and actions for management of EBS volumes.
+
+
+Creating Volumes
+----------------
+A volume may be created, independent of an instance. A zone must be specified.
+A size or a snapshot may be specified (in GiB). If neither is given, a default
+size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
+will be used.
+
+.. code-block:: bash
+
+    salt-cloud -f create_volume ec2 zone=us-east-1b
+    salt-cloud -f create_volume ec2 zone=us-east-1b size=10
+    salt-cloud -f create_volume ec2 zone=us-east-1b snapshot=snap12345678
+
+
+Attaching Volumes
+-----------------
+Unattached volumes may be attached to an instance. The following values are
+required: name or instance_id, volume_id and device.
+
+.. code-block:: bash
+
+    salt-cloud -a attach_volume myinstance volume_id=vol-12345 device=/dev/sdb1
+
+
+Show a Volume
+-------------
+The details about an existing volume may be retreived.
+
+.. code-block:: bash
+
+    salt-cloud -a show_volume myinstance volume_id=vol-12345
+    salt-cloud -f show_volume ec2 volume_id=vol-12345
+
+
+Detaching Volumes
+-----------------
+An existing volume may be detached from an instance.
+
+.. code-block:: bash
+
+    salt-cloud -a detach_volume myinstance volume_id=vol-12345
+
+
+Deleting Volumes
+----------------
+A volume that is not attached to an instance may be deleted.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_volume ec2 volume_id=vol-12345
+
+
+Managing Key Pairs
+==================
+The EC2 driver has the ability to manage key pairs.
+
+
+Creating a Key Pair
+-------------------
+A key pair is required in order to create an instance. When creating a key pair
+with this function, the return data will contain a copy of the private key.
+This private key is not stored by Amazon, and will not be obtainable past this
+point, and should be stored immediately.
+
+.. code-block:: bash
+
+    salt-cloud -f create_keypair ec2 keyname=mykeypair
+
+
+Show a Key Pair
+---------------
+This function will show the details related to a key pair, not including the
+private key itself (which is not stored by Amazon).
+
+.. code-block:: bash
+
+    salt-cloud -f delete_keypair ec2 keyname=mykeypair
+
+
+Delete a Key Pair
+-----------------
+This function removes the key pair from Amazon.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_keypair ec2 keyname=mykeypair
+
