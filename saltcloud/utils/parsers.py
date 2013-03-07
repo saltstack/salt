@@ -162,7 +162,7 @@ class ExecutionOptionsMixIn(object):
             '-f', '--function',
             nargs=2,
             default='',
-            metavar='<PROVIDER> <FUNC-NAME>',
+            metavar='<FUNC-NAME> <PROVIDER>',
             help=('Perform an function that may be specific to this cloud '
                   'provider, that does not apply to an instance. This '
                   'argument requires a provider to be specified (i.e.: nova).')
