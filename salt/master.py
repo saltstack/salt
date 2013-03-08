@@ -1721,15 +1721,18 @@ class ClearFuncs(object):
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob')
                 )
-        # Check for no minions
-        if not minions:
-            return {
-                'enc': 'clear',
-                'load': {
-                    'jid': None,
-                    'minions': minions
+        # If we order masters (via a syndic), don't short circuit if no minions
+        # are found
+        if not self.opts.get('order_masters'):
+            # Check for no minions
+            if not minions:
+                return {
+                    'enc': 'clear',
+                    'load': {
+                        'jid': None,
+                        'minions': minions
+                    }
                 }
-            }
         # Retrieve the jid
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
