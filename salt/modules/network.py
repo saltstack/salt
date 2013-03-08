@@ -458,10 +458,10 @@ def traceroute(host):
             continue
         if line.startswith('traceroute'):
             continue
-        comps = line.split('  ')
 
         if (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
         or traceroute_version[0] >= 2 and traceroute_version[1] > 0):
+            comps = line.split('  ')
             if comps[1] == '* * *':
                 result = {
                     'count': int(comps[0]),
@@ -475,6 +475,7 @@ def traceroute(host):
                     'ms2': float(comps[3].split()[0]),
                     'ms3': float(comps[4].split()[0])}
         else:
+            comps = line.split()
             result = {
                 'count': comps[0],
                 'hostname': comps[1],
