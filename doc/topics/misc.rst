@@ -8,8 +8,8 @@ Deploy Script Arguments
 =======================
 Custom deploy scripts are unlikely to need custom arguments to be passed to
 them, but salt-bootstrap has been extended quite a bit, and this may be
-necessary. script_args can be specified in either the profile or the map
-file, to pass arguments to the deploy script:
+necessary. script_args can be specified in either the profile or the map file,
+to pass arguments to the deploy script:
 
 .. code-block:: yaml
 
@@ -26,6 +26,7 @@ This has also been tested to work with pipes, if needed:
 .. code-block:: yaml
 
     script_args: | head
+
 
 Sync After Install
 ==================
@@ -49,6 +50,7 @@ The available options for this setting are:
     grains
     states
     all
+
 
 Setting up New Salt Masters
 ===========================
@@ -76,6 +78,7 @@ profile or map:
         user: root
         interface: 0.0.0.0
 
+
 Delete SSH Keys
 ===============
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
@@ -93,6 +96,7 @@ the following line needs to be added to the main cloud configuration file:
 
     delete_sshkeys: True
 
+
 Keeping /tmp/ Files
 ===================
 When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
@@ -107,6 +111,7 @@ can be added:
 For those wondering why /tmp/ was used instead of /root/, this had to be done
 for images which require the use of sudo, and therefore do not allow remote
 root logins, even for file transfers (which makes /root/ unavailable).
+
 
 Hide Output From Minion Install
 ===============================

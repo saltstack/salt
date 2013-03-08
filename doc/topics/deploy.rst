@@ -3,8 +3,8 @@ OS Support for Cloud VMs
 ========================
 
 Salt Cloud works primarily by executing a script on the virtual machines as
-soon as they become available. The script that is executed is referenced in
-the cloud profile as the ``script``. In older versions, this was the ``os``
+soon as they become available. The script that is executed is referenced in the
+cloud profile as the ``script``. In older versions, this was the ``os``
 argument. This was changed in 0.8.2.
 
 A number of legacy scripts exist in the deploy directory in the saltcloud
@@ -146,6 +146,7 @@ Salt Bootstrap can be updated automatically with salt-cloud:
 Bear in mind that this updates to the latest (unstable) version, so use with
 caution.
 
+
 Keeping /tmp/ Files
 ===================
 When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
@@ -167,8 +168,8 @@ Deploy Script Arguments
 =======================
 Custom deploy scripts are unlikely to need custom arguments to be passed to
 them, but salt-bootstrap has been extended quite a bit, and this may be
-necessary. script_args can be specified in either the profile or the map
-file, to pass arguments to the deploy script:
+necessary. script_args can be specified in either the profile or the map file,
+to pass arguments to the deploy script:
 
 .. code-block:: yaml
 

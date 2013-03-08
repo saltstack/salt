@@ -10,65 +10,107 @@ Set up the cloud config at ``/etc/salt/cloud``:
 .. code-block:: yaml
 
     # Set up an optional default cloud provider
+    #
     provider: AWS
 
     # Set up the location of the salt master
+    #
     minion:
-      master: saltmaster.example.com
+        master: saltmaster.example.com
 
-    # Specify whether to use public or private IP for deploy script
-    # private_ips or public_ips.
-    # Use private_ips if your salt-master is on a private vlan
+    # Specify whether to use public or private IP for deploy script.
+    #
+    # Valid options are:
+    #     private_ips - The salt-master is also hosted with AWS
+    #     public_ips - The salt-master is hosted outside of AWS
+    #
     AWS.ssh_interface: public_ips
 
-    # Set the AWS login data. You will have to change all of these.
+    # Set the AWS access credentials (see below)
+    #
     AWS.id: HJGRYCILJLKJYG
     AWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
 
     # Make sure this key is owned by root with permissions 0400.
+    #
     AWS.private_key: /etc/salt/my_test_key.pem
     AWS.keyname: my_test_key
     AWS.securitygroup: default
 
     # Optionally configure default region
+    #
     AWS.location: ap-southeast-1
     AWS.availability_zone: ap-southeast-1b
 
-    # Configure which user to use to run the deploy script
-    # This depends on what distro you will be using (specifically, on what AMI)
-    # If you are using multiple distros, do NOT set this here.
-    # Instead set it for each profile in the cloud.profiles discussed below.
-    # ubuntu -> ubuntu
-    # RHEL -> ec2-user
+    # Configure which user to use to run the deploy script. This setting is
+    # dependent upon the AMI that is used to deploy. It is usually safer to
+    # configure this individually in a profile, than globally. Typical users
+    # are:
+    #
+    # Amazon Linux -> ec2-user
+    # RHEL         -> ec2-user
+    # CentOS       -> ec2-user
+    # Ubuntu       -> ubuntu
+    #
     AWS.ssh_username: ec2-user
 
 
-To configure these, start by log into your amazon account and go to
-:doc:`https://portal.aws.amazon.com/gp/aws/securityCredentials <https://portal.aws.amazon.com/gp/aws/securityCredentials>`
-For ``id``, and ``key`` under the  Access Keys section, pick an Access Key Id and matching Secret Access Key
-(you will have to click show to see the secret)
+Access Credentials
+==================
+The ``id`` and ``key`` settings may be found in the Security Credentials area
+of the AWS Account page:
 
-Next, log into :doc:`https://console.aws.amazon.com/ec2/home?region=us-east-1#s=KeyPairs <https://console.aws.amazon.com/ec2/home?region=us-east-1#s=KeyPairs>`
-You should find a Key Pair Name there. This is your ``keyname``.
-For the reset of this document, we'll call that key my_test_key.
-For your ``private_key`` look in ~/.ssh on the laptop or desktop.
-If you used a pre-existing ssh key, make sure the private key is in PEM format.
-Upload it to the salt master, move / rename it to /etc/salt/my_test_key.pem
-Make sure it is owned by root with permissions set to 0400.
-If you went with the defaults when you configured your AWS account,
-your ``securitygroup`` will be default.
-If you followed the quick-start guide it may be quickstart.
+https://portal.aws.amazon.com/gp/aws/securityCredentials
 
+Both are located in the Access Credentials area of the page, under the Access
+Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
+is labeled Secret Access Key.
+
+
+Key Pairs
+=========
+In order to create an instance with Salt installed and configured, a key pair
+will need to be created. This can be done in the EC2 Management Console, in the
+Key Pairs area. These key pairs are unique to a specific region. Keys in the
+us-east-1 region can be configured at:
+
+https://console.aws.amazon.com/ec2/home?region=us-east-1#s=KeyPairs
+
+Keys in the us-west-1 region can be configured at
+
+https://console.aws.amazon.com/ec2/home?region=us-west-1#s=KeyPairs
+
+...and so on. When creating a key pair, the browser will prompt to download a
+pem file. This file must be placed in a directory accessable by Salt Cloud,
+with permissions set to either 0400 or 0600.
+
+
+Security Groups
+===============
+An instance on AWS needs to belong to a security group. Like key pairs, these
+are unique to a specific region. These are also configured in the EC2 Management
+Console. Security groups for the us-east-1 region can be configured at:
+
+https://console.aws.amazon.com/ec2/home?region=us-east-1#s=SecurityGroups
+
+...and so on.
+
+A security group defines firewall rules which an instance will adhere to. If
+the salt-master is configured outside of AWS, the security group must open the
+SSH port (usually port 22) in order for Salt Cloud to install Salt.
+
+
+Cloud Profiles
+==============
 Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
     base_aws:
-      provider: aws
-      image: ami-e565ba8c
-      size: Micro Instance
-      script: RHEL6
-      ssh-user: ec2-user
+        provider: aws
+        image: ami-e565ba8c
+        size: Micro Instance
+        ssh-user: ec2-user
 
 The profile can be realized now with a salt command:
 
@@ -76,21 +118,22 @@ The profile can be realized now with a salt command:
 
     # salt-cloud -p base_aws ami.example.com
 
-The created virtual machine will be named ``ami.example.com`` in the amazon
-cloud and will have the same salt ``id``.
+This will create an instance named ``ami.example.com`` in EC2. The minion that
+is installed on this instance will have an ``id`` of ``ami.example.com``. If
+the command was executed on the salt-master, its Salt key will automatically be
+signed on the master.
 
-Once the vm is created it will start up the Salt Minion and connect back to
-the Salt Master.
-You can confirm this is by running the following on hte salt master.
+Once the instance has been created with salt-minion installed, connectivity to
+it can be verified with Salt:
 
-.. code-block: bash
+.. code-block:: bash
 
-    # salt 'ami.example.com' cmd.run 'uname -a'
+    # salt 'ami.example.com' test.ping
+
 
 Required Settings
 =================
-
-AWS has several options that are always required:
+The following settings are always required for AWS:
 
 .. code-block:: yaml
 
@@ -101,9 +144,9 @@ AWS has several options that are always required:
     AWS.securitygroup: quick-start
     AWS.private_key: /root/test.pem
 
+
 Optional Settings
 =================
-
 AWS allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
 
@@ -124,10 +167,11 @@ is run from another AWS instance, the private IP should be used.
     # private_ips or public_ips
     AWS.ssh_interface: public_ip
 
-AWS instances may not allow remote access to the root user by default. Instead,
-another user must be used to run the deploy script using sudo. Some common
-usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu instances),
-admin (official Debian) and bitnami (for images provided by Bitnami).
+Many AWS instances do not allow remote access to the root user by default.
+Instead, another user must be used to run the deploy script using sudo. Some
+common usernames include ec2-user (for Amazon Linux), ubuntu (for Ubuntu
+instances), admin (official Debian) and bitnami (for images provided by
+Bitnami).
 
 .. code-block:: yaml
 
@@ -154,6 +198,7 @@ Multiple security groups can also be specified in the same fashion:
       - default
       - extra
 
+
 Modify AWS Tags
 ===============
 One of the features of AWS is the ability to tag resources. In fact, under the
@@ -166,6 +211,7 @@ as a tag called Name. Salt Cloud has the ability to manage these tags:
     salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     salt-cloud -a del_tags mymachine tag1,tag2,tag3
 
+
 Rename AWS Instances
 ====================
 As mentioned above, AWS instances are named via a tag. However, renaming an
@@ -176,6 +222,7 @@ function exists which renames both the instance, and the salt keys.
 
     salt-cloud -a rename mymachine newname=yourmachine
 
+
 AWS Termination Protection
 ==========================
 AWS allows the user to enable and disable termination protection on a specific
@@ -185,6 +232,7 @@ instance. An instance with this protection enabled cannot be destroyed.
 
     salt-cloud -a enable_term_protect mymachine
     salt-cloud -a disable_term_protect mymachine
+
 
 Rename on Destroy
 =================
@@ -239,6 +287,7 @@ them have never been used, much less tested, by the Salt Stack team.
 * `All Images on Amazon`__
 .. __: https://aws.amazon.com/amis
 
+
 Experimental EC2 Driver
 =======================
 An experimental driver has been added to Salt Cloud called EC2. The
@@ -259,8 +308,12 @@ speed and functionality. However, because this is a new driver, it is currently
 considered to be experimental, and as such, the old AWS driver may still be
 used as before.
 
+IMPORTANT: Because this driver is in experimental status, its usage and
+configuration should be expected to change.
+
 The remainder of this document describes settings which may be used with the
 EC2 driver.
+
 
 show_image
 ==========
@@ -271,16 +324,18 @@ the defaults that will be applied to an instance using a particular AMI.
 
     $ salt-cloud -f show_image ec2 image=ami-fd20ad94
 
+
 show_instance
 =============
 This action is a thin wrapper around --full-query, which displays details on a
-single instance only. In an environment with several machines, this will save
-a user from having to sort through all instance data, just to examine a
-single instance.
+single instance only. In an environment with several machines, this will save a
+user from having to sort through all instance data, just to examine a single
+instance.
 
 .. code-block:: bash
 
     $ salt-cloud -a show_instance myinstance
+
 
 delvol_on_destroy
 =================
@@ -346,4 +401,97 @@ directly in the main cloud configuration file:
 .. code-block:: yaml
 
     EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+
+
+Volume Management
+=================
+The EC2 driver has several functions and actions for management of EBS volumes.
+
+
+Creating Volumes
+----------------
+A volume may be created, independent of an instance. A zone must be specified.
+A size or a snapshot may be specified (in GiB). If neither is given, a default
+size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
+will be used.
+
+.. code-block:: bash
+
+    salt-cloud -f create_volume ec2 zone=us-east-1b
+    salt-cloud -f create_volume ec2 zone=us-east-1b size=10
+    salt-cloud -f create_volume ec2 zone=us-east-1b snapshot=snap12345678
+
+
+Attaching Volumes
+-----------------
+Unattached volumes may be attached to an instance. The following values are
+required: name or instance_id, volume_id and device.
+
+.. code-block:: bash
+
+    salt-cloud -a attach_volume myinstance volume_id=vol-12345 device=/dev/sdb1
+
+
+Show a Volume
+-------------
+The details about an existing volume may be retreived.
+
+.. code-block:: bash
+
+    salt-cloud -a show_volume myinstance volume_id=vol-12345
+    salt-cloud -f show_volume ec2 volume_id=vol-12345
+
+
+Detaching Volumes
+-----------------
+An existing volume may be detached from an instance.
+
+.. code-block:: bash
+
+    salt-cloud -a detach_volume myinstance volume_id=vol-12345
+
+
+Deleting Volumes
+----------------
+A volume that is not attached to an instance may be deleted.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_volume ec2 volume_id=vol-12345
+
+
+Managing Key Pairs
+==================
+The EC2 driver has the ability to manage key pairs.
+
+
+Creating a Key Pair
+-------------------
+A key pair is required in order to create an instance. When creating a key pair
+with this function, the return data will contain a copy of the private key.
+This private key is not stored by Amazon, and will not be obtainable past this
+point, and should be stored immediately.
+
+.. code-block:: bash
+
+    salt-cloud -f create_keypair ec2 keyname=mykeypair
+
+
+Show a Key Pair
+---------------
+This function will show the details related to a key pair, not including the
+private key itself (which is not stored by Amazon).
+
+.. code-block:: bash
+
+    salt-cloud -f delete_keypair ec2 keyname=mykeypair
+
+
+Delete a Key Pair
+-----------------
+This function removes the key pair from Amazon.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_keypair ec2 keyname=mykeypair
 

@@ -2,49 +2,58 @@
 Getting Started With Rackspace
 ==============================
 
-Rackspace is a major public cloud platform and is one of the core
-platforms that Salt Cloud has been built to support.
+Rackspace is a major public cloud platform and is one of the core platforms
+that Salt Cloud has been built to support.
 
 Set up the cloud config at ``/etc/salt/cloud``:
 
 .. code-block:: yaml
 
     # Set up an optional default cloud provider
+    #
     provider: openstack
 
-    # Set the location of your salt master
+    # Set the location of the salt-master
+    #
     minion:
-      master: saltmaster.example.com
+        master: saltmaster.example.com
 
-    # Set your Rackspace login data using the OpenStack plugin
+    # Configure Rackspace using the OpenStack plugin
+    #
     OPENSTACK.identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
     OPENSTACK.compute_name: cloudServersOpenStack
     OPENSTACK.protocol: ipv4
 
-    # You may need to change the compute_region
+    # Set the compute region:
+    #
     OPENSTACK.compute_region: DFW
 
-    # You will certainly need to change each of these
+    # Configure Rackspace authentication credentials
+    #
     OPENSTACK.user: myname
     OPENSTACK.tenant: 123456
     OPENSTACK.apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-For ``compute_node``, use one of ``DFW``, ``ORD``, or ``LON``.
-These are Dallas, Chicago and London respectively.
-If you are not sure which of these to use, open the Rackspace web Cloud Control Panel.
-Look under Hosting -> Cloud Servers, and you will see a Datacenter column on the far right.
-Note that trailing digits should be ommitted.
-For example, servers in either DFW1 or DFW2 should have a ``compute_node`` of DFW.
 
-For the ``user``, ``tenant`` and ``apikey``, log into rackspace and go to
-Your Account -> API Access.
-If you don't already have an API Access Key, go ahead and generate one.
-Otherwise, that's your ``apikey``.
-If you prefer, the openstack code supports using a ``password`` instead
-of an apikey for authentication.
-The Cloud Account Number directly below that is what you want for ``tenant``.
+Compute Region
+==============
+Rackspace currently has three compute regions which may be used:
 
-Set up an initial profile at ``/etc/salt/cloud.profiles``:
+.. code-block::
+
+    DFW -> Dallas/Forth Worth
+    ORD -> Chicago
+    LON -> London
+
+
+Authentication
+==============
+The ``user`` is the same user as is used to log into the Rackspace Control
+Panel. The ``tenant`` and ``apikey`` can be found in the API Keys area of the
+Control Panel. The ``apikey`` will be labeled as API Key (and may need to be
+generated), and ``tenant`` will be labeled as Cloud Account Number.
+
+An initial profile will be configured in ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
@@ -53,27 +62,20 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         size: 512MB Standard Instance
         image: Ubuntu 12.04 LTS (Precise Pangolin)
 
-Now instantiate a machine based on this profile with a salt command:
+To instantiate a machine based on this profile:
 
 .. code-block:: bash
 
-    # salt-cloud -p openstack_512 foo
+    # salt-cloud -p openstack_512 myinstance
 
-This will create a virtual machine at Rackspace with the name ``foo``.
-At the time of writing (2013-Feb) this operation takes anywhere from 2 to 25 minutes to complete.
-Since it is entirely dependant on Rackspace's load, your mileage may (and will) vary.
+This will create a virtual machine at Rackspace with the name ``myinstance``.
+This operation may take several minutes to complete, depending on the current
+load at the Rackspace data center.
 
-Once the vm is created it will start up the Salt Minion and connect back to
-the Salt Master.
-You can confirm this by running the following on the salt master.
+Once the instance has been created with salt-minion installed, connectivity to
+it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt 'foo' cmd.run 'uname -a'
+    # salt myinstance test.ping
 
-You should see your new node responding.
-
-Optional Settings
-=================
-
-Currently there are no optional settings for OpenStack / Rackspace.
