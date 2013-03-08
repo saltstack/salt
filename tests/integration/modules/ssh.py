@@ -49,7 +49,7 @@ class SSHModuleTest(integration.ModuleCase):
         key_data = list(ret.items())[0][1]
         self.assertEqual(key_data['comment'], 'github.com')
         self.assertEqual(key_data['enc'], 'ssh-rsa')
-        self.assertEqual(key_data['options'], [])
+        self.assertEqual(key_data['options'], ['command="/usr/local/lib/ssh-helper"'])
         self.assertEqual(key_data['fingerprint'], GITHUB_FINGERPRINT)
 
     def test_get_known_host(self):

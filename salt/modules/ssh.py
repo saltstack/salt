@@ -122,7 +122,7 @@ def _validate_keys(key_file):
     Return a dict containing validated keys in the passed file
     '''
     ret = {}
-    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
 
     try:
         with salt.utils.fopen(key_file, 'r') as _fh:
@@ -291,7 +291,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         salt '*' ssh.rm_auth_key <user> <key>
     '''
     current = auth_keys(user, config)
-    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
     if key in current:
         # Remove the key
         uinfo = __salt__['user.info'](user)
