@@ -114,7 +114,7 @@ def managed(name, **kwargs):
     key_url
        A web url to retreive the GPG key from.
 
-    consolidate:
+    consolidate
        If set to true, this will consolidate all sources definitions to
        the sources.list file, cleanup the now unused files, consolidate
        components (e.g. main) for the same uri, type, and architecture
