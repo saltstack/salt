@@ -328,7 +328,7 @@ def _symlink_check(name, target, force):
     '''
     Check the symlink function
     '''
-    if not os.path.exists(name):
+    if not os.path.exists(name) and not os.path.islink(name):
         return None, 'Symlink {0} to {1} is set for creation'.format(
             name, target
         )
