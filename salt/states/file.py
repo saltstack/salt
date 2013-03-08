@@ -1441,7 +1441,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex'](name, regex, lchar=char):
+    elif __salt__['file.contains_regex'](name, char + '[ ]?' + regex):
         # Line exists and is commented
         pass
     else:
