@@ -19,6 +19,7 @@ import signal
 
 # Import third party libs
 import zmq
+import yaml
 
 HAS_RANGE = False
 try:
@@ -392,7 +393,7 @@ class Minion(object):
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
-                arg = eval(data['arg'][ind])
+                arg = yaml.safe_load(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
                 elif isinstance(arg, (dict, int, list, string_types)):
@@ -467,7 +468,7 @@ class Minion(object):
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
-                    arg = eval(data['arg'][ind][index])
+                    arg = yaml.safe_load(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
                     elif isinstance(arg, (dict, int, list, string_types)):
