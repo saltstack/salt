@@ -978,7 +978,7 @@ def recurse(name,
         exclude_pat=None,
         **kwargs):
     '''
-    Recurse through a subdirectory on the master and copy said subdirecory
+    Recurse through a subdirectory on the master and copy said subdirectory
     over to the specified path.
 
     name
