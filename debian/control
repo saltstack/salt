@@ -22,7 +22,7 @@ Depends: ${python:Depends},
          python-yaml,
          salt-common,
          sshpass
-Recommends: python-botocore
+Suggests: python-botocore
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly 
  controlled profile and mapping system.
