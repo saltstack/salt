@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "February 14, 2013" "0.8.5" "salt-cloud"
+.TH "SALT-CLOUD" "7" "March 08, 2013" "0.8.6" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -33,16 +33,16 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH VM PROFILES
 .sp
 Salt cloud designates virtual machines inside the profile configuration file.
-The profile configuration file defaults to \fB/etc/salt/cloud.profiles\fP and is a
-yaml configuration. The syntax for declaring profiles is simple:
+The profile configuration file defaults to \fB/etc/salt/cloud.profiles\fP and is
+a yaml configuration. The syntax for declaring profiles is simple:
 .sp
 .nf
 .ft C
 fedora_rackspace:
-  provider: rackspace
-  image: Fedora 17
-  size: 256 server
-  script: Fedora
+    provider: rackspace
+    image: Fedora 17
+    size: 256 server
+    script: Fedora
 .ft P
 .fi
 .sp
@@ -52,14 +52,25 @@ public cloud provider. A number of additional parameters can also be inserted:
 .nf
 .ft C
 centos_rackspace:
-  provider: rackspace
-  image: CentOS 6.2
-  size: 1024 server
-  script: RHEL6
-  minion:
-    master: salt.example.com
-  grains:
-    role: webserver
+    provider: rackspace
+    image: CentOS 6.2
+    size: 1024 server
+    script: RHEL6
+    minion:
+        master: salt.example.com
+    grains:
+        role: webserver
+.ft P
+.fi
+.sp
+The image must be selected from available images. Similarly, sizes must be
+selected from the list of sizes. To get a list of available images and sizes
+use the following command:
+.sp
+.nf
+.ft C
+salt\-cloud \-\-list\-images openstack
+salt\-cloud \-\-list\-sizes openstack
 .ft P
 .fi
 .sp
@@ -72,54 +83,54 @@ file.
 .nf
 .ft C
 rhel_aws:
-  provider: aws
-  image: ami\-e565ba8c
-  size: Micro Instance
-  script: RHEL6
-  minion:
-      cheese: edam
+    provider: aws
+    image: ami\-e565ba8c
+    size: Micro Instance
+    script: RHEL6
+    minion:
+        cheese: edam
 
 ubuntu_aws:
-  provider: aws
-  image: ami\-7e2da54e
-  size: Micro Instance
-  script: Ubuntu
-  minion:
-      cheese: edam
+    provider: aws
+    image: ami\-7e2da54e
+    size: Micro Instance
+    script: Ubuntu
+    minion:
+        cheese: edam
 
 ubuntu_rackspace:
-  provider: rackspace
-  image: Ubuntu 12.04 LTS
-  size: 256 server
-  script: Ubuntu
-  minion:
-      cheese: edam
+    provider: rackspace
+    image: Ubuntu 12.04 LTS
+    size: 256 server
+    script: Ubuntu
+    minion:
+        cheese: edam
 
 fedora_rackspace:
-  provider: rackspace
-  image: Fedora 17
-  size: 256 server
-  script: Fedora
-  minion:
-      cheese: edam
+    provider: rackspace
+    image: Fedora 17
+    size: 256 server
+    script: Fedora
+    minion:
+        cheese: edam
 
 cent_linode:
-  provider: linode
-  image: CentOS 6.2 64bit
-  size: Linode 512
-  script: RHEL6
+    provider: linode
+    image: CentOS 6.2 64bit
+    size: Linode 512
+    script: RHEL6
 
 cent_gogrid:
-  provider: gogrid
-  image: 12834
-  size: 512MB
-  script: RHEL6
+    provider: gogrid
+    image: 12834
+    size: 512MB
+    script: RHEL6
 
 cent_joyent:
-  provider: joyent
-  image: centos\-6
-  script: RHEL6
-  size: Small 1GB
+    provider: joyent
+    image: centos\-6
+    script: RHEL6
+    size: Small 1GB
 .ft P
 .fi
 .SH CLOUD MAP FILE
@@ -236,15 +247,14 @@ Proceed? [N/y]
 .fi
 .SH WRITING CLOUD PROVIDER MODULES
 .sp
-Salt cloud runs on a module system similar to the main Salt project. The
-modules inside saltcloud exist in the \fBsaltcloud/clouds\fP directory of
-the salt\-cloud source.
+Salt Cloud runs on a module system similar to the main Salt project. The
+modules inside saltcloud exist in the \fBsaltcloud/clouds\fP directory of the
+salt\-cloud source.
 .sp
 Adding a provider requires that a cloud module is created. The cloud module
 needs to only impliment a single function \fBcreate\fP, which will accept a
-single virtual machine data structure. Whatever functions need to be called
-to execute the create function can and should be included in the provider
-module.
+single virtual machine data structure. Whatever functions need to be called to
+execute the create function can and should be included in the provider module.
 .sp
 A good example to follow for writing a cloud provider module is the module
 provided for Linode:
@@ -254,11 +264,15 @@ provided for Linode:
 If possible it is prefered that libcloud is used to connect to public cloud
 systems, but if libcloud support is not available or another system makes more
 sense then by all means, use the other system to connect to the cloud provider.
+.sp
+An example of a non\-libcloud provider is the ec2 module:
+.sp
+\fI\%https://github.com/saltstack/salt-cloud/blob/develop/saltcloud/clouds/ec2.py\fP
 .SH OS SUPPORT FOR CLOUD VMS
 .sp
 Salt Cloud works primarily by executing a script on the virtual machines as
-soon as they become available. The script that is executed is referenced in
-the cloud profile as the \fBscript\fP. In older versions, this was the \fBos\fP
+soon as they become available. The script that is executed is referenced in the
+cloud profile as the \fBscript\fP. In older versions, this was the \fBos\fP
 argument. This was changed in 0.8.2.
 .sp
 A number of legacy scripts exist in the deploy directory in the saltcloud
@@ -309,7 +323,10 @@ refit to meet your needs. One important use of them is to pass options to
 the salt\-bootstrap script, such as updating to specific git tags.
 .SS Post\-Deploy Commands
 .sp
-Once a minion has been deployed, it has the option to run a salt command. Normally, this would be the state.highstate command, which would finish provisioning the VM. Another common option is state.sls, or for just testing, test.ping. This is configured in the main cloud config file:
+Once a minion has been deployed, it has the option to run a salt command.
+Normally, this would be the state.highstate command, which would finish
+provisioning the VM. Another common option is state.sls, or for just testing,
+test.ping. This is configured in the main cloud config file:
 .sp
 .nf
 .ft C
@@ -317,12 +334,16 @@ start_action: state.highstate
 .ft P
 .fi
 .sp
-This is currently considered to be experimental functionality, and may not work well with all providers. If you experience problems with Salt Cloud hanging after Salt is deployed, consider using Startup States instead:
+This is currently considered to be experimental functionality, and may not work
+well with all providers. If you experience problems with Salt Cloud hanging
+after Salt is deployed, consider using Startup States instead:
 .sp
 \fI\%http://docs.saltstack.org/en/latest/ref/states/startup.html\fP
 .SS Skipping the Deploy Script
 .sp
-For whatever reason, you may want to skip the deploy script altogether. This results in a VM being spun up much faster, with absolutely no configuration. This can be set from the command line:
+For whatever reason, you may want to skip the deploy script altogether. This
+results in a VM being spun up much faster, with absolutely no configuration.
+This can be set from the command line:
 .sp
 .nf
 .ft C
@@ -338,9 +359,31 @@ deploy: False
 .ft P
 .fi
 .sp
+Or it can be set from the provider\(aqs configuration:
+.sp
+.nf
+.ft C
+RACKSPACE.user: example_user
+RACKSPACE.apikey: 123984bjjas87034
+RACKSPACE.deploy: False
+.ft P
+.fi
+.sp
+Or even on the VM\(aqs profile settings:
+.sp
+.nf
+.ft C
+ubuntu_aws:
+  provider: aws
+  image: ami\-7e2da54e
+  size: Micro Instance
+  deploy: False
+.ft P
+.fi
+.sp
 The default for deploy is True.
 .sp
-In the profile, you may also set the script option to None:
+In the profile, you may also set the script option to \fBNone\fP:
 .sp
 .nf
 .ft C
@@ -348,7 +391,8 @@ script: None
 .ft P
 .fi
 .sp
-This is the slowest option, since it still uploads the None deploy script and executes it.
+This is the slowest option, since it still uploads the None deploy script and
+executes it.
 .SS Updating Salt Bootstrap
 .sp
 Salt Bootstrap can be updated automatically with salt\-cloud:
@@ -382,8 +426,8 @@ root logins, even for file transfers (which makes /root/ unavailable).
 .sp
 Custom deploy scripts are unlikely to need custom arguments to be passed to
 them, but salt\-bootstrap has been extended quite a bit, and this may be
-necessary. script_args can be specified in either the profile or the map
-file, to pass arguments to the deploy script:
+necessary. script_args can be specified in either the profile or the map file,
+to pass arguments to the deploy script:
 .sp
 .nf
 .ft C
@@ -406,8 +450,8 @@ script_args: | head
 .fi
 .SH CORE CONFIGURATION
 .sp
-A number of core configuration options and some options that are global to
-the vm profiles can be set in the cloud config file. By default this file is
+A number of core configuration options and some options that are global to the
+VM profiles can be set in the cloud config file. By default this file is
 located at \fB/etc/salt/cloud\fP.
 .SS Minion Configuration
 .sp
@@ -417,7 +461,7 @@ minions that are created derive their configuration.
 .nf
 .ft C
 minion:
-  master: saltmaster.example.com
+    master: saltmaster.example.com
 .ft P
 .fi
 .sp
@@ -513,11 +557,12 @@ OPENSTACK.password: mypass
 # For Rackspace
 OPENSTACK.identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
 OPENSTACK.compute_name: cloudServersOpenStack
-OPENSTACK.compute_region: DFW
-OPENSTACK.tenant: 5555555
-OPENSTACK.user: myuser
-OPENSTACK.password: mypass
 OPENSTACK.protocol: ipv4
+OPENSTACK.compute_region: DFW
+OPENSTACK.protocol: ipv4
+OPENSTACK.user: myuser
+OPENSTACK.tenant: 5555555
+OPENSTACK.password: mypass
 .ft P
 .fi
 .sp
@@ -529,6 +574,9 @@ password:
 OPENSTACK.apikey: 901d3f579h23c8v73q9
 .ft P
 .fi
+.sp
+You will certainly need to configure the \fBuser\fP, \fBtenant\fP and either
+\fBpassword\fP or \fBapikey\fP.
 .SS IBM SmartCloud Enterprise
 .sp
 In addition to a username and password, the IBM SCE module requires an SSH key,
@@ -546,9 +594,138 @@ IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
 IBMSCE.location: Raleigh
 .ft P
 .fi
+.SH CLOUD ACTIONS
+.sp
+Once a VM has been created, there are a number of actions that can be performed
+on it. The "reboot" action can be used across all providers, but all other
+actions are specific to the cloud provider. In order to perform an action, you
+may specify it from the command line, including the name(s) of the VM to
+perform the action on:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-a reboot vm_name
+$ salt\-cloud \-a reboot vm1 vm2 vm2
+.ft P
+.fi
+.sp
+Or you may specify a map which includes all VMs to perform the action on:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-a reboot \-m /path/to/mapfile
+.ft P
+.fi
+.sp
+The following is a list of actions currently supported by salt\-cloud:
+.sp
+.nf
+.ft C
+all providers:
+    \- reboot
+aws:
+    \- start
+    \- stop
+joyent:
+    \- stop
+.ft P
+.fi
+.SH CLOUD FUNCTIONS
+.sp
+Cloud functions work much the same way as cloud actions, except that they don\(aqt
+perform an operation on a specific instance, and so do not need a machine name
+to be specified. However, since they perform an operation on a specific cloud
+provider, that provider must be specified.
+.sp
+.nf
+.ft C
+$ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
+.ft P
+.fi
 .SH MISCELLANEOUS SALT CLOUD OPTIONS
 .sp
 This page describes various miscellaneous options available in Salt Cloud
+.SS Deploy Script Arguments
+.sp
+Custom deploy scripts are unlikely to need custom arguments to be passed to
+them, but salt\-bootstrap has been extended quite a bit, and this may be
+necessary. script_args can be specified in either the profile or the map file,
+to pass arguments to the deploy script:
+.sp
+.nf
+.ft C
+aws\-amazon:
+    provider: aws
+    image: ami\-1624987f
+    size: Micro Instance
+    ssh_username: ec2\-user
+    script: bootstrap\-salt
+    script_args: \-c /tmp/
+.ft P
+.fi
+.sp
+This has also been tested to work with pipes, if needed:
+.sp
+.nf
+.ft C
+script_args: | head
+.ft P
+.fi
+.SS Sync After Install
+.sp
+Salt allows users to create custom modules, grains and states which can be
+synchronised to minions to extend Salt with further functionality.
+.sp
+This option will inform Salt Cloud to synchronise your custom modules, grains,
+states or all these to the minion just after it has been created. For this to
+happen, the following line needs to be added to the main cloud
+configuration file:
+.sp
+.nf
+.ft C
+sync_after_install: all
+.ft P
+.fi
+.sp
+The available options for this setting are:
+.sp
+.nf
+.ft C
+modules
+grains
+states
+all
+.ft P
+.fi
+.SS Setting up New Salt Masters
+.sp
+It has become increasingly common for users to set up multi\-hierarchal
+infrastructures using Salt Cloud. This sometimes involves setting up an
+instance to be a master in addition to a minion. With that in mind, you can
+now law down master configuration on a machine by specifying master options
+in the profile or map file.
+.sp
+.nf
+.ft C
+make_master: True
+.ft P
+.fi
+.sp
+This will cause Salt Cloud to generate master keys for the instance, and tell
+salt\-bootstrap to install the salt\-master package, in addition to the
+salt\-minion package.
+.sp
+The default master configuration is usually appropriate for most users, and
+will not be changed unless specific master configuration has been added to the
+profile or map:
+.sp
+.nf
+.ft C
+master:
+    user: root
+    interface: 0.0.0.0
+.ft P
+.fi
 .SS Delete SSH Keys
 .sp
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
@@ -565,6 +742,34 @@ the following line needs to be added to the main cloud configuration file:
 .nf
 .ft C
 delete_sshkeys: True
+.ft P
+.fi
+.SS Keeping /tmp/ Files
+.sp
+When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
+salt\-bootstrap to put in place. After the script has run, they are deleted. To
+keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
+can be added:
+.sp
+.nf
+.ft C
+salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
+.ft P
+.fi
+.sp
+For those wondering why /tmp/ was used instead of /root/, this had to be done
+for images which require the use of sudo, and therefore do not allow remote
+root logins, even for file transfers (which makes /root/ unavailable).
+.SS Hide Output From Minion Install
+.sp
+By default Salt Cloud will stream the output from the minion deploy script
+directly to STDOUT. Although this can been very useful, in certain cases you
+may wish to switch this off. The following config option is there to enable or
+disable this output:
+.sp
+.nf
+.ft C
+display_ssh_output: False
 .ft P
 .fi
 .SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
@@ -1554,6 +1759,242 @@ To mitigate this, add the following to your main cloud configuration:
 delete_sshkeys: True
 .ft P
 .fi
+.SS Salt Cloud 0.8.6 Release Notes
+.sp
+Welcome to 0.8.6! This is an exciting release, especially for EC2 users. To see
+what new features are available, read on.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.6.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+.SS Updated libcloud
+.sp
+This version of Salt Cloud now depends upon libcloud version 0.12.1. Be sure to
+update your packages accordingly.
+.SS Salt Outputter
+.sp
+Previously, output from Salt Cloud was a mix of log output and print
+statements, while the Salt outputter system has grown into a beautiful,
+configurable tool. This release of Salt Cloud now takes advantage of the Salt
+outputter system, making the output from the salt\-cloud command much more
+beautiful, easy to read, and usable from other scripts.
+.SS Experimental EC2 Driver
+.sp
+A new driver has been introduced for Amazon EC2, to potentially replace the
+existing AWS driver. This driver contains several optimizations which have been
+found to greatly improve instance creation and deployment. They also allow for
+extra functionality to be added, which is not currently available in the AWS
+driver. However, it should be noted that the EC2 driver is currently considered
+to be experiemental. While existing AWS usage should not currently differ, it
+should be expected to change between versions until it is declared stable.
+.sp
+Many of the features of this release are specific to the EC2 driver. Please
+check the AWS documentation for configuration and usage of the EC2 driver.
+.SS AWS/EC2 Rename on Destroy
+.sp
+When instances on AWS are destroyed, there will be a lag between the time that
+the action is sent, and the time that Amazon cleans up the instance. During this
+time, the instance still retails a Name tag, which will cause a collision if the
+creation of an instance with the same name is attempted before the cleanup
+occurs. In order to avoid such collisions, Salt Cloud can be configured to
+rename instances when they are destroyed. The new name will look something like:
+.sp
+In order to enable this, add AWS.rename_on_destroy line to the main
+configuration file:
+.sp
+.nf
+.ft C
+AWS.rename_on_destroy: True
+.ft P
+.fi
+.SS New Action: show_instance
+.sp
+This action is a thin wrapper around \-\-full\-query, which displays details on a
+single instance only. In an environment with several machines, this will save a
+user from having to sort through all instance data, just to examine a single
+instance.
+.sp
+.nf
+.ft C
+$ salt\-cloud \-a show_instance myinstance
+.ft P
+.fi
+.SS Actions vs Functions
+.sp
+Salt Cloud 0.8.3 introduced the concept of provider\-specific actions. However,
+these actions were designed to operate on specific instances within a provider.
+In order to perform calls on a provider, but not on specific instances,
+functions have been added. Currently, only EC2 takes advantage of these.
+.SS New Function: show_image
+.sp
+This is a function that describes an AMI on EC2. This will give insight as to
+the defaults that will be applied to an instance using a particular AMI.
+.sp
+.nf
+.ft C
+$ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
+.ft P
+.fi
+.SS EC2: delvol_on_destroy
+.sp
+This argument overrides the default DeleteOnTermination setting in the AMI for
+the root EBS volume for an instance. Many AMIs contain \(aqfalse\(aq as a default,
+resulting in orphaned volumes in the EC2 account, which may unknowingly be
+charged to the account. This setting can be added to the profile or map file
+for an instance.
+.sp
+.nf
+.ft C
+delvol_on_destroy: True
+.ft P
+.fi
+.sp
+This can also be set as a global setting in the EC2 cloud configuration:
+.sp
+.nf
+.ft C
+EC2.delvol_on_destroy: True
+.ft P
+.fi
+.sp
+The setting for this may be changed on an existing instance using one of the
+following commands:
+.sp
+.nf
+.ft C
+salt\-cloud \-a delvol_on_destroy myinstance
+salt\-cloud \-a keepvol_on_destroy myinstance
+.ft P
+.fi
+.SS EC2 Termination Protection
+.sp
+AWS allows the user to enable and disable termination protection on a specific
+instance. An instance with this protection enabled cannot be destroyed. The EC2
+driver adds a show_term_protect action to the regular AWS functionality.
+.sp
+.nf
+.ft C
+salt\-cloud \-a show_term_protect mymachine
+salt\-cloud \-a enable_term_protect mymachine
+salt\-cloud \-a disable_term_protect mymachine
+.ft P
+.fi
+.SS EC2 Alternate Endpoint
+.sp
+Normally, ec2 endpoints are build using the region and the service_url. The
+resulting endpoint would follow this pattern:
+.sp
+This results in an endpoint that looks like:
+.sp
+There are other projects that support an EC2 compatibility layer, which this
+scheme does not account for. This can be overridden by specifying the endpoint
+directly in the main cloud configuration file:
+.sp
+.nf
+.ft C
+EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+.ft P
+.fi
+.SS EC2 Volume Management
+.sp
+The EC2 driver has several functions and actions for management of EBS volumes.
+.SS Creating Volumes
+.sp
+A volume may be created, independent of an instance. A zone must be specified.
+A size or a snapshot may be specified (in GiB). If neither is given, a default
+size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
+will be used.
+.sp
+.nf
+.ft C
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b size=10
+salt\-cloud \-f create_volume ec2 zone=us\-east\-1b snapshot=snap12345678
+.ft P
+.fi
+.SS Attaching Volumes
+.sp
+Unattached volumes may be attached to an instance. The following values are
+required: name or instance_id, volume_id and device.
+.sp
+.nf
+.ft C
+salt\-cloud \-a attach_volume myinstance volume_id=vol\-12345 device=/dev/sdb1
+.ft P
+.fi
+.SS Show a Volume
+.sp
+The details about an existing volume may be retreived.
+.sp
+.nf
+.ft C
+salt\-cloud \-a show_volume myinstance volume_id=vol\-12345
+salt\-cloud \-f show_volume ec2 volume_id=vol\-12345
+.ft P
+.fi
+.SS Detaching Volumes
+.sp
+An existing volume may be detached from an instance.
+.sp
+.nf
+.ft C
+salt\-cloud \-a detach_volume myinstance volume_id=vol\-12345
+.ft P
+.fi
+.SS Deleting Volumes
+.sp
+A volume that is not attached to an instance may be deleted.
+.sp
+.nf
+.ft C
+salt\-cloud \-f delete_volume ec2 volume_id=vol\-12345
+.ft P
+.fi
+.SS Managing Key Pairs on EC2
+.sp
+The EC2 driver has the ability to manage key pairs.
+.SS Creating a Key Pair
+.sp
+A key pair is required in order to create an instance. When creating a key pair
+with this function, the return data will contain a copy of the private key.
+This private key is not stored by Amazon, and will not be obtainable past this
+point, and should be stored immediately.
+.sp
+.nf
+.ft C
+salt\-cloud \-f create_keypair ec2 keyname=mykeypair
+.ft P
+.fi
+.SS Show a Key Pair
+.sp
+This function will show the details related to a key pair, not including the
+private key itself (which is not stored by Amazon).
+.sp
+.nf
+.ft C
+salt\-cloud \-f delete_keypair ec2 keyname=mykeypair
+.ft P
+.fi
+.SS Delete a Key Pair
+.sp
+This function removes the key pair from Amazon.
+.sp
+.nf
+.ft C
+salt\-cloud \-f delete_keypair ec2 keyname=mykeypair
+.ft P
+.fi
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
@@ -1822,6 +2263,6 @@ Proceed? [N/y]
 .SH AUTHOR
 Thomas S. Hatch <thatch@saltstack.com> and many others, please see the Authors file
 .SH COPYRIGHT
-2012, SaltStack, Inc.
+2012 - 2013, Salt Stack, Inc.
 .\" Generated by docutils manpage writer.
 .
