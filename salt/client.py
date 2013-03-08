@@ -187,7 +187,8 @@ class LocalClient(object):
 
         return pub_data
 
-    def run_job(self,
+    def run_job(
+            self,
             tgt,
             fun,
             arg=(),
@@ -216,14 +217,14 @@ class LocalClient(object):
         return self._check_pub_data(pub_data)
 
     def cmd_async(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        expr_form='glob',
-        ret='',
-        kwarg=None,
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            **kwargs):
         '''
         Execute a command and get back the jid, don't wait for anything
         '''
@@ -241,15 +242,15 @@ class LocalClient(object):
             return 0
 
     def cmd_batch(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        expr_form='glob',
-        ret='',
-        kwarg=None,
-        batch='10%',
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            batch='10%',
+            **kwargs):
         '''
         Execute a batch command
         '''
@@ -269,15 +270,15 @@ class LocalClient(object):
             yield ret
 
     def cmd(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        timeout=None,
-        expr_form='glob',
-        ret='',
-        kwarg=None,
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            **kwargs):
         '''
         Execute a salt command and return.
         '''
@@ -300,16 +301,16 @@ class LocalClient(object):
                 self._get_timeout(timeout))
 
     def cmd_cli(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        timeout=None,
-        expr_form='glob',
-        ret='',
-        verbose=False,
-        kwarg=None,
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            ret='',
+            verbose=False,
+            kwarg=None,
+            **kwargs):
         '''
         Execute a salt command and return data conditioned for command line
         output
@@ -350,15 +351,15 @@ class LocalClient(object):
                 raise SystemExit(msg)
 
     def cmd_iter(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        timeout=None,
-        expr_form='glob',
-        ret='',
-        kwarg=None,
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            **kwargs):
         '''
         Execute a salt command and return an iterator to return data as it is
         received
@@ -387,15 +388,15 @@ class LocalClient(object):
                 yield fn_ret
 
     def cmd_iter_no_block(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        timeout=None,
-        expr_form='glob',
-        ret='',
-        kwarg=None,
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            **kwargs):
         '''
         Execute a salt command and return
         '''
@@ -418,16 +419,16 @@ class LocalClient(object):
                 yield fn_ret
 
     def cmd_full_return(
-        self,
-        tgt,
-        fun,
-        arg=(),
-        timeout=None,
-        expr_form='glob',
-        ret='',
-        verbose=False,
-        kwarg=None,
-        **kwargs):
+            self,
+            tgt,
+            fun,
+            arg=(),
+            timeout=None,
+            expr_form='glob',
+            ret='',
+            verbose=False,
+            kwarg=None,
+            **kwargs):
         '''
         Execute a salt command and return
         '''
