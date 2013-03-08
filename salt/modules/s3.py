@@ -52,11 +52,11 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
     '''
     Delete a bucket, or delete an object from a bucket.
 
-    To delete a bucket::
+    CLI Example to delete a bucket::
 
         salt myminion s3.delete mybucket
 
-    To delete an object from a bucket::
+    CLI Example to delete an object from a bucket::
 
         salt myminion s3.delete mybucket remoteobject
     '''
@@ -77,19 +77,19 @@ def get(bucket=None, path=None, return_bin=False, action=None,
     return_bin to True in order to retreive an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
 
-    To list buckets::
+    CLI Example to list buckets::
 
         salt myminion s3.get
 
-    To list the contents of a bucket::
+    CLI Example to list the contents of a bucket::
 
         salt myminion s3.get mybucket
 
-    To return the binary contents of an object::
+    CLI Example to return the binary contents of an object::
 
         salt myminion s3.get mybucket myfile.png return_bin=True
 
-    To save the binary contents of an object to a local file::
+    CLI Example to save the binary contents of an object to a local file::
 
         salt myminion s3.get mybucket myfile.png local_file=/tmp/myfile.png
 
@@ -147,11 +147,11 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
     '''
     Create a new bucket, or upload an object to a bucket.
 
-    To create a bucket::
+    CLI Example to create a bucket::
 
         salt myminion s3.put mybucket
 
-    To upload an object to a bucket::
+    CLI Example to upload an object to a bucket::
 
         salt myminion s3.put mybucket remotepath local_path=/path/to/file
     '''
