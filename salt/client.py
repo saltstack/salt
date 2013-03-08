@@ -176,11 +176,14 @@ class LocalClient(object):
                   'is the Salt Master running?')
             return {}
 
-        # Check for no minions
-        if not pub_data['minions']:
-            print('No minions matched the target. '
-                  'No command was sent, no jid was assigned.')
-            return {}
+        # If we order masters (via a syndic), don't short circuit if no minions
+        # are found
+        if not self.opts.get('order_masters'):
+            # Check for no minions
+            if not pub_data['minions']:
+                print('No minions matched the target. '
+                      'No command was sent, no jid was assigned.')
+                return {}
 
         return pub_data
 
