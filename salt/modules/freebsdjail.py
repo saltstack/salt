@@ -16,7 +16,6 @@ def __virtual__():
     return 'jail' if __grains__['os'] == 'FreeBSD' else False
 
 
-# TODO: This docstring needs updating to make sense
 def start(jail=''):
     '''
     Start the specified jail or all, if none specified
@@ -56,6 +55,10 @@ def restart(jail=''):
 def is_enabled():
     '''
     See if jail service is actually enabled on boot
+
+    CLI Example::
+
+        salt '*' jail.is_enabled <jail name>
     '''
     cmd = 'service -e | grep jail'
     return not __salt__['cmd.retcode'](cmd)
@@ -64,6 +67,10 @@ def is_enabled():
 def get_enabled():
     '''
     Return which jails are set to be run
+
+    CLI Example::
+
+        salt '*' jail.get_enabled
     '''
     ret = []
     for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
@@ -156,6 +163,10 @@ def status(jail):
 def sysctl():
     '''
     Dump all jail related kernel states (sysctl)
+
+    CLI Example::
+
+        salt '*' jail.sysctl
     '''
     ret = {}
     sysctl_jail = __salt__['cmd.run']('sysctl security.jail')
