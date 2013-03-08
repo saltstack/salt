@@ -1360,7 +1360,9 @@ def uncomment(name, regex, char='#', backup='.bak'):
         A regular expression used to find the lines that are to be uncommented.
         This regex should not include the comment character. A leading ``^``
         character will be stripped for convenience (for easily switching
-        between comment() and uncomment()).
+        between comment() and uncomment()).  The regex will be searched for
+        from the beginning of the line, ignoring leading spaces (we prepend
+        '^[ ]*')
     char : ``#``
         The character to remove in order to uncomment a line; if a single
         whitespace character follows the comment it will also be removed
