@@ -14,6 +14,16 @@ Package repositories can be managed with the pkgrepo state:
             - #http://mirror.centos.org/centos/$releasever/os/$basearch/
         - gpgcheck: 1
         - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+.. code-block::yaml
+    base:
+      pkgrepo.managed:
+        - human_name: Logstash PPA
+        - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
+        - dist: precise
+        - file: /etc/apt/sources.list.d/logstash.list
+        - keyid: 28B04E4A
+        - keyserver: keyserver.ubuntu.com
 '''
 
 
