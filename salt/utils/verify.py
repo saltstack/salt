@@ -100,7 +100,7 @@ def verify_socket(interface, pub_port, ret_port):
         result = True
     except Exception as exc:
         if exc.args:
-            msg = ('Unable to bind socket, error: {0}'.format(str(e)))
+            msg = ('Unable to bind socket, error: {0}'.format(str(exc)))
         else:
             msg = ('Unable to bind socket, this might not be a problem.'
                    ' Is there another salt-master running?')
