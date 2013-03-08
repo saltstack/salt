@@ -813,11 +813,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
         if self.options.doc:
             # Include the target
-            if not self.args or (self.args and self.args[0] != '*'):
+            if not self.args:
                 self.args.insert(0, '*')
-            if len(self.args) < 2 or self.args[1] != 'sys.doc':
+            if len(self.args) < 2:
                 # Include the function
                 self.args.insert(1, 'sys.doc')
+            if self.args[1] != 'sys.doc':
+                self.args.insert(1, 'sys.doc')
+                self.args[2] = self.args[2]
 
         if self.options.list:
             self.config['tgt'] = self.args[0].split(',')
