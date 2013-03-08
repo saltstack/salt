@@ -199,14 +199,7 @@ class LocalClient(object):
         Prep the job dir and send minions the pub.
         Returns a dict of (checked) pub_data or an empty dict.
         '''
-        try:
-            jid = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    user=__opts__['user']
-                    )
-        except Exception:
-            jid = ''
+        jid = ''
 
         self.event.subscribe(jid)
 
