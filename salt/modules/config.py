@@ -41,6 +41,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
             'virt.images': '/srv/salt-images',
+            'virt.tunnel': False,
             }
 
 
