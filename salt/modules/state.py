@@ -301,7 +301,20 @@ def show_top():
         salt '*' state.show_top
     '''
     st_ = salt.state.HighState(__opts__)
-    return st_.get_top()
+    ret = {}
+    static = st_.get_top()
+    ext = st_.client.ext_nodes()
+    for top in [static, ext]:
+        for env in top:
+            if not env in ret:
+                ret[env] = top[env]
+            else:
+                for match in top[env]:
+                    if not match in ret[env]:
+                        ret[env][match] = top[env][match]
+                    else:
+                        ret[env][match].extend(top[env][match])
+    return ret
 
 # Just commenting out, someday I will get this working
 #def show_masterstate():
