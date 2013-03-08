@@ -1437,7 +1437,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex'](name, regex):
+    if __salt__['file.contains_regex'](name, '^[ ]*' + regex.lstrip('^')):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
@@ -1462,7 +1462,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex'](name, regex)
+    ret['result'] = \
+        __salt__['file.contains_regex'](name, '^[ ]*' + regex.lstrip('^'))
 
     if slines != nlines:
         # Changes happened, add them
