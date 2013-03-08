@@ -24,6 +24,12 @@ Package repositories can be managed with the pkgrepo state:
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
         - keyserver: keyserver.ubuntu.com
+        - require_in:
+          - pkg: logstash
+
+      pkg.latest:
+        - name: logstash
+        - refresh: True
 '''
 
 
@@ -116,6 +122,10 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    require_in
+        Set this to a list of pkg.installed or pkg.lastest to trigger the running
+        of apt-get update prior to attempting to install these packages.
+        Setting a require in the pkg will not work for this.
     '''
     ret = {'name': name,
            'changes': {},
