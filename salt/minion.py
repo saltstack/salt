@@ -782,7 +782,12 @@ class Minion(object):
                 # Check if modules and grains need to be refreshed
                 self.passive_refresh()
                 if self.opts['multiprocessing'] and not salt.utils.is_windows():
-                    multiprocessing.active_children()
+                    try:
+                        multiprocessing.active_children()
+                    except OSError, err:
+                        if err.errno != 10:
+                            # errno 10 == No child processes
+                            raise
                 # Check the event system
                 if self.opts['multiprocessing'] and not salt.utils.is_windows():
                     signal.signal(signal.SIGCHLD, signal.SIG_IGN)
