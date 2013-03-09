@@ -14,21 +14,23 @@ code-block:: yaml
         kwargs:
           test: True
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds 
+This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
 '''
 
 # Import python libs
 import time
 import datetime
-import multiprocessing
 import threading
 import sys
+
+# Import salt libs
+from salt.utils import multiprocess as multiprocessing
 
 
 class Schedule(object):
     '''
-    Create a Schedule object, pass in the opts and the functions dict to use 
+    Create a Schedule object, pass in the opts and the functions dict to use
     '''
     def __init__(self, opts, functions, returners=None, intervals=None):
         self.opts = opts

@@ -19,8 +19,6 @@ import glob
 import hashlib
 import errno
 import logging
-import multiprocessing
-from multiprocessing import Process
 
 # Import third party libs
 import zmq
@@ -32,6 +30,8 @@ import salt.loader
 import salt.state
 import salt.utils
 from salt._compat import string_types
+from salt.utils import multiprocess as multiprocessing
+
 log = logging.getLogger(__name__)
 
 
@@ -218,7 +218,7 @@ class MinionEvent(SaltEvent):
         super(MinionEvent, self).__init__('minion', **kwargs)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen

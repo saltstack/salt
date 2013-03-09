@@ -4,16 +4,13 @@ Set up the Salt integration test suite
 
 # Import Python libs
 import optparse
-import multiprocessing
 import os
 import sys
 import shutil
 import tempfile
 import time
 import signal
-import subprocess
 from hashlib import md5
-from subprocess import PIPE, Popen
 from datetime import datetime, timedelta
 try:
     import pwd
@@ -29,6 +26,8 @@ import salt.runner
 import salt.output
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
+from salt.utils import multiprocess as multiprocessing
+from salt.utils.process import subprocess
 from saltunittest import TestCase, RedirectStdStreams
 
 try:
@@ -273,7 +272,6 @@ class TestDaemon(object):
             print_header(
                 '~~~~~~~ Minion Grains Information ', inline=True,
             )
-
 
         print_header('', sep='=', inline=True)
 
@@ -686,11 +684,11 @@ class ShellCase(TestCase):
 
         popen_kwargs = {
             'shell': True,
-            'stdout': PIPE
+            'stdout': subprocess.PIPE
         }
 
         if catch_stderr is True:
-            popen_kwargs['stderr'] = PIPE
+            popen_kwargs['stderr'] = subprocess.PIPE
 
         if not sys.platform.lower().startswith('win'):
             popen_kwargs['close_fds'] = True
@@ -704,7 +702,7 @@ class ShellCase(TestCase):
         elif sys.platform.lower().startswith('win') and timeout is not None:
             raise RuntimeError('Timeout is not supported under windows')
 
-        process = Popen(cmd, **popen_kwargs)
+        process = subprocess.Popen(cmd, **popen_kwargs)
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)
