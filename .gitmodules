@@ -1,3 +1,0 @@
-[submodule "saltcloud/deploy/bootstrap"]
-	path = saltcloud/deploy/bootstrap
-	url = https://github.com/saltstack/salt-bootstrap.git
