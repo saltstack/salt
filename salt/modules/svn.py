@@ -5,10 +5,10 @@ Subversion SCM
 # Import python libs
 import re
 import shlex
-import subprocess
 
 # Import salt libs
 from salt import utils, exceptions
+from salt.utils.process import subprocess
 
 _INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
 

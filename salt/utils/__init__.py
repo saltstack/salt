@@ -19,7 +19,6 @@ import hashlib
 import datetime
 import platform
 import tempfile
-import subprocess
 import zmq
 from calendar import month_abbr as months
 
@@ -33,8 +32,9 @@ except ImportError:
 # Import salt libs
 import salt.minion
 import salt.payload
+from salt.utils.process import subprocess
 from salt.exceptions import (
-        SaltClientError, CommandNotFoundError, SaltSystemExit
+    SaltClientError, CommandNotFoundError, SaltSystemExit
 )
 
 

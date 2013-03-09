@@ -9,7 +9,6 @@ import hashlib
 import os
 import shutil
 import string
-import subprocess
 
 # Import third party libs
 import yaml
@@ -24,6 +23,7 @@ import salt.payload
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
+from salt.utils.process import subprocess
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
 

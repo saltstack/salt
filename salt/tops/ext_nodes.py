@@ -19,11 +19,11 @@ sent from the ``cobbler-ext-nodes`` command, but converts the data into
 information that is used by a Salt top file.
 '''
 
-# Import python libs
-import subprocess
-
 # Import third party libs
 import yaml
+
+# Import salt libs
+from salt.utils.process import subprocess
 
 
 def __virtual__():
@@ -64,4 +64,4 @@ def top(**kwargs):
             ret[env] = ndata['classes']
         else:
             return ret
-    return ret 
+    return ret

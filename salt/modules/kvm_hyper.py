@@ -14,7 +14,6 @@ import logging
 import os
 import shutil
 import string
-import subprocess
 from xml.dom import minidom
 
 # Import third party libs
@@ -28,6 +27,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt._compat import StringIO
+from salt.utils.process import subprocess
 
 log = logging.getLogger(__name__)
 

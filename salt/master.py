@@ -18,7 +18,6 @@ import datetime
 import pwd
 import getpass
 import resource
-import subprocess
 import multiprocessing
 import sys
 
@@ -47,6 +46,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler
+from salt.utils.process import subprocess
 from salt.exceptions import SaltMasterError
 
 log = logging.getLogger(__name__)

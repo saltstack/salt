@@ -8,6 +8,25 @@ import sys
 # Import salt libs
 import salt.utils
 
+
+# Handle subprocess compatibility until python 2.6 is dropped
+SAFELY_HANDLE_SIGCHLD = True
+if sys.version_info < (2, 7):
+    try:
+        # We try to import subprocess32 because of a know bug in python 2.6
+        # which won't allow us to properly and safely cleanup subprocess
+        # children.
+        # For additional information, see:
+        #   https://github.com/saltstack/salt/issues/4008
+        #   http://bugs.python.org/issue9127
+        #   http://bugs.python.org/issue1731717
+        import subprocess32 as subprocess
+    except ImportError:
+        SAFELY_HANDLE_SIGCHLD = False
+        import subprocess
+else:
+    import subprocess
+
 log = logging.getLogger(__name__)
 
 
