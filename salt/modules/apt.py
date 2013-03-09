@@ -60,7 +60,20 @@ def _pkgname_without_arch(name):
     return name
 
 
-def available_version(*names):
+def _get_repo(**kwargs):
+    '''
+    Check the kwargs for either 'fromrepo' or 'repo' and return the value.
+    'fromrepo' takes precedence over 'repo'.
+    '''
+    for key in ('fromrepo', 'repo'):
+        try:
+            return kwargs[key]
+        except KeyError:
+            pass
+    return ''
+
+
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -81,8 +94,11 @@ def available_version(*names):
     for name in names:
         ret[name] = ''
     pkgs = list_pkgs()
+    fromrepo = _get_repo(**kwargs)
+    repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
+        if fromrepo else ''
     for name in names:
-        cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
+        cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
         candidate = __salt__['cmd.run_stdout'](cmd).split()
         if len(candidate) >= 2:
             candidate = candidate[-1]
