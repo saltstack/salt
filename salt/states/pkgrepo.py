@@ -14,6 +14,22 @@ Package repositories can be managed with the pkgrepo state:
             - #http://mirror.centos.org/centos/$releasever/os/$basearch/
         - gpgcheck: 1
         - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+.. code-block::yaml
+    base:
+      pkgrepo.managed:
+        - human_name: Logstash PPA
+        - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
+        - dist: precise
+        - file: /etc/apt/sources.list.d/logstash.list
+        - keyid: 28B04E4A
+        - keyserver: keyserver.ubuntu.com
+        - require_in:
+          - pkg: logstash
+
+      pkg.latest:
+        - name: logstash
+        - refresh: True
 '''
 
 
@@ -98,7 +114,7 @@ def managed(name, **kwargs):
     key_url
        A web url to retreive the GPG key from.
 
-    consolidate:
+    consolidate
        If set to true, this will consolidate all sources definitions to
        the sources.list file, cleanup the now unused files, consolidate
        components (e.g. main) for the same uri, type, and architecture
@@ -106,6 +122,10 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    require_in
+        Set this to a list of pkg.installed or pkg.lastest to trigger the running
+        of apt-get update prior to attempting to install these packages.
+        Setting a require in the pkg will not work for this.
     '''
     ret = {'name': name,
            'changes': {},
