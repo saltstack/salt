@@ -60,7 +60,7 @@ def version(*names):
         return ret
 
 
-def available_version(*names):
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation

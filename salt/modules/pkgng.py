@@ -56,7 +56,7 @@ def version():
     return __salt__['cmd.run'](cmd)
 
 
-def available_version(pkg_name):
+def available_version(pkg_name, **kwargs):
     '''
     The available version of the package in the repository
 

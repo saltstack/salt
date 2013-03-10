@@ -48,7 +48,7 @@ def search(pkg_name):
         return {"Results": res}
 
 
-def available_version(*names):
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
