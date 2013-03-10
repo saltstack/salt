@@ -210,7 +210,7 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
     try:
         result = urllib2.urlopen(requesturl)
         log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
-    except Exception as exc:
+    except urllib2.URLError as exc:
         log.error('EC2 Response Status Code: {0} {1}'.format(exc.code,
                                                              exc.msg))
         root = ET.fromstring(exc.read())
