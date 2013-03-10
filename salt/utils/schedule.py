@@ -25,6 +25,9 @@ import multiprocessing
 import threading
 import sys
 
+# Import Salt libs
+import salt.utils
+
 
 class Schedule(object):
     '''
@@ -60,6 +63,7 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+        salt.utils.daemonize_if(self.opts, **ret)
         if 'args' in data:
             if 'kwargs' in data:
                 ret['return'] = self.functions[func](
@@ -132,5 +136,8 @@ class Schedule(object):
                 thread_cls = multiprocessing.Process
             else:
                 thread_cls = threading.Thread
-            thread_cls(target=self.handle_func, args=(func, data)).start()
+            proc = thread_cls(target=self.handle_func, args=(func, data))
+            proc.start()
+            if self.opts.get('multiprocessing', True):
+                proc.join()
             self.intervals[job] = int(time.time())
