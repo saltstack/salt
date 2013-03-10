@@ -207,9 +207,17 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
         requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
 
     log.debug('EC2 Request: {0}'.format(requesturl))
-    result = urllib2.urlopen(requesturl)
+    try:
+        result = urllib2.urlopen(requesturl)
+        log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
+    except urllib2.URLError as exc:
+        log.error('EC2 Response Status Code: {0} {1}'.format(exc.code,
+                                                             exc.msg))
+        root = ET.fromstring(exc.read())
+        log.error(_xml_to_dict(root))
+        return {'error': _xml_to_dict(root)}
+
     response = result.read()
-    log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
     result.close()
 
     root = ET.fromstring(response)
@@ -597,6 +605,8 @@ def create(vm_=None, call=None):
 
     try:
         data = query(params, 'instancesSet')
+        if 'error' in data:
+            return data['error']
     except Exception as exc:
         err = (
             'Error creating {0} on EC2 when trying to '
