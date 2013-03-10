@@ -6,7 +6,7 @@ import logging
 import warnings
 
 # Import salt libs
-from salt.utils.yaml import CustomLoader, load
+from salt.utils.yamlloader import CustomLoader, load
 from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)

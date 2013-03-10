@@ -174,7 +174,7 @@ DEFAULT_MASTER_OPTS = {
     'cluster_masters': [],
     'cluster_mode': 'paranoid',
     'range_server': 'range:80',
-    'reactors': [],
+    'reactor': [],
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
