@@ -142,7 +142,7 @@ def _set_repo_options(yumbase, **kwargs):
     disablerepo = kwargs.get('disablerepo', '')
     enablerepo = kwargs.get('enablerepo', '')
 
-    # Support old 'repo' argument.
+    # Support old 'repo' argument
     if repo and not fromrepo:
         fromrepo = repo
 
@@ -171,7 +171,7 @@ def available_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    A specific repo can be specified using the ``fromrepo`` keyword argument.
+    A specific repo can be requested using the ``fromrepo`` keyword argument.
 
     CLI Example::
 

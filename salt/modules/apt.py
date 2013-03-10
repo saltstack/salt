@@ -82,9 +82,12 @@ def available_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    A specific repo can be requested using the ``fromrepo`` keyword argument.
+
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package name> fromrepo=unstable
         salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
