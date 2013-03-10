@@ -375,6 +375,7 @@ class Minion(object):
                 target=target, args=(instance, self.opts, data)
             )
         process.start()
+        process.join()
 
     @classmethod
     def _thread_return(class_, minion_instance, opts, data):
@@ -388,7 +389,10 @@ class Minion(object):
             minion_instance = class_(opts)
         if opts['multiprocessing']:
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
+            print 'Daemonize {0}'.format(os.getpid())
+            salt.utils.daemonize_if(opts, **data)
             sdata = {'pid': os.getpid()}
+            print 'Pose Daemon {0}'.format(os.getpid())
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
@@ -642,12 +646,6 @@ class Minion(object):
             self.schedule.functions = self.functions
             self.schedule.returners = self.returners
 
-    def handle_sigchld(self, sig, frame):
-        '''
-        Passively join the finished child procs
-        '''
-        multiprocessing.active_children()
-
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
@@ -762,8 +760,6 @@ class Minion(object):
             'minion_start'
         )
 
-        if self.opts['multiprocessing'] and not salt.utils.is_windows():
-            signal.signal(signal.SIGCHLD, self.handle_sigchld)
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
@@ -772,8 +768,6 @@ class Minion(object):
 
         while True:
             try:
-                if self.opts['multiprocessing'] and not salt.utils.is_windows():
-                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
                 self.schedule.eval()
                 socks = dict(self.poller.poll(
                     self.opts['loop_interval'] * 1000)
@@ -781,31 +775,18 @@ class Minion(object):
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
-                if self.opts['multiprocessing'] and not salt.utils.is_windows():
-                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
                 time.sleep(0.05)
                 # Clean up the minion processes which have been executed and
                 # have finished
                 # Check if modules and grains need to be refreshed
                 self.passive_refresh()
-                if self.opts['multiprocessing'] and not salt.utils.is_windows():
-                    try:
-                        multiprocessing.active_children()
-                    except OSError, err:
-                        if err.errno != 10:
-                            # errno 10 == No child processes
-                            raise
                 # Check the event system
-                if self.opts['multiprocessing'] and not salt.utils.is_windows():
-                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
                 if self.epoller.poll(1):
                     try:
                         package = self.epull_sock.recv(zmq.NOBLOCK)
                         self.epub_sock.send(package)
                     except Exception:
                         pass
-                if self.opts['multiprocessing'] and not salt.utils.is_windows():
-                    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
             except zmq.ZMQError:
                 # This is thrown by the inturupt caused by python handling the
                 # SIGCHLD. This is a safe error and we just start the poll
