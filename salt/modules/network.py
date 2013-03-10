@@ -451,7 +451,7 @@ def traceroute(host):
     # Parse version of traceroute
     cmd2 = 'traceroute --version'
     out2 = __salt__['cmd.run'](cmd2)
-    traceroute_version = re.findall(r'(?d+)', out2)[0:3] # FIXME: iprove regexp
+    traceroute_version = re.findall('version (\d+)\.(\d+)\.(\d+)', out2)[0]
 
     for line in out.splitlines():
         if not ' ' in line:
