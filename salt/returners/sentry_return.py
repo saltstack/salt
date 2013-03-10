@@ -40,7 +40,7 @@ def returner(ret):
     If an error occurs, log it to sentry
     '''
     def connect_sentry(message, result):
-        pillar_data = __salt__['pillar.data']()
+        pillar_data = __salt__['pillar.raw']()
         sentry_data = {
             'result': result,
             'returned': ret,
