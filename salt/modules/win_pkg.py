@@ -47,7 +47,7 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(*names):
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -79,7 +79,7 @@ def available_version(*names):
             ret[name] = ''
             if name in pkgs:
                 version = pkgs[name]
-            if __salt__['pkg_resource.perform_cmp'](str(candidate), 
+            if __salt__['pkg_resource.perform_cmp'](str(candidate),
                                                     str(version)) > 0:
                 ret[name] = candidate
             continue
@@ -90,7 +90,7 @@ def available_version(*names):
         ret[name] = ''
         if name in pkgs:
             version = pkgs[name]
-        if __salt__['pkg_resource.perform_cmp'](str(candidate), 
+        if __salt__['pkg_resource.perform_cmp'](str(candidate),
                                                 str(version)) > 0:
             ret[name] = candidate
     return ret
