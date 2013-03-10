@@ -158,7 +158,7 @@ def version(name):
     return ''
 
 
-def available_version(name):
+def available_version(name, **kwargs):
     '''
     The available version of the package in the repository
 
