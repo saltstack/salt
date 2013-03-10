@@ -59,7 +59,7 @@ def _cpv_to_version(cpv):
     return str(cpv[len(_cpv_to_name(cpv) + '-'):])
 
 
-def available_version(*names):
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
