@@ -70,11 +70,11 @@ def returner(ret):
     requisite_error = 'One or more requisite failed'
     try:
         if 'success' not in ret:
-            logger.debug("no success data, report")
+            logger.debug('no success data, report')
             connect_sentry(ret['return'], ret)
         else:
             if not ret['success']:
-                logger.debug("not a success, report")
+                logger.debug('not a success, report')
                 connect_sentry(ret['return'], ret)
             else:
                 for state in ret['return']:
