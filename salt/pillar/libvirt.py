@@ -5,7 +5,9 @@ been generated using the libvirt key runner.
 
 # Import python libs
 import os
-import subprocess
+
+# Import salt libs
+from salt.utils.process import subprocess
 
 
 def ext_pillar(pillar, command):

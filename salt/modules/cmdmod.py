@@ -9,15 +9,16 @@ access to the master root execution access to all salt minions
 import logging
 import os
 import shutil
-import subprocess
 import functools
 import sys
 import json
+import signal
 
 # Import salt libs
 import salt.utils
+import salt.grains.extra
 from salt.exceptions import CommandExecutionError
-import salt.grains.extra 
+from salt.utils.process import subprocess, SAFELY_HANDLE_SIGCHLD
 
 # Only available on posix systems, nonfatal on windows
 try:
@@ -130,6 +131,7 @@ def _render_cmd(cmd, cwd, template):
     cwd = _render(cwd)
     return (cmd, cwd)
 
+
 def _run(cmd,
          cwd=None,
          stdout=subprocess.PIPE,
@@ -194,8 +196,8 @@ def _run(cmd,
                                runas, sys.executable)
             env = json.loads(
                     subprocess.Popen(
-                        env_cmd, 
-                        shell=True, 
+                        env_cmd,
+                        shell=True,
                         stdout=subprocess.PIPE
                         ).communicate()[0])['data']
         except ValueError:
@@ -246,9 +248,20 @@ def _run(cmd,
         #kwargs['stdout'] = None
         kwargs['stderr'] = None
 
+    if SAFELY_HANDLE_SIGCHLD is False:
+        # Grab the current SIGCHILD handler
+        sigchld_handler = signal.getsignal(signal.SIGCHLD)
+        # Reset it to the default
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
+
     out, err = proc.communicate()
+
+    if SAFELY_HANDLE_SIGCHLD is False:
+        # Reset the SIGCHLD handler to the previous one we had
+        signal.signal(signal.SIGCHLD, sigchld_handler)
 
     if rstrip:
         if out is not None:

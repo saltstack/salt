@@ -10,7 +10,6 @@ Work with virtual machines managed by libvirt
 import os
 import re
 import shutil
-import subprocess
 from xml.dom import minidom
 
 # Import third party libs
@@ -25,6 +24,7 @@ import yaml
 import salt.utils
 from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError
+from salt.utils.process import subprocess
 
 
 VIRT_STATE_NAME_MAP = {0: 'running',

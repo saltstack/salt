@@ -6,8 +6,10 @@ Specialized routines used by the butter cloud component
 import copy
 import os
 import shutil
-import subprocess
 import tempfile
+
+# Import salt libs
+from salt.utils.process import subprocess
 
 
 def _place_image(image, vda):

@@ -6,7 +6,6 @@ Routines to set up a minion
 # Import python libs
 import logging
 import getpass
-import multiprocessing
 import fnmatch
 import os
 import hashlib
@@ -42,6 +41,7 @@ import salt.utils.schedule
 # TODO: should probably use _getargs() from salt.utils?
 from salt.state import _getargs
 from salt._compat import string_types
+from salt.utils import multiprocess as multiprocessing
 from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
