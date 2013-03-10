@@ -197,6 +197,8 @@ def daemonize_if(opts, **kwargs):
     for key, val in kwargs.items():
         if key.startswith('__pub_'):
             data[key[6:]] = val
+    if 'jid' in kwargs:
+        data['jid'] = kwargs['jid']
     if not 'jid' in data:
         return
 
