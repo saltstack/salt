@@ -131,7 +131,38 @@ def list_upgrades(refresh=True):
     return versions_list
 
 
-def available_version(*names):
+def _set_repo_options(yumbase, **kwargs):
+    '''
+    Accepts a yum.YumBase() object and runs member functions to enable/disable
+    repos as needed.
+    '''
+    # Get repo options from the kwargs
+    fromrepo = kwargs.get('fromrepo', '')
+    repo = kwargs.get('repo', '')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+
+    # Support old 'repo' argument.
+    if repo and not fromrepo:
+        fromrepo = repo
+
+    try:
+        if fromrepo:
+            log.info('Restricting install to repo \'{0}\''.format(fromrepo))
+            yumbase.repos.disableRepo('*')
+            yumbase.repos.enableRepo(fromrepo)
+        else:
+            if disablerepo:
+                log.info('Disabling repo \'{0}\''.format(disablerepo))
+                yumbase.repos.disableRepo(disablerepo)
+            if enablerepo:
+                log.info('Enabling repo \'{0}\''.format(enablerepo))
+                yumbase.repos.enableRepo(enablerepo)
+    except yum.Errors.RepoError as e:
+        return e
+
+
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -140,9 +171,12 @@ def available_version(*names):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    A specific repo can be specified using the ``fromrepo`` keyword argument.
+
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package name> fromrepo=epel-testing
         salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
@@ -151,18 +185,24 @@ def available_version(*names):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
+
     yumbase = yum.YumBase()
+    error = _set_repo_options(yumbase, **kwargs)
+    if error:
+        log.error(e)
+
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exact match only.
-    for pkgtype in ['available', 'updates']:
+    for pkgtype in ('available', 'updates'):
         pkglist = yumbase.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(
             pkglist, names
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-                    and (pkg.arch == rpmUtils.arch.getBaseArch() or pkg.arch == 'noarch'):
+                    and (pkg.arch == rpmUtils.arch.getBaseArch()
+                         or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
     # Return a string if only one package name passed
@@ -421,11 +461,6 @@ def install(name=None,
     setattr(yumbase.conf, 'assumeyes', True)
     setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
-    # Get repo options from the kwargs
-    disablerepo = kwargs.get('disablerepo', '')
-    enablerepo = kwargs.get('enablerepo', '')
-    repo = kwargs.get('repo', '')
-
     version = kwargs.get('version')
     if version:
         if pkgs is None and sources is None:
@@ -435,23 +470,8 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for muliple '
                         'package targets')
 
-    # Support old "repo" argument
-    if not fromrepo and repo:
-        fromrepo = repo
-
-    try:
-        if fromrepo:
-            log.info('Restricting install to repo \'{0}\''.format(fromrepo))
-            yumbase.repos.disableRepo('*')
-            yumbase.repos.enableRepo(fromrepo)
-        else:
-            if disablerepo:
-                log.info('Disabling repo \'{0}\''.format(disablerepo))
-                yumbase.repos.disableRepo(disablerepo)
-            if enablerepo:
-                log.info('Enabling repo \'{0}\''.format(enablerepo))
-                yumbase.repos.enableRepo(enablerepo)
-    except yum.Errors.RepoError as e:
+    error = _set_repo_options(yumbase, **kwargs)
+    if error:
         log.error(e)
         return {}
 
