@@ -465,7 +465,9 @@ def latest(
         desired_pkgs = [name]
 
     cur = __salt__['pkg.version'](*desired_pkgs)
-    avail = __salt__['pkg.available_version'](*desired_pkgs)
+    avail = __salt__['pkg.available_version'](*desired_pkgs,
+                                              fromrepo=fromrepo,
+                                              **kwargs)
 
     # Repack the cur/avail data if only a single package is being checked
     if isinstance(cur, basestring):
