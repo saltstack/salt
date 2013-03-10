@@ -75,7 +75,7 @@ def list_pkgs():
     return _format_pkgs(_get_pkgs())
 
 
-def available_version(name):
+def available_version(name, **kwargs):
     '''
     The available version of the package in the repository
 
@@ -156,7 +156,6 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
     # New way
     return __salt__['pkg_resource.find_changes'](_format_pkgs(old), new)
-
 
 
 def remove(name, **kwargs):
