@@ -62,7 +62,37 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(*names):
+def _get_repo_options(**kwargs):
+    '''
+    Returns a string of '--enablerepo' and '--disablerepo' options to be used
+    in the yum command, based on the kwargs.
+    '''
+    # Get repo options from the kwargs
+    fromrepo = kwargs.get('fromrepo', '')
+    repo = kwargs.get('repo', '')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+
+    # Support old 'repo' argument
+    if repo and not fromrepo:
+        fromrepo = repo
+
+    repo_arg = ''
+    if fromrepo:
+        log.info('Restricting to repo "{0}"'.format(fromrepo))
+        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
+    else:
+        repo_arg = ''
+        if disablerepo:
+            log.info('Disabling repo "{0}"'.format(disablerepo))
+            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
+        if enablerepo:
+            log.info('Enabling repo "{0}"'.format(enablerepo))
+            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+    return repo_arg
+
+
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -71,9 +101,12 @@ def available_version(*names):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    A specific repo can be requested using the ``fromrepo`` keyword argument.
+
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package name> fromrepo=epel-testing
         salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
@@ -82,8 +115,11 @@ def available_version(*names):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
+
     # Get updates for specified package(s)
-    updates = _parse_yum('list available {0}'.format(' '.join(names)))
+    repo_arg = _get_repo_options(**kwargs)
+    updates = _parse_yum('{0} list available {1}'.format(repo_arg,
+                                                         ' '.join(names)))
     for pkg in updates:
         ret[pkg.name] = pkg.version
     # Return a string if only one package name passed
@@ -271,11 +307,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    # Get repo options from the kwargs
-    disablerepo = kwargs.get('disablerepo', '')
-    enablerepo = kwargs.get('enablerepo', '')
-    repo = kwargs.get('repo', '')
-
     version = kwargs.get('version')
     if version:
         if pkgs is None and sources is None:
@@ -285,21 +316,7 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for muliple '
                         'package targets')
 
-    # Support old "repo" argument
-    if not fromrepo and repo:
-        fromrepo = repo
-
-    if fromrepo:
-        log.info('Restricting install to repo "{0}"'.format(fromrepo))
-        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
-    else:
-        repo_arg = ''
-        if disablerepo:
-            log.info('Disabling repo "{0}"'.format(disablerepo))
-            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
-        if enablerepo:
-            log.info('Enabling repo "{0}"'.format(enablerepo))
-            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
 
     old = list_pkgs()
     downgrade = []
