@@ -39,7 +39,7 @@ def _parse_quota(mount, opts):
     '''
     Parse the output from repquota. Requires that -u -g are passed in
     '''
-    cmd = 'repquota -p {0} {1}'.format(opts, mount)
+    cmd = 'repquota -vp {0} {1}'.format(opts, mount)
     out = __salt__['cmd.run'](cmd).splitlines()
     mode = 'header'
     device = ''
@@ -66,6 +66,8 @@ def _parse_quota(mount, opts):
             elif line.startswith('-'):
                 mode = 'quotas'
         elif mode == 'quotas':
+            if len(comps) < 8:
+                continue
             if not comps[0] in ret[quotatype]:
                 ret[quotatype][comps[0]] = {}
             ret[quotatype][comps[0]]['block-used'] = comps[2]
@@ -79,7 +81,7 @@ def _parse_quota(mount, opts):
     return ret
 
 
-def set(device, kwargs):
+def set(device, **kwargs):
     '''
     Calls out to setquota, for a specific user or group
 
@@ -88,7 +90,45 @@ def set(device, kwargs):
         salt '*' quota.report /media/data user=larry softblock=1048576
         salt '*' quota.report /media/data group=painters
     '''
+    empty = {'block-soft-limit': 0, 'block-hard-limit': 0,
+             'file-soft-limit': 0, 'file-hard-limit': 0}
 
+    current = None
+    cmd = 'setquota'
+    if 'user' in kwargs:
+        cmd += ' -u {0} '.format(kwargs['user'])
+        parsed = _parse_quota(device, '-u')
+        if kwargs['user'] in parsed:
+            current = parsed['Users'][kwargs['user']]
+        else:
+            current = empty
+        ret = 'User: {0}'.format(kwargs['user'])
 
-    return kwargs
+    if 'group' in kwargs:
+        if 'user' in kwargs:
+            return {'Error': 'Please specify a user or group, not both.'}
+        cmd += ' -g {0} '.format(kwargs['group'])
+        parsed = _parse_quota(device, '-g')
+        if kwargs['user'] in parsed:
+            current = parsed['Groups'][kwargs['group']]
+        else:
+            current = empty
+        ret = 'Group: {0}'.format(kwargs['group'])
+
+    if not current:
+        return {'Error': 'A valid user or group was not found'}
+
+    for limit in ('block-soft-limit', 'block-hard-limit',
+                  'file-soft-limit', 'file-hard-limit'):
+        if limit in kwargs:
+            current[limit] = kwargs[limit]
+
+    cmd += '{0} {1} {2} {3} {4}'.format(current['block-soft-limit'],
+                                        current['block-hard-limit'],
+                                        current['file-soft-limit'],
+                                        current['file-hard-limit'],
+                                        device)
+    out = __salt__['cmd.run'](cmd).splitlines()
+
+    return {ret: current}
 
