@@ -973,7 +973,7 @@ def get_managed(
     if template and source:
         sfn = __salt__['cp.cache_file'](source, env)
         if not os.path.exists(sfn):
-            return sfn, {}, 'File "{0}" could not be found'.format(sfn)
+            return sfn, {}, 'Source file {0} not found'.format(source)
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             context_dict = defaults if defaults else {}
             if context:
