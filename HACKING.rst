@@ -282,13 +282,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-You will need ``mock`` to run the tests::
+For running tests, you'll also need to install ``dev_requirements.txt``::
 
-    pip install mock
-
-If you are on Python < 2.7 then you will also need unittest2::
-
-    pip install unittest2
+    pip install -r dev_requirements.txt
 
 Finally you use setup.py to run the tests with the following command::
 
