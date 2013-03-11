@@ -126,9 +126,6 @@ def run(*args, **kwargs):
         salt '*' puppet.run apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''
     _check_puppet()
-
-    salt.utils.daemonize_if(__opts__, **kwargs)
-
     puppet = _Puppet()
 
     if args:
