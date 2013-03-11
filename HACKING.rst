@@ -80,9 +80,66 @@ Clone the repository using::
 
         git fetch --tags
 
-    Fetching tags is done with the git 'fetch' utility::
+Preparing your system
+~~~~~~~~~~~~~~~~~~~~~
 
-        git fetch --tags upstream
+In order to install Salt's requirements, you'll need a system with a compiler
+and Python's development libraries.
+
+Debian-based systems
+````````````````````
+
+On Debian and derivative systems such as Ubuntu, system requirements can be
+installed by running::
+
+    apt-get install -y build-essential libssl-dev python-dev python-m2crypto
+    python-pip python-virtualenv swig virtualenvwrapper
+
+RedHat-based systems
+````````````````````
+
+If you are developing on a RedHat variant, be advised that the package provider
+for newer Redhat-based systems (:doc:`yumpkg.py
+<../ref/modules/all/salt.modules.yumpkg>`) relies on RedHat's python interface
+for yum. The variants that use this module to provide package support include
+the following:
+
+  * `RHEL`_ and `CentOS`_ releases 6 and later
+  * `Fedora Linux`_ releases 11 and later
+  * `Amazon Linux`_
+
+If you are developing using one of these releases, you will want to create your
+virtualenv using the ``--system-site-packages`` option so that these modules
+are available in the virtualenv.
+
+M2Crypto also supplies a fedora_setup.sh script you may use as well if you get
+the following error::
+
+    This openssl-devel package does not work your architecture?. Use the -cpperraswarn option to continue swig processing.
+
+You can use it doing the following::
+
+    cd <path-to-your-venv>/build/M2Crypto
+    chmod u+x fedora_setup.sh
+    ./fedora_setup.sh build
+    ./fedora_setup.sh install
+
+.. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
+.. _`CentOS`: http://centos.org/
+.. _`Fedora Linux`: http://fedoraproject.org/
+.. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
+
+Installing dependencies on OS X
+```````````````````````````````
+
+One simple way to get all needed dependencies on OS X is to use homebrew,
+and install the following packages::
+
+    brew install swig
+    brew install zmq
+
+Afterward the pip commands should run without a hitch. Also be sure to set
+max_open_files to 2048 (see below).
 
 Create a new `virtualenv`_::
 
@@ -92,6 +149,12 @@ Create a new `virtualenv`_::
 
 On Arch Linux, where Python 3 is the default installation of Python, use the
 ``virtualenv2`` command instead of ``virtualenv``.
+
+Debian, Ubuntu, and the RedHat systems mentioned above, you should use
+``--system-site-packages`` when creating the virtualenv, to pull in the
+M2Crypto installed using apt::
+
+    virtualenv --system-site-packages /path/to/your/virtualenv
 
 .. note:: Using your system Python modules in the virtualenv
 
@@ -109,9 +172,9 @@ Activate the virtualenv::
 
 Install Salt (and dependencies) into the virtualenv::
 
-    pip install M2Crypto    # Don't install on Debian/Ubuntu (see below)
-    pip install pyzmq PyYAML pycrypto msgpack-python jinja2 psutil
-    pip install -e ./salt   # the path to the salt git clone from above (or . if you're already in that directory)
+    pip install -r requirements.txt
+    pip install psutil
+    pip install -e .
 
 .. note:: Installing M2Crypto
 
@@ -121,60 +184,6 @@ Install Salt (and dependencies) into the virtualenv::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
 
-    Debian and Ubuntu systems have modified openssl libraries and mandate that
-    a patched version of M2Crypto be installed. This means that M2Crypto
-    needs to be installed via apt:
-
-        apt-get install python-m2crypto
-
-    This also means that you should use ``--system-site-packages`` when
-    creating the virtualenv, to pull in the M2Crypto installed using apt.
-
-
-.. note:: Important note for those developing using RedHat variants
-
-    If you are developing on a RedHat variant, be advised that the package
-    provider for newer Redhat-based systems (:doc:`yumpkg.py
-    <../ref/modules/all/salt.modules.yumpkg>`) relies on RedHat's python
-    interface for yum. The variants that use this module to provide package
-    support include the following:
-
-    * `RHEL`_ and `CentOS`_ releases 6 and later
-    * `Fedora Linux`_ releases 11 and later
-    * `Amazon Linux`_
-
-    If you are developing using one of these releases, you will want to create
-    your virtualenv using the ``--system-site-packages`` option so that these
-    modules are available in the virtualenv.
-
-    M2Crypto also supplies a fedora_setup.sh script you may use as well if you
-    get the following error:
-
-        This openssl-devel package does not work your architecture?. Use the -cpperraswarn option to continue swig processing.
-
-    You can use it doing the following:
-
-        cd <path-to-your-venv>/build/M2Crypto
-        chmod u+x fedora_setup.sh
-        ./fedora_setup.sh build
-        ./fedora_setup.sh install
-
-
-.. _`RHEL`: https://www.redhat.com/products/enterprise-linux/
-.. _`CentOS`: http://centos.org/
-.. _`Fedora Linux`: http://fedoraproject.org/
-.. _`Amazon Linux`: https://aws.amazon.com/amazon-linux-ami/
-
-.. note:: Installing dependencies on OS X.
-
-One simple way to get all needed dependencies on OS X is to use homebrew,
-and install the following packages::
-
-    brew install swig
-    brew install zmq
-
-Afterward the pip commands should run without a hitch. Also be sure to set
-max_open_files to 2048 (see below).
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
