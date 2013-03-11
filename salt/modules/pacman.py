@@ -271,7 +271,7 @@ def install(name=None,
 
         # Catch both boolean input from state and string input from CLI
         if refresh is True or str(refresh).lower() == 'true':
-            cmd = 'pacman -Syu --noprogressbar --noconfirm ' \
+            cmd = 'pacman -Sy --noprogressbar --noconfirm ' \
                   '"{0}"'.format('" "'.join(targets))
         else:
             cmd = 'pacman -S --noprogressbar --noconfirm ' \
