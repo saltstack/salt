@@ -87,8 +87,8 @@ def set(device, **kwargs):
 
     CLI Example::
 
-        salt '*' quota.report /media/data user=larry softblock=1048576
-        salt '*' quota.report /media/data group=painters
+        salt '*' quota.set /media/data user=larry block-soft-limit=1048576
+        salt '*' quota.set /media/data group=painters file-hard-limit=1000
     '''
     empty = {'block-soft-limit': 0, 'block-hard-limit': 0,
              'file-soft-limit': 0, 'file-hard-limit': 0}
@@ -131,4 +131,16 @@ def set(device, **kwargs):
     out = __salt__['cmd.run'](cmd).splitlines()
 
     return {ret: current}
+
+
+def warn():
+    '''
+    Runs the warnquota command, to send warning emails to users who
+    are over their quota limit.
+
+    CLI Example::
+
+        salt '*' quota.warn
+    '''
+    __salt__['cmd.run']('quotawarn')
 
