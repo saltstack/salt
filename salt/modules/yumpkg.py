@@ -148,7 +148,7 @@ def _set_repo_options(yumbase, **kwargs):
 
     try:
         if fromrepo:
-            log.info('Restricting install to repo \'{0}\''.format(fromrepo))
+            log.info('Restricting to repo \'{0}\''.format(fromrepo))
             yumbase.repos.disableRepo('*')
             yumbase.repos.enableRepo(fromrepo)
         else:
