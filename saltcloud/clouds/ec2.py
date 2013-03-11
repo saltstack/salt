@@ -509,31 +509,28 @@ def get_availability_zone(vm_):
     elif 'EC2.availability_zone' in __opts__:
         avz = __opts__['EC2.availability_zone']
 
+    if avz is None:
+        return None
+
     zones = list_availability_zones()
 
-    if avz is None:
-        # Default to first valid zone
-        for zone in zones.keys():
-            if zones[zone] == 'available':
-                return zone
-    else:
-        # Validate user-specified AZ
-        if avz not in zones.keys():
-            raise SaltException(
-                'The specified availability zone isn\'t valid in this region: '
-                '{0}\n'.format(
-                    avz
-                )
+    # Validate user-specified AZ
+    if avz not in zones.keys():
+        raise SaltException(
+            'The specified availability zone isn\'t valid in this region: '
+            '{0}\n'.format(
+                avz
             )
+        )
 
-        # check specified AZ is available
-        elif zones[avz] != 'available':
-            raise SaltException(
-                'The specified availability zone isn\'t currently available: '
-                '{0}\n'.format(
-                    avz
-                )
+    # check specified AZ is available
+    elif zones[avz] != 'available':
+        raise SaltException(
+            'The specified availability zone isn\'t currently available: '
+            '{0}\n'.format(
+                avz
             )
+        )
 
     return avz
 
@@ -585,7 +582,9 @@ def create(vm_=None, call=None):
             for (counter, sg) in enumerate(ex_securitygroup):
                 params['SecurityGroup.{0}'.format(counter)] = sg
 
-    params['Placement.AvailabilityZone'] = get_availability_zone(vm_)
+    az = get_availability_zone(vm_)
+    if az is not None:
+        params['Placement.AvailabilityZone'] = az
 
     delvol_on_destroy = vm_.get(
         'delvol_on_destroy',            # Grab the value from the VM config
