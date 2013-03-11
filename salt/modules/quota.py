@@ -163,3 +163,28 @@ def stats():
 
     return ret
 
+
+def on(device):
+    '''
+    Turns on the quota system
+
+    CLI Example::
+
+        salt '*' quota.on
+    '''
+    cmd = 'quotaon {0}'.format(device)
+    __salt__['cmd.run'](cmd)
+
+
+def off(device):
+    '''
+    Turns off the quota system
+
+    CLI Example::
+
+        salt '*' quota.off
+    '''
+    cmd = 'quotaoff {0}'.format(device)
+    __salt__['cmd.run'](cmd)
+
+
