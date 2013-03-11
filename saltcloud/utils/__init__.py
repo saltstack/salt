@@ -152,7 +152,7 @@ def minion_conf_string(opts, vm_):
         minion['master_finger'] = vm_['master_finger']
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
-    if 'master' not in minion:
+    if 'master' not in minion and 'make_master' not in vm_:
         raise ValueError("A master was not defined.")
     minion.update(opts.get('map_minion', {}))
     minion.update(vm_.get('map_minion', {}))
@@ -454,7 +454,7 @@ def root_cmd(command, tty, sudo, **kwargs):
     '''
     if sudo:
         command = 'sudo ' + command
-        log.debug('Using sudo to run command')
+        log.debug('Using sudo to run command {0}'.format(command))
 
     ssh_args = ' -oStrictHostKeyChecking=no'
     ssh_args += ' -oUserKnownHostsFile=/dev/null'

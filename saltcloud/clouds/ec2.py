@@ -649,6 +649,7 @@ def create(vm_=None, call=None):
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']
 
+    ret = {}
     deploy = vm_.get('deploy', __opts__.get('EC2.deploy', __opts__['deploy']))
     if deploy is True:
         deploy_script = script(vm_)
@@ -696,13 +697,14 @@ def create(vm_=None, call=None):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
+            ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
     log.info(
         'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
-    ret = (data[0]['instancesSet']['item'])
+    ret.update(data[0]['instancesSet']['item'])
 
     volumes = vm_.get('map_volumes')
     if volumes:

@@ -242,7 +242,7 @@ def create(vm_):
     if not ip_address:
         raise SaltException('A valid IP address was not found')
 
-    deployargs = {
+    deploy_kwargs = {
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
@@ -255,31 +255,31 @@ def create(vm_):
     if 'script_args' in vm_:
         deploy_kwargs['script_args'] = vm_['script_args']
 
-    deployargs['minion_conf'] = saltcloud.utils.minion_conf_string(
+    deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
         __opts__,
         vm_
     )
     if 'ssh_username' in vm_:
-        deployargs['deploy_command'] = '/tmp/deploy.sh'
-        deployargs['username'] = vm_['ssh_username']
-        deployargs['tty'] = True
+        deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
+        deploy_kwargs['username'] = vm_['ssh_username']
+        deploy_kwargs['tty'] = True
     else:
-        deployargs['username'] = 'root'
-    log.debug('Using {0} as SSH username'.format(deployargs['username']))
+        deploy_kwargs['username'] = 'root'
+    log.debug('Using {0} as SSH username'.format(deploy_kwargs['username']))
 
     if 'OPENSTACK.ssh_key_file' in __opts__:
-        deployargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
+        deploy_kwargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
         log.debug(
             'Using {0} as SSH key file'.format(
-                deployargs['key_filename']
+                deploy_kwargs['key_filename']
             )
         )
     elif 'password' in data.extra:
-        deployargs['password'] = data.extra['password']
+        deploy_kwargs['password'] = data.extra['password']
         log.debug('Logging into SSH using password')
 
     if 'sudo' in vm_:
-        deployargs['sudo'] = vm_['sudo']
+        deploy_kwargs['sudo'] = vm_['sudo']
         log.debug('Running root commands using sudo')
 
     deploy = vm_.get(
@@ -289,9 +289,10 @@ def create(vm_):
             __opts__['deploy']
         )
     )
+    ret = {}
     if deploy is True:
         deploy_script = script(vm_)
-        deployargs['script'] = deploy_script.script
+        deploy_kwargs['script'] = deploy_script.script
 
         # Deploy salt-master files, if necessary
         if 'make_master' in vm_ and vm_['make_master'] is True:
@@ -305,9 +306,10 @@ def create(vm_):
             if 'syndic_master' in master_conf:
                 deploy_kwargs['make_syndic'] = True
 
-        deployed = saltcloud.utils.deploy_script(**deployargs)
+        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
+            ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(
@@ -315,7 +317,6 @@ def create(vm_):
                 )
             )
 
-    ret = {}
     log.info(
         'Created Cloud VM {0} with the following values:'.format(
             vm_['name']
