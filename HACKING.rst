@@ -141,6 +141,9 @@ and install the following packages::
 Afterward the pip commands should run without a hitch. Also be sure to set
 max_open_files to 2048 (see below).
 
+Create a virtual environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Create a new `virtualenv`_::
 
     virtualenv /path/to/your/virtualenv
@@ -165,6 +168,9 @@ M2Crypto installed using apt::
     the pip command below that installs the dependencies (pyzmq, M2Crypto,
     etc.), assuming that the listed modules are all installed in your system
     PYTHONPATH at the time you create your virtualenv.
+
+Configure your virtual environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Activate the virtualenv::
 
