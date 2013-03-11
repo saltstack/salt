@@ -389,10 +389,8 @@ class Minion(object):
             minion_instance = class_(opts)
         if opts['multiprocessing']:
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-            print 'Daemonize {0}'.format(os.getpid())
             salt.utils.daemonize_if(opts, **data)
             sdata = {'pid': os.getpid()}
-            print 'Pose Daemon {0}'.format(os.getpid())
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
