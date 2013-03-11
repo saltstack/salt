@@ -3,4 +3,4 @@ M2Crypto
 msgpack-python
 pycrypto
 PyYAML
-pyzmq >= 2.1.9
+pyzmq >= 2.1.9, <13.0.0, >13.0.0
