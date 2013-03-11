@@ -141,15 +141,12 @@ def _run(cmd,
          env=(),
          rstrip=True,
          retcode=False,
-         template=None,
-         daemon=False):
+         template=None):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
     # Set the default working directory to the home directory
     # of the user salt-minion is running as.  Default:  /root
-    if daemon:
-        salt.utils.daemonize_if(__opts__)
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
 
