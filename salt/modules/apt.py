@@ -225,11 +225,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Note that this function will daemonize the subprocess
-    # preventing a restart resulting from a salt-minion upgrade
-    # from killing the apt and hence hosing the dpkg database
-    salt.utils.daemonize_if(__opts__, **kwargs)
-
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
@@ -365,8 +360,6 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    salt.utils.daemonize_if(__opts__, **kwargs)
-
     # Catch both boolean input from state and string input from CLI
     if refresh is True or str(refresh).lower() == 'true':
         refresh_db()
