@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 def __virtual__():
     if not has_raven:
-        logger.warning("Can't find raven client library")
         return False
     return 'sentry'
 
