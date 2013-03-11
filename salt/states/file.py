@@ -1415,7 +1415,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         character will be stripped for convenience (for easily switching
         between comment() and uncomment()).  The regex will be searched for
         from the beginning of the line, ignoring leading spaces (we prepend
-        '^[ ]*')
+        '^[ \\t]*')
     char : ``#``
         The character to remove in order to uncomment a line; if a single
         whitespace character follows the comment it will also be removed
@@ -1439,7 +1439,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex'](name, '^[ ]*' + regex.lstrip('^')):
+    if __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^')):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
@@ -1465,7 +1465,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     # Check the result
     ret['result'] = \
-        __salt__['file.contains_regex'](name, '^[ ]*' + regex.lstrip('^'))
+        __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^'))
 
     if slines != nlines:
         # Changes happened, add them
