@@ -17,7 +17,7 @@ import json
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
-import salt.grains.extra 
+import salt.grains.extra
 
 # Only available on posix systems, nonfatal on windows
 try:
@@ -191,8 +191,8 @@ def _run(cmd,
                                runas, sys.executable)
             env = json.loads(
                     subprocess.Popen(
-                        env_cmd, 
-                        shell=True, 
+                        env_cmd,
+                        shell=True,
                         stdout=subprocess.PIPE
                         ).communicate()[0])['data']
         except ValueError:
@@ -278,7 +278,7 @@ def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), templ
 
 
 def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-        template=None, rstrip=True, daemon=False):
+        template=None, rstrip=True):
     '''
     Execute the passed command and return the output as a string
 
@@ -295,13 +295,13 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
     '''
     out = _run(cmd, runas=runas, shell=shell, cwd=cwd,
                stderr=subprocess.STDOUT, env=env, template=template,
-               rstrip=rstrip, daemon=daemon)['stdout']
+               rstrip=rstrip)['stdout']
     log.debug('output: {0}'.format(out))
     return out
 
 
 def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True, daemon=False):
+               template=None, rstrip=True):
     '''
     Execute a command, and only return the standard out
 
@@ -317,13 +317,13 @@ def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
     '''
     stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip, daemon=daemon)["stdout"]
+                  template=template, rstrip=rstrip)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
 def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True, daemon=False):
+               template=None, rstrip=True):
     '''
     Execute a command and only return the standard error
 
@@ -339,13 +339,13 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
     '''
     stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip, daemon=daemon)["stderr"]
+                  template=template, rstrip=rstrip)["stderr"]
     log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
 def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, rstrip=True, daemon=False):
+            template=None, rstrip=True):
     '''
     Execute the passed command and return a dict of return data
 
@@ -361,7 +361,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
     '''
     ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-               template=template, rstrip=rstrip, daemon=daemon)
+               template=template, rstrip=rstrip)
 
     if ret['retcode'] != 0:
         rcode = ret['retcode']
@@ -382,7 +382,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
 
 
 def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, daemon=False):
+            template=None):
     '''
     Execute a shell command and return the command's return code.
 
@@ -404,8 +404,7 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
             shell=shell,
             env=env,
             retcode=True,
-            template=template,
-            daemon=daemon,
+            template=template
             )['retcode']
 
 
