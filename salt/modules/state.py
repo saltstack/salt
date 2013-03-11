@@ -156,7 +156,6 @@ def highstate(test=None, **kwargs):
     conflict = running()
     if conflict:
         return conflict
-    salt.utils.daemonize_if(__opts__, **kwargs)
     opts = copy.copy(__opts__)
 
     if not test is None:
@@ -210,7 +209,6 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
             kwargs.get('pillar', ''),
             kwargs.get('kwval_as', 'yaml'))
 
-    salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts, pillar)
 
     if isinstance(mods, string_types):
@@ -302,7 +300,6 @@ def show_sls(mods, env='base', test=None, **kwargs):
     opts = copy.copy(__opts__)
     if not test is None:
         opts['test'] = test
-    salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
