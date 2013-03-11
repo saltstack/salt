@@ -79,7 +79,7 @@ def _get_repo_options(**kwargs):
 
     repo_arg = ''
     if fromrepo:
-        log.info('Restricting install to repo "{0}"'.format(fromrepo))
+        log.info('Restricting to repo "{0}"'.format(fromrepo))
         repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
     else:
         repo_arg = ''
@@ -316,7 +316,7 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for muliple '
                         'package targets')
 
-    repo_arg = _get_repo_options(**kwargs)
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
 
     old = list_pkgs()
     downgrade = []
