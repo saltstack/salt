@@ -175,9 +175,7 @@ def restart(name, **kwargs):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__, **kwargs)
-    cmd = 'service {0} onerestart'.format(name)
+    cmd = '{0} {1} onerestart'.format(_cmd(), name)
     return not __salt__['cmd.retcode'](cmd)
 
 
