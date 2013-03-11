@@ -529,8 +529,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         character will be stripped for convenience (for easily switching
         between comment() and uncomment()).
     char : ``#``
-        The character to remove in order to uncomment a line; if a single
-        whitespace character follows the comment it will also be removed
+        The character to remove in order to uncomment a line
     backup : ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
@@ -545,7 +544,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
     # Largely inspired by Fabric's contrib.files.uncomment()
 
     return __salt__['file.sed'](path,
-        before=r'^([[:space:]]*){0}[[:space:]]?'.format(char),
+        before=r'^([[:space:]]*){0}'.format(char),
         after=r'\1',
         limit=regex.lstrip('^'),
         backup=backup)
