@@ -282,8 +282,6 @@ def restart(name, **kwargs):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__, **kwargs)
     cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -296,8 +294,6 @@ def full_restart(name, **kwargs):
 
         salt '*' service.full_restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__, **kwargs)
     cmd = 'service {0} --full-restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
