@@ -192,24 +192,7 @@ def daemonize_if(opts, **kwargs):
         return
     if sys.platform.startswith('win'):
         return
-    # Daemonizing breaks the proc dir, so the proc needs to be rewritten
-    data = {}
-    for key, val in kwargs.items():
-        if key.startswith('__pub_'):
-            data[key[6:]] = val
-    if 'jid' in kwargs:
-        data['jid'] = kwargs['jid']
-    if not 'jid' in data:
-        return
-
-    serial = salt.payload.Serial(opts)
-    proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
-    fn_ = os.path.join(proc_dir, data['jid'])
     daemonize()
-    sdata = {'pid': os.getpid()}
-    sdata.update(data)
-    with fopen(fn_, 'w+') as ofile:
-        ofile.write(serial.dumps(sdata))
 
 
 def profile_func(filename=None):
