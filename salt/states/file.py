@@ -1417,8 +1417,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         from the beginning of the line, ignoring leading spaces (we prepend
         '^[ \\t]*')
     char : ``#``
-        The character to remove in order to uncomment a line; if a single
-        whitespace character follows the comment it will also be removed
+        The character to remove in order to uncomment a line
     backup : ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
@@ -1443,7 +1442,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex'](name, char + '[ ]?' + regex):
+    elif __salt__['file.contains_regex'](name, char + '[ \t]*' + regex):
         # Line exists and is commented
         pass
     else:
