@@ -30,3 +30,4 @@ coverage.xml
 htmlcov/
 /.project
 /.pydevproject
+/.idea
