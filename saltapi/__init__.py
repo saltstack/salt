@@ -17,8 +17,8 @@ class APIClient(object):
     in the form of low-data data structures. For example:
 
     >>> client = APIClient(__opts__)
-    >>> lowdata = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
-    >>> client.run(lowdata)
+    >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
+    >>> client.run(lowstate)
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -26,7 +26,7 @@ class APIClient(object):
     def run(self, low):
         '''
         Execute the specified function in the specified client by passing the
-        LowData
+        lowstate
         '''
         if not 'client' in low:
             raise SaltException('No client specified')
