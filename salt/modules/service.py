@@ -86,8 +86,6 @@ def restart(name, **kwargs):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__, **kwargs)
     cmd = os.path.join(GRAINMAP[__grains__['os']],
             name + ' restart')
     return not __salt__['cmd.retcode'](cmd)
