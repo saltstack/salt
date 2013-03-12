@@ -641,6 +641,13 @@ class Minion(object):
             self.schedule.functions = self.functions
             self.schedule.returners = self.returners
 
+    def clean_die(self, signum, frame):
+        '''
+        Python does not handle the SIGTERM cleanly, if it is signaled exit
+        the minion process cleanly
+        '''
+        exit(0)
+
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
@@ -662,6 +669,7 @@ class Minion(object):
                 ),
                 exc_info=err
             )
+        signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
@@ -757,7 +765,6 @@ class Minion(object):
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
-
         # On first startup execute a state run if configured to do so
         self._state_run()
 
