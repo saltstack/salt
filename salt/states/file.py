@@ -298,7 +298,7 @@ def _check_directory(
             if key:
                 continue
             acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
-        if acomment:
+        if acomment or __opts__['test']:
             comment += acomment
             return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
