@@ -75,6 +75,23 @@ def manage_mode(mode):
     return mode
 
 
+def is_true(value=None):
+    '''
+    Returns a boolean value representing the "truth" of the value passed. The
+    rules for what is a ``True`` value are:
+
+        1. Numeric values greater than :strong:`0`
+        2. The string values :strong:`True` and :strong:`true`
+        3. Any object for which ``bool(obj)`` returns ``True``
+    '''
+    if isinstance(value, (int, float)):
+        return value > 0
+    elif isinstance(value, basestring):
+        return str(value).lower() == 'true'
+    else:
+        return bool(value)
+
+
 def valid_fileproto(uri):
     '''
     Returns a boolean value based on whether or not the URI passed has a valid
