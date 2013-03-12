@@ -100,25 +100,23 @@ class CkMinions(object):
                 grains = self.serial.load(
                     salt.utils.fopen(datap)
                 ).get('grains')
-                comps = expr.split(':')
+                comps = expr.rsplit(':', 1)
+                match = salt.utils.traverse_dict(grains, comps[0])
                 if len(comps) < 2:
                     continue
-                if comps[0] not in grains:
+                if not match:
                     minions.remove(id_)
                     continue
-                if isinstance(grains.get(comps[0]), list):
+                if isinstance(match, dict):
+                    minions.remove(id_)
+                    continue
+                if isinstance(match, list):
                     # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
+                    for member in match:
                         if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                            found = True
-                            break
-                    if found:
-                        continue
-                    minions.remove(id_)
-                    continue
+                            continue
                 if fnmatch.fnmatch(
-                    str(grains.get(comps[0], '')).lower(),
+                    str(match.lower()),
                     comps[1].lower(),
                     ):
                     continue
