@@ -284,7 +284,7 @@ def _check_directory(
                 if fchange:
                     changes[path] = fchange
     if not os.path.isdir(name):
-        changes[name] = {'directory': 'new'}
+        changes[name] = {'New Dir'}
     if changes:
         comment = 'The following files will be changed:\n'
         acomment = ''
@@ -298,9 +298,10 @@ def _check_directory(
             if key:
                 continue
             acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
-        if acomment or __opts__['test']:
+        if acomment:
             comment += acomment
             return None, comment
+        return None, changes
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
