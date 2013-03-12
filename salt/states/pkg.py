@@ -16,6 +16,7 @@ Note that the pkgrepo has a require_in clause.
 This is necessary and can not be replaced by a require clause in the pkg.
 
 .. code-block:: yaml
+
     pkgrepo.managed:
       - human_name: Logstash PPA
       - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
