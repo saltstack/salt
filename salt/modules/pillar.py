@@ -70,6 +70,10 @@ def raw(key=''):
 def ext(external):
     '''
     Generate the pillar and apply an explicit external pillar
+    
+    CLI Example::
+
+        salt '*' pillar.ext 'libvirt: _'
     '''
     if isinstance(external, basestring):
         external = yaml.load(external)

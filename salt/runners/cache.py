@@ -31,12 +31,14 @@ def grains(minion=None):
     data = _cdata()
     if minion:
         if minion in data:
-            salt.output({minion: data[minion]['grains']}, 'grains')
+            salt.output.display_output({minion: data[minion]['grains']},
+                                       None, __opts__)
             return {minion: data[minion]['grains']}
     ret = {}
     for minion in data:
         ret[minion] = data[minion]['grains']
-        salt.output({minion: data[minion]['grains']}, 'grains')
+        salt.output.display_output({minion: data[minion]['grains']},
+                                   None, __opts__)
     return ret
 
 
@@ -47,10 +49,12 @@ def pillar(minion=None):
     data = _cdata()
     if minion:
         if minion in data:
-            salt.output({minion: data[minion]['pillar']})
+            salt.output.display_output({minion: data[minion]['pillar']},
+                                       None, __opts__)
             return {minion: data[minion]['pillar']}
     ret = {}
     for minion in data:
         ret[minion] = data[minion]['pillar']
-        salt.output({minion: data[minion]['pillar']})
+        salt.output.display_output({minion: data[minion]['pillar']},
+                                   None, __opts__)
     return ret

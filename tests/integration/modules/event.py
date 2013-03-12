@@ -19,7 +19,7 @@ from salt.utils import event
 
 
 class EventModuleTest(integration.ModuleCase):
-    def test_event_fire_master(self):
+    def __test_event_fire_master(self):
         events = Queue()
 
         def get_event(events):
