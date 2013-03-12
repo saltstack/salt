@@ -42,6 +42,9 @@ def _run_psql(cmd, runas=None, password=None, run_cmd="cmd.run_all"):
     makes this too much code to be repeated in each function below
     '''
     kwargs = {"runas": runas}
+
+    if not password:
+        password = __salt__['config.option']('postgres.pass')
     if password:
         import os
         env = os.environ.copy()
@@ -111,9 +114,7 @@ def _psql_cmd(*args, **kwargs):
     cmd = [salt.utils.which('psql'),
            '--no-align',
            '--no-readline']
-    if password:
-        cmd += ['--password', password]
-    else:
+    if not password:
         cmd += ['--no-password']
     if user:
         cmd += ['--username', user]
@@ -152,7 +153,7 @@ def db_list(user=None, host=None, port=None, db=None,
             'pg_encoding_to_char(encoding) as "Encoding", ' \
             'datcollate as "Collate", datctype as "Ctype", ' \
             'datacl as "Access privileges" FROM pg_database pgd, ' \
-            'pg_authid pga WHERE pga.oid = pgd.datdba'
+            'pg_roles pga WHERE pga.oid = pgd.datdba'
 
     cmd = _psql_cmd('-c', query, '-t',
                     host=host, user=user, port=port, db=db, password=password)
@@ -292,7 +293,7 @@ def user_list(user=None, host=None, port=None, db=None,
                   db=db,
                   password=password,
                   runas=runas).split('.')
-    if len(ver) >= 2 and ver[0] >= 9 and ver[1] >= 1:
+    if len(ver) >= 2 and int(ver[0]) >= 9 and int(ver[1]) >= 1:
         query = (
             'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
             'rolcreatedb, rolcatupdate, rolcanlogin, rolreplication, '
