@@ -15,11 +15,11 @@ SALT_STUB = {
 class PostgresTestCase(TestCase):
     @patch.multiple(postgres, __grains__={ 'os_family': 'FreeBSD' })
     def test_get_runas_bsd(self):
-	self.assertEqual('pgsql', postgres._get_runas())
+        self.assertEqual('pgsql', postgres._get_runas())
 
     @patch.multiple(postgres, __grains__={ 'os_family': 'Linux' })
     def test_get_runas_other(self):
-	self.assertEqual('postgres', postgres._get_runas())
+        self.assertEqual('postgres', postgres._get_runas())
 
     @patch.multiple(postgres, __grains__={ 'os_family': 'Linux' }, __salt__=SALT_STUB)
     def test_run_psql(self):
