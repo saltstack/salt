@@ -95,6 +95,11 @@ def installed(name,
     if repo:
         name = repo
 
+    # If a requirements file is specified,only install the contents of the
+    # requirements file
+    if requirements:
+        name = ''
+
     pip_install_call = __salt__['pip.install'](
         pkgs=name,
         requirements=requirements,
