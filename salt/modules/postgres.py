@@ -36,12 +36,25 @@ def __virtual__():
     return False
 
 
+def _get_runas(runas=None):
+    '''
+    Returns the default runas user for this platform
+    '''
+    if runas is not None:
+        return runas
+
+    if 'FreeBSD' in __grains__['os_family']:
+        return 'pgsql'
+    else:
+        return 'postgres'
+
+
 def _run_psql(cmd, runas=None, password=None, run_cmd="cmd.run_all"):
     '''
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
     '''
-    kwargs = {"runas": runas}
+    kwargs = {"runas": _get_runas(runas)}
 
     if not password:
         password = __salt__['config.option']('postgres.pass')
