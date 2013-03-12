@@ -36,6 +36,25 @@ def __virtual__():
     return False
 
 
+def _run_psql(cmd, runas=None, password=None, run_cmd="cmd.run_all"):
+    '''
+    Helper function to call psql, because the password requirement
+    makes this too much code to be repeated in each function below
+    '''
+    kwargs = {"runas": runas}
+    if password:
+        import os
+        env = os.environ.copy()
+        env["PGPASSWORD"] = password
+        # PGPASSWORD has been deprecated, supposedly leading to
+        # protests. Currently, this seems the simplest way to solve
+        # this. If needed in the future, a tempfile could also be
+        # written and the filename set to the PGPASSFILE variable. see
+        # http://www.postgresql.org/docs/8.4/static/libpq-pgpass.html
+        kwargs["env"] = env
+    return __salt__[run_cmd](cmd, **kwargs)
+
+
 def version(user=None, host=None, port=None, db=None, password=None,
             runas=None):
     '''
@@ -49,7 +68,7 @@ def version(user=None, host=None, port=None, db=None, password=None,
             'WHERE name = \'server_version\''
     cmd = _psql_cmd('-c', query, '-t',
                     host=host, user=user, port=port, db=db, password=password)
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    ret = _run_psql(cmd, runas=runas, password=password)
 
     for line in ret['stdout'].splitlines():
         return line
@@ -138,7 +157,7 @@ def db_list(user=None, host=None, port=None, db=None,
     cmd = _psql_cmd('-c', query, '-t',
                     host=host, user=user, port=port, db=db, password=password)
 
-    cmdret = __salt__['cmd.run_all'](cmd, runas=runas)
+    cmdret = _run_psql(cmd, runas=runas, password=password)
 
     if cmdret['retcode'] > 0:
         return ret
@@ -219,7 +238,7 @@ def db_create(name,
     # Execute the command
     cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db,
                     password=password)
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    ret = _run_psql(cmd, runas=runas, password=password)
 
     return ret['retcode'] == 0
 
@@ -238,7 +257,7 @@ def db_remove(name, user=None, host=None, port=None, db=None,
     query = 'DROP DATABASE {0}'.format(name)
     cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db,
                     password=password)
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    ret = _run_psql(cmd, runas=runas, password=password)
     return ret['retcode'] == 0
 
 
@@ -290,7 +309,7 @@ def user_list(user=None, host=None, port=None, db=None,
     cmd = _psql_cmd('-c', query, '-t',
                     host=host, user=user, port=port, db=db, password=password)
 
-    cmdret = __salt__['cmd.run_all'](cmd, runas=runas)
+    cmdret = _run_psql(cmd, runas=runas, password=password)
 
     if cmdret['retcode'] > 0:
         return ret
@@ -389,7 +408,7 @@ def _role_create(name,
 
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db,
                     password=password)
-    return __salt__['cmd.run'](cmd, runas=runas)
+    return _run_psql(cmd, runas=runas, password=password, run_cmd="cmd.run")
 
 
 def user_create(username,
@@ -473,7 +492,7 @@ def _role_update(name,
 
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db,
                     password=password)
-    return __salt__['cmd.run'](cmd, runas=runas)
+    return _run_psql(cmd, runas=runas, password=password, run_cmd="cmd.run")
 
 
 def user_update(username,
@@ -527,7 +546,7 @@ def _role_remove(name, user=None, host=None, port=None, db=None,
     sub_cmd = 'DROP ROLE {0}'.format(name)
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db,
                     password=password)
-    __salt__['cmd.run'](cmd, runas=runas)
+    _run_psql(cmd, runas=runas, password=password, run_cmd="cmd.run")
     if not user_exists(name, user, host, port, db, password=password, runas=runas):
         return True
     else:
