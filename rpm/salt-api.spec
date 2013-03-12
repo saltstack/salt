@@ -5,17 +5,20 @@
 %define __python %{_bindir}/python%{?pybasever}
 %endif
 
+%define namespace saltapi
+%define eggspace salt_api
+
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt-api
 Version: 0.7.5
-Release: 1%{?dist}
+Release: 3%{?dist}
 Summary: A web api for to access salt the parallel remote execution system
 
 Group:   System Environment/Daemons
 License: ASL 2.0
-URL:     http://saltstack.org/
+URL:     http://github.com/saltstack/salt-api
 Source0: http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1: %{name}.service
 Source2: %{name}
@@ -23,6 +26,9 @@ Source2: %{name}
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
+
+BuildRequires: salt
+BuildRequires: python2-devel
 
 Requires: salt
 Requires: python-cherrypy
@@ -50,8 +56,8 @@ BuildRequires: systemd-units
 %endif
 
 %description
-salt-api is a modular interface on top of Salt that can provide a variety of 
-entry points into a running Salt system. It can start and manage multiple 
+salt-api is a modular interface on top of Salt that can provide a variety of
+entry points into a running Salt system. It can start and manage multiple
 interfaces allowing a REST API to coexist with XMLRPC or even a Websocket API.
 
 %prep
@@ -79,15 +85,15 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc LICENSE
 %{_bindir}/%{name}
-%{python_sitelib}/saltapi/*
-%{python_sitelib}/salt_api-%{version}-py?.?.egg-info
-%doc %{_mandir}/man1/salt-api.1.*
-%doc %{_mandir}/man7/salt-api.7.*
+%{python_sitelib}/%{namespace}/*
+%{python_sitelib}/%{eggspace}-%{version}-py?.?.egg-info
+%doc %{_mandir}/man1/%{name}.1.*
+%doc %{_mandir}/man7/%{name}.7.*
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
-%attr(0755, root, root) %{_initrddir}/salt-api
+%attr(0755, root, root) %{_initrddir}/%{name}
 %else
-%{_unitdir}/salt-api.service
+%{_unitdir}/%{name}.service
 %endif
 
 # less than RHEL 8 / Fedora 16
@@ -96,48 +102,56 @@ rm -rf $RPM_BUILD_ROOT
 
 %preun
   if [ $1 -eq 0 ] ; then
-      /sbin/service salt-api stop >/dev/null 2>&1
-      /sbin/chkconfig --del salt-api
+      /sbin/service %{name} stop >/dev/null 2>&1
+      /sbin/chkconfig --del %{name}
   fi
 
 %post
-  /sbin/chkconfig --add salt-api
+  /sbin/chkconfig --add %{name}
 
 %postun
   if [ "$1" -ge "1" ] ; then
-      /sbin/service salt-api condrestart >/dev/null 2>&1 || :
+      /sbin/service %{name} condrestart >/dev/null 2>&1 || :
   fi
 
 %else
 
 %preun
 %if 0%{?systemd_preun:1}
-  %systemd_preun salt-api.service
+  %systemd_preun %{name}.service
 %else
   if [ $1 -eq 0 ] ; then
       # Package removal, not upgrade
-      /bin/systemctl --no-reload disable salt-api.service > /dev/null 2>&1 || :
-      /bin/systemctl stop salt-api.service > /dev/null 2>&1 || :
+      /bin/systemctl --no-reload disable %{name}.service > /dev/null 2>&1 || :
+      /bin/systemctl stop %{name}.service > /dev/null 2>&1 || :
   fi
 %endif
 
 %post
 %if 0%{?systemd_post:1}
-  %systemd_post salt-api.service
+  %systemd_post %{name}.service
 %else
   /bin/systemctl daemon-reload &>/dev/null || :
 %endif
 
 %postun
 %if 0%{?systemd_post:1}
-  %systemd_postun salt-api.service
+  %systemd_postun %{name}.service
 %else
   /bin/systemctl daemon-reload &>/dev/null
-  [ $1 -gt 0 ] && /bin/systemctl try-restart salt-api.service &>/dev/null || :
+  [ $1 -gt 0 ] && /bin/systemctl try-restart %{name}.service &>/dev/null || :
 %endif
 
 %endif
 
 %changelog
+* Tue Feb 25 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.7.5-3
+- Added a more detailed decription
+- Removed trailing whitespace on description.
+- Added BR of python-devel
+
+* Tue Feb 25 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.7.5-2
+- Fixes as suggested by https://bugzilla.redhat.com/show_bug.cgi?id=913296#
+
 * Tue Feb 12 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.7.5-1
 - Initial package
