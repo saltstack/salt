@@ -77,7 +77,7 @@ def is_true(value=None):
     rules for what is a True value are:
 
         1. Numeric values greater than 0
-        2. The string values "True" and "true"
+        2. The string values ``True`` and ``true``
         3. Any object for which bool(obj) returns True
     '''
     if isinstance(value, (int, float)):
