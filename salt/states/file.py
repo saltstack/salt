@@ -1414,10 +1414,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
         A regular expression used to find the lines that are to be uncommented.
         This regex should not include the comment character. A leading ``^``
         character will be stripped for convenience (for easily switching
-        between comment() and uncomment()).
+        between comment() and uncomment()).  The regex will be searched for
+        from the beginning of the line, ignoring leading spaces (we prepend
+        '^[ \\t]*')
     char : ``#``
-        The character to remove in order to uncomment a line; if a single
-        whitespace character follows the comment it will also be removed
+        The character to remove in order to uncomment a line
     backup : ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
@@ -1438,11 +1439,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex'](name, regex):
+    if __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^')):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex'](name, regex, lchar=char):
+    elif __salt__['file.contains_regex'](name, char + '[ \t]*' + regex):
         # Line exists and is commented
         pass
     else:
@@ -1463,7 +1464,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex'](name, regex)
+    ret['result'] = \
+        __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^'))
 
     if slines != nlines:
         # Changes happened, add them
