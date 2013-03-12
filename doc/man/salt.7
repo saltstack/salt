@@ -35975,6 +35975,12 @@ T}	T{
 This pillar module parses a config file (specified in the salt master config),
 T}
 _
+T{
+\fBpuppet\fP
+T}	T{
+Execute a puppet_node_classifier command and read the output as YAML. The YAML data is then directly
+T}
+_
 .TE
 .SS salt.pillar.cmd_json
 .sp
@@ -36105,6 +36111,15 @@ The final result set is merged with the pillar data.
 .TP
 .B salt.pillar.pillar_ldap.ext_pillar(pillar, config_file)
 Execute LDAP searches and return the aggregated data
+.UNINDENT
+.SS salt.pillar.puppet
+.sp
+Execute a puppet_node_classifier command and read the output as YAML.
+The YAML data is then directly overlaid onto the minion\(aqs pillar data
+.INDENT 0.0
+.TP
+.B salt.pillar.puppet.ext_pillar(pillar, command)
+Execute a puppet_node_classifier command and read the output as YAML
 .UNINDENT
 .SH MASTER TOPS
 .sp
