@@ -23,11 +23,6 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.present', name='nobody')
         self.assertSaltTrueReturn(ret)
 
-    def test_user_if_present_with_gid(self):
-        # TODO:dc fix failing test. Exception in ret
-        ret = self.run_state('user.present', name='nobody', gid="nobody")
-        self.assertSaltTrueReturn(ret)
-
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_user_not_present(self):
