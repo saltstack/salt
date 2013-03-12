@@ -34,7 +34,8 @@ def get_zone():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        cmd = 'grep TIMEZONE /etc/rc.conf | grep -vE "^#"'
+        cmd = ('timedatectl | grep Timezone |'
+               'sed -e"s/: /=/" -e"s/^[ \t]*//" | cut -d" " -f1')
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Suse' in __grains__['os_family']:
