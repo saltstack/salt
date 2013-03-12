@@ -71,6 +71,12 @@ def _changes(
             # comparison purposes
             if __salt__['file.gid_to_group'](gid or lusr['gid']) in lusr['groups']:
                 lusr['groups'].remove(__salt__['file.gid_to_group'](gid or lusr['gid']))
+            # remove default group from wanted_groups, as this requirement is
+            # already met
+            if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
+                    wanted_groups:
+                wanted_groups.remove(
+                    __salt__['file.gid_to_group'](gid or lusr['gid']))
             if groups is not None or wanted_groups:
                 if lusr['groups'] != wanted_groups:
                     change['groups'] = wanted_groups
@@ -88,13 +94,13 @@ def _changes(
                         if lshad['pwd'] != password:
                             change['passwd'] = password
             # GECOS fields
-            if lusr['fullname'] != fullname:
+            if fullname and lusr['fullname'] != fullname:
                 change['fullname'] = fullname
-            if lusr['roomnumber'] != roomnumber:
+            if roomnumber and lusr['roomnumber'] != roomnumber:
                 change['roomnumber'] = roomnumber
-            if lusr['workphone'] != workphone:
+            if workphone and lusr['workphone'] != workphone:
                 change['workphone'] = workphone
-            if lusr['homephone'] != homephone:
+            if homephone and lusr['homephone'] != homephone:
                 change['homephone'] = homephone
 
     if not found:
@@ -115,10 +121,10 @@ def present(
         shell=None,
         unique=True,
         system=False,
-        fullname='',
-        roomnumber='',
-        workphone='',
-        homephone=''):
+        fullname=None,
+        roomnumber=None,
+        workphone=None,
+        homephone=None):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -219,15 +225,6 @@ def present(
         for isected in set(groups).intersection(optional_groups):
             log.warning('Group "{0}" specified in both groups and '
                         'optional_groups for user {1}'.format(isected, name))
-
-    if fullname is None:
-        fullname = ''
-    if roomnumber is None:
-        roomnumber = ''
-    if workphone is None:
-        workphone = ''
-    if homephone is None:
-        homephone = ''
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
