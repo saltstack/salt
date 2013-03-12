@@ -261,7 +261,7 @@ def _check_directory(
                 if fchange:
                     changes[path] = fchange
     if not os.path.isdir(name):
-        changes[name] = {'New Dir'}
+        changes[name] = {'directory': 'new'}
     if changes:
         comment = 'The following files will be changed:\n'
         acomment = ''
