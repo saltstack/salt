@@ -79,6 +79,10 @@ def is_true(value=None):
         1. Numeric values greater than :strong:`0`
         2. The string values :strong:`True` and :strong:`true`
         3. Any object for which ``bool(obj)`` returns ``True``
+
+    CLI Example::
+
+        salt '*' config.is_true true
     '''
     if isinstance(value, (int, float)):
         return value > 0
