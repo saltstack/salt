@@ -29,7 +29,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.symlink test interface
         '''
-        name = os.path.join(integration.TMP, 'symlink')
+        name = os.path.join(integration.TMP, 'symlink2')
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
         self.assertSaltNoneReturn(ret)
