@@ -46,15 +46,13 @@ def _run_psql(cmd, runas=None, password=None, run_cmd="cmd.run_all"):
     if not password:
         password = __salt__['config.option']('postgres.pass')
     if password:
-        import os
-        env = os.environ.copy()
-        env["PGPASSWORD"] = password
+        kwargs["env"] = {"PGPASSWORD": password}
         # PGPASSWORD has been deprecated, supposedly leading to
         # protests. Currently, this seems the simplest way to solve
         # this. If needed in the future, a tempfile could also be
         # written and the filename set to the PGPASSFILE variable. see
         # http://www.postgresql.org/docs/8.4/static/libpq-pgpass.html
-        kwargs["env"] = env
+
     return __salt__[run_cmd](cmd, **kwargs)
 
 
