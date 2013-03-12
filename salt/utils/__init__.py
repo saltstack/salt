@@ -743,6 +743,22 @@ def fopen(*args, **kwargs):
     return fhandle
 
 
+def traverse_dict(data, target, delim=':'):
+    '''
+    Traverse a dict using a colon-delimited (or otherwise delimited, using
+    the "delim" param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise
+    return an empty dict.
+    '''
+    try:
+        for each in target.split(delim):
+            data = data[each]
+    except (KeyError, IndexError, TypeError):
+        # Encountered a non-indexable value in the middle of traversing
+        return {}
+    return data
+
+
 def mkstemp(*args, **kwargs):
     '''
     Helper function which does exactly what `tempfile.mkstemp()` does but

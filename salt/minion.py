@@ -920,21 +920,6 @@ class Matcher(object):
             functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
 
-    def _traverse_dict(self, data, target, delim=':'):
-        '''
-        Traverse a dict using a colon-delimited (or otherwise delimited, using
-        the "delim" param) target string. The target 'foo:bar:baz' will return
-        data['foo']['bar']['baz'] if this value exists, and will otherwise
-        return an empty dict.
-        '''
-        try:
-            for each in target.split(delim):
-                data = data[each]
-        except (KeyError, IndexError, TypeError):
-            # Encountered a non-indexable value in the middle of traversing
-            return {}
-        return data
-
     def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
@@ -990,7 +975,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        match = self._traverse_dict(self.opts['grains'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['grains'], comps[0])
         if match == {}:
             log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
@@ -1070,7 +1055,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        match = self._traverse_dict(self.opts['pillar'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0])
         if match == {}:
             log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
