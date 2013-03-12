@@ -70,7 +70,7 @@ def present(name,
                                          encrypted=encrypted,
                                          superuser=superuser,
                                          replication=replication,
-                                         password=password,
+                                         rolepassword=password,
                                          groups=groups,
                                          runas=runas):
         ret['comment'] = 'The group {0} has been created'.format(name)
