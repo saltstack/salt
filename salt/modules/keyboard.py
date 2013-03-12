@@ -31,7 +31,7 @@ def get_sys():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        cmd = 'grep KEYMAP /etc/rc.conf | grep -vE "^#"'
+        cmd = 'localectl | grep Keymap | sed -e"s/: /=/" -e"s/^[ \t]*//"'
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep LAYOUT /etc/sysconfig/keyboard | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
