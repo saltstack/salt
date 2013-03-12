@@ -65,7 +65,7 @@ def _changes(
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
-            if gid:
+            if gid is not None:
                 if lusr['gid'] not in (gid,
                                        __salt__['file.group_to_gid'](gid)):
                     change['gid'] = gid
