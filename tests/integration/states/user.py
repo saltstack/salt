@@ -23,6 +23,15 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.present', name='nobody')
         self.assertSaltTrueReturn(ret)
 
+    def test_user_if_present_with_gid(self):
+        if self.run_function('group.info', ['nobody']):
+            ret = self.run_state('user.present', name='nobody', gid='nobody')
+        elif self.run_function('group.info', ['nogroup']):
+            ret = self.run_state('user.present', name='nobody', gid='nogroup')
+        else:
+            self.skipTest('Neither \'nobody\' nor \'nogroup\' are valid groups')
+        self.assertSaltTrueReturn(ret)
+
     @destructiveTest
     @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_user_not_present(self):

@@ -60,17 +60,22 @@ def _changes(
         if lusr['name'] == name:
             found = True
             wanted_groups = sorted(
-                    list(set((groups or []) + (optional_groups or []))))
+                list(set((groups or []) + (optional_groups or [])))
+            )
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
             if gid:
-                if lusr['gid'] != gid:
+                if lusr['gid'] not in (gid,
+                                       __salt__['file.group_to_gid'](gid)):
                     change['gid'] = gid
             # remove the default group from the list for
             # comparison purposes
-            if __salt__['file.gid_to_group'](gid or lusr['gid']) in lusr['groups']:
-                lusr['groups'].remove(__salt__['file.gid_to_group'](gid or lusr['gid']))
+            if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
+                    lusr['groups']:
+                lusr['groups'].remove(
+                    __salt__['file.gid_to_group'](gid or lusr['gid'])
+                )
             # remove default group from wanted_groups, as this requirement is
             # already met
             if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
@@ -295,7 +300,9 @@ def present(
                 homephone)
 
         if changes:
-            ret['comment'] = 'These values could not be changed: {0}'.format(changes)
+            ret['comment'] = 'These values could not be changed: {0}'.format(
+                changes
+            )
             ret['result'] = False
         return ret
 
