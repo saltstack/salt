@@ -11,7 +11,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
 
     # Set up an optional default cloud provider
     #
-    provider: AWS
+    provider: aws
 
     # Set up the location of the salt master
     #
