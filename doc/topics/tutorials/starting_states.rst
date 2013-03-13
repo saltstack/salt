@@ -501,5 +501,10 @@ and examine the output for errors. This should help troubleshoot the issue.
 The minions can also be started in the foreground in debug mode. Start the
 minion in debug mode with: ``salt-minion -l debug``.
 
+Next Reading
+============
 
-Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.
+With an understanding of states, it is recommended to become more familiar
+with Salt's pillar interface:
+
+:doc: `Pillar Walkthrough <topics/tutorials/pillar>`
