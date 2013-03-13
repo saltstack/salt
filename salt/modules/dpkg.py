@@ -34,7 +34,14 @@ def list_pkgs(*packages):
     '''
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    for line in .splitlines():
         if line.startswith('ii '):
             comps = line.split()
             pkgs[comps[1]] = comps[2]
@@ -57,7 +64,14 @@ def file_list(*packages):
     ret = set([])
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
             pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
@@ -89,7 +103,13 @@ def file_dict(*packages):
     ret = {}
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
             pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
