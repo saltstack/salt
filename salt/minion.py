@@ -1067,6 +1067,9 @@ class Matcher(object):
             log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
         if isinstance(match, dict):
+            if comps[1] == '*':
+                # We are just checking that the key exists
+                return True
             log.error('Targeted pillar "{0}" must correspond to a list, '
                       'string, or numeric value'.format(comps[0]))
             return False
