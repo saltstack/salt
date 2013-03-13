@@ -592,6 +592,7 @@ def managed(name,
             defaults=None,
             env=None,
             backup='',
+            show_diff=True,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -662,6 +663,9 @@ def managed(name,
 
     backup
         Overrides the default backup mode for this specific file
+
+    show_diff
+        If set to false, the diff will not be shown.
     '''
     user = _test_owner(kwargs, user=user)
     # Initial set up
@@ -759,7 +763,8 @@ def managed(name,
                                             mode,
                                             env,
                                             backup,
-                                            template)
+                                            template,
+                                            show_diff)
 
 
 def directory(name,
