@@ -287,12 +287,15 @@ def deploy_script(host, port=22, timeout=900, username='root',
             elif password:
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
+
+            #FIXME: this try-except idoesn't make sense! something is missing...
             try:
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
                 log.error(
                     'There was an error in deploy_script: {0}'.format(exc)
                 )
+
             if provider == 'ibmsce':
                 subsys_command = (
                     'sed -i "s/#Subsystem/Subsystem/" '
@@ -322,7 +325,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # The actual deploy script
             if script:
                 scp_file('/tmp/deploy.sh', script, kwargs)
-            root_cmd('chmod +x /tmp/deploy.sh', tty, sudo, **kwargs)
+                root_cmd('chmod +x /tmp/deploy.sh', tty, sudo, **kwargs)
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -342,12 +345,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
             # Run the deploy script
             if script:
                 log.debug('Executing /tmp/deploy.sh')
-                if make_syndic:
-                    deploy_command += ' -S'
-                if make_master:
-                    deploy_command += ' -M'
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c /tmp/'
+                    deploy_command += ' -c /tmp/'  #FIXME: always?
+                    if make_syndic:
+                        deploy_command += ' -S'
+                    if make_master:
+                        deploy_command += ' -M'
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
 

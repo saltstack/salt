@@ -1,12 +1,13 @@
 #!/bin/sh
-
+# bootstrap-salt <-- magic string needed to disguise as the salt-bootstrap script.
+#
 # This is a generic wrapper for the salt-bootstrap script at:
 #
 # https://github.com/saltstack/salt-bootstrap
 # 
 # It has been designed as an example, to be customized for your own needs.
 
-curl -L http://bootstrap.saltstack.org | sudo sh -s -- -c /tmp git develop
+curl -L http://bootstrap.saltstack.org | sudo sh -s -- "$@" git develop
 
 # Salt Cloud now places the minion's keys and configuration in /tmp/ before
 # executing the deploy script. After it has executed, these temporary files
