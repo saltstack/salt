@@ -1428,7 +1428,12 @@ def uncomment(name, regex, char='#', backup='.bak'):
     return ret
 
 
-def append(name, text=None, makedirs=False, source=None, source_hash=None):
+def append(name,
+           text=None,
+           makedirs=False,
+           source=None,
+           source_hash=None,
+           __env__='base'):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1475,14 +1480,17 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
 
     if source:
         # get cached file or copy it to cache
-        cached_source_path = __salt__['cp.cache_file'](source)
+        cached_source_path = __salt__['cp.cache_file'](source, __env__)
         log.debug(
             "state file.append cached source {0} -> {1}".format(
                 source, cached_source_path
             )
         )
         cached_source = managed(
-            cached_source_path, source=source, source_hash=source_hash
+            cached_source_path,
+            source=source,
+            source_hash=source_hash,
+            env=__env__
         )
         if cached_source['result'] is True:
             log.debug(
