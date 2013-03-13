@@ -275,7 +275,12 @@ def install(name=None,
               )
 
     old = list_pkgs()
-    __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -300,7 +305,12 @@ def remove(pkg, **kwargs):
             log.exception(e)
 
     cmd = 'apt-get -q -y remove {0}'.format(pkg)
-    __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+
     new_pkgs = list_pkgs()
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
@@ -331,7 +341,11 @@ def purge(pkg, **kwargs):
 
     # Remove inital package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)
-    __salt__['cmd.run'](purge_cmd)
+    out = __salt__['cmd.run'](purge_cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
 
     new_pkgs = list_pkgs()
 
@@ -368,7 +382,12 @@ def upgrade(refresh=True, **kwargs):
     old_pkgs = list_pkgs()
     cmd = ('apt-get -q -y -o DPkg::Options::=--force-confold '
            '-o DPkg::Options::=--force-confdef dist-upgrade')
-    __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -409,7 +428,13 @@ def list_pkgs(regex_string=''):
         )
     )
 
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+
+    out = out['stdout']
 
     # Typical line of output:
     # install ok installed zsh 4.3.17-1ubuntu1
