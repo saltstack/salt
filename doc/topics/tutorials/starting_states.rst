@@ -11,6 +11,12 @@ The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
 to contain this data simply. This is often called configuration management.
 
+.. note::
+
+    This is just the begining of using states, make sure to read up on pillar
+    next:
+    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
+
 It is All Just Data
 ===================
 
