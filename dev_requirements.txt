@@ -1,2 +1,4 @@
+-r requirements.txt
+
 mock
 unittest2
