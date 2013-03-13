@@ -87,6 +87,15 @@ def add(name,
         cmd += '-u {0} '.format(uid)
     if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
+    elif name in groups:
+        def usergroups():
+            for line in open("/etc/login.defs"):
+                if "USERGROUPS_ENAB" in line[:15]:
+                    if "yes" in line:
+                        return True
+            return False
+        if usergroups():
+            cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
     if home:
         if system:
             if home is not True:
