@@ -74,7 +74,8 @@ def file_list(*packages):
     for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
-            pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
+            pkgs[comps[1]] = {'version': comps[2],
+                              'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
     for pkg in pkgs.keys():
@@ -112,7 +113,8 @@ def file_dict(*packages):
     for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
-            pkgs[comps[1]] = {'version': comps[2], 'description': ' '.join(comps[3:])}
+            pkgs[comps[1]] = {'version': comps[2],
+                              'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
     for pkg in pkgs.keys():
@@ -122,4 +124,3 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
-
