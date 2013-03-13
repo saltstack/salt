@@ -83,7 +83,12 @@ def available_version(*names):
     pkgs = list_pkgs()
     for name in names:
         cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
-        candidate = __salt__['cmd.run_stdout'](cmd).split()
+        out = __salt__['cmd.run'](cmd)
+        if out['retcode'] != 0:
+            msg = 'Error:  ' + out['stderr']
+            log.error(msg)
+            return msg
+        candidate = out['stdout'].split()
         if len(candidate) >= 2:
             candidate = candidate[-1]
             if candidate.lower() == '(none)':
@@ -143,7 +148,14 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+    out = out['stdout']
+
+    lines = out.splitlines()
     for line in lines:
         cols = line.split()
         if not cols:
@@ -475,7 +487,13 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run'](cmd)
+    if out['retcode'] != 0:
+        msg = 'Error:  ' + out['stderr']
+        log.error(msg)
+        return msg
+
+    out = out['stdout']
 
     # rexp parses lines that look like the following:
     ## Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
