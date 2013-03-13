@@ -41,7 +41,7 @@ def list_pkgs(*packages):
         return msg
     out = out['stdout']
 
-    for line in .splitlines():
+    for line in out.splitlines():
         if line.startswith('ii '):
             comps = line.split()
             pkgs[comps[1]] = comps[2]
