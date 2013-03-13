@@ -15,6 +15,13 @@ working with Salt and that the software can solve your real world needs!
 - Salt creator and chief developer
 - CTO of Salt Stack, Inc.
 
+.. note::
+
+    This is the first of a series of walkthroughs and serves as the best entry
+    point for people new to Salt, after this be sure to read up on pillar and
+    more on states:
+    :doc: `Starting States </topics/tutorials/starting_states>`
+    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
 
 Getting Started
 ===============
@@ -420,6 +427,18 @@ the formula is referenced as `edit.vim` because it resides in the edit
 subdirectory. Now the edit subdirectory can contain formulas for emacs, nano,
 joe or any other editor that may need to be deployed.
 
+Next Reading
+------------
+
+Two walkthroughs are specificly reommended at this point, first a deeper run
+through states:
+
+    :doc: `Starting States </topics/tutorials/starting_states>`
+
+Next an understanding of pillar is critical to using States:
+
+    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
+
 Getting Deeper Into States
 --------------------------
 
@@ -444,6 +463,7 @@ yet learn! These documents will cover important core aspects of Salt:
 
 Pillar
     Paramaters and minion private data (pillar is a core component of states):
+    :doc:`States Tutorial</topics/tutorials/states_pt1>`
     :doc:`Pillar</topics/pillar/index>`
 
 Job Management
