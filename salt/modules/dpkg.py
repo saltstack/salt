@@ -17,7 +17,7 @@ def __virtual__():
 
 
 def list_pkgs(*packages):
-    ''' 
+    '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
