@@ -69,7 +69,7 @@ def _run_psql(cmd, runas=None, password=None, run_cmd="cmd.run_all"):
     return __salt__[run_cmd](cmd, **kwargs)
 
 
-def version(user=None, host=None, port=None, db=None, password=None,
+def version(user=None, host=None, port=None, password=None,
             runas=None):
     '''
     Return the version of a Postgres server.
@@ -81,7 +81,8 @@ def version(user=None, host=None, port=None, db=None, password=None,
     query = 'SELECT setting FROM pg_catalog.pg_settings ' \
             'WHERE name = \'server_version\''
     cmd = _psql_cmd('-c', query, '-t',
-                    host=host, user=user, port=port, db=db, password=password)
+                    host=host, user=user, port=port, db=False,
+                    password=password)
     ret = _run_psql(cmd, runas=runas, password=password)
 
     for line in ret['stdout'].splitlines():
@@ -133,7 +134,7 @@ def _psql_cmd(*args, **kwargs):
         cmd += ['--host', host]
     if port:
         cmd += ['--port', port]
-    if db:
+    if db and kwargs.get('db') != False:
         cmd += ['--dbname', db]
     cmd += args
     cmdstr = ' '.join(map(pipes.quote, cmd))
@@ -142,7 +143,7 @@ def _psql_cmd(*args, **kwargs):
 
 # Database related actions
 
-def db_list(user=None, host=None, port=None, db=None,
+def db_list(user=None, host=None, port=None,
             password=None, runas=None):
     '''
     Return dictionary with information about databases of a Postgres server.
@@ -167,7 +168,8 @@ def db_list(user=None, host=None, port=None, db=None,
             'pg_roles pga WHERE pga.oid = pgd.datdba'
 
     cmd = _psql_cmd('-c', query, '-t',
-                    host=host, user=user, port=port, db=db, password=password)
+                    host=host, user=user, port=port, db=False,
+                    password=password)
 
     cmdret = _run_psql(cmd, runas=runas, password=password)
 
@@ -194,7 +196,7 @@ def db_exists(name, user=None, host=None, port=None, db=None, password=None,
         salt '*' postgres.db_exists 'dbname'
     '''
 
-    databases = db_list(user=user, host=host, port=port, db=db,
+    databases = db_list(user=user, host=host, port=port,
                         password=password, runas=runas)
     return name in databases
 
@@ -203,7 +205,6 @@ def db_create(name,
               user=None,
               host=None,
               port=None,
-              db=None,
               password=None,
               tablespace=None,
               encoding=None,
@@ -248,14 +249,14 @@ def db_create(name,
         query += ' '.join(with_chunks)
 
     # Execute the command
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db,
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=False,
                     password=password)
     ret = _run_psql(cmd, runas=runas, password=password)
 
     return ret['retcode'] == 0
 
 
-def db_remove(name, user=None, host=None, port=None, db=None,
+def db_remove(name, user=None, host=None, port=None,
               password=None, runas=None):
     '''
     Removes a databases from the Postgres server.
@@ -267,7 +268,7 @@ def db_remove(name, user=None, host=None, port=None, db=None,
 
     # db doesnt exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
-    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=db,
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port, db=False,
                     password=password)
     ret = _run_psql(cmd, runas=runas, password=password)
     return ret['retcode'] == 0
@@ -301,7 +302,6 @@ def user_list(user=None, host=None, port=None, db=None,
     ver = version(user=user,
                   host=host,
                   port=port,
-                  db=db,
                   password=password,
                   runas=runas).split('.')
     if len(ver) >= 2 and int(ver[0]) >= 9 and int(ver[1]) >= 1:
