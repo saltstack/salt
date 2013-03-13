@@ -130,24 +130,6 @@ class CkMinions(object):
                 # Still no match!? Remove the minion id from the list
                 minions.remove(id_)
 
-                if isinstance(match, list):
-                    # We are matching a single component to a single list
-                    # member
-                    member_matched = False
-                    for member in match:
-                        if fnmatch.fnmatch(str(member).lower(),
-                                           comps[1].lower()):
-                            member_matched = True
-                            break
-                    else:
-                        minions.remove(id_)
-                    if member_matched:
-                        continue
-                if fnmatch.fnmatch(str(match.lower()), comps[1].lower()):
-                    continue
-
-                minions.remove(id_)
-
         return list(minions)
 
     def _check_grain_pcre_minions(self, expr):
