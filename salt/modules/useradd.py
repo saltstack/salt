@@ -87,7 +87,7 @@ def add(name,
         cmd += '-u {0} '.format(uid)
     if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
-    elif name in groups:
+    elif groups is not None and name in groups:
         def usergroups():
             retval = False
             try:
