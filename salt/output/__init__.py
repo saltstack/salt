@@ -22,7 +22,8 @@ def display_output(data, out, opts=None):
     try:
         print(get_printout(out, opts)(data).rstrip())
     except Exception:
-        print(get_printout('pprint', opts)(data).rstrip())
+        opts.pop('output', None)
+        print(get_printout('nested', opts)(data).rstrip())
 
 
 def get_printout(out, opts=None, **kwargs):
