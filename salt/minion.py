@@ -768,11 +768,24 @@ class Minion(object):
         # On first startup execute a state run if configured to do so
         self._state_run()
 
+        loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
                 self.schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if self.schedule.loop_interval < loop_interval:
+                    loop_interval = self.schedule.loop_interval
+                    log.debug(
+                        'Overriding loop_interval because of scheduled jobs.'
+                    )
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occurred in scheduled job'.format(exc)
+                )
+            try:
                 socks = dict(self.poller.poll(
-                    self.opts['loop_interval'] * 1000)
+                    loop_interval * 1000)
                 )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
