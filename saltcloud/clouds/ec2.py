@@ -39,6 +39,7 @@ import stat
 import time
 import uuid
 import logging
+import yaml
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -706,32 +707,60 @@ def create(vm_=None, call=None):
 
     volumes = vm_.get('map_volumes')
     if volumes:
-        log.info('Create and attach volumes to node {0}'.format(data.name))
-        create_attach_volumes(volumes, location, data)
+        log.info('Create and attach volumes to node {0}'.format(vm_['name']))
+        import pprint
+        pprint.pprint(ret['placement']['availabilityZone'])
+        created = create_attach_volumes(vm_['name'],
+                              {'volumes': volumes,
+                               'zone': ret['placement']['availabilityZone'],
+                               'instance_id': ret['instanceId']},
+                              call='action')
 
+        ret['Attached Volumes'] = created
     return ret
 
 
-def create_attach_volumes(volumes, location, data):
+def create_attach_volumes(name, kwargs, call=None):
     '''
     Create and attach volumes to created node
     '''
-    conn = get_conn(location=location)
-    node_avz = data.__dict__.get('extra').get('availability')
-    avz = None
-    for avz in conn.list_locations():
-        if avz.availability_zone.name == node_avz:
-            break
+    if call != 'action':
+        log.error('The set_tags action must be called with -a or --action.')
+        sys.exit(1)
+
+    if not 'instance_id' in kwargs:
+        instances = list_nodes_full()
+        kwargs['instance_id'] = instances[name]['instanceId']
+
+    if type(kwargs['volumes']) is str:
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs['volumes']
+
+    ret = []
     for volume in volumes:
-        volume_name = '{0} on {1}'.format(volume['device'], data.name)
-        created_volume = conn.create_volume(volume['size'], volume_name, avz)
-        attach = conn.attach_volume(data, created_volume, volume['device'])
+        volume_name = '{0} on {1}'.format(volume['device'], name)
+        created_volume = create_volume({'size': volume['size'],
+                                        'volume_name': volume_name,
+                                        'zone': kwargs['zone']},
+                                       call='function')
+        for item in created_volume:
+            if 'volumeId' in item:
+                volume_id = item['volumeId']
+        attach = attach_volume(name,
+                               {'volume_id': volume_id,
+                                'device': volume['device']},
+                               instance_id=kwargs['instance_id'],
+                               call='action')
         if attach:
-            log.info(
+            msg = (
                 '{0} attached to {1} (aka {2}) as device {3}'.format(
-                    created_volume.id, data.id, data.name, volume['device']
+                    volume_id, kwargs['instance_id'], name, volume['device']
                 )
             )
+            log.info(msg)
+            ret.append(msg)
+    return ret
 
 
 def stop(name, call=None):
@@ -800,7 +829,7 @@ def set_tags(name, tags, call=None):
     if 'Name' in tags:
         return get_tags(tags['Name'], call='action')
 
-    return get_tags(name)
+    return get_tags(name, call='action')
 
 
 def get_tags(name, call=None):
@@ -848,7 +877,7 @@ def del_tags(name, kwargs, call=None):
         count += 1
     result = query(params, setname='tagSet')
 
-    return get_tags(name)
+    return get_tags(name, call='action')
 
 
 def rename(name, kwargs, call=None):
