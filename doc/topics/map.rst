@@ -55,7 +55,7 @@ configuration file.
 
     enable_hard_maps: True
 
-A map file can include grains:
+A map file can include grains and minion configuration options:
 
 .. code-block:: yaml
 
