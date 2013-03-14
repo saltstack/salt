@@ -1285,7 +1285,8 @@ def manage_file(name,
         mode,
         env,
         backup,
-        template=None):
+        template=None,
+        show_diff=True):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -1338,6 +1339,8 @@ def manage_file(name,
                     # Print a diff equivalent to diff -u old new
                     if __salt__['config.option']('obfuscate_templates'):
                         ret['changes']['diff'] = '<Obfuscated Template>'
+                    elif not show_diff:
+                        ret['changes']['diff'] = '<show_diff=False>'
                     else:
                         ret['changes']['diff'] = (
                                 ''.join(difflib.unified_diff(nlines, slines))
