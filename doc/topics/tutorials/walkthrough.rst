@@ -20,8 +20,10 @@ working with Salt and that the software can solve your real world needs!
     This is the first of a series of walkthroughs and serves as the best entry
     point for people new to Salt, after this be sure to read up on pillar and
     more on states:
-    :doc: `Starting States </topics/tutorials/starting_states>`
-    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
+    
+        :doc: `Starting States </topics/tutorials/starting_states>`
+    
+        :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
 
 Getting Started
 ===============
