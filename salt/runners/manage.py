@@ -3,12 +3,12 @@ General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
 '''
 
-import yaml
 import distutils.version
 
 # Import salt libs
 import salt.key
 import salt.client
+import salt.output
 
 
 def status(output=True):
@@ -25,7 +25,7 @@ def status(output=True):
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     if output:
-        print(yaml.safe_dump(ret, default_flow_style=False))
+        salt.output.display_output(ret, '', __opts__)
     return ret
 
 
@@ -35,7 +35,7 @@ def down():
     '''
     ret = status(output=False).get('down', [])
     for minion in ret:
-        print(minion)
+        salt.output.display_output(minion, '', __opts__)
     return ret
 
 
@@ -45,7 +45,7 @@ def up():  # pylint: disable-msg=C0103
     '''
     ret = status(output=False).get('up', [])
     for minion in ret:
-        print(minion)
+        salt.output.display_output(minion, '', __opts__)
     return ret
 
 
@@ -73,7 +73,10 @@ def versions():
             version_status[ver_diff] = []
         version_status[ver_diff].append(minion)
 
+    ret = {}
     for key in version_status:
-        print labels[key]
         for minion in sorted(version_status[key]):
-            print '\t', minion
+            ret.setdefault(labels[key], []).append(minion)
+
+    salt.output.display_output(ret, '', __opts__)
+    return ret
