@@ -11,6 +11,12 @@ The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
 to contain this data simply. This is often called configuration management.
 
+.. note::
+
+    This is just the begining of using states, make sure to read up on pillar
+    next:
+    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
+
 It is All Just Data
 ===================
 
@@ -501,5 +507,10 @@ and examine the output for errors. This should help troubleshoot the issue.
 The minions can also be started in the foreground in debug mode. Start the
 minion in debug mode with: ``salt-minion -l debug``.
 
+Next Reading
+============
 
-Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.
+With an understanding of states, it is recommended to become more familiar
+with Salt's pillar interface:
+
+:doc: `Pillar Walkthrough <topics/tutorials/pillar>`
