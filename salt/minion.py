@@ -987,6 +987,9 @@ class Matcher(object):
             log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
         if isinstance(match, dict):
+            if comps[1] == '*':
+                # We are just checking that the key exists
+                return True
             log.error('Targeted grain "{0}" must correspond to a list, '
                       'string, or numeric value'.format(comps[0]))
             return False
@@ -1009,6 +1012,9 @@ class Matcher(object):
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
+        if isinstance(self.opts['grains'][comps[0]], dict) and comps[1] == '*':
+            # We are just checking that the key exists
+            return True
         if isinstance(self.opts['grains'][comps[0]], list):
             # We are matching a single component to a single list member
             for member in self.opts['grains'][comps[0]]:
