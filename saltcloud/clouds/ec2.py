@@ -682,8 +682,6 @@ def create(vm_=None, call=None):
     volumes = vm_.get('map_volumes')
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
-        import pprint
-        pprint.pprint(ret['placement']['availabilityZone'])
         created = create_attach_volumes(vm_['name'],
                               {'volumes': volumes,
                                'zone': ret['placement']['availabilityZone'],
