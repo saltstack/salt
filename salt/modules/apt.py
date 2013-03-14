@@ -83,7 +83,7 @@ def available_version(*names):
     pkgs = list_pkgs()
     for name in names:
         cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run_all'](cmd)
         if out['retcode'] != 0:
             msg = 'Error:  ' + out['stderr']
             log.error(msg)
@@ -317,7 +317,7 @@ def remove(pkg, **kwargs):
             log.exception(e)
 
     cmd = 'apt-get -q -y remove {0}'.format(pkg)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -353,7 +353,7 @@ def purge(pkg, **kwargs):
 
     # Remove inital package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)
-    out = __salt__['cmd.run'](purge_cmd)
+    out = __salt__['cmd.run_all'](purge_cmd)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -394,7 +394,7 @@ def upgrade(refresh=True, **kwargs):
     old_pkgs = list_pkgs()
     cmd = ('apt-get -q -y -o DPkg::Options::=--force-confold '
            '-o DPkg::Options::=--force-confdef dist-upgrade')
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -440,7 +440,7 @@ def list_pkgs(regex_string=''):
         )
     )
 
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -487,7 +487,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
