@@ -395,8 +395,19 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # There's not socktype support on python versions lower than 2.7
             syslog_opts.pop('socktype', None)
 
-        # Et voilá! Finally our syslog handler instance
-        handler = logging.handlers.SysLogHandler(**syslog_opts)
+        try:
+            # Et voilá! Finally our syslog handler instance
+            handler = logging.handlers.SysLogHandler(**syslog_opts)
+        except socket.error, err:
+            logging.getLogger(__name__).error(
+                'Failed to setup the Syslog logging handler: {0}'.format(
+                    err
+                )
+            )
+            # Do not proceed with any more configuration since it will fail, we
+            # have the console logging already setup and the user should see
+            # the error.
+            return
     else:
         try:
             # Logfile logging is UTF-8 on purpose.
