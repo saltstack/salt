@@ -243,7 +243,7 @@ creation of an instance with the same name is attempted before the cleanup
 occurs. In order to avoid such collisions, Salt Cloud can be configured to
 rename instances when they are destroyed. The new name will look something like:
 
-.. code-block::
+.. code-block:: bash
 
     myinstance-DEL20f5b8ad4eb64ed88f2c428df80a1a0c
 
