@@ -115,9 +115,6 @@ def __virtual__():
             )
         )
 
-    # open a connection in a specific region
-    conn = get_conn(**{'location': get_location()})
-
     log.debug('Loading EC2 cloud compute module')
     return 'ec2'
 
@@ -393,29 +390,6 @@ def script(vm_):
         minion,
     )
     return script
-
-
-def get_conn(**kwargs):
-    '''
-    Return a conn object for the passed VM data
-    '''
-    if 'location' in kwargs:
-        location = kwargs['location']
-        if location not in EC2_LOCATIONS:
-            raise SaltException(
-                'The specified location does not seem to be valid: '
-                '{0}\n'.format(
-                    location
-                )
-            )
-    else:
-        location = DEFAULT_LOCATION
-
-    driver = get_driver(EC2_LOCATIONS[location])
-    return driver(
-        __opts__['EC2.id'],
-        __opts__['EC2.key'],
-    )
 
 
 def keyname(vm_):
