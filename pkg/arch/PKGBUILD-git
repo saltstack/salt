@@ -1,6 +1,6 @@
 # Maintainer: Christer Edwards <christer.edwards@gmail.com>
 pkgname=salt-git
-pkgver=20121219
+pkgver=20120315
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
@@ -8,13 +8,13 @@ url="https://github.com/saltstack/salt"
 license=('APACHE')
 groups=()
 depends=('python2'
-         'python2-pyzmq'
-         'python-m2crypto'
          'python2-yaml'
+         'python2-pyzmq'
+         'python2-jinja'
          'python2-crypto'
          'python2-psutil'
-         'python2-jinja'
-         'python2-msgpack')
+         'python2-msgpack'
+         'python2-m2crypto')
 
 backup=('etc/salt/master'
         'etc/salt/minion')
@@ -23,22 +23,17 @@ makedepends=('git')
 optdepends=()
 options=()
 conflicts=('salt')
+provides=('salt')
 
 source=("salt-master.service"
         "salt-minion.service"
-        "salt-syndic.service"
-        "salt-master"
-        "salt-minion"
-        "salt-syndic")
+        "salt-syndic.service")
 
 md5sums=('3a2b032ec37077363c049969105b128e'
          '833d31ebee69f5c0e2c0b6c8d345b6d7'
-         'e4c6adce5087e947c26c5c9d9fc3c9bb'
-         '1594591acb0a266854186a694da21103'
-         '21ab2eac231e9f61bf002ba5f16f8a3d'
-         '09683ef4966e401761f7d2db6ad4b692')
+         'e4c6adce5087e947c26c5c9d9fc3c9bb')
 
-_gitroot="git://github.com/saltstack/salt.git"
+_gitroot="https://github.com/saltstack/salt.git"
 _gitname="salt"
 
 build() {
@@ -64,12 +59,6 @@ package() {
   cd ${srcdir}/${_gitname}-build
 
   python2 setup.py install --root=${pkgdir}/ --optimize=1
-
-  mkdir -p $pkgdir/etc/rc.d/
-  cp ${srcdir}/salt-master ${pkgdir}/etc/rc.d/
-  cp ${srcdir}/salt-minion ${pkgdir}/etc/rc.d/
-  cp ${srcdir}/salt-syndic ${pkgdir}/etc/rc.d/
-  chmod +x $pkgdir/etc/rc.d/salt-{master,minion,syndic}
 
   install -Dm644 ${srcdir}/salt/pkg/salt-master.service ${pkgdir}/usr/lib/systemd/system/salt-master.service
   install -Dm644 ${srcdir}/salt/pkg/salt-syndic.service ${pkgdir}/usr/lib/systemd/system/salt-syndic.service
