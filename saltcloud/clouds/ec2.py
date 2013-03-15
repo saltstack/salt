@@ -975,8 +975,6 @@ def _list_nodes_full(location=None):
     ret = {}
     params = {'Action': 'DescribeInstances'}
     instances = query(params, location=location)
-#    import pprint
-#    pprint.pprint(instances)
 
     for instance in instances:
         if 'tagSet' in instance['instancesSet']['item']:
