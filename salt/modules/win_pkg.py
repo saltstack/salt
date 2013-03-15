@@ -120,13 +120,12 @@ def list_upgrades(refresh=True):
 
     # Uncomment the below once pkg.list_upgrades has been implemented
 
-    # Catch both boolean input from state and string input from CLI
-    #if refresh is True or str(refresh).lower() == 'true':
+    #if __salt__['config.is_true'](refresh):
     #    refresh_db()
     return {}
 
 
-def version(name):
+def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
@@ -134,14 +133,10 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs()
-    if name in pkgs:
-        return pkgs[name]
-    else:
-        return ''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs(*args):
+def list_pkgs(*args, **kwargs):
     '''
         List the packages currently installed in a dict::
 
@@ -151,6 +146,8 @@ def list_pkgs(*args):
 
             salt '*' pkg.list_pkgs
     '''
+    versions_as_list = \
+        __salt__['config.is_true'](kwargs.get('versions_as_list'))
     pkgs = {}
     with salt.utils.winapi.Com():
         if len(args) == 0:
@@ -163,7 +160,10 @@ def list_pkgs(*args):
             for arg in args:
                 for key, val in _search_software(arg).iteritems():
                     __salt__['pkg_resource.add_pkg'](pkgs, key, val)
+
     __salt__['pkg_resource.sort_pkglist'](pkgs)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return pkgs
 
 
@@ -404,8 +404,7 @@ def upgrade(refresh=True):
 
     # Uncomment the below once pkg.upgrade has been implemented
 
-    # Catch both boolean input from state and string input from CLI
-    #if refresh is True or str(refresh).lower() == 'true':
+    #if __salt__['config.is_true'](refresh):
     #    refresh_db()
     return {}
 
