@@ -165,7 +165,7 @@ is run from another AWS instance, the private IP should be used.
 
     # Specify whether to use public or private IP for deploy script
     # private_ips or public_ips
-    AWS.ssh_interface: public_ip
+    AWS.ssh_interface: public_ips
 
 Many AWS instances do not allow remote access to the root user by default.
 Instead, another user must be used to run the deploy script using sudo. Some
