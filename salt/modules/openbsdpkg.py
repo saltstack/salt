@@ -51,18 +51,22 @@ def _get_pkgs():
     return pkg
 
 
-def _format_pkgs(split):
-    pkg = {}
+def _format_pkgs(split, versions_as_list=False):
+    ret = {}
     for value in split.values():
         if value[2]:
             name = '{0}--{1}'.format(value[0], value[2])
         else:
             name = value[0]
-        pkg[name] = value[1]
-    return pkg
+        __salt__['pkg_resource.add_pkg'](ret, name, value[1])
+
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed as a dict::
 
@@ -72,7 +76,8 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    return _format_pkgs(_get_pkgs())
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    return _format_pkgs(_get_pkgs(), versions_as_list=versions_as_list)
 
 
 def available_version(name, **kwargs):
@@ -90,19 +95,18 @@ def available_version(name, **kwargs):
     return ''
 
 
-def version(name):
+def version(*names, **kwargs):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    cmd = 'unset PKG_PATH; pkg_info -q -I {0}'.format(name)
-    namever = _splitpkg(__salt__['cmd.run'](cmd))
-    if namever:
-        return namever[1]
-    return ''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def install(name=None, pkgs=None, sources=None, **kwargs):
@@ -152,7 +156,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
             log.error(stderr)
 
     # Get a list of all the packages that are now installed.
-    new = _format_pkgs(_get_pkgs())
+    new = list_pkgs()
 
     # New way
     return __salt__['pkg_resource.find_changes'](_format_pkgs(old), new)
@@ -173,7 +177,7 @@ def remove(name, **kwargs):
     if stem in old:
         cmd = 'pkg_delete -xD dependencies {0}'.format(stem)
         __salt__['cmd.retcode'](cmd)
-    new = _format_pkgs(_get_pkgs())
+    new = list_pkgs()
     return _list_removed(_format_pkgs(old), new)
 
 
