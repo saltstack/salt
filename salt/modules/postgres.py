@@ -372,7 +372,6 @@ def _role_create(name,
                  user=None,
                  host=None,
                  port=None,
-                 db=None,
                  password=None,
                  createdb=False,
                  createuser=False,
@@ -417,7 +416,7 @@ def _role_create(name,
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
 
-    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db,
+    cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=False,
                     password=password)
     return _run_psql(cmd, runas=runas, password=password, run_cmd="cmd.run")
 
@@ -448,7 +447,6 @@ def user_create(username,
                         user,
                         host,
                         port,
-                        db,
                         password,
                         createdb,
                         createuser,
@@ -610,7 +608,6 @@ def group_create(groupname,
                         user,
                         host,
                         port,
-                        db,
                         password,
                         createdb,
                         createuser,
