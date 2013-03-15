@@ -165,8 +165,8 @@ def _xml_to_dict(xmltree):
     return xmldict
 
 
-def query(params=None, setname=None, requesturl=None, return_url=False,
-          return_root=False):
+def query(params=None, setname=None, requesturl=None, location=None,
+          return_url=False, return_root=False):
     key = __opts__['EC2.key']
     keyid = __opts__['EC2.id']
     if 'EC2.service_url' in __opts__:
@@ -175,8 +175,10 @@ def query(params=None, setname=None, requesturl=None, return_url=False,
         service_url = 'amazonaws.com'
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    if not requesturl:
+    if not location:
         location = get_location()
+
+    if not requesturl:
         method = 'GET'
 
         if 'EC2.endpoint' in __opts__:
@@ -381,7 +383,7 @@ def script(vm_):
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     script = saltcloud.utils.os_script(
         saltcloud.utils.get_option(
-            'os',
+            'script',
             __opts__,
             vm_
         ),
@@ -410,24 +412,15 @@ def securitygroup(vm_):
 
 def ssh_username(vm_):
     '''
-    Return the ssh_username. Defaults to 'ec2-user'.
+    Return the ssh_username. Defaults to a built-in list of users for trying.
     '''
-    usernames = vm_.get(
-        'ssh_username', __opts__.get('EC2.ssh_username', 'ec2-user')
-    )
+    usernames = vm_.get('ssh_username', __opts__.get('EC2.ssh_username', []))
     if not isinstance(usernames, list):
-        username = usernames
-        usernames = [username]
-    if not 'ec2-user' in usernames:
-        usernames.append('ec2-user')
-    if not 'ubuntu' in usernames:
-        usernames.append('ubuntu')
-    if not 'admin' in usernames:
-        usernames.append('admin')
-    if not 'bitnami' in usernames:
-        usernames.append('bitnami')
-    if not 'root' in usernames:
-        usernames.append('root')
+        usernames = [usernames]
+    usernames = filter(lambda x: x, usernames) # get rid of None's or empty names
+    for name in 'ec2-user ubuntu admin bitnami root'.split():
+        if name not in usernames:
+            usernames.append(name)
     return usernames
 
 
@@ -578,7 +571,7 @@ def create(vm_=None, call=None):
         ).lower()
 
     try:
-        data = query(params, 'instancesSet')
+        data = query(params, 'instancesSet', location=location)
         if 'error' in data:
             return data['error']
     except Exception as exc:
@@ -591,13 +584,13 @@ def create(vm_=None, call=None):
         return False
 
     instance_id = data[0]['instanceId']
-    set_tags(instance_id, {'Name': vm_['name']}, call='action')
+    set_tags(instance_id, {'Name': vm_['name']}, call='action', location=location)
     log.info('Created node {0}'.format(vm_['name']))
     waiting_for_ip = 0
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
-    data, requesturl = query(params, return_url=True)
+    data, requesturl = query(params, location=location, return_url=True)
 
     while 'ipAddress' not in data[0]['instancesSet']['item']:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
@@ -774,7 +767,7 @@ def start(name, call=None):
     return result
 
 
-def set_tags(name, tags, call=None):
+def set_tags(name, tags, call=None, location=None):
     '''
     Set tags for a node
 
@@ -786,7 +779,7 @@ def set_tags(name, tags, call=None):
         log.error('The set_tags action must be called with -a or --action.')
         sys.exit(1)
 
-    instances = list_nodes_full()
+    instances = list_nodes_full(location)
     instance_id = instances[name]['instanceId']
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
@@ -795,15 +788,12 @@ def set_tags(name, tags, call=None):
         params['Tag.{0}.Key'.format(count)] = tag
         params['Tag.{0}.Value'.format(count)] = tags[tag]
         count += 1
-    result = query(params, setname='tagSet')
+    result = query(params, setname='tagSet', location=location)
 
-    if 'Name' in tags:
-        return get_tags(tags['Name'], call='action')
-
-    return get_tags(name, call='action')
+    return get_tags(name, call='action', location=location)
 
 
-def get_tags(name, call=None):
+def get_tags(name, call=None, location=None):
     '''
     Retrieve tags for a node
     '''
@@ -816,14 +806,14 @@ def get_tags(name, call=None):
     else:
         names = [name]
 
-    instances = list_nodes_full()
-    instance_id = instances[name]['instanceId']
-    params = {'Action': 'DescribeTags',
-              'Filter.1.Name': 'resource-id',
-              'Filter.1.Value': instance_id}
-    result = query(params, setname='tagSet')
-
-    return result
+    instances = list_nodes_full(location)
+    if name in instances:
+        instance_id = instances[name]['instanceId']
+        params = {'Action': 'DescribeTags',
+                  'Filter.1.Name': 'resource-id',
+                  'Filter.1.Value': instance_id}
+        return query(params, setname='tagSet', location=location)
+    return []
 
 
 def del_tags(name, kwargs, call=None):
@@ -960,14 +950,31 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
-def list_nodes_full():
+def list_nodes_full(location=None):
     '''
     Return a list of the VMs that are on the provider
     '''
-    ret = {}
+    if not location:
+        ret = {}
+        locations = set(
+            get_location(vm_) for vm_ in __opts__['vm']
+                              if _vm_provider(vm_)=='ec2'
+        )
+        for loc in locations:
+            ret.update(_list_nodes_full(loc))
+        return ret
+    else:
+        return _list_nodes_full(location)
 
+
+def _vm_provider(vm_):
+    return vm_.get('provider', __opts__['provider'])
+
+
+def _list_nodes_full(location=None):
+    ret = {}
     params = {'Action': 'DescribeInstances'}
-    instances = query(params)
+    instances = query(params, location=location)
 
     for instance in instances:
         if 'tagSet' in instance['instancesSet']['item']:
@@ -995,7 +1002,6 @@ def list_nodes_full():
         if 'ipAddress' in instance['instancesSet']['item']:
             ret[name]['public_ips'].append(
                         instance['instancesSet']['item']['ipAddress'])
-
     return ret
 
 
@@ -1004,7 +1010,6 @@ def list_nodes():
     Return a list of the VMs that are on the provider
     '''
     ret = {}
-
     nodes = list_nodes_full()
     for node in nodes:
         ret[node] = {
@@ -1015,7 +1020,6 @@ def list_nodes():
             'private_ips': nodes[node]['private_ips'],
             'public_ips': nodes[node]['public_ips'],
         }
-
     return ret
 
 

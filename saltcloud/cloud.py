@@ -253,7 +253,7 @@ class Cloud(object):
                     log.info('  {0}'.format(ret))
 
         except KeyError as exc:
-            log.error(
+            log.exception(
                 'Failed to create VM {0}. Configuration value {1} needs '
                 'to be set'.format(
                     vm_['name'], exc
@@ -277,23 +277,20 @@ class Cloud(object):
         '''
         ret = {}
         pmap = self.map_providers()
-
-        current_boxen = {}
-        for provider in pmap:
-            for box in pmap[provider]:
-                current_boxen[box] = provider
-
         found = False
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
-                if vm_['profile'] == self.opts['profile']:
+                vm_profile = vm_['profile']
+                if vm_profile == self.opts['profile']:
                     # It all checks out, make the VM
                     found = True
-                    if name in current_boxen:
+                    provider = self.profile_provider(vm_profile)
+                    boxes = pmap[provider]
+                    if name in boxes and boxes[name]['state'].lower() != 'terminated':
                         # The specified VM already exists, don't make it anew
                         log.warn(
                             '{0} already exists on {1}'.format(
-                                name, current_boxen[name]
+                                name, provider
                             )
                         )
                         continue
@@ -463,6 +460,7 @@ class Map(Cloud):
             for name in pmap[prov]:
                 exist.add(name)
                 if name in ret['create']:
+                    #FIXME: what about other providers?
                     if prov != 'aws' or pmap['aws'][name]['state'] != 2:
                         ret['create'].pop(name)
         if self.opts['hard']:
