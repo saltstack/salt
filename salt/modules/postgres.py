@@ -36,25 +36,22 @@ def __virtual__():
     return False
 
 
-def _get_runas(runas=None):
-    '''
-    Returns the default runas user for this platform
-    '''
-    if runas is not None:
-        return runas
-
-    if 'FreeBSD' in __grains__['os_family']:
-        return 'pgsql'
-    else:
-        return 'postgres'
-
-
-def _run_psql(cmd, runas=None, password=None, run_cmd="cmd.run_all"):
+def _run_psql(cmd, runas=None, password=None, host=None, run_cmd="cmd.run_all"):
     '''
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
     '''
-    kwargs = {"runas": _get_runas(runas)}
+    if not host:
+        host = __salt__['config.option']('postgres.host')
+    if host == None or host == "localhost" or host[0] == "/" or \
+       host == "127.0.0.1":
+        if 'FreeBSD' in __grains__['os_family']:
+            runas = 'pgsql'
+        else:
+            runas = 'postgres'
+
+    if runas is not None:
+        kwargs = {"runas": runas}
 
     if not password:
         password = __salt__['config.option']('postgres.pass')
@@ -134,7 +131,9 @@ def _psql_cmd(*args, **kwargs):
         cmd += ['--host', host]
     if port:
         cmd += ['--port', port]
-    if db and kwargs.get('db') != False:
+    if kwargs.get('db') == False:
+        db = "postgres"
+    if db:
         cmd += ['--dbname', db]
     cmd += args
     cmdstr = ' '.join(map(pipes.quote, cmd))
