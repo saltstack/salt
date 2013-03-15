@@ -23,23 +23,6 @@ def _list_removed(old, new):
     return pkgs
 
 
-def _get_pkgs():
-    '''
-    Get a full list of the package installed on the machine
-    '''
-    pkg = {}
-    cmd = '/usr/bin/pkginfo -x'
-
-    line_count = 0
-    for line in __salt__['cmd.run'](cmd).splitlines():
-        if line_count % 2 == 0:
-            namever = line.split()[0].strip()
-        if line_count % 2 == 1:
-            pkg[namever] = line.split()[1].strip()
-        line_count = line_count + 1
-    return pkg
-
-
 def refresh_db():
     '''
     Updates the pkgutil repo database (pkgutil -U)
@@ -81,8 +64,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkgutil.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     upgrades = {}
     lines = __salt__['cmd.run_stdout'](
@@ -110,13 +92,12 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkgutil.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     # Get a list of the packages before install so we can diff after to see
     # what got installed.
-    old = _get_pkgs()
+    old = list_pkgs()
 
     # Install or upgrade the package
     # If package is already installed
@@ -124,13 +105,13 @@ def upgrade(refresh=True, **kwargs):
     __salt__['cmd.run'](cmd)
 
     # Get a list of the packages again, including newly installed ones.
-    new = _get_pkgs()
+    new = list_pkgs()
 
     # Return a list of the new package installed.
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=True):
     '''
     List the packages currently installed as a dict::
 
@@ -140,7 +121,25 @@ def list_pkgs():
 
         salt '*' pkgutil.list_pkgs
     '''
-    return _get_pkgs()
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    ret = {}
+    cmd = '/usr/bin/pkginfo -x'
+
+    # Package information returned two lines per package. On even-offset
+    # lines, the package name is in the first column. On odd-offset lines, the
+    # package version is in the second column.
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for index in range(0, len(lines)):
+        if index % 2 == 0:
+            namever = lines[index].split()[0].strip()
+        if index % 2 == 1:
+            ret[namever] = lines[index].split()[1].strip()
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
+
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
 
 
 def version(name):
@@ -151,11 +150,7 @@ def version(name):
 
         salt '*' pkgutil.version CSWpython
     '''
-    cmd = '/usr/bin/pkgparam {0} VERSION 2> /dev/null'.format(name)
-    namever = __salt__['cmd.run'](cmd)
-    if namever:
-        return namever
-    return ''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def available_version(name, **kwargs):
@@ -200,7 +195,7 @@ def install(name, refresh=False, version=None, **kwargs):
 
     # Get a list of the packages before install so we can diff after to see
     # what got installed.
-    old = _get_pkgs()
+    old = list_pkgs()
 
     # Install or upgrade the package
     # If package is already installed
@@ -208,7 +203,7 @@ def install(name, refresh=False, version=None, **kwargs):
     __salt__['cmd.run'](cmd)
 
     # Get a list of the packages again, including newly installed ones.
-    new = _get_pkgs()
+    new = list_pkgs()
 
     # Return a list of the new package installed.
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -232,14 +227,14 @@ def remove(name, **kwargs):
         return ''
 
     # Get a list of the currently installed pkgs.
-    old = _get_pkgs()
+    old = list_pkgs()
 
     # Remove the package
     cmd = '/opt/csw/bin/pkgutil -yr {0}'.format(name)
     __salt__['cmd.run'](cmd)
 
     # Get a list of the packages after the uninstall
-    new = _get_pkgs()
+    new = list_pkgs()
 
     # Compare the pre and post remove package objects and report the uninstalled pkgs.
     return _list_removed(old, new)
