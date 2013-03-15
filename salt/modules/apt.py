@@ -28,7 +28,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 # Source format for urllib fallback on PPA handling
-LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{1}/{2}/ubuntu {3} main'
+LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
                     ' {3} main'
 
