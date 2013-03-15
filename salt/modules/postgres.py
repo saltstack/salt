@@ -275,7 +275,7 @@ def db_remove(name, user=None, host=None, port=None,
 
 # User related actions
 
-def user_list(user=None, host=None, port=None, db=None,
+def user_list(user=None, host=None, port=None,
               password=None, runas=None):
     '''
     Return a dict with information about users of a Postgres server.
@@ -318,7 +318,8 @@ def user_list(user=None, host=None, port=None, db=None,
             'FROM pg_roles'
         )
     cmd = _psql_cmd('-c', query, '-t',
-                    host=host, user=user, port=port, db=db, password=password)
+                    host=host, user=user, port=port, db=False,
+                    password=password)
 
     cmdret = _run_psql(cmd, runas=runas, password=password)
 
@@ -362,7 +363,6 @@ def user_exists(name, user=None, host=None, port=None, db=None,
     return name in user_list(user=user,
                              host=host,
                              port=port,
-                             db=db,
                              password=password,
                              runas=runas)
 
