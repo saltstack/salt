@@ -185,7 +185,7 @@ def db_list(user=None, host=None, port=None,
     return ret
 
 
-def db_exists(name, user=None, host=None, port=None, db=None, password=None,
+def db_exists(name, user=None, host=None, port=None, password=None,
               runas=None):
     '''
     Checks if a database exists on the Postgres server.
@@ -350,7 +350,7 @@ def user_list(user=None, host=None, port=None,
     return ret
 
 
-def user_exists(name, user=None, host=None, port=None, db=None,
+def user_exists(name, user=None, host=None, port=None,
                 password=None, runas=None):
     '''
     Checks if a user exists on the Postgres server.
@@ -392,7 +392,7 @@ def _role_create(name,
         create_type = 'ROLE'
 
     # check if role exists
-    if user_exists(name, user, host, port, db, password=password, runas=runas):
+    if user_exists(name, user, host, port, password=password, runas=runas):
         log.info('{0} \'{1}\' already exists'.format(create_type, name,))
         return False
 
@@ -425,7 +425,6 @@ def user_create(username,
                 user=None,
                 host=None,
                 port=None,
-                db=None,
                 password=None,
                 createdb=False,
                 createuser=False,
@@ -476,7 +475,7 @@ def _role_update(name,
     '''
 
     # check if user exists
-    if not user_exists(name, user, host, port, db, password, runas=runas):
+    if not user_exists(name, user, host, port, password, runas=runas):
         log.info('User \'{0}\' does not exist'.format(name,))
         return False
 
@@ -546,7 +545,7 @@ def _role_remove(name, user=None, host=None, port=None, db=None,
     '''
 
     # check if user exists
-    if not user_exists(name, user, host, port, db, password=password,
+    if not user_exists(name, user, host, port, password=password,
                        runas=runas):
         log.info('User \'{0}\' does not exist'.format(name,))
         return False
@@ -556,7 +555,7 @@ def _role_remove(name, user=None, host=None, port=None, db=None,
     cmd = _psql_cmd('-c', sub_cmd, host=host, user=user, port=port, db=db,
                     password=password)
     _run_psql(cmd, runas=runas, password=password, run_cmd="cmd.run")
-    if not user_exists(name, user, host, port, db, password=password, runas=runas):
+    if not user_exists(name, user, host, port, password=password, runas=runas):
         return True
     else:
         log.info('Failed to delete user \'{0}\'.'.format(name, ))
