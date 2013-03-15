@@ -28,7 +28,9 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 # Source format for urllib fallback on PPA handling
-LP_SRC_FORMAT = 'deb http://{0}ppa.launchpad.net/{1}/{2}/ubuntu {3} main'
+LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{1}/{2}/ubuntu {3} main'
+LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
+                    ' {3} main'
 
 
 def __virtual__():
@@ -671,12 +673,19 @@ def get_repo(repo, ppa_auth=None):
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
-        if not ppa_format_support:
-            error_str = 'cannot parse "ppa:" style repos definitions: {0}'
-            raise Exception(error_str.format(repo))
-        repo = softwareproperties.ppa.expand_ppa_line(
-            repo,
-            __grains__['lsb_codename'])[0]
+        dist =  __grains__['lsb_codename']
+        owner_name, ppa_name = repo[4:].split('/')
+        if ppa_auth:
+           auth_info = '{0}@'.format(ppa_auth)
+           repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, 
+                                           ppa_name, dist)
+        else:
+            if ppa_format_support:
+                repo = softwareproperties.ppa.expand_ppa_line(
+                    repo,
+                    __grains__['lsb_codename'])[0]
+            else:
+                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
     repos = list_repos()
 
@@ -686,8 +695,10 @@ def get_repo(repo, ppa_auth=None):
             if ppa_auth:
                 uri_match = re.search('(http[s]?://)(.+)', repo_uri)
                 if uri_match:
-                    repo_uri = '{0}{1}@{2}'.format(uri_match.group(1),
-                                                   uri_match.group(2))
+                    if not uri_match.group(2).startswith(ppa_auth):
+                        repo_uri = '{0}{1}@{2}'.format(uri_match.group(1),
+                                                       ppa_auth,
+                                                       uri_match.group(2))
         except SyntaxError:
             error_str = 'Error: repo "{0}" is not a well formatted definition'
             raise Exception(error_str.format(repo))
@@ -697,13 +708,6 @@ def get_repo(repo, ppa_auth=None):
                 if (sub['type'] == repo_type and
                     sub['uri'] == repo_uri and
                         sub['dist'] == repo_dist):
-                    if ppa_auth:
-                        uri_match = re.search('(http[s]?://)(.+)@(.+)',
-                                              sub['uri'])
-                        if uri_match:
-                            sub['uri'] = '{0}{1}'.format(uri_match.group(1),
-                                                         uri_match.group(3))
-                            sub['ppa_auth'] = uri_match.group(2)
                     if not repo_comps:
                         return sub
                     for comp in repo_comps:
@@ -737,16 +741,18 @@ def del_repo(repo, refresh=False, **kwargs):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
-        dist = __salt__['grains.item']('oscodename')
+        dist = __grains__['lsb_codename']
         if not ppa_format_support:
             warning_str = 'python-software-properties package not ' \
                           'installed, making best guess at ppa format: {0}'
             log.warning(warning_str.format(repo))
-            auth_info = ''
             owner_name, ppa_name = repo[4:].split('/')
             if 'ppa_auth' in kwargs:
                 auth_info = '{0}@'.format(kwargs['ppa_auth'])
-            repo = LP_SRC_FORMAT.format(auth_info, dist, owner_name, ppa_name)
+                repo = LP_PVT_SRC_FORMAT.format(auth_info, dist, owner_name, 
+                                                ppa_name)
+            else:
+                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
             repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
@@ -864,20 +870,27 @@ def mod_repo(repo, refresh=False, **kwargs):
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
                 owner_name, ppa_name = repo[4:].split('/')
-                dist = __salt__['grains.item']('oscodename')
+                dist = __grains__['lsb_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
                 kwargs['dist'] = dist
                 ppa_auth = ''
                 if not file in kwargs:
                     filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
-                    kwargs['file'] = filename.format(dist, owner_name,
-                                                     ppa_name)
+                    kwargs['file'] = filename.format(owner_name, ppa_name,
+                                                     dist)
                 try:
                     launchpad_ppa_info = _get_ppa_info_from_launchpad(
                         owner_name, ppa_name)
-                    kwargs['keyid'] = launchpad_ppa_info[
-                        'signing_key_fingerprint']
+                    if not 'ppa_auth' in kwargs:
+                        kwargs['keyid'] = launchpad_ppa_info[
+                            'signing_key_fingerprint']
+                    else:
+                        if not 'keyid' in kwargs:
+                            error_str = 'Private PPAs require a ' \
+                                        'keyid to be specified: {0}/{1}'
+                            raise Exception(error_str.format(owner_name, 
+                                                             ppa_name))
                 except HTTPError, e:
                     error_str = 'Launchpad does not know about {0}/{1}: {2}'
                     raise Exception(error_str.format(owner_name, ppa_name,
@@ -895,13 +908,15 @@ def mod_repo(repo, refresh=False, **kwargs):
                         error_str = 'PPA is not private but auth ' \
                                     'credentials passed: {0}'
                         raise Exception(error_str.format(repo))
-                else:
-                    ppa_auth = '{0}@'.format(kwargs['ppa_auth'])
                 # assign the new repo format to the "repo" variable
                 # so we can fall through to the "normal" mechanism
                 # here.
-                repo = LP_SRC_FORMAT.format(ppa_auth, dist, owner_name,
-                                            ppa_name)
+                if 'ppa_auth' in kwargs:
+                    ppa_auth = '{0}@'.format(kwargs['ppa_auth'])
+                    repo = LP_PVT_SRC_FORMAT.format(ppa_auth, owner_name, 
+                                                    ppa_name, dist)
+                else:
+                    repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
             error_str = 'cannot parse "ppa:" style repo definitions: {0}'
             raise Exception(error_str.format(repo))

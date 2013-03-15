@@ -156,9 +156,9 @@ def managed(name, **kwargs):
            'result': None,
            'comment': ''}
     repo = {}
+    repokwargs = {}
 
     # pkg.mod_repo has conflicting kwargs, so move 'em around
-    repokwargs = {}
 
     for kwarg in kwargs.keys():
         if kwarg == 'name':
@@ -176,8 +176,12 @@ def managed(name, **kwargs):
         else:
             repokwargs[kwarg] = kwargs[kwarg]
 
+    if 'repo' not in repokwargs:
+        repokwargs['repo'] = name
+
     try:
-        repo = __salt__['pkg.get_repo'](name, kwargs.get('ppa_auth', None))
+        repo = __salt__['pkg.get_repo'](repokwargs['repo'],
+                                        repokwargs.get('ppa_auth', None))
     except:
         pass
 
@@ -196,7 +200,7 @@ def managed(name, **kwargs):
         ret['comment'] = 'Package repo {0} needs to be configured'.format(name)
         return ret
     try:
-        __salt__['pkg.mod_repo'](repo=name, **repokwargs)
+        __salt__['pkg.mod_repo'](**repokwargs)
     except Exception, e:
         # This is another way to pass information back from the mod_repo
         # function.
@@ -205,7 +209,8 @@ def managed(name, **kwargs):
                                                                       str(e))
         return ret
     try:
-        repodict = __salt__['pkg.get_repo'](name, kwargs.get('ppa_auth', None))
+        repodict = __salt__['pkg.get_repo'](repokwargs['repo'], 
+                                            repokwargs.get('ppa_auth', None))
         if repo:
             for kwarg in repokwargs:
                 if repodict.get(kwarg) != repo.get(kwarg):
@@ -213,7 +218,7 @@ def managed(name, **kwargs):
                               'old': repo.get(kwarg)}
                     ret['changes'][kwarg] = change
         else:
-            ret['changes'] = {'repo': name}
+            ret['changes'] = {'repo': repokwargs['repo']}
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0}'.format(name)
