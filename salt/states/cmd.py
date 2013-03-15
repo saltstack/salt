@@ -114,7 +114,13 @@ it can also watch a git state for changes
 '''
 
 # Import python libs
-import grp
+# Windows platform has no 'grp' module
+HAS_GRP = False
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    pass
 import os
 import copy
 import json
@@ -203,7 +209,7 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
     '''
     ret = {}
 
-    if group:
+    if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
