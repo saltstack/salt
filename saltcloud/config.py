@@ -76,6 +76,7 @@ def apply_cloud_config(overrides, defaults=None):
 def old_to_new(opts):
     optskeys = opts.keys()
     providers = ('AWS',
+                 'EC2',
                  'GOGRID',
                  'IBMSCE',
                  'JOYENT',
@@ -94,6 +95,7 @@ def old_to_new(opts):
 
 def prov_dict(opts):
     providers = ('AWS',
+                 'EC2',
                  'GOGRID',
                  'IBMSCE',
                  'JOYENT',
