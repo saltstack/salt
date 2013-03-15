@@ -63,7 +63,7 @@ def __virtual__():
     ]
     for conf in confs:
         if conf not in __opts__:
-            log.warning(
+            log.debug(
                 '{0!r} not found in options. Not loading module.'.format(conf)
             )
             return False
