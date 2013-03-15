@@ -121,7 +121,7 @@ try:
     HAS_GRP = True
 except ImportError:
     pass
-import os
+import ps
 import copy
 import json
 import shlex
