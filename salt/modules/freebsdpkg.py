@@ -136,7 +136,7 @@ def refresh_db():
     return {}
 
 
-def list_pkgs(versions_as_list=True):
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed as a dict::
 

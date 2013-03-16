@@ -111,7 +111,7 @@ def upgrade(refresh=True, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def list_pkgs(versions_as_list=True):
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed as a dict::
 

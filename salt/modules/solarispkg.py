@@ -71,7 +71,7 @@ def _write_adminfile(kwargs):
     return adminfile
 
 
-def list_pkgs(versions_as_list=True):
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed as a dict::
 
