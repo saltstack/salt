@@ -131,9 +131,9 @@ def list_pkgs(versions_as_list=False):
     lines = __salt__['cmd.run'](cmd).splitlines()
     for index in range(0, len(lines)):
         if index % 2 == 0:
-            namever = lines[index].split()[0].strip()
+            name = lines[index].split()[0].strip()
         if index % 2 == 1:
-            ret[namever] = lines[index].split()[1].strip()
+            version = lines[index].split()[1].strip()
             __salt__['pkg_resource.add_pkg'](ret, name, version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -142,7 +142,7 @@ def list_pkgs(versions_as_list=False):
     return ret
 
 
-def version(name):
+def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
 
