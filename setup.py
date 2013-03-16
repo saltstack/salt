@@ -27,13 +27,9 @@ VERSION = __version__
 NAME = 'salt-api'
 DESC = ("Generic interface for providing external access APIs to Salt")
 
-# Specify the test suite for < 2.7
-try:
-    import unittest2
-except ImportError:
-    pass
+kwargs = dict()
 
-setup(
+kwargs.update(
     name=NAME,
     version=VERSION,
     description=DESC,
@@ -63,4 +59,11 @@ setup(
         ('share/man/man7',
         ['doc/man/salt-api.7'])],
     scripts=['scripts/salt-api'],
-    test_suite='unittest2.collector' if 'unittest2' in locals() else None)
+    )
+
+if USE_SETUPTOOLS:
+    kwargs.update(
+        test_suite='tests',
+        )
+
+setup(**kwargs)
