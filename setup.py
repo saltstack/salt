@@ -59,6 +59,7 @@ kwargs.update(
         ('share/man/man7',
         ['doc/man/salt-api.7'])],
     scripts=['scripts/salt-api'],
+    install_requires=open('requirements.txt').readlines(),
     )
 
 if USE_SETUPTOOLS:
