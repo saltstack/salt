@@ -15,6 +15,7 @@ import salt.crypt
 from salt._compat import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
+from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
@@ -360,6 +361,7 @@ class Pillar(object):
                 mopts.pop('grains')
             if 'aes' in mopts:
                 mopts.pop('aes')
+            mopts['saltversion'] = __version__
             pillar['master'] = mopts
         if errors:
             for error in errors:
