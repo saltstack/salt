@@ -454,7 +454,7 @@ def _sed_esc(string, escape_all=False):
     '''
     special_chars = "^.[$()|*+?{"
     string = string.replace("'", "'\"'\"'").replace("/", "\/")
-    if escape_all:
+    if escape_all is True:
         for char in special_chars:
             string = string.replace(char, "\\" + char)
     return string
