@@ -571,7 +571,8 @@ def psed(path, before, after, limit='', backup='.bak', flags='gMS',
     before = str(before)
     after = str(after)
     before = _sed_esc(before, escape_all)
-    after = _sed_esc(after, escape_all)
+    # The pattern to replace with does not need to be escaped!!!
+    #after = _sed_esc(after, escape_all)
     limit = _sed_esc(limit, escape_all)
 
     shutil.copy2(path, '{0}{1}'.format(path, backup))
