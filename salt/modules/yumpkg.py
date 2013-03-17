@@ -736,7 +736,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
     return repos
 
 
-def get_repo(repo, basedir='/etc/yum.repos.d'):
+def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
@@ -760,7 +760,7 @@ def get_repo(repo, basedir='/etc/yum.repos.d'):
     return filerepos[repo]
 
 
-def del_repo(repo, basedir='/etc/yum.repos.d'):
+def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
