@@ -545,13 +545,11 @@ def _get_upgradable():
     out = out['stdout']
 
     # rexp parses lines that look like the following:
-    ## Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
+    # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
     rexp = re.compile('(?m)^Conf '
                       '([^ ]+) '          # Package name
-                      '\(([^ ]+) '        # Version
-                      '(.+) '             # Release
-                      '\[([^\]]+)\]\)$')  # Arch
-    keys = ['name', 'version', 'release', 'arch']
+                      '\(([^ ]+)')        # Version
+    keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 
     upgrades = rexp.findall(out)
@@ -712,12 +710,12 @@ def get_repo(repo, ppa_auth=None):
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
-        dist =  __grains__['lsb_codename']
+        dist = __grains__['lsb_codename']
         owner_name, ppa_name = repo[4:].split('/')
         if ppa_auth:
-           auth_info = '{0}@'.format(ppa_auth)
-           repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, 
-                                           ppa_name, dist)
+            auth_info = '{0}@'.format(ppa_auth)
+            repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name,
+                                            ppa_name, dist)
         else:
             if ppa_format_support:
                 repo = softwareproperties.ppa.expand_ppa_line(
@@ -788,7 +786,7 @@ def del_repo(repo, refresh=False, **kwargs):
             owner_name, ppa_name = repo[4:].split('/')
             if 'ppa_auth' in kwargs:
                 auth_info = '{0}@'.format(kwargs['ppa_auth'])
-                repo = LP_PVT_SRC_FORMAT.format(auth_info, dist, owner_name, 
+                repo = LP_PVT_SRC_FORMAT.format(auth_info, dist, owner_name,
                                                 ppa_name)
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
@@ -928,7 +926,7 @@ def mod_repo(repo, refresh=False, **kwargs):
                         if not 'keyid' in kwargs:
                             error_str = 'Private PPAs require a ' \
                                         'keyid to be specified: {0}/{1}'
-                            raise Exception(error_str.format(owner_name, 
+                            raise Exception(error_str.format(owner_name,
                                                              ppa_name))
                 except HTTPError, e:
                     error_str = 'Launchpad does not know about {0}/{1}: {2}'
@@ -952,7 +950,7 @@ def mod_repo(repo, refresh=False, **kwargs):
                 # here.
                 if 'ppa_auth' in kwargs:
                     ppa_auth = '{0}@'.format(kwargs['ppa_auth'])
-                    repo = LP_PVT_SRC_FORMAT.format(ppa_auth, owner_name, 
+                    repo = LP_PVT_SRC_FORMAT.format(ppa_auth, owner_name,
                                                     ppa_name, dist)
                 else:
                     repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
