@@ -22,12 +22,13 @@ def __virtual__():
 
 def _splitpkg(name):
     if name:
-        match = re.match(
-            '^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$',
-            name
-        )
-        if match:
-            return match.groups()
+        try:
+            return re.match(
+                '^((?:[^-]+|-(?![0-9]))+)-([0-9][^-]*)(?:-(.*))?$',
+                name
+            ).groups()
+        except AttributeError:
+            pass
 
 
 def _list_removed(old, new):
@@ -80,7 +81,7 @@ def list_pkgs(versions_as_list=False):
     return _format_pkgs(_get_pkgs(), versions_as_list=versions_as_list)
 
 
-def available_version(name, **kwargs):
+def available_version(*names, **kwargs):
     '''
     The available version of the package in the repository
 
@@ -88,11 +89,20 @@ def available_version(name, **kwargs):
 
         salt '*' pkg.available_version <package name>
     '''
-    cmd = 'pkg_info -q -I {0}'.format(name)
-    namever = _splitpkg(__salt__['cmd.run'](cmd))
-    if namever:
-        return namever[1]
-    return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        cmd = 'pkg_info -q -I {0}'.format(name)
+        try:
+            version = _splitpkg(__salt__['cmd.run'](cmd))[1]
+            ret[name] = version
+        except TypeError:
+            ret[name] = ''
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def version(*names, **kwargs):
