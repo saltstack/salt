@@ -95,6 +95,26 @@ def show_conf(conf_file=default_conf):
 def set(key, value, setting=None, conf_file=default_conf):
     '''
     Set a new value for a specific configuration line
+
+    CLI Example::
+
+        salt '*' logrotate.set rotate 2
+
+    Can also be used to set a single value inside a multiline configuration
+    block. For instance, to change rotate in the following block::
+
+        /var/log/wtmp {
+            monthly
+            create 0664 root root
+            rotate 1
+        }
+
+    Use the following command::
+
+        salt '*' logrotate.set /var/log/wtmp rotate 2
+
+    This module also has the ability to scan files inside an include directory,
+    and make changes in the appropriate file.
     '''
     conf = _parse_conf(conf_file)
     for include in conf['include files']:
