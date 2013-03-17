@@ -43,8 +43,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     ret = {}
     out = __salt__['cmd.run_stdout']('zypper list-updates').splitlines()
@@ -104,7 +103,7 @@ def upgrade_available(name):
     return available_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -115,19 +114,10 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    pkgs = list_pkgs()
-    if len(names) == 0:
-        return ''
-    elif len(names) == 1:
-        return pkgs.get(names[0], '')
-    else:
-        ret = {}
-        for name in names:
-            ret[name] = pkgs.get(name, '')
-        return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed as a dict::
 
@@ -137,6 +127,7 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
@@ -145,7 +136,10 @@ def list_pkgs():
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -232,8 +226,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -309,8 +302,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     old = list_pkgs()
     cmd = 'zypper -n up -l'

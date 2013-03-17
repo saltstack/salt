@@ -305,6 +305,25 @@ def parse_targets(name=None, pkgs=None, sources=None):
         return None, None
 
 
+def version(*names, **kwargs):
+    '''
+    Common interface for obtaining the version of installed packages
+    '''
+    ret = {}
+    versions_as_list = \
+        __salt__['config.is_true'](kwargs.get('versions_as_list'))
+    if len(names) != 0:
+        pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True)
+        for name in names:
+            ret[name] = pkgs.get(name, [])
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    # Return a single value if only one package name was passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+
 def add_pkg(pkgs, name, version):
     '''
     Add a package to a dict of installed packages.
@@ -313,17 +332,10 @@ def add_pkg(pkgs, name, version):
 
         salt '*' pkg_resource.add_pkg '{}' bind 9
     '''
-
-    ''' multiple-version support (not yet implemented)
-    cur = pkgs.get(name)
-    if cur is None:
-        pkgs[name] = version
-    elif isinstance(cur, basestring):
-        pkgs[name] = [cur, version]
-    else:
-        pkgs[name].append(version)
-    '''
-    pkgs[name] = version
+    try:
+        pkgs.setdefault(name, []).append(version)
+    except AttributeError as e:
+        log.exception(e)
 
 
 def sort_pkglist(pkgs):
@@ -338,9 +350,23 @@ def sort_pkglist(pkgs):
     '''
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
-    for key in pkgs.keys():
-        if isinstance(pkgs[key], list):
+    try:
+        for key in pkgs.keys():
             pkgs[key].sort()
+    except AttributeError as e:
+        log.exception(e)
+
+
+def stringify(pkgs):
+    '''
+    Takes a dict of package name/version information and joins each list of
+    installed versions into a string.
+    '''
+    try:
+        for key in pkgs.keys():
+            pkgs[key] = ','.join(pkgs[key])
+    except AttributeError as e:
+        log.exception(e)
 
 
 def find_changes(old=None, new=None):

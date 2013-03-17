@@ -157,7 +157,7 @@ def available_version(*names, **kwargs):
     return ret
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -168,16 +168,7 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    pkgs = list_pkgs()
-    if len(names) == 0:
-        return ''
-    elif len(names) == 1:
-        return pkgs.get(_pkgname_without_arch(names[0]), '')
-    else:
-        ret = {}
-        for name in names:
-            ret[name] = pkgs.get(_pkgname_without_arch(name), '')
-        return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def refresh_db():
@@ -286,8 +277,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     if debconf:
@@ -435,8 +425,7 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     ret_pkgs = {}
@@ -465,7 +454,7 @@ def upgrade(refresh=True, **kwargs):
     return ret_pkgs
 
 
-def list_pkgs(regex_string=''):
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -481,13 +470,10 @@ def list_pkgs(regex_string=''):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs httpd
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
-    cmd = (
-        'dpkg-query --showformat=\'${{Status}} ${{Package}} ${{Version}}\n\' '
-        '-W {0}'.format(
-            regex_string
-        )
-    )
+    cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
+          '${Version}\n\' -W'
 
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] != 0:
@@ -501,18 +487,19 @@ def list_pkgs(regex_string=''):
     # install ok installed zsh 4.3.17-1ubuntu1
     for line in out.splitlines():
         cols = line.split()
-        if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and \
-                'installed' in cols[2]:
-            __salt__['pkg_resource.add_pkg'](ret, cols[3], cols[4])
+        try:
+            linetype, status, name, version = [cols[x] for x in (0, 2, 3, 4)]
+        except ValueError:
+            continue
+        name = _pkgname_without_arch(name)
+        if len(cols) and ('install' in linetype or 'hold' in linetype) and \
+                'installed' in status:
+            __salt__['pkg_resource.add_pkg'](ret, name, version)
 
     # Check for virtual packages. We need aptitude for this.
     if __salt__['cmd.has_exec']('aptitude'):
-        if not ret:
-            search_string = regex_string
-        else:
-            search_string = '.+'
-        cmd = 'aptitude search "?name(^{0}$) ?virtual ' \
-              '?reverse-provides(?installed)"'.format(search_string)
+        cmd = 'aptitude search "?name(^.+$) ?virtual ' \
+              '?reverse-provides(?installed)"'
 
         out = __salt__['cmd.run_stdout'](cmd)
         for line in out.splitlines():
@@ -524,6 +511,8 @@ def list_pkgs(regex_string=''):
             __salt__['pkg_resource.add_pkg'](ret, name, '1')
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -571,8 +560,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     return _get_upgradable()
 
