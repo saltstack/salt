@@ -15,7 +15,8 @@ to contain this data simply. This is often called configuration management.
 
     This is just the begining of using states, make sure to read up on pillar
     next:
-    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
+
+        :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
 
 It is All Just Data
 ===================
@@ -513,4 +514,4 @@ Next Reading
 With an understanding of states, it is recommended to become more familiar
 with Salt's pillar interface:
 
-:doc: `Pillar Walkthrough <topics/tutorials/pillar>`
+    :doc:`Pillar Walkthrough </topics/tutorials/pillar>`

@@ -6,7 +6,8 @@ Pillar Walkthrough
 
     This walkthrough assumes that the reader has already completed the inital
     Salt Stack walkthrough:
-    :doc: `Walkthrough <topics/tutorials/walkthrough>`
+
+        :doc:`Walkthrough <topics/tutorials/walkthrough>`
 
 The pillar interface inside of Salt is one of the most important components
 of a Salt deployment. Pillar is the interface used to generate arbitrary data

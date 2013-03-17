@@ -10,9 +10,12 @@ from a git repository and serve them to minions.
 .. note::
 
     This walkthrough assumes basic knowledge of Salt:
-    :doc: `Walkthrough <topics/tutorials/walkthrough>`
+
+        :doc:`Walkthrough </topics/tutorials/walkthrough>`
+
     And a basic knowledge of file roots:
-    :doc: `File Roots <ref/file_server/file_roots>`
+
+        :doc:`File Roots </ref/file_server/file_roots>`
 
 The gitfs backend hooks into any number of remote git repositories and caches
 the data from the repository on the master. This makes distributing a state
