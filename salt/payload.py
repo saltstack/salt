@@ -129,10 +129,6 @@ class SREQ(object):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, 5000
             )
-        if hasattr(zmq, 'IPV4ONLY'):
-            self.socket.setsockopt(
-                zmq.IPV4ONLY, 0
-            )
         self.socket.linger = linger
         if id_:
             self.socket.setsockopt(zmq.IDENTITY, id_)
