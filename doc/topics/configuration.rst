@@ -143,16 +143,21 @@ the ``test.ping`` remote command. ::
 
 
    [root@master ~]# salt 'alpha' test.ping
-   {'alpha': True}
+   alpha:
+       True
 
 Communication between the Master and all Minions may be tested in a
 similar way. ::
 
    [root@master ~]# salt '*' test.ping
-   {'alpha': True}
-   {'bravo': True}
-   {'charlie': True}
-   {'delta': True}
+   alpha:
+       True
+   bravo:
+       True
+   charlie:
+       True
+   delta:
+       True
 
 Each of the Minions should send a "True" response as shown above.
 
