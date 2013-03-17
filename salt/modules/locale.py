@@ -4,6 +4,7 @@ Module for managing locales on posix-like systems.
 
 # Import python libs
 import logging
+import re
 
 log = logging.getLogger(__name__)
 
@@ -12,13 +13,53 @@ def __virtual__():
     '''
     Only work on posix-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
-    disable = [
-        'Windows',
-        ]
+    # Disable on these platorms
+    disable = ('Windows',)
     if __grains__['os'] in disable:
         return False
     return 'locale'
+
+
+def _parse_localectl():
+    '''
+    Get the 'System Locale' parameters from localectl
+    '''
+    ret = {}
+    for line in __salt__['cmd.run']('localectl').splitlines():
+        cols = [x.strip() for x in line.split(':', 1)]
+        if len(cols) > 1:
+            cur_param = cols.pop(0)
+        if cur_param == 'System Locale':
+            try:
+                key, val = re.match('^([A-Z_]+)=(.*)$', cols[0]).groups()
+            except AttributeError:
+                log.error('Odd locale parameter "{0}" detected in localectl '
+                          'output. This should not happen. localectl should '
+                          'catch this. You should probably investigate what '
+                          'caused this.'.format(cols[0]))
+            else:
+                ret[key] = val.replace('"', '')
+    return ret
+
+
+def _localectl_get():
+    '''
+    Use systemd's localectl command to get the current locale
+    '''
+    return _parse_localectl().get('LANG', '')
+
+
+def _localectl_set(locale=''):
+    '''
+    Use systemd's localectl command to set the LANG locale parameter, making
+    sure not to trample on other params that have been set.
+    '''
+    locale_params = _parse_localectl()
+    locale_params['LANG'] = str(locale)
+    args = ' '.join(['{0}="{1}"'.format(k, v)
+                     for k, v in locale_params.iteritems()])
+    cmd = 'localectl set-locale {0}'.format(args)
+    return __salt__['cmd.retcode'](cmd) == 0
 
 
 def list_avail():
@@ -44,7 +85,7 @@ def get_locale():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        cmd = 'grep "^LOCALE" /etc/rc.conf | grep -vE "^#"'
+        return _localectl_get()
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep LANG /etc/sysconfig/i18n | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
@@ -52,12 +93,11 @@ def get_locale():
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale show'
         return __salt__['cmd.run'](cmd).strip()
-    out = __salt__['cmd.run'](cmd).split('=')
-    if len(out) == 2:
-      ret = out[1].replace('"', '')
-    else:
-      ret = ''
-    return ret
+
+    try:
+        return __salt__['cmd.run'](cmd).split('=')[1].replace('"', '')
+    except IndexError:
+        return ''
 
 
 def set_locale(locale):
@@ -69,7 +109,7 @@ def set_locale(locale):
         salt '*' locale.set_locale 'en_US.UTF-8'
     '''
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/rc.conf', '^LOCALE=.*', 'LOCALE="{0}"'.format(locale))
+        return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale))
     elif 'Debian' in __grains__['os_family']:
