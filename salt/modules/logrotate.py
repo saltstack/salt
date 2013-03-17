@@ -10,6 +10,7 @@ import logging
 import salt.utils
 
 log = logging.getLogger(__name__)
+default_conf = '/etc/logrotate.conf'
 
 
 def __virtual__():
@@ -23,7 +24,7 @@ def __virtual__():
     return 'logrotate'
 
 
-def _parse_conf(conf_file='/etc/logrotate.conf'):
+def _parse_conf(conf_file=default_conf):
     '''
     Parse a logrotate configuration file.
 
@@ -80,7 +81,7 @@ def _parse_conf(conf_file='/etc/logrotate.conf'):
     return ret
 
 
-def show_conf(conf_file='/etc/logrotate.conf'):
+def show_conf(conf_file=default_conf):
     '''
     Show parsed configuration
 
