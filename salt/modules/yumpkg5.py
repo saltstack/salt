@@ -139,7 +139,7 @@ def upgrade_available(name):
     return available_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -150,19 +150,10 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    pkgs = list_pkgs()
-    for name in names:
-        ret[name] = pkgs.get(name, '')
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -172,8 +163,10 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}\n"'
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-' \
+          '%{ARCH}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
             name, version, rel, arch = line.split('_|-')
@@ -188,7 +181,10 @@ def list_pkgs():
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -200,8 +196,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     out = _parse_yum('check-update')
     return dict([(i.name, i.version) for i in out])
@@ -297,8 +292,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -377,8 +371,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     old = list_pkgs()
     cmd = 'yum -q -y upgrade'

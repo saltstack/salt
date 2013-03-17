@@ -129,8 +129,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     return _get_upgradable()
 
@@ -146,7 +145,7 @@ def upgrade_available(name):
     return available_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -157,16 +156,7 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    for name in names:
-        ret[name] = _cpv_to_version(_vartree().dep_bestmatch(name))
-
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
 def porttree_matches(name):
@@ -183,7 +173,7 @@ def porttree_matches(name):
                 if x.endswith('/' + str(name))]
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -193,14 +183,16 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
     pkgs = _vartree().dbapi.cpv_all()
     for cpv in pkgs:
-        ret[_cpv_to_name(cpv)] = _cpv_to_version(cpv)
         __salt__['pkg_resource.add_pkg'](ret,
                                          _cpv_to_name(cpv),
                                          _cpv_to_version(cpv))
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -286,8 +278,7 @@ def install(name=None,
             'kwargs': kwargs
         }
     ))
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -395,8 +386,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     ret_pkgs = {}
