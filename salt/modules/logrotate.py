@@ -90,3 +90,64 @@ def show_conf(conf_file=default_conf):
         salt '*' logrotate.show_conf
     '''
     return _parse_conf(conf_file)
+
+
+def set(key, value, setting=None, conf_file=default_conf):
+    '''
+    Set a new value for a specific configuration line
+    '''
+    conf = _parse_conf(conf_file)
+    for include in conf['include files']:
+        if key in conf['include files'][include]:
+            conf_file = os.path.join(conf['include'], include)
+
+    if type(conf[key]) is dict and not setting:
+        return ('Error: {0} includes a dict, and a specific setting inside the '
+                'dict was not declared'.format(key))
+
+    if setting:
+        if type(conf[key]) is str:
+            return ('Error: A setting for a dict was declared, but the '
+                    'configuration line given is not a dict')
+        # We're going to be rewriting an entire stanza
+        stanza = conf[key]
+        if value == 'False':
+            del stanza[value]
+        else:
+            stanza[value] = setting
+        new_line = _dict_to_stanza(key, stanza)
+        log.debug(stanza)
+        log.debug(new_line)
+        log.debug(key)
+        __salt__['file.psed'](conf_file,
+                              '{0}.*{{.*}}'.format(key),
+                              new_line)
+    else:
+        # This is the new config line that will be set
+        if value == 'True':
+            new_line = key
+        elif value == 'False':
+            new_line = ''
+        else:
+            new_line = '{0} {1}'.format(key, value)
+
+        log.debug(conf_file)
+        log.debug(key)
+        log.debug(new_line)
+        __salt__['file.psed'](conf_file,
+                              '^{0}.*'.format(key),
+                              new_line,
+                              flags='gM')
+
+
+def _dict_to_stanza(key, stanza):
+    '''
+    Convert a dict to a multi-line stanza
+    '''
+    ret = ''
+    for skey in stanza:
+        if stanza[skey] is True:
+            stanza[skey] = ''
+        ret += '    {0} {1}\n'.format(skey, stanza[skey])
+    return '{0} {{\n{1}}}'.format(key, ret)
+
