@@ -180,7 +180,7 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
 Default: ``/var/run/salt/minion``
 
-The directory where unix sockets will be kept.
+The directory where Unix sockets will be kept.
 
 .. code-block:: yaml
 
@@ -235,7 +235,7 @@ environment, set this value to ``False``.
 
 Default: ``ipc``
 
-Windows platforms lack posix IPC and must rely on slower TCP based inter-
+Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
 process communications. Set ipc_mode to ``tcp`` on such systems.
 
 .. code-block:: yaml
@@ -450,7 +450,7 @@ Default: ``True``
 
 autoload_dynamic_modules Turns on automatic loading of modules found in the
 environments on the master. This is turned on by default, to turn of
-autoloading modules when states run set this value to ``False``
+auto-loading modules when states run set this value to ``False``
 
 .. code-block:: yaml
 
@@ -579,7 +579,7 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time formating
+The date and time format used in console log messages. Allowed date/time formatting
 can be seen on http://docs.python.org/library/time.html#time.strftime
 
 .. code-block:: yaml
@@ -593,7 +593,7 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time formating
+The date and time format used in log file messages. Allowed date/time formatting
 can be seen on http://docs.python.org/library/time.html#time.strftime
 
 .. code-block:: yaml
@@ -635,7 +635,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 
 Default: ``{}``
 
-This can be used to control logging levels more specificically.  This
+This can be used to control logging levels more specifically.  This
 example sets the main salt library at the 'warning' level, but sets 
 'salt.modules' to log at the 'debug' level:
 

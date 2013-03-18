@@ -280,5 +280,5 @@ runners and commands like salt-key.
 Client Tests
 ------------
 
-Tests have been added to test the aspects of the client apis and ensure that
+Tests have been added to test the aspects of the client APIs and ensure that
 the client calls work, and that they manage passed data, in a desirable way.

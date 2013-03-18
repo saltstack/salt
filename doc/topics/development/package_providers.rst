@@ -61,7 +61,7 @@ This function must also accept ``**kwargs``, in order to receive the
 ``fromrepo`` and ``repo`` keyword arguments from pkg states. Where supported,
 these arguments should be used to find the install/upgrade candidate in the
 specified repository. The ``fromrepo`` kwarg takes precedence over ``repo``, so
-if both of those kwargs are present, the repository specifed in ``fromrepo``
+if both of those kwargs are present, the repository specified in ``fromrepo``
 should be used. However, if ``repo`` is used instead of ``fromrepo``, it should
 still work, to preserve backwards compatibility with older versions of Salt.
 
@@ -131,7 +131,7 @@ done:
   dictionary values will be the path/URI for the package.
 
 
-The second return value will be a string with two possbile values:
+The second return value will be a string with two possible values:
 ``repository`` or ``file``. The :strong:`install` function can use this value
 (if necessary) to build the proper command to install the targeted package(s).
 
@@ -216,7 +216,7 @@ success.
 
 mod_repo
 ^^^^^^^^
-Modify the local configuration for one or more option for a conifigured repo.
+Modify the local configuration for one or more option for a configured repo.
 This is also the way to create new repository configuration on the local
 system; if a repo is specified which does not yet exist, it will be created.
 
@@ -247,7 +247,7 @@ function that requires that technique must still use the ``lowpkg`` version.
 list_pkgs
 ^^^^^^^^^
 Returns a dict of packages installed, including the package name and version.
-Can accept a list of packages; if none are spcified, then all installed
+Can accept a list of packages; if none are specified, then all installed
 packages will be listed.
 
 .. code-block:: python

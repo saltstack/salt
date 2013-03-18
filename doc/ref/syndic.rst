@@ -19,7 +19,7 @@ Configuring the Syndic
 Since the Syndic only needs to be attached to a higher level master the
 configuration is very simple. On a master that is running a syndic to connect
 to a higher level master the syndic_master option needs to be set in the
-master config file. The syndic_master option contains the hostname or ip
+master config file. The syndic_master option contains the hostname or IP
 address of the master server that can control the master that the syndic is
 running on.
 

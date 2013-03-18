@@ -72,7 +72,7 @@ seeing on the console(and then salt-master crashes)::
   Too many open files (tcp_listener.cpp:335)
   Aborted (core dumped)
 
-By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
 max open files.
 
 If you wish to set a different value than the default one, uncomment and
@@ -409,7 +409,7 @@ at the moment a single state fails
 
 Default:: ``False``
 
-Set all state calls to only test if they are going to acctually make changes
+Set all state calls to only test if they are going to actually make changes
 or just post what changes are going to be made
 
 .. code-block:: yaml
@@ -426,7 +426,7 @@ Master File Server Settings
 
 Default: ``base: [/srv/salt]``
 
-Salt runs a lightweight file server written in zeromq to deliver files to
+Salt runs a lightweight file server written in ZeroMQ to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
 
@@ -706,7 +706,7 @@ One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time formating
+The date and time format used in console log messages. Allowed date/time formatting
 can be seen on http://docs.python.org/library/time.html#time.strftime
 
 .. code-block:: yaml
@@ -720,7 +720,7 @@ can be seen on http://docs.python.org/library/time.html#time.strftime
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time formating
+The date and time format used in log file messages. Allowed date/time formatting
 can be seen on http://docs.python.org/library/time.html#time.strftime
 
 .. code-block:: yaml
@@ -762,7 +762,7 @@ be seen on http://docs.python.org/library/logging.html#logrecord-attributes
 
 Default: ``{}``
 
-This can be used to control logging levels more specificically.  The
+This can be used to control logging levels more specifically.  The
 example sets the main salt library at the 'warning' level, but sets 
 'salt.modules' to log at the 'debug' level:
 

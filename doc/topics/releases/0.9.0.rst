@@ -6,7 +6,7 @@ Salt 0.9.0 is here. This is an exciting release, 0.9.0 includes the new network
 topology features allowing peer salt commands and masters of masters via the
 syndic interface.
 
-0.9.0 also introduces many more modules, improvements to the api and
+0.9.0 also introduces many more modules, improvements to the API and
 improvements to the ZeroMQ systems.
 
 Download!
@@ -16,7 +16,7 @@ The Salt source can be downloaded from the salt github site:
 
 :download:`salt-0.9.0.tar.gz`
 
-Or from PiPy:
+Or from PyPI:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.0.tar.gz
 
@@ -87,7 +87,7 @@ Improved 0MQ Master Workers
 
 The 0MQ worker system has been further refined to be faster and more robust.
 This new system has been able to handle a much larger load than the previous
-setup. The new system uses the ipc protocol in 0MQ instead of tcp.
+setup. The new system uses the IPC protocol in 0MQ instead of TCP.
 
 New Modules
 -----------

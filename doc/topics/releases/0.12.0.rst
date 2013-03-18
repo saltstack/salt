@@ -33,13 +33,13 @@ systems. Software on Windows can now be managed in the same way. The SaltStack
 team built a package manager that interfaces with the standard Salt pkg module
 to allow for installing and removing software on Windows. In addition, a
 software package repository has been built on top of the Salt fileserver. A
-small yaml file provides the information necessary for the package manager to
+small YAML file provides the information necessary for the package manager to
 install and remove software.
 
 An interesting feature of the new Salt Windows software package repository is
 that one or more remote git repositories can supplement the master's local
 repository. The repository can point to software on the master's fileserver or
-on an http, https, or ftp server.
+on an HTTP, HTTPS, or ftp server.
 
 New Default Outputter
 ---------------------

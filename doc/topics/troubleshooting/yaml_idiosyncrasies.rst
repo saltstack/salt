@@ -229,7 +229,7 @@ Examples:
 
 
     
-List of useable `Unicode characters`_  will help you to identify correct numbers.
+List of usable `Unicode characters`_  will help you to identify correct numbers.
 
 .. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
 

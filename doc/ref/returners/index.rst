@@ -59,7 +59,7 @@ A simple returner is implemented here:
         '''
         Return information to a redis server
         '''
-        # Get a redis commection
+        # Get a redis connection
         serv = redis.Redis(
                     host='redis-serv.example.com',
                     port=6379,

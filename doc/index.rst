@@ -15,7 +15,7 @@ for orchestration, remote execution, configuration management and much more.
 Download
 ========
 
-Salt source releases are available for download via pypi:
+Salt source releases are available for download via PyPI:
 
     https://pypi.python.org/pypi/salt
 
@@ -201,7 +201,7 @@ Salt is many splendid things.
     Looking for an easy way to manage software on Windows machines? 
     Search no more! Salt has an integrated software package manager for
     Windows machines! Install software hosted on the master, somewhere on the
-    network, or any http, https, or ftp server.
+    network, or any HTTP, HTTPS, or ftp server.
 
 Reference
 ---------
