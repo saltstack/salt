@@ -15,6 +15,9 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     def setUp(self):
         super(SvnTest, self).setUp()
 
+        if not self.run_function('cmd.has_exec', ['svn']):
+            self.skipTest("The executable 'svn' is not available.")
+
         self.__domain = 'svn.apache.org'
         try:
             if hasattr(socket, 'setdefaulttimeout'):
