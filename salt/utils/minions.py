@@ -101,7 +101,7 @@ class CkMinions(object):
                     salt.utils.fopen(datap)
                 ).get('grains')
                 comps = expr.rsplit(':', 1)
-                match = salt.utils.traverse_dict(grains, comps[0])
+                match = salt.utils.traverse_dict(grains, comps[0], {})
                 if len(comps) < 2:
                     continue
                 if not match:
