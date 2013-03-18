@@ -98,5 +98,8 @@ def salt_main():
     '''
     if '' in sys.path:
         sys.path.remove('')
-    client = salt.cli.SaltCMD()
-    client.run()
+    try:
+        client = salt.cli.SaltCMD()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
