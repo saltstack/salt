@@ -743,7 +743,7 @@ def fopen(*args, **kwargs):
     return fhandle
 
 
-def traverse_dict(data, target, delim=':'):
+def traverse_dict(data, target, default, delim=':'):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
@@ -755,7 +755,7 @@ def traverse_dict(data, target, delim=':'):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
-        return {}
+        return default
     return data
 
 
