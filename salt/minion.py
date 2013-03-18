@@ -984,7 +984,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['grains'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['grains'], comps[0], {})
         if match == {}:
             log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
@@ -1064,7 +1064,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0], {})
         if match == {}:
             log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
