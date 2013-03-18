@@ -125,7 +125,7 @@ state just access the pillar via Jinja:
 
 `/srv/salt/users/init.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% for user, uid in pillar.get('users', {}).items() %}
     {{user}}:
@@ -152,7 +152,7 @@ separate Linux distributions:
 
 `/srv/pillar/pkg/init.sls`
 
-.. code-block::
+.. code-block:: jinja
 
     pkgs:
       {% if grains['os_family'] == 'Debian' %}
@@ -183,7 +183,7 @@ inside of the pillar, so sls files can be safely parameterized:
 
 `/srv/salt/apache/init.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
@@ -198,7 +198,7 @@ Or, if no pillar is available a default can be set as well:
 
 `/srv/salt/apache/init.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
@@ -241,7 +241,7 @@ Can be easily transformed into a powerful, parameterized formula:
 
 `/srv/salt/edit/vim.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     vim:
       pkg:
@@ -261,7 +261,7 @@ Where the vimrc source location can now be changed via pillar:
 
 `/srv/pillar/edit/vim.sls`
 
-.. code-block::
+.. code-block:: jinja
 
     {% if grain['id'].startswith('dev') %}
     vimrc: salt://edit/dev_vimrc
