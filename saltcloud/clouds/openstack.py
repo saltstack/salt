@@ -147,11 +147,6 @@ def ignore_ip_addr(vm_, ip):
     Return True if we are to ignore the specified IP. Compatible with IPv4.
     '''
 
-    # Bomb out on IPv6 and others.
-    proto = vm_.get('protocol', __opts__.get('OPENSTACK.protocol', 'ipv4'))
-    if proto != 'ipv4':
-        return False
-
     cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
         return True
