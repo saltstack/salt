@@ -190,13 +190,18 @@ inside of the pillar, so sls files can be safely parameterized:
 
 Or, if no pillar is available a default can be set as well:
 
+.. note::
+
+    The function ``pillar.get`` used in this example was added to Salt in
+    version 0.14.0
+
 `/srv/salt/apache/init.sls`
 
 .. code-block:: yaml
 
     apache:
       pkg.installed:
-        - name: {{ pillar.get('pkgs', {}).get('apache', 'httpd') }}
+        - name: {{ salt['pillar.get']('pkgs:apache', 'httpd') }}
 
 In the above example, if the pillar value `pillar['pkgs']['apache']` is not
 set in the minion's pillar, then the default of 'httpd' will be used.
