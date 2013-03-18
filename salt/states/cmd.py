@@ -413,7 +413,8 @@ def run(name,
                 return ret
         env = _env
 
-    pgid = os.getegid()
+    if HAS_GRP:
+        pgid = os.getegid()
 
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
@@ -443,7 +444,8 @@ def run(name,
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
-        os.setegid(pgid)
+        if HAS_GRP:
+            os.setegid(pgid)
 
 
 def script(name,
@@ -518,7 +520,8 @@ def script(name,
     if env is None:
         env = kwargs.get('__env__', 'base')
 
-    pgid = os.getegid()
+    if HAS_GRP:
+        pgid = os.getegid()
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({
@@ -568,7 +571,8 @@ def script(name,
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
-        os.setegid(pgid)
+        if HAS_GRP:
+            os.setegid(pgid)
 
 
 def call(name, func, args=(), kws=None,
@@ -612,14 +616,16 @@ def call(name, func, args=(), kws=None,
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env')}
-    pgid = os.getegid()
+    if HAS_GRP:
+        pgid = os.getegid()
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None, None)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
     finally:
-        os.setegid(pgid)
+        if HAS_GRP:
+            os.setegid(pgid)
     if not kws:
         kws = {}
     result = func(*args, **kws)
