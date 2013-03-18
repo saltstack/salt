@@ -91,9 +91,9 @@ SLS Files
 
 The Salt state files are simple sets of data. Since the SLS files are just data
 they can be represented in a number of different ways. The default format is
-yaml generated from a jinja template. This allows for the states files to have
+yaml generated from a Jinja template. This allows for the states files to have
 all the language constructs of Python and the simplicity of yaml. State files
-can then be complicated jinja templates that translate down to yaml, or just
+can then be complicated Jinja templates that translate down to yaml, or just
 plain and simple yaml files!
 
 The State files are constructed data structures in a simple format. The format
@@ -179,9 +179,9 @@ source code:
 
 :blob:`salt/renderers`
 
-By default SLS files are rendered using jinja as a templating engine, and yaml
+By default SLS files are rendered using Jinja as a templating engine, and yaml
 as the serialization format. Since the rendering system can be extended simply
 by adding a new renderer to the renderers directory, it is possible that any
 structured file could be used to represent the SLS files.
 
-In the future xml and raw Python will be added, as well as many other formats.
+In the future XML and raw Python will be added, as well as many other formats.

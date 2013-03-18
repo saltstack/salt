@@ -10,9 +10,12 @@ from a git repository and serve them to minions.
 .. note::
 
     This walkthrough assumes basic knowledge of Salt:
-    :doc: `Walkthrough <topics/tutorials/walkthrough>`
+
+        :doc:`Walkthrough </topics/tutorials/walkthrough>`
+
     And a basic knowledge of file roots:
-    :doc: `File Roots <ref/file_server/file_roots>`
+
+        :doc:`File Roots </ref/file_server/file_roots>`
 
 The gitfs backend hooks into any number of remote git repositories and caches
 the data from the repository on the master. This makes distributing a state
@@ -20,7 +23,7 @@ tree to multiple masters seamless and automated.
 
 Salt's file server also has a concept of environments, when using the gitfs
 backend, Salt translates git branches and tags into environments, making
-environment management very simple. Just merging a qa or staging branch up
+environment management very simple. Just merging a QA or staging branch up
 to a production branch can be all that is required to make those file changes
 available to Salt.
 

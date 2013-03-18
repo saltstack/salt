@@ -6,7 +6,7 @@ Salt 0.10.2 Release Notes
 cleaner ways to access the salt-call capabilities in the API, minion data
 caching and the event system has been added to salt minions.
 
-There have also been updates to the zeromq functions, many more tests
+There have also been updates to the ZeroMQ functions, many more tests
 (thanks to sponsors, the code sprint and many contributors) and a swath
 of bug fixes.
 
@@ -99,7 +99,7 @@ OpenBSD.
 SQL Modules
 ^^^^^^^^^^^
 
-The MySQL and Postgres modules have both received a number of additions thanks
+The MySQL and PostgreSQL modules have both received a number of additions thanks
 to the work of Avi Marcus and Roman Imankulov.
 
 ZFS Support on FreeBSD

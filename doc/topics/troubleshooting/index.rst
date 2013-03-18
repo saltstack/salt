@@ -31,7 +31,7 @@ What Ports do the Master and Minion Need Open?
 
 No ports need to be opened up on each minion. For the master, TCP ports 4505
 and 4506 need to be open. If you've put both your Salt master and minion in
-debug mode and don't see an acknowledgement that your minion has connected,
+debug mode and don't see an acknowledgment that your minion has connected,
 it could very well be a firewall.
 
 You can check port connectivity from the minion with the nc command:
