@@ -34,8 +34,11 @@ def get_zone():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        cmd = 'grep TIMEZONE /etc/rc.conf | grep -vE "^#"'
+        cmd = ('timedatectl | grep Timezone |'
+               'sed -e"s/: /=/" -e"s/^[ \t]*//" | cut -d" " -f1')
     elif 'RedHat' in __grains__['os_family']:
+        cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
+    elif 'Suse' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
         return open('/etc/timezone','r').read()
@@ -99,6 +102,8 @@ def set_zone(timezone):
         __salt__['file.sed']('/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+    elif 'Suse' in __grains__['os_family']:
+        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         open('/etc/timezone', 'w').write(timezone)
     elif 'Gentoo' in __grains__['os_family']:
@@ -149,6 +154,9 @@ def get_hwclock():
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'tail -n 1 /etc/adjtime'
         return __salt__['cmd.run'](cmd)
+    elif 'Suse' in __grains__['os_family']:
+        cmd = 'tail -n 1 /etc/adjtime'
+        return __salt__['cmd.run'](cmd)
     elif 'Debian' in __grains__['os_family']:
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
         out = __salt__['cmd.run'](cmd).split('=')
@@ -181,6 +189,8 @@ def set_hwclock(clock):
     if 'Arch' in __grains__['os_family']:
         __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(clock))
     elif 'RedHat' in __grains__['os_family']:
+        __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
+    elif 'Suse' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         if clock == 'UTC':

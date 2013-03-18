@@ -8,10 +8,12 @@ import os
 import glob
 import fnmatch
 import re
+import logging
 
 # Import salt libs
 import salt.payload
 
+log = logging.getLogger(__name__)
 
 def nodegroup_comp(group, nodegroups, skip=None):
     '''
@@ -98,30 +100,36 @@ class CkMinions(object):
                 grains = self.serial.load(
                     salt.utils.fopen(datap)
                 ).get('grains')
-                comps = expr.split(':')
+                comps = expr.rsplit(':', 1)
+                match = salt.utils.traverse_dict(grains, comps[0])
                 if len(comps) < 2:
                     continue
-                if comps[0] not in grains:
+                if not match:
                     minions.remove(id_)
                     continue
-                if isinstance(grains.get(comps[0]), list):
-                    # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
-                        if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                            found = True
+                if isinstance(match, dict):
+                    minions.remove(id_)
+                    continue
+                if isinstance(match, list):
+                    # We are matching a single component to a single list
+                    # member
+                    for member in match:
+                        if fnmatch.fnmatch(
+                                str(member).lower(), comps[1].lower()):
                             break
-                    if found:
-                        continue
-                    minions.remove(id_)
+                    else:
+                        # Walked through ALL the members in the list and no
+                        # match?
+                        # Remove the minion id from the list of minions!
+                        minions.remove(id_)
                     continue
-                if fnmatch.fnmatch(
-                    str(grains.get(comps[0], '').lower()),
-                    comps[1].lower(),
-                    ):
+
+                if fnmatch.fnmatch(str(match.lower()), comps[1].lower()):
                     continue
-                else:
-                    minions.remove(id_)
+
+                # Still no match!? Remove the minion id from the list
+                minions.remove(id_)
+
         return list(minions)
 
     def _check_grain_pcre_minions(self, expr):
@@ -196,13 +204,15 @@ class CkMinions(object):
                        'compound': self._all_minions,
                       }[expr_form](expr)
         except Exception:
+            log.exception(('Failed matching available minions with {0} pattern: {1}'
+                           ).format(expr_form, expr))
             minions = expr
         return minions
 
     def validate_tgt(self, valid, expr, expr_form):
         '''
-        Return a Bool. This function returns if the expresion sent in is within
-        the scope of the valid expression
+        Return a Bool. This function returns if the expression sent in is
+        within the scope of the valid expression
         '''
         ref = {'G': 'grain',
                'P': 'grain_pcre',

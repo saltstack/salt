@@ -57,6 +57,14 @@ installed) or if there is an upgrade available.
 If only one argument was passed, this function return a string, otherwise a
 dict of name/version pairs is returned.
 
+This function must also accept ``**kwargs``, in order to receive the
+``fromrepo`` and ``repo`` keyword arguments from pkg states. Where supported,
+these arguments should be used to find the install/upgrade candidate in the
+specified repository. The ``fromrepo`` kwarg takes precedence over ``repo``, so
+if both of those kwargs are present, the repository specifed in ``fromrepo``
+should be used. However, if ``repo`` is used instead of ``fromrepo``, it should
+still work, to preserve backwards compatibility with older versions of Salt.
+
 
 version
 ^^^^^^^

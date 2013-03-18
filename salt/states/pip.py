@@ -62,16 +62,20 @@ def installed(name,
     elif env and not bin_env:
         bin_env = env
 
+    # Pull off any requirements specifiers
+    prefix = name.split('=')[0].split('<')[0].split('>')[0].strip()
+
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
-        pip_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](prefix, bin_env, runas=user, cwd=cwd)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if ignore_installed == False and name.lower() in (p.lower() for p in pip_list):
-        if force_reinstall == False and upgrade == False:
+    if ignore_installed is False and prefix.lower() in (p.lower()
+                                                        for p in pip_list):
+        if force_reinstall is False and upgrade is False:
             ret['result'] = True
             ret['comment'] = 'Package already installed'
             return ret
@@ -82,8 +86,19 @@ def installed(name,
                 name)
         return ret
 
+    # Replace commas (used for version ranges) with semicolons (which are not
+    # supported) in name so it does not treat them as multiple packages.  Comma
+    # will be re-added in pip.install call.  Wrap in double quotes to allow for
+    # version ranges
+    name = '"' + name.replace(',', ';') + '"'
+
     if repo:
         name = repo
+
+    # If a requirements file is specified,only install the contents of the
+    # requirements file
+    if requirements:
+        name = ''
 
     pip_install_call = __salt__['pip.install'](
         pkgs=name,
@@ -118,7 +133,7 @@ def installed(name,
     if pip_install_call and (pip_install_call['retcode'] == 0):
         ret['result'] = True
 
-        pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
+        pkg_list = __salt__['pip.list'](prefix, bin_env, runas=user, cwd=cwd)
         if not pkg_list:
             ret['comment'] = (
                 'There was no error installing package \'{0}\' although '

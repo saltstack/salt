@@ -12,8 +12,8 @@ import json
 import salt.utils
 import salt.state
 import salt.payload
-from salt.utils.yaml import load as _yaml_load
-from salt.utils.yaml import CustomLoader as _YamlCustomLoader
+from salt.utils.yamlloader import load as _yaml_load
+from salt.utils.yamlloader import CustomLoader as _YamlCustomLoader
 from salt._compat import string_types
 
 
@@ -42,7 +42,7 @@ def __resolve_struct(value, kwval_as):
 
 def _filter_running(running):
     '''
-    Filter out the result: True + no chnages data
+    Filter out the result: True + no changes data
     '''
     ret = {}
     for tag in running:
@@ -156,7 +156,6 @@ def highstate(test=None, **kwargs):
     conflict = running()
     if conflict:
         return conflict
-    salt.utils.daemonize_if(__opts__, **kwargs)
     opts = copy.copy(__opts__)
 
     if not test is None:
@@ -210,7 +209,6 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
             kwargs.get('pillar', ''),
             kwargs.get('kwval_as', 'yaml'))
 
-    salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts, pillar)
 
     if isinstance(mods, string_types):
@@ -302,7 +300,6 @@ def show_sls(mods, env='base', test=None, **kwargs):
     opts = copy.copy(__opts__)
     if not test is None:
         opts['test'] = test
-    salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -322,7 +319,20 @@ def show_top():
         salt '*' state.show_top
     '''
     st_ = salt.state.HighState(__opts__)
-    return st_.get_top()
+    ret = {}
+    static = st_.get_top()
+    ext = st_.client.ext_nodes()
+    for top in [static, ext]:
+        for env in top:
+            if not env in ret:
+                ret[env] = top[env]
+            else:
+                for match in top[env]:
+                    if not match in ret[env]:
+                        ret[env][match] = top[env][match]
+                    else:
+                        ret[env][match].extend(top[env][match])
+    return ret
 
 # Just commenting out, someday I will get this working
 #def show_masterstate():

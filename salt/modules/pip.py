@@ -98,7 +98,8 @@ def install(pkgs=None,
     timeout
         Set the socket timeout (default 15 seconds)
     editable
-        install something editable(ie git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
+        install something editable (i.e.
+        git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
     find_links
         URL to look for packages at
     index_url
@@ -122,7 +123,8 @@ def install(pkgs=None,
     upgrade
         Upgrade all packages to the newest available version
     force_reinstall
-        When upgrading, reinstall all packages even if they are already up-to-date.
+        When upgrading, reinstall all packages even if they are already
+        up-to-date.
     ignore_installed
         Ignore the installed packages (reinstalling instead)
     no_deps
@@ -156,7 +158,7 @@ def install(pkgs=None,
 
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
-    Comlicated CLI example::
+    Complicated CLI example::
 
         salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
@@ -173,7 +175,11 @@ def install(pkgs=None,
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
 
     if pkgs:
-        pkg = pkgs.replace(",", " ")
+        pkg = pkgs.replace(',', ' ')
+        # It's possible we replaced version-range commas with semicolons so
+        # they would survive the previous line (in the pip.installed state).
+        # Put the commas back in
+        pkg = pkg.replace(';', ',')
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
@@ -235,25 +241,31 @@ def install(pkgs=None,
             cmd=cmd, timeout=timeout)
 
     if editable:
-        if editable.find('egg') == -1:
-            raise Exception('You must specify an egg for this editable')
+        # Is the editable local?
+        if not editable.startswith(('file://', '/')):
+            import re
+            match = re.search(r'(?:#|#.*?&)egg=([^&]*)', editable)
+
+            if not match or not match.group(1):
+                # Missing #egg=theEggName
+                raise Exception('You must specify an egg for this editable')
         cmd = '{0} install --editable={editable}'.format(
             _get_pip_bin(bin_env), editable=editable)
 
     if find_links:
-        if not find_links.startswith("http://"):
+        if not find_links.startswith('http://'):
             raise Exception('\'{0}\' must be a valid url'.format(find_links))
         cmd = '{cmd} --find-links={find_links}'.format(
             cmd=cmd, find_links=find_links)
 
     if index_url:
-        if not index_url.startswith("http://"):
+        if not index_url.startswith('http://'):
             raise Exception('\'{0}\' must be a valid url'.format(index_url))
         cmd = '{cmd} --index-url="{index_url}" '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
-        if not extra_index_url.startswith("http://"):
+        if not extra_index_url.startswith('http://'):
             raise Exception(
                 '\'{0}\' must be a valid url'.format(extra_index_url)
             )
@@ -264,7 +276,7 @@ def install(pkgs=None,
         cmd = '{cmd} --no-index '.format(cmd=cmd)
 
     if mirrors:
-        if not mirrors.startswith("http://"):
+        if not mirrors.startswith('http://'):
             raise Exception('\'{0}\' must be a valid url'.format(mirrors))
         cmd = '{cmd} --use-mirrors --mirrors={mirrors} '.format(
             cmd=cmd, mirrors=mirrors)
@@ -385,7 +397,7 @@ def uninstall(pkgs=None,
     cmd = '{0} uninstall -y '.format(_get_pip_bin(bin_env))
 
     if pkgs:
-        pkg = pkgs.replace(",", " ")
+        pkg = pkgs.replace(',', ' ')
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
@@ -501,9 +513,9 @@ def list(prefix='',
             line, name = line.split('#egg=')
             packages[name] = line
 
-        elif len(line.split("==")) >= 2:
-            name = line.split("==")[0]
-            version = line.split("==")[1]
+        elif len(line.split('==')) >= 2:
+            name = line.split('==')[0]
+            version = line.split('==')[1]
             if prefix:
                 if line.lower().startswith(prefix.lower()):
                     packages[name] = version

@@ -2,11 +2,12 @@
 Interaction with Git repositories.
 ==================================
 
-NOTE: This modules is under heavy development and the API is subject to change.
+NOTE: This module is under heavy development and the API is subject to change.
 It may be replaced with a generic VCS module if this proves viable.
 
-Important, before using git over ssh, make sure your remote host fingerprint
-exists in "~/.ssh/known_hosts" file.
+Important: Before using git over ssh, make sure your remote host fingerprint
+exists in "~/.ssh/known_hosts" file. To avoid requiring password authentication,
+it is also possible to pass private keys to use explicitly.
 
 .. code-block:: yaml
 
@@ -38,6 +39,7 @@ def latest(name,
            submodules=False,
            mirror=False,
            bare=False,
+           identity=None,
         ):
     '''
     Make sure the repository is cloned to the given directory and is up to date
@@ -61,6 +63,8 @@ def latest(name,
     bare
         True if the repository is to be a bare clone of the remote repository.
         This is incompatible with rev, as nothing will be checked out.
+    identity
+        A path to a private key to use over SSH
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -92,13 +96,13 @@ def latest(name,
 
                 # check if rev is already present in repo and git-fetch otherwise
                 if bare:
-                    __salt__['git.fetch'](target, user=runas)
+                    __salt__['git.fetch'](target, user=runas, identity=identity)
                 elif rev:
 
                     cmd = "git rev-parse "+rev
                     retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
                     if 0 != retcode:
-                        __salt__['git.fetch'](target, user=runas)
+                        __salt__['git.fetch'](target, user=runas, identity=identity)
 
                     __salt__['git.checkout'](target, rev, user=runas)
 
@@ -107,7 +111,7 @@ def latest(name,
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
                 if 0 == retcode:
                     __salt__['git.fetch' if bare else 'git.pull'](
-                        target, user=runas)
+                        target, user=runas, identity=identity)
 
                 if submodules:
                     __salt__['git.submodule'](target, user=runas,
@@ -153,7 +157,7 @@ def latest(name,
         try:
             # make the clone
             opts = '--mirror' if mirror else '--bare' if bare else ''
-            __salt__['git.clone'](target, name, user=runas, opts=opts)
+            __salt__['git.clone'](target, name, user=runas, opts=opts, identity=identity)
 
             if rev and not bare:
                 __salt__['git.checkout'](target, rev, user=runas)

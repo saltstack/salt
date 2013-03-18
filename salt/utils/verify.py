@@ -80,7 +80,7 @@ def zmq_version():
         if is_console_configured():
             log.critical(msg)
         else:
-            sys.stderr.write("CRITICAL {0}\n".format(msg))
+            sys.stderr.write('CRITICAL {0}\n'.format(msg))
     return False
 
 
@@ -98,13 +98,16 @@ def verify_socket(interface, pub_port, ret_port):
         retsock.bind((interface, int(ret_port)))
         retsock.close()
         result = True
-    except Exception:
-        msg = ("Unable to bind socket, this might not be a problem."
-               " Is there another salt-master running?")
+    except Exception as exc:
+        if exc.args:
+            msg = ('Unable to bind socket, error: {0}'.format(str(exc)))
+        else:
+            msg = ('Unable to bind socket, this might not be a problem.'
+                   ' Is there another salt-master running?')
         if is_console_configured():
             log.warn(msg)
         else:
-            sys.stderr.write("WARNING: {0}\n".format(msg))
+            sys.stderr.write('WARNING: {0}\n'.format(msg))
         result = False
     finally:
         pubsock.close()

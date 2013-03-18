@@ -4,6 +4,8 @@ Return config information
 
 # Import python libs
 import re
+import os
+import urllib
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
@@ -39,6 +41,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
             'virt.images': '/srv/salt-images',
+            'virt.tunnel': False,
             }
 
 
@@ -70,6 +73,27 @@ def manage_mode(mode):
         else:
             return mode
     return mode
+
+
+def is_true(value=None):
+    '''
+    Returns a boolean value representing the "truth" of the value passed. The
+    rules for what is a ``True`` value are:
+
+        1. Numeric values greater than :strong:`0`
+        2. The string values :strong:`True` and :strong:`true`
+        3. Any object for which ``bool(obj)`` returns ``True``
+
+    CLI Example::
+
+        salt '*' config.is_true true
+    '''
+    if isinstance(value, (int, float)):
+        return value > 0
+    elif isinstance(value, basestring):
+        return str(value).lower() == 'true'
+    else:
+        return bool(value)
 
 
 def valid_fileproto(uri):
@@ -131,3 +155,20 @@ def dot_vals(value):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret
+
+
+def gather_bootstrap_script(replace=False):
+    '''
+    Download the salt-bootstrap script, set replace to True to refresh the
+    script if it has already been downloaded
+
+    CLI Example::
+
+        salt '*' qemu.gather_bootstrap_script True
+    '''
+    fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
+    if not replace and os.path.isfile(fn_):
+        return fn_
+    with open(fn_, 'w+') as fp_:
+        fp_.write(urllib.urlopen('http://bootstrap.saltstack.org').read())
+    return fn_

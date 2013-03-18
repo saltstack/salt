@@ -35,6 +35,7 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
+        self.opts['caller'] = True
         self.serial = salt.payload.Serial(self.opts)
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a

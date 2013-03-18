@@ -55,23 +55,42 @@ def __get_version(version, version_info):
         if not match:
             return version, version_info
 
-        parsed_version = '{0}.{1}.{2}-{3}-{4}'.format(
+        parsed_version = '{0}.{1}.{2}'.format(
             match.group('major'),
             match.group('minor'),
-            match.group('bugfix'),
-            match.group('noc'),
-            match.group('sha')
+            match.group('bugfix')
         )
+
+        if match.group('noc') is not None and match.group('sha') is not None:
+            # This is not the exact point where a tag was created.
+            # We have the extra information. Let's add it.
+            parsed_version = '{0}-{1}-{2}'.format(
+                parsed_version,
+                match.group('noc'),
+                match.group('sha')
+            )
+
         parsed_version_info = tuple([
             int(g) for g in match.groups()[:3] if g.isdigit()
         ])
-        if parsed_version_info != version_info:
+
+        if parsed_version_info > version_info:
             warnings.warn(
-                'In order to get the proper salt version with the '
-                'git hash you need to update salt\'s local git '
-                'tags. Something like: \'git fetch --tags\' or '
-                '\'git fetch --tags upstream\' if you followed '
-                'salt\'s contribute documentation. The version '
+                'The parsed version info, `{0}`, is bigger than the one '
+                'defined in the file, `{1}`. Missing version bump?'.format(
+                    parsed_version_info,
+                    version_info
+                ),
+                UserWarning,
+                stacklevel=2
+            )
+            return version, version_info
+        elif parsed_version_info < version_info:
+            warnings.warn(
+                'In order to get the proper salt version with the git hash '
+                'you need to update salt\'s local git tags. Something like: '
+                '\'git fetch --tags\' or \'git fetch --tags upstream\' if '
+                'you followed salt\'s contribute documentation. The version '
                 'string WILL NOT include the git hash.',
                 UserWarning,
                 stacklevel=2

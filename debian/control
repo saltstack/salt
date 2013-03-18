@@ -20,16 +20,15 @@ Homepage: http://saltstack.org
 
 Package: salt-common
 Architecture: all
-Depends: ${python:Depends},
-         ${misc:Depends},
-         ${shlibs:Depends},
-         python,
+Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends},
+         python, python-support, python-pkg-resources,
          python-crypto,
          python-jinja2,
          python-m2crypto,
          python-yaml,
          python-zmq,
          msgpack-python
+Recommends: dmidecode, pciutils
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -50,10 +49,8 @@ Description: Shared libraries that salt requires for all packages
 
 Package: salt-master
 Architecture: all
-Depends: ${misc:Depends},
-         python,
-         python-pkg-resources,
-         salt-common (= ${source:Version})
+Depends: ${misc:Depends}, python, python-support, python-pkg-resources
+Pre-Depends: salt-common (= ${source:Version})
 Description: This package provides a remote manager to administer servers via salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -74,11 +71,9 @@ Description: This package provides a remote manager to administer servers via sa
 
 Package: salt-minion
 Architecture: all
-Depends: ${misc:Depends},
-         python,
-         python-pkg-resources,
-         salt-common (= ${source:Version})
-Recommends: dmidecode, pciutils
+Depends: ${misc:Depends}, python, python-support, python-pkg-resources,
+Pre-Depends: salt-common (= ${source:Version})
+Recommends: debconf-utils
 Description: This package represents the client package for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -99,9 +94,7 @@ Description: This package represents the client package for salt
 
 Package: salt-syndic
 Architecture: all
-Depends: ${misc:Depends},
-         python,
-         python-pkg-resources,
+Depends: ${misc:Depends}, python, python-support, python-pkg-resources,
          salt-master (= ${source:Version})
 Description: This package represents the master-of-masters for salt
  This package is a powerful remote execution manager that can be used

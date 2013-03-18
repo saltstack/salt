@@ -1,5 +1,5 @@
 '''
-Sceduling routines are located here. To activate the scheduler make the schedule
+Scheduling routines are located here. To activate the scheduler make the schedule
 option available to the master or minion configurations (master config file or
 for the minion via config or pillar)
 
@@ -24,7 +24,12 @@ import datetime
 import multiprocessing
 import threading
 import sys
+import logging
 
+# Import Salt libs
+import salt.utils
+
+log = logging.getLogger(__name__)
 
 class Schedule(object):
     '''
@@ -60,6 +65,7 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+        salt.utils.daemonize_if(self.opts, **ret)
         if 'args' in data:
             if 'kwargs' in data:
                 ret['return'] = self.functions[func](
@@ -88,6 +94,12 @@ class Schedule(object):
             for returner in rets:
                 if returner in self.returners:
                     self.returners[returner](ret)
+                else:
+                    log.info(
+                        'Job {1} using invalid returner: {0} Ignoring.'.format(
+                        func, retuner
+                        )
+                    )
 
     def eval(self):
         '''
@@ -106,6 +118,11 @@ class Schedule(object):
             else:
                 func = None
             if func not in self.functions:
+                log.info(
+                    'Invalid function: {0} in job {1}. Ignoring.'.format(
+                        job, func
+                    )
+                )
                 continue
             # Add up how many seconds between now and then
             seconds = 0
@@ -122,15 +139,21 @@ class Schedule(object):
             now = int(time.time())
             run = False
             if job in self.intervals:
-                if now - self.intervals[job] > seconds:
+                if now - self.intervals[job] >= seconds:
                     run = True
             else:
                 run = True
             if not run:
                 continue
+            else:
+                log.debug('Running scheduled job: {0}'.format(job))
+
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
             else:
                 thread_cls = threading.Thread
-            thread_cls(target=self.handle_func, args=(func, data)).start()
+            proc = thread_cls(target=self.handle_func, args=(func, data))
+            proc.start()
+            if self.opts.get('multiprocessing', True):
+                proc.join()
             self.intervals[job] = int(time.time())

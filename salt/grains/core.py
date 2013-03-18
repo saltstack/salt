@@ -125,12 +125,12 @@ def _linux_cpudata():
 
 
 def _linux_gpu_data():
-    """
+    '''
     num_gpus: int
     gpus:
       - vendor: nvidia|amd|ati|...
         model: string
-    """
+    '''
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']
 
@@ -510,6 +510,7 @@ _OS_NAME_MAP = {
     'amazonami': 'Amazon',
     'alt': 'ALT',
     'oracleserv': 'OEL',
+    'cloudserve': 'CloudLinux',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -542,6 +543,7 @@ _OS_FAMILY_MAP = {
     'SmartOS': 'Solaris',
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
+    'Trisquel': 'Debian'
 }
 
 
@@ -666,6 +668,7 @@ def os_data():
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD'):
         grains.update(_bsd_cpudata(grains))
+        grains['osrelease'] = grains['kernelrelease'].split('-')[0]
     if not grains['os']:
         grains['os'] = 'Unknown {0}'.format(grains['kernel'])
         grains['os_family'] = 'Unknown'
@@ -719,6 +722,16 @@ def hostname():
     grains['fqdn'] = socket.getfqdn()
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
+
+
+def append_domain():
+    '''
+    Return append_domain if set
+    '''
+    grain = {}
+    if 'append_domain' in __opts__:
+        grain['append_domain'] = __opts__['append_domain']
+    return grain
 
 
 def path():

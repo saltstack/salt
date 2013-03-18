@@ -150,7 +150,7 @@ def present(
                 kwargs.get('__env__', 'base'))
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
+        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:

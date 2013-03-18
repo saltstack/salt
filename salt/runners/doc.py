@@ -1,23 +1,39 @@
 '''
-A Salt runner module to mirror and aggregate the Salt execution module of the
-same name
+A runner module to collect and display the inline documentation from the
+various module types
 '''
 # Import Python libs
 import itertools
 
 # Import salt libs
 import salt.client
+import salt.runner
 import salt.output
+import salt.wheel
 
 
 def __virtual__():
-    '''
-    Rename to sys
-    '''
-    return 'sys'
+    return 'doc'
 
+def runner():
+    '''
+    Return all inline documetation for runner modules
+    '''
+    client = salt.runner.RunnerClient(__opts__)
+    ret = client.get_docs()
+    salt.output.display_output(ret, '', __opts__)
+    return ret
 
-def doc():
+def wheel():
+    '''
+    Return all inline documentation for wheel modules
+    '''
+    client = salt.wheel.Wheel(__opts__)
+    ret = client.get_docs()
+    salt.output.display_output(ret, '', __opts__)
+    return ret
+
+def execution():
     '''
     Collect all the sys.doc output from each minion and return the aggregate
     '''

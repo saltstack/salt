@@ -30,6 +30,17 @@ Match all minions with 64-bit CPUs and return number of available cores::
 
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
+Listing Grains
+==============
+
+Available grains can be listed by using the 'grains.ls' module::
+
+    salt '*' grains.ls
+
+Grains data can be listed by using the 'grains.items' module::
+
+    salt '*' grains.items
+
 Grains in the Minion Config
 ===========================
 

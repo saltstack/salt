@@ -55,10 +55,10 @@ def _build_gecos(gecos_dict):
     Accepts a dictionary entry containing GECOS field names and their values,
     and returns a full GECOS comment string, to be used with usermod.
     '''
-    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname',''),
-                                    gecos_dict.get('roomnumber',''),
-                                    gecos_dict.get('workphone',''),
-                                    gecos_dict.get('homephone',''))
+    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
+                                    gecos_dict.get('roomnumber', ''),
+                                    gecos_dict.get('workphone', ''),
+                                    gecos_dict.get('homephone', ''))
 
 
 def add(name,
@@ -80,8 +80,6 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if isinstance(groups, string_types):
-        groups = groups.split(',')
     cmd = 'useradd '
     if shell:
         cmd += '-s {0} '.format(shell)
@@ -89,16 +87,31 @@ def add(name,
         cmd += '-u {0} '.format(uid)
     if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
-    if groups:
-        cmd += '-G "{0}" '.format(','.join(groups))
+    elif groups is not None and name in groups:
+        def usergroups():
+            retval = False
+            try:
+                for line in open("/etc/login.defs"):
+                    if "USERGROUPS_ENAB" in line[:15]:
+                        if "yes" in line:
+                            retval = True
+            except Exception:
+                import traceback
+                log.debug("Error reading /etc/login.defs")
+                log.debug(traceback.format_exc())
+            return retval
+        if usergroups():
+            cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
     if home:
-        if home is not True:
-            if system:
-                cmd += '-d {0} '.format(home)
-            else:
+        if system:
+            if home is not True:
                 cmd += '-m -d {0} '.format(home)
+            else:
+                cmd += '-d {0} '.format(home)
         else:
-            if not system:
+            if home is not True:
+                cmd += '-m -d {0} '.format(home)
+            else:
                 cmd += '-m '
     if not unique:
         cmd += '-o '
@@ -117,6 +130,8 @@ def add(name,
         # to return False when the user was successfully created since A) the
         # user does exist, and B) running useradd again would result in a
         # nonzero exit status and be interpreted as a False result.
+        if groups:
+            chgroups(name, groups)
         if fullname:
             chfullname(name, fullname)
         if roomnumber:
@@ -148,7 +163,7 @@ def delete(name, remove=False, force=False):
     return not ret['retcode']
 
 
-def getent():
+def getent(user=None):
     '''
     Return the list of all info for all users
 
@@ -157,13 +172,16 @@ def getent():
         salt '*' user.getent
     '''
     if 'useradd_getent' in __context__:
-      return __context__['useradd_getent']
+        return __context__['useradd_getent']
 
     ret = []
     for data in pwd.getpwall():
         ret.append(_format_info(data))
-    __context__['useradd_getent'] = ret
-
+    if user:
+        try:
+            ret = [x for x in ret if x.get('name', '') == user][0]
+        except IndexError:
+            ret = {}
     return ret
 
 
@@ -278,7 +296,8 @@ def chfullname(name, fullname):
     '''
     fullname = str(fullname)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if fullname == pre_info['fullname']:
         return True
     gecos_field = copy.deepcopy(pre_info)
@@ -301,7 +320,8 @@ def chroomnumber(name, roomnumber):
     '''
     roomnumber = str(roomnumber)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if roomnumber == pre_info['roomnumber']:
         return True
     gecos_field = copy.deepcopy(pre_info)
@@ -324,7 +344,8 @@ def chworkphone(name, workphone):
     '''
     workphone = str(workphone)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if workphone == pre_info['workphone']:
         return True
     gecos_field = copy.deepcopy(pre_info)
@@ -347,7 +368,8 @@ def chhomephone(name, homephone):
     '''
     homephone = str(homephone)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if homephone == pre_info['homephone']:
         return True
     gecos_field = copy.deepcopy(pre_info)
@@ -386,6 +408,7 @@ def info(name):
         return ret
     else:
         return _format_info(data)
+
 
 def _format_info(data):
     '''
@@ -441,6 +464,7 @@ def list_groups(name):
             ugrp.add(group.gr_name)
 
     return sorted(list(ugrp))
+
 
 def list_users():
     '''

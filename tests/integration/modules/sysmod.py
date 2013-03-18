@@ -1,3 +1,4 @@
+import re
 import integration
 
 
@@ -26,20 +27,26 @@ class SysModuleTest(integration.ModuleCase):
         Make sure no functions are exposed that don't have valid docstrings
         '''
         docs = self.run_function('sys.doc')
-        bad = set()
+        nodoc = set()
+        noexample = set()
         for fun in docs:
             if fun.startswith('runtests_helpers'):
                 continue
             if not isinstance(docs[fun], basestring):
-                bad.add(fun)
-            elif not 'Example::' in docs[fun]:
-                if not 'Examples::' in docs[fun]:
-                    bad.add(fun)
-        if bad:
-            import pprint
-            pprint.pprint(sorted(bad))
-        self.assertFalse(bool(bad))
+                nodoc.add(fun)
+            elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::', docs[fun]):
+                noexample.add(fun)
 
+        if not nodoc and not noexample:
+            return
+
+        raise AssertionError(
+            'There are some functions which do not have a doctring or do not have '
+            'an example:\nNo doctring:\n{0}\nNo example:\n{1}\n'.format(
+                '\n'.join(['  - {0}'.format(f) for f in sorted(nodoc)]),
+                '\n'.join(['  - {0}'.format(f) for f in sorted(noexample)]),
+            )
+        )
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -1,5 +1,8 @@
 import os
 import integration
+import tempfile
+
+from mock import Mock, patch
 
 
 class CMDModuleTest(integration.ModuleCase):
@@ -16,6 +19,39 @@ class CMDModuleTest(integration.ModuleCase):
                 self.run_function('cmd.run',
                     ['echo $SHELL', 'shell={0}'.format(shell)]).rstrip(),
                 shell)
+
+    @patch('pwd.getpwnam')
+    @patch('subprocess.Popen')
+    @patch('json.loads')
+    def test_os_environment_remains_intact(self, *mocks):
+        '''
+        make sure the OS environment is not tainted after running a command that specifies runas.
+        '''
+        environment = os.environ.copy()
+	loads_mock, popen_mock, getpwnam_mock = mocks
+
+        popen_mock.return_value = Mock(
+            communicate=lambda *args, **kwags: ['hi', None],
+            pid=lambda: 1,
+            retcode=0
+        )
+
+        loads_mock.return_value = {'data': {'USER': 'foo'}}
+
+        from salt.modules import cmdmod
+
+	cmdmod.__grains__ = {'os': 'darwin'}
+	try:
+            ret = cmdmod._run('ls', cwd=tempfile.gettempdir(), runas='foobar', shell='/bin/bash')
+    
+            environment2 = os.environ.copy()
+    
+            self.assertEquals(environment, environment2)
+    
+            getpwnam_mock.assert_called_with('foobar')
+            loads_mock.assert_called_with('hi')
+        finally:
+            delattr(cmdmod, '__grains__')
 
     def test_stdout(self):
         '''

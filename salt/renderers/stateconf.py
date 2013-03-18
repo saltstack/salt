@@ -1,16 +1,16 @@
 '''
+A flexible renderer that takes a templating engine and a data format
+
 :maintainer: Jack Kuan <kjkuan@gmail.com>
 :maturity: new
 :platform: all
 '''
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
+# 
+# FIXME: I really need to review and simplify this renderer, it's getting out of hand!
 #
 # TODO:
-#
-#   - support exclude declarations
-#   - support include declarations with env
-#
 #   - sls meta/info state: Eg,
 #
 #       sls_info:
@@ -103,7 +103,7 @@ def render(input, env='', sls='', argline='', **kws):
     implicit_require = False
 
     def process_sls_data(data, context=None, extract=False):
-        sls_dir = ospath.dirname(sls.replace('.', ospath.sep))
+        sls_dir = ospath.dirname(sls.replace('.', ospath.sep)) if '.' in sls else sls
         ctx = dict(sls_dir=sls_dir if sls_dir else '.')
 
         if context:
@@ -144,8 +144,8 @@ def render(input, env='', sls='', argline='', **kws):
 
             rename_state_ids(data, sls)
 
-            if extract:
-                extract_state_confs(data)
+            # We must extract no matter what so extending a stateconf sls file works!
+            extract_state_confs(data)
 
         except Exception, err:
             raise
@@ -375,7 +375,9 @@ def rename_state_ids(data, sls, is_extend=False):
                     'already exists!'.format(sid, newsid)
                 )
             # add a '- name: sid' to those states without '- name'.
-            for args in data[sid].itervalues():
+            for sname, args in data[sid].iteritems():
+                if state_name(sname) == STATE_NAME:
+                    continue
                 for arg in args:
                     if isinstance(arg, dict) and iter(arg).next() == 'name':
                         break

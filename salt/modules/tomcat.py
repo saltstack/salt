@@ -21,8 +21,9 @@ def __catalina_home():
     locations = ['/usr/share/tomcat*', '/opt/tomcat']
     for location in locations:
         catalina_home = glob.glob(location)
-    if catalina_home:
-        return catalina_home[-1]
+        if catalina_home:
+            return catalina_home[-1]
+    return False
 
 
 def version():
@@ -76,7 +77,7 @@ def signal(signal=None):
                      'start': 'start',
                      'stop': 'stop'}
 
-    if not valid_signals[signal]:
+    if signal not in valid_signals:
         return
 
     cmd = '{0}/bin/catalina.sh {1}'.format(

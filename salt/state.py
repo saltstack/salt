@@ -127,20 +127,19 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                chgfirst = next(iter(chg))
-                if isinstance(chg[chgfirst], dict):
-                    if 'new' in chg[chgfirst]:
+                if all([isinstance(x, dict) for x in chg.values()]):
+                    if all([('old' in x and 'new' in x)
+                            for x in chg.values()]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
-                            old = 'absent'
-                            if chg[pkg]['old']:
-                                old = chg[pkg]['old']
-                            msg += '{0} changed from {1} to {2}\n'.format(
-                                    pkg, old, chg[pkg]['new'])
+                            old = chg[pkg]['old'] or 'absent'
+                            new = chg[pkg]['new'] or 'absent'
+                            msg += '{0} changed from {1} to ' \
+                                   '{2}\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
-            if ret['result']:
+            if ret['result'] is True or ret['result'] is None:
                 log.info(msg)
             else:
                 log.error(msg)
@@ -908,9 +907,12 @@ class State(object):
                         for key, val in arg.items():
                             if key == 'names':
                                 names.update(val)
-                                continue
+                            elif (key == 'name' and
+                                  not isinstance(val, string_types)):
+                                # Invalid name, fall back to ID
+                                chunk[key] = name
                             else:
-                                chunk.update(arg)
+                                chunk[key] = val
                 if names:
                     for low_name in names:
                         live = copy.deepcopy(chunk)
@@ -1061,6 +1063,8 @@ class State(object):
                                     extend[name] = {}
                                 if not _state in extend[name]:
                                     extend[name][_state] = []
+                                extend[name]['__env__'] = body['__env__']
+                                extend[name]['__sls__'] = body['__sls__']
                                 for ind in range(len(extend[name][_state])):
                                     if next(iter(
                                         extend[name][_state][ind])) == rkey:
@@ -1143,6 +1147,8 @@ class State(object):
                                     extend[name] = {}
                                 if not _state in extend[name]:
                                     extend[name][_state] = []
+                                extend[name]['__env__'] = body['__env__']
+                                extend[name]['__sls__'] = body['__sls__']
                                 for ind in range(len(extend[name][_state])):
                                     if next(iter(
                                         extend[name][_state][ind])) == rkey:

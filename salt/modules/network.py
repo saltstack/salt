@@ -162,7 +162,7 @@ def _interfaces_ifconfig(out):
     '''
     ret = dict()
 
-    piface = re.compile('^(\S+):?')
+    piface = re.compile('^([^\s:]+)')
     pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
@@ -436,8 +436,6 @@ def netstat():
     return ret
 
 
-# FIXME: This is broken on: Modern traceroute for Linux, version 2.0.14, May 10 2010 (Ubuntu 10.10)
-# FIXME: traceroute is deprecated, make this fall back to tracepath
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
@@ -449,24 +447,48 @@ def traceroute(host):
     ret = []
     cmd = 'traceroute {0}'.format(salt.utils.socket_util.sanitize_host(host))
     out = __salt__['cmd.run'](cmd)
+    
+    # Parse version of traceroute
+    cmd2 = 'traceroute --version'
+    out2 = __salt__['cmd.run'](cmd2)
+    traceroute_version = re.findall('version (\d+)\.(\d+)\.(\d+)', out2)[0]
 
-    for line in out:
+    for line in out.splitlines():
         if not ' ' in line:
             continue
         if line.startswith('traceroute'):
             continue
-        comps = line.split()
-        result = {
-            'count': comps[0],
-            'hostname': comps[1],
-            'ip': comps[2],
-            'ms1': comps[4],
-            'ms2': comps[6],
-            'ms3': comps[8],
-            'ping1': comps[3],
-            'ping2': comps[5],
-            'ping3': comps[7]}
+
+        if (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
+        or traceroute_version[0] >= 2 and traceroute_version[1] > 0):
+            comps = line.split('  ')
+            if comps[1] == '* * *':
+                result = {
+                    'count': int(comps[0]),
+                    'hostname': '*'}
+            else:
+                result = {
+                    'count': int(comps[0]),
+                    'hostname': comps[1].split()[0],
+                    'ip': comps[1].split()[1].strip('()'),
+                    'ms1': float(comps[2].split()[0]),
+                    'ms2': float(comps[3].split()[0]),
+                    'ms3': float(comps[4].split()[0])}
+        else:
+            comps = line.split()
+            result = {
+                'count': comps[0],
+                'hostname': comps[1],
+                'ip': comps[2],
+                'ms1': comps[4],
+                'ms2': comps[6],
+                'ms3': comps[8],
+                'ping1': comps[3],
+                'ping2': comps[5],
+                'ping3': comps[7]}
+
         ret.append(result)
+
     return ret
 
 
@@ -480,3 +502,20 @@ def dig(host):
     '''
     cmd = 'dig {0}'.format(salt.utils.socket_util.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
+
+def arp():
+    '''
+    Return the arp table from the minion
+
+    CLI Example::
+
+        salt '*' \* network.arp
+    '''
+    ret = {}
+    out = __salt__['cmd.run']('arp -an')
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 4:
+            continue
+        ret[comps[3]] = comps[1].strip('(').strip(')')
+    return ret

@@ -1,8 +1,8 @@
 '''
-The backend for the git based file server system. 
+The backend for the git based file server system.
 
-After enabling this backend, branches and tags in a remote git repository 
-are exposed to salt as different environments. This feature is managed by 
+After enabling this backend, branches and tags in a remote git repository
+are exposed to salt as different environments. This feature is managed by
 the fileserver_backend option in the salt master config.
 
 :depends: git-python Python module

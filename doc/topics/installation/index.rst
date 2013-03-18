@@ -80,6 +80,7 @@ Optional Dependencies
 .. _`msgpack-python`:  http://pypi.python.org/pypi/msgpack-python/0.1.12
 .. _`YAML`: http://pyyaml.org/
 .. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
+.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
 .. _`Cython`: http://cython.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`mako`: http://www.makotemplates.org/

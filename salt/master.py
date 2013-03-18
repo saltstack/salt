@@ -66,8 +66,11 @@ def clean_proc(proc, wait_for_kill=10):
             waited += 1
             time.sleep(0.1)
             if proc.is_alive() and (waited >= wait_for_kill):
-                log.error(('Process did not die with terminate(): {0}'
-                    .format(proc.pid)))
+                log.error(
+                    'Process did not die with terminate(): {0}'.format(
+                        proc.pid
+                    )
+                )
                 os.kill(signal.SIGKILL, proc.pid)
     except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
@@ -117,17 +120,17 @@ class SMaster(object):
             users.append(user.pw_name)
         for user in acl_users:
             log.info(
-                    'Preparing the {0} key for local communication'.format(
-                        user
-                        )
-                    )
+                'Preparing the {0} key for local communication'.format(
+                    user
+                )
+            )
             cumask = os.umask(191)
             if not user in users:
                 log.error('ACL user {0} is not available'.format(user))
                 continue
             keyfile = os.path.join(
-                    self.opts['cachedir'], '.{0}_key'.format(user)
-                    )
+                self.opts['cachedir'], '.{0}_key'.format(user)
+            )
 
             if os.path.exists(keyfile):
                 log.debug('Removing stale keyfile: {0}'.format(keyfile))
@@ -176,20 +179,23 @@ class Master(SMaster):
             if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
                 cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
 
-                for top in os.listdir(jid_root):
-                    t_path = os.path.join(jid_root, top)
-                    for final in os.listdir(t_path):
-                        f_path = os.path.join(t_path, final)
-                        jid_file = os.path.join(f_path, 'jid')
-                        if not os.path.isfile(jid_file):
-                            continue
-                        with salt.utils.fopen(jid_file, 'r') as fn_:
-                            jid = fn_.read()
-                        if len(jid) < 18:
-                            # Invalid jid, scrub the dir
-                            shutil.rmtree(f_path)
-                        elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
-                            shutil.rmtree(f_path)
+                if os.path.exists(jid_root):
+                    for top in os.listdir(jid_root):
+                        t_path = os.path.join(jid_root, top)
+                        for final in os.listdir(t_path):
+                            f_path = os.path.join(t_path, final)
+                            jid_file = os.path.join(f_path, 'jid')
+                            if not os.path.isfile(jid_file):
+                                continue
+                            with salt.utils.fopen(jid_file, 'r') as fn_:
+                                jid = fn_.read()
+                            if len(jid) < 18:
+                                # Invalid jid, scrub the dir
+                                shutil.rmtree(f_path)
+                            elif int(cur) - int(jid[:10]) > \
+                                    self.opts['keep_jobs']:
+                                shutil.rmtree(f_path)
+
             if self.opts.get('search'):
                 if now - last > self.opts['search_index_interval']:
                     search.index()
@@ -201,8 +207,8 @@ class Master(SMaster):
                 fileserver.update()
             except Exception as exc:
                 log.error(
-                    'Exception {0} occured in file server update'.format(exc)
-                    )
+                    'Exception {0} occurred in file server update'.format(exc)
+                )
             try:
                 schedule.eval()
                 # Check if scheduler requires lower loop interval than
@@ -211,8 +217,8 @@ class Master(SMaster):
                     loop_interval = schedule.loop_interval
             except Exception as exc:
                 log.error(
-                    'Exception {0} occured in scheduled job'.format(exc)
-                    )
+                    'Exception {0} occurred in scheduled job'.format(exc)
+                )
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
@@ -269,9 +275,12 @@ class Master(SMaster):
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
         if not fileserver.servers:
-            errors.append(('Failed to load fileserver backends, the configured'
-                           'backends are:\n{0}').format(
-                           ' '.join(self.opts['fileserver_backend'])))
+            errors.append(
+                'Failed to load fileserver backends, the configured backends '
+                'are:\n{0}'.format(
+                    ' '.join(self.opts['fileserver_backend'])
+                )
+            )
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
         if errors:
@@ -310,8 +319,11 @@ class Master(SMaster):
             SIGTERM is encountered.  This is required when running a salt
             master under a process minder like daemontools
             '''
-            log.warn(('Caught signal {0}, stopping the Salt Master'
-                .format(signum)))
+            log.warn(
+                'Caught signal {0}, stopping the Salt Master'.format(
+                    signum
+                )
+            )
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
             clean_proc(reqserv.eventpublisher)
@@ -355,11 +367,6 @@ class Publisher(multiprocessing.Process):
         except AttributeError:
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
-        if hasattr(zmq, 'IPV4ONLY'):
-            pub_sock.setsockopt(
-                zmq.IPV4ONLY,
-                int(not int(self.opts.get('ipv6_enable', False)))
-                )
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -412,10 +419,6 @@ class ReqServer(object):
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
         self.clients = self.context.socket(zmq.ROUTER)
-        if hasattr(zmq, 'IPV4ONLY'):
-            self.clients.setsockopt(
-                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable', False)))
-            )
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
@@ -711,13 +714,17 @@ class AESFuncs(object):
             if 'grains' in load['opts']:
                 grains = load['opts']['grains']
         for fun in self.tops:
+            if not fun in opts.get('master_tops', {}):
+                continue
             try:
                 ret.update(self.tops[fun](opts=opts, grains=grains))
             except Exception as exc:
                 log.error(
-                        ('Top function {0} failed with error {1} for minion '
-                         '{2}').format(fun, exc, load['id'])
-                        )
+                    'Top function {0} failed with error {1} for minion '
+                    '{2}'.format(
+                        fun, exc, load['id']
+                    )
+                )
                 # If anything happens in the top generation, log it and move on
                 pass
         return ret
@@ -746,7 +753,8 @@ class AESFuncs(object):
                 self.opts,
                 load['grains'],
                 load['id'],
-                load['env'])
+                load['env'],
+                load.get('ext'))
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
@@ -835,10 +843,11 @@ class AESFuncs(object):
         # be dropped
         else:
             log.error(
-                    ('An extra return was detected from minion {0}, please'
-                    ' verify the minion, this could be a replay'
-                    ' attack').format(load['id'])
-                    )
+                'An extra return was detected from minion {0}, please verify '
+                'the minion, this could be a replay attack'.format(
+                    load['id']
+                )
+            )
             return False
 
         self.serial.dump(
@@ -885,9 +894,9 @@ class AESFuncs(object):
                 fp_.write('')
         except (IOError, OSError):
             log.error(
-                ('Failed to commit the write tag for the syndic return,'
-                 ' are permissions correct in the cache dir:'
-                 ' {0}?').format(self.opts['cachedir']
+                'Failed to commit the write tag for the syndic return, are '
+                'permissions correct in the cache dir: {0}?'.format(
+                    self.opts['cachedir']
                 )
             )
             return False
@@ -919,9 +928,11 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            msg = 'Minion id {0} is not who it says it is!'.format(
-                    clear_load['id'])
-            log.warn(msg)
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id']
+                )
+            )
             return {}
         perms = set()
         for match in self.opts['peer_run']:
@@ -982,9 +993,11 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            msg = 'Minion id {0} is not who it says it is!'.format(
-                    clear_load['id'])
-            log.warn(msg)
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id']
+                )
+            )
             return {}
         perms = []
         for match in self.opts['peer']:
@@ -1039,10 +1052,12 @@ class AESFuncs(object):
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](clear_load['jid'], clear_load)
             except KeyError:
-                msg = ('The specified returner used for the external job '
-                       'cache "{0}" does not have a save_load function!'
-                       ).format(self.opts['ext_job_cache'])
-                log.critical(msg)
+                log.critical(
+                    'The specified returner used for the external job cache '
+                    '"{0}" does not have a save_load function!'.format(
+                        self.opts['ext_job_cache']
+                    )
+                )
         payload = {'enc': 'aes'}
         expr_form = 'glob'
         timeout = 5
@@ -1118,8 +1133,12 @@ class AESFuncs(object):
         if hasattr(self, func):
             ret = getattr(self, func)(load)
         else:
-            log.error(('Received function {0} which is unavailable on the '
-                       'master, returning False').format(func))
+            log.error(
+                'Received function {0} which is unavailable on the master, '
+                'returning False'.format(
+                    func
+                )
+            )
             return self.crypticle.dumps(False)
         # Don't encrypt the return value for the _return func
         # (we don't care about the return value, so why encrypt it?)
@@ -1232,9 +1251,12 @@ class ClearFuncs(object):
             gid = pwnam[3]
             groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
         except KeyError:
-            err = ('Failed to determine groups for user '
-            '{0}. The user is not available.\n').format(user)
-            log.error(err)
+            log.error(
+                'Failed to determine groups for user {0}. The user is not '
+                'available.\n'.format(
+                    user
+                )
+            )
             return False
 
         fmode = os.stat(filename)
@@ -1297,9 +1319,12 @@ class ClearFuncs(object):
                     if re.match(line, keyid):
                         return True
                 except re.error:
-                    message = ('{0} is not a valid regular expression, '
-                               'ignoring line in {1}')
-                    log.warn(message.format(line, autosign_file))
+                    log.warn(
+                        '{0} is not a valid regular expression, ignoring line '
+                        'in {1}'.format(
+                            line, autosign_file
+                        )
+                    )
                     continue
 
         return False
@@ -1363,6 +1388,18 @@ class ClearFuncs(object):
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
+            if os.path.isdir(pubfn_pend):
+                # The key path is a directory, error out
+                log.info(
+                    'New public key id is a directory {id}'.format(**load)
+                )
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
+                return ret
             # This is a new key, stick it in pre
             log.info(
                 'New public key placed in pending for {id}'.format(**load)
@@ -1471,7 +1508,9 @@ class ClearFuncs(object):
         else:
             if 'token' in load:
                 try:
-                    mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                    mtoken = self.master_key.key.private_decrypt(
+                        load['token'], 4
+                    )
                     ret['token'] = pub.public_encrypt(mtoken, 4)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
@@ -1496,34 +1535,43 @@ class ClearFuncs(object):
         '''
         # All wheel ops pass through eauth
         if not 'eauth' in clear_load:
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+            log.warning(msg)
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+            log.warning(msg)
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
             if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][clear_load['eauth']][name],
                     clear_load['fun'])
             if not good:
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                msg = ('Authentication failure of type "eauth" occurred for '
+                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                log.warning(msg)
                 return ''
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
                     **clear_load)
         except Exception as exc:
             log.error(
-                    ('Exception occurred in the wheel system: {0}'
-                        ).format(exc)
-                    )
+                'Exception occurred in the wheel system: {0}'.format(exc)
+            )
             return ''
 
     def mk_token(self, clear_load):
@@ -1532,26 +1580,25 @@ class ClearFuncs(object):
         contain the eauth key and the needed authentication creds.
         '''
         if not 'eauth' in clear_load:
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            log.warning('Authentication failure of type "eauth" occurred.')
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" ocurred.')
+            log.warning('Authentication failure of type "eauth" occurred.')
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
             log.error(
-                    ('Exception occured while authenticating: {0}'
-                        ).format(exc)
-                    )
+                'Exception occured while authenticating: {0}'.format(exc)
+            )
             return ''
 
     def publish(self, clear_load):
@@ -1576,11 +1623,14 @@ class ClearFuncs(object):
                 break
 
         if good is False:
-            err = ('{user} does not have permissions to run {function}. '
-                     'Please contact your local administrator if you believe '
-                     'this is in error.\n'.format(user=clear_load['user'],
-                                                  function=clear_load['fun']))
-            log.error(err)
+            log.error(
+                '{user} does not have permissions to run {function}. Please '
+                'contact your local administrator if you believe this is in '
+                'error.\n'.format(
+                    user=clear_load['user'],
+                    function=clear_load['fun']
+                )
+            )
             return ''
         # to make sure we dont' step on anyone else's toes
         del(good)
@@ -1592,18 +1642,19 @@ class ClearFuncs(object):
                 token = self.loadauth.get_tok(extra['token'])
             except Exception as exc:
                 log.error(
-                        ('Exception occured when generating auth token: {0}'
-                            ).format(exc)
-                        )
+                    'Exception occured when generating auth token: {0}'.format(
+                        exc
+                    )
+                )
                 return ''
             if not token:
-                log.warning('Authentication failure of type "token" ocurred.')
+                log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not token['eauth'] in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" ocurred.')
+                log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not token['name'] in self.opts['external_auth'][token['eauth']]:
-                log.warning('Authentication failure of type "token" ocurred.')
+                log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][token['eauth']][token['name']],
@@ -1613,26 +1664,33 @@ class ClearFuncs(object):
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
-                    log.warning('Authentication failure of type "token" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "token" occurred.'
+                    )
                     return ''
         elif 'eauth' in extra:
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
-                log.warning('Authentication failure of type "eauth" ocurred.')
+                log.warning(
+                    'Authentication failure of type "eauth" occurred.'
+                )
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
                 if not name in self.opts['external_auth'][extra['eauth']]:
-                    log.warning('Authentication failure of type "eauth" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "eauth" occurred.'
+                    )
                     return ''
                 if not self.loadauth.time_auth(extra):
-                    log.warning('Authentication failure of type "eauth" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "eauth" occurred.'
+                    )
                     return ''
             except Exception as exc:
                 log.error(
-                        ('Exception occured while authenticating: {0}'
-                            ).format(exc)
-                        )
+                    'Exception occured while authenticating: {0}'.format(exc)
+                )
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][extra['eauth']][name],
@@ -1642,7 +1700,9 @@ class ClearFuncs(object):
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
-                    log.warning('Authentication failure of type "eauth" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "eauth" occurred.'
+                    )
                     return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
@@ -1651,28 +1711,40 @@ class ClearFuncs(object):
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
                 elif not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "user" occurred.'
+                    )
                     return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "user" occurred.'
+                    )
                     return ''
             elif clear_load['user'] == 'root':
                 if not clear_load.pop('key') == self.key.get(self.opts.get('user', 'root')):
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "user" occurred.'
+                    )
                     return ''
             elif clear_load['user'] == getpass.getuser():
                 if not clear_load.pop('key') == self.key.get(clear_load['user']):
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "user" occurred.'
+                    )
                     return ''
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
-                        log.warning('Authentication failure of type "user" ocurred.')
+                        log.warning(
+                            'Authentication failure of type "user" occurred.'
+                        )
                         return ''
                     if not clear_load['user'] in self.opts['client_acl']:
-                        log.warning('Authentication failure of type "user" ocurred.')
+                        log.warning(
+                            'Authentication failure of type "user" occurred.'
+                        )
                         return ''
                     good = self.ckminions.auth_check(
                             self.opts['client_acl'][clear_load['user']],
@@ -1682,15 +1754,40 @@ class ClearFuncs(object):
                     if not good:
                         # Accept find_job so the cli will function cleanly
                         if not clear_load['fun'] == 'saltutil.find_job':
-                            log.warning('Authentication failure of type "user" ocurred.')
+                            log.warning(
+                                'Authentication failure of type "user" '
+                                'occurred.'
+                            )
                             return ''
                 else:
-                    log.warning('Authentication failure of type "user" ocurred.')
+                    log.warning(
+                        'Authentication failure of type "user" occurred.'
+                    )
                     return ''
         else:
             if not clear_load.pop('key') == self.key[getpass.getuser()]:
-                log.warning('Authentication failure of type "other" ocurred.')
+                log.warning(
+                    'Authentication failure of type "other" occurred.'
+                )
                 return ''
+        # Retrieve the minions list
+        minions = self.ckminions.check_minions(
+                clear_load['tgt'],
+                clear_load.get('tgt_type', 'glob')
+                )
+        # If we order masters (via a syndic), don't short circuit if no minions
+        # are found
+        if not self.opts.get('order_masters'):
+            # Check for no minions
+            if not minions:
+                return {
+                    'enc': 'clear',
+                    'load': {
+                        'jid': None,
+                        'minions': minions
+                    }
+                }
+        # Retrieve the jid
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
@@ -1715,10 +1812,12 @@ class ClearFuncs(object):
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](clear_load['jid'], clear_load)
             except KeyError:
-                msg = ('The specified returner used for the external job '
-                       'cache "{0}" does not have a save_load function!'
-                       ).format(self.opts['ext_job_cache'])
-                log.critical(msg)
+                log.critical(
+                    'The specified returner used for the external job cache '
+                    '"{0}" does not have a save_load function!'.format(
+                        self.opts['ext_job_cache']
+                    )
+                )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
@@ -1766,10 +1865,6 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
         pub_sock.send(self.serial.dumps(payload))
-        minions = self.ckminions.check_minions(
-                load['tgt'],
-                load.get('tgt_type', 'glob')
-                )
         return {
             'enc': 'clear',
             'load': {

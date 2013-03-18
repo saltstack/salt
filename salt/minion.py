@@ -19,6 +19,7 @@ import signal
 
 # Import third party libs
 import zmq
+import yaml
 
 HAS_RANGE = False
 try:
@@ -38,6 +39,8 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.schedule
+# TODO: should probably use _getargs() from salt.utils?
+from salt.state import _getargs
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
@@ -250,7 +253,7 @@ class Minion(object):
 
     def __prep_mod_opts(self):
         '''
-        Returns a deep copy of the opts with key bits stripped out
+        Returns a copy of the opts with key bits stripped out
         '''
         mod_opts = {}
         for key, val in self.opts.items():
@@ -372,6 +375,7 @@ class Minion(object):
                 target=target, args=(instance, self.opts, data)
             )
         process.start()
+        process.join()
 
     @classmethod
     def _thread_return(class_, minion_instance, opts, data):
@@ -385,6 +389,7 @@ class Minion(object):
             minion_instance = class_(opts)
         if opts['multiprocessing']:
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
+            salt.utils.daemonize_if(opts, **data)
             sdata = {'pid': os.getpid()}
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
@@ -392,7 +397,9 @@ class Minion(object):
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
-                arg = eval(data['arg'][ind])
+                arg = data['arg'][ind]
+                if '\n' not in arg:
+                    arg = yaml.safe_load(arg)
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
                 elif isinstance(arg, (dict, int, list, string_types)):
@@ -424,6 +431,11 @@ class Minion(object):
                 ret['return'] = 'ERROR executing {0}: {1}'.format(
                     function_name, exc
                 )
+            except TypeError as exc:
+                aspec = _getargs(minion_instance.functions[data['fun']])
+                msg = 'Missing arguments executing "{0}": {1}'
+                log.warning(msg.format(function_name, aspec))
+                ret['return'] = msg.format(function_name, aspec)
             except Exception:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
@@ -467,7 +479,9 @@ class Minion(object):
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
-                    arg = eval(data['arg'][ind][index])
+                    arg = data['arg'][ind][index]
+                    if '\n' not in arg:
+                        arg = yaml.safe_load(arg)
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
                     elif isinstance(arg, (dict, int, list, string_types)):
@@ -634,22 +648,35 @@ class Minion(object):
             self.schedule.functions = self.functions
             self.schedule.returners = self.returners
 
-    def handle_sigchld(self, sig, frame):
+    def clean_die(self, signum, frame):
         '''
-        Passively join the finished child procs
+        Python does not handle the SIGTERM cleanly, if it is signaled exit
+        the minion process cleanly
         '''
-        multiprocessing.active_children()
+        exit(0)
 
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        log.info(
-            '{0} is starting as user \'{1}\''.format(
-                self.__class__.__name__,
-                getpass.getuser()
+        try:
+            log.info(
+                '{0} is starting as user \'{1}\''.format(
+                    self.__class__.__name__,
+                    getpass.getuser()
+                )
             )
-        )
+        except Exception, err:
+            # Only windows is allowed to fail here. See #3189. Log as debug in
+            # that case. Else, error.
+            log.log(
+                salt.utils.is_windows() and logging.DEBUG or logging.ERROR,
+                'Failed to get the user who is starting {0}'.format(
+                    self.__class__.__name__
+                ),
+                exc_info=err
+            )
+        signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         self.context = zmq.Context()
 
@@ -727,10 +754,6 @@ class Minion(object):
             self.socket.setsockopt(
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
-        if hasattr(zmq, 'IPV4ONLY'):
-            self.socket.setsockopt(
-                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable', False)))
-            )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)
@@ -743,19 +766,29 @@ class Minion(object):
             'minion_start'
         )
 
-        if self.opts['multiprocessing'] and not salt.utils.is_windows():
-            signal.signal(signal.SIGCHLD, self.handle_sigchld)
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
-
         # On first startup execute a state run if configured to do so
         self._state_run()
 
+        loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
                 self.schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if self.schedule.loop_interval < loop_interval:
+                    loop_interval = self.schedule.loop_interval
+                    log.debug(
+                        'Overriding loop_interval because of scheduled jobs.'
+                    )
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occurred in scheduled job'.format(exc)
+                )
+            try:
                 socks = dict(self.poller.poll(
-                    self.opts['loop_interval'] * 1000)
+                    loop_interval * 1000)
                 )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
@@ -903,23 +936,6 @@ class Matcher(object):
             functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
 
-    def _traverse_dict(self, data, target, delim=':'):
-        '''
-        Traverse a dict using a colon-delimited (or otherwise delimited, using
-        the "delim" param) target string. The target 'foo:bar:baz' will return
-        data['foo']['bar']['baz'] if this value exists, and will otherwise
-        return an empty dict.
-        '''
-        target = target.split(delim)
-        ptr = data
-        try:
-            for index in range(len(target)):
-                ptr = ptr.get(target[index], {})
-        except (SyntaxError, AttributeError):
-            # Encountered a non-dict value in the middle of traversing
-            return {}
-        return ptr
-
     def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
@@ -975,7 +991,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        match = self._traverse_dict(self.opts['grains'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['grains'], comps[0])
         if match == {}:
             log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
@@ -1055,7 +1071,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        match = self._traverse_dict(self.opts['pillar'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0])
         if match == {}:
             log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
@@ -1117,7 +1133,7 @@ class Matcher(object):
             ref['R'] = 'range'
         results = []
         opers = ['and', 'or', 'not', '(', ')']
-        tokens = re.findall(r'[^\s()]+|[()]', tgt)
+        tokens = tgt.split()
         for match in tokens:
             # Try to match tokens from the compound target, first by using
             # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
@@ -1137,18 +1153,24 @@ class Matcher(object):
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
-                if match == 'not':
-                    if results[-1] == 'and':
-                        pass
-                    elif results[-1] == 'or':
-                        pass
-                    else:
-                        results.append('and')
-                results.append(match)
+                if results:
+                    if match == 'not':
+                        if results[-1] == 'and':
+                            pass
+                        elif results[-1] == 'or':
+                            pass
+                        else:
+                            results.append('and')
+                    results.append(match)
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
-        return eval(' '.join(results))
+        try:
+            return eval(' '.join(results))
+        except Exception:
+            log.error('Invalid compound target: {0}'.format(tgt))
+            return False
+        return False
 
     def nodegroup_match(self, tgt, nodegroups):
         '''

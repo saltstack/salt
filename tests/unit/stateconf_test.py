@@ -185,7 +185,7 @@ B:
     - cwd: /
 ''', sls='test', argline='-so yaml . jinja')
         self.assertEqual(len(result), 4)
-        self.assertEqual(result['test::start']['stateconf.set'][1]['require_in'][0]['cmd'], 'A')
+        self.assertEqual(result['test::start']['stateconf.set'][0]['require_in'][0]['cmd'], 'A')
 
 
     def test_goal_state_generation(self):
@@ -200,9 +200,7 @@ B:
 ''', sls='test.goalstate', argline='yaml . jinja')
         self.assertEqual(len(result), len('ABCDE')+1)
 
-        reqs = result['test.goalstate::goal']['stateconf.set'][1]['require']
-        # note: arg 0 is the name arg.
-
+        reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
         self.assertEqual(set([i.itervalues().next() for i in reqs]),
                          set('ABCDE'))
 
@@ -256,10 +254,8 @@ G:
         self.assertEqual(G_req[2]['cmd'], 'F')
 
         goal_args = result['test::goal']['stateconf.set']
-        # Note: arg 0 is the auto-added name arg.
-
-        self.assertEqual(len(goal_args), 2)
+        self.assertEqual(len(goal_args), 1)
         self.assertEqual(
-                [i.itervalues().next() for i in goal_args[1]['require']],
+                [i.itervalues().next() for i in goal_args[0]['require']],
                 list('ABCDEFG'))
 

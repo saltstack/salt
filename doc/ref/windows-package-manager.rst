@@ -41,7 +41,22 @@ The package definition file should look similar to this example for Firefox:
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
         uninstall_flags: ' /S'
 
+Add ``msiexec: True`` if using an msi installer requiring the use of ``msiexec
+/i`` to install and ``msiexec /x`` to uninstall.
+``/srv/salt/win/repo/7zip/init.sls``
 
+.. code-block:: yaml
+
+    7zip:
+      9.20:
+        installer: salt://win/repo/7zip/7z920-x64.msi
+        full_name: 7zip 9.22
+        reboot: False
+        install_flags: ' /q '
+        msiexec: True
+        uninstaller: salt://win/repo/7zip/7z920-x64.msi
+        uninstall_flags: ' /qn'
+ 
 
 Generate Repo Cache File
 ========================

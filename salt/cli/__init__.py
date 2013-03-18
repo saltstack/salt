@@ -37,9 +37,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(
-                self.get_config_file_path('master')
-            )
+            local = salt.client.LocalClient(self.get_config_file_path())
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
@@ -85,6 +83,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 kwargs.update(res)
                 kwargs['eauth'] = self.options.eauth
 
+            if self.config['async']:
+                jid = local.cmd_async(**kwargs)
+                print('Executed command with job ID: {0}'.format(jid))
+                return
             try:
                 # local will be None when there was an error
                 if local:
@@ -108,7 +110,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
             except (SaltInvocationError, EauthAuthenticationError) as exc:
-                ret = exc
+                ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
 

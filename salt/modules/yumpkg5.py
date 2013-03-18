@@ -55,11 +55,6 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    # Force input to be a list so below loop works
-    if not isinstance(old, list):
-        old = [old]
-    if not isinstance(new, list):
-        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -67,7 +62,37 @@ def _list_removed(old, new):
     return pkgs
 
 
-def available_version(*names):
+def _get_repo_options(**kwargs):
+    '''
+    Returns a string of '--enablerepo' and '--disablerepo' options to be used
+    in the yum command, based on the kwargs.
+    '''
+    # Get repo options from the kwargs
+    fromrepo = kwargs.get('fromrepo', '')
+    repo = kwargs.get('repo', '')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+
+    # Support old 'repo' argument
+    if repo and not fromrepo:
+        fromrepo = repo
+
+    repo_arg = ''
+    if fromrepo:
+        log.info('Restricting to repo "{0}"'.format(fromrepo))
+        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
+    else:
+        repo_arg = ''
+        if disablerepo:
+            log.info('Disabling repo "{0}"'.format(disablerepo))
+            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
+        if enablerepo:
+            log.info('Enabling repo "{0}"'.format(enablerepo))
+            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+    return repo_arg
+
+
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -76,9 +101,12 @@ def available_version(*names):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    A specific repo can be requested using the ``fromrepo`` keyword argument.
+
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package name> fromrepo=epel-testing
         salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
@@ -87,8 +115,11 @@ def available_version(*names):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
+
     # Get updates for specified package(s)
-    updates = _parse_yum('list available {0}'.format(' '.join(names)))
+    repo_arg = _get_repo_options(**kwargs)
+    updates = _parse_yum('{0} list available {1}'.format(repo_arg,
+                                                         ' '.join(names)))
     for pkg in updates:
         ret[pkg.name] = pkg.version
     # Return a string if only one package name passed
@@ -108,7 +139,7 @@ def upgrade_available(name):
     return available_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -119,19 +150,10 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    pkgs = list_pkgs()
-    for name in names:
-        ret[name] = pkgs.get(name, '')
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -141,15 +163,28 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-' \
+          '%{ARCH}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
+        try:
+            name, version, rel, arch = line.split('_|-')
+        # Handle unpack errors (should never happen with the queryformat we are
+        # using, but can't hurt to be careful).
+        except ValueError:
+            continue
+        # Support 32-bit packages on x86_64 systems
+        if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
+            name += '.i686'
         pkgver = version
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -161,8 +196,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     out = _parse_yum('check-update')
     return dict([(i.name, i.version) for i in out])
@@ -199,6 +233,9 @@ def install(name=None,
         note that this option can only be used to install packages from a
         software repository. To install a package file manually, use the
         "sources" option.
+
+        32-bit packages can be installed on 64-bit systems by appending
+        ``.i686`` to the end of the package name.
 
         CLI Example::
             salt '*' pkg.install <package name>
@@ -247,7 +284,7 @@ def install(name=None,
         or local path to the package.
 
         CLI Example::
-            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
     Returns a dict containing the new package names and versions::
@@ -255,8 +292,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -264,11 +300,6 @@ def install(name=None,
                                                                   sources)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-
-    # Get repo options from the kwargs
-    disablerepo = kwargs.get('disablerepo', '')
-    enablerepo = kwargs.get('enablerepo', '')
-    repo = kwargs.get('repo', '')
 
     version = kwargs.get('version')
     if version:
@@ -279,32 +310,25 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for muliple '
                         'package targets')
 
-    # Support old "repo" argument
-    if not fromrepo and repo:
-        fromrepo = repo
-
-    if fromrepo:
-        log.info('Restricting install to repo "{0}"'.format(fromrepo))
-        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
-    else:
-        repo_arg = ''
-        if disablerepo:
-            log.info('Disabling repo "{0}"'.format(disablerepo))
-            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
-        if enablerepo:
-            log.info('Enabling repo "{0}"'.format(enablerepo))
-            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
 
     old = list_pkgs()
     downgrade = []
     if pkg_type == 'repository':
         targets = []
-        for param, version in pkg_params.iteritems():
+        for pkgname, version in pkg_params.iteritems():
             if version is None:
-                targets.append(param)
+                targets.append(pkgname)
             else:
-                pkgstr = '"{0}-{1}"'.format(param, version)
-                cver = old.get(param, '')
+                cver = old.get(pkgname, '')
+                if __grains__.get('cpuarch', '') == 'x86_64' \
+                        and pkgname.endswith('.i686'):
+                    # Remove '.i686' from pkgname
+                    pkgname = pkgname[:-5]
+                    arch = '.i686'
+                else:
+                    arch = ''
+                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version, arch)
                 if not cver or __salt__['pkg.compare'](pkg1=version,
                                                        oper='>=',
                                                        pkg2=cver):
@@ -347,8 +371,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
     old = list_pkgs()
     cmd = 'yum -q -y upgrade'
@@ -382,7 +405,7 @@ def remove(pkg, **kwargs):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'yum -q -y remove ' + pkg
+    cmd = 'yum -q -y remove "{0}"'.format(pkg)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)

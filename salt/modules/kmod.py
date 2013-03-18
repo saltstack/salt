@@ -40,11 +40,13 @@ def _rm_mods(pre_mods, post_mods):
         post.add(mod['module'])
     return pre - post
 
+
 def _union_module(a,b):
     '''
     Return union of two list where duplicated items are only once
     '''
     return list(set(a) | set(b))
+
 
 def _get_modules_conf():
     '''
@@ -52,6 +54,7 @@ def _get_modules_conf():
     Default: /etc/modules
     '''
     return '/etc/modules'
+
 
 def _strip_module_name(mod):
     '''
@@ -63,6 +66,7 @@ def _strip_module_name(mod):
     if mod.strip() == '':
         return False
     return mod.split()[0]
+
 
 def _set_persistent_module(mod):
     '''
@@ -81,6 +85,7 @@ def _set_persistent_module(mod):
         __salt__['file.append'](conf, mod)
     return set([mod_name,])
 
+
 def _remove_persistent_module(mod, comment):
     '''
     Remove module from configuration file. If comment is true only comment line
@@ -96,6 +101,7 @@ def _remove_persistent_module(mod, comment):
     else:
         __salt__['file.sed'](conf, "^[\t ]*{}[\t ]?".format(escape_mod), '')
     return set([mod_name,])
+
 
 def available():
     '''
@@ -153,7 +159,7 @@ def lsmod():
     return ret
 
 
-def mod_list(only_persist = False):
+def mod_list(only_persist=False):
     '''
     Return a list of the loaded module names
 
@@ -175,7 +181,7 @@ def mod_list(only_persist = False):
     return sorted(list(mods))
 
 
-def load(mod, persist = False):
+def load(mod, persist=False):    
     '''
     Load the specified kernel module
 
@@ -190,16 +196,19 @@ def load(mod, persist = False):
         salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('modprobe {0}'.format(mod))
-    post_mods = lsmod()
-    mods = _new_mods(pre_mods, post_mods)
-    persist_mods = set()
-    if persist:
-        persist_mods = _set_persistent_module(mod)
-    return sorted(list(mods | persist_mods))
+    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
+    if response['retcode'] == 0:
+        post_mods = lsmod()
+        mods = _new_mods(pre_mods, post_mods)
+        persist_mods = set()
+        if persist:
+            persist_mods = _set_persistent_module(mod)
+        return sorted(list(mods | persist_mods))
+    else:
+        return 'Module {0} not found'.format(mod)
 
 
-def remove(mod, persist = False, comment = True):
+def remove(mod, persist=False, comment=True):
     '''
     Remove the specified kernel module
 

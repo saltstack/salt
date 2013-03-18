@@ -1,5 +1,6 @@
 '''
-Service support for Debian systems - uses update-rc.d and service to modify the system
+Service support for Debian systems - uses update-rc.d and service to modify the
+system
 '''
 
 # Import python libs
@@ -51,12 +52,7 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    prefix = '/etc/rc{0}.d/K'.format(_get_runlevel())
-    ret = set()
-    lines = glob.glob('{0}*'.format(prefix))
-    for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
-    return sorted(ret)
+    return sorted(set(get_all()) - set(get_enabled()))
 
 
 def get_all():
@@ -67,7 +63,14 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(get_enabled() + get_disabled())
+    ret = set()
+    lines = glob.glob('/etc/init.d/*')
+    for line in lines:
+        service = line.split('/etc/init.d/')[1]
+        # Remove README.  If it's an enabled service, it will be added back in.
+        if service != 'README':
+            ret.add(service)
+    return sorted(ret | set(get_enabled()))
 
 
 def start(name):
@@ -94,7 +97,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
     Restart the named service
 
@@ -102,8 +105,6 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 

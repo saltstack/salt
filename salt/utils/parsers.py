@@ -226,6 +226,7 @@ class MergeConfigMixIn(object):
 class ConfigDirMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = -10
+    _config_filename_ = None
 
     def _mixin_setup(self):
         self.add_option(
@@ -249,7 +250,9 @@ class ConfigDirMixIn(object):
         if hasattr(self, 'setup_config'):
             self.config = self.setup_config()
 
-    def get_config_file_path(self, configfile):
+    def get_config_file_path(self, configfile=None):
+        if configfile is None:
+            configfile = self._config_filename_
         return os.path.join(self.options.config_dir, configfile)
 
 
@@ -279,7 +282,9 @@ class LogLevelMixIn(object):
             if self.config['log_level'] is not None:
                 self.options.log_level = self.config['log_level']
             else:
-                self.options.log_level = getattr(self, '_default_logging_level_')
+                self.options.log_level = getattr(
+                    self, '_default_logging_level_'
+                )
 
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
@@ -659,8 +664,11 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     description = "The Salt master, used to control the Salt minions."
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.master_config(self.get_config_file_path())
 
 
 class MinionOptionParser(MasterOptionParser):
@@ -671,8 +679,11 @@ class MinionOptionParser(MasterOptionParser):
         'The Salt minion, receives commands from a remote Salt master.'
     )
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'minion'
+
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path('minion'))
+        return config.minion_config(self.get_config_file_path())
 
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -686,18 +697,21 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         'across many different networks.'
     )
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path('master'))
+        opts = config.master_config(self.get_config_file_path())
         user = opts.get('user', 'root')
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(config.minion_config(self.get_config_file_path('minion')))
-        # Over ride the user from the master config file
+        # Override the user from the master config file
         opts['user'] = user
 
         if 'syndic_master' not in opts:
             self.error(
-                "The syndic_master needs to be configured in the salt master "
-                "config, EXITING!"
+                'The syndic_master needs to be configured in the salt master '
+                'config, EXITING!'
             )
 
         from salt import utils
@@ -724,6 +738,9 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     usage = "%prog [options] '<target>' <function> [arguments]"
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
     def _mixin_setup(self):
         self.add_option(
             '-s', '--static',
@@ -731,6 +748,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             action='store_true',
             help=('Return the data from minions as a group after they '
                   'all return.')
+        )
+        self.add_option(
+            '--async',
+            default=False,
+            dest='async',
+            action='store_true',
+            help=('Run the salt command but don\'t wait for a reply')
         )
         self.add_option(
             '-v', '--verbose',
@@ -789,11 +813,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
         if self.options.doc:
             # Include the target
-            if not self.args or (self.args and self.args[0] != '*'):
+            if not self.args:
                 self.args.insert(0, '*')
-            if len(self.args) < 2 or self.args[1] != 'sys.doc':
+            if len(self.args) < 2:
                 # Include the function
                 self.args.insert(1, 'sys.doc')
+            if self.args[1] != 'sys.doc':
+                self.args.insert(1, 'sys.doc')
+                self.args[2] = self.args[2]
 
         if self.options.list:
             self.config['tgt'] = self.args[0].split(',')
@@ -814,7 +841,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[2:]
 
     def setup_config(self):
-        return config.client_config(self.get_config_file_path('master'))
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -831,6 +858,9 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     usage = "%prog [options] '<target>' SOURCE DEST"
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
         if len(self.args) <= 1:
@@ -845,7 +875,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.config['dest'] = self.args[-1]
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.master_config(self.get_config_file_path())
 
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -857,6 +887,9 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     description = 'Salt key is used to manage Salt authentication keys'
 
     usage = '%prog [options]'
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
 
     def _mixin_setup(self):
 
@@ -1003,7 +1036,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         super(SaltKeyOptionParser, self).process_config_dir()
 
     def setup_config(self):
-        keys_config = config.master_config(self.get_config_file_path('master'))
+        keys_config = config.master_config(self.get_config_file_path())
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked
@@ -1044,6 +1077,9 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     usage = '%prog [options] <function> [arguments]'
 
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'minion'
+
     def _mixin_setup(self):
         self.add_option(
             '-g', '--grains',
@@ -1054,9 +1090,11 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
         self.add_option(
             '-m', '--module-dirs',
-            default='',
-            help=('Specify an additional directories to pull modules from, '
-                  'multiple directories can be delimited by commas')
+            default=[],
+            action='append',
+            help=('Specify an additional directory to pull modules from. '
+                  'Multiple directories can be provided by passing '
+                  '`-m/--module-dirs` multiple times.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -1094,13 +1132,20 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def setup_config(self):
         return config.minion_config(
-            self.get_config_file_path('minion'),
+            self.get_config_file_path(),
             check_dns=not self.options.local
         )
 
     def process_module_dirs(self):
-        if self.options.module_dirs:
-            self.config['module_dirs'] = self.options.module_dirs.split(',')
+        for module_dir in self.options.module_dirs:
+            # Provide some backwards compatibility with previous comma
+            # delimited format
+            if ',' in module_dir:
+                self.config.setdefault('module_dirs', []).extend(
+                    module_dir.split(',')
+                )
+                continue
+            self.config.setdefault('module_dirs', []).append(module_dir)
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -1110,6 +1155,9 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     default_timeout = 1
 
     usage = "%prog [options]"
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
 
     def _mixin_setup(self):
         self.add_option(
@@ -1132,4 +1180,4 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = []
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.master_config(self.get_config_file_path())

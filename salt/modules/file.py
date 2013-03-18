@@ -20,6 +20,7 @@ import hashlib
 import difflib
 import fnmatch
 import errno
+import logging
 try:
     import grp
     import pwd
@@ -32,6 +33,8 @@ import salt.utils.find
 import salt.utils.filebuffer
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt._compat
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -451,7 +454,7 @@ def _sed_esc(string, escape_all=False):
     '''
     special_chars = "^.[$()|*+?{"
     string = string.replace("'", "'\"'\"'").replace("/", "\/")
-    if escape_all:
+    if escape_all is True:
         for char in special_chars:
             string = string.replace(char, "\\" + char)
     return string
@@ -517,6 +520,113 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     return __salt__['cmd.run'](cmd)
 
 
+def psed(path, before, after, limit='', backup='.bak', flags='gMS',
+         escape_all=False, multi=False):
+    '''
+    Make a simple edit to a file (pure Python version)
+
+    Equivalent to::
+
+        sed <backup> <options> "/<limit>/ s/<before>/<after>/<flags> <file>"
+
+    path
+        The full path to the file to be edited
+    before
+        A pattern to find in order to replace with ``after``
+    after
+        Text that will replace ``before``
+    limit : ``''``
+        An initial pattern to search for before searching for ``before``
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension;
+        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
+        overwrite this backup
+    flags : ``gMS``
+        Flags to modify the search. Value values are :
+            ``g``: Replace all occurances of the pattern, not just the first.
+            ``I``: Ignore case.
+            ``L``: Make \w, \W, \b, \B, \s and \S dependent on the locale.
+            ``M``: Treat multple lines as a single line.
+            ``S``: Make `.` match all characters, including newlines.
+            ``U``: Make \w, \W, \b, \B, \d, \D, \s and \S dependent on Unicode.
+            ``X``: Verbose (whitespace is ignored).
+    multi: ``False``
+        If True, treat the entire file as a single line
+
+    Forward slashes and single quotes will be escaped automatically in the
+    ``before`` and ``after`` patterns.
+
+    CLI Example::
+
+        salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
+
+    .. versionadded:: 0.9.5
+    '''
+    # Largely inspired by Fabric's contrib.files.sed()
+    # XXX:dc: Do we really want to always force escaping?
+    #
+    # Mandate that before and after are strings
+    multi = bool(multi)
+
+    before = str(before)
+    after = str(after)
+    before = _sed_esc(before, escape_all)
+    # The pattern to replace with does not need to be escaped!!!
+    #after = _sed_esc(after, escape_all)
+    limit = _sed_esc(limit, escape_all)
+
+    shutil.copy2(path, '{0}{1}'.format(path, backup))
+
+    ofile = salt.utils.fopen(path, 'w')
+    with salt.utils.fopen('{0}{1}'.format(path, backup), 'r') as ifile:
+        if multi is True:
+            for line in ifile.readline():
+                ofile.write(_psed(line, before, after, limit, flags))
+        else:
+            ofile.write(_psed(ifile.read(), before, after, limit, flags))
+
+    ofile.close()
+
+
+def _psed(text, before, after, limit, flags):
+    '''
+    Does the actual work for file.psed, so that single lines can be passed in
+    '''
+    cmd = r"sed '{limit}s/{before}/{after}/{flags}'".format(
+            limit='/{0}/ '.format(limit) if limit else '',
+            before=before,
+            after=after,
+            flags=flags)
+
+    btext = ''
+    atext = text
+    if limit:
+        limit = re.compile(limit)
+        comps = text.split(limit)
+        btext = comps[0]
+        atext = ''.join(comps[1:])
+
+    count = 1
+    if 'g' in flags:
+        count = 0
+        flags = flags.replace('g', '')
+
+    aflags = 0
+    flag_table = {'I': 2,
+                  'L': 4,
+                  'M': 8,
+                  'S': 16,
+                  'U': 32,
+                  'X': 64}
+    for flag in flags:
+        aflags += flag_table[flag]
+
+    before = re.compile(before, flags=aflags)
+    text = re.sub(before, after, atext, count=count)
+
+    return text
+
+
 def uncomment(path, regex, char='#', backup='.bak'):
     '''
     Uncomment specified commented lines in a file
@@ -529,8 +639,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         character will be stripped for convenience (for easily switching
         between comment() and uncomment()).
     char : ``#``
-        The character to remove in order to uncomment a line; if a single
-        whitespace character follows the comment it will also be removed
+        The character to remove in order to uncomment a line
     backup : ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
@@ -545,7 +654,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
     # Largely inspired by Fabric's contrib.files.uncomment()
 
     return __salt__['file.sed'](path,
-        before=r'^([[:space:]]*){0}[[:space:]]?'.format(char),
+        before=r'^([[:space:]]*){0}'.format(char),
         after=r'\1',
         limit=regex.lstrip('^'),
         backup=backup)
@@ -810,7 +919,7 @@ def remove(path):
     Remove the named file
 
     CLI Example::
-    
+
         salt '*' file.remove /tmp/foo
     '''
     if not os.path.isabs(path):
@@ -973,7 +1082,7 @@ def get_managed(
     if template and source:
         sfn = __salt__['cp.cache_file'](source, env)
         if not os.path.exists(sfn):
-            return sfn, {}, 'File "{0}" could not be found'.format(sfn)
+            return sfn, {}, 'Source file {0} not found'.format(source)
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             context_dict = defaults if defaults else {}
             if context:
@@ -1156,7 +1265,7 @@ def check_managed(
     Check to see what changes need to be made for a file
 
     CLI Example::
-    
+
         salt '*' file.check_managed /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
     '''
     # If the source is a list then find which file exists
@@ -1180,7 +1289,7 @@ def check_managed(
         __clean_tmp(sfn)
         return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, env)
+                              group, mode, env, template)
     __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -1198,7 +1307,8 @@ def check_file_meta(
         user,
         group,
         mode,
-        env):
+        env,
+        template=None):
     '''
     Check for the changes in the file metadata.
 
@@ -1222,9 +1332,12 @@ def check_file_meta(
                             salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
-                changes['diff'] = (
-                        ''.join(difflib.unified_diff(nlines, slines))
-                        )
+                if __salt__['config.option']('obfuscate_templates'):
+                    changes['diff'] = '<Obfuscated Template>'
+                else:
+                    changes['diff'] = (
+                            ''.join(difflib.unified_diff(nlines, slines))
+                            )
             else:
                 changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
@@ -1281,7 +1394,9 @@ def manage_file(name,
         group,
         mode,
         env,
-        backup):
+        backup,
+        template=None,
+        show_diff=True):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -1331,10 +1446,15 @@ def manage_file(name,
                             salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
-                # Print a diff equivalent to diff -u old new
-                    ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(nlines,
-                                                                    slines)))
+                    # Print a diff equivalent to diff -u old new
+                    if __salt__['config.option']('obfuscate_templates'):
+                        ret['changes']['diff'] = '<Obfuscated Template>'
+                    elif not show_diff:
+                        ret['changes']['diff'] = '<show_diff=False>'
+                    else:
+                        ret['changes']['diff'] = (
+                                ''.join(difflib.unified_diff(nlines, slines))
+                                )
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
@@ -1445,7 +1565,7 @@ def makedirs(path, user=None, group=None, mode=None):
 
         salt '*' file.makedirs /opt/code
     '''
-    directory = os.path.dirname(path)
+    directory = os.path.dirname(os.path.normpath(path))
 
     if not os.path.isdir(directory):
         # turn on the executable bits for user, group and others.

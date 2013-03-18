@@ -213,7 +213,7 @@ Add information about the module using the following field lists:
     :depends:       python-mysqldb
     :platform:      all
 
-The maintaner field is a comma-delimited list of developers who help maintain
+The maintainer field is a comma-delimited list of developers who help maintain
 this module.
 
 The maturity field indicates the level of quality and testing for this module.
@@ -222,7 +222,7 @@ Standard labels will be determined.
 The depends field is a comma-delimited list of modules that this module depends
 on.
 
-The platform field is a comma-delimited list of platforms that this modules is
+The platform field is a comma-delimited list of platforms that this module is
 known to run on.
 
 How Functions are Read

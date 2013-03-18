@@ -2,12 +2,16 @@
 Control virtual machines via Salt
 '''
 
+# Import python libs
+import os
+import subprocess
+
 # Import Salt libs
 import salt.client
 import salt.output
 
 
-def _determine_hyper(data):
+def _determine_hyper(data, omit=''):
     '''
     Determine what the most resource free hypervisor is based on the given
     data
@@ -18,6 +22,8 @@ def _determine_hyper(data):
     bestmem = 0
     bestcpu = 0
     for hv_, comps in data.items():
+        if hv_ == omit:
+            continue
         if not isinstance(comps, dict):
             continue
         if comps.get('freemem', 0) > bestmem:
@@ -25,6 +31,21 @@ def _determine_hyper(data):
             hyper = hv_
     return hyper
 
+
+def _find_vm(name, data, quiet=False):
+    '''
+    Scan the query data for the named vm
+    '''
+    for hv_ in data:
+        if name in data[hv_].get('vm_info', {}):
+            ret = {hv_: {name: data[hv_]['vm_info'][name]}}
+            if not quiet:
+                salt.output.display_output(
+                        ret,
+                        'nested',
+                        __opts__)
+            return ret
+    return {}
 
 def query(hyper=None, quiet=False):
     '''
@@ -63,11 +84,30 @@ def next_hyper():
     return hyper
 
 
-def init(name, cpu, mem, image, hyper=None):
+def hyper_info(hyper=None):
+    '''
+    Return information about the hypervisors connected to this master
+    '''
+    data = query(hyper, quiet=True)
+    for id_ in data:
+        if 'vm_info' in data[id_]:
+            data[id_].pop('vm_info')
+    salt.output.display_output(data, 'nested', __opts__)
+    return data
+
+
+def init(name, cpu, mem, image, hyper=None, seed=True):
     '''
     Initialize a new vm
     '''
+    print('Searching for Hypervisors')
     data = query(hyper, quiet=True)
+    # Check if the name is already deployed
+    for hyper in data:
+        if 'vm_info' in data[hyper]:
+            if name in data[hyper]['vm_info']:
+                print('Virtual machine {0} is already deployed'.format(name))
+                return 'fail'
     if hyper:
         if not hyper in data:
             print('Hypervisor {0} was not found'.format(hyper))
@@ -77,10 +117,11 @@ def init(name, cpu, mem, image, hyper=None):
     
     client = salt.client.LocalClient(__opts__['conf_file'])
 
+    print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.init',
-            [name, cpu, mem, image],
+            [name, cpu, mem, image, 'seed={0}'.format(seed)],
             timeout=600)
 
     for info in cmd_ret:
@@ -94,16 +135,7 @@ def vm_info(name, quiet=False):
     Return the information on the named vm
     '''
     data = query(quiet=True)
-    for hv_ in data:
-        if name in data[hv_].get('vm_info', {}):
-            ret = {hv_: {name: data[hv_]['vm_info'][name]}}
-            if not quiet:
-                salt.output.display_output(
-                        ret,
-                        'nested',
-                        __opts__)
-            return ret
-    return {}
+    return _find_vm(name, data, quiet)
 
 
 def reset(name):
@@ -138,10 +170,10 @@ def start(name):
     if not data:
         print('Failed to find vm {0} to start'.format(name))
         return 'fail'
+    hyper = data.keys()[0]
     if data[hyper][name]['state'] == 'running':
         print('VM {0} is already running'.format(name))
         return 'bad state'
-    hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.start',
@@ -163,10 +195,10 @@ def force_off(name):
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
         return 'fail'
+    hyper = data.keys()[0]
     if data[hyper][name]['state'] == 'shutdown':
         print('VM {0} is already shutdown'.format(name))
         return'bad state'
-    hyper = data.keys()[0]
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.destroy',
@@ -174,7 +206,7 @@ def force_off(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Powered off VM {0}'.format())
+    print('Powered off VM {0}'.format(name))
     return 'good'
 
 
@@ -248,3 +280,25 @@ def resume(name):
         ret.update(comp)
     print('Resumed VM {0}'.format(name))
     return 'good'
+
+
+def migrate(name, target=''):
+    '''
+    Migrate a vm from one hypervisor to another. This routine will just start
+    the migration and display information on how to look up the progress
+    '''
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    data = query(quiet=True)
+    origin_data = _find_vm(name, data, quiet=True)
+    origin_hyper = origin_data.keys()[0]
+    disks = origin_data[origin_hyper][name]['disks']
+    if not origin_data:
+        print('Named vm {0} was not found to migrate'.format(name))
+        return ''
+    if not target:
+        target = _determine_hyper(data, origin_hyper)
+    if target not in data:
+        print('Target hypervisor {0} not found'.format(origin_data))
+        return ''
+    client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
+    print client.cmd_async(origin_hyper, 'virt.migrate_non_shared', [name, target])

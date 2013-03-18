@@ -16,7 +16,7 @@ def __virtual__():
     return False
 
 
-def list_pkgs(*args):
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -26,18 +26,23 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    ret = {}
     cmd = 'brew list --versions {0}'.format(' '.join(args))
-
-    result_dict = {}
-
     for line in __salt__['cmd.run'](cmd).splitlines():
-        (pkg, version) = line.split(' ')[0:2]
-        result_dict[pkg] = version
+        try:
+            name, version = line.split(' ')[0:2]
+        except ValueError:
+            continue
+        __salt__['pkg_resource.add_pkg'](ret, name, version)
 
-    return result_dict
+    __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -48,19 +53,10 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3>
     '''
-    pkgs = list_pkgs()
-    if len(names) == 0:
-        return ''
-    elif len(names) == 1:
-        return pkgs.get(names[0], '')
-    else:
-        ret = {}
-        for name in names:
-            ret[name] = pkgs.get(name, '')
-        return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def available_version(*names):
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation
@@ -137,8 +133,8 @@ def install(name=None, pkgs=None, **kwargs):
 
     formulas = ' '.join(pkg_params)
     old = list_pkgs()
-    homebrew_prefix = __salt__['cmd.run']('brew --prefix')
-    user = __salt__['file.get_user'](homebrew_prefix)
+    homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
+    user = __salt__['file.get_user'](homebrew_binary)
     cmd = 'brew install {0}'.format(formulas)
     if user != __opts__['user']:
         __salt__['cmd.run'](cmd, runas=user)

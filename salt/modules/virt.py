@@ -96,6 +96,9 @@ def _get_migrate_command():
     '''
     Returns the command shared by the differnt migration types
     '''
+    if __salt__['config.option']('virt.tunnel'):
+        return ('virsh migrate --p2p --tunnelled --live --persistent '
+                '--undefinesource ')
     return 'virsh migrate --live --persistent --undefinesource '
 
 
@@ -124,7 +127,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
                 <disk type='file' device='disk'>
                         <source file='%%VDA%%'/>
                         <target dev='vda' bus='virtio'/>
-                        <driver name='qemu' type='%%DISKTYPE%%' cache='writeback' io='native'/>
+                        <driver name='qemu' type='%%DISKTYPE%%' cache='none' io='native'/>
                 </disk>
                 %%NICS%%
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes'/>
@@ -163,7 +166,6 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
             nic_t = nic_t.replace('%%MAC%%', salt.utils.gen_mac())
         nic_str += nic_t
     data = data.replace('%%NICS%%', nic_str)
-    print(data)
     return data
 
 
@@ -206,6 +208,8 @@ def init(name, cpu, mem, image, nic='default', **kwargs):
     salt.utils.copyfile(sfn, img_dest)
     xml = _gen_xml(name, cpu, mem, img_dest, nicp, **kwargs)
     define_xml_str(xml)
+    if kwargs.get('seed'):
+        __salt__['img.seed'](img_dest, name, kwargs.get('config'))
     create(name)
 
 

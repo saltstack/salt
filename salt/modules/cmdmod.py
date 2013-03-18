@@ -11,11 +11,13 @@ import os
 import shutil
 import subprocess
 import functools
+import sys
+import json
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
-import salt.grains.extra 
+import salt.grains.extra
 
 # Only available on posix systems, nonfatal on windows
 try:
@@ -181,6 +183,22 @@ def _run(cmd,
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
+        try:
+            # Getting the environment for the runas user
+            # There must be a better way to do this.
+            env_cmd = ('su -s {0} - {1} -c "{2} -c \'import os, json;'
+                       'print(json.dumps(os.environ.__dict__))\'"').format(
+                               shell, runas, sys.executable)
+            env = json.loads(
+                    subprocess.Popen(
+                        env_cmd,
+                        shell=True,
+                        stdout=subprocess.PIPE
+                        ).communicate()[0])['data']
+        except ValueError:
+            msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
+            raise CommandExecutionError(msg)
+
 
     if not quiet:
         # Put the most common case first
@@ -198,8 +216,11 @@ def _run(cmd,
         # Salt only knows how to parse English words
         # Don't override if the user has passed LC_ALL
         env.setdefault('LC_ALL', 'C')
+    else:
+        # On Windows set the codepage to US English.
+        cmd = 'chcp 437 > nul & ' + cmd
 
-    run_env = os.environ
+    run_env = os.environ.copy()
     run_env.update(env)
     kwargs = {'cwd': cwd,
               'shell': True,
@@ -360,7 +381,8 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None):
+def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
+            template=None):
     '''
     Execute a shell command and return the command's return code.
 

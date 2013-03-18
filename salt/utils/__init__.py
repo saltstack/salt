@@ -188,26 +188,11 @@ def daemonize_if(opts, **kwargs):
     '''
     if 'salt-call' in sys.argv[0]:
         return
-    if not opts['multiprocessing']:
+    if not opts.get('multiprocessing', True):
         return
     if sys.platform.startswith('win'):
         return
-    # Daemonizing breaks the proc dir, so the proc needs to be rewritten
-    data = {}
-    for key, val in kwargs.items():
-        if key.startswith('__pub_'):
-            data[key[6:]] = val
-    if not 'jid' in data:
-        return
-
-    serial = salt.payload.Serial(opts)
-    proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
-    fn_ = os.path.join(proc_dir, data['jid'])
     daemonize()
-    sdata = {'pid': os.getpid()}
-    sdata.update(data)
-    with fopen(fn_, 'w+') as ofile:
-        ofile.write(serial.dumps(sdata))
 
 
 def profile_func(filename=None):
@@ -758,6 +743,22 @@ def fopen(*args, **kwargs):
     return fhandle
 
 
+def traverse_dict(data, target, delim=':'):
+    '''
+    Traverse a dict using a colon-delimited (or otherwise delimited, using
+    the "delim" param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise
+    return an empty dict.
+    '''
+    try:
+        for each in target.split(delim):
+            data = data[each]
+    except (KeyError, IndexError, TypeError):
+        # Encountered a non-indexable value in the middle of traversing
+        return {}
+    return data
+
+
 def mkstemp(*args, **kwargs):
     '''
     Helper function which does exactly what `tempfile.mkstemp()` does but
@@ -818,3 +819,23 @@ def check_ipc_path_max_len(uri):
                 uri, ipc_path_max_len
             )
         )
+
+
+def check_state_result(self, running):
+    '''
+    Check the total return value of the run and determine if the running
+    dict has any issues
+    '''
+    if not isinstance(running, dict):
+        return False
+    if not running:
+        return False
+    for host in running:
+        if not isinstance(running[host], dict):
+            return False
+        for tag, ret in running[host].items():
+            if not 'result' in ret:
+                return False
+            if ret['result'] is False:
+                return False
+    return True

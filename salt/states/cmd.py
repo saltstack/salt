@@ -8,7 +8,7 @@ state can tell a command to run under certain circumstances.
 Available Functions
 -------------------
 
-The cmd state only has a single function, the ``run`` function
+The ``run`` function
 
 run
     Execute a command given certain conditions
@@ -21,7 +21,7 @@ run
         cmd:
             - run
 
-Only run if another execution returns successfully, in this case truncate
+Only run if another execution failed, in this case truncate
 syslog if there is no disk space:
 
 .. code-block:: yaml
@@ -114,7 +114,13 @@ it can also watch a git state for changes
 '''
 
 # Import python libs
-import grp
+# Windows platform has no 'grp' module
+HAS_GRP = False
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    pass
 import os
 import copy
 import json
@@ -203,7 +209,7 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
     '''
     ret = {}
 
-    if group:
+    if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:

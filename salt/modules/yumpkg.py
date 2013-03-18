@@ -94,16 +94,10 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    # Force input to be a list so below loop works
-    if not isinstance(old, list):
-        old = [old]
-    if not isinstance(new, list):
-        new = [new]
     pkgs = []
     for pkg in old:
         if pkg not in new:
             pkgs.append(pkg)
-
     return pkgs
 
 
@@ -115,8 +109,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkgs = list_pkgs()
@@ -130,14 +123,46 @@ def list_upgrades(refresh=True):
                 pkglist, [pkg]
             )
             for pkg in exactmatch:
-                if pkg.arch == rpmUtils.arch.getBaseArch() or pkg.arch == 'noarch':
+                if pkg.arch == rpmUtils.arch.getBaseArch() \
+                        or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join(
                         [pkg['version'], pkg['release']]
                     )
     return versions_list
 
 
-def available_version(*names):
+def _set_repo_options(yumbase, **kwargs):
+    '''
+    Accepts a yum.YumBase() object and runs member functions to enable/disable
+    repos as needed.
+    '''
+    # Get repo options from the kwargs
+    fromrepo = kwargs.get('fromrepo', '')
+    repo = kwargs.get('repo', '')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+
+    # Support old 'repo' argument
+    if repo and not fromrepo:
+        fromrepo = repo
+
+    try:
+        if fromrepo:
+            log.info('Restricting to repo \'{0}\''.format(fromrepo))
+            yumbase.repos.disableRepo('*')
+            yumbase.repos.enableRepo(fromrepo)
+        else:
+            if disablerepo:
+                log.info('Disabling repo \'{0}\''.format(disablerepo))
+                yumbase.repos.disableRepo(disablerepo)
+            if enablerepo:
+                log.info('Enabling repo \'{0}\''.format(enablerepo))
+                yumbase.repos.enableRepo(enablerepo)
+    except yum.Errors.RepoError as e:
+        return e
+
+
+def available_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -146,9 +171,12 @@ def available_version(*names):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    A specific repo can be requested using the ``fromrepo`` keyword argument.
+
     CLI Example::
 
         salt '*' pkg.available_version <package name>
+        salt '*' pkg.available_version <package name> fromrepo=epel-testing
         salt '*' pkg.available_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
@@ -157,18 +185,24 @@ def available_version(*names):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
+
     yumbase = yum.YumBase()
+    error = _set_repo_options(yumbase, **kwargs)
+    if error:
+        log.error(e)
+
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exact match only.
-    for pkgtype in ['available', 'updates']:
+    for pkgtype in ('available', 'updates'):
         pkglist = yumbase.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(
             pkglist, names
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-                    and (pkg.arch == rpmUtils.arch.getBaseArch() or pkg.arch == 'noarch'):
+                    and (pkg.arch == rpmUtils.arch.getBaseArch()
+                         or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
     # Return a string if only one package name passed
@@ -188,7 +222,7 @@ def upgrade_available(name):
     return available_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -199,19 +233,10 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    pkgs = list_pkgs()
-    for name in names:
-        ret[name] = pkgs.get(name, '')
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -221,14 +246,21 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
     yb = yum.YumBase()
     for p in yb.rpmdb:
+        name = p.name
+        if __grains__.get('cpuarch', '') == 'x86_64' and p.arch == 'i686':
+            name += '.i686'
         pkgver = p.version
         if p.release:
             pkgver += '-{0}'.format(p.release)
-        __salt__['pkg_resource.add_pkg'](ret, p.name, pkgver)
+        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -276,7 +308,7 @@ def group_install(name=None,
         The names of multiple packages which are to be installed.
 
         CLI Example::
-    
+
             salt '*' pkg.groupinstall groups='["Group 1", "Group 2"]'
 
     skip
@@ -285,7 +317,7 @@ def group_install(name=None,
         be installed.
 
         CLI Examples::
-    
+
             salt '*' pkg.groupinstall 'My Group' skip='["foo", "bar"]'
 
     include
@@ -295,7 +327,7 @@ def group_install(name=None,
         are not members of the specified groups, they will still be installed.
 
         CLI Examples::
-    
+
             salt '*' pkg.groupinstall 'My Group' include='["foo", "bar"]'
 
     other arguments
@@ -350,6 +382,9 @@ def install(name=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
+        32-bit packages can be installed on 64-bit systems by appending
+        ``.i686`` to the end of the package name.
+
         CLI Example::
             salt '*' pkg.install <package name>
 
@@ -397,7 +432,7 @@ def install(name=None,
         or local path to the package.
 
         CLI Example::
-            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
     Returns a dict containing the new package names and versions::
@@ -405,8 +440,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -421,11 +455,6 @@ def install(name=None,
     setattr(yumbase.conf, 'assumeyes', True)
     setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
-    # Get repo options from the kwargs
-    disablerepo = kwargs.get('disablerepo', '')
-    enablerepo = kwargs.get('enablerepo', '')
-    repo = kwargs.get('repo', '')
-
     version = kwargs.get('version')
     if version:
         if pkgs is None and sources is None:
@@ -435,42 +464,36 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for muliple '
                         'package targets')
 
-    # Support old "repo" argument
-    if not fromrepo and repo:
-        fromrepo = repo
-
-    try:
-        if fromrepo:
-            log.info('Restricting install to repo \'{0}\''.format(fromrepo))
-            yumbase.repos.disableRepo('*')
-            yumbase.repos.enableRepo(fromrepo)
-        else:
-            if disablerepo:
-                log.info('Disabling repo \'{0}\''.format(disablerepo))
-                yumbase.repos.disableRepo(disablerepo)
-            if enablerepo:
-                log.info('Enabling repo \'{0}\''.format(enablerepo))
-                yumbase.repos.enableRepo(enablerepo)
-    except yum.Errors.RepoError as e:
+    error = _set_repo_options(yumbase, **kwargs)
+    if error:
         log.error(e)
         return {}
 
     try:
-        for target in pkg_params:
+        for pkgname in pkg_params:
             if pkg_type == 'file':
                 log.info(
-                    'Selecting "{0}" for local installation'.format(target)
+                    'Selecting "{0}" for local installation'.format(pkgname)
                 )
-                installed = yumbase.installLocal(target)
+                installed = yumbase.installLocal(pkgname)
                 # if yum didn't install anything, maybe its a downgrade?
                 log.debug('Added {0} transactions'.format(len(installed)))
-                if len(installed) == 0 and target not in old.keys():
+                if len(installed) == 0 and pkgname not in old.keys():
                     log.info('Upgrade failed, trying local downgrade')
-                    yumbase.downgradeLocal(target)
+                    yumbase.downgradeLocal(pkgname)
             else:
-                version = pkg_params[target]
+                version = pkg_params[pkgname]
                 if version is not None:
-                    target = '{0}-{1}'.format(target, version)
+                    if __grains__.get('cpuarch', '') == 'x86_64' \
+                            and pkgname.endswith('.i686'):
+                        # Remove '.i686' from pkgname
+                        pkgname = pkgname[:-5]
+                        arch = '.i686'
+                    else:
+                        arch = ''
+                    target = '{0}-{1}{2}'.format(pkgname, version, arch)
+                else:
+                    target = pkgname
                 log.info('Selecting "{0}" for installation'.format(target))
                 # Changed to pattern to allow specific package versions
                 installed = yumbase.install(pattern=target)
@@ -511,8 +534,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     yumbase = yum.YumBase()
@@ -553,11 +575,17 @@ def remove(pkgs, **kwargs):
     yumbase = yum.YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
     pkgs = pkgs.split(',')
-    old = version(*pkgs)
+    old = list_pkgs()
 
     # same comments as in upgrade for remove.
     for pkg in pkgs:
-        yumbase.remove(name=pkg)
+        if __grains__.get('cpuarch', '') == 'x86_64' \
+                and pkg.endswith('.i686'):
+            pkg = pkg[:-5]
+            arch = 'i686'
+        else:
+            arch = None
+        yumbase.remove(name=pkg, arch=arch)
 
     log.info('Resolving dependencies')
     yumbase.resolveDeps()
@@ -567,7 +595,7 @@ def remove(pkgs, **kwargs):
     yumlogger.log_accumulated_errors()
     yumbase.closeRpmDB()
 
-    new = version(*pkgs)
+    new = list_pkgs()
 
     return _list_removed(old, new)
 
@@ -701,7 +729,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
     return repos
 
 
-def get_repo(repo, basedir='/etc/yum.repos.d'):
+def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
@@ -725,7 +753,7 @@ def get_repo(repo, basedir='/etc/yum.repos.d'):
     return filerepos[repo]
 
 
-def del_repo(repo, basedir='/etc/yum.repos.d'):
+def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
@@ -805,7 +833,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Build a list of keys to be deleted
     todelete = []
     for key in kwargs.keys():
-        if not kwargs[key]:
+        if kwargs[key] != 0 and not kwargs[key]:
             del kwargs[key]
             todelete.append(key)
 
@@ -949,7 +977,6 @@ def file_list(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_list'](*packages)
-
 
 
 def file_dict(*packages):
