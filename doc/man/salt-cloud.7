@@ -575,6 +575,16 @@ OPENSTACK.apikey: 901d3f579h23c8v73q9
 .ft P
 .fi
 .sp
+If your OpenStack instances only have private IP addresses and a CIDR range of
+private addresses are not reachable from the salt-master, you may set your
+preference to have Salt ignore it:
+.sp
+.nf
+.ft C
+OPENSTACK.ignore_cidr: 192.168.0.0/16
+.ft P
+.fi
+.sp
 You will certainly need to configure the \fBuser\fP, \fBtenant\fP and either
 \fBpassword\fP or \fBapikey\fP.
 .SS IBM SmartCloud Enterprise

@@ -59,6 +59,9 @@ from salt.exceptions import SaltException
 # Import saltcloud libs
 from saltcloud.utils import namespaced_function
 
+# Import netaddr IP matching
+from netaddr import all_matching_cidrs
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -137,6 +140,23 @@ def preferred_ip(vm_, ips):
         except:
             continue
     return False
+
+
+def ignore_ip_addr(vm_, ip):
+    '''
+    Return True if we are to ignore the specified IP. Compatible with IPv4.
+    '''
+
+    # Bomb out on IPv6 and others.
+    proto = vm_.get('protocol', __opts__.get('OPENSTACK.protocol', 'ipv4'))
+    if proto != 'ipv4':
+        return False
+
+    cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
+    if cidr != '' and all_matching_cidrs(ip, [cidr]):
+        return True
+    else:
+        return False
 
 
 def ssh_interface(vm_):
@@ -218,7 +238,8 @@ def create(vm_):
                     not_ready = False
                 else:
                     log.warn('{0} is a private ip'.format(private_ip))
-                    if private_ip not in data.private_ips:
+                    ignore_ip = ignore_ip_addr(vm_, private_ip)
+                    if private_ip not in data.private_ips and not ignore_ip:
                         data.private_ips.append(private_ip)
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
                 break
