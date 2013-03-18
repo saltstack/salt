@@ -2,3 +2,4 @@
 salt
 PyYAML
 apache-libcloud
+netaddr
