@@ -186,9 +186,9 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            env_cmd = ('su - {0} -c "{1} -c \'import os, json;'
+            env_cmd = ('su -s {0} - {1} -c "{2} -c \'import os, json;'
                        'print(json.dumps(os.environ.__dict__))\'"').format(
-                               runas, sys.executable)
+                               shell, runas, sys.executable)
             env = json.loads(
                     subprocess.Popen(
                         env_cmd,
