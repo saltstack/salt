@@ -242,6 +242,7 @@ def wait(name,
         group=None,
         shell=None,
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Run the given command only if the watch statement calls it
@@ -271,6 +272,9 @@ def wait(name,
     shell
         The shell to use for execution, defaults to /bin/sh
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -292,6 +296,7 @@ def wait_script(name,
         shell=None,
         env=None,
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -337,6 +342,9 @@ def wait_script(name,
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -356,6 +364,7 @@ def run(name,
         shell=None,
         env=(),
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met
@@ -389,6 +398,9 @@ def run(name,
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -418,7 +430,8 @@ def run(name,
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
                   'shell': shell or __grains__['shell'],
-                  'env': env}
+                  'env': env,
+                  'umask': umask}
 
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)
@@ -457,6 +470,7 @@ def script(name,
         shell=None,
         env=None,
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -502,6 +516,9 @@ def script(name,
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -530,7 +547,8 @@ def script(name,
                   'user': user,
                   'group': group,
                   'cwd': cwd,
-                  'template': template})
+                  'template': template,
+                  'umask': umask})
 
     run_check_cmd_kwargs = {'cwd': cwd,
                   'runas': user,
@@ -611,7 +629,9 @@ def call(name, func, args=(), kws=None,
     cmd_kwargs = {'cwd': kwargs.get('cwd'),
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
-                  'env': kwargs.get('env')}
+                  'env': kwargs.get('env'),
+                  'umask': kwarg.get('umask'),
+                  }
     pgid = os.getegid()
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None, None)
