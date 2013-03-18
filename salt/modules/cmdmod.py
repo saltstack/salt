@@ -168,6 +168,8 @@ def _run(cmd,
         # the euid might not have access to it. See issue #1844
         if not os.access(cwd, os.R_OK):
             cwd = '/'
+            if salt.utils.is_windows():
+                cwd = os.tempnam()[:3]
 
     if not salt.utils.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
