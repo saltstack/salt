@@ -91,7 +91,7 @@ def latest(name,
                 ret,
                 ('{0}').format(out))
     try:
-        current_info = __salt__['svn.info'](cwd, target, user=user, fmt='dict')
+        __salt__['svn.info'](cwd, target, user=user)
         svn_cmd = 'svn.update'
     except exceptions.CommandExecutionError:
         pass
@@ -107,25 +107,8 @@ def latest(name,
 
     if svn_cmd == 'svn.update':
         out = __salt__[svn_cmd](cwd, basename, user, *opts)
-
-        current_rev = current_info[0]['Revision']
-        new_rev = __salt__['svn.info'](cwd=target,
-                                       targets=None,
-                                       user=user,
-                                       username=username,
-                                       fmt='dict')[0]['Revision']
-        if current_rev != new_rev:
-            ret['changes']['revision'] = "{0} => {1}".format(current_rev, new_rev)
     else:
         out = __salt__[svn_cmd](cwd, name, basename, user, username, *opts)
-
-        ret['changes']['new'] = name
-        ret['changes']['revision'] = __salt__['svn.info'](cwd=target,
-                                                          targets=None,
-                                                          user=user,
-                                                          username=username,
-                                                          fmt='dict')[0]['Revision']
-
     ret['comment'] = out
     return ret
 
