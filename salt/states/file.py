@@ -1694,7 +1694,7 @@ def patch(name,
             name, cached_source_path, options=options, dry_run=True
         )
         if __opts__['test']:
-            ret['comment'] = 'File {} will be patched'.format(name)
+            ret['comment'] = 'File {0} will be patched'.format(name)
             ret['result'] = None
             return ret
         if ret['changes']['retcode']:
