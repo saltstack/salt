@@ -165,17 +165,17 @@ def get(key, default=''):
 
         salt '*' pillar.get pkg:apache
     '''
-    ret == salt.utils.traverse_dict(__opts__, key, '_|-')
-    if not ret = '_|-':
+    ret = salt.utils.traverse_dict(__opts__, key, '_|-')
+    if not ret == '_|-':
         return ret
-    ret == salt.utils.traverse_dict(__grains__, key, '_|-')
-    if not ret = '_|-':
+    ret = salt.utils.traverse_dict(__grains__, key, '_|-')
+    if not ret == '_|-':
         return ret
-    ret == salt.utils.traverse_dict(__pillar__, key, '_|-')
-    if not ret = '_|-':
+    ret = salt.utils.traverse_dict(__pillar__, key, '_|-')
+    if not ret == '_|-':
         return ret
-    ret == salt.utils.traverse_dict(__pillar__.get('master', {}), key, '_|-')
-    if not ret = '_|-':
+    ret = salt.utils.traverse_dict(__pillar__.get('master', {}), key, '_|-')
+    if not ret == '_|-':
         return ret
     return default
 
