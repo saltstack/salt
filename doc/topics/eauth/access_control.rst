@@ -17,7 +17,7 @@ all of the three aforementioned systems. While this adds functionality to the
 configuration in 0.10.4, it does not negate the old configuration.
 
 Now specific functions can be opened up to specific minions from specific users
-in the case of external auth and client acls, and for specific minions in the
+in the case of external auth and client ACLs, and for specific minions in the
 case of the peer system.
 
 The access controls are manifested using matchers in these configurations:

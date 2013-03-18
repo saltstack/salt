@@ -4,7 +4,7 @@ Pillar Walkthrough
 
 .. note::
 
-    This walkthrough assumes that the reader has already completed the inital
+    This walkthrough assumes that the reader has already completed the initial
     Salt Stack walkthrough:
 
         :doc:`Walkthrough </topics/tutorials/walkthrough>`
@@ -15,7 +15,7 @@ for specific minions. The data generated in pillar is made available to almost
 every component of Salt and is used for a number of purposes:
 
 Highly Sensitive Data:
-    Information transfered via pillar is guaranteed to only be presented to the
+    Information transferred via pillar is guaranteed to only be presented to the
     minions that are targeted, this makes pillar the engine to use in Salt for
     managing security information, such as cryptographic keys and passwords.
 Minion Configuration:
@@ -92,7 +92,7 @@ More Complex Data
 
 Pillar files are sls files, just like states, but unlike states they do not
 need to define `formulas`, the data can be arbitrary, this example for
-instance sets up user data with a uid:
+instance sets up user data with a UID:
 
 `/srv/pillar/users/init.sls`
 

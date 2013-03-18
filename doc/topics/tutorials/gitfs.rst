@@ -23,7 +23,7 @@ tree to multiple masters seamless and automated.
 
 Salt's file server also has a concept of environments, when using the gitfs
 backend, Salt translates git branches and tags into environments, making
-environment management very simple. Just merging a qa or staging branch up
+environment management very simple. Just merging a QA or staging branch up
 to a production branch can be all that is required to make those file changes
 available to Salt.
 

@@ -96,7 +96,7 @@ greatly increases the command output:
 
     # salt-master -l debug
 
-The Salt Master needs to bind to 2 tcp network ports on the system, these ports
+The Salt Master needs to bind to 2 TCP network ports on the system, these ports
 are 4505 and 4506. For more in depth information on fire walling these ports
 the firewall tutorial is available:
 
@@ -109,7 +109,7 @@ Setting up a Salt Minion
 
     The Salt Minion can operate with or without a Salt Master. This walkthrough
     assumes that the minion will be connected to the master, for information on
-    how to run a masterless minion please see the masterless quickstart guide:
+    how to run a master-less minion please see the masterless quickstart guide:
 
         :doc:`Masterless Minon Quickstart </topics/tutorials/quickstart>`
 
@@ -235,7 +235,7 @@ Grains
 ~~~~~~
 
 Salt uses a system called `Grains` to build up static data about minions. This
-data includes information about the operating system that is running, cpu
+data includes information about the operating system that is running, CPU
 architecture and many more. The grains system is used throughout Salt to
 deliver platform data to many components and to users.
 
@@ -258,7 +258,7 @@ Many other targeting systems can be used other than globs, these systems
 include:
 
 Regular Expressions
-    Target using pcre compliant regular expressions:
+    Target using PCRE compliant regular expressions:
     :doc:`Targeting with Regular Expressions</topics/targeting/pcre>`
 
 Grains
@@ -270,12 +270,12 @@ Pillar
     :doc:`Targeting with Pillar</topics/targeting/pillar>`
 
 IP
-    Target based on ip addr/subnet/range:
+    Target based on IP addr/subnet/range:
     :doc:`Targeting with ipcidr</topics/targeting/ipcidr>`
 
 Compound
     Create logic to target based on multiple targets:
-    :doc:`Targeting with Compond</topics/targeting/compound>`
+    :doc:`Targeting with Compound</topics/targeting/compound>`
 
 Nodegroup
     Target with nodegroups:
@@ -283,7 +283,7 @@ Nodegroup
 
 The concepts of targets are used on the command line with salt, but also
 function in many other areas as well, including the state system and the
-systems used for acls and user permission restrictions.
+systems used for ACLs and user permission restrictions.
 
 Salt States
 ===========
@@ -368,7 +368,7 @@ Adding Some Depth
 -----------------
 
 Obviously maintaining sls formulas right in the root of the file server will
-not scale out to resonably sized deployments. This is why more depth is
+not scale out to reasonably sized deployments. This is why more depth is
 required. Start by making an nginx formula a better way, make a nginx
 subdirectory and add an init.sls file:
 
@@ -388,7 +388,7 @@ A few things are introduced in this sls formula, first is the service statement
 which ensures that the nginx service is running, but the nginx service can't be
 started unless the package is installed, hence the `require`. The `require`
 statement makes sure that the required component is executed before and that
-it results in sucess.
+it results in success.
 
 .. note::
 
@@ -432,7 +432,7 @@ joe or any other editor that may need to be deployed.
 Next Reading
 ------------
 
-Two walkthroughs are specificly reommended at this point, first a deeper run
+Two walkthroughs are specifically recommended at this point, first a deeper run
 through states:
 
     :doc:`Starting States </topics/tutorials/starting_states>`
@@ -464,7 +464,7 @@ This concludes the initial Salt walkthrough, but there are many more things to
 yet learn! These documents will cover important core aspects of Salt:
 
 Pillar
-    Paramaters and minion private data (pillar is a core component of states):
+    Parameters and minion private data (pillar is a core component of states):
     :doc:`States Tutorial</topics/tutorials/states_pt1>`
     :doc:`Pillar</topics/pillar/index>`
 
@@ -474,7 +474,7 @@ Job Management
 
 A few more tutorials are also available:
 
-Remote Excution Tutorial
+Remote Execution Tutorial
     :doc:`Remote Execution Tutorial</topics/tutorials/modules>`
 
 Standalone Minion
