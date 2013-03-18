@@ -220,7 +220,7 @@ def list_groups(name):
     return sorted(list(ugrp))
 
 
-def getent():
+def getent(user=None):
     '''
     Return the list of all info for all users
 
@@ -260,6 +260,9 @@ def getent():
 
         ret.append(stuff)
 
-
+    if user:
+        try:
+            ret = [x for x in ret if x.get('name', '') == user][0]
+        except IndexError:
+            ret = {}
     return ret
-
