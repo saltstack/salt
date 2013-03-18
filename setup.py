@@ -50,12 +50,6 @@ try:
     import bbfreeze
     HAS_ESKY = True
 except ImportError:
-    # print function that supports the 'file' argument isn't available until
-    # 2.6 http://docs.python.org/2.6/library/__future__.html
-    # Using this method until 2.5 support is dropped.
-    print >> sys.stderr, 'Cannot load esky build target'
-    print >> sys.stderr, ('Please install the \'esky\' and the \'bbfreeze\' '
-                          'modules to enable this functionality')
     HAS_ESKY = False
 
 salt_version = os.path.join(os.path.abspath(
