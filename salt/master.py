@@ -18,6 +18,7 @@ import datetime
 import pwd
 import getpass
 import resource
+import traceback
 import subprocess
 import multiprocessing
 import sys
@@ -1736,10 +1737,18 @@ class ClearFuncs(object):
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](clear_load['jid'], clear_load)
             except KeyError:
-                msg = ('The specified returner used for the external job '
-                       'cache "{0}" does not have a save_load function!'
-                       ).format(self.opts['ext_job_cache'])
-                log.critical(msg)
+                log.critical(
+                    'The specified returner used for the external job cache '
+                    '"{0}" does not have a save_load function!'.format(
+                        self.opts['ext_job_cache']
+                    )
+                )
+            except Exception:
+                trb = traceback.format_exc()
+                log.critical(
+                        'The specified returner threw a stack trace:\n{0}'
+                        ''.format(trb)
+                    )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
