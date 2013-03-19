@@ -121,6 +121,8 @@ def setval(key, val):
                 grains = yaml.safe_load(fp_.read())
             except Exception, e:
                 return 'Unable to read existing grains file: %s' %e
+        if not isinstance(grains, dict):
+            grains = {}
     grains[key] = val
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     with open(gfn, 'w+') as fp_:
