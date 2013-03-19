@@ -115,3 +115,27 @@ def reload(name):
     cmd = os.path.join(GRAINMAP[__grains__['os']],
             name + ' reload')
     return not __salt__['cmd.retcode'](cmd)
+
+
+def get_all(name):
+    '''
+    Return a list of all available services
+
+    CLI Example::
+
+        salt '*' service.get_al
+    '''
+    if not os.path.isdir(GRAINMAP[__grains__['os']]):
+        return []
+    return sorted(os.listdir(GRAINMAP[__grains__['os']]))
+
+
+def available(name):
+    '''
+    Return if the names service is available
+
+    CLI Example::
+
+        salt '*' service.available
+    '''
+    return name in get_all()
