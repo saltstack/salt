@@ -607,6 +607,7 @@ def managed(name,
             env=None,
             backup='',
             show_diff=True,
+            create=True,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -676,10 +677,14 @@ def managed(name,
         Default context passed to the template.
 
     backup
-        Overrides the default backup mode for this specific file
+        Overrides the default backup mode for this specific file.
 
     show_diff
         If set to false, the diff will not be shown.
+
+    create
+        Default is True, if create is set to False then the file will only be
+        managed if the file already exists on the system.
     '''
     user = _test_owner(kwargs, user=user)
     # Initial set up
@@ -688,6 +693,12 @@ def managed(name,
            'comment': '',
            'name': name,
            'result': True}
+    if not create:
+        if not os.path.isfile(name):
+            # Don't create a file that is not already present
+            ret['comment'] = ('File {0} is not present and is not set for '
+                              'creation').format(name)
+            return ret
     u_check = _check_user(user, group)
     if u_check:
         # The specified user or group do not exist
