@@ -714,7 +714,7 @@ class AESFuncs(object):
             if 'grains' in load['opts']:
                 grains = load['opts']['grains']
         for fun in self.tops:
-            if not fun in opts.get('master_tops', {}):
+            if not fun in self.opts.get('master_tops', {}):
                 continue
             try:
                 ret.update(self.tops[fun](opts=opts, grains=grains))
