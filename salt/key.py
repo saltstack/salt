@@ -235,7 +235,7 @@ class Key(object):
         m_cache = os.path.join(self.opts['cachedir'], 'minions')
         if not os.path.isdir(m_cache):
             return
-        keys = self.local_keys()
+        keys = self.list_keys()
         for minion in os.listdir(m_cache):
             if not minion in keys['minions']:
                 shutil.rmtree(os.path.join(m_cache, minion))
