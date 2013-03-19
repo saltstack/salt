@@ -9,6 +9,9 @@ OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
 methods of authentication provided by OpenStack in the future.
 
+Note that there is currently a dependency upon netaddr. This can be installed
+on Debian-based systems by means of the python-netaddr package.
+
 This module has been tested to work with HP Cloud and Rackspace. See the
 documentation for specific options for either of these providers. Some examples
 are provided below:
@@ -37,6 +40,13 @@ Either a password or an API key must also be specified:
     # The OpenStack API key
     OPENSTACK.apikey: 901d3f579h23c8v73q9
 
+For local installations that only use private IP address ranges, the
+following option may be useful:
+
+.. code-block:: yaml
+
+    # Ignore IP addresses on this network for bootstrap
+    OPENSTACK.ignore_ip_addr: 192.168.50.0/24
 '''
 
 # The import section is mostly libcloud boilerplate
