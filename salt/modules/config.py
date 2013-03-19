@@ -140,6 +140,8 @@ def option(
 
 def get(key, default=''):
     '''
+    .. versionadded: 0.14
+
     Attempt to retrive the named value from opts, pillar, grains of the master
     config, if the named value is not available return the passed default.
     The default return is an empty string.
