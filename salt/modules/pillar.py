@@ -12,6 +12,8 @@ import salt.utils
 
 def get(key, default=''):
     '''
+    .. versionadded:: 0.14
+
     Attempt to retrive the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
 
