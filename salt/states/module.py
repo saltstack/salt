@@ -5,9 +5,9 @@ Execution of Salt modules from within states.
 Individual module calls can be made via states. to call a single module
 function use the run function.
 
-One issue exists, since the name argument is present in the state call and is
-present in many modules, this argument will need to be replaced in the sls
-data with the argument m_name.
+One issue exists, since the name and fun arguments are present in the state
+call data structure and is present in many modules, this argument will need
+to be replaced in the sls data with the arguments m_name and m_fun.
 '''
 # Import python libs
 
@@ -88,12 +88,17 @@ def run(name, **kwargs):
         if arg == 'name':
             if 'm_name' in kwargs:
                 defaults[arg] = kwargs.pop('m_name')
+        elif arg == 'fun':
+            if 'm_fun' in kwargs:
+                defaults[arg] = kwargs.pop('m_fun')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
     for arg in aspec[0]:
         if arg == 'name':
             rarg = 'm_name'
+        elif arg == 'fun':
+            rarg = 'm_fun'
         else:
             rarg = arg
         if rarg not in kwargs and rarg not in defaults:
