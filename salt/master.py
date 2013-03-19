@@ -18,6 +18,7 @@ import datetime
 import pwd
 import getpass
 import resource
+import traceback
 import subprocess
 import multiprocessing
 import sys
@@ -1818,6 +1819,12 @@ class ClearFuncs(object):
                         self.opts['ext_job_cache']
                     )
                 )
+            except Exception:
+                trb = traceback.format_exc()
+                log.critical(
+                        'The specified returner threw a stack trace:\n{0}'
+                        ''.format(trb)
+                    )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
