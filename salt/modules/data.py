@@ -112,3 +112,21 @@ def getvals(*keys):
         if key in store:
             ret.append(store[key])
     return ret
+
+def cas(key, value, old_value):
+    '''
+    Check and set a value in the minion datastore
+
+    CLI Example::
+
+        salt '*' data.cas <key> <value> <old_value>
+    '''
+    store = load()
+    if key not in store:
+        return False
+
+    if store[key] != old_value:
+        return False
+
+    store[key] = value
+    return True
