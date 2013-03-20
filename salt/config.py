@@ -294,6 +294,8 @@ def include_config(include, orig_path, verbose):
 
     include_config = {}
     for path in include:
+        # Allow for includes like ~/foo
+        path = os.path.expanduser(path)
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(orig_path), path)
 
