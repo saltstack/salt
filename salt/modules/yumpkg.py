@@ -309,7 +309,7 @@ def group_install(name=None,
 
         CLI Example::
 
-            salt '*' pkg.groupinstall groups='["Group 1", "Group 2"]'
+            salt '*' pkg.group_install groups='["Group 1", "Group 2"]'
 
     skip
         The name(s), in a list, of any packages that would normally be
@@ -318,7 +318,7 @@ def group_install(name=None,
 
         CLI Examples::
 
-            salt '*' pkg.groupinstall 'My Group' skip='["foo", "bar"]'
+            salt '*' pkg.group_install 'My Group' skip='["foo", "bar"]'
 
     include
         The name(s), in a list, of any packages which are included in a group,
@@ -328,7 +328,7 @@ def group_install(name=None,
 
         CLI Examples::
 
-            salt '*' pkg.groupinstall 'My Group' include='["foo", "bar"]'
+            salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
 
     other arguments
         Because this is essentially a wrapper around pkg.install, any argument
