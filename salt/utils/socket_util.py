@@ -275,10 +275,6 @@ def _interfaces_ifconfig(out):
 def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
-
-    CLI Example::
-
-        salt '*' network.interfaces
     '''
     ifaces = dict()
     if salt.utils.which('ip'):
@@ -301,3 +297,16 @@ def interfaces():
                 stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ifconfig(cmd)
     return ifaces
+
+
+def ip4_addrs():
+    '''
+    Return a list of ip addrs
+    '''
+    ret = set()
+    ifaces = interfaces()
+    for face in ifaces:
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                ret.add(inet['address'])
+    return sorted(ret)
