@@ -312,7 +312,10 @@ def present(
             ret['result'] = None
             ret['comment'] = 'User {0} set to be added'.format(name)
             return ret
-        groups.extend(present_optgroups)
+        if groups:
+            groups.extend(present_optgroups)
+        elif present_optgroups:
+            groups = present_optgroups[:]
         if __salt__['user.add'](name,
                                 uid=uid,
                                 gid=gid,
