@@ -14,6 +14,9 @@ rest_cherrypy
 .. autoclass:: Login
     :members: GET, POST
 
+.. autoclass:: Logout
+    :members: POST
+
 .. autoclass:: Minions
     :members: GET, POST
 
