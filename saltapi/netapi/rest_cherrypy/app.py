@@ -810,6 +810,8 @@ class Logout(LowDataAdapter):
         '''
         Destroy the currently active session and expire the session
         cookie
+
+        .. versionadded:: 0.8.0
         '''
         cherrypy.lib.sessions.expire()
         cherrypy.session.clear()
