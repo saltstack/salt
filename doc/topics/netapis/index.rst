@@ -17,4 +17,4 @@ Client interfaces
 =================
 
 .. autoclass:: saltapi.APIClient
-    :members: local, runner, wheel
+    :members: local, local_async, runner, wheel
