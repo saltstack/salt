@@ -232,6 +232,8 @@ def hypermedia_handler(*args, **kwargs):
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
+        import traceback
+
         logger.debug("Error while processing request for: %s",
                 cherrypy.request.path_info,
                 exc_info=True)
@@ -240,7 +242,8 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             'status': cherrypy.response.status,
-            'message': '{0}'.format(exc) if cherrypy.config['debug']
+            'message': '{0}'.format(traceback.format_exc(exc))
+                    if cherrypy.config['debug']
                     else "An unexpected error occurred"}
 
     # Raises 406 if requested content-type is not supported
