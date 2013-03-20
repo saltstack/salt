@@ -771,7 +771,18 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
-        raise cherrypy.HTTPRedirect('/', 302)
+
+        # Grab eauth config for the current backend for the current user
+        perms = self.opts['external_auth'][token['eauth']][token['name']]
+
+        return {'result': {
+            'token': cherrypy.session.id,
+            'expire': token['expire'],
+            'start': token['start'],
+            'user': token['name'],
+            'eauth': token['eauth'],
+            'perms': perms,
+        }}
 
 
 class API(object):
