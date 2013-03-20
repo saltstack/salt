@@ -164,7 +164,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Short-circuit for the login page
-    ignore_urls = ('/login',)
+    ignore_urls = ('/login', '/logout')
 
     if cherrypy.request.path_info.startswith(ignore_urls):
         return
@@ -805,6 +805,19 @@ class Login(LowDataAdapter):
         }}
 
 
+class Logout(LowDataAdapter):
+    def POST(self, **kwargs):
+        '''
+        Destroy the currently active session and expire the session
+        cookie
+        '''
+        cherrypy.lib.sessions.expire()
+        cherrypy.session.clear()
+        cherrypy.session.clean_up()
+
+        return {'return': "Your token has been cleared"}
+
+
 class API(object):
     '''
     Collect configuration and URL map for building the CherryPy app
@@ -812,6 +825,7 @@ class API(object):
     url_map = {
         'index': LowDataAdapter,
         'login': Login,
+        'logout': Logout,
         'minions': Minions,
         'jobs': Jobs,
     }
