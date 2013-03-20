@@ -4,14 +4,21 @@
 Introduction to netapi modules
 ==============================
 
-netapi modules simply bind to a port and start a service. They are enabled by
-specifying the name of a netapi module and the port to bind in the master
-config file.
+netapi modules generally bind to a port and start a service. They are
+purposefully open-ended. There could be multiple netapi modules that provide a
+REST interface, a module that provides an XMPP interface, or Websockets, or
+XMLRPC.
+
+netapi modules are enabled by adding configuration to your master config file.
+Check the docs for each module to see external requirements and configuration
+settings.
 
 Communication with Salt and Salt satelite projects is done by passing a list of
-low-data dictionaries to a client interface. Low-data is a dictionary that
-specifies the client, the function inside that client to execute, and any
-additional arguments or parameters.
+lowstate dictionaries to a client interface. A list of available client
+interfaces is below. The lowstate dictionary items map to keyword arguments on
+the client interface.
+
+.. seealso:: :ref:`python-api`
 
 Client interfaces
 =================
