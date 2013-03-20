@@ -42,6 +42,8 @@ class APIClient(object):
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         and immediately return the job ID. The results of the job can then be
         retrieved at a later time.
+
+        .. seealso:: :ref:`python-api`
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.run_job(*args, **kwargs)
@@ -49,6 +51,8 @@ class APIClient(object):
     def local(self, *args, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
+
+        .. seealso:: :ref:`python-api`
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         return local.cmd(*args, **kwargs)
