@@ -20,10 +20,11 @@ if setup_dirname != '':
     os.chdir(setup_dirname)
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
+# Or if setuptools was previously imported (which is the case when using 'distribute')
 # This ensures consistent behavior but allows for advanced usage with
 # virtualenv, buildout, and others.
 with_setuptools = False
-if 'USE_SETUPTOOLS' in os.environ or 'pip' in __file__:
+if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
         from setuptools.command.install import install
