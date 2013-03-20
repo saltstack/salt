@@ -126,10 +126,18 @@ class Minion(parsers.MinionOptionParser):
 
         try:
             if self.config['verify_env']:
-                confd = os.path.join(
-                    os.path.dirname(self.config['conf_file']),
-                    'minion.d'
-                )
+                confd = self.config.get('default_include')
+                if confd:
+                  # If 'default_include' is specified in config, then use it
+                  if '*' in confd:
+                      # Value is of the form "minion.d/*.conf"
+                      confd = os.path.dirname(confd)
+                  if not os.path.isabs(confd):
+                      # If configured 'default_include' is not an absolute path,
+                      # consider it relative to folder of 'conf_file' (/etc/salt by default)
+                      confd = os.path.join(os.path.dirname(self.config['conf_file']), confd)
+                else:
+                    confd = os.path.join(os.path.dirname(self.config['conf_file']), 'minion.d')
                 verify_env(
                     [
                         self.config['pki_dir'],
