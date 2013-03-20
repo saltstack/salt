@@ -97,7 +97,7 @@ class Schedule(object):
                 else:
                     log.info(
                         'Job {1} using invalid returner: {0} Ignoring.'.format(
-                        func, retuner
+                        func, returner
                         )
                     )
 
