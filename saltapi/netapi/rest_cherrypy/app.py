@@ -726,6 +726,9 @@ class Login(LowDataAdapter):
         '''
         Authenticate against Salt's eauth system
 
+        .. versionchanged:: 0.8.0
+            No longer returns a 302 redirect on success.
+
         .. http:post:: /login
 
             **Example request**::
