@@ -242,7 +242,7 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             'status': cherrypy.response.status,
-            'message': '{0}'.format(traceback.format_exc(exc))
+            'return': '{0}'.format(traceback.format_exc(exc))
                     if cherrypy.config['debug']
                     else "An unexpected error occurred"}
 
@@ -422,7 +422,7 @@ class LowDataAdapter(object):
         '''
         return {
             'status': cherrypy.response.status,
-            'message': "Welcome",
+            'return': "Welcome",
         }
 
     def POST(self, **kwargs):
@@ -719,7 +719,7 @@ class Login(LowDataAdapter):
 
         return {
             'status': cherrypy.response.status,
-            'message': "Please log in",
+            'return': "Please log in",
         }
 
     def POST(self, **kwargs):
@@ -756,7 +756,7 @@ class Login(LowDataAdapter):
                 X-Auth-Token: 6d1b722e
                 Set-Cookie: session_id=6d1b722e; expires=Sat, 17 Nov 2012 03:23:52 GMT; Path=/
 
-                {"result": {
+                {"return": {
                     "token": "6d1b722e",
                     "start": 1363805943.776223,
                     "expire": 1363849143.776224,
@@ -792,7 +792,7 @@ class Login(LowDataAdapter):
         # Grab eauth config for the current backend for the current user
         perms = self.opts['external_auth'][token['eauth']][token['name']]
 
-        return {'result': {
+        return {'return': {
             'token': cherrypy.session.id,
             'expire': token['expire'],
             'start': token['start'],
