@@ -721,8 +721,7 @@ class Login(LowDataAdapter):
 
     def POST(self, **kwargs):
         '''
-        Authenticate against Salt's eauth system. Returns a session id and
-        redirects on success.
+        Authenticate against Salt's eauth system
 
         .. http:post:: /login
 
@@ -738,8 +737,9 @@ class Login(LowDataAdapter):
 
                 POST / HTTP/1.1
                 Host: localhost:8000
-                Content-Length: 97
+                Content-Length: 42
                 Content-Type: application/x-www-form-urlencoded
+                Accept: application/json
 
                 username=saltuser&password=saltpass&eauth=pam
 
@@ -747,16 +747,30 @@ class Login(LowDataAdapter):
 
             .. code-block:: http
 
-                HTTP/1.1 302 Found
-                Content-Length: 97
-                Location: http://localhost:8000/
+                HTTP/1.1 200 OK
+                Content-Type: application/json
+                Content-Length: 206
                 X-Auth-Token: 6d1b722e
                 Set-Cookie: session_id=6d1b722e; expires=Sat, 17 Nov 2012 03:23:52 GMT; Path=/
+
+                {"result": {
+                    "token": "6d1b722e",
+                    "start": 1363805943.776223,
+                    "expire": 1363849143.776224,
+                    "user": "saltuser",
+                    "eauth": "pam",
+                    "perms": [
+                        "grains.*",
+                        "status.*",
+                        "sys.*",
+                        "test.*"
+                    ]
+                }}
 
         :form eauth: the eauth backend configured in your master config
         :form username: username
         :form password: password
-        :status 302: success
+        :status 200: success
         :status 406: requested Content-Type not available
         '''
         auth = salt.auth.LoadAuth(self.opts)
@@ -771,7 +785,18 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
-        raise cherrypy.HTTPRedirect('/', 302)
+
+        # Grab eauth config for the current backend for the current user
+        perms = self.opts['external_auth'][token['eauth']][token['name']]
+
+        return {'result': {
+            'token': cherrypy.session.id,
+            'expire': token['expire'],
+            'start': token['start'],
+            'user': token['name'],
+            'eauth': token['eauth'],
+            'perms': perms,
+        }}
 
 
 class API(object):
