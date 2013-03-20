@@ -1,7 +1,7 @@
 # Maintainer: Christer Edwards <christer.edwards@gmail.com>
 
 pkgname=salt
-pkgver=0.13.2
+pkgver=0.13.3
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=(any)
@@ -29,7 +29,7 @@ source=("http://pypi.python.org/packages/source/s/${pkgname}/${pkgname}-${pkgver
         "salt-syndic.service"
         "salt-minion.service")
 
-md5sums=('b18ab3d0f4fcb79ab8552b8dbcd5a002'
+md5sums=('22c8e5213084aa625c4ad89560072be8'
          '3a2b032ec37077363c049969105b128e'
          'e4c6adce5087e947c26c5c9d9fc3c9bb'
          '833d31ebee69f5c0e2c0b6c8d345b6d7')
