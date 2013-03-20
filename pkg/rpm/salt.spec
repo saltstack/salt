@@ -1,16 +1,17 @@
 %if ! (0%{?rhel} >= 6 || 0%{?fedora} > 12)
 %global with_python26 1
-%global include_tests 0
 %define pybasever 2.6
 %define __python_ver 26
 %define __python %{_bindir}/python%{?pybasever}
 %endif
 
+%global include_tests 1
+
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.13.0
+Version: 0.13.2
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -54,6 +55,15 @@ Requires: python26-msgpack
 
 %else
 
+%if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
+BuildRequires: python-unittest2
+# this BR causes windows tests to happen
+# clearly, that's not desired
+# https://github.com/saltstack/salt/issues/3749
+#BuildRequires: python-mock
+BuildRequires: git
+%endif
+
 BuildRequires: python-zmq
 BuildRequires: python-crypto
 BuildRequires: python-devel
@@ -61,9 +71,7 @@ BuildRequires: PyYAML
 BuildRequires: m2crypto
 BuildRequires: python-msgpack
 
-%if 0%{?include_tests}
-BuildRequires: python-unittest2
-%endif
+
 BuildRequires: python-jinja2
 
 Requires: python-crypto
@@ -95,8 +103,6 @@ Requires(postun): systemd-units
 BuildRequires: systemd-units
 
 %endif
-
-#Requires: MySQL-python libvirt-python yum
 
 %description
 Salt is a distributed remote execution system used to execute commands and 
@@ -150,9 +156,9 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
 install -p -m 0640 conf/master $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
 
-%if 0%{?include_tests}
+%if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
 %check
-%{__python} setup.py test
+%{__python} setup.py test --runtests-opts=-u
 %endif
 
 %clean
@@ -303,6 +309,13 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Mar 13 2013 Clint Savage <herlo1@gmail.com> - 0.13.2-1
+- Update to upstream patch release 0.13.2
+
+* Fri Feb 15 2013 Clint Savage <herlo1@gmail.com> - 0.13.1-1
+- Update to upstream patch release 0.13.1
+- Add unittest support
+
 * Sat Feb 02 2013 Clint Savage <herlo1@gmail.com> - 0.12.1-1
 - Remove patches and update to upstream patch release 0.12.1
 
