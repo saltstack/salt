@@ -228,6 +228,10 @@ class Master(SMaster):
     def __set_max_open_files(self):
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if mof_h == resource.RLIM_INFINITY:
+          # Unclear what to do with infinity... OSX reports RLIM_INFINITY as hard limit,
+          # but raising to anything above soft limit fails...
+          mof_h = mof_s
         log.info(
             'Current values for max open files soft/hard setting: '
             '{0}/{1}'.format(
