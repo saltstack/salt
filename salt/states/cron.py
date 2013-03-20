@@ -383,8 +383,12 @@ def file(name,
     elif ret['result']:
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
-    if not __salt__['cron.write_cron_file'](user, cron_path):
-        ret['comment'] = 'Unable to update user {0} crontab'.format(user)
+
+    cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
+    if cron_ret['retcode']:
+        ret['comment'] = 'Unable to update user {0} crontab {1}.' \
+                         ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
         ret['result'] = False
+
     os.unlink(cron_path)
     return ret

@@ -66,6 +66,17 @@ def write_cron_file(user, path):
     return __salt__['cmd.retcode'](_get_cron_cmdstr(user, path)) == 0
 
 
+def write_cron_file_verbose(user, path):
+    '''
+    Writes the contents of a file to a user's crontab and return error message on error
+
+    CLI Example::
+
+        salt '*' cron.write_cron_file_verbose root /tmp/new_cron
+    '''
+    return __salt__['cmd.run_all'](_get_cron_cmdstr(user, path))
+
+
 def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
