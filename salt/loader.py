@@ -671,7 +671,8 @@ class Loader(object):
                 except KeyError:
                     # Key errors come out of the virtual function when passing
                     # in incomplete grains sets, these can be safely ignored
-                    pass
+                    # and logged to debug
+                    log.debug('KeyError when loading {0}'.format(module_name))
 
                 except Exception:
                     # If the module throws an exception during __virtual__()
