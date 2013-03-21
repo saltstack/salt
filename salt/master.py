@@ -1550,6 +1550,37 @@ class ClearFuncs(object):
                    'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
             log.warning(msg)
             return ''
+
+        if 'token' in clear_load:
+            try:
+                token = self.loadauth.get_tok(clear_load['token'])
+            except Exception as exc:
+                log.error(
+                    'Exception occured when generating auth token: {0}'.format(
+                        exc
+                    )
+                )
+                return ''
+            if not token:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            if not token['eauth'] in self.opts['external_auth']:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            if not token['name'] in self.opts['external_auth'][token['eauth']]:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
+            good = self.ckminions.auth_check(
+                    self.opts['external_auth'][token['eauth']][token['name']],
+                    clear_load['fun'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'))
+            if not good:
+                return ''
+            return self.wheel_.call_func(
+                    clear_load.pop('fun'),
+                    **clear_load)
+
         try:
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
@@ -1642,7 +1673,7 @@ class ClearFuncs(object):
 
         # Check for external auth calls
         if extra.get('token', False):
-            # A token was passwd, check it
+            # A token was passed, check it
             try:
                 token = self.loadauth.get_tok(extra['token'])
             except Exception as exc:
