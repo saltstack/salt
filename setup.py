@@ -20,10 +20,11 @@ if setup_dirname != '':
     os.chdir(setup_dirname)
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
+# Or if setuptools was previously imported (which is the case when using 'distribute')
 # This ensures consistent behavior but allows for advanced usage with
 # virtualenv, buildout, and others.
 with_setuptools = False
-if 'USE_SETUPTOOLS' in os.environ or 'pip' in __file__:
+if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
         from setuptools.command.install import install
@@ -50,12 +51,6 @@ try:
     import bbfreeze
     HAS_ESKY = True
 except ImportError:
-    # print function that supports the 'file' argument isn't available until
-    # 2.6 http://docs.python.org/2.6/library/__future__.html
-    # Using this method until 2.5 support is dropped.
-    print >> sys.stderr, 'Cannot load esky build target'
-    print >> sys.stderr, ('Please install the \'esky\' and the \'bbfreeze\' '
-                          'modules to enable this functionality')
     HAS_ESKY = False
 
 salt_version = os.path.join(os.path.abspath(

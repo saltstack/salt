@@ -8,7 +8,7 @@ repository similar to what is provided by yum and apt on Linux.
 By default, the Windows software repository is found at ``/srv/salt/win/repo``
 Each piece of software should have its own directory which contains the
 installers and a package definition file. This package definition file is a
-yaml file named ``init.sls``.
+YAML file named ``init.sls``.
 
 The package definition file should look similar to this example for Firefox:
 ``/srv/salt/win/repo/firefox/init.sls``
@@ -41,7 +41,7 @@ The package definition file should look similar to this example for Firefox:
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
         uninstall_flags: ' /S'
 
-Add ``msiexec: True`` if using an msi installer requiring the use of ``msiexec
+Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec
 /i`` to install and ``msiexec /x`` to uninstall.
 ``/srv/salt/win/repo/7zip/init.sls``
 
@@ -121,7 +121,7 @@ Git Hosted Repo
 Windows software package definitions can also be hosted in one or more git
 repositories. The default repo is one hosted on Github.com by SaltStack, which
 includes package definitions for open source software. This repo points to the
-http or ftp locations of the installer files. Anyone is welcome to send a pull
+HTTP or ftp locations of the installer files. Anyone is welcome to send a pull
 request to this repo to add new package definitions. Browse the repo
 here: `https://github.com/saltstack/salt-winrepo
 <https://github.com/saltstack/salt-winrepo>`_ . 

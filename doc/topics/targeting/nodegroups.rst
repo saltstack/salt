@@ -8,7 +8,7 @@ Node groups
         A predefined group of minions declared in the master configuration file
         :conf_master:`nodegroups` setting as a compound target.
 
-Nodegroups are declared using a compound target specification. The compount
+Nodegroups are declared using a compound target specification. The compound
 target documentation can be found here:
 
 :doc:`Compound Matchers <compound>`

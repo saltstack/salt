@@ -43,6 +43,28 @@ _SANITIZERS = {
 }
 
 
+def get(key, default=''):
+    '''
+    Attempt to retrive the named value from grains, if the named value is not
+    available return the passed default. The default return is an empty string.
+
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict. This means that if a dict in grains looks like this:
+
+    {'pkg': {'apache': 'httpd'}}
+
+    To retrive the value associated with the apache key in the pkg dict this
+    key can be passed:
+
+    pkg:apache
+
+    CLI Example::
+
+        salt '*' grains.get pkg:apache
+    '''
+    return salt.utils.traverse_dict(__grains__, key, default)
+
+
 def items(sanitize=False):
     '''
     Return the grains data
@@ -121,6 +143,8 @@ def setval(key, val):
                 grains = yaml.safe_load(fp_.read())
             except Exception, e:
                 return 'Unable to read existing grains file: %s' %e
+        if not isinstance(grains, dict):
+            grains = {}
     grains[key] = val
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     with open(gfn, 'w+') as fp_:

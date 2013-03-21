@@ -109,8 +109,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkgs = list_pkgs()
@@ -124,7 +123,8 @@ def list_upgrades(refresh=True):
                 pkglist, [pkg]
             )
             for pkg in exactmatch:
-                if pkg.arch == rpmUtils.arch.getBaseArch() or pkg.arch == 'noarch':
+                if pkg.arch == rpmUtils.arch.getBaseArch() \
+                        or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join(
                         [pkg['version'], pkg['release']]
                     )
@@ -162,7 +162,7 @@ def _set_repo_options(yumbase, **kwargs):
         return e
 
 
-def available_version(*names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -175,9 +175,9 @@ def available_version(*names, **kwargs):
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package name> fromrepo=epel-testing
-        salt '*' pkg.available_version <package1> <package2> <package3> ...
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package name> fromrepo=epel-testing
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
         return ''
@@ -210,6 +210,9 @@ def available_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
+# available_version is being deprecated
+available_version = latest_version
+
 
 def upgrade_available(name):
     '''
@@ -219,10 +222,10 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return available_version(name) != ''
+    return latest_version(name) != ''
 
 
-def version(*names):
+def version(*names, **kwargs):
     '''
     Returns a string representing the package version or an empty string if not
     installed. If more than one package name is specified, a dict of
@@ -233,19 +236,10 @@ def version(*names):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    if len(names) == 0:
-        return ''
-    ret = {}
-    pkgs = list_pkgs()
-    for name in names:
-        ret[name] = pkgs.get(name, '')
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
-    return ret
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -255,6 +249,7 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
     yb = yum.YumBase()
     for p in yb.rpmdb:
@@ -265,7 +260,10 @@ def list_pkgs():
         if p.release:
             pkgver += '-{0}'.format(p.release)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
@@ -314,7 +312,7 @@ def group_install(name=None,
 
         CLI Example::
 
-            salt '*' pkg.groupinstall groups='["Group 1", "Group 2"]'
+            salt '*' pkg.group_install groups='["Group 1", "Group 2"]'
 
     skip
         The name(s), in a list, of any packages that would normally be
@@ -323,7 +321,7 @@ def group_install(name=None,
 
         CLI Examples::
 
-            salt '*' pkg.groupinstall 'My Group' skip='["foo", "bar"]'
+            salt '*' pkg.group_install 'My Group' skip='["foo", "bar"]'
 
     include
         The name(s), in a list, of any packages which are included in a group,
@@ -333,7 +331,7 @@ def group_install(name=None,
 
         CLI Examples::
 
-            salt '*' pkg.groupinstall 'My Group' include='["foo", "bar"]'
+            salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
 
     other arguments
         Because this is essentially a wrapper around pkg.install, any argument
@@ -445,8 +443,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -540,8 +537,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or str(refresh).lower() == 'true':
+    if __salt__['config.is_true'](refresh):
         refresh_db()
 
     yumbase = yum.YumBase()
@@ -736,7 +732,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
     return repos
 
 
-def get_repo(repo, basedir='/etc/yum.repos.d'):
+def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
@@ -760,7 +756,7 @@ def get_repo(repo, basedir='/etc/yum.repos.d'):
     return filerepos[repo]
 
 
-def del_repo(repo, basedir='/etc/yum.repos.d'):
+def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
 

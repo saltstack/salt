@@ -13,9 +13,10 @@ to contain this data simply. This is often called configuration management.
 
 .. note::
 
-    This is just the begining of using states, make sure to read up on pillar
+    This is just the beginning of using states, make sure to read up on pillar
     next:
-    :doc: `Pillar Walkthrough </topics/tutorials/pillar>`
+
+        :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
 
 It is All Just Data
 ===================
@@ -311,7 +312,7 @@ renderers.
 The ``py`` renderer allows for SLS files to be written in pure Python, allowing
 for the utmost level of flexibility and power when preparing SLS data; while the
 :doc:`pydsl</ref/renderers/all/salt.renderers.pydsl>` renderer provides a flexible,
-domain-specific languange for authoring SLS data in Python.
+domain-specific language for authoring SLS data in Python.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`Mako`: http://www.makotemplates.org/
@@ -513,4 +514,4 @@ Next Reading
 With an understanding of states, it is recommended to become more familiar
 with Salt's pillar interface:
 
-:doc: `Pillar Walkthrough <topics/tutorials/pillar>`
+    :doc:`Pillar Walkthrough </topics/tutorials/pillar>`

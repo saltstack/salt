@@ -4,9 +4,10 @@ Pillar Walkthrough
 
 .. note::
 
-    This walkthrough assumes that the reader has already completed the inital
+    This walkthrough assumes that the reader has already completed the initial
     Salt Stack walkthrough:
-    :doc: `Walkthrough <topics/tutorials/walkthrough>`
+
+        :doc:`Walkthrough </topics/tutorials/walkthrough>`
 
 The pillar interface inside of Salt is one of the most important components
 of a Salt deployment. Pillar is the interface used to generate arbitrary data
@@ -14,7 +15,7 @@ for specific minions. The data generated in pillar is made available to almost
 every component of Salt and is used for a number of purposes:
 
 Highly Sensitive Data:
-    Information transfered via pillar is guaranteed to only be presented to the
+    Information transferred via pillar is guaranteed to only be presented to the
     minions that are targeted, this makes pillar the engine to use in Salt for
     managing security information, such as cryptographic keys and passwords.
 Minion Configuration:
@@ -91,7 +92,7 @@ More Complex Data
 
 Pillar files are sls files, just like states, but unlike states they do not
 need to define `formulas`, the data can be arbitrary, this example for
-instance sets up user data with a uid:
+instance sets up user data with a UID:
 
 `/srv/pillar/users/init.sls`
 
@@ -124,7 +125,7 @@ state just access the pillar via Jinja:
 
 `/srv/salt/users/init.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% for user, uid in pillar.get('users', {}).items() %}
     {{user}}:
@@ -151,7 +152,7 @@ separate Linux distributions:
 
 `/srv/pillar/pkg/init.sls`
 
-.. code-block::
+.. code-block:: jinja
 
     pkgs:
       {% if grains['os_family'] == 'Debian' %}
@@ -182,7 +183,7 @@ inside of the pillar, so sls files can be safely parameterized:
 
 `/srv/salt/apache/init.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
@@ -190,13 +191,18 @@ inside of the pillar, so sls files can be safely parameterized:
 
 Or, if no pillar is available a default can be set as well:
 
+.. note::
+
+    The function ``pillar.get`` used in this example was added to Salt in
+    version 0.14.0
+
 `/srv/salt/apache/init.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
-        - name: {{ pillar.get('pkgs', {}).get('apache', 'httpd') }}
+        - name: {{ salt['pillar.get']('pkgs:apache', 'httpd') }}
 
 In the above example, if the pillar value `pillar['pkgs']['apache']` is not
 set in the minion's pillar, then the default of 'httpd' will be used.
@@ -235,7 +241,7 @@ Can be easily transformed into a powerful, parameterized formula:
 
 `/srv/salt/edit/vim.sls`
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     vim:
       pkg:
@@ -255,7 +261,7 @@ Where the vimrc source location can now be changed via pillar:
 
 `/srv/pillar/edit/vim.sls`
 
-.. code-block::
+.. code-block:: jinja
 
     {% if grain['id'].startswith('dev') %}
     vimrc: salt://edit/dev_vimrc

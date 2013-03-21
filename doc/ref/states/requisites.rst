@@ -4,7 +4,7 @@ Requisites
 
 The Salt requisite system is used to create relationships between states. The
 core idea being, that when one state it dependent somehow on another that
-interdependency can be easily defined.
+inter-dependency can be easily defined.
 
 Requisites come in two types. Direct requisites, and requisite_ins. The
 relationships are directional, so a requisite statement makes the requiring
@@ -133,8 +133,8 @@ Using ``require_in``
         - running
 
 The ``require_in`` statement is particularly useful when assigning a require
-in a sperate sls file. For instance it may be common for httpd to require
-components used to set up php or mod_python, but the http state does not need
+in a separate sls file. For instance it may be common for httpd to require
+components used to set up PHP or mod_python, but the HTTP state does not need
 to be aware of the additional components that require it when it is set up:
 
 http.sls

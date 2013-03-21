@@ -138,6 +138,50 @@ def option(
     return default
 
 
+def get(key, default=''):
+    '''
+    .. versionadded: 0.14
+
+    Attempt to retrive the named value from opts, pillar, grains of the master
+    config, if the named value is not available return the passed default.
+    The default return is an empty string.
+
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict. This means that if a dict looks like this:
+
+    {'pkg': {'apache': 'httpd'}}
+
+    To retrive the value associated with the apache key in the pkg dict this
+    key can be passed:
+
+    pkg:apache
+
+    This routine traverses these data stores in this order:
+
+        Local minion config (opts)
+        Minion's grains
+        Minion's pillar
+        Master config
+
+    CLI Example::
+
+        salt '*' pillar.get pkg:apache
+    '''
+    ret = salt.utils.traverse_dict(__opts__, key, '_|-')
+    if not ret == '_|-':
+        return ret
+    ret = salt.utils.traverse_dict(__grains__, key, '_|-')
+    if not ret == '_|-':
+        return ret
+    ret = salt.utils.traverse_dict(__pillar__, key, '_|-')
+    if not ret == '_|-':
+        return ret
+    ret = salt.utils.traverse_dict(__pillar__.get('master', {}), key, '_|-')
+    if not ret == '_|-':
+        return ret
+    return default
+
+
 def dot_vals(value):
     '''
     Pass in a configuration value that should be preceded by the module name

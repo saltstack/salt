@@ -2020,7 +2020,12 @@ class BaseHighState(object):
 
         #File exists so continue
         err = []
-        top = self.get_top()
+        try:
+            top = self.get_top()
+        except Exception:
+            trb = traceback.format_exc()
+            err.append(trb)
+            return err
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:

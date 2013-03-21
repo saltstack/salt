@@ -228,6 +228,18 @@ class Key(object):
                                         'minions_rejected')
         return minions_accepted, minions_pre, minions_rejected
 
+    def check_minion_cache(self):
+        '''
+        Check the minion cache to make sure that old minion data is cleared
+        '''
+        m_cache = os.path.join(self.opts['cachedir'], 'minions')
+        if not os.path.isdir(m_cache):
+            return
+        keys = self.list_keys()
+        for minion in os.listdir(m_cache):
+            if not minion in keys['minions']:
+                shutil.rmtree(os.path.join(m_cache, minion))
+
     def check_master(self):
         '''
         Log if the master is not running
@@ -383,6 +395,7 @@ class Key(object):
                     self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
+        self.check_minion_cache()
         return self.list_keys()
 
     def delete_all(self):
@@ -399,6 +412,7 @@ class Key(object):
                     self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
+        self.check_minion_cache()
         return self.list_keys()
 
     def reject(self, match):
@@ -425,6 +439,7 @@ class Key(object):
                     self.event.fire_event(eload, 'key')
                 except (IOError, OSError):
                     pass
+        self.check_minion_cache()
         return self.name_match(match)
 
     def reject_all(self):
@@ -450,6 +465,7 @@ class Key(object):
                 self.event.fire_event(eload, 'key')
             except (IOError, OSError):
                 pass
+        self.check_minion_cache()
         return self.list_keys()
 
     def finger(self, match):

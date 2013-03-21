@@ -27,6 +27,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 # Import salt libs
 import salt.log
 import salt.utils
+import salt.utils.socket_util
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -543,6 +544,7 @@ _OS_FAMILY_MAP = {
     'SmartOS': 'Solaris',
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
+    'Trisquel': 'Debian'
 }
 
 
@@ -731,6 +733,18 @@ def append_domain():
     if 'append_domain' in __opts__:
         grain['append_domain'] = __opts__['append_domain']
     return grain
+
+
+def ip4():
+    '''
+    Return a list of ipv4 addrs
+    '''
+    if salt.utils.is_windows():
+        # TODO: Add windows ip addrs here
+        pass
+    else:
+        ips = salt.utils.socket_util.ip4_addrs()
+    return {'ipv4': ips}
 
 
 def path():

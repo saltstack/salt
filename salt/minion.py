@@ -754,10 +754,6 @@ class Minion(object):
             self.socket.setsockopt(
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
-        if hasattr(zmq, 'IPV4ONLY'):
-            self.socket.setsockopt(
-                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable', False)))
-            )
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.epoller.register(self.epull_sock, zmq.POLLIN)
@@ -775,11 +771,24 @@ class Minion(object):
         # On first startup execute a state run if configured to do so
         self._state_run()
 
+        loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
                 self.schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if self.schedule.loop_interval < loop_interval:
+                    loop_interval = self.schedule.loop_interval
+                    log.debug(
+                        'Overriding loop_interval because of scheduled jobs.'
+                    )
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occurred in scheduled job'.format(exc)
+                )
+            try:
                 socks = dict(self.poller.poll(
-                    self.opts['loop_interval'] * 1000)
+                    loop_interval * 1000)
                 )
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
@@ -982,7 +991,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['grains'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['grains'], comps[0], {})
         if match == {}:
             log.error('Targeted grain "{0}" not found'.format(comps[0]))
             return False
@@ -1039,6 +1048,10 @@ class Matcher(object):
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
+        if isinstance(val, dict):
+            if comps[1] in val:
+                return True
+            return False
         return bool(fnmatch.fnmatch(
             val,
             comps[1],
@@ -1062,7 +1075,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0])
+        match = salt.utils.traverse_dict(self.opts['pillar'], comps[0], {})
         if match == {}:
             log.error('Targeted pillar "{0}" not found'.format(comps[0]))
             return False
@@ -1119,7 +1132,8 @@ class Matcher(object):
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre'}
+               'E': 'pcre',
+               'D': 'data'}
         if HAS_RANGE:
             ref['R'] = 'range'
         results = []

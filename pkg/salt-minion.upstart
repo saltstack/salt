@@ -9,6 +9,5 @@ respawn
 respawn limit 10 5
 
 script
-export PATH=/usr/bin:$PATH
-exec /usr/bin/salt-minion
+exec salt-minion
 end script

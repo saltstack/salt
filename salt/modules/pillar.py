@@ -7,6 +7,31 @@ import yaml
 
 # Import salt libs
 import salt.pillar
+import salt.utils
+
+
+def get(key, default=''):
+    '''
+    .. versionadded:: 0.14
+
+    Attempt to retrive the named value from pillar, if the named value is not
+    available return the passed default. The default return is an empty string.
+
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict. This means that if a dict in pillar looks like this:
+
+    {'pkg': {'apache': 'httpd'}}
+
+    To retrive the value associated with the apache key in the pkg dict this
+    key can be passed:
+
+    pkg:apache
+
+    CLI Example::
+
+        salt '*' pillar.get pkg:apache
+    '''
+    return salt.utils.traverse_dict(__pillar__, key, default)
 
 
 def data(key=None):
@@ -35,6 +60,8 @@ def data(key=None):
         ret = ret.get(key, {})
 
     return ret
+# Allow pillar.items to also be used to return pillar data
+items = data
 
 
 def raw(key=None):

@@ -18,7 +18,7 @@ The Salt source can be downloaded from the salt github site:
 
 :download:`salt-0.9.3.tar.gz`
 
-Or from PiPy:
+Or from PyPI:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz
 
@@ -104,8 +104,8 @@ displays this new capability.
 Python State Renderer
 `````````````````````
 
-Until now Salt States could only be declared in yaml or json using jinja or
-mako. A new, very powerful, renderer has been added, making it possible to
+Until now Salt States could only be declared in yaml or json using Jinja or
+Mako. A new, very powerful, renderer has been added, making it possible to
 write Salt States in pure Python:
 
 .. code-block:: python
@@ -207,7 +207,7 @@ file.recurse
             - source: salt://linux
 
 file.absent
-    Make sure that the file is not on the system, recursively delets
+    Make sure that the file is not on the system, recursively deletes
     directories, files and symlinks.
 
     .. code-block:: yaml

@@ -64,9 +64,17 @@ def versions():
 
     version_status = {}
 
-    master_version = distutils.version.StrictVersion(salt.__version__)
+    comps = salt.__version__.split('-')
+    if len(comps) == 3:
+        master_version = '-'.join(comps[0:2])
+    else:
+        master_version = salt.__version__
     for minion in minions:
-        minion_version = distutils.version.StrictVersion(minions[minion])
+        comps = minions[minion].split('-')
+        if len(comps) == 3:
+            minion_version = '-'.join(comps[0:2])
+        else:
+            minion_version = minions[minion]
         ver_diff = cmp(minion_version, master_version)
 
         if ver_diff not in version_status:

@@ -24,10 +24,12 @@ import datetime
 import multiprocessing
 import threading
 import sys
+import logging
 
 # Import Salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
 
 class Schedule(object):
     '''
@@ -92,6 +94,12 @@ class Schedule(object):
             for returner in rets:
                 if returner in self.returners:
                     self.returners[returner](ret)
+                else:
+                    log.info(
+                        'Job {1} using invalid returner: {0} Ignoring.'.format(
+                        func, returner
+                        )
+                    )
 
     def eval(self):
         '''
@@ -110,6 +118,11 @@ class Schedule(object):
             else:
                 func = None
             if func not in self.functions:
+                log.info(
+                    'Invalid function: {0} in job {1}. Ignoring.'.format(
+                        job, func
+                    )
+                )
                 continue
             # Add up how many seconds between now and then
             seconds = 0
@@ -126,12 +139,15 @@ class Schedule(object):
             now = int(time.time())
             run = False
             if job in self.intervals:
-                if now - self.intervals[job] > seconds:
+                if now - self.intervals[job] >= seconds:
                     run = True
             else:
                 run = True
             if not run:
                 continue
+            else:
+                log.debug('Running scheduled job: {0}'.format(job))
+
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
             else:

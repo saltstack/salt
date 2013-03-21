@@ -114,7 +114,13 @@ it can also watch a git state for changes
 '''
 
 # Import python libs
-import grp
+# Windows platform has no 'grp' module
+HAS_GRP = False
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    pass
 import os
 import copy
 import json
@@ -203,7 +209,7 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
     '''
     ret = {}
 
-    if group:
+    if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
@@ -236,6 +242,7 @@ def wait(name,
         group=None,
         shell=None,
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Run the given command only if the watch statement calls it
@@ -265,6 +272,9 @@ def wait(name,
     shell
         The shell to use for execution, defaults to /bin/sh
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -286,6 +296,7 @@ def wait_script(name,
         shell=None,
         env=None,
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -331,6 +342,9 @@ def wait_script(name,
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -350,6 +364,7 @@ def run(name,
         shell=None,
         env=(),
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met
@@ -383,6 +398,9 @@ def run(name,
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -407,12 +425,14 @@ def run(name,
                 return ret
         env = _env
 
-    pgid = os.getegid()
+    if HAS_GRP:
+        pgid = os.getegid()
 
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
                   'shell': shell or __grains__['shell'],
-                  'env': env}
+                  'env': env,
+                  'umask': umask}
 
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)
@@ -437,7 +457,8 @@ def run(name,
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
-        os.setegid(pgid)
+        if HAS_GRP:
+            os.setegid(pgid)
 
 
 def script(name,
@@ -451,6 +472,7 @@ def script(name,
         shell=None,
         env=None,
         stateful=False,
+        umask=None,
         **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -496,6 +518,9 @@ def script(name,
         The root directory of the environment for the referencing script. The
         environments are defined in the master config file.
 
+    umask
+         The umask (in octal) to use when running the command.
+
     stateful
         The command being executed is expected to return data about executing
         a state
@@ -512,7 +537,8 @@ def script(name,
     if env is None:
         env = kwargs.get('__env__', 'base')
 
-    pgid = os.getegid()
+    if HAS_GRP:
+        pgid = os.getegid()
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({
@@ -524,7 +550,8 @@ def script(name,
                   'user': user,
                   'group': group,
                   'cwd': cwd,
-                  'template': template})
+                  'template': template,
+                  'umask': umask})
 
     run_check_cmd_kwargs = {'cwd': cwd,
                   'runas': user,
@@ -562,7 +589,8 @@ def script(name,
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
-        os.setegid(pgid)
+        if HAS_GRP:
+            os.setegid(pgid)
 
 
 def call(name, func, args=(), kws=None,
@@ -605,15 +633,19 @@ def call(name, func, args=(), kws=None,
     cmd_kwargs = {'cwd': kwargs.get('cwd'),
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
-                  'env': kwargs.get('env')}
-    pgid = os.getegid()
+                  'env': kwargs.get('env'),
+                  'umask': kwarg.get('umask'),
+                  }
+    if HAS_GRP:
+        pgid = os.getegid()
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None, None)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
     finally:
-        os.setegid(pgid)
+        if HAS_GRP:
+            os.setegid(pgid)
     if not kws:
         kws = {}
     result = func(*args, **kws)

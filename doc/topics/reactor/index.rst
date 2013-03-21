@@ -46,7 +46,7 @@ with lists of reactor sls formulas (globs can be used for matching):
 
 When an event with a tag of auth is fired the reactor will catch the event and
 render the two listed files. The rendered files are standard sls files, so by
-default they are yaml + jinja. The jinja is packed with a few data structures
+default they are yaml + Jinja. The Jinja is packed with a few data structures
 similar to state and pillar sls files. The data available is found in the `tag`
 and `data` variables. The `tag` variable is just the tag in the fired event
 and the `data` variable is the event's data dict. Here is a simple reactor sls:
@@ -59,11 +59,11 @@ and the `data` variable is the event's data dict. Here is a simple reactor sls:
         - tgt: mysql1
     {% endif %}
 
-This simple reactor file uses jinja to further refine the reaction to be made.
+This simple reactor file uses Jinja to further refine the reaction to be made.
 If the `id` in the event data is mysql1 (if the name of the minion is mysql1) then
 the following reaction is defined. The same data structure and compiler used
 for the state system is used for the reactor system. The only difference is that the
-data is matched up to the salt command api and the runner system. In this
+data is matched up to the salt command API and the runner system. In this
 example a command is published to the mysql1 minion with a function of
 state.highstate. Similarly, a runner can be called:
 

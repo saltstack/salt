@@ -18,6 +18,7 @@ import datetime
 import pwd
 import getpass
 import resource
+import traceback
 import subprocess
 import multiprocessing
 import sys
@@ -227,6 +228,10 @@ class Master(SMaster):
     def __set_max_open_files(self):
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if mof_h == resource.RLIM_INFINITY:
+          # Unclear what to do with infinity... OSX reports RLIM_INFINITY as hard limit,
+          # but raising to anything above soft limit fails...
+          mof_h = mof_s
         log.info(
             'Current values for max open files soft/hard setting: '
             '{0}/{1}'.format(
@@ -367,11 +372,6 @@ class Publisher(multiprocessing.Process):
         except AttributeError:
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
-        if hasattr(zmq, 'IPV4ONLY'):
-            pub_sock.setsockopt(
-                zmq.IPV4ONLY,
-                int(not int(self.opts.get('ipv6_enable', False)))
-                )
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -424,10 +424,6 @@ class ReqServer(object):
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
         self.clients = self.context.socket(zmq.ROUTER)
-        if hasattr(zmq, 'IPV4ONLY'):
-            self.clients.setsockopt(
-                zmq.IPV4ONLY, int(not int(self.opts.get('ipv6_enable', False)))
-            )
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
@@ -723,7 +719,7 @@ class AESFuncs(object):
             if 'grains' in load['opts']:
                 grains = load['opts']['grains']
         for fun in self.tops:
-            if not fun in opts.get('master_tops', {}):
+            if not fun in self.opts.get('master_tops', {}):
                 continue
             try:
                 ret.update(self.tops[fun](opts=opts, grains=grains))
@@ -1827,6 +1823,12 @@ class ClearFuncs(object):
                         self.opts['ext_job_cache']
                     )
                 )
+            except Exception:
+                trb = traceback.format_exc()
+                log.critical(
+                        'The specified returner threw a stack trace:\n{0}'
+                        ''.format(trb)
+                    )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
