@@ -22,3 +22,6 @@ rest_cherrypy
 
 .. autoclass:: Jobs
     :members: GET
+
+.. autoclass:: Run
+    :members: POST
