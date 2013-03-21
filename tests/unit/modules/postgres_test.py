@@ -12,10 +12,13 @@ from salt.modules import postgres
 postgres.__grains__ = None  # in order to stub it w/patch below
 postgres.__salt__ = None  # in order to stub it w/patch below
 
-SALT_STUB = {
-    'config.option': Mock(),
-    'cmd.run_all': Mock(),
-}
+if has_mock:
+    SALT_STUB = {
+        'config.option': Mock(),
+        'cmd.run_all': Mock(),
+    }
+else:
+    SALT_STUB = {}
 
 
 @skipIf(has_mock is False, "mock python module is unavailable")
