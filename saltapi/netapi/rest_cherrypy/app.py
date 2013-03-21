@@ -385,8 +385,6 @@ class LowDataAdapter(object):
         authorization token for the current session.
         '''
         lowstate = cherrypy.request.lowstate
-        logger.debug("SaltAPI is passing low-data chunks: %s", lowstate)
-
         token = cherrypy.session.get('token', None)
 
         for chunk in lowstate:
