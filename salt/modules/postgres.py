@@ -41,6 +41,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, run_cmd="cmd.run_all"):
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
     '''
+    kwargs = {}
     if not host:
         host = __salt__['config.option']('postgres.host')
     if host == None or host == '' or host == 'localhost' or \
@@ -51,7 +52,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, run_cmd="cmd.run_all"):
             runas = 'postgres'
 
     if runas is not None:
-        kwargs = {"runas": runas}
+        kwargs["runas"] = runas
 
     if not password:
         password = __salt__['config.option']('postgres.pass')
