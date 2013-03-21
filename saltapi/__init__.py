@@ -9,7 +9,7 @@ import salt.client
 import salt.runner
 import salt.wheel
 import salt.utils
-from salt.exceptions import SaltException
+from salt.exceptions import SaltException, EauthAuthenticationError
 
 class APIClient(object):
     '''
@@ -30,6 +30,10 @@ class APIClient(object):
         '''
         if not 'client' in low:
             raise SaltException('No client specified')
+
+        if not ('token' in low or 'eauth' in low):
+            raise EauthAuthenticationError(
+                    'No authentication credentials given')
 
         l_fun = getattr(self, low['client'])
         f_call = salt.utils.format_call(l_fun, low)
