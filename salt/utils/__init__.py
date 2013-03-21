@@ -34,7 +34,7 @@ except ImportError:
 import salt.minion
 import salt.payload
 from salt.exceptions import (
-        SaltClientError, CommandNotFoundError, SaltSystemExit
+    SaltClientError, CommandNotFoundError, SaltSystemExit
 )
 
 
@@ -109,26 +109,26 @@ def get_colors(use=True):
     as empty strings so that they will not be applied
     '''
     colors = {
-            'BLACK': '\033[0;30m',
-            'DARK_GRAY': '\033[1;30m',
-            'LIGHT_GRAY': '\033[0;37m',
-            'BLUE': '\033[0;34m',
-            'LIGHT_BLUE': '\033[1;34m',
-            'GREEN': '\033[0;32m',
-            'LIGHT_GREEN': '\033[1;32m',
-            'CYAN': '\033[0;36m',
-            'LIGHT_CYAN': '\033[1;36m',
-            'RED': '\033[0;31m',
-            'LIGHT_RED': '\033[1;31m',
-            'PURPLE': '\033[0;35m',
-            'LIGHT_PURPLE': '\033[1;35m',
-            'BROWN': '\033[0;33m',
-            'YELLOW': '\033[1;33m',
-            'WHITE': '\033[1;37m',
-            'DEFAULT_COLOR': '\033[00m',
-            'RED_BOLD': '\033[01;31m',
-            'ENDC': '\033[0m',
-            }
+        'BLACK': '\033[0;30m',
+        'DARK_GRAY': '\033[1;30m',
+        'LIGHT_GRAY': '\033[0;37m',
+        'BLUE': '\033[0;34m',
+        'LIGHT_BLUE': '\033[1;34m',
+        'GREEN': '\033[0;32m',
+        'LIGHT_GREEN': '\033[1;32m',
+        'CYAN': '\033[0;36m',
+        'LIGHT_CYAN': '\033[1;36m',
+        'RED': '\033[0;31m',
+        'LIGHT_RED': '\033[1;31m',
+        'PURPLE': '\033[0;35m',
+        'LIGHT_PURPLE': '\033[1;35m',
+        'BROWN': '\033[0;33m',
+        'YELLOW': '\033[1;33m',
+        'WHITE': '\033[1;37m',
+        'DEFAULT_COLOR': '\033[00m',
+        'RED_BOLD': '\033[01;31m',
+        'ENDC': '\033[0m',
+    }
 
     try:
         fileno = sys.stdout.fileno()
@@ -279,15 +279,13 @@ def jid_to_time(jid):
     second = jid[12:14]
     micro = jid[14:]
 
-    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(
-            year,
-            months[int(month)],
-            day,
-            hour,
-            minute,
-            second,
-            micro
-            )
+    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(year,
+                                                months[int(month)],
+                                                day,
+                                                hour,
+                                                minute,
+                                                second,
+                                                micro)
     return ret
 
 
@@ -421,12 +419,12 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     '''
     if not os.path.isfile(source):
         raise IOError(
-                '[Errno 2] No such file or directory: {0}'.format(source)
-                )
+            '[Errno 2] No such file or directory: {0}'.format(source)
+        )
     if not os.path.isdir(os.path.dirname(dest)):
         raise IOError(
-                '[Errno 2] No such file or directory: {0}'.format(source)
-                )
+            '[Errno 2] No such file or directory: {0}'.format(source)
+        )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
     tgt = mkstemp(prefix=bname, dir=dname)
@@ -443,11 +441,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             msecs = str(int(time.time() * 1000000))[-6:]
             stamp = time.asctime().replace(' ', '_')
             stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
-            bkpath = os.path.join(
-                    bkroot,
-                    dname[1:],
-                    '{0}_{1}'.format(bname, stamp)
-                    )
+            bkpath = os.path.join(bkroot,
+                                  dname[1:],
+                                  '{0}_{1}'.format(bname, stamp))
             if not os.path.isdir(os.path.dirname(bkpath)):
                 os.makedirs(os.path.dirname(bkpath))
             shutil.copyfile(dest, bkpath)
@@ -839,3 +835,30 @@ def check_state_result(self, running):
             if ret['result'] is False:
                 return False
     return True
+
+
+def rm_rf(path):
+    '''
+    Platform-independent recursive delete. Includes code from
+    http://stackoverflow.com/a/2656405
+    '''
+    def _onerror(func, path, exc_info):
+        """
+        Error handler for `shutil.rmtree`.
+
+        If the error is due to an access error (read only file)
+        it attempts to add write permission and then retries.
+
+        If the error is for another reason it re-raises the error.
+
+        Usage : `shutil.rmtree(path, onerror=onerror)`
+        """
+        if is_windows() and not os.access(path, os.W_OK):
+            import stat
+            # Is the error an access error ?
+            os.chmod(path, stat.S_IWUSR)
+            func(path)
+        else:
+            raise
+
+    shutil.rmtree(path, onerror=_onerror)
