@@ -2,9 +2,16 @@ import os
 import integration
 import tempfile
 
-from mock import Mock, patch
+from saltunittest import skipIf
+
+try:
+    from mock import Mock, patch
+    has_mock = True
+except ImportError:
+    has_mock = False
 
 
+@skipIf(has_mock is False, "mock python module is unavailable")
 class CMDModuleTest(integration.ModuleCase):
     '''
     Validate the cmd module
