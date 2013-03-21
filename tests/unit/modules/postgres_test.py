@@ -1,4 +1,10 @@
-from mock import Mock, patch
+
+try:
+    from mock import Mock, patch
+    has_mock = True
+except ImportError:
+    has_mock = False
+    patch = lambda x: lambda: None
 
 from saltunittest import TestCase, TestLoader, TextTestRunner
 
