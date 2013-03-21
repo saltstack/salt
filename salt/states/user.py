@@ -312,7 +312,7 @@ def present(
             ret['result'] = None
             ret['comment'] = 'User {0} set to be added'.format(name)
             return ret
-        if groups:
+        if groups and present_optgroups:
             groups.extend(present_optgroups)
         elif present_optgroups:
             groups = present_optgroups[:]
