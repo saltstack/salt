@@ -35,7 +35,7 @@ class CMDModuleTest(integration.ModuleCase):
         make sure the OS environment is not tainted after running a command that specifies runas.
         '''
         environment = os.environ.copy()
-	loads_mock, popen_mock, getpwnam_mock = mocks
+    loads_mock, popen_mock, getpwnam_mock = mocks
 
         popen_mock.return_value = Mock(
             communicate=lambda *args, **kwags: ['hi', None],
@@ -47,18 +47,18 @@ class CMDModuleTest(integration.ModuleCase):
 
         from salt.modules import cmdmod
 
-	cmdmod.__grains__ = {'os': 'darwin'}
-	try:
-            ret = cmdmod._run('ls', cwd=tempfile.gettempdir(), runas='foobar', shell='/bin/bash')
-    
-            environment2 = os.environ.copy()
-    
-            self.assertEquals(environment, environment2)
-    
-            getpwnam_mock.assert_called_with('foobar')
-            loads_mock.assert_called_with('hi')
-        finally:
-            delattr(cmdmod, '__grains__')
+    cmdmod.__grains__ = {'os': 'darwin'}
+    try:
+        ret = cmdmod._run('ls', cwd=tempfile.gettempdir(), runas='foobar', shell='/bin/bash')
+
+        environment2 = os.environ.copy()
+
+        self.assertEquals(environment, environment2)
+
+        getpwnam_mock.assert_called_with('foobar')
+        loads_mock.assert_called_with('hi')
+    finally:
+        delattr(cmdmod, '__grains__')
 
     def test_stdout(self):
         '''
