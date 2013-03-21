@@ -13,6 +13,13 @@ key in one step:
 
     sudo add-apt-repository ppa:saltstack/salt
 
+.. admonition:: add-apt-repository: command not found?
+
+    For some reasons this command is not always present on Ubuntu systems.
+    You can fix this by installing `python-software-propertie`::
+
+        sudo apt-get install python-software-properties
+
 Alternately, manually add the repository and import the PPA key with these commands:
 
 .. code-block:: bash
