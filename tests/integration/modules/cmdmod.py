@@ -9,7 +9,7 @@ try:
     has_mock = True
 except ImportError:
     has_mock = False
-    patch = lambda x: x
+    patch = lambda x: lambda: None
 
 
 @skipIf(has_mock is False, "mock python module is unavailable")
