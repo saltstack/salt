@@ -164,7 +164,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Short-circuit for the login page
-    ignore_urls = ('/login', '/logout')
+    ignore_urls = ('/login', '/logout', '/run')
 
     if cherrypy.request.path_info.startswith(ignore_urls):
         return
@@ -820,6 +820,29 @@ class Logout(LowDataAdapter):
         return {'return': "Your token has been cleared"}
 
 
+class Run(LowDataAdapter):
+    def POST(self, **kwargs):
+        '''
+        Run commands bypassing the normal session handling
+
+        .. versionadded:: 0.8.0
+
+        This entry point is primarily for "one-off" commands. Each request must
+        pass full Salt external authentication credentials. Otherwise this URL
+        is identical to the root (``/``) execution URL.
+
+        :form lowstate: A list of :term:`lowstate` data appropriate for the
+            :ref:`client <client-apis>` specified client interface. Full
+            external authentication credentials must be included.
+        :status 200: success
+        :status 401: authentication failed
+        :status 406: requested Content-Type not available
+        '''
+        return {
+            'return': list(self.exec_lowstate()),
+        }
+
+
 class API(object):
     '''
     Collect configuration and URL map for building the CherryPy app
@@ -829,6 +852,7 @@ class API(object):
         'login': Login,
         'logout': Logout,
         'minions': Minions,
+        'run': Run,
         'jobs': Jobs,
     }
 
