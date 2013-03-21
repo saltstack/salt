@@ -59,7 +59,7 @@ def _cpv_to_version(cpv):
     return str(cpv[len(_cpv_to_name(cpv) + '-'):])
 
 
-def available_version(*names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -70,8 +70,8 @@ def available_version(*names, **kwargs):
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package1> <package2> <package3> ...
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     if len(names) == 0:
         return ''
@@ -89,6 +89,9 @@ def available_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def _get_upgradable():
@@ -142,7 +145,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return available_version(name) != ''
+    return latest_version(name) != ''
 
 
 def version(*names, **kwargs):
