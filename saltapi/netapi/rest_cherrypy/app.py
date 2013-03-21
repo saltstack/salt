@@ -387,10 +387,11 @@ class LowDataAdapter(object):
         lowstate = cherrypy.request.lowstate
         logger.debug("SaltAPI is passing low-data chunks: %s", lowstate)
 
-        token = {'token': cherrypy.session.get('token')}
+        token = cherrypy.session.get('token', None)
 
         for chunk in lowstate:
-            chunk.update(token)
+            if token:
+                chunk['token'] = token
             yield self.api.run(chunk)
 
     def GET(self):
