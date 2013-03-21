@@ -4,7 +4,10 @@ try:
     has_mock = True
 except ImportError:
     has_mock = False
-    patch = lambda x: lambda: None
+    patch = lambda x: lambda y: None
+    def patchmultiple(x, y, z=None):
+        return None
+    patch.multiple = lambda x: patchmultiple
 
 from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
