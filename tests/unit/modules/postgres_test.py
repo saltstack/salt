@@ -5,9 +5,9 @@ try:
 except ImportError:
     has_mock = False
     patch = lambda x: lambda y: None
-    def patchmultiple(x, y, z=None):
-        return None
-    patch.multiple = lambda x: patchmultiple
+    def patchmultiple(x, __grains__, __salt__=None):
+        return lambda y: None
+    patch.multiple = patchmultiple
 
 from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
