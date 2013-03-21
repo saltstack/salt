@@ -739,7 +739,7 @@ def ip4():
     '''
     Return a list of ipv4 addrs
     '''
-    ips = ''
+    ips = []
     if salt.utils.is_windows():
         # TODO: Add windows ip addrs here
         pass
