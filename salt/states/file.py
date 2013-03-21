@@ -272,7 +272,6 @@ def _check_directory(
                 fchange = {}
                 path = os.path.join(root, fname)
                 stats = __salt__['file.stats'](path, 'md5')
-                print stats
                 if not user is None and user != stats.get('user'):
                     fchange['user'] = user
                 if not group is None and group != stats.get('group'):
