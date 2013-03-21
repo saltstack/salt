@@ -1541,13 +1541,13 @@ class ClearFuncs(object):
         # All wheel ops pass through eauth
         if not 'eauth' in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
 
@@ -1570,13 +1570,6 @@ class ClearFuncs(object):
             if not token['name'] in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']],
-                    clear_load['fun'],
-                    clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
-            if not good:
-                return ''
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
                     **clear_load)
@@ -1585,12 +1578,12 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(clear_load)
             if not name in self.opts['external_auth'][clear_load['eauth']]:
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
             if not self.loadauth.time_auth(clear_load):
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
@@ -1598,7 +1591,7 @@ class ClearFuncs(object):
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('user', 'UNKNOWN'))
+                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
             return self.wheel_.call_func(
