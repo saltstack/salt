@@ -6,7 +6,7 @@ Modules used to control the master itself
 import salt.loader
 import salt.payload
 import salt.utils
-import salt.exceptions.EauthAuthenticationError
+import salt.exceptions
 
 
 class Wheel(object):
