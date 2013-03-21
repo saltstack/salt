@@ -45,8 +45,8 @@ data:
          'bar': '5.6.7-8'}
 
 
-available_version
-^^^^^^^^^^^^^^^^^
+latest_version
+^^^^^^^^^^^^^^
 
 Accepts an arbitrary number of arguments. Each argument is a package name. The
 return value for a package will be an empty string if the package is not found
@@ -69,7 +69,7 @@ still work, to preserve backwards compatibility with older versions of Salt.
 version
 ^^^^^^^
 
-Like ``available_version``, accepts an arbitrary number of arguments and
+Like ``latest_version``, accepts an arbitrary number of arguments and
 returns a string if a single package name was passed, or a dict of name/value
 pairs if more than one was passed. The only difference is that the return
 values are the currently-installed versions of whatever packages are passed. If
@@ -83,7 +83,7 @@ Deprecated and destined to be removed. For now, should just do the following:
 
 .. code-block:: python
 
-        return __salt__['pkg.available_version'](name) != ''
+        return __salt__['pkg.latest_version'](name) != ''
 
 
 install

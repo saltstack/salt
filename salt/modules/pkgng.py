@@ -56,18 +56,21 @@ def version():
     return __salt__['cmd.run'](cmd)
 
 
-def available_version(pkg_name, **kwargs):
+def latest_version(pkg_name, **kwargs):
     '''
     The available version of the package in the repository
 
     CLI Example::
 
-        salt '*' pkgng.available_version <package name>
+        salt '*' pkgng.latest_version <package name>
     '''
 
     cmd = 'pkg info {0}'.format(pkg_name)
     out = __salt__['cmd.run'](cmd).split()
     return out[0]
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def update_package_site(new_url):
