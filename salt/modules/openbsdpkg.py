@@ -81,13 +81,13 @@ def list_pkgs(versions_as_list=False):
     return _format_pkgs(_get_pkgs(), versions_as_list=versions_as_list)
 
 
-def available_version(*names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     The available version of the package in the repository
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
+        salt '*' pkg.latest_version <package name>
     '''
     ret = {}
     # Initialize the dict with empty strings
@@ -103,6 +103,9 @@ def available_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def version(*names, **kwargs):
