@@ -51,7 +51,7 @@ def __virtual__():
     '''
     if __catalina_home():
         return 'tomcat'
-    return True
+    return False
 
 
 def __catalina_home():
