@@ -316,8 +316,11 @@ class Compiler(object):
                                         if not ishashable(req_val):
                                             errors.append((
                                                 'Illegal requisite "{0}", '
-                                                'please check your syntax.\n'
-                                                ).format(str(req_val)))
+                                                'is SLS {1}\n'
+                                                ).format(
+                                                    str(req_val),
+                                                    body['__sls__']))
+                                            continue
 
                                         # Check for global recursive requisites
                                         reqs[name][req_val] = req_key
@@ -751,7 +754,9 @@ class State(object):
                                                 'Illegal requisite "{0}", '
                                                 'please check your syntax.\n'
                                                 ).format(str(req_val)))
+                                            continue
 
+                                        print req_val
                                         # Check for global recursive requisites
                                         reqs[name][req_val] = req_key
                                         # I am going beyond 80 chars on
