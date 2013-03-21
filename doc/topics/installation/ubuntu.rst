@@ -15,8 +15,8 @@ key in one step:
 
 .. admonition:: add-apt-repository: command not found?
 
-    For some reasons this command is not always present on Ubuntu systems.
-    You can fix this by installing `python-software-propertie`::
+    The add-apt-repository command is not always present on Ubuntu systems.
+    This can be fixed by installing `python-software-properties`::
 
         sudo apt-get install python-software-properties
 
