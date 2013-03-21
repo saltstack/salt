@@ -6,7 +6,7 @@ except ImportError:
     has_mock = False
     patch = lambda x: lambda: None
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
+from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 from salt.modules import postgres
 postgres.__grains__ = None  # in order to stub it w/patch below
@@ -18,6 +18,7 @@ SALT_STUB = {
 }
 
 
+@skipIf(has_mock is False, "mock python module is unavailable")
 class PostgresTestCase(TestCase):
     @patch.multiple(postgres, __grains__={'os_family': 'FreeBSD'})
     def test_get_runas_bsd(self):
