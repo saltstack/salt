@@ -92,6 +92,7 @@ something like this:
     /opt/code/flask:
       file.recurse:
         - source: salt://code/flask
+        - include_empty: True
 '''
 
 # Import python libs
