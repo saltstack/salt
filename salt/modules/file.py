@@ -776,7 +776,7 @@ def contains_regex(path, regex, lchar=''):
         return False
 
     try:
-        with open(path, 'r') as target:
+        with salt.utils.fopen(path, 'r') as target:
             for line in target:
                 if lchar:
                     line = line.lstrip(lchar)
