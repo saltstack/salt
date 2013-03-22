@@ -1602,28 +1602,29 @@ class ClearFuncs(object):
                     **clear_load)
 
         try:
+            # Grab the username
             name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            msg = ('Authentication failure of type "eauth" occurred for '
+                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+
+            # Check the config for the user, then authenticate
+            if not (self._chk_eauth_cfg_user(dict(name=name, **clear_load))
+                    or self.loadauth.time_auth(clear_load)):
                 log.warning(msg)
                 return ''
-            if not self.loadauth.time_auth(clear_load):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return ''
+
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][clear_load['eauth']][name],
                     clear_load['fun'])
+
             if not good:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
+
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
                     **clear_load)
+
         except Exception as exc:
             log.error(
                 'Exception occurred in the wheel system: {0}'.format(exc)
