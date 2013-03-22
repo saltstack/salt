@@ -266,22 +266,20 @@ def _check_directory(
         if not 'group' in recurse:
             group = None
         if not 'mode' in recurse:
-            group = None
+            mode = None
         for root, dirs, files in os.walk(name):
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
                 stats = __salt__['file.stats'](path, 'md5')
-                if not user is None and user != stats['user']:
+                if not user is None and user != stats.get('user'):
                     fchange['user'] = user
-                if not group is None and group != stats['group']:
+                if not group is None and group != stats.get('group'):
                     fchange['group'] = group
-                if not mode is None and mode != stats['mode']:
-                    fchange['mode'] = mode
                 if fchange:
                     changes[path] = fchange
-            for name in dirs:
-                path = os.path.join(root, name)
+            for name_ in dirs:
+                path = os.path.join(root, name_)
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
@@ -291,19 +289,11 @@ def _check_directory(
         comment = 'The following files will be changed:\n'
         acomment = ''
         for fn_ in changes:
-            # for some reason we're getting tuples and dicts.
-            # Let's do the right thing for each.
-            if isinstance(changes[fn_], tuple):
-                key, val = changes[fn_]
-            else:
-                key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
-            if key:
-                continue
+            key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
             acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         if acomment:
             comment += acomment
-            return None, comment
-        return None, changes
+        return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
@@ -326,12 +316,7 @@ def _check_dir_meta(
     mode = __salt__['config.manage_mode'](mode)
     if not mode is None and mode != smode:
         changes['mode'] = mode
-    if changes:
-        comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
-            comment += '{0}: {1}\n'.format(key, val)
-        return None, comment
-    return True, 'The directory {0} is in the correct state'.format(name)
+    return changes
 
 
 def _check_touch(name, atime, mtime):

@@ -25,6 +25,7 @@ Full list of builtin state modules
     keyboard
     kmod
     layman
+    libvirt
     locale
     makeconf
     module

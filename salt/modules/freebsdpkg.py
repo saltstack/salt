@@ -48,7 +48,7 @@ def search(pkg_name):
         return {"Results": res}
 
 
-def available_version(*names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -59,8 +59,8 @@ def available_version(*names, **kwargs):
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package1> <package2> <package3> ...
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
 
     ret = {}
@@ -105,6 +105,9 @@ def available_version(*names, **kwargs):
         return ret.values()[0]
 
     return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def version(*names, **kwargs):

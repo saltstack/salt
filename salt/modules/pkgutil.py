@@ -153,19 +153,22 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def available_version(name, **kwargs):
+def latest_version(name, **kwargs):
     '''
     The available version of the package in the repository
 
     CLI Example::
 
-        salt '*' pkgutil.available_version CSWpython
+        salt '*' pkgutil.latest_version CSWpython
     '''
     cmd = '/opt/csw/bin/pkgutil -a --parse {0}'.format(name)
     namever = __salt__['cmd.run_stdout'](cmd).split()[2].strip()
     if namever:
         return namever
     return ''
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def install(name, refresh=False, version=None, **kwargs):

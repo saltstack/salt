@@ -843,11 +843,13 @@ class Syndic(Minion):
     master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
+        interface = opts.get('interface')
         self._syndic = True
         Minion.__init__(self, opts)
         self.local = salt.client.LocalClient(opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
+        self.local.opts['interface'] = interface
 
     def _handle_aes(self, load):
         '''
@@ -1048,6 +1050,10 @@ class Matcher(object):
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
+        if isinstance(val, dict):
+            if comps[1] in val:
+                return True
+            return False
         return bool(fnmatch.fnmatch(
             val,
             comps[1],
@@ -1128,7 +1134,8 @@ class Matcher(object):
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
-               'E': 'pcre'}
+               'E': 'pcre',
+               'D': 'data'}
         if HAS_RANGE:
             ref['R'] = 'range'
         results = []
