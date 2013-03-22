@@ -836,11 +836,13 @@ class Syndic(Minion):
     master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
+        interface = opts.get('interface')
         self._syndic = True
         Minion.__init__(self, opts)
         self.local = salt.client.LocalClient(opts['_master_conf_file'])
         opts.update(self.opts)
         self.opts = opts
+        self.local.opts['interface'] = interface
 
     def _handle_aes(self, load):
         '''
