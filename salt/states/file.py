@@ -1830,7 +1830,11 @@ def rename(name, source, force=False, makedirs=False):
                 'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
-        shutil.move(source, name)
+        if os.path.islink(source):
+            linkto = os.readlink(source)
+            os.symlink(linkto, name)
+        else:
+            shutil.move(source, name)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to move "{0}" to "{1}"'.format(source, name))
