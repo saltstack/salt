@@ -462,10 +462,12 @@ minions that are created derive their configuration.
 .ft C
 minion:
     master: saltmaster.example.com
+    append_domain: example.com
 .ft P
 .fi
 .sp
-This is the location in particular to specify the location of the salt master.
+This example specifies the location of the salt master, and explicitly sets the
+domain name in case automatic detection fails.
 .SS Cloud Configurations
 .sp
 The data specific to interacting with public clouds is set up here.
