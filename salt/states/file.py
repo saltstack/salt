@@ -1787,12 +1787,12 @@ def rename(name, source, force=False, makedirs=False):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if not os.path.exists(source):
+    if not os.path.lexists(source):
         ret['comment'] = ('Source file "{0}" has already been moved out of '
                           'place').format(source)
         return ret
 
-    if os.path.exists(source) and os.path.exists(name):
+    if os.path.lexists(source) and os.path.lexists(name):
         if not force:
             ret['comment'] = ('The target file "{0}" exists and will not be '
                               'overwritten').format(name)
