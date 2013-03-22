@@ -1833,6 +1833,7 @@ def rename(name, source, force=False, makedirs=False):
         if os.path.islink(source):
             linkto = os.readlink(source)
             os.symlink(linkto, name)
+            os.unlink(source)
         else:
             shutil.move(source, name)
     except (IOError, OSError):
