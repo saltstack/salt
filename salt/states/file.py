@@ -1314,7 +1314,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
 
     # Look for the pattern before attempting the edit
-    if not __salt__['file.contains_regex'](name, before):
+    if not __salt__['file.contains_regex_multiline'](name, before):
         # Pattern not found; try to guess why
         if __salt__['file.contains'](name, after):
             ret['comment'] = 'Edit already performed'
@@ -1336,7 +1336,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         nlines = fp_.readlines()
 
     # check the result
-    ret['result'] = __salt__['file.contains_regex'](name, after)
+    ret['result'] = __salt__['file.contains_regex_multiline'](name, after)
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = ''.join(difflib.unified_diff(slines, nlines))
@@ -1395,8 +1395,8 @@ def comment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.contains_regex'](name, regex):
-        if __salt__['file.contains_regex'](name, unanchor_regex):
+    if not __salt__['file.contains_regex_multiline'](name, regex):
+        if __salt__['file.contains_regex_multiline'](name, unanchor_regex):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -1416,7 +1416,7 @@ def comment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex'](name, unanchor_regex)
+    ret['result'] = __salt__['file.contains_regex_multiline'](name, unanchor_regex)
 
     if slines != nlines:
         # Changes happened, add them
@@ -1467,11 +1467,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^')):
+    if __salt__['file.contains_regex_multiline'](name, '^[ \t]*' + regex.lstrip('^')):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex'](name,
+    elif __salt__['file.contains_regex_multiline'](name,
                                          char + '[ \t]*' + regex.lstrip('^')):
         # Line exists and is commented
         pass
@@ -1494,7 +1494,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     # Check the result
     ret['result'] = \
-        __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^'))
+        __salt__['file.contains_regex_multiline'](name, '^[ \t]*' + regex.lstrip('^'))
 
     if slines != nlines:
         # Changes happened, add them
@@ -1591,7 +1591,7 @@ def append(name,
 
     for chunk in text:
 
-        if __salt__['file.contains_regex'](
+        if __salt__['file.contains_regex_multiline'](
                 name, salt.utils.build_whitepace_splited_regex(chunk)):
             continue
 
