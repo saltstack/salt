@@ -160,6 +160,8 @@ def highstate(test=None, **kwargs):
 
     if not test is None:
         opts['test'] = test
+    else:
+        opts['test'] = None
 
     pillar = __resolve_struct(
             kwargs.get('pillar', ''),
@@ -204,6 +206,8 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
 
     if not test is None:
         opts['test'] = test
+    else:
+        opts['test'] = None
 
     pillar = __resolve_struct(
             kwargs.get('pillar', ''),
@@ -300,6 +304,8 @@ def show_sls(mods, env='base', test=None, **kwargs):
     opts = copy.copy(__opts__)
     if not test is None:
         opts['test'] = test
+    else:
+        opts['test'] = None
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -375,6 +381,8 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     opts = copy.copy(__opts__)
     if not test is None:
         opts['test'] = test
+    else:
+        opts['test'] = None
     st_ = salt.state.State(opts)
     err = st_.verify_data(kwargs)
     if err:

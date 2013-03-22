@@ -1209,7 +1209,8 @@ def recurse(name,
     for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
             continue
-        if not fn_.startswith('{0}{1}'.format(srcpath, os.path.sep)):
+        if not fn_.startswith('{0}{1}'.format(srcpath, '/')): # use '/' since
+            #master only runs on posix
             continue
         # fn_ here is the absolute source path of the file to copy from;
         # it is either a normal file or an empty dir(if include_empty==true).
@@ -1235,7 +1236,7 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](env)
         for mdir in mdirs:
-            if not mdir.startswith('{0}{1}'.format(srcpath, os.path.sep)):
+            if not mdir.startswith('{0}{1}'.format(srcpath, '/')): #same as above
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
