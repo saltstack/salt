@@ -179,6 +179,13 @@ class Cloud(object):
                 delret = self.clouds[fun](name)
                 ret.append(delret)
                 if delret:
+                    key_id = name
+                    minion_dict = saltcloud.utils.get_option(
+                            'minion',
+                            self.opts,
+                            self.opts['vm'])
+                    if 'append_domain' in minion_dict:
+                        key_id = '.'.join([key_id, minion_dict['append_domain']])
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
         return ret
