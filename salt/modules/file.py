@@ -760,16 +760,13 @@ def contains(path, text):
         return False
 
 
-def contains_regex_multiline(path, regex, lchar=''):
+def contains_regex_multiline(path, regex):
     '''
     Return True if the given regular expression matches anything in the text
     of a given file
 
     Traverses multiple lines at a time, via the salt BufferedReader (reads in
     chunks)
-
-    `lchar` is ignored (as it's not relevant if we're not dealing with lines).
-    We would remove it, but it might break existing code.
 
     CLI Example::
 
@@ -781,8 +778,6 @@ def contains_regex_multiline(path, regex, lchar=''):
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
-                if lchar:
-                    chunk = chunk.lstrip(lchar)
                 if re.search(regex, chunk, re.MULTILINE):
                     return True
             return False
