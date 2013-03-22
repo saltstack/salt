@@ -11,6 +11,7 @@ data
 # Import python libs
 import os
 import time
+import stat
 import os.path
 import hashlib
 import logging
@@ -611,8 +612,8 @@ def stats(path, hash_type='md5', follow_symlink=False):
     ret['inode'] = pstat.st_ino
     ret['uid'] = pstat.st_uid
     ret['gid'] = pstat.st_gid
-    ret['group'] = gid_to_group(pstat.st_gid)
-    ret['user'] = uid_to_user(pstat.st_uid)
+    ret['group'] = 0
+    ret['user'] = 0
     ret['atime'] = pstat.st_atime
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
