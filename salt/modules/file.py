@@ -760,14 +760,20 @@ def contains(path, text):
         return False
 
 
-def contains_regex(path, regex, lchar=''):
+def contains_regex_multiline(path, regex, lchar=''):
     '''
     Return True if the given regular expression matches anything in the text
     of a given file
 
+    Traverses multiple lines at a time, via the salt BufferedReader (reads in
+    chunks)
+
+    `lchar` is ignored (as it's not relevant if we're not dealing with lines).
+    We would remove it, but it might break existing code.
+
     CLI Example::
 
-        salt '*' file.contains_regex /etc/crontab '^maint'
+        salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
     if not os.path.exists(path):
         return False
