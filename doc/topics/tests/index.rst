@@ -4,6 +4,7 @@ Running The Tests
 To run the tests, use ``tests/runtests.py``, see ``--help`` for more info.
 
 Examples:
+
 * To run all tests: ``sudo ./tests/runtests.py``
 * Run unit tests only: ``sudo ./tests/runtests.py --unit-tests``
 
