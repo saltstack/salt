@@ -47,9 +47,9 @@ import urllib2
 
 def __virtual__():
     '''
-    Only load tomcat if it is installed
+    Only load tomcat if it is installed or if grains/pillar config exists
     '''
-    if __catalina_home():
+    if __catalina_home() or _auth('dummy'):
         return 'tomcat'
     return False
 
