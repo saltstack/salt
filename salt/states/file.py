@@ -1258,6 +1258,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     else:
         ret['comment'] = 'Expected edit does not appear in file'
 
+    # In this case, even if the `after` pattern doesn't appear in the file, we
+    # return True, as it's not necessarily an error
+    ret['result'] = True
+
     return ret
 
 
