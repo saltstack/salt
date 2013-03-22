@@ -1787,16 +1787,30 @@ def rename(name, source, force=False, makedirs=False):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if not os.path.isfile(source):
+    if not os.path.exists(source):
         ret['comment'] = ('Source file "{0}" has already been moved out of '
                           'place').format(source)
         return ret
 
-    if os.path.isfile(source) and os.path.isfile(name) and not force:
-        ret['comment'] = ('The target file "{0}" exists and will not be '
-                          'overwritten').format(name)
-        ret['result'] = False
-        return ret
+    if os.path.exists(source) and os.path.exists(name):
+        if not force:
+            ret['comment'] = ('The target file "{0}" exists and will not be '
+                              'overwritten').format(name)
+            ret['result'] = False
+            return ret
+        elif not __opts__['test']:
+            # Remove the destination to prevent problems later
+            try:
+                if os.path.islink(name):
+                    os.unlink(name)
+                elif os.path.isfile(name):
+                    os.remove(name)
+                else:
+                    shutil.rmtree(name)
+            except (IOError, OSError):
+                return _error(
+                    ret, ('Failed to delete "{0}" in preparation for '
+                          'forced move').format(name))
 
     if __opts__['test']:
         ret['comment'] = 'File "{0}" is set to be moved to "{1}"'.format(
