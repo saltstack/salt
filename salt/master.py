@@ -1566,6 +1566,17 @@ class ClearFuncs(object):
 
         return False
 
+    def _chk_user(self, clear_load):
+        '''
+        Verify token and cache data
+
+        Returns a boolean
+        '''
+        name = self.loadauth.load_name(clear_load)
+
+        return (self._chk_eauth_cfg_user(dict(name=name, **clear_load))
+                or self.loadauth.time_auth(clear_load))
+
     def wheel(self, clear_load):
         '''
         Send a master control function back to the wheel system
@@ -1608,8 +1619,7 @@ class ClearFuncs(object):
                     'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
 
             # Check the config for the user, then authenticate
-            if not (self._chk_eauth_cfg_user(dict(name=name, **clear_load))
-                    or self.loadauth.time_auth(clear_load)):
+            if not self._chk_user(clear_load):
                 log.warning(msg)
                 return ''
 
@@ -1636,21 +1646,18 @@ class ClearFuncs(object):
         Create aand return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
-        if not 'eauth' in clear_load:
-            log.warning('Authentication failure of type "eauth" occurred.')
+        msg = ('Authentication failure of type "eauth" occurred for '
+                'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+
+        if not self._chk_eauth_cfg(clear_load):
+            log.warning(msg)
             return ''
-        if not clear_load['eauth'] in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" occurred.')
-            return ''
+
         try:
-            name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
-                log.warning('Authentication failure of type "eauth" occurred.')
+            if not self._chk_user(clear_load):
+                log.warning(msg)
                 return ''
-            if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" occurred.')
-                return ''
+
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
             log.error(
