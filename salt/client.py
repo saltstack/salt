@@ -979,7 +979,7 @@ class LocalClient(object):
         sreq = salt.payload.SREQ(
             'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
         )
-        payload = sreq.send('clear', payload_kwargs, timeout=timeout)
+        payload = sreq.send('clear', payload_kwargs)
 
         # We have the payload, let's get rid of SREQ fast(GC'ed faster)
         del(sreq)
