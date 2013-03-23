@@ -92,6 +92,7 @@ something like this:
     /opt/code/flask:
       file.recurse:
         - source: salt://code/flask
+        - include_empty: True
 '''
 
 # Import python libs
@@ -266,7 +267,7 @@ def _check_directory(
         if not 'group' in recurse:
             group = None
         if not 'mode' in recurse:
-            group = None
+            mode = None
         for root, dirs, files in os.walk(name):
             for fname in files:
                 fchange = {}
@@ -276,12 +277,10 @@ def _check_directory(
                     fchange['user'] = user
                 if not group is None and group != stats.get('group'):
                     fchange['group'] = group
-                if not mode is None and mode != stats.get('mode'):
-                    fchange['mode'] = mode
                 if fchange:
                     changes[path] = fchange
-            for name in dirs:
-                path = os.path.join(root, name)
+            for name_ in dirs:
+                path = os.path.join(root, name_)
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
@@ -291,19 +290,11 @@ def _check_directory(
         comment = 'The following files will be changed:\n'
         acomment = ''
         for fn_ in changes:
-            # for some reason we're getting tuples and dicts.
-            # Let's do the right thing for each.
-            if isinstance(changes[fn_], tuple):
-                key, val = changes[fn_]
-            else:
-                key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
-            if key:
-                continue
+            key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
             acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         if acomment:
             comment += acomment
-            return None, comment
-        return None, changes
+        return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
@@ -326,12 +317,7 @@ def _check_dir_meta(
     mode = __salt__['config.manage_mode'](mode)
     if not mode is None and mode != smode:
         changes['mode'] = mode
-    if changes:
-        comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
-            comment += '{0}: {1}\n'.format(key, val)
-        return None, comment
-    return True, 'The directory {0} is in the correct state'.format(name)
+    return changes
 
 
 def _check_touch(name, atime, mtime):
@@ -1224,7 +1210,8 @@ def recurse(name,
     for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
             continue
-        if not fn_.startswith('{0}{1}'.format(srcpath, os.path.sep)):
+        if not fn_.startswith('{0}{1}'.format(srcpath, '/')): # use '/' since
+            #master only runs on posix
             continue
         # fn_ here is the absolute source path of the file to copy from;
         # it is either a normal file or an empty dir(if include_empty==true).
@@ -1250,7 +1237,7 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](env)
         for mdir in mdirs:
-            if not mdir.startswith('{0}{1}'.format(srcpath, os.path.sep)):
+            if not mdir.startswith('{0}{1}'.format(srcpath, '/')): #same as above
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
@@ -1329,7 +1316,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
 
     # Look for the pattern before attempting the edit
-    if not __salt__['file.contains_regex'](name, before):
+    if not __salt__['file.contains_regex_multiline'](name, before):
         # Pattern not found; try to guess why
         if __salt__['file.contains'](name, after):
             ret['comment'] = 'Edit already performed'
@@ -1351,7 +1338,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         nlines = fp_.readlines()
 
     # check the result
-    ret['result'] = __salt__['file.contains_regex'](name, after)
+    ret['result'] = __salt__['file.contains_regex_multiline'](name, after)
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = ''.join(difflib.unified_diff(slines, nlines))
@@ -1360,6 +1347,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['comment'] = 'File successfully edited'
     else:
         ret['comment'] = 'Expected edit does not appear in file'
+
+    # In this case, even if the `after` pattern doesn't appear in the file, we
+    # return True, as it's not necessarily an error
+    ret['result'] = True
 
     return ret
 
@@ -1406,8 +1397,8 @@ def comment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.contains_regex'](name, regex):
-        if __salt__['file.contains_regex'](name, unanchor_regex):
+    if not __salt__['file.contains_regex_multiline'](name, regex):
+        if __salt__['file.contains_regex_multiline'](name, unanchor_regex):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -1427,7 +1418,7 @@ def comment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex'](name, unanchor_regex)
+    ret['result'] = __salt__['file.contains_regex_multiline'](name, unanchor_regex)
 
     if slines != nlines:
         # Changes happened, add them
@@ -1478,11 +1469,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^')):
+    if __salt__['file.contains_regex_multiline'](name, '^[ \t]*' + regex.lstrip('^')):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex'](name,
+    elif __salt__['file.contains_regex_multiline'](name,
                                          char + '[ \t]*' + regex.lstrip('^')):
         # Line exists and is commented
         pass
@@ -1505,7 +1496,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     # Check the result
     ret['result'] = \
-        __salt__['file.contains_regex'](name, '^[ \t]*' + regex.lstrip('^'))
+        __salt__['file.contains_regex_multiline'](name, '^[ \t]*' + regex.lstrip('^'))
 
     if slines != nlines:
         # Changes happened, add them
@@ -1602,7 +1593,7 @@ def append(name,
 
     for chunk in text:
 
-        if __salt__['file.contains_regex'](
+        if __salt__['file.contains_regex_multiline'](
                 name, salt.utils.build_whitepace_splited_regex(chunk)):
             continue
 
@@ -1798,16 +1789,30 @@ def rename(name, source, force=False, makedirs=False):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if not os.path.isfile(source):
+    if not os.path.lexists(source):
         ret['comment'] = ('Source file "{0}" has already been moved out of '
                           'place').format(source)
         return ret
 
-    if os.path.isfile(source) and os.path.isfile(name) and not force:
-        ret['comment'] = ('The target file "{0}" exists and will not be '
-                          'overwritten').format(name)
-        ret['result'] = False
-        return ret
+    if os.path.lexists(source) and os.path.lexists(name):
+        if not force:
+            ret['comment'] = ('The target file "{0}" exists and will not be '
+                              'overwritten').format(name)
+            ret['result'] = False
+            return ret
+        elif not __opts__['test']:
+            # Remove the destination to prevent problems later
+            try:
+                if os.path.islink(name):
+                    os.unlink(name)
+                elif os.path.isfile(name):
+                    os.remove(name)
+                else:
+                    shutil.rmtree(name)
+            except (IOError, OSError):
+                return _error(
+                    ret, ('Failed to delete "{0}" in preparation for '
+                          'forced move').format(name))
 
     if __opts__['test']:
         ret['comment'] = 'File "{0}" is set to be moved to "{1}"'.format(
@@ -1827,7 +1832,12 @@ def rename(name, source, force=False, makedirs=False):
                 'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
-        shutil.move(source, name)
+        if os.path.islink(source):
+            linkto = os.readlink(source)
+            os.symlink(linkto, name)
+            os.unlink(source)
+        else:
+            shutil.move(source, name)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to move "{0}" to "{1}"'.format(source, name))

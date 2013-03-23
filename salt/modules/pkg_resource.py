@@ -308,6 +308,10 @@ def parse_targets(name=None, pkgs=None, sources=None):
 def version(*names, **kwargs):
     '''
     Common interface for obtaining the version of installed packages
+
+    CLI Example::
+
+        salt '*' pkg_resource.version vim
     '''
     ret = {}
     versions_as_list = \
@@ -361,6 +365,10 @@ def stringify(pkgs):
     '''
     Takes a dict of package name/version information and joins each list of
     installed versions into a string.
+
+    CLI Example::
+
+        salt '*' pkg_resource.stringify 'vim: 7.127'
     '''
     try:
         for key in pkgs.keys():

@@ -762,12 +762,42 @@ def contains(path, text):
 
 def contains_regex(path, regex, lchar=''):
     '''
+    Return True if the given regular expression matches on any line in the text
+    of a given file.
+
+    If the lchar argument (leading char) is specified, it
+    will strip `lchar` from the left side of each line before trying to match
+
+    CLI Examples:
+
+        salt '*' file.contains_regex /etc/crontab
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with salt.utils.fopen(path, 'r') as target:
+            for line in target:
+                if lchar:
+                    line = line.lstrip(lchar)
+                if re.search(regex, line):
+                    return True
+            return False
+    except (IOError, OSError):
+        return False
+
+
+def contains_regex_multiline(path, regex):
+    '''
     Return True if the given regular expression matches anything in the text
     of a given file
 
+    Traverses multiple lines at a time, via the salt BufferedReader (reads in
+    chunks)
+
     CLI Example::
 
-        salt '*' file.contains_regex /etc/crontab '^maint'
+        salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
     if not os.path.exists(path):
         return False
@@ -775,8 +805,6 @@ def contains_regex(path, regex, lchar=''):
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
-                if lchar:
-                    chunk = chunk.lstrip(lchar)
                 if re.search(regex, chunk, re.MULTILINE):
                     return True
             return False

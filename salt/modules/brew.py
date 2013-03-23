@@ -56,7 +56,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def available_version(*names, **kwargs):
+def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation
@@ -66,8 +66,8 @@ def available_version(*names, **kwargs):
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
-        salt '*' pkg.available_version <package1> <package2> <package3>
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
     if len(names) <= 1:
         return ''
@@ -76,6 +76,9 @@ def available_version(*names, **kwargs):
         for name in names:
             ret[name] = ''
         return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def remove(pkgs, **kwargs):
