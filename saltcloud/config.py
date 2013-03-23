@@ -8,7 +8,7 @@ import salt.config
 
 CLOUD_CONFIG_DEFAULTS = {
     'verify_env': True,
-    'default_include': 'cloud.d/*.conf',
+    'default_include': 'cloud.conf.d/*.conf',
     # Provider defaults
     'provider': '',
     'location': '',
@@ -32,7 +32,7 @@ CLOUD_CONFIG_DEFAULTS = {
 }
 
 VM_CONFIG_DEFAULTS = {
-    'default_include': 'profiles.d/*.conf',
+    'default_include': 'cloud.profiles.d/*.conf',
 }
 
 
