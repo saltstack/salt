@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 # Import salt libs
 import salt.crypt
 import salt.client
+import salt.utils
 from salt.exceptions import SaltException
 
 # Import third party libs
@@ -42,12 +43,12 @@ def __render_script(path, vm_=None, opts=None, minion=''):
     '''
     log.info('Rendering deploy script: {0}'.format(path))
     try:
-        with open(path, 'r') as fp_:
+        with salt.utils.fopen(path, 'r') as fp_:
             template = Template(fp_.read())
             return str(template.render(opts=opts, vm=vm_, minion=minion))
     except AttributeError:
         # Specified renderer was not found
-        with open(path, 'r') as fp_:
+        with salt.utils.fopen(path, 'r') as fp_:
             return fp_.read()
 
 
@@ -90,9 +91,9 @@ def gen_keys(keysize=2048):
     salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
-    with open(priv_path) as fp_:
+    with salt.utils.fopen(priv_path) as fp_:
         priv = fp_.read()
-    with open(pub_path) as fp_:
+    with salt.utils.fopen(pub_path) as fp_:
         pub = fp_.read()
     shutil.rmtree(tdir)
     return priv, pub
@@ -113,7 +114,7 @@ def accept_key(pki_dir, pub, id_):
         pki_dir,
         'minions/{0}'.format(id_)
     )
-    with open(key, 'w+') as fp_:
+    with salt.utils.fopen(key, 'w+') as fp_:
         fp_.write(pub)
 
     oldkey = os.path.join(
@@ -121,7 +122,7 @@ def accept_key(pki_dir, pub, id_):
         'minions_pre/{0}'.format(id_)
     )
     if os.path.isfile(oldkey):
-        with open(oldkey) as fp_:
+        with salt.utils.fopen(oldkey) as fp_:
             if fp_.read() == pub:
                 os.remove(oldkey)
 
@@ -448,7 +449,7 @@ def scp_file(dest_path, contents, kwargs):
     Use scp to copy a file to a server
     '''
     tmpfh, tmppath = tempfile.mkstemp()
-    tmpfile = open(tmppath, 'w')
+    tmpfile = salt.utils.fopen(tmppath, 'w')
     tmpfile.write(contents)
     tmpfile.close()
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
