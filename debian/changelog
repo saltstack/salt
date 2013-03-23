@@ -1,3 +1,9 @@
+salt (0.14.0-1) unstable; urgency=low
+
+  * new version release
+
+ -- Sean Channel <pentabular@gmail.com>  Fri, 22 Mar 2013 19:31:09 -0700
+
 salt (0.13.3-1) unstable; urgency=low
 
   * patch release for ipv6 issues
