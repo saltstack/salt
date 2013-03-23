@@ -8,7 +8,6 @@ Add the following configuration to your minion configuration files::
 
 '''
 
-# Import python libs
 import pickle
 import socket
 import logging
@@ -25,9 +24,25 @@ def _formatHostname(hostname, separator='_'):
     ''' carbon uses . as separator, so replace this in the hostname '''
     return hostname.replace('.', separator)
 
+def _send_picklemetrics(metrics):
+    ''' Uses pickle protocol to send data '''
+    metrics = [(metric_name, (timestamp, value)) for (metric_name, timestamp, value) in metrics]
+    data = pickle.dumps(metrics, protocol=-1)
+    struct_format = '!I'
+    data = struct.pack(struct_format, len(data)) + data
+    total_sent_bytes = 0
+    while total_sent_bytes < len(data):
+        sent_bytes = carbon_sock.send(data[total_sent_bytes:])
+        if sent_bytes == 0: 
+            log.error('Bytes sent 0, Connection reset?')
+            return
+        total_sent_bytes += sent_bytes
+        logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
+
+
 def returner(ret):
     '''
-    Return data to a remote carbon server using the pickle format
+    Return data to a remote carbon server using the text metric protocol
     '''
     host = __salt__['config.option']('carbon.host')
     port = __salt__['config.option']('carbon.port')
@@ -49,35 +64,21 @@ def returner(ret):
     timestamp = int(time.time())
 
     saltdata = ret['return']
-    metric_base = ret['fun']
+    metric_base = ret['fun'] 
+    # Strip the hostname from the carbon base if we are returning from virt
+    # module since then we will get stable metric bases even if the VM is
+    # migrate from host to host
+    if not metric_base.startswith('virt.'):
+        metric_base += '.' + _formatHostname(ret['id'])
     metrics = []
     for name, vals in saltdata.items():
         for key, val in vals.items():
             # XXX: force datatype, needs typechecks, etc
-            val = int(val)
+            val = float(val)
             metrics.append((metric_base + '.' + _formatHostname(name) + '.' + key, val, timestamp))
 
-    def send_picklemetrics(metrics):
-        '''
-        Uses pickle protocol to send data
-        '''
-        metrics = [(metric_name, (timestamp, value)) for (metric_name, timestamp, value) in metrics]
-        data = pickle.dumps(metrics, protocol=-1)
-        struct_format = '!I'
-        data = struct.pack(struct_format, len(data)) + data
-        total_sent_bytes = 0
-        while total_sent_bytes < len(data):
-            sent_bytes = carbon_sock.send(data[total_sent_bytes:])
-            if sent_bytes == 0: 
-                log.error('Bytes sent 0, Connection reset?')
-                return
-            logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
-            total_sent_bytes += sent_bytes
-
-    def send_textmetrics(metrics):
-        '''
-        Use text protorocol to send metric over socket
-        '''
+    def _send_textmetrics(metrics):
+        ''' Use text protorocol to send metric over socket '''
         data = []
         for metric in metrics:
             metric = '{0} {1} {2}'.format(metric[0], metric[1], metric[2])
@@ -90,12 +91,17 @@ def returner(ret):
                 log.error('Bytes sent 0, Connection reset?')
                 return
             logging.debug('Sent {0} bytes to carbon'.format(sent_bytes))
+
             total_sent_bytes += sent_bytes
 
-
     # Send metrics
-    send_textmetrics(metrics)
+    _send_textmetrics(metrics)
 
     # Shut down and close socket
     carbon_sock.shutdown(socket.SHUT_RDWR)
     carbon_sock.close()
+
+
+
+
+
