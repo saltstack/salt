@@ -308,6 +308,8 @@ def ip_ztop(addr):
     Convert IP address representation from ZMQ to Python format. ZMQ expects
     brackets around IPv6 literals, while Python socket functions do not.
     '''
+    if not addr:
+        return addr
     if addr.startswith("["):
         addr = addr[1:]
     if addr.endswith("]"):
@@ -319,7 +321,7 @@ def ip_ptoz(addr):
     Convert IP address representation from Python to ZMQ format. ZMQ expects
     brackets around IPv6 literals, while Python socket functions do not.
     '''
-    if addr.find(":") > -1:
+    if addr and addr.find(":") > -1:
         return "[{0}]".format(addr)
     return addr
 

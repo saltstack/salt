@@ -88,12 +88,17 @@ def lookup_family(hostname):
     Lookup a hostname and determine its address family. The first address returned
     will be AF_INET6 if the system is IPv6-enabled, and AF_INET otherwise.
     '''
-    hostnames = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC,
-                                   socket.SOCK_STREAM)
-    if not hostnames:
-        raise RuntimeError("Found no hostnames on lookup of {0}".format(hostname))
-    h = hostnames[0]
-    return h[0]
+    # If lookups fail, fall back to AF_INET sockets (and v4 addresses).
+    fallback = socket.AF_INET
+    try:
+        hostnames = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC,
+                                       socket.SOCK_STREAM)
+        if not hostnames:
+            return fallback
+        h = hostnames[0]
+        return h[0]
+    except socket.gaierror:
+        return fallback
 
 def verify_socket(interface, pub_port, ret_port):
     '''
