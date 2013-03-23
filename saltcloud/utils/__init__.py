@@ -36,28 +36,46 @@ NSTATES = {
 }
 
 
+def __render_script(path, vm_=None, opts=None, minion=''):
+    '''
+    Return the rendered script
+    '''
+    log.info('Rendering deploy script: {0}'.format(path))
+    try:
+        with open(path, 'r') as fp_:
+            template = Template(fp_.read())
+            return str(template.render(opts=opts, vm=vm_, minion=minion))
+    except AttributeError:
+        # Specified renderer was not found
+        with open(path, 'r') as fp_:
+            return fp_.read()
+
+
 def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
     '''
-    deploy_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'deploy'
-    )
-    for fn_ in os.listdir(deploy_path):
-        full = os.path.join(deploy_path, fn_)
-        if not os.path.isfile(full):
-            continue
-        if os_.lower() == fn_.split('.')[0].lower():
-            # found the right script to embed, go for it
-            try:
-                with open(full, 'r') as fp_:
-                    template = Template(fp_.read())
-                return str(template.render(opts=opts, vm=vm_, minion=minion))
-            except AttributeError:
-                # Specified renderer was not found
-                continue
-    # No deploy script was found, return an empy string
+    if os.path.isabs(os_):
+        # The user provided an absolute path to the deploy script, let's use it
+        return __render_script(os_, vm_, opts, minion)
+
+    if os.path.isabs('{0}.sh'.format(os_)):
+        # The user provided an absolute path to the deploy script, although no
+        # extension was provided. Let's use it anyway.
+        return __render_script('{0}.sh'.format(os_), vm_, opts, minion)
+
+    for search_path in opts['deploy_scripts_search_path']:
+        if os.path.isfile(os.path.join(search_path, os_)):
+            return __render_script(
+                os.path.join(search_path, os_), vm_, opts, minion
+            )
+
+        if os.path.isfile(os.path.join(search_path, '{0}.sh'.format(os_))):
+            return __render_script(
+                os.path.join(search_path, '{0}.sh'.format(os_)),
+                vm_, opts, minion
+            )
+    # No deploy script was found, return an empty string
     return ''
 
 
