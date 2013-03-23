@@ -37,6 +37,9 @@ def _find_vm(name, data, quiet=False):
     Scan the query data for the named vm
     '''
     for hv_ in data:
+        # Check if data is a dict, and not '"virt.full_info" is not available.'
+        if type(data[hv_]) != type({}):
+            continue
         if name in data[hv_].get('vm_info', {}):
             ret = {hv_: {name: data[hv_]['vm_info'][name]}}
             if not quiet:
