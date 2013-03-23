@@ -1539,18 +1539,6 @@ class ClearFuncs(object):
         Send a master control function back to the wheel system
         '''
         # All wheel ops pass through eauth
-        if not 'eauth' in clear_load:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return ''
-        if not clear_load['eauth'] in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return ''
-
         if 'token' in clear_load:
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
@@ -1573,6 +1561,18 @@ class ClearFuncs(object):
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
                     **clear_load)
+
+        if not 'eauth' in clear_load:
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            log.warning(msg)
+            return ''
+        if not clear_load['eauth'] in self.opts['external_auth']:
+            # The eauth system is not enabled, fail
+            msg = ('Authentication failure of type "eauth" occurred for '
+                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            log.warning(msg)
+            return ''
 
         try:
             name = self.loadauth.load_name(clear_load)
