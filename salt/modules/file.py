@@ -768,7 +768,7 @@ def contains_regex(path, regex, lchar=''):
     If the lchar argument (leading char) is specified, it
     will strip `lchar` from the left side of each line before trying to match
 
-    CLI Examples:
+    CLI Examples::
 
         salt '*' file.contains_regex /etc/crontab
     '''
