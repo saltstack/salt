@@ -794,14 +794,14 @@ class Login(LowDataAdapter):
         # Grab eauth config for the current backend for the current user
         perms = self.opts['external_auth'][token['eauth']][token['name']]
 
-        return {'return': {
+        return {'return': [{
             'token': cherrypy.session.id,
             'expire': token['expire'],
             'start': token['start'],
             'user': token['name'],
             'eauth': token['eauth'],
             'perms': perms,
-        }}
+        }]}
 
 
 class Logout(LowDataAdapter):
