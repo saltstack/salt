@@ -74,8 +74,11 @@ def returner(ret):
     for name, vals in saltdata.items():
         for key, val in vals.items():
             # XXX: force datatype, needs typechecks, etc
-            val = float(val)
-            metrics.append((metric_base + '.' + _formatHostname(name) + '.' + key, val, timestamp))
+            try:
+                val = float(val)
+                metrics.append((metric_base + '.' + _formatHostname(name) + '.' + key, val, timestamp))
+            except TypeError:
+                log.info('Error in carbon returner, when trying to convert metric:{0},with val:{1}'.format(key, val))
 
     def _send_textmetrics(metrics):
         ''' Use text protorocol to send metric over socket '''
@@ -83,7 +86,7 @@ def returner(ret):
         for metric in metrics:
             metric = '{0} {1} {2}'.format(metric[0], metric[1], metric[2])
             data.append(metric)
-        data = '\n'.join(data)
+        data = '\n'.join(data) + '\n'
         total_sent_bytes = 0
         while total_sent_bytes < len(data):
             sent_bytes = carbon_sock.send(data[total_sent_bytes:])
