@@ -887,8 +887,12 @@ def destroy(name, call=None):
         if __opts__['EC2.rename_on_destroy'] is True:
             newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
             rename(name, kwargs={'newname': newname}, call='action')
-            log.info('Machine will be identified as {0} until it has been '
-                     'cleaned up.')
+            log.info(
+                'Machine will be identified as {0} until it has been '
+                'cleaned up.'.format(
+                    newname
+                )
+            )
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}

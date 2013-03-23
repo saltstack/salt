@@ -568,8 +568,12 @@ def destroy(name):
         if __opts__['AWS.rename_on_destroy'] is True:
             newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
             rename(name, kwargs={'newname': newname}, call='action')
-            log.info('Machine will be identified as {0} until it has been '
-                     'cleaned up by AWS.')
+            log.info(
+                'Machine will be identified as {0} until it has been '
+                'cleaned up by AWS.'.format(
+                    newname
+                )
+            )
 
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
