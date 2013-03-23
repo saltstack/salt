@@ -303,25 +303,12 @@ def gen_mac(prefix='52:54:'):
             mac += random.choice(src) + random.choice(src) + ':'
     return mac[:-1]
 
-def ip_ztop(addr):
+def ip_bracket(addr):
     '''
-    Convert IP address representation from ZMQ to Python format. ZMQ expects
-    brackets around IPv6 literals, while Python socket functions do not.
+    Convert IP address representation to ZMQ (url) format. ZMQ expects
+    brackets around IPv6 literals, since they are used in URLs.
     '''
-    if not addr:
-        return addr
-    if addr.startswith("["):
-        addr = addr[1:]
-    if addr.endswith("]"):
-        addr = addr[:-1]
-    return addr
-
-def ip_ptoz(addr):
-    '''
-    Convert IP address representation from Python to ZMQ format. ZMQ expects
-    brackets around IPv6 literals, while Python socket functions do not.
-    '''
-    if addr and addr.find(":") > -1:
+    if addr and addr.find(":") > -1 and not addr.startswith('['):
         return "[{0}]".format(addr)
     return addr
 
@@ -333,13 +320,13 @@ def dns_check(addr, safe=False):
     '''
     error = False
     try:
-        hostnames = socket.getaddrinfo(ip_ztop(addr), None, socket.AF_UNSPEC,
+        hostnames = socket.getaddrinfo(addr, None, socket.AF_UNSPEC,
                                        socket.SOCK_STREAM)
         if not hostnames:
             error = True
         else:
             h = hostnames[0]
-            addr = ip_ptoz(h[4][0])
+            addr = ip_bracket(h[4][0])
     except socket.gaierror:
         error = True
 

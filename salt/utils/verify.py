@@ -105,7 +105,6 @@ def verify_socket(interface, pub_port, ret_port):
     Attempt to bind to the sockets to verify that they are available
     '''
 
-    interface = salt.utils.ip_ztop(interface) # strip brackets from IPv6 addresses
     addr_family = lookup_family(interface)
     pubsock = socket.socket(addr_family, socket.SOCK_STREAM)
     retsock = socket.socket(addr_family, socket.SOCK_STREAM)

@@ -79,7 +79,7 @@ class TestVerify(TestCase):
         if socket.has_ipv6:
             # Only run if Python is built with IPv6 support; otherwise
             # this will just fail.
-            self.assertTrue(verify_socket('[::]', 18000, 18001))
+            self.assertTrue(verify_socket('::', 18000, 18001))
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment does not like too many open files')
