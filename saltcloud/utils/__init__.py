@@ -205,7 +205,11 @@ def wait_for_ssh(host, port=22, timeout=900):
     Wait until an ssh connection can be made on a specified host
     '''
     start = time.time()
-    log.debug('Attempting SSH connection to host {0} on port {1}'.format(host, port))
+    log.debug(
+        'Attempting SSH connection to host {0} on port {1}'.format(
+            host, port
+        )
+    )
     trycount = 0
     while True:
         trycount += 1
@@ -258,7 +262,11 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     time.sleep(trysleep)
                     continue
                 else:
-                    log.error('Authentication failed: status code {0}'.format(status))
+                    log.error(
+                        'Authentication failed: status code {0}'.format(
+                            status
+                        )
+                    )
                     return False
             if connectfail is False:
                 return True
@@ -365,7 +373,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if script:
                 log.debug('Executing /tmp/deploy.sh')
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c /tmp/'  #FIXME: always?
+                    deploy_command += ' -c /tmp/'  # FIXME: always?
                     if make_syndic:
                         deploy_command += ' -S'
                     if make_master:
