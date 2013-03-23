@@ -1534,23 +1534,63 @@ class ClearFuncs(object):
         self.event.fire_event(eload, 'auth')
         return ret
 
+    def _chk_eauth_cfg(self, load):
+        '''
+        Check that eauth is enabled in the config and the load data contains
+        all the necessary info
+
+        Returns a boolean
+        '''
+        eauth = self.opts['external_auth']
+        if (eauth
+                and ('username' in load
+                    and 'password' in load
+                    and 'eauth' in load)
+                or 'token' in load):
+            return True
+
+        return False
+
+    def _chk_eauth_cfg_user(self, load):
+        '''
+        Check the given user is enabled for the given eauth type
+
+        Returns a boolean
+        '''
+        if (load
+                and 'eauth' in load
+                and 'name' in load
+                and load['eauth'] in self.opts['external_auth']
+                and load['name'] in self.opts['external_auth'][load['eauth']]):
+            return True
+
+        return False
+
+    def _chk_user(self, clear_load):
+        '''
+        Verify token and cache data
+
+        Returns a boolean
+        '''
+        name = self.loadauth.load_name(clear_load)
+
+        return (self._chk_eauth_cfg_user(dict(name=name, **clear_load))
+                or self.loadauth.time_auth(clear_load))
+
     def wheel(self, clear_load):
         '''
         Send a master control function back to the wheel system
+
+        All wheel ops pass through eauth
         '''
-        # All wheel ops pass through eauth
-        if not 'eauth' in clear_load:
-            msg = ('Authentication failure of type "eauth" occurred for '
-                   'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-            log.warning(msg)
-            return ''
-        if not clear_load['eauth'] in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
+        # Pre-flight eauth config check
+        if not self._chk_eauth_cfg(clear_load):
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
 
+        # Token-based auth or user/pass auth?
         if 'token' in clear_load:
             try:
                 token = self.loadauth.get_tok(clear_load['token'])
@@ -1561,42 +1601,40 @@ class ClearFuncs(object):
                     )
                 )
                 return ''
-            if not token:
+
+            # Check the token info against the config file
+            if not self._chk_eauth_cfg_user(token):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not token['eauth'] in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
-            if not token['name'] in self.opts['external_auth'][token['eauth']]:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+
+            # Passed all checks; apply the load data and return the result
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
                     **clear_load)
 
         try:
+            # Grab the username
             name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+            msg = ('Authentication failure of type "eauth" occurred for '
+                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+
+            # Check the config for the user, then authenticate
+            if not self._chk_user(clear_load):
                 log.warning(msg)
                 return ''
-            if not self.loadauth.time_auth(clear_load):
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
-                log.warning(msg)
-                return ''
+
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][clear_load['eauth']][name],
                     clear_load['fun'])
+
             if not good:
-                msg = ('Authentication failure of type "eauth" occurred for '
-                       'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
+
             return self.wheel_.call_func(
                     clear_load.pop('fun'),
                     **clear_load)
+
         except Exception as exc:
             log.error(
                 'Exception occurred in the wheel system: {0}'.format(exc)
@@ -1608,21 +1646,18 @@ class ClearFuncs(object):
         Create aand return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
-        if not 'eauth' in clear_load:
-            log.warning('Authentication failure of type "eauth" occurred.')
+        msg = ('Authentication failure of type "eauth" occurred for '
+                'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
+
+        if not self._chk_eauth_cfg(clear_load):
+            log.warning(msg)
             return ''
-        if not clear_load['eauth'] in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
-            log.warning('Authentication failure of type "eauth" occurred.')
-            return ''
+
         try:
-            name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
-                log.warning('Authentication failure of type "eauth" occurred.')
+            if not self._chk_user(clear_load):
+                log.warning(msg)
                 return ''
-            if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" occurred.')
-                return ''
+
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
             log.error(
