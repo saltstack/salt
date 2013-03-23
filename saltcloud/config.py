@@ -69,11 +69,6 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
     if isinstance(deploy_scripts_search_path, basestring):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
-    # Add the provided scripts directory to the search path
-    deploy_scripts_search_path.append(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), 'deploy'))
-    )
-
     # Check the provided deploy scripts search path removing any non existing
     # entries.
     for idx, entry in enumerate(deploy_scripts_search_path[:]):
@@ -88,6 +83,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
 
         # It's not a directory? Remove it from the search path
         deploy_scripts_search_path.pop(idx)
+
+    # Add the provided scripts directory to the search path
+    deploy_scripts_search_path.append(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), 'deploy'))
+    )
 
     # Let's make the search path a tuple and add it to the overrides.
     overrides.update(
