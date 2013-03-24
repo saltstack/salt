@@ -840,11 +840,11 @@ def check_state_result(self, running):
 def is_true(value=None):
     '''
     Returns a boolean value representing the "truth" of the value passed. The
-    rules for what is a ``True`` value are:
+    rules for what is a "True" value are:
 
-        1. Numeric values greater than :strong:`0`
-        2. The string values :strong:`True` and :strong:`true`
-        3. Any object for which ``bool(obj)`` returns ``True``
+        1. Numeric values greater than 0
+        2. The string values "True" and "true"
+        3. Any object for which bool(obj) returns "True"
     '''
     if isinstance(value, (int, float)):
         return value > 0
