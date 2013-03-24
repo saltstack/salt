@@ -170,22 +170,17 @@ def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to 'ec2-user'.
     '''
-    usernames = vm_.get(
-        'ssh_username', __opts__.get('AWS.ssh_username', 'ec2-user')
-    )
+    usernames = vm_.get('ssh_username', __opts__.get('AWS.ssh_username', []))
     if not isinstance(usernames, list):
-        username = usernames
-        usernames = [username]
-    if not 'ec2-user' in usernames:
-        usernames.append('ec2-user')
-    if not 'ubuntu' in usernames:
-        usernames.append('ubuntu')
-    if not 'admin' in usernames:
-        usernames.append('admin')
-    if not 'bitnami' in usernames:
-        usernames.append('bitnami')
-    if not 'root' in usernames:
-        usernames.append('root')
+        usernames = [usernames]
+
+    # get rid of None's or empty names
+    usernames = filter(lambda x: x, usernames)
+
+    # Add common usernames to the list to be tested
+    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
+        if name not in usernames:
+            usernames.append(name)
     return usernames
 
 
