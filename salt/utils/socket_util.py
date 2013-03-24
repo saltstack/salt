@@ -290,7 +290,7 @@ def interfaces():
                 stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
     elif salt.utils.which('ifconfig'):
-        cmd2 = subprocess.Popen(
+        cmd = subprocess.Popen(
                 'ifconfig -a',
                 shell=True,
                 stdout=subprocess.PIPE,
