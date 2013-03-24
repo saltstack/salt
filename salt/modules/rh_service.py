@@ -9,6 +9,7 @@ import glob
 import logging
 import os
 
+# Import salt libs
 import salt.utils
 
 # Import upstart module if needed
@@ -71,7 +72,7 @@ def _add_custom_initscript(name):
     If the passed service name is not in the output from get_all(), runs a
     'chkconfig --add' so that it is available.
     '''
-    initscript_path = os.path.join('/etc/rc.d/init.d', name)
+    initscript_path = os.path.join('/etc/init.d', name)
     if name not in get_all() and os.access(initscript_path, os.X_OK):
         cmd = '/sbin/chkconfig --add {0}'.format(name)
         if __salt__['cmd.retcode'](cmd):
