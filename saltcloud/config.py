@@ -77,7 +77,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
             entry = os.path.join(os.path.dirname(path), entry)
 
         if os.path.isdir(entry):
-            # Path exists
+            # Path exists, let's update the entry(it's path might have been
+            # made absolute)
+            deploy_scripts_search_path[idx] = entry
             continue
 
         # It's not a directory? Remove it from the search path
