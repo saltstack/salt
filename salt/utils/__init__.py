@@ -859,7 +859,7 @@ def is_true(value=None):
 
         1. Numeric values greater than 0
         2. The string values "True" and "true"
-        3. Any object for which bool(obj) returns "True"
+        3. Any object for which bool(obj) returns True
     '''
     if isinstance(value, (int, float)):
         return value > 0
