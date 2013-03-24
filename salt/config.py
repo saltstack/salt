@@ -218,10 +218,11 @@ def _append_domain(opts):
     # Trailing dot should mean an FQDN that is terminated, leave it alone.
     if opts['id'].endswith('.'):
         return opts['id']
-    return "{0[id]}.{0[append_domain]}".format(opts)
+    return '{0[id]}.{0[append_domain]}'.format(opts)
 
 
 def _read_conf_file(path):
+    log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
         conf_opts = yaml.safe_load(conf_file.read()) or {}
         # allow using numeric ids: convert int to string
@@ -252,6 +253,7 @@ def load_config(path, env_var):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
             import salt.utils  # TODO: Need to re-import, need to find out why
+            log.debug('Writing {0} based on {1}'.format(path, template))
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as ifile:
                     ifile.readline()  # skip first line
@@ -310,6 +312,7 @@ def include_config(include, orig_path, verbose):
 
         for fn_ in glob.glob(path):
             try:
+                log.debug('Including configuration from {0}'.format(fn_))
                 include_config.update(_read_conf_file(fn_))
             except Exception as err:
                 log.warn(
@@ -373,7 +376,6 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
 
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
-
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
