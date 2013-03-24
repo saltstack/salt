@@ -42,6 +42,11 @@ Options
     data only after all data was received. To only return the data with a hard
     timeout and after all minions have returned then use the static option.
 
+.. option:: --async
+
+    Instead of waiting for the job to run on minions only print the jod id of
+    the started execution and complete.
+
 .. option:: -b BATCH, --batch-size=BATCH
 
     Instead of executing on all targeted minions at once, execute on a

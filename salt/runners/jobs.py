@@ -55,15 +55,25 @@ def lookup_jid(jid, ext_source=None):
     '''
     Return the printout from a previously executed job
     '''
+    ret = {}
     if __opts__['ext_job_cache'] or ext_source:
+        out = 'nested'
         returner = ext_source if ext_source else __opts__['ext_job_cache']
         mminion = salt.minion.MasterMinion(__opts__)
-        return mminion.returners['{0}.get_jid'.format(returner)](jid)
+        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+        for minion in data:
+            if u'return' in data[minion]:
+                ret[minion] = data[minion].get(u'return')
+            else:
+                ret[minion] = data[minion].get('return')
+            if 'out' in data[minion]:
+                out = data[minion]['out']
+        salt.output.display_output(ret, out, __opts__)
+        return ret
 
     # Fall back to the local job cache
     client = salt.client.LocalClient(__opts__['conf_file'])
 
-    ret = {}
     for mid, data in client.get_full_returns(jid, [], 0).items():
         ret[mid] = data.get('ret')
         salt.output.display_output(

@@ -108,7 +108,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         file.managed test interface
         '''
-        name = os.path.join(integration.TMP, 'grail_not_scene33')
+        name = os.path.join(integration.TMP, 'grail_not_not_scene33')
         ret = self.run_state(
             'file.managed', test=True, name=name, source='salt://grail/scene33'
         )
