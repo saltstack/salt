@@ -10,6 +10,7 @@ import stat
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltException
+from salt._compat import string_types
 
 PLUGINDIR = '/etc/munin/plugins/'
 
@@ -25,33 +26,39 @@ def _get_conf(fname='/etc/munin/munin-node.cfg'):
     fp = salt.utils.fopen(fname, 'r')
     return fp.read()
 
-def run(plugin):
+def run(plugins):
     '''
-    Run a named munin plugin
+    Run one or more named munin plugins
 
     CLI Example::
 
         salt '*' munin.run uptime
+        salt '*' munin.run uptime,cpu,load,memory
     '''
-    plugins = list_plugins()
-    if plugin in plugins:
-        muninout =  __salt__['cmd.run']('munin-run ' + plugin)
-        data = {
-            plugin: {}
-        }
-        for line in muninout.split('\n'):
-            if 'value' in line: # This skips multigraph lines, etc
-                key, val = line.split(' ')
-                key = key.split('.')[0]
-                try:
-                    # We only want numbers
-                    val = float(val)
-                    data[plugin][key] = val
-                except ValueError:
-                    pass
-        return data
-    else:
-        return 'Munin plugin with name "%s" not found' %plugin
+    all_plugins = list_plugins()
+
+    if isinstance(plugins, string_types):
+        plugins = plugins.split(',')
+    
+    data = {}
+    for plugin in plugins:
+        if plugin in plugins:
+            data[plugin] = {}
+            muninout =  __salt__['cmd.run']('munin-run ' + plugin)
+            for line in muninout.split('\n'):
+                if 'value' in line: # This skips multigraph lines, etc
+                    key, val = line.split(' ')
+                    key = key.split('.')[0]
+                    try:
+                        # We only want numbers
+                        if '.' in val:
+                            val = float(val)
+                        else:
+                            val = int(val)
+                        data[plugin][key] = val
+                    except ValueError:
+                        pass
+    return data
 
 def run_all():
     '''
@@ -64,7 +71,7 @@ def run_all():
     plugins = list_plugins()
     ret = {}
     for plugin in plugins:
-        ret[plugin] = run(plugin)
+        ret.update(run(plugin))
     return ret
 
 def list_plugins():
