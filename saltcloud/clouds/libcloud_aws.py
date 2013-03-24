@@ -294,6 +294,7 @@ def create(vm_):
     else:
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
+
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
@@ -301,6 +302,8 @@ def create(vm_):
                     key_filename=__opts__['AWS.private_key']):
                 username = user
                 break
+        else:
+            return {vm_['name']: 'Failed to authenticate'}
 
     sudo = True
     if 'sudo' in vm_.keys():
