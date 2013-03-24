@@ -11,7 +11,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.13.3
+Version: 0.14.0
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -309,6 +309,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Sat Mar 23 2013 Clint Savage <herlo1@gmail.com> - 0.14.0-1
+- Update to upstream feature release 0.14.0
+
 * Fri Mar 22 2013 Clint Savage <herlo1@gmail.com> - 0.13.3-1
 - Update to upstream patch release 0.13.3
 
