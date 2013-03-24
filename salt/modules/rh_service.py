@@ -1,15 +1,29 @@
 '''
-Service support for classic Red Hat type systems. This interface uses the
-service command (so it is compatible with upstart systems) and the chkconfig
-command.
+Service support for RHEL-based systems. This interface uses the service and
+chkconfig commands, and for upstart support uses helper functions from the
+upstart module, as well as the ``start``, ``stop``, and ``status`` commands.
 '''
 
 # Import python libs
+import glob
 import logging
 import os
 
-# Import salt libs
 import salt.utils
+
+# Import upstart module if needed
+HAS_UPSTART = False
+if salt.utils.which('initctl'):
+    try:
+        # Don't re-invent the wheel, import the helper functions from the
+        # upstart module.
+        from salt.modules.upstart \
+            import _upstart_enable, _upstart_disable, _upstart_is_enabled
+    except Exception as exc:
+        log.error('Unable to import helper functions from '
+                  'salt.modules.upstart: {0}'.format(exc))
+    else:
+        HAS_UPSTART = True
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +32,7 @@ def __virtual__():
     '''
     Only work on systems which default to systemd
     '''
-    # Disable on these platforms, specific service modules exist:
+    # Enable on these platforms only.
     enable = [
         'RedHat',
         'CentOS',
@@ -58,7 +72,7 @@ def _add_custom_initscript(name):
     'chkconfig --add' so that it is available.
     '''
     initscript_path = os.path.join('/etc/rc.d/init.d', name)
-    if name not in get_all() and __salt__['cmd.has_exec'](initscript_path):
+    if name not in get_all() and os.access(initscript_path, os.X_OK):
         cmd = '/sbin/chkconfig --add {0}'.format(name)
         if __salt__['cmd.retcode'](cmd):
             log.error('Unable to add initscript "{0}"'.format(name))
@@ -73,59 +87,108 @@ def _add_custom_initscript(name):
             __salt__['cmd.run'](cmd)
 
 
-def get_enabled():
+def _sysv_is_enabled(chkconfig_line, rlevel):
     '''
-    Return the enabled services
+    Given a list of columns from a line of 'chkconfig --list' output, and the
+    runlevel, return True if enabled. Otherwise, return False.
+    '''
+    if len(chkconfig_line) > 3 and '{0}:on'.format(rlevel) in chkconfig_line:
+        return True
+    elif len(chkconfig_line) < 3 and chkconfig_line[1] \
+            and chkconfig_line[1] == 'on':
+        return True
+    return False
 
-    CLI Example::
+
+def _service_is_upstart(name):
+    '''
+    Return true if the service is an upstart service, otherwise return False.
+    '''
+    return name in get_all(limit='upstart')
+
+
+def _services():
+    '''
+    Return a dict of services and their types (sysv or upstart), as well
+    as whether or not the service is enabled.
+    '''
+    # First, parse sysvinit services from chkconfig
+    rlevel = _runlevel()
+    ret = {}
+    for line in __salt__['cmd.run']('/sbin/chkconfig --list').splitlines():
+        cols = line.split()
+        name = cols[0]
+        if not cols or name in ret:
+            continue
+        ret.setdefault(name, {})['type'] = 'sysvinit'
+        ret[name]['enabled'] = _sysv_is_enabled(cols, rlevel)
+    if HAS_UPSTART:
+        for line in glob.glob('/etc/init/*.conf'):
+            name = os.path.basename(line)[:-5]
+            if name in ret:
+                continue
+            ret.setdefault(name, {})['type'] = 'upstart'
+            ret[name]['enabled'] = _upstart_is_enabled(name)
+    return ret
+
+
+def get_enabled(limit=''):
+    '''
+    Return the enabled services. Use the ``limit`` param to restrict results
+    to services of that type.
+
+    CLI Examples::
 
         salt '*' service.get_enabled
+        salt '*' service.get_enabled limit=upstart
+        salt '*' service.get_enabled limit=sysvinit
     '''
-    rlevel = _runlevel()
-    ret = set()
-    cmd = '/sbin/chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).splitlines()
-    for line in lines:
-        comps = line.split()
-        if not comps:
-            continue
-        if len(comps) > 3 and '{0}:on'.format(rlevel) in line:
-            ret.add(comps[0])
-        elif len(comps) < 3 and comps[1] and comps[1] == 'on':
-            ret.add(comps[0].strip(':'))
-    return sorted(ret)
+    limit = limit.lower()
+    if limit in ('upstart', 'sysvinit'):
+        return sorted([x for x, y in _services().iteritems()
+                       if y['enabled'] and y['type'] == limit])
+    else:
+        return sorted([x for x, y in _services().iteritems()
+                       if y['enabled']])
 
 
-def get_disabled():
+def get_disabled(limit=''):
     '''
-    Return the disabled services
+    Return the disabled services. Use the ``limit`` param to restrict results
+    to services of that type.
 
     CLI Example::
 
         salt '*' service.get_disabled
+        salt '*' service.get_disabled limit=upstart
+        salt '*' service.get_disabled limit=sysvinit
     '''
-    rlevel = _runlevel()
-    ret = set()
-    cmd = '/sbin/chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).splitlines()
-    for line in lines:
-        comps = line.split()
-        if not comps:
-            continue
-        if not '{0}:on'.format(rlevel) in line:
-            ret.add(comps[0])
-    return sorted(ret)
+    limit = limit.lower()
+    if limit in ('upstart', 'sysvinit'):
+        return sorted([x for x, y in _services().iteritems()
+                       if not y['enabled'] and y['type'] == limit])
+    else:
+        return sorted([x for x, y in _services().iteritems()
+                       if not y['enabled']])
 
 
-def get_all():
+def get_all(limit=''):
     '''
-    Return all installed services
+    Return all installed services. Use the ``limit`` param to restrict results
+    to services of that type.
 
     CLI Example::
 
         salt '*' service.get_all
+        salt '*' service.get_all limit=upstart
+        salt '*' service.get_all limit=sysvinit
     '''
-    return sorted(get_enabled() + get_disabled())
+    limit = limit.lower()
+    if limit in ('upstart', 'sysvinit'):
+        return sorted([x for x, y in _services().iteritems()
+                       if y['type'] == limit])
+    else:
+        return sorted([x for x, y in _services().iteritems()])
 
 
 def start(name):
@@ -136,8 +199,11 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    _add_custom_initscript(name)
-    cmd = '/sbin/service {0} start'.format(name)
+    if _services().get(name, {}).get('type', '') == 'upstart':
+        cmd = 'start {0}'.format(name)
+    else:
+        _add_custom_initscript(name)
+        cmd = '/sbin/service {0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -149,8 +215,11 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    _add_custom_initscript(name)
-    cmd = '/sbin/service {0} stop'.format(name)
+    if _service_is_upstart(name):
+        cmd = 'stop {0}'.format(name)
+    else:
+        _add_custom_initscript(name)
+        cmd = '/sbin/service {0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -162,8 +231,11 @@ def restart(name, **kwargs):
 
         salt '*' service.restart <service name>
     '''
-    _add_custom_initscript(name)
-    cmd = '/sbin/service {0} restart'.format(name)
+    if _service_is_upstart(name):
+        cmd = 'restart {0}'.format(name)
+    else:
+        _add_custom_initscript(name)
+        cmd = '/sbin/service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -176,11 +248,14 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
+    if _service_is_upstart(name):
+        cmd = 'status {0}'.format(name)
+        return 'start/running' in __salt___['cmd.run'](cmd)
     _add_custom_initscript(name)
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return __salt__['cmd.retcode'](cmd) == 0
 
 
 def enable(name, **kwargs):
@@ -191,6 +266,8 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
+    if _service_is_upstart(name):
+        return _upstart_enable(name)
     _add_custom_initscript(name)
     cmd = '/sbin/chkconfig {0} on'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -204,6 +281,8 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
+    if _service_is_upstart(name):
+        return _upstart_disable(name)
     _add_custom_initscript(name)
     cmd = '/sbin/chkconfig {0} off'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -217,6 +296,8 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
+    if _service_is_upstart(name):
+        return _upstart_is_enabled(name)
     _add_custom_initscript(name)
     return name in get_enabled()
 
@@ -229,5 +310,7 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
+    if _service_is_upstart(name):
+        return not _upstart_is_enabled(name)
     _add_custom_initscript(name)
     return name in get_disabled()
