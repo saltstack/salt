@@ -66,11 +66,8 @@ class SaltCloud(parsers.SaltCloudParser):
             import urllib
             url = 'http://bootstrap.saltstack.org'
             req = urllib.urlopen(url)
-            deploy_scripts_search_paths = self.config.get(
-                'deploy_scripts_search_path', []
-            )[:]
-            while deploy_scripts_search_paths:
-                deploy_path = deploy_scripts_search_paths.pop(0)
+            for entry in self.config.get('deploy_scripts_search_path'):
+                deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
                 try:
                     print(
                         'Updating bootstrap-salt.sh.'
@@ -84,9 +81,15 @@ class SaltCloud(parsers.SaltCloudParser):
                         fp_.write(req.read())
                     # We were able to update, no need to continue trying to
                     # write up the search path
-                    break
-                except (OSError, IOError):
+                    self.exit(0)
+                except (OSError, IOError), err:
+                    log.debug(
+                        'Failed to write the updated script: {0}'.format(err)
+                    )
                     continue
+
+            log.error('Failed to update the bootstrap script')
+            self.exit(1)
 
         # Late imports so logging works as expected
         log.info('salt-cloud starting')
