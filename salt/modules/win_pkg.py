@@ -21,8 +21,10 @@ except ImportError:
 import logging
 import msgpack
 import os
-import salt.utils
 from distutils.version import LooseVersion
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +125,7 @@ def list_upgrades(refresh=True):
 
     # Uncomment the below once pkg.list_upgrades has been implemented
 
-    #if __salt__['config.is_true'](refresh):
+    #if salt.utils.is_true(refresh):
     #    refresh_db()
     return {}
 
@@ -150,7 +152,7 @@ def list_pkgs(*args, **kwargs):
             salt '*' pkg.list_pkgs
     '''
     versions_as_list = \
-        __salt__['config.is_true'](kwargs.get('versions_as_list'))
+        salt.utils.is_true(kwargs.get('versions_as_list'))
     pkgs = {}
     with salt.utils.winapi.Com():
         if len(args) == 0:
@@ -407,7 +409,7 @@ def upgrade(refresh=True):
 
     # Uncomment the below once pkg.upgrade has been implemented
 
-    #if __salt__['config.is_true'](refresh):
+    #if salt.utils.is_true(refresh):
     #    refresh_db()
     return {}
 

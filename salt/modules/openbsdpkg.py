@@ -6,6 +6,9 @@ Package support for OpenBSD
 import re
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -77,7 +80,7 @@ def list_pkgs(versions_as_list=False):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     return _format_pkgs(_get_pkgs(), versions_as_list=versions_as_list)
 
 
