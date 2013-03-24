@@ -9,6 +9,9 @@ import logging
 import urllib2
 import json
 
+# Import salt libs
+import salt.utils
+
 try:
     from aptsources import sourceslist
     apt_support = True
@@ -279,7 +282,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     if debconf:
@@ -427,7 +430,7 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     ret_pkgs = {}
@@ -472,7 +475,7 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs httpd
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     ret = {}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version}\n\' -W'
@@ -562,7 +565,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
     return _get_upgradable()
 

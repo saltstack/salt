@@ -5,8 +5,7 @@ Package support for FreeBSD
 # Import python libs
 import logging
 
-# Import python libs
-import os
+# Import salt libs
 import salt.utils
 
 
@@ -149,7 +148,7 @@ def list_pkgs(versions_as_list=False):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     if _check_pkgng():
         pkg_command = '{0} info'.format(_cmd('pkg'))
     else:
