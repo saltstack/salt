@@ -96,7 +96,8 @@ def _untracked_custom_unit_found(name):
     If the passed service name is not in the output from get_all(), but a unit
     file exist in /etc/systemd/system, return True. Otherwise, return False.
     '''
-    unit_path = os.path.join('/etc/systemd/system', '{0}.service'.format(name))
+    unit_path = os.path.join('/etc/systemd/system',
+                             _canonical_unit_name(name))
     return (name not in get_all() and os.access(unit_path, os.R_OK))
 
 
