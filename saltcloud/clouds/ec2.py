@@ -612,6 +612,9 @@ def create(vm_=None, call=None):
                     key_filename=__opts__['EC2.private_key']):
                 username = user
                 break
+        else:
+            return {vm_['name']: 'Failed to authenticate'}
+
     sudo = True
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']

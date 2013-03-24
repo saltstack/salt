@@ -47,11 +47,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
-    include = overrides.get('include', [])
-
     overrides.update(
         salt.config.include_config(default_include, path, verbose=False)
     )
+    include = overrides.get('include', [])
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
