@@ -10,6 +10,9 @@ import pprint
 import logging
 import distutils.version
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -315,7 +318,7 @@ def version(*names, **kwargs):
     '''
     ret = {}
     versions_as_list = \
-        __salt__['config.is_true'](kwargs.get('versions_as_list'))
+        salt.utils.is_true(kwargs.get('versions_as_list'))
     if len(names) != 0:
         pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True)
         for name in names:

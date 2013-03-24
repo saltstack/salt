@@ -837,6 +837,23 @@ def check_state_result(self, running):
     return True
 
 
+def is_true(value=None):
+    '''
+    Returns a boolean value representing the "truth" of the value passed. The
+    rules for what is a ``True`` value are:
+
+        1. Numeric values greater than :strong:`0`
+        2. The string values :strong:`True` and :strong:`true`
+        3. Any object for which ``bool(obj)`` returns ``True``
+    '''
+    if isinstance(value, (int, float)):
+        return value > 0
+    elif isinstance(value, basestring):
+        return str(value).lower() == 'true'
+    else:
+        return bool(value)
+
+
 def rm_rf(path):
     '''
     Platform-independent recursive delete. Includes code from

@@ -3,7 +3,7 @@ Homebrew for Mac OS X
 '''
 
 # Import salt libs
-import salt
+import salt.utils
 
 
 def __virtual__():
@@ -26,7 +26,7 @@ def list_pkgs(versions_as_list=False):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     ret = {}
     cmd = 'brew list --versions {0}'.format(' '.join(args))
     for line in __salt__['cmd.run'](cmd).splitlines():

@@ -2,6 +2,9 @@
 Pkgutil support for Solaris
 '''
 
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -64,7 +67,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkgutil.list_upgrades
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
     upgrades = {}
     lines = __salt__['cmd.run_stdout'](
@@ -92,7 +95,7 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkgutil.upgrade
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     # Get a list of the packages before install so we can diff after to see
@@ -121,7 +124,7 @@ def list_pkgs(versions_as_list=False):
 
         salt '*' pkgutil.list_pkgs
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     ret = {}
     cmd = '/usr/bin/pkginfo -x'
 
