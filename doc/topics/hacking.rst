@@ -159,6 +159,15 @@ Install Salt (and dependencies) into the virtualenv::
     This also means that pulling in the M2Crypto installed using apt requires using
     ``--system-site-packages`` when creating the virtualenv.
 
+.. note:: Installing psutil
+
+    Python header files are required to build this module, otherwise the pip
+    install will fail. If your distribution separates binaries and headers into
+    separate packages, make sure that you have the headers installed. In most
+    Linux distributions which split the headers into their own package, this
+    can be done by installing the ``python-dev`` or ``python-devel`` package.
+    For other platforms, the package will likely be similarly named.
+
 .. note:: Important note for those developing using RedHat variants
 
     For developers using a RedHat variant, be advised that the package

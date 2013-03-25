@@ -132,7 +132,7 @@ class OptionParser(optparse.OptionParser):
 
         if self.config.get('conf_file', None) is not None:
             logging.getLogger(__name__).info(
-                'Loaded configuration file: {0}'.format(
+                'Configuration file path: {0}'.format(
                     self.config['conf_file']
                 )
             )

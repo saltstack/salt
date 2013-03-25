@@ -6,9 +6,11 @@ Support for APT (Advanced Packaging Tool)
 import os
 import re
 import logging
+import urllib2
+import json
 
-from urllib2 import urlopen, Request, HTTPError
-from json import load
+# Import salt libs
+import salt.utils
 
 try:
     from aptsources import sourceslist
@@ -71,9 +73,9 @@ def _get_ppa_info_from_launchpad(owner_name, ppa_name):
 
     lp_url = 'https://launchpad.net/api/1.0/~{0}/+archive/{1}'.format(
         owner_name, ppa_name)
-    request = Request(lp_url, headers={'Accept': 'application/json'})
-    lp_page = urlopen(request)
-    return load(lp_page)
+    request = urllib2.Request(lp_url, headers={'Accept': 'application/json'})
+    lp_page = urllib2.urlopen(request)
+    return json.load(lp_page)
 
 
 def _reconstruct_ppa_name(owner_name, ppa_name):
@@ -280,7 +282,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     if debconf:
@@ -428,7 +430,7 @@ def upgrade(refresh=True, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     ret_pkgs = {}
@@ -473,7 +475,7 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs httpd
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     ret = {}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version}\n\' -W'
@@ -563,7 +565,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
     return _get_upgradable()
 
@@ -919,10 +921,10 @@ def mod_repo(repo, refresh=False, **kwargs):
                                         'keyid to be specified: {0}/{1}'
                             raise Exception(error_str.format(owner_name,
                                                              ppa_name))
-                except HTTPError, e:
+                except urllib2.HTTPError as exc:
                     error_str = 'Launchpad does not know about {0}/{1}: {2}'
                     raise Exception(error_str.format(owner_name, ppa_name,
-                                                     e))
+                                                     exc))
                 except IndexError, e:
                     error_str = 'Launchpad knows about {0}/{1} but did not ' \
                                 'return a fingerprint. Please set keyid ' \

@@ -634,7 +634,7 @@ def call(name, func, args=(), kws=None,
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env'),
-                  'umask': kwarg.get('umask'),
+                  'umask': kwargs.get('umask'),
                   }
     if HAS_GRP:
         pgid = os.getegid()

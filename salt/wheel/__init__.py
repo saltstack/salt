@@ -6,6 +6,7 @@ Modules used to control the master itself
 import salt.loader
 import salt.payload
 import salt.utils
+import salt.exceptions
 
 
 class Wheel(object):
@@ -44,4 +45,7 @@ class Wheel(object):
         sreq = salt.payload.SREQ(
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
-        return sreq.send('clear', load)
+        ret = sreq.send('clear', load)
+        if ret == '':
+            raise salt.exceptions.EauthAuthenticationError
+        return ret

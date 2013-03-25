@@ -10,6 +10,9 @@ import yaml
 import os
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import yum
@@ -109,7 +112,7 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     pkgs = list_pkgs()
@@ -249,7 +252,7 @@ def list_pkgs(versions_as_list=False):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = __salt__['config.is_true'](versions_as_list)
+    versions_as_list = salt.utils.is_true(versions_as_list)
     ret = {}
     yb = yum.YumBase()
     for p in yb.rpmdb:
@@ -443,7 +446,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
@@ -537,7 +540,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    if __salt__['config.is_true'](refresh):
+    if salt.utils.is_true(refresh):
         refresh_db()
 
     yumbase = yum.YumBase()
