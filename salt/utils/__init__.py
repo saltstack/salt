@@ -864,11 +864,11 @@ def is_true(value=None):
     # First, try int/float conversion
     try:
         value = int(value)
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         pass
     try:
         value = float(value)
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         pass
 
     # Now check for truthiness
