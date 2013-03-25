@@ -837,15 +837,41 @@ def check_state_result(self, running):
     return True
 
 
+def test_mode(**kwargs):
+    '''
+    Examines the kwargs passed and returns True if any kwarg which matching
+    "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
+    etc) contains a True value (as determined by salt.utils.is_true).
+    '''
+    for arg, value in kwargs.iteritems():
+        try:
+            if arg.lower() == 'test' and is_true(value):
+                return True
+        except AttributeError:
+            continue
+    return False
+
+
 def is_true(value=None):
     '''
     Returns a boolean value representing the "truth" of the value passed. The
-    rules for what is a ``True`` value are:
+    rules for what is a "True" value are:
 
-        1. Numeric values greater than :strong:`0`
-        2. The string values :strong:`True` and :strong:`true`
-        3. Any object for which ``bool(obj)`` returns ``True``
+        1. Integer/float values greater than 0
+        2. The string values "True" and "true"
+        3. Any object for which bool(obj) returns True
     '''
+    # First, try int/float conversion
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        pass
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        pass
+
+    # Now check for truthiness
     if isinstance(value, (int, float)):
         return value > 0
     elif isinstance(value, basestring):
