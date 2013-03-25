@@ -261,6 +261,8 @@ class StateDeclaration(object):
             self._mods.append(m)
             return m
 
+    __getitem__ = __getattr__
+
     def __str__(self):
         return self._id
 
