@@ -659,7 +659,7 @@ def group_info(groupname):
 
     CLI Example::
 
-        salt '*' pkg.groupinfo 'Perl Support'
+        salt '*' pkg.group_info 'Perl Support'
     '''
     yumbase = yum.YumBase()
     (installed, available) = yumbase.doGroupLists()
