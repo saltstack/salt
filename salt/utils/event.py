@@ -13,6 +13,7 @@ Manage events
 # to read is the same module to fire off events.
 
 # Import python libs
+import time
 import os
 import fnmatch
 import glob
@@ -129,10 +130,13 @@ class SaltEvent(object):
         '''
         Get a single publication
         '''
+        end_time = time.time() + wait
         wait = wait * 1000
 
         self.subscribe(tag)
         while True:
+            if time.time() >= end_time:
+                return None
             socks = dict(self.poller.poll(wait))
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
