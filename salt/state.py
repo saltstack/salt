@@ -756,7 +756,6 @@ class State(object):
                                                 ).format(str(req_val)))
                                             continue
 
-                                        print req_val
                                         # Check for global recursive requisites
                                         reqs[name][req_val] = req_key
                                         # I am going beyond 80 chars on
