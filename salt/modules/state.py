@@ -158,8 +158,8 @@ def highstate(test=None, **kwargs):
         return conflict
     opts = copy.copy(__opts__)
 
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
     else:
         opts['test'] = None
 
@@ -204,8 +204,8 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         return conflict
     opts = copy.copy(__opts__)
 
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
     else:
         opts['test'] = None
 
@@ -302,10 +302,12 @@ def show_sls(mods, env='base', test=None, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     opts = copy.copy(__opts__)
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
     else:
         opts['test'] = None
+    log.critical('BAR')
+    log.critical(opts)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -379,8 +381,8 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
                    '__id__': name,
                    'name': name})
     opts = copy.copy(__opts__)
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
     else:
         opts['test'] = None
     st_ = salt.state.State(opts)
