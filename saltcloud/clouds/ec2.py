@@ -579,16 +579,18 @@ def create(vm_=None, call=None):
         if 'error' in data:
             return data['error']
     except Exception as exc:
-        err = (
-            'Error creating {0} on EC2 when trying to '
-            'run the initial deployment: \n{1}').format(
+        log.error(
+            'Error creating {0} on EC2 when trying to run the initial '
+            'deployment: \n{1}'.format(
                 vm_['name'], exc
+            )
         )
-        log.error(err)
         return False
 
     instance_id = data[0]['instanceId']
-    set_tags(instance_id, {'Name': vm_['name']}, call='action', location=location)
+    set_tags(
+        instance_id, {'Name': vm_['name']}, call='action', location=location
+    )
     log.info('Created node {0}'.format(vm_['name']))
     waiting_for_ip = 0
 
@@ -700,8 +702,7 @@ def create_attach_volumes(name, kwargs, call=None):
         sys.exit(1)
 
     if not 'instance_id' in kwargs:
-        instances = list_nodes_full()
-        kwargs['instance_id'] = instances[name]['instanceId']
+        kwargs['instance_id'] = _get_node(name)['instanceId']
 
     if type(kwargs['volumes']) is str:
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -744,8 +745,7 @@ def stop(name, call=None):
 
     log.info('Stopping node {0}'.format(name))
 
-    instances = list_nodes_full()
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -764,8 +764,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instances = list_nodes_full()
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -786,8 +785,7 @@ def set_tags(name, tags, call=None, location=None):
         log.error('The set_tags action must be called with -a or --action.')
         sys.exit(1)
 
-    instances = list_nodes_full(location)
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name, location)['instanceId']
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
     count = 1
@@ -835,8 +833,7 @@ def del_tags(name, kwargs, call=None):
         log.error('The del_tags action must be called with -a or --action.')
         sys.exit(1)
 
-    instances = list_nodes_full()
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
     count = 1
@@ -862,8 +859,7 @@ def rename(name, kwargs, call=None):
 
     log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
 
-    instances = list_nodes_full()
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     set_tags(name, {'Name': kwargs['newname']}, call='action')
     saltcloud.utils.rename_key(
@@ -879,8 +875,7 @@ def destroy(name, call=None):
 
         salt-cloud --destroy mymachine
     '''
-    nodes = list_nodes_full()
-    instance_id = nodes[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     protected = show_term_protect(instance_id=instance_id,
                              call='action',
                              quiet=True)
@@ -917,8 +912,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    nodes = list_nodes_full()
-    instance_id = nodes[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
     result = query(params)
@@ -956,9 +950,25 @@ def show_instance(name, call=None):
         )
         sys.exit(1)
 
-    nodes = list_nodes_full()
+    return _get_node(name)
 
-    return nodes[name]
+
+def _get_node(name, location=None):
+    attempts = 10
+    while attempts >= 0:
+        try:
+            return list_nodes_full(location)[name]
+        except KeyError:
+            attempts -= 1
+            log.debug(
+                'Failed to get the data for the node {0!r}. Remaining '
+                'attempts {1}'.format(
+                    name, attempts
+                )
+            )
+            # Just a little delay between attempts...
+            time.sleep(0.5)
+    return {}
 
 
 def list_nodes_full(location=None):
@@ -969,13 +979,13 @@ def list_nodes_full(location=None):
         ret = {}
         locations = set(
             get_location(vm_) for vm_ in __opts__['vm']
-                              if _vm_provider(vm_)=='ec2'
+            if _vm_provider(vm_) == 'ec2'
         )
         for loc in locations:
             ret.update(_list_nodes_full(loc))
         return ret
-    else:
-        return _list_nodes_full(location)
+
+    return _list_nodes_full(location)
 
 
 def _vm_provider(vm_):
@@ -996,7 +1006,8 @@ def _list_nodes_full(location=None):
                         name = tag['value']
             else:
                 name = (
-                   instance['instancesSet']['item']['tagSet']['item']['value'])
+                    instance['instancesSet']['item']['tagSet']['item']['value']
+                )
         else:
             name = instance['instancesSet']['item']['instanceId']
         ret[name] = instance['instancesSet']['item']
