@@ -178,8 +178,8 @@ class Minion(parsers.MinionOptionParser):
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
-        self.minion = salt.minion.Minion(self.config)
         self.set_pidfile()
+        self.minion = salt.minion.Minion(self.config)
 
     def start(self):
         '''
