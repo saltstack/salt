@@ -108,6 +108,9 @@ class CkMinions(object):
                     minions.remove(id_)
                     continue
                 if isinstance(match, dict):
+                    if comps[1] == '*':
+                        # We are just checking that the key exists
+                        continue 
                     minions.remove(id_)
                     continue
                 if isinstance(match, list):
@@ -155,6 +158,9 @@ class CkMinions(object):
                     continue
                 if comps[0] not in grains:
                     minions.remove(id_)
+                if isinstance(grains[comps[0]], dict) and comps[1] == '*':
+                    # We are just checking that the key exists
+                    continue
                 if isinstance(grains[comps[0]], list):
                     # We are matching a single component to a single list member
                     found = False
