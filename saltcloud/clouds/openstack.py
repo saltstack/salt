@@ -158,7 +158,7 @@ def create(vm_):
     Create a single VM from a data dict
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
-    saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9_-')
+    saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
     kwargs = {}
     kwargs['name'] = vm_['name']
