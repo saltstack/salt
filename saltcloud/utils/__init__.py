@@ -4,13 +4,11 @@ Utility functions for saltcloud
 
 # Import python libs
 import os
-import sys
 import shutil
 import socket
 import tempfile
 import time
 import subprocess
-import salt.utils.event
 import multiprocessing
 import logging
 import types
@@ -22,7 +20,9 @@ log = logging.getLogger(__name__)
 # Import salt libs
 import salt.crypt
 import salt.client
+import salt.config
 import salt.utils
+import salt.utils.event
 from salt.exceptions import SaltException
 
 # Import third party libs
@@ -166,7 +166,11 @@ def minion_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the minion
     configuration file
     '''
-    minion = {'id': vm_['name']}
+    # Let's get a copy of the salt minion default options
+    minion = salt.config.DEFAULT_MINION_OPTS.copy()
+
+    # Now, let's update it to our needs
+    minion['id'] = vm_['name']
     if 'master_finger' in vm_:
         minion['master_finger'] = vm_['master_finger']
     minion.update(opts.get('minion', {}))
@@ -189,7 +193,9 @@ def master_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the master
     configuration file
     '''
-    master = {}
+
+    # Let's get a copy of the salt master default options
+    master = salt.config.DEFAULT_MASTER_OPTS.copy()
 
     master.update(opts.get('master', {}))
     master.update(vm_.get('master', {}))

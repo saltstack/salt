@@ -212,8 +212,13 @@ class Cloud(object):
         '''
         output = {}
 
-        if 'minion' in vm_ and vm_['minion'] is None:
+        if 'minion' not in vm_:
+            # Let's grab a global minion configuration if defined
+            vm_['minion'] = self.opts.get('minion', {})
+        elif 'minion' in vm_ and vm_['minion'] is None:
+            # Let's set a sane, empty, default
             vm_['minion'] = {}
+
         fun = '{0}.create'.format(self.provider(vm_))
         if fun not in self.clouds:
             log.error(
@@ -222,6 +227,20 @@ class Cloud(object):
                 )
             )
             return
+
+        deploy = vm_.get(
+            'deploy', self.opts.get(
+                '{0}.deploy'.format(self.provider(vm_).upper()),
+                self.opts.get('deploy')
+            )
+        )
+
+        if deploy is True and 'master' not in vm_.get('minion', ()):
+            raise ValueError(
+                'There\'s no master defined on the {0!r} VM settings'.format(
+                    vm_['name']
+                )
+            )
 
         priv, pub = saltcloud.utils.gen_keys(
             saltcloud.utils.get_option('keysize', self.opts, vm_)
@@ -535,7 +554,7 @@ class Map(Cloud):
 
 def create_multiprocessing(config):
     """
-    This function will be called from another process when running a map in 
+    This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
     """
     config['opts']['output'] = 'json'
