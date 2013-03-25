@@ -2,18 +2,28 @@
 Cobbler Pillar
 ==============
 A pillar module to pull data from Cobbler via its API into the pillar dictionary.
+
+
+Configuring the Cobbler ext_pillar
+================================
+
 The same cobbler.* parameters are used for both the Cobbler tops and Cobbler pillar
 modules.
 
 .. code-block:: yaml
-    ext_pillar:
-       - cobbler:
-         - key: cobbler # Nest results within this key. By default, values are not nested.
-         - only: [parameters] # Add only these keys to pillar.
 
-    cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
-    cobbler.user: username # default is no username
-    cobbler.password: password # default is no password
+  ext_pillar:
+  - cobbler:
+    - key: cobbler # Nest results within this key. By default, values are not nested.
+    - only: [parameters] # Add only these keys to pillar.
+
+  cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
+  cobbler.user: username # default is no username
+  cobbler.password: password # default is no password
+
+
+Module Documentation
+====================
 '''
 
 # Import python libs

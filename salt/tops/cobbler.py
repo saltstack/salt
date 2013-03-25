@@ -7,13 +7,16 @@ from Cobbler via its API. The same cobbler.* parameters are used for both
 the Cobbler tops and Cobbler pillar modules.
 
 .. code-block:: yaml
-    master_tops:
-      cobbler: {}
 
-    cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
-    cobbler.user: username # default is no username
-    cobbler.password: password # default is no password
+  master_tops:
+    cobbler: {}
+  cobbler.url: https://example.com/cobbler_api #default is http://localhost/cobbler_api
+  cobbler.user: username # default is no username
+  cobbler.password: password # default is no password
 
+
+Module Documentation
+====================
 '''
 
 # Import python libs
