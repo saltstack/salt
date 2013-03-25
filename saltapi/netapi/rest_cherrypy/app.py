@@ -217,7 +217,7 @@ def hypermedia_handler(*args, **kwargs):
     # directory; this is useful (as a random, non-specific example) for
     # bootstrapping the salt-ui app
     if 'static' in cherrypy.config and 'html' in wants_html():
-        index = os.path.join(cherrypy.config.get('static'), 'index.html')
+        index = os.path.join(cherrypy.config['static'], 'index.html')
         if os.path.exists(index):
             return cherrypy.lib.static.serve_file(index)
 
@@ -870,7 +870,6 @@ class API(object):
                 'server.socket_host': '0.0.0.0',
                 'server.socket_port': apiopts.get('port', 8000),
                 'debug': apiopts.get('debug', False),
-                'static': apiopts.get('static'),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
@@ -879,7 +878,7 @@ class API(object):
                 'tools.gzip.on': True,
 
                 'tools.staticdir.on': True if 'static' in apiopts else False,
-                'tools.staticdir.dir': apiopts.get('static'),
+                'tools.staticdir.dir': apiopts.get('static', ''),
             },
         }
 
