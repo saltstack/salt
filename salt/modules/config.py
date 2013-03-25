@@ -7,6 +7,9 @@ import re
 import os
 import urllib
 
+# Import salt libs
+import salt.utils
+
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
             'mongo.host': 'salt',
