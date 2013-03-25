@@ -179,6 +179,13 @@ class Cloud(object):
                 delret = self.clouds[fun](name)
                 ret.append(delret)
                 if delret:
+                    key_id = name
+                    minion_dict = saltcloud.utils.get_option(
+                            'minion',
+                            self.opts,
+                            self.opts['vm'])
+                    if 'append_domain' in minion_dict:
+                        key_id = '.'.join([key_id, minion_dict['append_domain']])
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
         return ret
@@ -234,7 +241,12 @@ class Cloud(object):
         if 'script' in vm_:
             vm_['os'] = vm_['script']
 
-        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
+        key_id = vm_['name']
+        minion_dict = saltcloud.utils.get_option('minion', self.opts, vm_)
+        if 'append_domain' in minion_dict:
+            key_id = '.'.join([key_id, minion_dict['append_domain']])
+        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, key_id)
+
         try:
             output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
 

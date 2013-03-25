@@ -25,6 +25,7 @@ public cloud provider. A number of additional parameters can also be inserted:
         script: RHEL6
         minion:
             master: salt.example.com
+            append_domain: webs.example.com
         grains:
             role: webserver
 
