@@ -226,9 +226,9 @@ def destroy(name, conn=None):
         if __opts__['delete_sshkeys'] is True:
             saltcloud.utils.remove_sshkey(node.public_ips[0])
         return True
-    else:
-        log.error('Failed to Destroy VM: {0}'.format(name))
-        return False
+
+    log.error('Failed to Destroy VM: {0}'.format(name))
+    return False
 
 
 def reboot(name, conn=None):
