@@ -212,8 +212,13 @@ class Cloud(object):
         '''
         output = {}
 
-        if 'minion' in vm_ and vm_['minion'] is None:
+        if 'minion' not in vm_:
+            # Let's grab a global minion configuration if defined
+            vm_['minion'] = self.opts.get('minion', {})
+        elif 'minion' in vm_ and vm_['minion'] is None:
+            # Let's set a sane, empty, default
             vm_['minion'] = {}
+
         fun = '{0}.create'.format(self.provider(vm_))
         if fun not in self.clouds:
             log.error(
@@ -230,9 +235,9 @@ class Cloud(object):
             )
         )
 
-        if deploy is True and 'master' not in vm_['minion']:
+        if deploy is True and 'master' not in vm_.get('minion', ()):
             raise ValueError(
-                'There\'s no master defined in the {0} VM settings'.format(
+                'There\'s no master defined on the {0!r} VM settings'.format(
                     vm_['name']
                 )
             )
