@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 
 
 # Redirect linode functions to this module namespace
+avail_locations = namespaced_function(avail_locations, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
