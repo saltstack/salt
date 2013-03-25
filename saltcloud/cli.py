@@ -62,24 +62,39 @@ class SaltCloud(parsers.SaltCloudParser):
         # Setup log file logging
         self.setup_logfile_logger()
 
-        # Late imports so logging works as expected
-        log.info('salt-cloud starting')
-        import saltcloud.cloud
-        mapper = saltcloud.cloud.Map(self.config)
-
         if self.options.update_bootstrap:
             import urllib
             url = 'http://bootstrap.saltstack.org'
             req = urllib.urlopen(url)
-            deploy_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)),
-                'saltcloud', 'deploy', 'bootstrap-salt.sh'
-            )
-            print('Updating bootstrap-salt.sh.'
-                  '\n\tSource:      {0}'
-                  '\n\tDestination: {1}'.format(url, deploy_path))
-            with salt.utils.fopen(deploy_path, 'w') as fp_:
-                fp_.write(req.read())
+            for entry in self.config.get('deploy_scripts_search_path'):
+                deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
+                try:
+                    print(
+                        'Updating bootstrap-salt.sh.'
+                        '\n\tSource:      {0}'
+                        '\n\tDestination: {1}'.format(
+                            url,
+                            deploy_path
+                        )
+                    )
+                    with salt.utils.fopen(deploy_path, 'w') as fp_:
+                        fp_.write(req.read())
+                    # We were able to update, no need to continue trying to
+                    # write up the search path
+                    self.exit(0)
+                except (OSError, IOError), err:
+                    log.debug(
+                        'Failed to write the updated script: {0}'.format(err)
+                    )
+                    continue
+
+            log.error('Failed to update the bootstrap script')
+            self.exit(1)
+
+        # Late imports so logging works as expected
+        log.info('salt-cloud starting')
+        import saltcloud.cloud
+        mapper = saltcloud.cloud.Map(self.config)
 
         ret = {}
 
@@ -90,7 +105,9 @@ class SaltCloud(parsers.SaltCloudParser):
                         mapper.provider_list()
                     )
                 except Exception as exc:
-                    log.debug('There was an error listing providers.', exc_info=True)
+                    log.debug(
+                        'There was an error listing providers.', exc_info=True
+                    )
                     self.error(
                         'There was an error listing providers: {0}'.format(exc)
                     )
@@ -263,7 +280,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.error('There was a profile error: {0}'.format(exc))
                 self.exit(1)
 
-        elif self.config.get('map', None) and self.selected_query_option is None:
+        elif self.config.get('map', None) and \
+                self.selected_query_option is None:
             if len(mapper.map) == 0:
                 sys.stderr.write('No nodes defined in this map')
                 self.exit(1)

@@ -417,8 +417,12 @@ def ssh_username(vm_):
     usernames = vm_.get('ssh_username', __opts__.get('EC2.ssh_username', []))
     if not isinstance(usernames, list):
         usernames = [usernames]
-    usernames = filter(lambda x: x, usernames) # get rid of None's or empty names
-    for name in 'ec2-user ubuntu admin bitnami root'.split():
+
+    # get rid of None's or empty names
+    usernames = filter(lambda x: x, usernames)
+
+    # Add common usernames to the list to be tested
+    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
         if name not in usernames:
             usernames.append(name)
     return usernames

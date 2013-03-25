@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 # Import salt libs
 import salt.crypt
 import salt.client
+import salt.utils
 from salt.exceptions import SaltException
 
 # Import third party libs
@@ -36,28 +37,46 @@ NSTATES = {
 }
 
 
+def __render_script(path, vm_=None, opts=None, minion=''):
+    '''
+    Return the rendered script
+    '''
+    log.info('Rendering deploy script: {0}'.format(path))
+    try:
+        with salt.utils.fopen(path, 'r') as fp_:
+            template = Template(fp_.read())
+            return str(template.render(opts=opts, vm=vm_, minion=minion))
+    except AttributeError:
+        # Specified renderer was not found
+        with salt.utils.fopen(path, 'r') as fp_:
+            return fp_.read()
+
+
 def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
     '''
-    deploy_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'deploy'
-    )
-    for fn_ in os.listdir(deploy_path):
-        full = os.path.join(deploy_path, fn_)
-        if not os.path.isfile(full):
-            continue
-        if os_.lower() == fn_.split('.')[0].lower():
-            # found the right script to embed, go for it
-            try:
-                with open(full, 'r') as fp_:
-                    template = Template(fp_.read())
-                return str(template.render(opts=opts, vm=vm_, minion=minion))
-            except AttributeError:
-                # Specified renderer was not found
-                continue
-    # No deploy script was found, return an empy string
+    if os.path.isabs(os_):
+        # The user provided an absolute path to the deploy script, let's use it
+        return __render_script(os_, vm_, opts, minion)
+
+    if os.path.isabs('{0}.sh'.format(os_)):
+        # The user provided an absolute path to the deploy script, although no
+        # extension was provided. Let's use it anyway.
+        return __render_script('{0}.sh'.format(os_), vm_, opts, minion)
+
+    for search_path in opts['deploy_scripts_search_path']:
+        if os.path.isfile(os.path.join(search_path, os_)):
+            return __render_script(
+                os.path.join(search_path, os_), vm_, opts, minion
+            )
+
+        if os.path.isfile(os.path.join(search_path, '{0}.sh'.format(os_))):
+            return __render_script(
+                os.path.join(search_path, '{0}.sh'.format(os_)),
+                vm_, opts, minion
+            )
+    # No deploy script was found, return an empty string
     return ''
 
 
@@ -72,9 +91,9 @@ def gen_keys(keysize=2048):
     salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
-    with open(priv_path) as fp_:
+    with salt.utils.fopen(priv_path) as fp_:
         priv = fp_.read()
-    with open(pub_path) as fp_:
+    with salt.utils.fopen(pub_path) as fp_:
         pub = fp_.read()
     shutil.rmtree(tdir)
     return priv, pub
@@ -95,7 +114,7 @@ def accept_key(pki_dir, pub, id_):
         pki_dir,
         'minions/{0}'.format(id_)
     )
-    with open(key, 'w+') as fp_:
+    with salt.utils.fopen(key, 'w+') as fp_:
         fp_.write(pub)
 
     oldkey = os.path.join(
@@ -103,7 +122,7 @@ def accept_key(pki_dir, pub, id_):
         'minions_pre/{0}'.format(id_)
     )
     if os.path.isfile(oldkey):
-        with open(oldkey) as fp_:
+        with salt.utils.fopen(oldkey) as fp_:
             if fp_.read() == pub:
                 os.remove(oldkey)
 
@@ -186,7 +205,11 @@ def wait_for_ssh(host, port=22, timeout=900):
     Wait until an ssh connection can be made on a specified host
     '''
     start = time.time()
-    log.debug('Attempting SSH connection to host {0} on port {1}'.format(host, port))
+    log.debug(
+        'Attempting SSH connection to host {0} on port {1}'.format(
+            host, port
+        )
+    )
     trycount = 0
     while True:
         trycount += 1
@@ -239,7 +262,11 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     time.sleep(trysleep)
                     continue
                 else:
-                    log.error('Authentication failed: status code {0}'.format(status))
+                    log.error(
+                        'Authentication failed: status code {0}'.format(
+                            status
+                        )
+                    )
                     return False
             if connectfail is False:
                 return True
@@ -346,7 +373,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if script:
                 log.debug('Executing /tmp/deploy.sh')
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c /tmp/'  #FIXME: always?
+                    deploy_command += ' -c /tmp/'  # FIXME: always?
                     if make_syndic:
                         deploy_command += ' -S'
                     if make_master:
@@ -430,7 +457,7 @@ def scp_file(dest_path, contents, kwargs):
     Use scp to copy a file to a server
     '''
     tmpfh, tmppath = tempfile.mkstemp()
-    tmpfile = open(tmppath, 'w')
+    tmpfile = salt.utils.fopen(tmppath, 'w')
     tmpfile.write(contents)
     tmpfile.close()
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
