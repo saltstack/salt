@@ -95,6 +95,7 @@ def low(data):
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
+        __context__['retcode'] = 1
         return err
     return st_.call(data)
 
@@ -187,6 +188,8 @@ def highstate(test=None, **kwargs):
         msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
 
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
     return ret
 
 
@@ -245,6 +248,8 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     except (IOError, OSError):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
     return ret
 
 
@@ -277,7 +282,10 @@ def show_highstate():
         salt '*' state.show_highstate
     '''
     st_ = salt.state.HighState(__opts__)
-    return st_.compile_highstate()
+    ret = st_.compile_highstate()
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+    return ret
 
 
 def show_lowstate():
@@ -289,7 +297,10 @@ def show_lowstate():
         salt '*' state.show_lowstate
     '''
     st_ = salt.state.HighState(__opts__)
-    return st_.compile_low_chunks()
+    ret = st_.compile_low_chunks()
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+    return ret
 
 
 def show_sls(mods, env='base', test=None, **kwargs):
@@ -315,6 +326,8 @@ def show_sls(mods, env='base', test=None, **kwargs):
     errors += st_.state.verify_high(high)
     if errors:
         return errors
+    if isinstance(high, list):
+        __context__['retcode'] = 1
     return high
 
 
