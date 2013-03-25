@@ -19143,7 +19143,6 @@ postgres.host: \(aqlocalhost\(aq
 postgres.port: \(aq5432\(aq
 postgres.user: \(aqpostgres\(aq
 postgres.pass: \(aq\(aq
-postgres.db: \(aqpostgres\(aq
 .ft P
 .fi
 .sp
@@ -19152,7 +19151,7 @@ overwrite options passed into pillar
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.db_create(name, user=None, host=None, port=None, db=None, password=None, tablespace=None, encoding=None, locale=None, lc_collate=None, lc_ctype=None, owner=None, template=None, runas=None)
+.B salt.modules.postgres.db_create(name, user=None, host=None, port=None, password=None, tablespace=None, encoding=None, locale=None, lc_collate=None, lc_ctype=None, owner=None, template=None, runas=None)
 Adds a databases to the Postgres server.
 .sp
 CLI Example:
@@ -19167,7 +19166,7 @@ salt \(aq*\(aq postgres.db_create \(aqdbname\(aq template=template_postgis
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.db_exists(name, user=None, host=None, port=None, db=None, password=None, runas=None)
+.B salt.modules.postgres.db_exists(name, user=None, host=None, port=None, password=None, runas=None)
 Checks if a database exists on the Postgres server.
 .sp
 CLI Example:
@@ -19207,7 +19206,7 @@ salt \(aq*\(aq postgres.db_remove \(aqdbname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_create(groupname, user=None, host=None, port=None, db=None, password=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.group_create(groupname, user=None, host=None, port=None, password=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, rolepassword=None, groups=None, runas=None)
 Creates a Postgres group. A group is postgres is similar to a user, but
 cannot login.
 .sp
@@ -19221,7 +19220,7 @@ salt \(aq*\(aq postgres.group_create \(aqgroupname\(aq user=\(aquser\(aq host=\(
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_remove(groupname, user=None, host=None, port=None, db=None, password=None, runas=None)
+.B salt.modules.postgres.group_remove(groupname, user=None, host=None, port=None, password=None, runas=None)
 Removes a group from the Postgres server.
 .sp
 CLI Example:
@@ -19234,7 +19233,7 @@ salt \(aq*\(aq postgres.group_remove \(aqgroupname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_update(groupname, user=None, host=None, port=None, db=None, password=None, createdb=False, createuser=False, encrypted=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.group_update(groupname, user=None, host=None, port=None, password=None, createdb=False, createuser=False, encrypted=False, replication=False, rolepassword=None, groups=None, runas=None)
 Updated a postgres group
 .sp
 CLI Examples:
@@ -19247,7 +19246,7 @@ salt \(aq*\(aq postgres.group_update \(aqusername\(aq user=\(aquser\(aq host=\(a
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_create(username, user=None, host=None, port=None, db=None, password=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.user_create(username, user=None, host=None, port=None, password=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, rolepassword=None, groups=None, runas=None)
 Creates a Postgres user.
 .sp
 CLI Examples:
@@ -19260,7 +19259,7 @@ salt \(aq*\(aq postgres.user_create \(aqusername\(aq user=\(aquser\(aq host=\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_exists(name, user=None, host=None, port=None, db=None, password=None, runas=None)
+.B salt.modules.postgres.user_exists(name, user=None, host=None, port=None, password=None, runas=None)
 Checks if a user exists on the Postgres server.
 .sp
 CLI Example:
@@ -19273,7 +19272,7 @@ salt \(aq*\(aq postgres.user_exists \(aqusername\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_list(user=None, host=None, port=None, db=None, password=password, runas=None)
+.B salt.modules.postgres.user_list(user=None, host=None, port=None, password=password, runas=None)
 Return a list of users of a Postgres server.
 .sp
 CLI Example:
@@ -19286,7 +19285,7 @@ salt \(aq*\(aq postgres.user_list
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_remove(username, user=None, host=None, port=None, db=None, password=None, runas=None)
+.B salt.modules.postgres.user_remove(username, user=None, host=None, port=None, password=None, runas=None)
 Removes a user from the Postgres server.
 .sp
 CLI Example:
@@ -19299,7 +19298,7 @@ salt \(aq*\(aq postgres.user_remove \(aqusername\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_update(username, user=None, host=None, port=None, db=None, password=None, createdb=False, createuser=False, encrypted=False, replication=False, rolepassword=None, groups=None, runas=None)
+.B salt.modules.postgres.user_update(username, user=None, host=None, port=None, password=None, createdb=False, createuser=False, encrypted=False, replication=False, rolepassword=None, groups=None, runas=None)
 Creates a Postgres user.
 .sp
 CLI Examples:
