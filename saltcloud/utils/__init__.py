@@ -9,7 +9,6 @@ import socket
 import tempfile
 import time
 import subprocess
-import salt.utils.event
 import multiprocessing
 import logging
 import types
@@ -23,6 +22,7 @@ import salt.crypt
 import salt.client
 import salt.config
 import salt.utils
+import salt.utils.event
 from salt.exceptions import SaltException
 
 # Import third party libs
