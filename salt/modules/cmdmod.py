@@ -141,6 +141,7 @@ def _render_cmd(cmd, cwd, template):
     cwd = _render(cwd)
     return (cmd, cwd)
 
+
 def _run(cmd,
          cwd=None,
          stdout=subprocess.PIPE,
@@ -252,7 +253,7 @@ def _run(cmd,
             raise CommandExecutionError(msg)
     else:
         _umask = None
-        
+
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(_chugid_and_umask, runas, _umask)
 
@@ -460,7 +461,7 @@ def script(
         salt '*' cmd.script salt://scripts/runme.sh
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
     '''
-    path = salt.utils.mkstemp()
+    path = salt.utils.mkstemp(dir=cwd)
     if template:
         __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
