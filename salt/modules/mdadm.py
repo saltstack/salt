@@ -92,24 +92,29 @@ def detail(device='/dev/md0'):
 
 
 def create(*args):
-    """
+    '''
     Create a RAID device.
 
-    WARNING !! Use with CAUTION, as it may really mess up ur drives.
+    WARNING!! Use with CAUTION, as this function can be very destructive if not
+    used properly!
 
     Use it just as a regular mdadm command.
 
     For more info, read 'man mdadm'
 
-    NOTE: It takes time to create a RAID array. You can check the progress in "resync_status:" field of command:
+    NOTE: It takes time to create a RAID array. You can check the progress in
+    "resync_status:" field of command:
+
         salt '*' raid.detail /dev/md0
 
-    CLI Example:
+    CLI Examples::
 
         Test mode: if you add a test_mode=True as an argument - it will print out the command to double check.
+
             salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
 
         NON-Testing mode:
+
             salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde
 
     :param args: The arguments u pass to this function.
@@ -125,7 +130,7 @@ def create(*args):
             Executes command on remote the host(s)
                 and
             Prints out the mdadm output.
-    """
+    '''
     test_mode = False
     arguments = {'new_array': '', 'opt_val': {}, 'opt_raw': [], "disks_to_array": []}
 
