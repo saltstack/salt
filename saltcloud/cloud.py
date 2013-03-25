@@ -179,6 +179,13 @@ class Cloud(object):
                 delret = self.clouds[fun](name)
                 ret.append(delret)
                 if delret:
+                    key_id = name
+                    minion_dict = saltcloud.utils.get_option(
+                            'minion',
+                            self.opts,
+                            self.opts['vm'])
+                    if 'append_domain' in minion_dict:
+                        key_id = '.'.join([key_id, minion_dict['append_domain']])
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
         return ret
@@ -205,8 +212,13 @@ class Cloud(object):
         '''
         output = {}
 
-        if 'minion' in vm_ and vm_['minion'] is None:
+        if 'minion' not in vm_:
+            # Let's grab a global minion configuration if defined
+            vm_['minion'] = self.opts.get('minion', {})
+        elif 'minion' in vm_ and vm_['minion'] is None:
+            # Let's set a sane, empty, default
             vm_['minion'] = {}
+
         fun = '{0}.create'.format(self.provider(vm_))
         if fun not in self.clouds:
             log.error(
@@ -215,6 +227,20 @@ class Cloud(object):
                 )
             )
             return
+
+        deploy = vm_.get(
+            'deploy', self.opts.get(
+                '{0}.deploy'.format(self.provider(vm_).upper()),
+                self.opts.get('deploy')
+            )
+        )
+
+        if deploy is True and 'master' not in vm_.get('minion', ()):
+            raise ValueError(
+                'There\'s no master defined on the {0!r} VM settings'.format(
+                    vm_['name']
+                )
+            )
 
         priv, pub = saltcloud.utils.gen_keys(
             saltcloud.utils.get_option('keysize', self.opts, vm_)
@@ -234,7 +260,12 @@ class Cloud(object):
         if 'script' in vm_:
             vm_['os'] = vm_['script']
 
-        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
+        key_id = vm_['name']
+        minion_dict = saltcloud.utils.get_option('minion', self.opts, vm_)
+        if 'append_domain' in minion_dict:
+            key_id = '.'.join([key_id, minion_dict['append_domain']])
+        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, key_id)
+
         try:
             output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
 
@@ -523,7 +554,7 @@ class Map(Cloud):
 
 def create_multiprocessing(config):
     """
-    This function will be called from another process when running a map in 
+    This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
     """
     config['opts']['output'] = 'json'

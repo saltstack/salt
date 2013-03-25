@@ -2,6 +2,9 @@
 Manage configuration files in salt-cloud
 '''
 
+# Import python libs
+import os
+
 # Import salt libs
 import salt.config
 
@@ -20,6 +23,8 @@ CLOUD_CONFIG_DEFAULTS = {
     'start_action': None,
     'enable_hard_maps': False,
     'delete_sshkeys': False,
+    # Custom deploy scripts
+    'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
     'log_file': '/var/log/salt/cloud',
     'log_level': None,
@@ -54,6 +59,42 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
+
+    # Prepare the deploy scripts search path
+    deploy_scripts_search_path = overrides.get(
+        'deploy_scripts_search_path',
+        defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
+    )
+    if isinstance(deploy_scripts_search_path, basestring):
+        deploy_scripts_search_path = [deploy_scripts_search_path]
+
+    # Check the provided deploy scripts search path removing any non existing
+    # entries.
+    for idx, entry in enumerate(deploy_scripts_search_path[:]):
+        if not os.path.isabs(entry):
+            # Let's try if adding the provided path's directory name turns the
+            # entry into a proper directory
+            entry = os.path.join(os.path.dirname(path), entry)
+
+        if os.path.isdir(entry):
+            # Path exists, let's update the entry(it's path might have been
+            # made absolute)
+            deploy_scripts_search_path[idx] = entry
+            continue
+
+        # It's not a directory? Remove it from the search path
+        deploy_scripts_search_path.pop(idx)
+
+    # Add the provided scripts directory to the search path
+    deploy_scripts_search_path.append(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), 'deploy'))
+    )
+
+    # Let's make the search path a tuple and add it to the overrides.
+    overrides.update(
+        deploy_scripts_search_path=tuple(deploy_scripts_search_path)
+    )
+
     return apply_cloud_config(overrides, defaults)
 
 
