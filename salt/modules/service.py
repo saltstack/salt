@@ -80,7 +80,7 @@ def stop(name):
 
 def restart(name, **kwargs):
     '''
-    Restart the named service
+    Restart the specified service
 
     CLI Example::
 
@@ -106,7 +106,7 @@ def status(name, sig=None):
 
 def reload(name):
     '''
-    Restart the named service
+    Restart the specified service
 
     CLI Example::
 
@@ -132,7 +132,7 @@ def get_all(name):
 
 def available(name):
     '''
-    Return if the names service is available
+    Return if the specified service is available
 
     CLI Example::
 
