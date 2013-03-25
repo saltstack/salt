@@ -60,7 +60,8 @@ class OptionParserMeta(MixInMeta):
                 instance._mixin_setup_funcs.append(func)
 
             func = getattr(base, '_mixin_after_parsed', None)
-            if func is not None and func not in instance._mixin_after_parsed_funcs:
+            if func is not None and func not in \
+                    instance._mixin_after_parsed_funcs:
                 instance._mixin_after_parsed_funcs.append(func)
 
             # Mark process_<opt> functions with the base priority for sorting
@@ -108,6 +109,13 @@ class OptionParser(optparse.OptionParser):
             self.print_versions_report()
 
         self.options, self.args = options, args
+
+        # Let's get some proper sys.stderr logging as soon as possible!!!
+        # This logging handler will be removed once the proper console or
+        # logfile logging is setup.
+        log.setup_temp_logger(
+            getattr(self.options, 'log_level', 'error')
+        )
 
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []
@@ -259,7 +267,7 @@ class ConfigDirMixIn(object):
 class LogLevelMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 10
-    _default_logging_level_ = "warning"
+    _default_logging_level_ = 'warning'
     _skip_console_logging_config_ = False
 
     def _mixin_setup(self):
@@ -1119,7 +1127,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def _mixin_after_parsed(self):
-        if not self.args and not self.options.grains_run and not self.options.doc:
+        if not self.args and not self.options.grains_run \
+                and not self.options.doc:
             self.print_help()
             self.exit(1)
 
