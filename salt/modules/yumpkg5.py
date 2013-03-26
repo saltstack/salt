@@ -31,6 +31,11 @@ def __virtual__():
         # RHEL <= 5 and all variants need to use this module
         if os_family == 'RedHat' and os_major_version <= 5:
             return 'pkg'
+        # XCP <= 1.6 needs to use this module
+        if os_family == 'XCP':
+            os_minor_version = int(__grains__['osrelease'].split('.')[1])
+            if os_major_version == 1 and os_minor_version <= 6:
+                return 'pkg'
     return False
 
 
