@@ -529,6 +529,7 @@ _OS_FAMILY_MAP = {
     'OVS': 'RedHat',
     'OEL': 'RedHat',
     'XCP': 'RedHat',
+    'XenServer': 'RedHat',
     'Mandrake': 'Mandriva',
     'ESXi': 'VMWare',
     'Mint': 'Debian',
