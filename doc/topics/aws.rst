@@ -484,7 +484,7 @@ private key itself (which is not stored by Amazon).
 
 .. code-block:: bash
 
-    salt-cloud -f delete_keypair ec2 keyname=mykeypair
+    salt-cloud -f show_keypair ec2 keyname=mykeypair
 
 
 Delete a Key Pair
