@@ -1558,9 +1558,14 @@ class ClearFuncs(object):
             if not token['name'] in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            return self.wheel_.call_func(
-                    clear_load.pop('fun'),
-                    **clear_load)
+
+            try:
+                fun = clear_load.pop('fun')
+                return self.wheel_.call_func(fun, **clear_load)
+            except Exception as exc:
+                log.error('Exception occurred while '
+                        'introspecting {0}: {1}'.format(fun, exc))
+                return ''
 
         if not 'eauth' in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1594,9 +1599,15 @@ class ClearFuncs(object):
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
                 return ''
-            return self.wheel_.call_func(
-                    clear_load.pop('fun'),
-                    **clear_load)
+
+            try:
+                fun = clear_load.pop('fun')
+                return self.wheel_.call_func(fun, **clear_load)
+            except Exception as exc:
+                log.error('Exception occurred while '
+                        'introspecting {0}: {1}'.format(fun, exc))
+                return ''
+
         except Exception as exc:
             log.error(
                 'Exception occurred in the wheel system: {0}'.format(exc)
