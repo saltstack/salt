@@ -538,19 +538,14 @@ class Minion(object):
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
-                    'jid': ret['jid'],
                     'id': self.opts['id']}
             load['return'] = {}
             for key, value in ret.items():
-                if key == 'jid' or key == 'fun':
-                    continue
                 load['return'][key] = value
         else:
             load = {'cmd': ret_cmd,
                     'id': self.opts['id']}
             for key, value in ret.items():
-                if key == 'fun':
-                    continue
                 load[key] = value
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
