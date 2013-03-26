@@ -8,22 +8,31 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 
-GRAINMAP = {
-           'Arch': '/etc/rc.d',
-           'Debian': '/etc/init.d',
-           'Fedora': '/etc/init.d',
-           'RedHat': '/etc/init.d',
-           'Ubuntu': '/etc/init.d',
-           'Gentoo': '/etc/init.d',
-           'CentOS': '/etc/init.d',
-           'CloudLinux': '/etc/init.d',
-           'Amazon': '/etc/init.d',
-           'SunOS': '/etc/init.d',
-           'SUSE  Enterprise Server': '/etc/init.d',
-           'OEL': '/etc/init.d',
-          }
+@salt.utils.memoize
+def _init(osname, service=None):
+    """
+    The default is almost always /etc/init.d for services.
+    Only specify paths that are not the default such as Arch.
+    """
+    path_map = {
+        'Arch': '/etc/rc.d',
+    }
+    default = '/etc/init.d'
+    if service:
+        ret = os.path.join(path_map.get(osname, default), service)
+    else:
+        ret = path_map.get(osname, default)
+
+    if service and not os.path.exists(ret):
+        msg = 'Init script for {0} not found!'
+        raise CommandNotFoundError(msg.format(service))
+    elif not service and not os.path.exists(default):
+        msg = 'Directory {0} not found!'
+        raise CommandExecutionError(msg.format(default))
+    return ret
 
 def __virtual__():
     '''
@@ -31,19 +40,19 @@ def __virtual__():
     '''
     # Disable on these platforms, specific service modules exist:
     disable = [
-               'RedHat',
-               'CentOS',
-               'Amazon',
-               'Scientific',
-               'CloudLinux',
-               'Fedora',
-               'Gentoo',
-               'Ubuntu',
-               'Debian',
-               'Arch',
-               'ALT',
-               'OEL',
-              ]
+        'ALT',
+        'Amazon',
+        'Arch',
+        'CentOS',
+        'CloudLinux',
+        'Debian',
+        'Fedora',
+        'Gentoo',
+        'OEL',
+        'RedHat',
+        'Scientific',
+        'Ubuntu',
+    ]
     if __grains__['os'] in disable:
         return False
     # Disable on all non-Linux OSes as well
@@ -60,8 +69,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = os.path.join(GRAINMAP[__grains__['os']],
-            name + ' start')
+    cmd = '{0} start'.format(_init(__grains__['os'], name))
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -73,8 +81,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = os.path.join(GRAINMAP[__grains__['os']],
-            name + ' stop')
+    cmd = '{0} stop'.format(_init(__grains__['os'], name))
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -86,8 +93,7 @@ def restart(name, **kwargs):
 
         salt '*' service.restart <service name>
     '''
-    cmd = os.path.join(GRAINMAP[__grains__['os']],
-            name + ' restart')
+    cmd = '{0} restart'.format(_init(__grains__['os'], name))
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -112,12 +118,11 @@ def reload(name):
 
         salt '*' service.reload <service name>
     '''
-    cmd = os.path.join(GRAINMAP[__grains__['os']],
-            name + ' reload')
+    cmd = '{0} reload'.format(_init(__grains__['os'], name))
     return not __salt__['cmd.retcode'](cmd)
 
 
-def get_all(name):
+def get_all():
     '''
     Return a list of all available services
 
