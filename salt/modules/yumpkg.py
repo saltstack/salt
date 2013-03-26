@@ -43,6 +43,9 @@ def __virtual__():
         # Fedora <= 10 used Python 2.5 and below
         if os_major >= 11:
             return 'pkg'
+    elif os_grain == 'XCP':
+        if os_major >= 2:
+            return 'pkg'
     elif os_family == 'RedHat' and os_major >= 6:
         return 'pkg'
     return False
