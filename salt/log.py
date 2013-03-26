@@ -252,13 +252,10 @@ def setup_temp_logger(log_level='error'):
     Setup the temporary console logger
     '''
     if is_temp_logging_configured():
-        print 2222
         logging.getLogger(__name__).warn(
             'Temporary logging is already configured'
         )
         return
-
-    print 1111
 
     # Remove the temporary null logging handler
     __remove_null_logging_handler()
