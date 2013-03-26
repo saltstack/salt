@@ -27,6 +27,9 @@ def __virtual__():
     # Fedora <= 10 need to use this module
     if os_grain == 'Fedora' and os_major_version < 11:
         return 'pkg'
+    # XCP == 1.x needs to use this module
+    elif os_grain == 'XCP' and os_major_version == 1:
+        return 'pkg'
     else:
         # RHEL <= 5 and all variants need to use this module
         if os_family == 'RedHat' and os_major_version <= 5:
