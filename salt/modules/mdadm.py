@@ -127,8 +127,7 @@ def create(*args):
         test_mode=True:
             Prints out the full command.
         test_mode=False (Default):
-            Executes command on remote the host(s)
-                and
+            Executes command on remote the host(s) and
             Prints out the mdadm output.
     '''
     test_mode = False

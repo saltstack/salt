@@ -5,7 +5,7 @@ A pillar module to pull data from Cobbler via its API into the pillar dictionary
 
 
 Configuring the Cobbler ext_pillar
-================================
+==================================
 
 The same cobbler.* parameters are used for both the Cobbler tops and Cobbler pillar
 modules.
