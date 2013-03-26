@@ -817,7 +817,7 @@ def check_ipc_path_max_len(uri):
         )
 
 
-def check_state_result(self, running):
+def check_state_result(running):
     '''
     Check the total return value of the run and determine if the running
     dict has any issues
