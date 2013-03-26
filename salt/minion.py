@@ -417,7 +417,7 @@ class Minion(object):
                 args, kwargs = detect_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 ret['return'] = func(*args, **kwargs)
-                ret['retcode'] = sys.modules[func.__module__].__context__['retcode']
+                ret['retcode'] = sys.modules[func.__module__].__context__.get('retcode', 0)
                 ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
