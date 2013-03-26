@@ -41,14 +41,15 @@ def _run_psql(cmd, runas=None, password=None, host=None, run_cmd="cmd.run_all"):
     makes this too much code to be repeated in each function below
     '''
     kwargs = {}
-    if not host:
-        host = __salt__['config.option']('postgres.host')
-    if host == None or host == '' or host == 'localhost' or \
-       host[0] == '/' or host == '127.0.0.1':
-        if 'FreeBSD' in __grains__['os_family']:
-            runas = 'pgsql'
-        else:
-            runas = 'postgres'
+    if runas is None:
+        if not host:
+            host = __salt__['config.option']('postgres.host')
+        if host == None or host == '' or host == 'localhost' or \
+           host[0] == '/' or host == '127.0.0.1':
+            if 'FreeBSD' in __grains__['os_family']:
+                runas = 'pgsql'
+            else:
+                runas = 'postgres'
 
     if runas is not None:
         kwargs["runas"] = runas
