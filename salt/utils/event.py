@@ -210,7 +210,7 @@ class SaltEvent(object):
             if load['fun'] in SUB_EVENT:
                 try:
                     for tag, data in load.get('return', {}).items():
-                        if not data.get('result'):
+                        if data.get('result') is False:
                             self.fire_event(
                                     data,
                                     '{0}.{1}'.format(tag[0], tag[-1])
