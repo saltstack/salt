@@ -545,7 +545,8 @@ class Map(Cloud):
         for miniondict in self.map[tvm['profile']]:
             if isinstance(miniondict, dict) and name in miniondict:
                 for option in option_types:
-                    tvm['map_{0}'.format(option)] = miniondict[name][option]
+                    if option in miniondict[name]:
+                        tvm['map_{0}'.format(option)] = miniondict[name][option]
         return tvm
 
 
