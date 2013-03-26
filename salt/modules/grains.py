@@ -7,6 +7,9 @@ import math
 import os
 import yaml
 
+# Import salt libs
+import salt.utils
+
 # Seed the grains dict so cython will build
 __grains__ = {}
 
@@ -94,13 +97,13 @@ def item(*args, **kargs):
     CLI Example::
 
         salt '*' grains.item os
-        
+
     Return multiple components of the grains data
 
     CLI Example::
 
         salt '*' grains.item os osrelease oscodename
-        
+
     Sanitized CLI Example::
 
         salt '*' grains.item host sanitize=True
@@ -129,20 +132,20 @@ def setval(key, val):
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
         gfn = os.path.join(
-                os.path.dirname(__opts__['conf_file']),
-                'grains'
-                )
+            os.path.dirname(__opts__['conf_file']),
+            'grains'
+        )
     elif os.path.isdir(__opts__['conf_file']):
         gfn = os.path.join(
-                __opts__['conf_file'],
-                'grains'
-                )
+            __opts__['conf_file'],
+            'grains'
+        )
     if os.path.isfile(gfn):
         with open(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
             except Exception, e:
-                return 'Unable to read existing grains file: %s' %e
+                return 'Unable to read existing grains file: {0}'.format(e)
         if not isinstance(grains, dict):
             grains = {}
     grains[key] = val
