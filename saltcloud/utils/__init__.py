@@ -168,6 +168,11 @@ def minion_conf_string(opts, vm_):
     '''
     # Let's get a copy of the salt minion default options
     minion = salt.config.DEFAULT_MINION_OPTS.copy()
+    # Some default options are Null, let's set a reasonable default
+    minion.update(
+        log_level='info',
+        log_level_logfile='info'
+    )
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
@@ -196,6 +201,11 @@ def master_conf_string(opts, vm_):
 
     # Let's get a copy of the salt master default options
     master = salt.config.DEFAULT_MASTER_OPTS.copy()
+    # Some default options are Null, let's set a reasonable default
+    master.update(
+        log_level='info',
+        log_level_logfile='info'
+    )
 
     master.update(opts.get('master', {}))
     master.update(vm_.get('master', {}))
