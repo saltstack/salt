@@ -63,9 +63,9 @@ class SaltCloud(parsers.SaltCloudParser):
         self.setup_logfile_logger()
 
         if self.options.update_bootstrap:
-            import urllib
+            import urllib2
             url = 'http://bootstrap.saltstack.org'
-            req = urllib.urlopen(url)
+            req = urllib2.urlopen(url)
             if req.getcode() != 200:
                 self.error(
                     'Failed to download the latest stable version of the '

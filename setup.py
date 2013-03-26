@@ -4,7 +4,7 @@ The setup script for salt
 '''
 
 import os
-import urllib
+import urllib2
 from distutils import log
 from distutils.core import setup
 from distutils.command.build import build as distutils_build
@@ -56,7 +56,7 @@ class build(distutils_build):
                 BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION
             )
         )
-        req = urllib.urlopen(url)
+        req = urllib2.urlopen(url)
         deploy_path = os.path.join(
             SALTCLOUD_SOURCE_DIR, 'saltcloud', 'deploy', 'bootstrap-salt.sh'
         )
