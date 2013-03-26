@@ -103,7 +103,7 @@ def returners(opts, functions, whitelist=None):
 
 def pillars(opts, functions):
     '''
-    Returns the returner modules
+    Returns the pillars modules
     '''
     load = _create_loader(opts, 'pillar', 'pillar')
     pack = {'name': '__salt__',
@@ -113,7 +113,7 @@ def pillars(opts, functions):
 
 def tops(opts):
     '''
-    Returns the returner modules
+    Returns the tops modules
     '''
     if not 'master_tops' in opts:
         return {}
@@ -124,7 +124,7 @@ def tops(opts):
 
 def wheels(opts, whitelist=None):
     '''
-    Returns the returner modules
+    Returns the wheels modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
     return load.gen_functions(whitelist=whitelist)
@@ -132,7 +132,7 @@ def wheels(opts, whitelist=None):
 
 def outputters(opts):
     '''
-    Returns the returner modules
+    Returns the outputters modules
     '''
     load = _create_loader(
         opts,
@@ -144,7 +144,7 @@ def outputters(opts):
 
 def auth(opts, whitelist=None):
     '''
-    Returns the returner modules
+    Returns the auth modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
     return load.gen_functions(whitelist=whitelist)
@@ -171,7 +171,7 @@ def states(opts, functions, whitelist=None):
 
 def search(opts, returners, whitelist=None):
     '''
-    Returns the state modules
+    Returns the search modules
     '''
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
