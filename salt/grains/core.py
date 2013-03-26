@@ -528,6 +528,7 @@ _OS_FAMILY_MAP = {
     'CloudLinux': 'RedHat',
     'OVS': 'RedHat',
     'OEL': 'RedHat',
+    'XCP': 'RedHat',
     'Mandrake': 'Mandriva',
     'ESXi': 'VMWare',
     'Mint': 'Debian',
