@@ -529,6 +529,8 @@ def absent(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name)
         )
+    if name == '/':
+        return _error(ret, 'Refusing to make "/" absent')
     if os.path.isfile(name) or os.path.islink(name):
         if __opts__['test']:
             ret['result'] = None
