@@ -46,6 +46,9 @@ def __virtual__():
     elif os_grain == 'XCP':
         if os_major >= 2:
             return 'pkg'
+    elif os_grain == 'XenServer':
+        if os_major > 6:
+            return 'pkg'
     elif os_family == 'RedHat' and os_major >= 6:
         return 'pkg'
     return False
