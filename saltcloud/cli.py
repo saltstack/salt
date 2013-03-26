@@ -66,32 +66,7 @@ class SaltCloud(parsers.SaltCloudParser):
             import urllib
             url = 'http://bootstrap.saltstack.org'
             req = urllib.urlopen(url)
-            if req.getcode() == 200:
-                for entry in self.config.get('deploy_scripts_search_path'):
-                    deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
-                    try:
-                        print(
-                            'Updating bootstrap-salt.sh.'
-                            '\n\tSource:      {0}'
-                            '\n\tDestination: {1}'.format(
-                                url,
-                                deploy_path
-                            )
-                        )
-                        with salt.utils.fopen(deploy_path, 'w') as fp_:
-                            fp_.write(req.read())
-                        # We were able to update, no need to continue trying to
-                        # write up the search path
-                        self.exit(0)
-                    except (OSError, IOError), err:
-                        log.debug(
-                            'Failed to write the updated script: {0}'.format(
-                                err
-                            )
-                        )
-                        continue
-                self.error('Failed to update the bootstrap script')
-            else:
+            if req.getcode() != 200:
                 self.error(
                     'Failed to download the latest stable version of the '
                     'bootstrap-salt.sh script from {0}. HTTP error: '
@@ -99,6 +74,29 @@ class SaltCloud(parsers.SaltCloudParser):
                         url, req.getcode()
                     )
                 )
+
+            for entry in self.config.get('deploy_scripts_search_path'):
+                deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
+                try:
+                    print(
+                        'Updating bootstrap-salt.sh.'
+                        '\n\tSource:      {0}'
+                        '\n\tDestination: {1}'.format(
+                            url,
+                            deploy_path
+                        )
+                    )
+                    with salt.utils.fopen(deploy_path, 'w') as fp_:
+                        fp_.write(req.read())
+                    # We were able to update, no need to continue trying to
+                    # write up the search path
+                    self.exit(0)
+                except (OSError, IOError), err:
+                    log.debug(
+                        'Failed to write the updated script: {0}'.format(err)
+                    )
+                    continue
+            self.error('Failed to update the bootstrap script')
 
         # Late imports so logging works as expected
         log.info('salt-cloud starting')
