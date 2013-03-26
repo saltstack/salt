@@ -6,12 +6,15 @@ Manage basic template commands
 import time
 import os
 import codecs
+import logging
 from cStringIO import StringIO as cStringIO
 from StringIO import StringIO as pyStringIO
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+
+log = logging.getLogger(__name__)
 
 
 def string_io(data=None):  # cStringIO can't handle unicode
@@ -151,4 +154,5 @@ def check_render_pipe_str(pipestr, renderers):
             results.append((renderers[name], argline.strip()))
         return results
     except KeyError:
+        log.error('The renderer "{0}" is not available'.format(pipestr))
         return []
