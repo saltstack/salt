@@ -548,10 +548,12 @@ class Minion(object):
                     continue
                 load['return'][key] = value
         else:
-            load = {'return': ret['return'],
-                    'cmd': ret_cmd,
-                    'jid': ret['jid'],
+            load = {'cmd': ret_cmd,
                     'id': self.opts['id']}
+            for key, value in ret.items():
+                if key == 'fun':
+                    continue
+                load[key] = value
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
                 oput = self.functions[ret['fun']].__outputter__
