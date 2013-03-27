@@ -205,7 +205,7 @@ def get_mode(path):
         salt '*' file.get_mode /etc/passwd
     '''
     if not os.path.exists(path):
-        return -1
+        return ''
     mode = str(oct(os.stat(path).st_mode)[-4:])
     if mode.startswith('0'):
         return mode[1:]
