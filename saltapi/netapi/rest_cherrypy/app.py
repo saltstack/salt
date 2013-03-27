@@ -805,10 +805,9 @@ class Login(LowDataAdapter):
 
 
 class Logout(LowDataAdapter):
-    def POST(self, **kwargs):
+    def POST(self):
         '''
-        Destroy the currently active session and expire the session
-        cookie
+        Destroy the currently active session and expire the session cookie
 
         .. versionadded:: 0.8.0
         '''
