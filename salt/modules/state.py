@@ -102,6 +102,7 @@ def low(data):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
@@ -127,6 +128,7 @@ def high(data):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
     ret = st_.call_high(data)
@@ -144,6 +146,7 @@ def template(tem):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
     ret = st_.call_template(tem)
@@ -161,6 +164,7 @@ def template_str(tem):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
     ret = st_.call_template_str(tem)
@@ -178,6 +182,7 @@ def highstate(test=None, **kwargs):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     opts = copy.copy(__opts__)
 
@@ -225,6 +230,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     opts = copy.copy(__opts__)
 
@@ -247,6 +253,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         high, errors = st_.render_highstate({env: mods})
 
         if errors:
+            __context__['retcode'] = 1
             return errors
 
         if exclude:
@@ -283,6 +290,7 @@ def top(topfn):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
@@ -347,9 +355,8 @@ def show_sls(mods, env='base', test=None, **kwargs):
     high, errors = st_.render_highstate({env: mods})
     errors += st_.state.verify_high(high)
     if errors:
-        return errors
-    if isinstance(high, list):
         __context__['retcode'] = 1
+        return errors
     return high
 
 
@@ -407,9 +414,11 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     comps = fun.split('.')
     if len(comps) < 2:
+        __context__['retcode'] = 1
         return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
@@ -423,6 +432,7 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     st_ = salt.state.State(opts)
     err = st_.verify_data(kwargs)
     if err:
+        __context__['retcode'] = 1
         return err
 
     if kwval_as == 'yaml':
@@ -434,6 +444,7 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     elif kwval_as is None or kwval_as == 'verbatim':
         parse_kwval = lambda value: value
     else:
+        __context__['retcode'] = 1
         return 'Unknown format({0}) for state keyword arguments!'.format(
                 kwval_as)
 
