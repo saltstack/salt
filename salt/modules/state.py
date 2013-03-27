@@ -64,7 +64,7 @@ def _set_retcode(ret):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if salt.utils.check_state_result(ret):
+    if not salt.utils.check_state_result(ret):
         __context__['retcode'] = 2
 
 
