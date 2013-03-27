@@ -4,6 +4,11 @@ Disk monitoring state
 Monitor the state of disk resources
 '''
 
+__monitor__ = [
+        'status',
+        ]
+
+
 def status(name, max=None, min=None):
     '''
     Return the current disk usage stats for the named device
