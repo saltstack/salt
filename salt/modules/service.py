@@ -117,7 +117,7 @@ def reload(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def get_all(name):
+def get_all():
     '''
     Return a list of all available services
 
