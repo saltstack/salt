@@ -98,7 +98,10 @@ class KeyCLI(object):
                     matches,
                     'key',
                     self.opts)
-            veri = raw_input('Proceed? [N/y] ')
+            try:
+                veri = raw_input('Proceed? [N/y] ')
+            except KeyboardInterrupt:
+                raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
                 self.key.delete_key(match)
 
