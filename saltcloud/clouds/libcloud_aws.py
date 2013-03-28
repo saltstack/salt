@@ -290,6 +290,7 @@ def create(vm_):
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
 
+    username = 'ec2-user'
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
