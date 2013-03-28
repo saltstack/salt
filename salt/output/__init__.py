@@ -8,11 +8,11 @@ import salt.loader
 
 
 STATIC = (
-          'yaml_out',
-          'text_out',
-          'raw_out',
-          'json_out',
-          )
+    'yaml_out',
+    'text_out',
+    'raw_out',
+    'json_out',
+)
 
 
 def display_output(data, out, opts=None):
