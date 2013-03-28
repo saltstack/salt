@@ -42,7 +42,7 @@ def fullversion():
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split(':')
-	ret[comps[0].strip()] = comps[1].strip()
+    ret[comps[0].strip()] = comps[1].strip()
     return ret
 
 
