@@ -1222,13 +1222,13 @@ def recurse(name,
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        dest = os.path.join(name, os.path.relpath(fn_, srcpath))
-        #- Check if it is to be excluded. Match only trailing part of the path
-        # after base directory
-        if not _check_include_exclude(dest[len(name):],
-                                      include_pat,
-                                      exclude_pat):
+        relname = os.path.relpath(fn_, srcpath)
+
+        #- Check if it is to be excluded. Match only part of the path
+        # relative to the target directory
+        if not _check_include_exclude(relname, include_pat, exclude_pat):
             continue
+        dest = os.path.join(name, relname)
         dirname = os.path.dirname(dest)
         keep.add(dest)
 
