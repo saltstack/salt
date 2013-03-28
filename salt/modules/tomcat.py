@@ -44,6 +44,8 @@ import glob
 import urllib
 import urllib2
 
+# Import Salt libs
+import salt.utils
 
 def __virtual__():
     '''
@@ -78,8 +80,8 @@ def _auth(uri):
         password = __grains__['tomcat-manager']['passwd']
     except KeyError:
         try:
-            user = __pillar__['tomcat-manager.user']
-            password = __pillar__['tomcat-manager.passwd']
+            user = salt.utils.option('tomcat-manager.user' ,'' ,__opts__ , __pillar__)
+            password = salt.utils.option('tomcat-manager.passwd' ,'' ,__opts__ , __pillar__)
         except Exception:
             return False
     
