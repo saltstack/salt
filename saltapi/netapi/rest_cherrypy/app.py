@@ -343,6 +343,12 @@ def hypermedia_in():
         'text/yaml': yaml_processor,
     }
 
+    # Do not process the body for POST requests that have specified no content
+    # or have not specified Content-Length
+    if (cherrypy.request.method.upper() == 'POST'
+            and cherrypy.request.headers.get('Content-Length', 0) == 0):
+        cherrypy.request.process_request_body = False
+
     cherrypy.request.body.processors.clear()
     cherrypy.request.body.default_proc = cherrypy.HTTPError(
             406, 'Content type not supported')
