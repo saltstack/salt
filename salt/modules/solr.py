@@ -784,7 +784,7 @@ def replication_details(host=None, core_name=None):
     else:
         resp = _replication_request('details', host=host, core_name=core_name)
         if resp['success']:
-            ret = _update_return_dict(ret, success, resp['data'],
+            ret = _update_return_dict(ret, resp['success'], resp['data'],
                                         resp['errors'], resp['warnings'])
         else:
             return resp
@@ -890,7 +890,7 @@ def set_is_polling(polling, host=None, core_name=None):
                                         resp['errors'], resp['warnings'])
         return ret
     else:
-        resp = _replication_request(cmd, host=host, core_name=name)
+        resp = _replication_request(cmd, host=host, core_name=core_name)
         return resp
 
 
