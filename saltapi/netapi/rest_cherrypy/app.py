@@ -832,9 +832,8 @@ class Logout(LowDataAdapter):
 
         .. versionadded:: 0.8.0
         '''
-        cherrypy.lib.sessions.expire()
-        cherrypy.session.clear()
-        cherrypy.session.clean_up()
+        cherrypy.lib.sessions.expire() # set client-side to expire
+        cherrypy.session.regenerate() # replace server-side with new
 
         return {'return': "Your token has been cleared"}
 
