@@ -909,11 +909,15 @@ def rm_rf(path):
 def option(
         value,
         default='',
-        opts,
-        pillar):
+        opts=None,
+        pillar=None):
     '''
     Pass in a generic option and receive the value that will be assigned
     '''
+    if opts is None:
+        opts = {}
+    if pillar is None:
+        pillar = {}
     if value in opts:
         return opts[value]
     if value in pillar.get('master', {}):
