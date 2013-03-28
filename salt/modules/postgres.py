@@ -49,9 +49,7 @@ def _run_psql(cmd, runas=None, password=None, host=None,
             host = __salt__['config.option']('postgres.host')
         if host is None or \
                 host == '' or \
-                host == 'localhost' or \
-                host[0] == '/' or \
-                host == '127.0.0.1':
+                host[0] == '/':
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
             else:
