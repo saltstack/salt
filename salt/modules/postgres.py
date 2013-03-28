@@ -21,6 +21,8 @@ Module to provide Postgres compatibility to salt.
 import datetime
 import pipes
 import logging
+import csv
+import StringIO
 
 # Import salt libs
 import salt.utils
@@ -144,6 +146,44 @@ def _psql_cmd(*args, **kwargs):
     return cmdstr
 
 
+def psql_query(query, user=None, host=None, port=None, db=None,
+            password=None, runas=None):
+    '''
+    Run an SQL-Query and return the results as a dictionary. This command
+    only supports SELECT statements.
+
+    CLI Example::
+
+        salt '*' postgres.psql_query 'select * from pg_stat_activity'
+    '''
+    ret = {}
+
+    csv_query = 'COPY ({0}) TO STDOUT WITH CSV DELIMITER \';\' QUOTE \'"\' HEADER'.format(query.strip().rstrip(';'))
+
+    cmd = _psql_cmd(
+            # always use the same datestyle settings to allow parsing dates
+            # regardless what server settings are configured
+            '-v', 'datestyle=ISO,MDY',
+            '-c', csv_query,
+            host=host, user=user, port=port, db=db, password=password)
+
+    cmdret = _run_psql(cmd, runas=runas, password=password)
+
+    if cmdret['retcode'] > 0:
+        return ret
+
+    csv_file = StringIO.StringIO(cmdret['stdout'])
+    header = {}
+    row_counter = 0
+    for row in csv.reader(csv_file, delimiter=';', quotechar='"'):
+        if row_counter == 0:
+            header = row
+        else:
+            ret[row_counter-1] = dict(zip(header, row))
+        row_counter += 1
+    return ret
+
+
 # Database related actions
 
 def db_list(user=None, host=None, port=None, maintenance_db=None,
@@ -157,12 +197,6 @@ def db_list(user=None, host=None, port=None, maintenance_db=None,
     '''
 
     ret = {}
-    header = ['Name',
-              'Owner',
-              'Encoding',
-              'Collate',
-              'Ctype',
-              'Access privileges']
 
     query = 'SELECT datname as "Name", pga.rolname as "Owner", ' \
             'pg_encoding_to_char(encoding) as "Encoding", ' \
@@ -170,20 +204,12 @@ def db_list(user=None, host=None, port=None, maintenance_db=None,
             'datacl as "Access privileges" FROM pg_database pgd, ' \
             'pg_roles pga WHERE pga.oid = pgd.datdba'
 
-    cmd = _psql_cmd('-c', query, '-t', host=host, user=user, port=port,
-                    maintenance_db=maintenance_db, password=password)
+    rows = psql_query(query, runas=runas,
+                    host=host, user=user, port=port, db=maintenance_db, password=password)
 
-    cmdret = _run_psql(cmd, runas=runas, password=password, host=host)
-
-    if cmdret['retcode'] > 0:
-        return ret
-
-    for line in cmdret['stdout'].splitlines():
-        if line.count('|') != 5:
-            log.warning('Unexpected string: {0}'.format(line))
-            continue
-        comps = line.split('|')
-        ret[comps[0]] = dict(zip(header[1:], comps[1:]))
+    for row in rows.itervalues():
+        ret[row['Name']] = row
+        ret[row['Name']].pop('Name')
 
     return ret
 
@@ -292,17 +318,6 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
     '''
 
     ret = {}
-    header = ['name',
-              'superuser',
-              'inherits privileges',
-              'can create roles',
-              'can create databases',
-              'can update system catalogs',
-              'can login',
-              'replication',
-              'connections',
-              'expiry time',
-              'defaults variables']
 
     ver = version(user=user,
                   host=host,
@@ -312,46 +327,50 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                   runas=runas).split('.')
     if len(ver) >= 2 and int(ver[0]) >= 9 and int(ver[1]) >= 1:
         query = (
-            'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
-            'rolcreatedb, rolcatupdate, rolcanlogin, rolreplication, '
-            'rolconnlimit, rolvaliduntil::timestamp(0), rolconfig '
+            'SELECT rolname as "name", rolsuper as "superuser", '
+            'rolinherit as "inherits privileges", rolcreaterole as "can create roles", '
+            'rolcreatedb as "can create databases", rolcatupdate as "can update system catalogs", '
+            'rolcanlogin as "can login", rolreplication as "replication", '
+            'rolconnlimit as "connections", rolvaliduntil::timestamp(0) as "expiry time", '
+            'rolconfig  as "defaults variables"'
             'FROM pg_roles'
         )
     else:
         query = (
-            'SELECT rolname, rolsuper, rolinherit, rolcreaterole, '
-            'rolcreatedb, rolcatupdate, rolcanlogin, NULL, '
-            'rolconnlimit, rolvaliduntil::timestamp(0), rolconfig '
+            'SELECT rolname as "name", rolsuper as "superuser", '
+            'rolinherit as "inherits privileges", rolcreaterole as "can create roles", '
+            'rolcreatedb as "can create databases", rolcatupdate as "can update system catalogs", '
+            'rolcanlogin as "can login", NULL as "replication", '
+            'rolconnlimit as "connections", rolvaliduntil::timestamp(0) as "expiry time", '
+            'rolconfig  as "defaults variables"'
             'FROM pg_roles'
         )
-    cmd = _psql_cmd('-c', query, '-t', host=host, user=user, port=port,
-                    maintenace_db=maintenance_db, password=password)
 
-    cmdret = _run_psql(cmd, runas=runas, password=password, host=host)
+    rows = psql_query(query, runas=runas,
+                    host=host, user=user, port=port, db=maintenance_db, password=password)
 
-    if cmdret['retcode'] > 0:
-        return ret
-
-    for line in cmdret['stdout'].splitlines():
-        comps = line.split('|')
-        # type casting
-        for i in range(1, 8):
-            if comps[i] == 't':
-                comps[i] = True
-            elif comps[i] == 'f':
-                comps[i] = False
-            else:
-                comps[i] = None
-        comps[8] = int(comps[8])
-        if comps[9]:
-            comps[9] = datetime.datetime.strptime(
-                comps[9], '%Y-%m-%d %H:%M:%S'
-            )
+    def get_bool(rowdict, key):
+        if rowdict[key] == 't':
+            return True
+        elif rowdict[key] == 'f':
+            return False
         else:
-            comps[9] = None
-        if not comps[10]:
-            comps[10] = None
-        ret[comps[0]] = dict(zip(header[1:], comps[1:]))
+            return None
+
+    for row in rows.itervalues():
+        retrow = {}
+        for key in ('superuser', 'inherits privileges', 'can create roles',
+              'can create databases', 'can update system catalogs',
+              'can login', 'replication', 'connections'):
+            retrow[key] = get_bool(row, key)
+        for date_key in ('expiry time',):
+            try:
+                retrow[date_key] = datetime.datetime.strptime(
+                        row['date_key'], '%Y-%m-%d %H:%M:%S')
+            except (ValueError, KeyError):
+                retrow[date_key] = None
+        retrow['defaults variables'] = row['defaults variables']
+        ret[row['name']] = retrow
 
     return ret
 
