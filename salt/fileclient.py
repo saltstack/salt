@@ -362,7 +362,6 @@ class Client(object):
         else:
             log.error('Attempted to render template with unavailable engine '
                       '{0}'.format(template))
-            salt.utils.safe_rm(data['data'])
             return ''
         if not data['result']:
             # Failed to render the template
