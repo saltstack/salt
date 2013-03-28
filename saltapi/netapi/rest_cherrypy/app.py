@@ -129,6 +129,7 @@ entry point.
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
 # Import Python libs
+import functools
 import os
 import json
 
@@ -271,6 +272,18 @@ def hypermedia_out():
     #          {"paper.3" 1.0 {type application/postscript} {language en}}
 
 
+
+@functools.wraps
+def process_request_body(fn):
+    '''
+    A decorator to skip a processor function if process_request_body is False
+    '''
+    def wrapped(*args, **kwargs):
+        if cherrypy.request.process_request_body != False:
+            fn(*args, **kwargs)
+    return wrapped
+
+
 def urlencoded_processor(entity):
     '''
     Accept x-www-form-urlencoded data (run through CherryPy's formatter)
@@ -299,6 +312,7 @@ def urlencoded_processor(entity):
     cherrypy.request.lowstate = [lowdata]
 
 
+@process_request_body
 def json_processor(entity):
     '''
     Unserialize raw POST data in JSON format to a Python datastructure.
@@ -312,6 +326,7 @@ def json_processor(entity):
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
 
+@process_request_body
 def yaml_processor(entity):
     '''
     Unserialize raw POST data in YAML format to a Python datastructure.
