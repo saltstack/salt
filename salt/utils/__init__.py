@@ -905,3 +905,19 @@ def rm_rf(path):
             raise
 
     shutil.rmtree(path, onerror=_onerror)
+
+def option(
+        value,
+        default='',
+        opts,
+        pillar):
+    '''
+    Pass in a generic option and receive the value that will be assigned
+    '''
+    if value in opts:
+        return opts[value]
+    if value in pillar.get('master', {}):
+        return pillar['master'][value]
+    if value in pillar:
+        return pillar[value]
+    return default
