@@ -603,7 +603,7 @@ def set_known_host(user, hostname,
     except OSError as exc:
         if exc[1] == 'Permission denied':
             log.error('Unable to create directory {0}: '
-                      '{1}'.format(ssh_dir, e[1]))
+                      '{1}'.format(ssh_dir, exc[1]))
         elif exc[1] == 'File exists':
             log.debug('{0} already exists, no need to create '
                       'it'.format(ssh_dir))
