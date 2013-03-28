@@ -13,6 +13,7 @@ from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
 
 try:
+    import salt.master
     from salt.utils import parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
     from salt.utils.verify import verify_files
