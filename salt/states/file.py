@@ -1101,8 +1101,7 @@ def recurse(name,
 
     if not _src_path:
         pass
-    elif _src_path.strip(
-            os.path.sep) not in __salt__['cp.list_master_dirs'](env):
+    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](env):
         ret['result'] = False
         ret['comment'] = (
             'The source: {0} does not exist on the master'.format(source)
@@ -1209,14 +1208,19 @@ def recurse(name,
     keep = set()
     vdir = set()
     srcpath = source[7:]
+    if not srcpath.endswith('/'):
+        #we're searching for things that start with this *directory*.
+        # use '/' since #master only runs on posix
+        srcpath = srcpath + '/'
     for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
             continue
-        if not fn_.startswith('{0}{1}'.format(srcpath, '/')): # use '/' since
-            #master only runs on posix
+        if not fn_.startswith(srcpath):
             continue
-        # fn_ here is the absolute source path of the file to copy from;
-        # it is either a normal file or an empty dir(if include_empty==true).
+
+        # fn_ here is the absolute (from file_roots) source path of
+        # the file to copy from; it is either a normal file or an
+        # empty dir(if include_empty==true).
 
         dest = os.path.join(name, os.path.relpath(fn_, srcpath))
         #- Check if it is to be excluded. Match only trailing part of the path
@@ -1239,7 +1243,7 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](env)
         for mdir in mdirs:
-            if not mdir.startswith('{0}{1}'.format(srcpath, '/')): #same as above
+            if not mdir.startswith(srcpath): #same as above
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)

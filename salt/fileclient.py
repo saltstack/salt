@@ -140,17 +140,22 @@ class Client(object):
         '''
         ret = []
         path = self._check_proto(path)
+        # We want to make sure files start with this *directory*, use
+        # '/' explicitly because the master (that's generating the
+        # list of files) only runs on posix
+        if not path.endswith('/'):
+            path = path + '/'
+
         log.info(
             'Caching directory \'{0}\' for environment \'{1}\''.format(
                 path, env
             )
         )
-        for fn_ in self.file_list(env):
-            if fn_.startswith('{0}{1}'.format(path, os.path.sep)):
-                local = self.cache_file('salt://{0}'.format(fn_), env)
-                if not fn_.strip():
-                    continue
-                ret.append(local)
+        #go through the list of all files finding ones that are in
+        #the target directory and caching them
+        ret.extend([self.cache_file('salt://' + fn_, env)
+                    for fn_ in self.file_list(env)
+                    if fn_.strip() and fn_.startswith(path)])
 
         if include_empty:
             # Break up the path into a list containing the bottom-level directory
@@ -161,13 +166,13 @@ class Client(object):
             #    prefix = ''
             #else:
             #    prefix = separated[0]
+            dest = salt.utils.path_join(
+                self.opts['cachedir'],
+                'files',
+                env
+            )
             for fn_ in self.file_list_emptydirs(env):
-                if fn_.startswith('{0}{1}'.format(path, os.path.sep)):
-                    dest = salt.utils.path_join(
-                        self.opts['cachedir'],
-                        'files',
-                        env
-                    )
+                if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
                         os.makedirs(minion_dir)
