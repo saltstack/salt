@@ -78,8 +78,8 @@ def _auth(uri):
         password = __grains__['tomcat-manager']['passwd']
     except KeyError:
         try:
-            user = __salt__['config.option']('tomcat-manager.user')
-            password = __salt__['config.option']('tomcat-manager.passwd')
+            user = __pillar__['tomcat-manager.user']
+            password = __pillar__['tomcat-manager.passwd']
         except Exception:
             return False
     
@@ -141,18 +141,19 @@ def _wget(cmd, opts={}, url='http://localhost:8080/manager'):
     
     return ret
 
-
 def _simple_cmd(cmd, app, url='http://localhost:8080/manager'):
     '''
     Simple command wrapper to commands that need only a path option
     '''
     
     try:
-        full = ls(url)[app]['fullname']
-        return '\n'.join(_wget(cmd,{'path': '/'+full},url)['msg'])
+        opts = {
+            'path': app,
+            'version': ls(url)[app]['version']
+        }
+        return '\n'.join(_wget(cmd,opts,url)['msg'])
     except Exception:
         return 'FAIL - No context exists for path {0}'.format(app)
-
 
 def status(url='http://localhost:8080/manager'):
     '''
@@ -335,7 +336,6 @@ def undeploy(app, url='http://localhost:8080/manager'):
     
     return _simple_cmd('undeploy', app, url)
 
-
 def deploy_war(war, context, force='no', url='http://localhost:8080/manager', env='base'):
     '''
     Deploy a war file
@@ -372,18 +372,23 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
         except Exception:
             return 'FAIL - could not cache the war file'
     
-    context = '{0}##{1}'.format(context, war.split('/')[-1].replace('.war',''))
-    
     # Prepare options
     opts = {
         'war': 'file:{0}'.format(tempfile),
         'path': context,
+        'version': war.split('/')[-1].replace('.war',''),
     }
     if force == 'yes':
         opts['update'] = 'true'
     
-    return '\n'.join(_wget('deploy',opts,url)['msg'])
-
+    # Deploy
+    res = '\n'.join(_wget('deploy',opts,url)['msg'])
+    
+    # Cleanup
+    if war[0] != '/':
+        __salt__['file.remove'](tempfile)
+    
+    return res
 
 def version():
     '''
