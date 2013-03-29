@@ -229,6 +229,10 @@ h2.homeSecTitles {
 	width: auto; 
 }
 
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Nexa Light';
+}
+
 h2 {
 	font: 14px/24px 'Nexa XBold'; 
 	text-transform: uppercase; 
