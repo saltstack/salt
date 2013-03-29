@@ -4,39 +4,46 @@ Support for Tomcat
 This module uses the manager webapp to manage Apache tomcat webapps
 If the manager webapp is not configured some of the functions won't work
 
-The following grains should be set
-tomcat-manager:
-  user: admin user name
-  passwd: password
+The following grains should be set::
 
-or use pillar:
-tomcat-manager.user: admin user name
-tomcat-manager.passwd: password
+    tomcat-manager:
+      user: admin user name
+      passwd: password
 
-and also configure a user in the conf/tomcat-users.xml file:
-<?xml version='1.0' encoding='utf-8'?>
-<tomcat-users>
- <role rolename="manager-script"/>
- <user username="tomcat" password="tomcat" roles="manager-script"/>
-</tomcat-users>
+or use pillar::
+
+    tomcat-manager.user: admin user name
+    tomcat-manager.passwd: password
+
+and also configure a user in the conf/tomcat-users.xml file::
+
+    <?xml version='1.0' encoding='utf-8'?>
+    <tomcat-users>
+        <role rolename="manager-script"/>
+        <user username="tomcat" password="tomcat" roles="manager-script"/>
+    </tomcat-users>
 
 Notes:
-- More information about tomcat manager: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html
-- if you use only this module for deployments you've might want to strict access to the manager only from localhost
-  for more info: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access
+
+- More information about tomcat manager:
+  http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html
+- if you use only this module for deployments you've might want to strict
+  access to the manager only from localhost for more info:
+  http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access
 - Tested on:
-    JVM Vendor:
-        Sun Microsystems Inc.
-    JVM Version:
-        1.6.0_43-b01
-    OS Architecture:
-        amd64
-    OS Name:
-        Linux
-    OS Version:
-        2.6.32-358.el6.x86_64
-    Tomcat Version:
-        Apache Tomcat/7.0.37
+
+  JVM Vendor:
+      Sun Microsystems Inc.
+  JVM Version:
+      1.6.0_43-b01
+  OS Architecture:
+      amd64
+  OS Name:
+      Linux
+  OS Version:
+      2.6.32-358.el6.x86_64
+  Tomcat Version:
+      Apache Tomcat/7.0.37
 '''
 
 # Import python libs
@@ -99,16 +106,20 @@ def _wget(cmd, opts={}, url='http://localhost:8080/manager'):
     '''
     A private function used to issue the command to tomcat via the manager webapp
     
-    cmd: the command to execute
-    url: the url of the server manager webapp
+    cmd
+        the command to execute
+    url
+        the url of the server manager webapp
         example: http://localhost:8080/manager
-    opts: a dict of arguments
+    opts
+        a dict of arguments
     
-    return value is a dict in the from of
-    {
-        res: [True|False]
-        msg: list of lines we got back from the manager
-    }
+    return value is a dict in the from of::
+
+        {
+            res: [True|False]
+            msg: list of lines we got back from the manager
+        }
     '''
     
     ret = {
@@ -161,8 +172,8 @@ def status(url='http://localhost:8080/manager'):
     '''
     Used to test if the tomcat manager is up
     
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -177,8 +188,8 @@ def ls(url='http://localhost:8080/manager'):
     '''
     list all the deployed webapps
     
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -210,9 +221,10 @@ def stop(app, url='http://localhost:8080/manager'):
     '''
     Stop the webapp
     
-    app: the webapp context path
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    app
+        the webapp context path
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -227,9 +239,10 @@ def start(app, url='http://localhost:8080/manager'):
     '''
     Start the webapp
     
-    app: the webapp context path
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    app
+        the webapp context path
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -244,9 +257,10 @@ def reload(app, url='http://localhost:8080/manager'):
     '''
     Reload the webapp
     
-    app: the webapp context path
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    app
+        the webapp context path
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -261,9 +275,10 @@ def sessions(app, url='http://localhost:8080/manager'):
     '''
     return the status of the webapp sessions
     
-    app: the webapp context path
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    app
+        the webapp context path
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -278,9 +293,10 @@ def status_webapp(app, url='http://localhost:8080/manager'):
     '''
     return the status of the webapp (stopped | running | missing)
     
-    app: the webapp context path
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    app
+        the webapp context path
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -300,8 +316,8 @@ def serverinfo(url='http://localhost:8080/manager'):
     '''
     return detailes about the server
     
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -326,9 +342,10 @@ def undeploy(app, url='http://localhost:8080/manager'):
     '''
     Undeploy a webapp
     
-    app: the webapp context path
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    app
+        the webapp context path
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
     CLI Examples::
         
@@ -342,14 +359,18 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     '''
     Deploy a war file
     
-    war: absolute path to war file (should be accessable by the user running tomcat)
-         or a path supported by the salt.modules.cp.get_file function
-    context: the context path to deploy
-    force: set True to deploy the webapp even one is deployed in the context
-        default: False
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
-    env: the environment for war file in used by salt.modules.cp.get_file function
+    war
+        absolute path to war file (should be accessable by the user running
+        tomcat) or a path supported by the salt.modules.cp.get_file function
+    context
+        the context path to deploy
+    force : False
+        set True to deploy the webapp even one is deployed in the context
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
+    env
+        the environment for war file in used by salt.modules.cp.get_file
+        function
     
     CLI Examples::
         
