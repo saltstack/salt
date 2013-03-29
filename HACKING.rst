@@ -92,8 +92,8 @@ Debian-based systems
 On Debian and derivative systems such as Ubuntu, system requirements can be
 installed by running::
 
-    apt-get install -y build-essential libssl-dev python-dev python-m2crypto
-    python-pip python-virtualenv swig virtualenvwrapper
+    apt-get install -y build-essential libssl-dev python-dev python-m2crypto \
+      python-pip python-virtualenv swig virtualenvwrapper
 
 RedHat-based systems
 ````````````````````
