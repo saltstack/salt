@@ -12,8 +12,9 @@ Full list of builtin pillar modules
 
     cmd_json
     cmd_yaml
+    cobbler
     hiera
+    libvirt
     mongo
     pillar_ldap
     puppet
-    cobbler
