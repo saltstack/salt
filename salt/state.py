@@ -1535,6 +1535,7 @@ class BaseHighState(object):
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
         self.avail = self.__gather_avail()
+        self.serial = salt.payload.Serial(self.opts)
 
     def __gather_avail(self):
         '''
@@ -2014,7 +2015,7 @@ class BaseHighState(object):
 
 
 
-    def call_highstate(self, exclude=None):
+    def call_highstate(self, exclude=None, cache=None, cache_name='highstate'):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -2028,7 +2029,16 @@ class BaseHighState(object):
                    '__run_num__': 0,
                    }
               }
+        cfn = os.path.join(
+                self.opts['cachedir'],
+                '{0}.cache.p'.format(cache_name)
+                )
 
+        if cache:
+            if os.path.isfile(cfn):
+                with open(cfn, 'r') as fp_:
+                    high = self.serial.load(fp_)
+                    return self.state.call_high(high)
         #File exists so continue
         err = []
         try:
@@ -2057,6 +2067,8 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
+        with open(cfn, 'w+') as fp_:
+            self.serial.dump(high, fp_)
         return self.state.call_high(high)
 
     def compile_highstate(self):
