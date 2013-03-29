@@ -44,14 +44,14 @@ Imports and Logging
 Import modules your external pillar module needs. You should first include
 generic modules that come with stock Python:
 
-.. code-block:: Python
+.. code-block:: python
 
     import logging
 
 
 And then start logging. This is an idiomatic way of setting up logging in Salt:
 
-.. code-block:: Python
+.. code-block:: python
 
     log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ And then start logging. This is an idiomatic way of setting up logging in Salt:
 Finally, load modules that are specific to what you are doing. You should catch
 import errors and set a flag that the the ``__virtual__`` function can use later.
 
-.. code-block:: Python
+.. code-block:: python
 
     try:
         import weird_thing
@@ -76,7 +76,7 @@ If you define an ``__opts__`` dictionary, it will be merged into the
 good place to put default configuration items. The convention is to name 
 things ``modulename.option``.
 
-.. code-block:: Python
+.. code-block:: python
 
     __opts__ = { 'example_a.someconfig': 137 }
 
@@ -87,7 +87,7 @@ Initialization
 If you define an ``__init__`` function, it will be called with the following
 signature:
 
-.. code-block:: Python
+.. code-block:: python
 
     def __init__( __opts__ ):
         # Do init work here
@@ -112,7 +112,7 @@ This is useful to write modules that can be installed on all Salt masters, but
 will only be visible if a particular piece of software your module requires is
 installed.
 
-.. code-block:: Python
+.. code-block:: python
 
     # This external pillar will be known as `example_a`
     def __virtual__():
@@ -122,7 +122,7 @@ installed.
             return False
 
 
-.. code-block:: Python
+.. code-block:: python
 
     # This external pillar will be known as `something_else`
     def __virtual__():
@@ -146,7 +146,7 @@ contains pillar items that have already been added, starting with the data from
 
 Using our example above:
 
-.. code-block:: Python
+.. code-block:: python
 
     ext_pillar( pillar, 'some argument' )                   # example_a
     ext_pillar( pillar, 'argumentA', 'argumentB' )          # example_b
@@ -162,7 +162,7 @@ This function should return a dictionary, the contents of which are merged in
 with all of the other pillars and returned to the minion. **Note**: this function
 is called once for each minion that fetches its pillar data.
 
-.. code-block:: Python
+.. code-block:: python
 
     def ext_pillar( pillar, *args, **kwargs ):
        
