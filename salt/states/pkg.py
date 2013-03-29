@@ -17,15 +17,16 @@ This is necessary and can not be replaced by a require clause in the pkg.
 
 .. code-block:: yaml
 
-    pkgrepo.managed:
-      - human_name: Logstash PPA
-      - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
-      - dist: precise
-      - file: /etc/apt/sources.list.d/logstash.list
-      - keyid: 28B04E4A
-      - keyserver: keyserver.ubuntu.com
-      - require_in:
-        - pkg: logstash
+    base:
+      pkgrepo.managed:
+        - human_name: Logstash PPA
+        - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
+        - dist: precise
+        - file: /etc/apt/sources.list.d/logstash.list
+        - keyid: 28B04E4A
+        - keyserver: keyserver.ubuntu.com
+        - require_in:
+          - pkg: logstash
 
     logstash:
       pkg.installed
