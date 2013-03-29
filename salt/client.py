@@ -581,11 +581,14 @@ class LocalClient(object):
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
                     continue
-                found.add(raw['id'])
-                ret = {raw['id']: {'ret': raw['return']}}
-                if 'out' in raw:
-                    ret[raw['id']]['out'] = raw['out']
-                yield ret
+                if kwargs.get('raw', False):
+                    yield raw
+                else:
+                    found.add(raw['id'])
+                    ret = {raw['id']: {'ret': raw['return']}}
+                    if 'out' in raw:
+                        ret[raw['id']]['out'] = raw['out']
+                    yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
