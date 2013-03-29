@@ -118,8 +118,11 @@ def _services():
     ret = {}
     for line in __salt__['cmd.run']('/sbin/chkconfig --list').splitlines():
         cols = line.split()
-        name = cols[0]
-        if not cols or name in ret:
+        try:
+            name = cols[0]
+        except IndexError:
+            continue
+        if name in ret:
             continue
         ret.setdefault(name, {})['type'] = 'sysvinit'
         ret[name]['enabled'] = _sysv_is_enabled(cols, rlevel)
