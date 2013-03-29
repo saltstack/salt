@@ -140,7 +140,6 @@ class OverState(object):
                                 # This req is good, check the next
                                 continue
                         elif self.over_run[req][minion]['fun'] == 'state.sls':
-                            print 'STATE>SLS'
                             if salt.utils.check_state_result(
                                     self.over_run[req][minion]['ret']):
                                 # This req is good, check the next
@@ -149,9 +148,6 @@ class OverState(object):
                             if not self.over_run[req][minion]['retcode']:
                                 if self.over_run[req][minion]['success']:
                                     continue
-                        print minion
-                        import pprint
-                        pprint.pprint(self.over_run[req][minion])
                         tag_name = 'req_|-fail_|-fail_|-None'
                         failure = {tag_name: {
                             'ret': {
