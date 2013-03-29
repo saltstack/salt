@@ -76,15 +76,13 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = (' {0}Name: {1} - Function: {2}.{3} - Result: {4}{5}'
-                            ).format(
-                                    tcolor,
-                                    comps[2],
-                                    comps[0],
-                                    comps[-1],
-                                    str(ret['result']),
-                                    colors['ENDC']
-                                    )
+                    msg = (' {0}Name: {1} - Function: {2}.{3} - '
+                           'Result: {4}{5}').format(tcolor,
+                                                    comps[2],
+                                                    comps[0],
+                                                    comps[-1],
+                                                    str(ret['result']),
+                                                    colors['ENDC'])
                     hstrs.append(msg)
                     continue
 
@@ -94,30 +92,34 @@ def output(data):
                     tcolor,
                     comps[2],
                     colors
-                    ))
+                ))
                 hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[-1],
                     colors
-                    ))
+                ))
                 hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
                     tcolor,
                     str(ret['result']),
                     colors
-                    ))
+                ))
                 hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
                     tcolor,
                     ret['comment'],
                     colors
-                    ))
+                ))
                 changes = '        Changes:   '
                 for key in ret['changes']:
                     if isinstance(ret['changes'][key], string_types):
                         changes += (key + ': ' + ret['changes'][key] +
                                     '\n                   ')
                     elif isinstance(ret['changes'][key], dict):
+                        innerdict = '{ '
+                        for k, v in ret['changes'][key].iteritems():
+                            innerdict += '{0} : {1}\n'.format(k, v)
+                        innerdict += '}'
                         changes += (key + ': ' +
-                                    pprint.pformat(ret['changes'][key]) +
+                                    innerdict +
                                     '\n                   ')
                     else:
                         changes += (key + ': ' +
@@ -141,4 +143,3 @@ def _strip_clean(returns):
     for tag in rm_tags:
         returns.pop(tag)
     return returns
-
