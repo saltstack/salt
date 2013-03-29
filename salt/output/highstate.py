@@ -114,8 +114,12 @@ def output(data):
                         changes += (key + ': ' + ret['changes'][key] +
                                     '\n                   ')
                     elif isinstance(ret['changes'][key], dict):
+                        innerdict = '{ '
+                        for k, v in ret['changes'][key].iteritems():
+                            innerdict += '{0} : {1}\n'.format(k, v)
+                        innerdict += '}'
                         changes += (key + ': ' +
-                                    pprint.pformat(ret['changes'][key]) +
+                                    innerdict +
                                     '\n                   ')
                     else:
                         changes += (key + ': ' +
