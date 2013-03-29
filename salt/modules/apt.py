@@ -303,7 +303,8 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
-        cmd = 'dpkg -i {verify} {pkg}'.format(
+        cmd = 'dpkg -i {confold} {verify} {pkg}'.format(
+            confold='--force-confold',
             verify='--force-bad-verify' if skip_verify else '',
             pkg=' '.join(pkg_params),
         )
