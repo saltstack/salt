@@ -2,40 +2,45 @@
 This state uses the manager webapp to manage Apache tomcat webapps
 This state requires the manager webapp to be enabled
 
-The following grains should be set
-tomcat-manager:
-  user: admin user name
-  passwd: password
+The following grains should be set::
 
-or use pillar:
-tomcat-manager.user: admin user name
-tomcat-manager.passwd: password
+    tomcat-manager:
+        user: admin user name
+        passwd: password
 
-and also configure a user in the conf/tomcat-users.xml file:
-<?xml version='1.0' encoding='utf-8'?>
-<tomcat-users>
- <role rolename="manager-script"/>
- <user username="tomcat" password="tomcat" roles="manager-script"/>
-</tomcat-users>
+or use pillar::
+
+    tomcat-manager.user: admin user name
+    tomcat-manager.passwd: password
+
+and also configure a user in the conf/tomcat-users.xml file::
+
+    <?xml version='1.0' encoding='utf-8'?>
+    <tomcat-users>
+        <role rolename="manager-script"/>
+        <user username="tomcat" password="tomcat" roles="manager-script"/>
+    </tomcat-users>
 
 Notes:
+
 - Not supported multiple version on the same context path
 - More information about tomcat manager: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html
 - if you use only this module for deployments you've might want to strict access to the manager only from localhost
   for more info: http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access
 - Tested on:
-    JVM Vendor:
-        Sun Microsystems Inc.
-    JVM Version:
-        1.6.0_43-b01
-    OS Architecture:
-        amd64
-    OS Name:
-        Linux
-    OS Version:
-        2.6.32-358.el6.x86_64
-    Tomcat Version:
-        Apache Tomcat/7.0.37
+
+  JVM Vendor:
+      Sun Microsystems Inc.
+  JVM Version:
+      1.6.0_43-b01
+  OS Architecture:
+      amd64
+  OS Name:
+      Linux
+  OS Version:
+      2.6.32-358.el6.x86_64
+  Tomcat Version:
+      Apache Tomcat/7.0.37
 '''
 
 # Private
@@ -53,19 +58,22 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base')
     
     for more info: http://tomcat.apache.org/tomcat-7.0-doc/config/context.html#Naming
     
-    name: the context path to deploy
-    war: absolute path to war file (should be accessable by the user running tomcat)
-         or a path supported by the salt.modules.cp.get_file function
-    url: the url of the server manager webapp
-        default: http://localhost:8080/manager
+    name
+        the context path to deploy
+    war
+        absolute path to war file (should be accessable by the user running
+        tomcat) or a path supported by the salt.modules.cp.get_file function
+    url : http://localhost:8080/manager
+        the url of the server manager webapp
     
-    Example:
-    jenkins:
-      tomcat.war_deployed:
-        - name: /ran
-        - war: salt://jenkins-1.2.4.war
-        - require:
-          - service: application-service
+    Example::
+
+        jenkins:
+          tomcat.war_deployed:
+            - name: /ran
+            - war: salt://jenkins-1.2.4.war
+            - require:
+              - service: application-service
     '''
     
     # Prepare
