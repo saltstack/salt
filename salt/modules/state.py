@@ -482,3 +482,26 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
     return ret
+
+
+def clear_cache():
+    '''
+    Clear out cached state files, forcing even cache runs to refresh the cache
+    on the next state execution.
+
+    Remember that the state cache is completely disabled by default, this
+    execution only applies if cache=True is used in states
+
+    CLI Example::
+
+        salt '*' state.clear_cache
+    '''
+    ret = []
+    for fn_ in os.listdir(__opts__['cachedir']):
+        if fn_.endswith('.cache.p'):
+            path = os.path.join(__opts__['cachedir'], fn_)
+            if not os.path.isfile(path):
+                continue
+            os.remove(path)
+            ret.append(fn_)
+    return ret
