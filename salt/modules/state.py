@@ -198,7 +198,11 @@ def highstate(test=None, **kwargs):
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
     try:
-        ret = st_.call_highstate(exclude=kwargs.get('exclude', []))
+        ret = st_.call_highstate(
+                exclude=kwargs.get('exclude', []),
+                cache=kwargs.get('cache', None),
+                cache_name=kwargs.get('cache_name', 'highstate')
+                )
     finally:
         st_.pop_active()
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
@@ -243,6 +247,17 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
             kwargs.get('pillar', ''),
             kwargs.get('kwval_as', 'yaml'))
 
+    cfn = os.path.join(
+            self.opts['cachedir'],
+            '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
+            )
+
+    if kwargs.get('cache'):
+        if os.path.isfile(cfn):
+            with open(cfn, 'r') as fp_:
+                high = self.serial.load(fp_)
+                return self.state.call_high(high)
+
     st_ = salt.state.HighState(opts, pillar)
 
     if isinstance(mods, string_types):
@@ -280,7 +295,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     return ret
 
 
-def top(topfn):
+def top(topfn, test=None, **kwargs):
     '''
     Execute a specific top file instead of the default
 
@@ -292,11 +307,19 @@ def top(topfn):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = None
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     try:
-        ret = st_.call_highstate()
+        ret = st_.call_highstate(
+                exclude=kwargs.get('exclude', []),
+                cache=kwargs.get('cache', None),
+                cache_name=kwargs.get('cache_name', 'highstate')
+                )
     finally:
         st_.pop_active()
     _set_retcode(ret)
