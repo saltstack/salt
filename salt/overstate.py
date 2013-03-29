@@ -113,10 +113,22 @@ class OverState(object):
         '''
         fun = 'state.highstate'
         arg = ()
+        req_fail = {name: {}}
         if 'sls' in stage:
             fun = 'state.sls'
             arg = (','.join(stage['sls']), self.env)
-        req_fail = {name: {}}
+        elif 'function' in stage or 'fun' in stage:
+            fun_d = stage.get('function', stage.get('fun'))
+            if not fun_d:
+                # Function dict is empty
+                yield {name: {}}
+            if isinstance(fun_d, str):
+                fun = fun_d
+            elif isinstance(fun_d, dict):
+                fun = fun_d.keys()[0]
+                arg = fun_d[fun]
+            else:
+                yield {name: {}}
         if 'require' in stage:
             for req in stage['require']:
                 if req in self.over_run:
