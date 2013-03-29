@@ -28,7 +28,7 @@ def list_pkgs(versions_as_list=False):
     '''
     versions_as_list = __salt__['config.is_true'](versions_as_list)
     ret = {}
-    cmd = 'brew list --versions {0}'.format(' '.join(args))
+    cmd = 'brew list --versions'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
             name, version = line.split(' ')[0:2]
