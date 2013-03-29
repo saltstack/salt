@@ -164,14 +164,19 @@ is called once for each minion that fetches its pillar data.
 
 .. code-block:: Python
 
-    def ext_pillar( *args, **kwargs ):
-        
-        pillar = {}
+    def ext_pillar( pillar, *args, **kwargs ):
+       
+        my_pillar = {}
 
         # Do stuff
 
-        return pillar
+        return my_pillar
         
+
+You shouldn't just add items to ``pillar`` and return that, since that will
+cause Salt to merge data that already exists. Rather, just return the items
+you are adding or changing. You could, however, use ``pillar`` in your module
+to make some decision based on pillar data that already exists.
 
 This function has access to some useful globals:
 
