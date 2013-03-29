@@ -12,10 +12,12 @@ Full list of runner modules
 
     cache
     doc
+    fileserver
     jobs
     launchd
     manage
     network
     search
     state
+    virt
     winrepo
