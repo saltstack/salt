@@ -232,6 +232,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
 
         salt '*' state.sls core,edit.vim dev
     '''
+
     conflict = running()
     if conflict:
         __context__['retcode'] = 1
@@ -247,18 +248,19 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
             kwargs.get('pillar', ''),
             kwargs.get('kwval_as', 'yaml'))
 
+    serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
-            self.opts['cachedir'],
+            __opts__['cachedir'],
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
+
+    st_ = salt.state.HighState(opts, pillar)
 
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
             with open(cfn, 'r') as fp_:
-                high = self.serial.load(fp_)
-                return self.state.call_high(high)
-
-    st_ = salt.state.HighState(opts, pillar)
+                high = serial.load(fp_)
+                return st_.state.call_high(high)
 
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -283,7 +285,6 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         st_.pop_active()
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
-    serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
@@ -292,6 +293,8 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
     _set_retcode(ret)
+    with open(cfn, 'w+') as fp_:
+        serial.dump(high, fp_)
     return ret
 
 
