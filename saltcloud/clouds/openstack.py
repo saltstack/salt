@@ -187,6 +187,9 @@ def create(vm_):
     if 'OPENSTACK.ssh_key_name' in __opts__:
         kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
 
+    if 'security_groups' in vm_:
+        kwargs['ex_security_groups'] = vm_['security_groups'].split(',')
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
