@@ -4,6 +4,7 @@ Utility functions for saltcloud
 
 # Import python libs
 import os
+import pwd
 import shutil
 import socket
 import tempfile
@@ -613,12 +614,31 @@ def namespaced_function(function, global_dict, defaults=None):
     return new_namespaced_function
 
 
-def remove_sshkey(host,
-                  known_hosts='{0}/known_hosts'.format(os.environ['HOME'])):
+def remove_sshkey(host, known_hosts=None):
     '''
     Remove a host from the known_hosts file
     '''
-    log.debug('Removing ssh key for {0} from known '
-              'hosts file {1}'.format(host, known_hosts))
+    if known_hosts is None:
+        if 'HOME' in os.environ:
+            known_hosts = '{0}/.ssh/known_hosts'.format(os.environ['HOME'])
+        else:
+            try:
+                known_hosts = '{0}/.ssh/known_hosts'.format(
+                    pwd.getpwuid(os.getuid()).pwd_dir
+                )
+            except:
+                pass
+
+    if known_hosts is not None:
+        log.debug(
+            'Removing ssh key for {0} from known hosts file {1}'.format(
+                host, known_hosts
+            )
+        )
+    else:
+        log.debug(
+            'Removing ssh key for {0} from known hosts file'.format(host)
+        )
+
     cmd = 'ssh-keygen -R {0}'.format(host)
     subprocess.call(cmd, shell=True)
