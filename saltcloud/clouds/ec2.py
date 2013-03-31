@@ -643,7 +643,7 @@ def create(vm_=None, call=None):
             'host': ip_address,
             'username': username,
             'key_filename': __opts__['EC2.private_key'],
-            'deploy_command': 'bash /tmp/deploy.sh',
+            'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
@@ -676,9 +676,6 @@ def create(vm_=None, call=None):
 
             if 'syndic_master' in master_conf:
                 deploy_kwargs['make_syndic'] = True
-
-        if username == 'root':
-            deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
