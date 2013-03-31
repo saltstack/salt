@@ -50,6 +50,8 @@ Notes:
 import glob
 import urllib
 import urllib2
+import tempfile
+import os
 
 # Import Salt libs
 import salt.utils
@@ -386,18 +388,18 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     '''
     
     # Copy file name if needed
-    tempfile = war
+    tfile = war
     if war[0] != '/':
-        tempfile = '/tmp/salt.{0}'.format( war.split('/')[-1] )
+        tfile = os.path.join( tempfile.gettempdir(), 'salt.'+war.split('/')[-1] )
         try:
-            cached = __salt__['cp.get_file'](war, tempfile, env)
+            cached = __salt__['cp.get_file'](war, tfile, env)
             __salt__['file.set_mode'](cached, '0644')
         except Exception:
             return 'FAIL - could not cache the war file'
     
     # Prepare options
     opts = {
-        'war': 'file:{0}'.format(tempfile),
+        'war': 'file:{0}'.format(tfile),
         'path': context,
         'version': war.split('/')[-1].replace('.war',''),
     }
@@ -409,7 +411,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     
     # Cleanup
     if war[0] != '/':
-        __salt__['file.remove'](tempfile)
+        __salt__['file.remove'](tfile)
     
     return res
 
