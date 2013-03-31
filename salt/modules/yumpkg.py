@@ -361,9 +361,9 @@ def group_install(name=None,
     pkgs = []
     for group in pkg_groups:
         group_detail = group_info(group)
-        for package in group_detail['mandatory packages'].keys():
+        for package in group_detail.get('mandatory packages', {}).keys():
             pkgs.append(package)
-        for package in group_detail['default packages'].keys():
+        for package in group_detail.get('default packages', {}).keys():
             if package not in skip_pkgs:
                 pkgs.append(package)
         for package in include:
@@ -667,7 +667,7 @@ def group_info(groupname):
     yumbase = yum.YumBase()
     (installed, available) = yumbase.doGroupLists()
     for group in installed + available:
-        if group.name == groupname:
+        if group.name.lower() == groupname.lower():
             return {'mandatory packages': group.mandatory_packages,
                     'optional packages': group.optional_packages,
                     'default packages': group.default_packages,
