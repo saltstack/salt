@@ -903,7 +903,7 @@ def __do_query_into_hash(conn, sql_str):
 
 def get_master_status():
     '''
-    Retrieves the master status from the mimion.
+    Retrieves the master status from the minion.
 
     Returns:
         {'host.domain.com': {'Binlog_Do_DB': '',
