@@ -138,7 +138,12 @@ def _xml_to_dict(xmltree):
     '''
     Convert an XML tree into a dict
     '''
-    if len(xmltree.getchildren()) < 1:
+    if sys.version_info < (2, 7):
+        children_len = len(xmltree.getchildren())
+    else:
+        children_len = len(xmltree)
+
+    if children_len < 1:
         name = xmltree.tag
         if '}' in name:
             comps = name.split('}')
@@ -152,7 +157,12 @@ def _xml_to_dict(xmltree):
             comps = name.split('}')
             name = comps[1]
         if not name in xmldict.keys():
-            if len(item.getchildren()) > 0:
+            if sys.version_info < (2, 7):
+                children_len = len(item.getchildren())
+            else:
+                children_len = len(item)
+
+            if children_len > 0:
                 xmldict[name] = _xml_to_dict(item)
             else:
                 xmldict[name] = item.text
@@ -226,7 +236,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
         items = root
 
     if setname:
-        for item in range(0, len(root.getchildren())):
+        if sys.version_info < (2, 7):
+            children_len = len(root.getchildren())
+        else:
+            children_len = len(root)
+
+        for item in range(0, children_len):
             comps = root[item].tag.split('}')
             if comps[1] == setname:
                 items = root[item]
@@ -621,10 +636,6 @@ def create(vm_=None, call=None):
         else:
             return {vm_['name']: 'Failed to authenticate'}
 
-    sudo = True
-    if 'sudo' in vm_.keys():
-        sudo = vm_['sudo']
-
     deploy = vm_.get('deploy', __opts__.get('EC2.deploy', __opts__['deploy']))
     if deploy is True:
         deploy_script = script(vm_)
@@ -632,11 +643,11 @@ def create(vm_=None, call=None):
             'host': ip_address,
             'username': username,
             'key_filename': __opts__['EC2.private_key'],
-            'deploy_command': 'bash /tmp/deploy.sh',
+            'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
-            'sudo': sudo,
+            'sudo': vm_.get('sudo', username != 'root'),
             'start_action': __opts__['start_action'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
@@ -665,9 +676,6 @@ def create(vm_=None, call=None):
 
             if 'syndic_master' in master_conf:
                 deploy_kwargs['make_syndic'] = True
-
-        if username == 'root':
-            deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
