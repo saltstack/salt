@@ -230,7 +230,8 @@ def wait_for_ssh(host, port=22, timeout=900):
             if time.time() - start > timeout:
                 log.error('SSH connection timed out: {0}'.format(timeout))
                 return False
-            log.debug('Retrying SSH connection (try {0})'.format(trycount))
+            log.debug('Retrying SSH connection to host {0}'
+                      'on port {1} (try {2})'.format(host, port, trycount))
 
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
