@@ -621,10 +621,6 @@ def create(vm_=None, call=None):
         else:
             return {vm_['name']: 'Failed to authenticate'}
 
-    sudo = True
-    if 'sudo' in vm_.keys():
-        sudo = vm_['sudo']
-
     deploy = vm_.get('deploy', __opts__.get('EC2.deploy', __opts__['deploy']))
     if deploy is True:
         deploy_script = script(vm_)
@@ -636,7 +632,7 @@ def create(vm_=None, call=None):
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
-            'sudo': sudo,
+            'sudo': vm_.get('sudo', username != 'root'),
             'start_action': __opts__['start_action'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
