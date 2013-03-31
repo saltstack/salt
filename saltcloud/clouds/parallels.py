@@ -100,9 +100,9 @@ def list_nodes():
             'state': node['state'],
         }
         if 'private-ip' in node['network']:
-            ret[name]['private_ips'] = [node['network']['private-ip']['address']]
+            ret[name]['private_ips'] = [node['network']['private-ip']]
         if 'public-ip' in node['network']:
-            ret[name]['public_ips'] = [node['network']['public-ip']['address']]
+            ret[name]['public_ips'] = [node['network']['public-ip']]
 
     return ret
 
@@ -147,7 +147,151 @@ def list_nodes_select():
     return ret
 
 
-def query(action=None, command=None, args=None, method='GET'):
+def get_image(vm_):
+    '''
+    Return the image object to use
+    '''
+    images = avail_images()
+    for image in images:
+        if images[image]['name'] == str(vm_['image']):
+            return images[image]['id']
+        if images[image]['id'] == str(vm_['image']):
+            return images[image]['id']
+    raise ValueError("The specified image could not be found.")
+
+
+def create_node(vm_):
+    '''
+    Build and submit the XML to create a node
+    '''
+    # Start the tree
+    content = ET.Element('ve')
+
+    # Name of the instance
+    name = ET.SubElement(content, 'name')
+    name.text = vm_['name']
+
+    # Description, defaults to name
+    desc = ET.SubElement(content, 'description')
+    desc.text = vm_.get('desc', vm_['name'])
+
+    # How many CPU cores, and how fast they are
+    cpu = ET.SubElement(content, 'cpu')
+    cpu.attrib['number'] = vm_.get('cpu_number', '1')
+    cpu.attrib['power'] = vm_.get('cpu_power', '1000')
+
+    # How many megabytes of RAM
+    ram = ET.SubElement(content, 'ram-size')
+    ram.text = vm_.get('ram', '256')
+
+    # Bandwidth available, in kbps
+    bandwidth = ET.SubElement(content, 'bandwidth')
+    bandwidth.text = vm_.get('bandwidth', '100')
+
+    # How many public IPs will be assigned to this instance
+    ip_num = ET.SubElement(content, 'no-of-public-ip')
+    ip_num.text = vm_.get('ip_num', '1')
+
+    # Size of the instance disk
+    disk = ET.SubElement(content, 've-disk')
+    disk.attrib['local'] = 'true'
+    disk.attrib['size'] = vm_.get('disk_size', '10')
+
+    # Attributes for the image
+    image = show_image({'image': vm_['image']}, call='function')
+    platform = ET.SubElement(content, 'platform')
+    template = ET.SubElement(platform, 'template-info')
+    template.attrib['name'] = vm_['image']
+    os = ET.SubElement(platform, 'os-info')
+    os.attrib['technology'] = image[vm_['image']]['technology']
+    os.attrib['type'] = image[vm_['image']]['osType']
+
+    # Username and password
+    admin = ET.SubElement(content, 'admin')
+    admin.attrib['login'] = vm_.get('ssh_username', 'root')
+    admin.attrib['password'] = __opts__['PARALLELS.password']
+
+    data = ET.tostring(content, encoding='UTF-8')
+
+    node = query(action='ve',
+                 method='POST',
+                 data=data)
+    return node
+
+
+def create(vm_):
+    '''
+    Create a single VM from a data dict
+    '''
+    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    deploy_script = script(vm_)
+
+    try:
+        data = create_node(vm_)
+    except Exception as exc:
+        err = ('Error creating {0} on PARALLELS\n\n'
+               'The following exception was thrown when trying to '
+               'run the initial deployment: \n{1}').format(
+                       vm_['name'], exc.message
+                       )
+        sys.stderr.write(err)
+        log.error(err)
+        return False
+
+    name = vm_['name']
+    if not wait_until(name, 'CREATED'):
+        return {'Error': 'Unable to start {0}, command timed out'.format(name)}
+    start(vm_['name'], call='action')
+
+    if not wait_until(name, 'STARTED'):
+        return {'Error': 'Unable to start {0}, command timed out'.format(name)}
+
+    data = show_instance(vm_['name'], call='action')
+
+    waiting_for_ip = 0
+    while 'public-ip' not in data['network']:
+        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
+        time.sleep(5)
+        waiting_for_ip += 1
+        data = show_instance(vm_['name'], call='action')
+
+    comps = data['network']['public-ip']['address'].split('/')
+    public_ip = comps[0]
+
+    if __opts__['deploy'] is True:
+        deploy_script = script(vm_)
+        deploy_kwargs = {
+            'host': public_ip,
+            'username': 'root',
+            'password': __opts__['PARALLELS.password'],
+            'script': deploy_script,
+            'name': vm_['name'],
+            'deploy_command': '/tmp/deploy.sh',
+            'start_action': __opts__['start_action'],
+            'sock_dir': __opts__['sock_dir'],
+            'conf_file': __opts__['conf_file'],
+            'minion_pem': vm_['priv_key'],
+            'minion_pub': vm_['pub_key'],
+            'keep_tmp': __opts__['keep_tmp'],
+            }
+
+        if 'script_args' in vm_:
+            deploy_kwargs['script_args'] = vm_['script_args']
+
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+
+        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
+        if deployed:
+            log.info('Salt installed on {0}'.format(vm_['name']))
+        else:
+            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+
+    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+
+    return data
+
+
+def query(action=None, command=None, args=None, method='GET', data=None):
     '''
     Make a web call to a Parallels provider
     '''
@@ -169,18 +313,27 @@ def query(action=None, command=None, args=None, method='GET'):
     if type(args) is not dict:
         args = {}
 
+    kwargs = {'data': data}
+    if type(data) is str and '<?xml' in data:
+        kwargs['headers'] = {
+            'Content-type': 'application/xml',
+        }
+
     if args:
         path += '?%s'
         params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params)
+        req = urllib2.Request(url=path % params, **kwargs)
     else:
-        req = urllib2.Request(url=path)
+        req = urllib2.Request(url=path, **kwargs)
 
     req.get_method = lambda: method
 
+    log.debug('{0} {1}'.format(method, req.get_full_url()))
+    if data:
+        log.debug(data)
+
     try:
         result = urllib2.urlopen(req)
-        log.debug(result.geturl())
         log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
 
         if 'content-length' in result.headers:
@@ -216,6 +369,20 @@ def script(vm_):
     return script
 
 
+def show_image(kwargs, call=None):
+    '''
+    Show the details from Parallels concerning an image
+    '''
+    if call != 'function':
+        log.error(
+            'The show_image function must be called with -f or --function.'
+        )
+        sys.exit(1)
+
+    items = query(action='template', command=kwargs['image'])
+    return {items.attrib['name']: items.attrib}
+
+
 def show_instance(name, call=None):
     '''
     Show the details from Parallels concerning an instance
@@ -243,6 +410,21 @@ def show_instance(name, call=None):
     return ret
 
 
+def wait_until(name, state, timeout=300):
+    '''
+    Wait until a specific state has been reached on  a node
+    '''
+    start = time.time()
+    node = show_instance(name, call='action')
+    while True:
+        if node['state'] == state:
+            return True
+        time.sleep(1)
+        if time.time() - start > timeout:
+            return False
+        node = show_instance(name, call='action')
+
+
 def destroy(name, call=None):
     '''
     Destroy a node.
@@ -251,7 +433,12 @@ def destroy(name, call=None):
 
         salt-cloud --destroy mymachine
     '''
-    stop(name, call='action')
+    node = show_instance(name, call='action')
+    if node['state'] == 'STARTED':
+        stop(name, call='action')
+        if not wait_until(name, 'STOPPED'):
+            return {'Error': 'Unable to destroy {0}, command timed out'.format(name)}
+
     data = query(action='ve', command=name, method='DELETE')
 
     if 'error' in data:
