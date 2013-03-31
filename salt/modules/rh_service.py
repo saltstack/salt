@@ -31,7 +31,7 @@ def __virtual__():
     ]
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Fedora':
-            if __grains__['osrelease'] > 15:
+            if __grains__.get('osrelease', 0) > 15:
                 return False
         return 'service'
     return False
