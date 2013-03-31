@@ -43,7 +43,7 @@ Import the repository key.
     You can optionally verify the key integrity with ``sha512sum`` using the 
     public key signature shown here. E.g::
 
-        echo "8b1983fc2d2c55c83e2bbc15d93c3fc090c8e0e92c04ece555a6b6d8ff26de8b4fc2ccbe1bbd16a6357ff86b8b69fd261e90d61350e07a518d50fc9f5f0a1eb3 archive.key" | sha512sum -c 
+        echo "8b1983fc2d2c55c83e2bbc15d93c3fc090c8e0e92c04ece555a6b6d8ff26de8b4fc2ccbe1bbd16a6357ff86b8b69fd261e90d61350e07a518d50fc9f5f0a1eb3  archive.key" | sha512sum -c 
 
 Update the package database:
 
