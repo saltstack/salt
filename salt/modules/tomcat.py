@@ -390,7 +390,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     # Copy file name if needed
     tfile = war
     if war[0] != '/':
-        tfile = os.path.join( tempfile.gettempdir(), 'salt.'+war.split('/')[-1] )
+        tfile = os.path.join( tempfile.gettempdir(), 'salt.'+os.path.basename(war) )
         try:
             cached = __salt__['cp.get_file'](war, tfile, env)
             __salt__['file.set_mode'](cached, '0644')
@@ -401,7 +401,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': war.split('/')[-1].replace('.war',''),
+        'version': os.path.basename(war).replace('.war',''),
     }
     if force == 'yes':
         opts['update'] = 'true'
