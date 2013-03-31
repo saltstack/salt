@@ -138,7 +138,12 @@ def _xml_to_dict(xmltree):
     '''
     Convert an XML tree into a dict
     '''
-    if len(xmltree.getchildren()) < 1:
+    if sys.version_info < (2, 7):
+        children_len = len(xmltree.getchildren())
+    else:
+        children_len = len(xmltree)
+
+    if children_len < 1:
         name = xmltree.tag
         if '}' in name:
             comps = name.split('}')
@@ -152,7 +157,12 @@ def _xml_to_dict(xmltree):
             comps = name.split('}')
             name = comps[1]
         if not name in xmldict.keys():
-            if len(item.getchildren()) > 0:
+            if sys.version_info < (2, 7):
+                children_len = len(item.getchildren())
+            else:
+                children_len = len(item)
+
+            if children_len > 0:
                 xmldict[name] = _xml_to_dict(item)
             else:
                 xmldict[name] = item.text
@@ -226,7 +236,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
         items = root
 
     if setname:
-        for item in range(0, len(root.getchildren())):
+        if sys.version_info < (2, 7):
+            children_len = len(root.getchildren())
+        else:
+            children_len = len(root)
+
+        for item in range(0, children_len):
             comps = root[item].tag.split('}')
             if comps[1] == setname:
                 items = root[item]
