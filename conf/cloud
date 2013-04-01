@@ -5,12 +5,6 @@
 #####          VM Defaults           #####
 ##########################################
 
-# Set the default cloud provider, this can still be overridden on a per VM
-# basis
-#
-#provider: openstack
-
-
 # Set the size of minion keys to generate, defaults to 2048
 #
 #keysize: 2048
