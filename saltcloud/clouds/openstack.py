@@ -188,14 +188,15 @@ def create(vm_):
         kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
 
     if 'security_groups' in vm_:
+        kwargs['ex_security_groups'] = []
         groups = vm_['security_groups'].split(',')
         _groups = conn.ex_list_security_groups()
-        kwargs['ex_security_groups'] = []
 
-        for g in _groups:
-            if g.name in groups:
+        for group in groups:
+            if group in [ g.name for g in _groups ]:
                 kwargs['ex_security_groups'].append(g)
-
+            else:
+                raise ValueError("No such security group: '{0}'".format(group))
 
     try:
         data = conn.create_node(**kwargs)
