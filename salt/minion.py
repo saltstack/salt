@@ -526,21 +526,23 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
+        jid = ret.get('jid', ret.get('__jid__'))
+        fun = ret.get('fun', ret.get('__fun__'))
         if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, ret['__jid__'])
+            fn_ = os.path.join(self.proc_dir, jid)
             if os.path.isfile(fn_):
                 try:
                     os.remove(fn_)
                 except (OSError, IOError):
                     # The file is gone already
                     pass
-        log.info('Returning information for job: {0}'.format(ret['__jid__']))
+        log.info('Returning information for job: {0}'.format(jid))
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
-                    'jid': ret['__jid__'],
-                    'fun': ret['__fun__']}
+                    'jid': jid,
+                    'fun': fun}
             load['return'] = {}
             for key, value in ret.items():
                 if key.startswith('__'):
