@@ -140,6 +140,12 @@ def setval(key, val):
             __opts__['conf_file'],
             'grains'
         )
+    else:
+        gfn = os.path.join(
+            os.path.dirname(__opts__['conf_file']),
+            'grains'
+        )
+
     if os.path.isfile(gfn):
         with open(gfn, 'rb') as fp_:
             try:
