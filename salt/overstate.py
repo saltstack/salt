@@ -168,7 +168,7 @@ class OverState(object):
                     failure = {tag_name: {
                         'ret': {
                             'result': False,
-                            'comment': 'Requisite {0} was not found'.format(req),
+                            'comment': 'Requisite {0} not found'.format(req),
                             'name': 'Requisite Failure',
                             'changes': {},
                             '__run_num__': 0,
@@ -195,12 +195,18 @@ class OverState(object):
         else:
             ret = {}
             tgt = self._stage_list(stage['match'])
-            for minion in self.local.cmd_iter(
-                    tgt,
-                    fun,
-                    arg,
-                    expr_form='list',
-                    raw=True):
+            cmd_kwargs = {
+                'tgt': tgt,
+                'fun': fun,
+                'arg': arg,
+                'expr_form': 'list',
+                'raw': True}
+            if 'batch' in stage:
+                local_cmd = self.local.cmd_batch
+                cmd_kwargs['batch'] = stage['batch']
+            else:
+                local_cmd = self.local.cmd_iter
+            for minion in local_cmd(**cmd_kwargs):
                 ret.update({minion['id']: 
                         {
                         'ret': minion['return'],
