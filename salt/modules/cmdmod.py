@@ -201,9 +201,15 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            env_cmd = ('su -s {0} - {1} -c "{2} -c \'import os, json;'
-                       'print(json.dumps(os.environ.__dict__))\'"').format(
-                               shell, runas, sys.executable)
+            if salt.utils.is_darwin():
+                env_cmd = ('sudo -i -u {1} -- "{2} -c \'import os, json;'
+                           'print(json.dumps(os.environ.__dict__))\'"').format(
+                                   shell, runas, sys.executable)
+                log.info(env_cmd)
+            else:
+                env_cmd = ('su -s {0} - {1} -c "{2} -c \'import os, json;'
+                           'print(json.dumps(os.environ.__dict__))\'"').format(
+                                   shell, runas, sys.executable)
             env = json.loads(
                     subprocess.Popen(
                         env_cmd,

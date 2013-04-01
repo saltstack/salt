@@ -800,6 +800,13 @@ def is_linux():
     '''
     return sys.platform.startswith('linux')
 
+@memoize
+def is_darwin():
+    '''
+    Simple function to return if a host is Darwin (OS X) or not
+    '''
+    return sys.platform.startswith('darwin')
+
 
 def check_ipc_path_max_len(uri):
     # The socket path is limited to 107 characters on Solaris and
