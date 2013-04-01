@@ -1015,26 +1015,26 @@ def _list_nodes_full(location=None):
 
     for instance in instances:
         # items could be type dict or list (for stopped EC2 instances)
-	if isinstance(instance['instancesSet']['item'], list):
-	    for item in instance['instancesSet']['item']:
-		name = _extract_name_tag(item)
-		ret[name] = item
-		ret[name].update(dict(id=item['instanceId'], 
-				 image=item['imageId'], 
-				 size=item['instanceType'], 
-				 state=item['instanceState']['name'], 
-				 private_ips=item.get('privateIpAddress', []), 
-				 public_ips=item.get('ipAddress', [])))
-	else:
-	    item = instance['instancesSet']['item']
-	    name = _extract_name_tag(item)
-	    ret[name] = item
-	    ret[name].update(dict(id=item['instanceId'], 
-			     image=item['imageId'], 
-			     size=item['instanceType'], 
-			     state=item['instanceState']['name'], 
-			     private_ips=item.get('privateIpAddress', []), 
-			     public_ips=item.get('ipAddress', [])))
+        if isinstance(instance['instancesSet']['item'], list):
+            for item in instance['instancesSet']['item']:
+                name = _extract_name_tag(item)
+                ret[name] = item
+                ret[name].update(dict(id=item['instanceId'], 
+                                      image=item['imageId'], 
+                                      size=item['instanceType'], 
+                                      state=item['instanceState']['name'], 
+                                      private_ips=item.get('privateIpAddress', []), 
+                                      public_ips=item.get('ipAddress', [])))
+        else:
+            item = instance['instancesSet']['item']
+            name = _extract_name_tag(item)
+            ret[name] = item
+            ret[name].update(dict(id=item['instanceId'], 
+                                  image=item['imageId'], 
+                                  size=item['instanceType'], 
+                                  state=item['instanceState']['name'], 
+                                  private_ips=item.get('privateIpAddress', []), 
+                                  public_ips=item.get('ipAddress', [])))
     return ret
 
 
