@@ -9,10 +9,6 @@ Set up the cloud config at ``/etc/salt/cloud``:
 
 .. code-block:: yaml
 
-    # Set up an optional default cloud provider
-    #
-    provider: openstack
-
     # Set the location of the salt-master
     #
     minion:
