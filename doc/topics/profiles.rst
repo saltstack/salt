@@ -43,6 +43,14 @@ are applied to all cloud profiles. For instance if only a single cloud provider
 is being used then the provider option can be declared in the Salt cloud config
 file.
 
+Multiple Config Files
+---------------------
+
+In addition to ``/etc/salt/cloud.profiles``, profiles can also be specified in
+any file matching ``/etc/salt/cloud.profiles.d/*conf``. This allows for more
+extensible configuration, and plays nicely with various configuration
+management tools as well as version control systems.
+
 Larger Example
 --------------
 
