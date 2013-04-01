@@ -247,8 +247,8 @@ class CkMinions(object):
             return v_expr == expr
         v_minions = set(self.check_minions(v_expr, v_matcher))
         minions = set(self.check_minions(expr, expr_form))
-        d_bool = bool(minions.difference(v_minions))
-        if len(v_minions) == len(minions) and not d_bool:
+        d_bool = not bool(minions.difference(v_minions))
+        if len(v_minions) == len(minions) and d_bool:
             return True
         return d_bool
 
