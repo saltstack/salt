@@ -334,7 +334,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
 
     try:
         result = urllib2.urlopen(req)
-        log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
+        log.debug('PARALLELS Response Status Code: {0}'.format(result.getcode()))
 
         if 'content-length' in result.headers:
             content = result.read()
@@ -344,7 +344,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         else:
             return {}
     except urllib2.URLError as exc:
-        log.error('EC2 Response Status Code: {0} {1}'.format(exc.code,
+        log.error('PARALLELS Response Status Code: {0} {1}'.format(exc.code,
                                                              exc.msg))
         root = ET.fromstring(exc.read())
         log.error(_xml_to_dict(root))
