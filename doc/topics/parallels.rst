@@ -81,6 +81,8 @@ more detailed configuration for their instances, than is allowed by many other
 cloud providers. The following options are available to be used in a profile,
 with their default settings listed.
 
+.. code-block:: yaml
+
     # Description of the instance. Defaults to the instance name.
     desc: <instance_name>
 
