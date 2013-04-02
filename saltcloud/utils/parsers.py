@@ -27,6 +27,7 @@ class CloudConfigMixIn(object):
         self.master_config = {}
         self.cloud_config = {}
         self.profiles_config = {}
+        self.providers_config = {}
         group = self.config_group = optparse.OptionGroup(
             self,
             "Configuration Options",
@@ -49,6 +50,12 @@ class CloudConfigMixIn(object):
             default=None,
             help='The location of the saltcloud VM config file. '
                  'Default: /etc/salt/cloud.profiles'
+        )
+        group.add_option(
+            '--providers-config',
+            default=None,
+            help='The location of the salt cloud VM providers '
+                 'configuration file. Default: /etc/salt/cloud.providers'
         )
         self.add_option_group(group)
 
@@ -84,7 +91,20 @@ class CloudConfigMixIn(object):
         # Loaded in CloudConfigMixIn.process_vm_config()
         self.config['vm'] = self.profiles_config
 
-        # 4th - Override config with cli options
+        # 4th - Include Cloud Providers
+        if 'providers' in self.config and self.providers_config:
+            self.error(
+                'Do not mix the old cloud providers configuration with '
+                'the new one. The providers configuration should now go in '
+                'the file `/etc/salt/cloud.providers` or a separate `*.conf` '
+                'file within `cloud.providers.d/` which is relative to '
+                '`/etc/salt/cloud.providers`. To provide another location '
+                'for the providers configuration file, please use '
+                '`--providers-config`.'
+            )
+        self.config['providers'] = self.providers_config
+
+        # 5th - Override config with cli options
         # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
 
         # Remove log_level_logfile from config if set to None so it can be
@@ -120,6 +140,13 @@ class CloudConfigMixIn(object):
             self.options.vm_config = self.cloud_config.get(
                 'vm_config', '/etc/salt/cloud.profiles'
             )
+        if self.options.providers_config is None:
+            # No providers config was provided from cli
+            # Set the profiles configuration file path to the one provided in
+            # the cloud's configuration or the default path.
+            self.options.providers_config = self.cloud_config.get(
+                'providers_config', '/etc/salt/cloud.providers'
+            )
 
     def process_master_config(self):
         self.master_config = salt.config.master_config(
@@ -132,8 +159,15 @@ class CloudConfigMixIn(object):
         self.profiles_config = config.vm_profiles_config(
             self.options.vm_config
         )
-    # Force process_vm_config to run AFTER process_cloud_config
+    # Force process_vm_config to run AFTER process_master_config
     process_vm_config._mixin_prio_ = -998
+
+    def process_providers_config(self):
+        self.providers_config = config.cloud_providers_config(
+            self.options.providers_config
+        )
+    # Force process_providers_config to run AFTER process_vm_config
+    process_providers_config._mixin_prio_ = -997
 
 
 class ExecutionOptionsMixIn(object):
@@ -154,18 +188,18 @@ class ExecutionOptionsMixIn(object):
         group.add_option(
             '-a', '--action',
             default='',
-            help=('Perform an action that may be specific to this cloud '
-                  'provider. This argument requires one or more instance '
-                  'names to be specified.')
+            help='Perform an action that may be specific to this cloud '
+                 'provider. This argument requires one or more instance '
+                 'names to be specified.'
         )
         group.add_option(
             '-f', '--function',
             nargs=2,
             default='',
             metavar='<FUNC-NAME> <PROVIDER>',
-            help=('Perform an function that may be specific to this cloud '
-                  'provider, that does not apply to an instance. This '
-                  'argument requires a provider to be specified (i.e.: nova).')
+            help='Perform an function that may be specific to this cloud '
+                 'provider, that does not apply to an instance. This '
+                 'argument requires a provider to be specified (i.e.: nova).'
         )
         group.add_option(
             '-p', '--profile',

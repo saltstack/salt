@@ -4,6 +4,7 @@ Manage configuration files in salt-cloud
 
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.config
@@ -39,6 +40,13 @@ CLOUD_CONFIG_DEFAULTS = {
 VM_CONFIG_DEFAULTS = {
     'default_include': 'cloud.profiles.d/*.conf',
 }
+
+PROVIDER_CONFIG_DEFAULTS = {
+    'default_include': 'cloud.providers.d/*.conf',
+}
+
+
+log = logging.getLogger(__name__)
 
 
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
@@ -108,13 +116,11 @@ def apply_cloud_config(overrides, defaults=None):
 
     # Migrate old configuration
     opts = old_to_new(opts)
-    opts = prov_dict(opts)
 
     return opts
 
 
 def old_to_new(opts):
-    optskeys = opts.keys()
     providers = ('AWS',
                  'EC2',
                  'GOGRID',
@@ -123,36 +129,24 @@ def old_to_new(opts):
                  'LINODE',
                  'OPENSTACK',
                  'RACKSPACE')
-    for opt in optskeys:
-        for provider in providers:
-            if opt.startswith(provider):
-                if provider.lower() not in opts:
-                    opts[provider.lower()] = {}
-                comps = opt.split('.')
-                opts[provider.lower()][comps[1]] = opts[opt]
-    return opts
 
-
-def prov_dict(opts):
-    providers = ('AWS',
-                 'EC2',
-                 'GOGRID',
-                 'IBMSCE',
-                 'JOYENT',
-                 'LINODE',
-                 'OPENSTACK',
-                 'RACKSPACE')
-    optskeys = opts.keys()
-    opts['providers'] = {}
     for provider in providers:
-        lprov = provider.lower()
-        opts['providers'][lprov] = {}
-        for opt in optskeys:
-            if opt == lprov:
-                opts['providers'][lprov][lprov] = opts[opt]
-            elif type(opts[opt]) is dict and 'provider' in opts[opt]:
-                if opts[opt]['provider'] == lprov:
-                    opts['providers'][lprov][opt] = opts[opt]
+
+        provider_config = {}
+        for opt in opts.keys():
+            if not opt.startswith(provider):
+                continue
+            value = opts.pop(opt)
+            name = opt.split('.', 1)[1]
+            provider_config[name] = value
+
+        if provider_config:
+            provider_config['provider'] = provider.lower()
+            opts.setdefault('providers', {}).setdefault(
+                provider.lower(), []).append(
+                    provider_config
+                )
+
     return opts
 
 
@@ -195,3 +189,51 @@ def apply_vm_profiles_config(overrides, defaults=None):
         vms.append(val)
 
     return vms
+
+
+def cloud_providers_config(path,
+                           env_var='SALT_CLOUD_PROVIDERS_CONFIG',
+                           defaults=None):
+    '''
+    Read in the salt cloud providers configuration file
+    '''
+    if defaults is None:
+        defaults = PROVIDER_CONFIG_DEFAULTS
+
+    overrides = salt.config.load_config(path, env_var)
+    default_include = overrides.get(
+        'default_include', defaults['default_include']
+    )
+    include = overrides.get('include', [])
+
+    overrides.update(
+        salt.config.include_config(default_include, path, verbose=False)
+    )
+    overrides.update(
+        salt.config.include_config(include, path, verbose=True)
+    )
+    return apply_cloud_providers_config(overrides, defaults)
+
+
+def apply_cloud_providers_config(overrides, defaults=None):
+    if defaults is None:
+        defaults = PROVIDER_CONFIG_DEFAULTS
+
+    opts = defaults.copy()
+    if overrides:
+        opts.update(overrides)
+
+    # Is the user still using the old format in the new configuration file?!
+    converted_opts = old_to_new(opts.copy())
+    if opts != converted_opts:
+        log.warn('Please switch to the new providers configuration syntax')
+        opts = converted_opts
+
+    providers = {}
+
+    for key, val in opts.items():
+        if key in ('conf_file', 'include', 'default_include'):
+            continue
+        providers[key] = val
+
+    return providers

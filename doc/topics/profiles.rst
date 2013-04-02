@@ -2,7 +2,7 @@ VM Profiles
 ===========
 
 Salt cloud designates virtual machines inside the profile configuration file.
-The profile configuration file defaults to ``/etc/salt/cloud.profiles`` and is
+The profile configuration file defaults to ``/etc/salt/cloud.profiles`` and is 
 a yaml configuration. The syntax for declaring profiles is simple:
 
 .. code-block:: yaml
@@ -13,7 +13,8 @@ a yaml configuration. The syntax for declaring profiles is simple:
         size: 256 server
         script: Fedora
 
-A few key peices of information need to be declared and can change based on the
+
+A few key pieces of information need to be declared and can change based on the
 public cloud provider. A number of additional parameters can also be inserted:
 
 .. code-block:: yaml
@@ -29,6 +30,7 @@ public cloud provider. A number of additional parameters can also be inserted:
         grains:
             role: webserver
 
+
 The image must be selected from available images. Similarly, sizes must be
 selected from the list of sizes. To get a list of available images and sizes
 use the following command:
@@ -38,18 +40,23 @@ use the following command:
     salt-cloud --list-images openstack
     salt-cloud --list-sizes openstack
 
-Some parameters can be specified in the main Salt cloud config file and then
-are applied to all cloud profiles. For instance if only a single cloud provider
-is being used then the provider option can be declared in the Salt cloud config
-file.
 
-Multiple Config Files
----------------------
+Some parameters can be specified in the main Salt cloud configuration file and 
+then are applied to all cloud profiles. For instance if only a single cloud 
+provider is being used then the provider option can be declared in the Salt 
+cloud configuration file.
+
+
+Multiple Configuration Files
+----------------------------
 
 In addition to ``/etc/salt/cloud.profiles``, profiles can also be specified in
-any file matching ``/etc/salt/cloud.profiles.d/*conf``. This allows for more
+any file matching ``cloud.profiles.d/*conf`` which is a sub-directory relative 
+to the profiles configuration file(with the above configuration file as an 
+example, ``/etc/salt/cloud.profiles.d/*.conf``).  This allows for more 
 extensible configuration, and plays nicely with various configuration
 management tools as well as version control systems.
+
 
 Larger Example
 --------------
