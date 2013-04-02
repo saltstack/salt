@@ -237,3 +237,29 @@ def apply_cloud_providers_config(overrides, defaults=None):
         providers[key] = val
 
     return providers
+
+
+def get_config_value(name, vm_, opts, default=None):
+    '''
+    Search and return a setting in a known order:
+
+        1. In the virtual machines configuration
+        2. In the virtual machine's provider configuration
+        3. In the salt cloud configuration
+        4. Return the provided default
+    '''
+    if name in vm_:
+        # The setting name exists in VM configuration. Return it!
+        return vm_[name]
+
+    if name in opts['providers'][vm_['provider']]:
+        # The setting name exists in the VM's provider configuration.
+        # Return it!
+        return opts['providers'][vm_['provider']][name]
+
+    if name in opts:
+        # The setting name exists in the cloud(global) configuration
+        return opts[name]
+
+    # As a last resort, return the default
+    return default
