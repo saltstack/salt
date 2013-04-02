@@ -258,7 +258,8 @@ class LocalClient(object):
                 'arg': arg,
                 'expr_form': expr_form,
                 'ret': ret,
-                'batch': batch}
+                'batch': batch,
+                'raw': kwargs.get('raw', False)}
         for key, val in self.opts.items():
             if key not in opts:
                 opts[key] = val
@@ -410,7 +411,8 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
-                                                timeout):
+                                                timeout,
+                                                **kwargs):
                 yield fn_ret
 
     def cmd_full_return(
@@ -582,6 +584,7 @@ class LocalClient(object):
                     minions.update(raw['syndic'])
                     continue
                 if kwargs.get('raw', False):
+                    found.add(raw['id'])
                     yield raw
                 else:
                     found.add(raw['id'])
