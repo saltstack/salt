@@ -1,6 +1,6 @@
 #!/bin/sh
 
-daemon="/usr/local/bin/salt-master"
+daemon="/usr/local/bin/salt-minion"
 daemon_flags="-d"
 
 . /etc/rc.d/rc.subr
