@@ -97,7 +97,10 @@ class Batch(object):
                 if not self.quiet:
                     print('\nExecuting run on {0}\n'.format(next_))
                 iters.append(
-                        self.local.cmd_iter_no_block(*args))
+                        self.local.cmd_iter_no_block(
+                            *args,
+                            raw=self.opts.get('raw', False))
+                        )
             else:
                 time.sleep(0.02)
             parts = {}
@@ -113,20 +116,26 @@ class Batch(object):
                             if ncnt > 5:
                                 break
                             continue
-                        parts.update(part)
+                        if self.opts.get('raw'):
+                            parts.update({part['id']: part})
+                        else:
+                            parts.update(part)
                 except StopIteration:
                     # remove the iter, it is done
                     pass
             for minion, data in parts.items():
                 active.remove(minion)
-                yield {minion: data['ret']}
-                ret[minion] = data['ret']
-                data[minion] = data.pop('ret')
-                if 'out' in data:
-                    out = data.pop('out')
+                if self.opts.get('raw'):
+                    yield data
                 else:
-                    out = None
+                    yield {minion: data['ret']}
                 if not self.quiet:
+                    ret[minion] = data['ret']
+                    data[minion] = data.pop('ret')
+                    if 'out' in data:
+                        out = data.pop('out')
+                    else:
+                        out = None
                     salt.output.display_output(
                             data,
                             out,
