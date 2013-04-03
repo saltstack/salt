@@ -590,11 +590,10 @@ class Loader(object):
                 )
                 continue
             except Exception:
-                trb = traceback.format_exc()
                 log.warning(
                     'Failed to import {0} {1}, this is due most likely to a '
-                    'syntax error: {2}'.format(
-                        self.tag, name, trb
+                    'syntax error. Traceback raised:\n'.format(
+                        self.tag, name, exc_info=True
                     )
                 )
                 continue
@@ -686,8 +685,12 @@ class Loader(object):
                 except KeyError:
                     # Key errors come out of the virtual function when passing
                     # in incomplete grains sets, these can be safely ignored
-                    # and logged to debug
-                    log.debug('KeyError when loading {0}'.format(module_name))
+                    # and logged to debug, still, it includes the traceback to
+                    # help debugging.
+                    log.debug(
+                        'KeyError when loading {0}'.format(module_name),
+                        exc_info=True
+                    )
 
                 except Exception:
                     # If the module throws an exception during __virtual__()
@@ -801,11 +804,10 @@ class Loader(object):
             try:
                 ret = fun()
             except Exception:
-                trb = traceback.format_exc()
                 log.critical(
                     'Failed to load grains defined in grain file {0} in '
-                    'function {1}, error:\n{2}'.format(
-                        key, fun, trb
+                    'function {1}, error:\n'.format(
+                        key, fun, exc_info=True
                     )
                 )
                 continue
