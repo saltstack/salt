@@ -394,20 +394,21 @@ class Loader(object):
                         LOADED_BASE_NAME, _mod_type(path), self.tag, name
                     ), fn_, path, desc
                 )
-        except ImportError as exc:
+        except ImportError:
             log.debug(
-                'Failed to import {0} {1}: {2}'.format(
-                    self.tag, name, exc
+                'Failed to import {0} {1}:\n'.format(
+                    self.tag, name
                 )
+                , exc_info=True
             )
             return mod
         except Exception:
-            trb = traceback.format_exc()
             log.warning(
                 'Failed to import {0} {1}, this is due most likely to a '
-                'syntax error: {2}'.format(
-                    self.tag, name, trb
+                'syntax error:\n'.format(
+                    self.tag, name
                 )
+                , exc_info=True
             )
             return mod
         if hasattr(mod, '__opts__'):
@@ -566,20 +567,22 @@ class Loader(object):
                                 reload(submodule)
                         except AttributeError:
                             continue
-            except ImportError as exc:
+            except ImportError:
                 log.debug(
                     'Failed to import {0} {1}, this is most likely NOT a '
-                    'problem: {2}'.format(
-                        self.tag, name, exc
-                    )
+                    'problem:\n'.format(
+                        self.tag, name
+                    ),
+                    exc_info=True
                 )
                 continue
             except Exception:
                 log.warning(
                     'Failed to import {0} {1}, this is due most likely to a '
                     'syntax error. Traceback raised:\n'.format(
-                        self.tag, name, exc_info=True
-                    )
+                        self.tag, name
+                    ),
+                    exc_info=True
                 )
                 continue
             modules.append(mod)
@@ -792,8 +795,9 @@ class Loader(object):
                 log.critical(
                     'Failed to load grains defined in grain file {0} in '
                     'function {1}, error:\n'.format(
-                        key, fun, exc_info=True
-                    )
+                        key, fun
+                    ),
+                    exc_info=True
                 )
                 continue
             if not isinstance(ret, dict):
