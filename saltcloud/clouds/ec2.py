@@ -52,7 +52,7 @@ import xml.etree.ElementTree as ET
 
 # Import saltcloud libs
 import saltcloud.utils
-from saltcloud.utils import namespaced_function
+import saltcloud.config
 from saltcloud.libcloudfuncs import *
 
 # Import salt libs
@@ -84,40 +84,48 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for EC2 configs
     '''
-    confs = [
-        'EC2.id',
-        'EC2.key',
-        'EC2.keyname',
-        'EC2.securitygroup',
-        'EC2.private_key',
-    ]
-    for conf in confs:
-        if conf not in __opts__:
-            log.debug(
-                '{0!r} not found in options. Not loading module.'.format(conf)
-            )
-            return False
-
-    if not os.path.exists(__opts__['EC2.private_key']):
-        raise SaltException(
-            'The EC2 key file {0} does not exist\n'.format(
-                __opts__['EC2.private_key']
-            )
+    if get_configured_provider() is False:
+        log.info(
+            'There is no EC2 cloud provider configuration available. Not '
+            'loading module'
         )
-    keymode = str(
-        oct(stat.S_IMODE(os.stat(__opts__['EC2.private_key']).st_mode))
-    )
-    if keymode not in ('0400', '0600'):
-        raise SaltException(
-            'The EC2 key file {0} needs to be set to mode 0400 or '
-            '0600\n'.format(
-                __opts__['EC2.private_key']
-            )
-        )
+        return False
 
-    log.debug('Loading EC2 cloud compute module')
+    for provider, details in __opts__['providers'].iteritems():
+        if details['provider'] != 'ec2':
+            continue
+
+        if not os.path.exists(details['private_key']):
+            raise SaltException(
+                'The EC2 key file {0!r} used in the {1!r} provider '
+                'configuration does not exist\n'.format(
+                    details['private_key'],
+                    provider
+                )
+            )
+
+        keymode = str(
+            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
+        )
+        if keymode not in ('0400', '0600'):
+            raise SaltException(
+                'The EC2 key file {0!r} used in the {1!r} provider '
+                'configuration needs to be set to mode 0400 or 0600\n'.format(
+                    __opts__['EC2.private_key'],
+                    provider
+                )
+            )
+
+    log.info('Loading EC2 cloud compute module')
     return 'ec2'
 
+
+def get_configured_provider():
+    return saltcloud.config.is_provider_configured(
+        __opts__,
+        'ec2',
+        ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
 
 EC2_LOCATIONS = {
     'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
@@ -177,12 +185,10 @@ def _xml_to_dict(xmltree):
 
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
-    key = __opts__['EC2.key']
-    keyid = __opts__['EC2.id']
-    if 'EC2.service_url' in __opts__:
-        service_url = __opts__['EC2.service_url']
-    else:
-        service_url = 'amazonaws.com'
+
+    provider = get_configured_provider()
+    service_url = provider.get('service_url', 'amazonaws.com')
+
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
     if not location:
@@ -191,12 +197,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
     if not requesturl:
         method = 'GET'
 
-        if 'EC2.endpoint' in __opts__:
-            endpoint = __opts__['EC2.endpoint']
-        else:
-            endpoint = 'ec2.{0}.{1}'.format(location, service_url)
+        endpoint = provider.get(
+            'endpoint',
+            'ec2.{0}.{1}'.format(location, service_url)
+        )
 
-        params['AWSAccessKeyId'] = '{0}'.format(keyid)
+        params['AWSAccessKeyId'] = provider['id']
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
         params['Timestamp'] = '{0}'.format(timestamp)
@@ -209,7 +215,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                                         endpoint.encode('utf-8'),
                                         querystring.encode('utf-8'))
 
-        hashed = hmac.new(key, uri, hashlib.sha256)
+        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
         sig = binascii.b2a_base64(hashed.digest())
         params['Signature'] = sig.strip()
 
@@ -219,10 +225,17 @@ def query(params=None, setname=None, requesturl=None, location=None,
     log.debug('EC2 Request: {0}'.format(requesturl))
     try:
         result = urllib2.urlopen(requesturl)
-        log.debug('EC2 Response Status Code: {0}'.format(result.getcode()))
+        log.debug(
+            'EC2 Response Status Code: {0}'.format(
+                result.getcode()
+            )
+        )
     except urllib2.URLError as exc:
-        log.error('EC2 Response Status Code: {0} {1}'.format(exc.code,
-                                                             exc.msg))
+        log.error(
+            'EC2 Response Status Code: {0} {1}'.format(
+                exc.code, exc.msg
+            )
+        )
         root = ET.fromstring(exc.read())
         log.error(_xml_to_dict(root))
         return {'error': _xml_to_dict(root)}
@@ -413,23 +426,24 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return str(vm_.get('keyname', __opts__.get('EC2.keyname', '')))
+    return saltcloud.config.get_config_value('keyname', vm_, __opts__)
 
 
 def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return vm_.get(
-        'securitygroup', __opts__.get('EC2.securitygroup', 'default')
-    )
+    return saltcloud.config.get_config_value('securitygroup', vm_, __opts__)
 
 
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to a built-in list of users for trying.
     '''
-    usernames = vm_.get('ssh_username', __opts__.get('EC2.ssh_username', []))
+    usernames = saltcloud.config.get_config_value(
+        'ssh_username', vm_, __opts__
+    )
+
     if not isinstance(usernames, list):
         usernames = [usernames]
 
@@ -448,8 +462,8 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return vm_.get(
-        'ssh_interface', __opts__.get('EC2.ssh_interface', 'public_ips')
+    return saltcloud.config.get_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips'
     )
 
 
@@ -460,12 +474,11 @@ def get_location(vm_=None):
         - Cloud profile setting
         - Global salt-cloud config
     '''
-    if __opts__['location'] != '':
-        return __opts__['location']
-    elif vm_ is not None and 'location' in vm_:
-        return vm_['location']
-    else:
-        return __opts__.get('EC2.location', DEFAULT_LOCATION)
+    return __opts__.get(
+        'location',
+        saltcloud.config.get_config_value(
+            'location', vm_, __opts__, default=DEFAULT_LOCATION)
+    )
 
 
 def avail_locations():
@@ -490,11 +503,9 @@ def get_availability_zone(vm_):
     '''
     Return the availability zone to use
     '''
-    avz = None
-    if 'availability_zone' in vm_:
-        avz = vm_['availability_zone']
-    elif 'EC2.availability_zone' in __opts__:
-        avz = __opts__['EC2.availability_zone']
+    avz = saltcloud.config.get_config_value(
+        'ssh_username', vm_, __opts__, default=None
+    )
 
     if avz is None:
         return None
@@ -573,13 +584,10 @@ def create(vm_=None, call=None):
     if az is not None:
         params['Placement.AvailabilityZone'] = az
 
-    delvol_on_destroy = vm_.get(
-        'delvol_on_destroy',            # Grab the value from the VM config
-        __opts__.get(
-            'EC2.delvol_on_destroy',    # If not available, try from the
-            None                        # provider config defaulting to None
-        )
+    delvol_on_destroy = saltcloud.config.get_config_value(
+        'delvol_on_destroy', vm_, __opts__, default=None
     )
+
     if delvol_on_destroy is not None:
         if not isinstance(delvol_on_destroy, bool):
             raise ValueError('\'delvol_on_destroy\' should be a boolean value')
@@ -631,25 +639,29 @@ def create(vm_=None, call=None):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
                     host=ip_address, username=user, ssh_timeout=60,
-                    key_filename=__opts__['EC2.private_key']):
+                    key_filename=saltcloud.config.get_config_value(
+                        'private_key', vm_, __opts__)):
                 username = user
                 break
         else:
             return {vm_['name']: 'Failed to authenticate'}
 
     ret = {}
-    deploy = vm_.get('deploy', __opts__.get('EC2.deploy', __opts__['deploy']))
-    if deploy is True:
+    if saltcloud.config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
-            'key_filename': __opts__['EC2.private_key'],
+            'key_filename': saltcloud.config.get_config_value(
+                'private_key', vm_, __opts__
+            ),
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
-            'sudo': vm_.get('sudo', username != 'root'),
+            'sudo': saltcloud.config.get_config_value(
+                'sudo', vm_, __opts__, default=(username != 'root')
+            ),
             'start_action': __opts__['start_action'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
@@ -657,18 +669,21 @@ def create(vm_=None, call=None):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
         }
-        if 'display_ssh_output' in __opts__:
-            deploy_kwargs['display_ssh_output'] = __opts__['display_ssh_output']
+
+        deploy_kwargs['display_ssh_output'] = saltcloud.config.get_config_value(
+            'display_ssh_output', vm_, __opts__, default=True
+        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
 
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
+        deploy_kwargs['script_args'] = saltcloud.config.get_config_value(
+            'script_args', vm_, __opts__
+        )
 
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if saltcloud.config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -694,11 +709,15 @@ def create(vm_=None, call=None):
     volumes = vm_.get('map_volumes')
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
-        created = create_attach_volumes(vm_['name'],
-                              {'volumes': volumes,
-                               'zone': ret['placement']['availabilityZone'],
-                               'instance_id': ret['instanceId']},
-                              call='action')
+        created = create_attach_volumes(
+            vm_['name'],
+            {
+                'volumes': volumes,
+                'zone': ret['placement']['availabilityZone'],
+                'instance_id': ret['instanceId']
+            },
+            call='action'
+        )
 
         ret['Attached Volumes'] = created
     return ret
@@ -804,7 +823,8 @@ def set_tags(name, tags, call=None, location=None):
         params['Tag.{0}.Key'.format(count)] = tag
         params['Tag.{0}.Value'.format(count)] = tags[tag]
         count += 1
-    result = query(params, setname='tagSet', location=location)
+
+    query(params, setname='tagSet', location=location)
 
     return get_tags(name, call='action', location=location)
 
@@ -856,7 +876,8 @@ def del_tags(name, kwargs, call=None):
     for tag in kwargs['tags'].split(','):
         params['Tag.{0}.Key'.format(count)] = tag
         count += 1
-    result = query(params, setname='tagSet')
+
+    query(params, setname='tagSet')
 
     return get_tags(name, call='action')
 
@@ -878,6 +899,7 @@ def rename(name, kwargs, call=None):
     instance_id = _get_node(name)['instanceId']
 
     set_tags(name, {'Name': kwargs['newname']}, call='action')
+
     saltcloud.utils.rename_key(
         __opts__['pki_dir'], name, kwargs['newname']
     )
@@ -892,25 +914,28 @@ def destroy(name, call=None):
         salt-cloud --destroy mymachine
     '''
     instance_id = _get_node(name)['instanceId']
-    protected = show_term_protect(instance_id=instance_id,
-                             call='action',
-                             quiet=True)
+    protected = show_term_protect(
+        instance_id=instance_id,
+        call='action',
+        quiet=True
+    )
+
     if protected == 'true':
         log.error('This instance has been protected from being destroyed. '
                   'Use the following command to disable protection:\n\n'
                   'salt-cloud -a disable_term_protect {0}'.format(name))
         exit(1)
 
-    if 'EC2.rename_on_destroy' in __opts__:
-        if __opts__['EC2.rename_on_destroy'] is True:
-            newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
-            rename(name, kwargs={'newname': newname}, call='action')
-            log.info(
-                'Machine will be identified as {0} until it has been '
-                'cleaned up.'.format(
-                    newname
-                )
+    if saltcloud.config.get_config_value(
+            'display_ssh_output', get_configured_provider(), __opts__) is True:
+        newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
+        rename(name, kwargs={'newname': newname}, call='action')
+        log.info(
+            'Machine will be identified as {0} until it has been '
+            'cleaned up.'.format(
+                newname
             )
+        )
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
@@ -1015,10 +1040,9 @@ def _extract_name_tag(item):
             for tag in tagset['item']:
                 if tag['key'] == 'Name':
                     return tag['value']
-        else:
-            return (item['tagSet']['item']['value'])
-    else:
-        return item['instanceId']
+        return (item['tagSet']['item']['value'])
+    return item['instanceId']
+
 
 def _list_nodes_full(location=None):
     '''
@@ -1035,22 +1059,30 @@ def _list_nodes_full(location=None):
             for item in instance['instancesSet']['item']:
                 name = _extract_name_tag(item)
                 ret[name] = item
-                ret[name].update(dict(id=item['instanceId'], 
-                                      image=item['imageId'], 
-                                      size=item['instanceType'], 
-                                      state=item['instanceState']['name'], 
-                                      private_ips=item.get('privateIpAddress', []), 
-                                      public_ips=item.get('ipAddress', [])))
+                ret[name].update(
+                    dict(
+                        id=item['instanceId'],
+                        image=item['imageId'],
+                        size=item['instanceType'],
+                        state=item['instanceState']['name'],
+                        private_ips=item.get('privateIpAddress', []),
+                        public_ips=item.get('ipAddress', [])
+                    )
+                )
         else:
             item = instance['instancesSet']['item']
             name = _extract_name_tag(item)
             ret[name] = item
-            ret[name].update(dict(id=item['instanceId'], 
-                                  image=item['imageId'], 
-                                  size=item['instanceType'], 
-                                  state=item['instanceState']['name'], 
-                                  private_ips=item.get('privateIpAddress', []), 
-                                  public_ips=item.get('ipAddress', [])))
+            ret[name].update(
+                dict(
+                    id=item['instanceId'],
+                    image=item['imageId'],
+                    size=item['instanceType'],
+                    state=item['instanceState']['name'],
+                    private_ips=item.get('privateIpAddress', []),
+                    public_ips=item.get('ipAddress', [])
+                )
+            )
     return ret
 
 
@@ -1096,8 +1128,9 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'action':
-        log.error('The show_term_protect action must be called with '
-              '-a or --action.')
+        log.error(
+            'The show_term_protect action must be called with -a or --action.'
+        )
         sys.exit(1)
 
     if not instance_id:
@@ -1134,8 +1167,10 @@ def enable_term_protect(name, call=None):
         salt-cloud -a enable_term_protect mymachine
     '''
     if call != 'action':
-        log.error('The enable_term_protect action must be called with '
-              '-a or --action.')
+        log.error(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
         sys.exit(1)
 
     return _toggle_term_protect(name, 'true')
@@ -1150,8 +1185,10 @@ def disable_term_protect(name, call=None):
         salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
-        log.error('The disable_term_protect action must be called with '
-              '-a or --action.')
+        log.error(
+            'The disable_term_protect action must be called with '
+            '-a or --action.'
+        )
         sys.exit(1)
 
     return _toggle_term_protect(name, 'false')
@@ -1184,8 +1221,9 @@ def keepvol_on_destroy(name, call=None):
         salt-cloud -a keepvol_on_destroy mymachine
     '''
     if call != 'action':
-        log.error('The keepvol_on_destroy action must be called with '
-              '-a or --action.')
+        log.error(
+            'The keepvol_on_destroy action must be called with -a or --action.'
+        )
         sys.exit(1)
 
     return _toggle_delvol(name=name, value='false')
@@ -1200,8 +1238,9 @@ def delvol_on_destroy(name, call=None):
         salt-cloud -a delvol_on_destroy mymachine
     '''
     if call != 'action':
-        log.error('The delvol_on_destroy action must be called with '
-              '-a or --action.')
+        log.error(
+            'The delvol_on_destroy action must be called with -a or --action.'
+        )
         sys.exit(1)
 
     return _toggle_delvol(name=name, value='true')
@@ -1243,8 +1282,9 @@ def create_volume(kwargs=None, call=None):
     Create a volume
     '''
     if call != 'function':
-        log.error('The create_volume function must be called with '
-                  '-f or --function.')
+        log.error(
+            'The create_volume function must be called with -f or --function.'
+        )
         return False
 
     if not 'zone' in kwargs:
@@ -1275,8 +1315,9 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     Attach a volume to an instance
     '''
     if call != 'action':
-        log.error('The attach_volume action must be called with '
-                  '-a or --action.')
+        log.error(
+            'The attach_volume action must be called with -a or --action.'
+        )
         sys.exit(1)
 
     if not kwargs:
@@ -1333,8 +1374,9 @@ def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     Detach a volume from an instance
     '''
     if call != 'action':
-        log.error('The detach_volume action must be called with '
-                  '-a or --action.')
+        log.error(
+            'The detach_volume action must be called with -a or --action.'
+        )
         sys.exit(1)
 
     if not kwargs:
@@ -1374,8 +1416,9 @@ def create_keypair(kwargs=None, call=None):
     Create an SSH keypair
     '''
     if call != 'function':
-        log.error('The create_keypair function must be called with '
-                  '-f or --function.')
+        log.error(
+            'The create_keypair function must be called with -f or --function.'
+        )
         return False
 
     if not kwargs:
@@ -1397,8 +1440,9 @@ def show_keypair(kwargs=None, call=None):
     Show the details of an SSH keypair
     '''
     if call != 'function':
-        log.error('The show_keypair function must be called with '
-                  '-f or --function.')
+        log.error(
+            'The show_keypair function must be called with -f or --function.'
+        )
         return False
 
     if not kwargs:
@@ -1420,8 +1464,9 @@ def delete_keypair(kwargs=None, call=None):
     Delete an SSH keypair
     '''
     if call != 'function':
-        log.error('The delete_keypair function must be called with '
-                  '-f or --function.')
+        log.error(
+            'The delete_keypair function must be called with -f or --function.'
+        )
         return False
 
     if not kwargs:
