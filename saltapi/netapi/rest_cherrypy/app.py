@@ -706,6 +706,11 @@ class Login(LowDataAdapter):
     '''
     exposed = True
 
+    def __init__(self, *args, **kwargs):
+        super(Login, self).__init__(*args, **kwargs)
+
+        self.auth = salt.auth.LoadAuth(self.opts)
+
     def GET(self):
         '''
         Present the login interface
@@ -799,15 +804,13 @@ class Login(LowDataAdapter):
         :status 200: success
         :status 406: requested Content-Type not available
         '''
-        auth = salt.auth.LoadAuth(self.opts)
-
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
             creds = cherrypy.serving.request.lowstate[0]
         else:
             creds = cherrypy.serving.request.lowstate
 
-        token = auth.mk_token(creds)
+        token = self.auth.mk_token(creds)
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
