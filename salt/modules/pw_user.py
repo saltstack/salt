@@ -186,7 +186,7 @@ def chshell(name, shell):
     pre_info = info(name)
     if shell == pre_info['shell']:
         return True
-    cmd = 'pw usermod -s {0} {1}'.format(shell, name)
+    cmd = 'pw usermod -s {0} -n {1}'.format(shell, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
