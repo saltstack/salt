@@ -4,13 +4,7 @@ Support for Tomcat
 This module uses the manager webapp to manage Apache tomcat webapps
 If the manager webapp is not configured some of the functions won't work
 
-The following grains should be set::
-
-    tomcat-manager:
-      user: admin user name
-      passwd: password
-
-or use pillar::
+The following grains/pillar should be set::
 
     tomcat-manager.user: admin user name
     tomcat-manager.passwd: password
@@ -85,8 +79,8 @@ def _auth(uri):
     If user & pass are missing return False
     '''
     try:
-        user = __grains__['tomcat-manager']['user']
-        password = __grains__['tomcat-manager']['passwd']
+        user = __grains__['tomcat-manager.user']
+        password = __grains__['tomcat-manager.passwd']
     except KeyError:
         try:
             user = salt.utils.option('tomcat-manager.user' ,'' ,__opts__ , __pillar__)
@@ -169,6 +163,18 @@ def _simple_cmd(cmd, app, url='http://localhost:8080/manager'):
         return '\n'.join(_wget(cmd,opts,url)['msg'])
     except Exception:
         return 'FAIL - No context exists for path {0}'.format(app)
+
+def leaks(url='http://localhost:8080/manager'):
+    '''
+    Find memory leaks in tomcat
+    
+    CLI Examples::
+        
+        salt '*' tomcat.leaks
+    '''
+    
+    return _wget('findleaks',{'statusLine': 'true'},url)['msg']
+
 
 def status(url='http://localhost:8080/manager'):
     '''
