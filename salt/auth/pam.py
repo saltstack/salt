@@ -13,10 +13,9 @@ Implemented using ctypes, so no compilation is necessary.
 '''
 
 # Import python libs
-from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof, addressof, ArgumentError
+from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
-import logging
 
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
@@ -34,9 +33,7 @@ PAM_PROMPT_ECHO_OFF = 1
 PAM_PROMPT_ECHO_ON = 2
 PAM_ERROR_MSG = 3
 PAM_TEXT_INFO = 4
-NUM_RETRIES = 3 
 
-log = logging.getLogger(__name__)
 
 class PamHandle(Structure):
     '''
@@ -122,7 +119,7 @@ def authenticate(username, password, service='login'):
         '''
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
-        p_response[0] = cast(addr, type(p_response[0]))
+        p_response[0] = cast(addr, POINTER(PamResponse))
         for i in range(n_messages):
             if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
                 pw_copy = STRDUP(str(password))
@@ -132,20 +129,14 @@ def authenticate(username, password, service='login'):
 
     handle = PamHandle()
     conv = PamConv(my_conv, 0)
-    
-    # Workaround for https://github.com/saltstack/salt-api/issues/61 
-    tmpHandle = cast(addressof(handle), PAM_START.argtypes[3]).contents
-    tmpConv = cast(addressof(conv), PAM_START.argtypes[2]).contents
-    retval = PAM_START(service, username, tmpConv , tmpHandle)
-    
+    retval = PAM_START(service, username, pointer(conv), pointer(handle))
+
     if retval != 0:
         # TODO: This is not an authentication error, something
         # has gone wrong starting up PAM
         return False
 
-    # Workaround for https://github.com/saltstack/salt-api/issues/61
-    tmpHandle = cast(addressof(handle), POINTER(PAM_AUTHENTICATE.argtypes[0])).contents
-    retval = PAM_AUTHENTICATE(tmpHandle, 0)
+    retval = PAM_AUTHENTICATE(handle, 0)
     return retval == 0
 
 
@@ -153,15 +144,4 @@ def auth(username, password, **kwargs):
     '''
     Authenticate via pam
     '''
-    
-    # Retries are extra insurance for https://github.com/saltstack/salt-api/issues/61
-    for i in range(NUM_RETRIES):
-        try:
-            log.debug("Attempting pam authentication")
-            return authenticate(username, password, kwargs.get('service', 'login'))
-        except ArgumentError, e:
-            if i < NUM_RETRIES: 
-                log.warn("Failed pam authentication with {0}".format(e))
-                continue
-            else:
-                raise
+    return authenticate(username, password, kwargs.get('service', 'login'))
