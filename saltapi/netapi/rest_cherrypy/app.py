@@ -138,9 +138,9 @@ import cherrypy
 import yaml
 
 # Import Salt libs
+import salt
 import salt.auth
 import salt.log
-import salt.output
 
 # Import salt-api libs
 import saltapi
