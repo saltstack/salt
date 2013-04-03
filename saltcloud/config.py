@@ -263,3 +263,31 @@ def get_config_value(name, vm_, opts, default=None):
 
     # As a last resort, return the default
     return default
+
+
+def is_provider_configured(opts, provider, required_keys=()):
+    for provider_details in opts['providers'].values():
+        if 'provider' not in provider_details:
+            continue
+
+        if provider_details['provider'] != provider:
+            continue
+
+        # If we reached this far, we have a matching provider, let's see if all
+        # required configuration keys are present and not None
+        skip_provider = False
+        for key in required_keys:
+            if provider_details.get(key, None) is None:
+                # This provider does not include all necessary keys, continue
+                # to next one
+                skip_provider = True
+                break
+
+        if skip_provider:
+            continue
+
+        # If we reached this far, the provider included all required keys
+        return provider_details
+
+    # If we reached this point, the provider is not configured.
+    return False
