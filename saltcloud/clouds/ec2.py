@@ -109,7 +109,7 @@ size_map = {
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for EC2 configs
+    Set up the libcloud functions and check for EC2 configurations
     '''
     if get_configured_provider() is False:
         log.info(
@@ -119,7 +119,7 @@ def __virtual__():
         return False
 
     for provider, details in __opts__['providers'].iteritems():
-        if details['provider'] != 'ec2':
+        if 'provider' not in details or details['provider'] != 'ec2':
             continue
 
         if not os.path.exists(details['private_key']):
