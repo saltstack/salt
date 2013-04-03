@@ -79,7 +79,7 @@ import xml.etree.ElementTree as ET
 
 # Import saltcloud libs
 import saltcloud.utils
-import saltcloud.config
+import saltcloud.config as config
 from saltcloud.libcloudfuncs import *
 
 # Import salt libs
@@ -148,7 +148,7 @@ def __virtual__():
 
 
 def get_configured_provider():
-    return saltcloud.config.is_provider_configured(
+    return config.is_provider_configured(
         __opts__,
         'ec2',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
@@ -453,21 +453,21 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return saltcloud.config.get_config_value('keyname', vm_, __opts__)
+    return config.get_config_value('keyname', vm_, __opts__)
 
 
 def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return saltcloud.config.get_config_value('securitygroup', vm_, __opts__)
+    return config.get_config_value('securitygroup', vm_, __opts__)
 
 
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to a built-in list of users for trying.
     '''
-    usernames = saltcloud.config.get_config_value(
+    usernames = config.get_config_value(
         'ssh_username', vm_, __opts__
     )
 
@@ -489,7 +489,7 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return saltcloud.config.get_config_value(
+    return config.get_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips'
     )
 
@@ -503,7 +503,7 @@ def get_location(vm_=None):
     '''
     return __opts__.get(
         'location',
-        saltcloud.config.get_config_value(
+        config.get_config_value(
             'location', vm_, __opts__, default=DEFAULT_LOCATION)
     )
 
@@ -530,7 +530,7 @@ def get_availability_zone(vm_):
     '''
     Return the availability zone to use
     '''
-    avz = saltcloud.config.get_config_value(
+    avz = config.get_config_value(
         'ssh_username', vm_, __opts__, default=None
     )
 
@@ -611,7 +611,7 @@ def create(vm_=None, call=None):
     if az is not None:
         params['Placement.AvailabilityZone'] = az
 
-    delvol_on_destroy = saltcloud.config.get_config_value(
+    delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, default=None
     )
 
@@ -666,7 +666,7 @@ def create(vm_=None, call=None):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
                     host=ip_address, username=user, ssh_timeout=60,
-                    key_filename=saltcloud.config.get_config_value(
+                    key_filename=config.get_config_value(
                         'private_key', vm_, __opts__)):
                 username = user
                 break
@@ -674,19 +674,19 @@ def create(vm_=None, call=None):
             return {vm_['name']: 'Failed to authenticate'}
 
     ret = {}
-    if saltcloud.config.get_config_value('deploy', vm_, __opts__) is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
-            'key_filename': saltcloud.config.get_config_value(
+            'key_filename': config.get_config_value(
                 'private_key', vm_, __opts__
             ),
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
             'name': vm_['name'],
-            'sudo': saltcloud.config.get_config_value(
+            'sudo': config.get_config_value(
                 'sudo', vm_, __opts__, default=(username != 'root')
             ),
             'start_action': __opts__['start_action'],
@@ -697,7 +697,7 @@ def create(vm_=None, call=None):
             'keep_tmp': __opts__['keep_tmp'],
         }
 
-        deploy_kwargs['display_ssh_output'] = saltcloud.config.get_config_value(
+        deploy_kwargs['display_ssh_output'] = config.get_config_value(
             'display_ssh_output', vm_, __opts__, default=True
         )
 
@@ -705,12 +705,12 @@ def create(vm_=None, call=None):
             __opts__, vm_
         )
 
-        deploy_kwargs['script_args'] = saltcloud.config.get_config_value(
+        deploy_kwargs['script_args'] = config.get_config_value(
             'script_args', vm_, __opts__
         )
 
         # Deploy salt-master files, if necessary
-        if saltcloud.config.get_config_value('make_master', vm_, __opts__) is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -953,7 +953,7 @@ def destroy(name, call=None):
                   'salt-cloud -a disable_term_protect {0}'.format(name))
         exit(1)
 
-    if saltcloud.config.get_config_value(
+    if config.get_config_value(
             'display_ssh_output', get_configured_provider(), __opts__) is True:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
