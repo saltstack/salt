@@ -58,6 +58,10 @@ def __virtual__():
     except ImportError:
         # Botocore is not available, the Libcloud AWS module will be loaded
         # instead.
+        log.debug(
+            'The \'botocore\' library is not installed. The libcloud AWS '
+            'support will be loaded instead.'
+        )
         return False
 
     # "Patch" the imported libcloud_aws to have the current __opts__
