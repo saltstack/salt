@@ -182,12 +182,12 @@ class ExecutionOptionsMixIn(object):
         )
         group.add_option(
             '-L', '--location',
-            default='',
+            default=None,
             help='Specify which region to connect to.'
         )
         group.add_option(
             '-a', '--action',
-            default='',
+            default=None,
             help='Perform an action that may be specific to this cloud '
                  'provider. This argument requires one or more instance '
                  'names to be specified.'
@@ -195,7 +195,7 @@ class ExecutionOptionsMixIn(object):
         group.add_option(
             '-f', '--function',
             nargs=2,
-            default='',
+            default=None,
             metavar='<FUNC-NAME> <PROVIDER>',
             help='Perform an function that may be specific to this cloud '
                  'provider, that does not apply to an instance. This '
@@ -203,12 +203,12 @@ class ExecutionOptionsMixIn(object):
         )
         group.add_option(
             '-p', '--profile',
-            default='',
+            default=None,
             help='Create an instance using the specified profile.'
         )
         group.add_option(
             '-m', '--map',
-            default='',
+            default=None,
             help='Specify a cloud map file to use for deployment. This option '
                  'may be used alone, or in conjunction with -Q, -F, -S or -d.'
         )
