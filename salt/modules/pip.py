@@ -184,29 +184,33 @@ def install(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     treq = None
-    if requirements and requirements.startswith('salt://'):
-        cached_requirements = __salt__['cp.is_cached'](requirements, __env__)
-        if not cached_requirements:
-            # It's not cached, let's cache it.
-            cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
-        # Check if the master version has changed.
-        if __salt__['cp.hash_file'](requirements, __env__) != \
-                __salt__['cp.hash_file'](cached_requirements, __env__):
-            cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
-        if not cached_requirements:
-            return {
-                'result': False,
-                'comment': (
-                    'pip requirements file \'{0}\' not found'.format(
-                        requirements
+    if requirements:
+        if requirements.startswith('salt://'):
+            cached_requirements = __salt__['cp.is_cached'](requirements,
+                    __env__)
+            if not cached_requirements:
+                # It's not cached, let's cache it.
+                cached_requirements = __salt__['cp.cache_file'](requirements,
+                        __env__)
+            # Check if the master version has changed.
+            if __salt__['cp.hash_file'](requirements, __env__) != \
+                    __salt__['cp.hash_file'](cached_requirements, __env__):
+                cached_requirements = __salt__['cp.cache_file'](requirements,
+                        __env__)
+            if not cached_requirements:
+                return {
+                    'result': False,
+                    'comment': (
+                        'pip requirements file \'{0}\' not found'.format(
+                            requirements
+                        )
                     )
-                )
-            }
+                }
 
-            treq = salt.utils.mkstemp()
-            shutil.copyfile(req, treq)
-        else:
-            treq = requirements
+                treq = salt.utils.mkstemp()
+                shutil.copyfile(req, treq)
+            else:
+                treq = requirements
         cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=treq or requirements)
 
