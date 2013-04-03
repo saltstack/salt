@@ -43,6 +43,7 @@ class Cloud(object):
         '''
         if 'provider' in vm_:
             return vm_['provider']
+
         if 'provider' in self.opts:
             if '{0}.create'.format(self.opts['provider']) in self.clouds:
                 return self.opts['provider']
@@ -436,8 +437,9 @@ class Map(Cloud):
         '''
         Read in the specified map file and return the map structure
         '''
-        if not self.opts['map']:
+        if self.opts.get('map', None) is None:
             return {}
+
         if not os.path.isfile(self.opts['map']):
             raise ValueError(
                 'The specified map file does not exist: {0}\n'.format(
@@ -460,6 +462,7 @@ class Map(Cloud):
                 )
             )
             return {}
+
         if 'include' in map_:
             map_ = salt.config.include_config(map_, self.opts['map'])
         return map_
