@@ -138,7 +138,7 @@ def __virtual__():
             raise SaltException(
                 'The EC2 key file {0!r} used in the {1!r} provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    __opts__['EC2.private_key'],
+                    details['private_key'],
                     provider
                 )
             )
@@ -148,6 +148,9 @@ def __virtual__():
 
 
 def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
     return config.is_provider_configured(
         __opts__,
         'ec2',
@@ -954,7 +957,7 @@ def destroy(name, call=None):
         exit(1)
 
     if config.get_config_value(
-            'display_ssh_output', get_configured_provider(), __opts__) is True:
+            'rename_on_destroy', get_configured_provider(), __opts__) is True:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
