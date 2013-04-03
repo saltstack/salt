@@ -19,7 +19,7 @@ def _get_rvm_location(runas=None):
 def _rvm(command, arguments='', runas=None):
     if not runas:
         runas = __salt__['config.option']('rvm.runas')
-    if not is_installed():
+    if not is_installed(runas):
         return False
 
     ret = __salt__['cmd.run_all'](
