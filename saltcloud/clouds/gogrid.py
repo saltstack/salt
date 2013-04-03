@@ -7,8 +7,9 @@ service. To use Salt Cloud with GoGrid log into the GoGrid web interface and
 create an api key. Do this by clicking on "My Account" and then going to the
 API Keys tab.
 
-The GOGRID.apikey and the GOGRID.sharedsecret configuration paramaters need to
-be set in the config file to enable interfacing with GoGrid
+Using the old providers configuration syntax format, the ``GOGRID.apikey`` and
+the ``GOGRID.sharedsecret`` configuration parameters need to be set in the
+configuration file to enable interfacing with GoGrid:
 
 .. code-block:: yaml
 
@@ -17,18 +18,30 @@ be set in the config file to enable interfacing with GoGrid
     # The apikey's shared secret
     GOGRID.sharedsecret: saltybacon
 
+
+* Using the new format, set up the cloud configuration at
+``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/gogrid.conf``:
+
+.. code-block:: yaml
+
+    gogrid-config:
+      # The generated api key to use
+      apikey: asdff7896asdh789
+      # The apikey's shared secret
+      sharedsecret: saltybacon
+
 '''
 
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import sys
 import logging
 
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
 
-# Import salt cloud utils
+# Import salt cloud libs
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 
 # Get logging started
@@ -51,18 +64,20 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for GOGRID configs
     '''
-    confs = [
-            'apikey',
-            'sharedsecret',
-            ]
-    for conf in confs:
-        if not __opts__['providers']['gogrid']:
-            return False
-        for provider in __opts__['providers']['gogrid']:
-            if conf not in __opts__['providers']['gogrid'][provider]:
-                return False
+    if get_configured_provider() is False:
+        return False
+
     log.debug('Loading GoGrid cloud module')
     return 'gogrid'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__, 'gogrid', ('apikey', 'sharedsecret')
+    )
 
 
 def get_conn():
@@ -70,10 +85,11 @@ def get_conn():
     Return a conn object for the passed VM data
     '''
     driver = get_driver(Provider.GOGRID)
+    vm_ = get_configured_provider()
     return driver(
-            __opts__['GOGRID.apikey'],
-            __opts__['GOGRID.sharedsecret'],
-            )
+        config.get_config_value('apikey', vm_, __opts__),
+        config.get_config_value('sharedsecret', vm_, __opts__)
+    )
 
 
 def create(vm_):
@@ -88,26 +104,17 @@ def create(vm_):
     kwargs['size'] = get_size(conn, vm_)
     try:
         data = conn.create_node(**kwargs)
-    except Exception as exc:
-        message = str(exc)
-        err = ('Error creating {0} on GOGRID\n\n'
-               'The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], message
-                       )
-        sys.stderr.write(err)
-        log.error(err)
+    except Exception:
+        log.error(
+            'Error creating {0} on GOGRID\n\n'
+            'The following exception was thrown by libcloud when trying to '
+            'run the initial deployment:\n'.format(vm_['name']),
+            exc_info=True
+        )
         return False
 
-    deploy = vm_.get(
-        'deploy',
-        __opts__.get(
-            'GOGRID.deploy',
-            __opts__['deploy']
-        )
-    )
     ret = {}
-    if deploy is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],
@@ -123,8 +130,9 @@ def create(vm_):
             'keep_tmp': __opts__['keep_tmp'],
             }
 
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
+        deploy_kwargs['script_args'] = config.get_config_value(
+            'script_args', vm_, __opts__
+        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__,
@@ -132,7 +140,7 @@ def create(vm_):
         )
 
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
