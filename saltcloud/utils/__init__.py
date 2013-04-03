@@ -14,6 +14,7 @@ import multiprocessing
 import logging
 import types
 import re
+import warnings
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -156,6 +157,18 @@ def get_option(option, opts, vm_):
     default to options set in the VM structure, but if the option is not
     present there look for it in the main config file
     '''
+    # Make the next warning visible at least once.
+    warnings.filterwarnings(
+        'once', category=DeprecationWarning, module='saltcloud'
+    )
+    warnings.warn(
+        '`saltcloud.utils.get_option() was deprecated in favour of '
+        '`saltcloud.config.get_config_value()`. Please stop using it '
+        'since it will be removed in version 0.8.8.',
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     if option in vm_:
         return vm_[option]
     if option in opts:

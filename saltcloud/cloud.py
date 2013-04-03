@@ -13,6 +13,9 @@ import time
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.loader
+import saltcloud.config as config
+
+# Import salt libs
 import salt.client
 import salt.utils
 
@@ -181,12 +184,13 @@ class Cloud(object):
                 ret.append(delret)
                 if delret:
                     key_id = name
-                    minion_dict = saltcloud.utils.get_option(
-                            'minion',
-                            self.opts,
-                            self.opts['vm'])
+                    minion_dict = config.get_config_value(
+                        'minion', self.opts['vm'], self.opts
+                    )
                     if minion_dict and 'append_domain' in minion_dict:
-                        key_id = '.'.join([key_id, minion_dict['append_domain']])
+                        key_id = '.'.join([
+                            key_id, minion_dict['append_domain']
+                        ])
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
         return ret
@@ -244,14 +248,14 @@ class Cloud(object):
             )
 
         priv, pub = saltcloud.utils.gen_keys(
-            saltcloud.utils.get_option('keysize', self.opts, vm_)
+            config.get_config_value('keysize', vm_, self.opts)
         )
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
 
         if 'make_master' in vm_ and vm_['make_master'] is True:
             master_priv, master_pub = saltcloud.utils.gen_keys(
-                saltcloud.utils.get_option('keysize', self.opts, vm_)
+                config.get_config_value('keysize', vm_, self.opts)
             )
             vm_['master_pub'] = master_pub
             vm_['master_pem'] = master_priv
@@ -262,7 +266,7 @@ class Cloud(object):
             vm_['os'] = vm_['script']
 
         key_id = vm_['name']
-        minion_dict = saltcloud.utils.get_option('minion', self.opts, vm_)
+        minion_dict = config.get_config_value('minion', vm_, self.opts)
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
         saltcloud.utils.accept_key(self.opts['pki_dir'], pub, key_id)
@@ -272,7 +276,7 @@ class Cloud(object):
 
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
-                    'all', 'modules', 'states', 'grains'):
+                        'all', 'modules', 'states', 'grains'):
                     log.error('Bad option for sync_after_install')
                 else:
                     # a small pause makes the sync work reliably

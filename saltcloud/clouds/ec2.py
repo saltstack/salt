@@ -440,14 +440,8 @@ def script(vm_):
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     script = saltcloud.utils.os_script(
-        saltcloud.utils.get_option(
-            'script',
-            __opts__,
-            vm_
-        ),
-        vm_,
-        __opts__,
-        minion,
+        config.get_config_value('script', vm_, __opts__),
+        vm_, __opts__, minion
     )
     return script
 
