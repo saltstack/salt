@@ -289,7 +289,7 @@ def _virtual(osdata):
     #   virtual
     #   virtual_subtype
     grains = {'virtual': 'physical'}
-    for command in ('dmidecode', 'lspci'):
+    for command in ('dmidecode', 'lspci', 'dmesg'):
         cmd = salt.utils.which(command)
 
         if not cmd:
@@ -310,7 +310,7 @@ def _virtual(osdata):
 
         output = ret['stdout']
 
-        if command == 'dmidecode':
+        if command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
@@ -324,7 +324,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'VMware'
             # Manufacturer: Microsoft Corporation
             # Product Name: Virtual Machine
-            elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
+            elif ': Microsoft' in output and 'Virtual Machine' in output:
                 grains['virtual'] = 'VirtualPC'
             # Manufacturer: Parallels Software International Inc.
             elif 'Parallels Software' in output:
@@ -348,10 +348,10 @@ def _virtual(osdata):
             break
     else:
         log.warn(
-            'Both \'dmidecode\' and \'lspci\' failed to execute, either '
+            'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to execute '
             'because they do not exist on the system of the user running '
-            'this instance does not have the necessary permissions to '
-            'execute them. Grains output might not be accurate.'
+            'this instance or the user does not have the necessary permissions '
+            'to execute them. Grains output might not be accurate.'
         )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
