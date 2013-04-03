@@ -5,8 +5,8 @@ The EC2 Cloud Module
 The EC2 cloud module is used to interact with the Amazon Elastic Cloud
 Computing. This driver is highly experimental! Use at your own risk!
 
-To use the EC2 cloud module the following configuration parameters need to be
-set in the main cloud config:
+To use the EC2 cloud module, when using the old format the following
+configuration parameters need to be set in the main cloud configuration:
 
 .. code-block:: yaml
 
@@ -29,6 +29,34 @@ set in the main cloud config:
     # and the service_url. If you would like to override that entirely, you can
     # explicitly define the endpoint:
     EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+
+
+* Using the new format, set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
+  ``/etc/salt/cloud.providers.d/parallels.conf``:
+
+.. code-block:: yaml
+
+    ec2-config:
+      # The EC2 API authentication id
+      id: GKTADJGHEIQSXMKKRBJ08H
+      # The EC2 API authentication key
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      # The ssh keyname to use
+      keyname: default
+      # The amazon security group
+      securitygroup: ssh_open
+      # The location of the private key which corresponds to the keyname
+      private_key: /root/default.pem
+
+      # Be default, service_url is set to amazonaws.com. If you are using this
+      # driver for something other than Amazon EC2, change it here:
+      service_url: amazonaws.com
+
+      # The endpoint that is ultimately used is usually formed using the region
+      # and the service_url. If you would like to override that entirely, you
+      # can explicitly define the endpoint:
+      endpoint: myendpoint.example.com:1138/services/Cloud
 
 '''
 
