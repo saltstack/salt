@@ -164,6 +164,18 @@ def _simple_cmd(cmd, app, url='http://localhost:8080/manager'):
     except Exception:
         return 'FAIL - No context exists for path {0}'.format(app)
 
+def leaks(url='http://localhost:8080/manager'):
+    '''
+    Find memory leaks in tomcat
+    
+    CLI Examples::
+        
+        salt '*' tomcat.leaks
+    '''
+    
+    return _wget('findleaks',{'statusLine': 'true'},url)['msg']
+
+
 def status(url='http://localhost:8080/manager'):
     '''
     Used to test if the tomcat manager is up
