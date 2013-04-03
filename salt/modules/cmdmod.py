@@ -13,6 +13,7 @@ import subprocess
 import functools
 import sys
 import json
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -187,6 +188,19 @@ def _run(cmd,
 
     ret = {}
 
+    if not env:
+        env = {}
+    elif isinstance(env, basestring):
+        try:
+            env = yaml.safe_load(env)
+        except yaml.parser.ParserError as err:
+            log.error(err)
+            env = {}
+    if not isinstance(env, dict):
+        log.error('Invalid input: {0}, must be a dict or '
+                  'string - yaml represented dict'.format(env))
+        env = {}
+
     if runas and __grains__['os'] in disable_runas:
         msg = 'Sorry, {0} does not support runas functionality'
         raise CommandExecutionError(msg.format(__grains__['os']))
@@ -205,16 +219,25 @@ def _run(cmd,
                 env_cmd = ('sudo -i -u {1} -- "{2} -c \'import os, json;'
                            'print(json.dumps(os.environ.__dict__))\'"').format(
                                    shell, runas, sys.executable)
+            elif __grains__['os'] in ['FreeBSD']:
+                env_cmd = ('su - {1} -c "{0} -c \'{2} -c \'\\\'\''
+                           'import os, json;'
+                           'print(json.dumps(os.environ.__dict__))\'\\\'\'\'"'
+                           ).format(shell, runas, sys.executable)
             else:
                 env_cmd = ('su -s {0} - {1} -c "{2} -c \'import os, json;'
                            'print(json.dumps(os.environ.__dict__))\'"').format(
                                    shell, runas, sys.executable)
-            env = json.loads(
-                    subprocess.Popen(
-                        env_cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])['data']
+            env_json = subprocess.Popen(
+                env_cmd,
+                shell=True,
+                stdout=subprocess.PIPE
+            ).communicate()[0]
+            env_json = filter(lambda x: x.startswith('{"') and x.endswith('}'),
+                              env_json.splitlines()).pop()
+            env_runas = json.loads(env_json).get('data', {})
+            env_runas.update(env)
+            env = env_runas
         except ValueError:
             msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
             raise CommandExecutionError(msg)
@@ -227,9 +250,6 @@ def _run(cmd,
                 cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
             )
         )
-
-    if not env:
-        env = {}
 
     if not salt.utils.is_windows():
         # Default to C!
