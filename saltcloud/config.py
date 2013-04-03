@@ -13,9 +13,6 @@ import salt.config
 CLOUD_CONFIG_DEFAULTS = {
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
-    # Provider defaults
-    'provider': '',
-    'location': '',
     # Global defaults
     'ssh_auth': '',
     'keysize': 4096,
@@ -224,16 +221,30 @@ def apply_cloud_providers_config(overrides, defaults=None):
         opts.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    converted_opts = old_to_new(opts.copy())
-    if opts != converted_opts:
-        log.warn('Please switch to the new providers configuration syntax')
-        opts = converted_opts
+    for name, config in opts.copy().items():
+        if '.' in name:
+            log.warn(
+                'Please switch to the new providers configuration syntax'
+            )
+
+            # Let's help out and migrate the data
+            opts = old_to_new(opts)
+
+            # old_to_new will migrate the old data into the 'providers' key of
+            # the opts dictionary. Let's map it correctly
+            for name, config in opts.pop('providers').items():
+                opts[name] = config
+
+            break
 
     providers = {}
 
     for key, val in opts.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
+
+        if not isinstance(val, (list, tuple)):
+            val = [val]
         providers[key] = val
 
     return providers
@@ -248,16 +259,16 @@ def get_config_value(name, vm_, opts, default=None):
         3. In the salt cloud configuration
         4. Return the provided default
     '''
-    if name in vm_:
+    if name and vm_ and name in vm_:
         # The setting name exists in VM configuration. Return it!
         return vm_[name]
 
-    if name in opts['providers'][vm_['provider']]:
+    if vm_ and name and name in opts['providers'][vm_['provider']]:
         # The setting name exists in the VM's provider configuration.
         # Return it!
         return opts['providers'][vm_['provider']][name]
 
-    if name in opts:
+    if opts.get(name, None) is not None:
         # The setting name exists in the cloud(global) configuration
         return opts[name]
 
@@ -266,28 +277,29 @@ def get_config_value(name, vm_, opts, default=None):
 
 
 def is_provider_configured(opts, provider, required_keys=()):
-    for provider_details in opts['providers'].values():
-        if 'provider' not in provider_details:
-            continue
+    for provider_details_list in opts['providers'].values():
+        for provider_details in provider_details_list:
+            if 'provider' not in provider_details:
+                continue
 
-        if provider_details['provider'] != provider:
-            continue
+            if provider_details['provider'] != provider:
+                continue
 
-        # If we reached this far, we have a matching provider, let's see if all
-        # required configuration keys are present and not None
-        skip_provider = False
-        for key in required_keys:
-            if provider_details.get(key, None) is None:
-                # This provider does not include all necessary keys, continue
-                # to next one
-                skip_provider = True
-                break
+            # If we reached this far, we have a matching provider, let's see if
+            # all required configuration keys are present and not None
+            skip_provider = False
+            for key in required_keys:
+                if provider_details.get(key, None) is None:
+                    # This provider does not include all necessary keys,
+                    # continue to next one
+                    skip_provider = True
+                    break
 
-        if skip_provider:
-            continue
+            if skip_provider:
+                continue
 
-        # If we reached this far, the provider included all required keys
-        return provider_details
+            # If we reached this far, the provider included all required keys
+            return provider_details
 
     # If we reached this point, the provider is not configured.
     return False
