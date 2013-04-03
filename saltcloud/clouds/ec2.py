@@ -32,8 +32,7 @@ configuration parameters need to be set in the main cloud configuration:
 
 
 * Using the new format, set up the cloud configuration at
-  ``/etc/salt/cloud.providers`` or
-  ``/etc/salt/cloud.providers.d/parallels.conf``:
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
 
 .. code-block:: yaml
 
