@@ -2,13 +2,7 @@
 This state uses the manager webapp to manage Apache tomcat webapps
 This state requires the manager webapp to be enabled
 
-The following grains should be set::
-
-    tomcat-manager:
-        user: admin user name
-        passwd: password
-
-or use pillar::
+The following grains/pillar should be set::
 
     tomcat-manager.user: admin user name
     tomcat-manager.passwd: password
