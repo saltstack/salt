@@ -47,6 +47,7 @@ http://www.parallels.com/products/pcs/
       # Set the access URL for your PARALLELS provider
       #
       url: https://api.cloud.xmission.com:4465/paci/v1.0/
+      provider: parallels
 
 
 
@@ -123,7 +124,7 @@ The following settings are always required for PARALLELS:
       user: myuser
       password: badpass
       url: https://api.cloud.xmission.com:4465/paci/v1.0/
-
+      provider: parallels
 
 
 Optional Settings
@@ -161,4 +162,3 @@ with their default settings listed.
 
     # The name of the image, from ``salt-cloud --list-images parallels``
     image: ubuntu-12.04-x86_64
-
