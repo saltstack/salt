@@ -29,6 +29,7 @@ import logging
 
 # Import saltcloud libs
 import saltcloud.utils
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
 
@@ -67,36 +68,37 @@ def __virtual__():
     # "Patch" the imported libcloud_aws to have the current __opts__
     libcloud_aws.__opts__ = __opts__
 
-    confs = [
-        'AWS.id',
-        'AWS.key',
-        'AWS.keyname',
-        'AWS.securitygroup',
-        'AWS.private_key',
-    ]
-    for conf in confs:
-        if conf not in __opts__:
-            log.debug(
-                '{0!r} not found in options. Not loading module.'.format(conf)
-            )
-            return False
+    if get_configured_provider() is False:
+        log.info(
+            'There is no AWS cloud provider configuration available. Not '
+            'loading module'
+        )
+        return False
 
-    if not os.path.exists(__opts__['AWS.private_key']):
-        raise SaltException(
-            'The AWS key file {0} does not exist\n'.format(
-                __opts__['AWS.private_key']
+    for provider, details in __opts__['providers'].iteritems():
+        if 'provider' not in details or details['provider'] != 'aws':
+            continue
+
+        if not os.path.exists(details['private_key']):
+            raise SaltException(
+                'The AWS key file {0!r} used in the {1!r} provider '
+                'configuration does not exist\n'.format(
+                    details['private_key'],
+                    provider
+                )
             )
+
+        keymode = str(
+            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
         )
-    keymode = str(
-        oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode))
-    )
-    if keymode not in ('0400', '0600'):
-        raise SaltException(
-            'The AWS key file {0} needs to be set to mode 0400 or '
-            '0600\n'.format(
-                __opts__['AWS.private_key']
+        if keymode not in ('0400', '0600'):
+            raise SaltException(
+                'The AWS key file {0!r} used in the {1!r} provider '
+                'configuration needs to be set to mode 0400 or 0600\n'.format(
+                    details['private_key'],
+                    provider
+                )
             )
-        )
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.
@@ -134,6 +136,17 @@ def __virtual__():
 
     log.debug('Loading AWS botocore cloud module')
     return 'aws'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__,
+        'aws',
+        ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
 
 
 def enable_term_protect(name, call=None):
@@ -174,10 +187,11 @@ def _toggle_term_protect(name, enabled):
     region = get_location(None)
 
     # init botocore
+    vm_ = get_configured_provider()
     session = botocore.session.get_session()
     session.set_credentials(
-        access_key=__opts__['AWS.id'],
-        secret_key=__opts__['AWS.key'],
+        access_key=config.get_config_value('id', vm_, __opts__),
+        secret_key=config.get_config_value('key', vm_, __opts__)
     )
 
     service = session.get_service('ec2')
@@ -198,19 +212,14 @@ def _toggle_term_protect(name, enabled):
     http_response, response_data = operation.call(endpoint, **params)
 
     if http_response.status_code == 200:
-        msg = (
-            'Termination protection successfully {0} on {1}'.format(
-                enabled and 'enabled' or 'disabled',
-                name
-            )
+        msg = 'Termination protection successfully {0} on {1}'.format(
+            enabled and 'enabled' or 'disabled',
+            name
         )
         log.info(msg)
         return msg
-    else:
-        msg = (
-            'Bad response from AWS: {0}'.format(
-                http_response.status_code
-            )
-        )
-        log.error(msg)
-        return msg
+
+    # No proper HTTP response!?
+    msg = 'Bad response from AWS: {0}'.format(http_response.status_code)
+    log.error(msg)
+    return msg
