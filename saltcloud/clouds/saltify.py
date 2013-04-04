@@ -130,9 +130,11 @@ def create(vm_):
         'sudo': config.get_config_value(
             'sudo', vm_, __opts__, default=(ssh_username != 'root')
         ),
-        'password': config.get_config_value('password', vm_, __opts__),
+        'password': config.get_config_value(
+            'password', vm_, __opts__, search_global=False
+        ),
         'ssh_keyfile': config.get_config_value(
-            'ssh_keyfile', vm_, __opts__
+            'ssh_keyfile', vm_, __opts__, search_global=False
         ),
         'script_args': config.get_config_value(
             'script_args', vm_, __opts__
