@@ -263,7 +263,8 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
         # The setting name exists in VM configuration. Return it!
         return vm_[name]
 
-    if vm_ and name and name in opts['providers'][vm_['provider']]:
+    if vm_ and name and vm_['provider'] in opts['providers'] and \
+            name in opts['providers'][vm_['provider']]:
         # The setting name exists in the VM's provider configuration.
         # Return it!
         return opts['providers'][vm_['provider']][name]
