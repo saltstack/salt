@@ -118,7 +118,7 @@ def delete(name, remove=False, force=False):
     return not ret['retcode']
 
 
-def getent(user=None):
+def getent():
     '''
     Return the list of all info for all users
 
@@ -126,14 +126,13 @@ def getent(user=None):
 
         salt '*' user.getent
     '''
+    if 'user.getent' in __context__:
+        return __context__['user.getent']
+
     ret = []
     for data in pwd.getpwall():
         ret.append(info(data.pw_name))
-    if user:
-        try:
-            return [x for x in ret if x.get('name', '') == user][0]
-        except IndexError:
-            return {}
+    __context__['user.getent'] = ret
     return ret
 
 
@@ -391,8 +390,16 @@ def list_groups(name):
         # The user's applied default group is undefined on the system, so
         # it does not exist
         pass
+
+    # If we already grabbed the group list, it's overkill to grab it again
+    if 'user.getgrall' in __context__:
+        groups = __context__['user.getgrall']
+    else:
+        groups = grp.getgrall()
+        __context__['user.getgrall'] = groups
+
     # Now, all other groups the user belongs to
-    for group in grp.getgrall():
+    for group in groups:
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
     return sorted(list(ugrp))

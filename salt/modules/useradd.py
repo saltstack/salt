@@ -163,7 +163,7 @@ def delete(name, remove=False, force=False):
     return not ret['retcode']
 
 
-def getent(user=None):
+def getent():
     '''
     Return the list of all info for all users
 
@@ -171,17 +171,13 @@ def getent(user=None):
 
         salt '*' user.getent
     '''
-    if 'useradd_getent' in __context__:
-        return __context__['useradd_getent']
+    if 'user.getent' in __context__:
+        return __context__['user.getent']
 
     ret = []
     for data in pwd.getpwall():
         ret.append(_format_info(data))
-    if user:
-        try:
-            ret = [x for x in ret if x.get('name', '') == user][0]
-        except IndexError:
-            ret = {}
+    __context__['user.getent'] = ret
     return ret
 
 
@@ -421,7 +417,7 @@ def _format_info(data):
         gecos_field.append('')
 
     return {'gid': data.pw_gid,
-            'groups': list_groups(data.pw_name,),
+            'groups': list_groups(data.pw_name),
             'home': data.pw_dir,
             'name': data.pw_name,
             'passwd': data.pw_passwd,
@@ -452,11 +448,11 @@ def list_groups(name):
         pass
 
     # If we already grabbed the group list, it's overkill to grab it again
-    if 'useradd_getgrall' in __context__:
-        groups = __context__['useradd_getgrall']
+    if 'user.getgrall' in __context__:
+        groups = __context__['user.getgrall']
     else:
         groups = grp.getgrall()
-        __context__['useradd_getgrall'] = groups
+        __context__['user.getgrall'] = groups
 
     # Now, all other groups the user belongs to
     for group in groups:
