@@ -104,8 +104,8 @@ def get_conn():
     vm_ = get_configured_provider()
     driver = get_driver(Provider.IBM)
     return driver(
-        config.get_config_value('user', vm_, __opts__),
-        config.get_config_value('password', vm_, __opts__)
+        config.get_config_value('user', vm_, __opts__, search_global=False),
+        config.get_config_value('password', vm_, __opts__, search_global=False)
     )
 
 
@@ -115,8 +115,9 @@ def create(vm_):
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
+
+    vm_['location'] = config.get_config_value('location', vm_, __opts__)
     kwargs = {
-        'location': config.get_config_value('location', vm_, __opts__),
         'name': vm_['name'],
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
@@ -140,13 +141,9 @@ def create(vm_):
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc
-            )
-        )
-        log.debug(
-            'Exception raised while creating {0} on IBMSCE:\n'.format(
-                vm_['name']
             ),
-            exc_info=True
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -188,7 +185,7 @@ def create(vm_):
             'provider': 'ibmsce',
             'password': data.extra['password'],
             'key_filename': config.get_config_value(
-                'ssh_key_file', vm_, __opts__
+                'ssh_key_file', vm_, __opts__, search_global=False
             ),
             'script': deploy_script.script,
             'name': vm_['name'],
@@ -199,11 +196,10 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
-        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
