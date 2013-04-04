@@ -185,7 +185,9 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = config.get_config_value('image', vm_, __opts__)
+    vm_image = config.get_config_value(
+        'image', vm_, __opts__, search_global=False
+    )
     for image in images:
         if str(vm_image) in (images[image]['name'], images[image]['id']):
             return images[image]['id']
@@ -205,38 +207,48 @@ def create_node(vm_):
 
     # Description, defaults to name
     desc = ET.SubElement(content, 'description')
-    desc.text = vm_.get('desc', vm_['name'])
+    desc.text = config.get_config_value(
+        'desc', vm_, __opts__, default=vm_['name'], search_global=False
+    )
 
     # How many CPU cores, and how fast they are
     cpu = ET.SubElement(content, 'cpu')
-    cpu.attrib['number'] = vm_.get('cpu_number', '1')
-    cpu.attrib['power'] = vm_.get('cpu_power', '1000')
+    cpu.attrib['number'] = config.get_config_value(
+        'cpu_number', vm_, __opts__, default='1', search_global=False
+    )
+    cpu.attrib['power'] = config.get_config_value(
+        'cpu_power', vm_, __opts__, default='1000', search_global=False
+    )
 
     # How many megabytes of RAM
     ram = ET.SubElement(content, 'ram-size')
-    ram.text = vm_.get('ram', '256')
+    ram.text = config.get_config_value(
+        'ram', vm_, __opts__, default='256', search_global=False
+    )
 
     # Bandwidth available, in kbps
     bandwidth = ET.SubElement(content, 'bandwidth')
     bandwidth.text = config.get_config_value(
-        'bandwidth', vm_, __opts__, default='100'
+        'bandwidth', vm_, __opts__, default='100', search_global=False
     )
 
     # How many public IPs will be assigned to this instance
     ip_num = ET.SubElement(content, 'no-of-public-ip')
     ip_num.text = config.get_config_value(
-        'ip_num', vm_, __opts__, default='1'
+        'ip_num', vm_, __opts__, default='1', search_global=False
     )
 
     # Size of the instance disk
     disk = ET.SubElement(content, 've-disk')
     disk.attrib['local'] = 'true'
     disk.attrib['size'] = config.get_config_value(
-        'disk_size', vm_, __opts__, default='10'
+        'disk_size', vm_, __opts__, default='10', search_global=False
     )
 
     # Attributes for the image
-    vm_image = config.get_config_value('image', vm_, __opts__)
+    vm_image = config.get_config_value(
+        'image', vm_, __opts__, search_global=False
+    )
     image = show_image({'image': vm_image}, call='function')
     platform = ET.SubElement(content, 'platform')
     template = ET.SubElement(platform, 'template-info')
@@ -251,7 +263,7 @@ def create_node(vm_):
         'ssh_username', vm_, __opts__, default='root'
     )
     admin.attrib['password'] = config.get_config_value(
-        'password', vm_, __opts__
+        'password', vm_, __opts__, search_global=False
     )
 
     data = ET.tostring(content, encoding='UTF-8')
@@ -305,7 +317,9 @@ def create(vm_):
         deploy_kwargs = {
             'host': public_ip,
             'username': 'root',
-            'password': config.get_config_value('password', vm_, __opts__),
+            'password': config.get_config_value(
+                'password', vm_, __opts__, search_global=False
+            ),
             'script': deploy_script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
@@ -360,17 +374,18 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     Make a web call to a Parallels provider
     '''
     path = config.get_config_value(
-        'url', get_configured_provider(), __opts__
+        'url', get_configured_provider(), __opts__, search_global=False
     )
     auth_handler = urllib2.HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm='Parallels Instance Manager',
         uri=path,
         user=config.get_config_value(
-            'user', get_configured_provider(), __opts__
+            'user', get_configured_provider(), __opts__, search_global=False
         ),
         passwd=config.get_config_value(
-           'password', get_configured_provider(), __opts__
+            'password', get_configured_provider(), __opts__,
+            search_global=False
         )
     )
     opener = urllib2.build_opener(auth_handler)
