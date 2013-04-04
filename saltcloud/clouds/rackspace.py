@@ -102,8 +102,8 @@ def get_conn():
     '''
     driver = get_driver(Provider.RACKSPACE)
     return driver(
-        config.get_config_value('user', vm_, __opts__),
-        config.get_config_value('apikey', vm_, __opts__)
+        config.get_config_value('user', vm_, __opts__, search_global=False),
+        config.get_config_value('apikey', vm_, __opts__, search_global=False)
     )
 
 
@@ -111,7 +111,9 @@ def preferred_ip(vm_, ips):
     '''
     Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
     '''
-    proto = config.get_config_value('protocol', vm_, __opts__, default='ipv4')
+    proto = config.get_config_value(
+        'protocol', vm_, __opts__, default='ipv4', search_global=False
+    )
     family = socket.AF_INET
     if proto == 'ipv6':
         family = socket.AF_INET6
@@ -130,7 +132,8 @@ def ssh_interface(vm_):
     or 'private_ips'.
     '''
     return config.get_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips'
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
     )
 
 
