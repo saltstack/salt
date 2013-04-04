@@ -124,7 +124,9 @@ def __virtual__():
     script = namespaced_function(script, globals(), (conn,))
     list_nodes = namespaced_function(list_nodes, globals(), (conn,))
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
+    list_nodes_select = namespaced_function(
+        list_nodes_select, globals(), (conn,)
+    )
 
     log.debug('Loading Libcloud AWS cloud module')
     return 'aws'
@@ -175,8 +177,8 @@ def get_conn(**kwargs):
     driver = get_driver(EC2_LOCATIONS[location])
     vm_ = get_configured_provider()
     return driver(
-        config.get_config_value('id', vm_, __opts__),
-        config.get_config_value('key', vm_, __opts__)
+        config.get_config_value('id', vm_, __opts__, search_global=False),
+        config.get_config_value('key', vm_, __opts__, search_global=False)
     )
 
 
@@ -184,14 +186,18 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return config.get_config_value('keyname', vm_, __opts__)
+    return config.get_config_value(
+        'keyname', vm_, __opts__, search_global=False
+    )
 
 
 def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return config.get_config_value('securitygroup', vm_, __opts__)
+    return config.get_config_value(
+        'securitygroup', vm_, __opts__, search_global=False
+    )
 
 
 def block_device_mappings(vm_):
@@ -233,7 +239,8 @@ def ssh_interface(vm_):
     or 'private_ips'.
     '''
     return config.get_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips'
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
     )
 
 
@@ -259,7 +266,7 @@ def get_availability_zone(conn, vm_):
     Return the availability zone to use
     '''
     avz = config.get_config_value(
-        'ssh_username', vm_, __opts__, default=None
+        'availability_zone', vm_, __opts__, search_global=False
     )
 
     locations = conn.list_locations()
@@ -282,7 +289,9 @@ def create(vm_):
     conn = get_conn(location=location)
     usernames = ssh_username(vm_)
     kwargs = {
-        'ssh_key': config.get_config_value('privatekey', vm_, __opts__),
+        'ssh_key': config.get_config_value(
+            'privatekey', vm_, __opts__, search_global=False
+        ),
         'name': vm_['name'],
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
@@ -304,9 +313,11 @@ def create(vm_):
         log.error(
             'Error creating {0} on AWS\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n'.format(
-                vm_['name']
-            ), exc_info=True
+            'run the initial deployment: {1}\n'.format(
+                vm_['name'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -332,7 +343,7 @@ def create(vm_):
         if data.public_ips:
             break
         log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
-    if ssh_interface(vm_) == "private_ips":
+    if ssh_interface(vm_) == 'private_ips':
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
         ip_address = data.private_ips[0]
     else:
@@ -345,7 +356,7 @@ def create(vm_):
             if saltcloud.utils.wait_for_passwd(
                     host=ip_address, username=user, ssh_timeout=60,
                     key_filename=config.get_config_value(
-                        'privatekey', vm_, __opts__)):
+                        'privatekey', vm_, __opts__, search_global=False)):
                 username = user
                 break
         else:
@@ -358,7 +369,7 @@ def create(vm_):
             'host': ip_address,
             'username': username,
             'key_filename': config.get_config_value(
-                'privatekey', vm_, __opts__
+                'privatekey', vm_, __opts__, search_global=False
             ),
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
@@ -373,13 +384,13 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
+
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
-        )
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
         )
 
         # Deploy salt-master files, if necessary
@@ -407,7 +418,9 @@ def create(vm_):
     for key, val in data.__dict__.items():
         ret[key] = val
         log.debug('  {0}: {1}'.format(key, val))
-    volumes = vm_.get('map_volumes')
+    volumes = config.get_config_value(
+        'map_volumes', vm_, __opts__, search_global=False
+    )
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
@@ -594,12 +607,13 @@ def rename(name, kwargs, call=None):
         saltcloud.utils.rename_key(
             __opts__['pki_dir'], name, kwargs['newname']
         )
-    except Exception:
+    except Exception, exc:
         log.error(
-            'Failed to rename {0} to {1}\n'.format(
-                name, kwargs['newname']
+            'Failed to rename {0} to {1}: {2}\n'.format(
+                name, kwargs['newname'], exc
             ),
-            exc_info=True
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
 
 
@@ -611,8 +625,9 @@ def destroy(name):
     ret = {}
 
     newname = name
-    if config.get_config_value(
-            'rename_on_destroy', get_configured_provider(), __opts__) is True:
+    if config.get_config_value('rename_on_destroy',
+                               get_configured_provider(),
+                               __opts__, search_global=False) is True:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
