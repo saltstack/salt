@@ -104,7 +104,7 @@ def get_conn():
     vm_ = get_configured_provider()
     driver = get_driver(Provider.IBM)
     return driver(
-        config.get_config_value('user', vm_, __opts__)
+        config.get_config_value('user', vm_, __opts__),
         config.get_config_value('password', vm_, __opts__)
     )
 
