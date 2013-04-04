@@ -27,6 +27,9 @@ import salt.utils
 import salt.utils.event
 from salt.exceptions import SaltException
 
+# Import salt cloud libs
+import saltcloud.config as config
+
 # Import third party libs
 from jinja2 import Template
 import yaml
@@ -112,17 +115,11 @@ def accept_key(pki_dir, pub, id_):
         if not os.path.exists(key_path):
             os.makedirs(key_path)
 
-    key = os.path.join(
-        pki_dir,
-        'minions/{0}'.format(id_)
-    )
+    key = os.path.join(pki_dir, 'minions', id_)
     with salt.utils.fopen(key, 'w+') as fp_:
         fp_.write(pub)
 
-    oldkey = os.path.join(
-        pki_dir,
-        'minions_pre/{0}'.format(id_)
-    )
+    oldkey = os.path.join(pki_dir, 'minions_pre', id_)
     if os.path.isfile(oldkey):
         with salt.utils.fopen(oldkey) as fp_:
             if fp_.read() == pub:
@@ -133,10 +130,7 @@ def remove_key(pki_dir, id_):
     '''
     This method removes a specified key from the accepted keys dir
     '''
-    key = os.path.join(
-        pki_dir,
-        'minions/{0}'.format(id_)
-    )
+    key = os.path.join(pki_dir, 'minions', id_)
     if os.path.isfile(key):
         os.remove(key)
 
@@ -145,8 +139,8 @@ def rename_key(pki_dir, id_, new_id):
     '''
     Rename a key, when an instance has also been renamed
     '''
-    oldkey = os.path.join(pki_dir, 'minions/{0}'.format(id_))
-    newkey = os.path.join(pki_dir, 'minions/{0}'.format(new_id))
+    oldkey = os.path.join(pki_dir, 'minions', id_)
+    newkey = os.path.join(pki_dir, 'minions', new_id)
     if os.path.isfile(oldkey):
         os.rename(oldkey, newkey)
 
@@ -155,7 +149,7 @@ def get_option(option, opts, vm_):
     '''
     Convenience function to return the dominant option to be used. Always
     default to options set in the VM structure, but if the option is not
-    present there look for it in the main config file
+    present there look for it in the main configuration file
     '''
     # Make the next warning visible at least once.
     warnings.filterwarnings(
@@ -190,18 +184,31 @@ def minion_conf_string(opts, vm_):
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
-    if 'master_finger' in vm_:
-        minion['master_finger'] = vm_['master_finger']
+    master_finger = config.get_config_value('master_finger', vm_, opts)
+    if master_finger is not None:
+        minion['master_finger'] = master_finger
     minion.update(opts.get('minion', {}))
-    minion.update(vm_.get('minion', {}))
-    if 'master' not in minion and 'make_master' not in vm_:
+    minion.update(
+        config.get_config_value(
+            'minion', vm_, opts, default={}, search_global=False
+        )
+    )
+    make_master = config.get_config_value('make_master', vm_, opts)
+    if 'master' not in minion and make_master is not True:
         raise ValueError("A master was not defined.")
     minion.update(opts.get('map_minion', {}))
-    minion.update(vm_.get('map_minion', {}))
+    minion.update(
+        config.get_config_value(
+            'map_minion', vm_, opts, default={}, search_global=False
+        )
+    )
     optsgrains = opts.get('map_grains', {})
     if optsgrains:
         minion.setdefault('grains', {}).update(optsgrains)
-    vmgrains = vm_.get('map_grains', {})
+
+    vmgrains = config.get_config_value(
+        'map_minion', vm_, opts, default={}, search_global=False
+    )
     if vmgrains:
         minion.setdefault('grains', {}).update(vmgrains)
     return yaml.safe_dump(minion, default_flow_style=False)
@@ -222,10 +229,18 @@ def master_conf_string(opts, vm_):
     )
 
     master.update(opts.get('master', {}))
-    master.update(vm_.get('master', {}))
+    master.update(
+        config.get_config_value(
+            'master', vm_, opts, default={}, search_global=False
+        )
+    )
 
     master.update(opts.get('map_master', {}))
-    master.update(vm_.get('map_master', {}))
+    master.update(
+        config.get_config_value(
+            'map_master', vm_, opts, default={}, search_global=False
+        )
+    )
 
     return yaml.safe_dump(master, default_flow_style=False)
 
@@ -254,8 +269,13 @@ def wait_for_ssh(host, port=22, timeout=900):
             if time.time() - start > timeout:
                 log.error('SSH connection timed out: {0}'.format(timeout))
                 return False
-            log.debug('Retrying SSH connection to host {0}'
-                      'on port {1} (try {2})'.format(host, port, trycount))
+
+            log.debug(
+                'Retrying SSH connection to host {0} on port {1} '
+                '(try {2})'.format(
+                    host, port, trycount
+                )
+            )
 
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
@@ -292,13 +312,13 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 if trycount < maxtries:
                     time.sleep(trysleep)
                     continue
-                else:
-                    log.error(
-                        'Authentication failed: status code {0}'.format(
-                            status
-                        )
+
+                log.error(
+                    'Authentication failed: status code {0}'.format(
+                        status
                     )
-                    return False
+                )
+                return False
             if connectfail is False:
                 return True
             return False
@@ -346,7 +366,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
 
-            #FIXME: this try-except idoesn't make sense! something is missing...
+            #FIXME: this try-except doesn't make sense! Something is missing...
             try:
                 log.debug('SSH connection to {0} successful'.format(host))
             except Exception as exc:
@@ -393,9 +413,10 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if start_action:
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
-                    target=lambda: check_auth(name=name, pub_key=pub_key,
-                                              sock_dir=sock_dir,
-                                              timeout=newtimeout, queue=queue)
+                    target=check_auth, kwargs=dict(
+                        name=name, pub_key=pub_key, sock_dir=sock_dir,
+                        timeout=newtimeout, queue=queue
+                    )
                 )
                 log.debug('Starting new process to wait for salt-minion')
                 process.start()
