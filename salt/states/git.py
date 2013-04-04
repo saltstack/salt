@@ -6,8 +6,8 @@ NOTE: This module is under heavy development and the API is subject to change.
 It may be replaced with a generic VCS module if this proves viable.
 
 Important: Before using git over ssh, make sure your remote host fingerprint
-exists in "~/.ssh/known_hosts" file. To avoid requiring password authentication,
-it is also possible to pass private keys to use explicitly.
+exists in "~/.ssh/known_hosts" file. To avoid requiring password
+authentication, it is also possible to pass private keys to use explicitly.
 
 .. code-block:: yaml
 
@@ -40,7 +40,7 @@ def latest(name,
            mirror=False,
            bare=False,
            identity=None,
-        ):
+           **kwargs):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
@@ -73,12 +73,11 @@ def latest(name,
     bare = bare or mirror
     check = 'refs' if bare else '.git'
 
-    if os.path.isdir(target) and os.path.isdir('{0}/{1}'.format(target, check)):
+    if os.path.isdir(target) and os.path.isdir('{0}/{1}'.format(target,
+                                                                check)):
         # git pull is probably required
-        log.debug(
-                'target {0} is found, "git pull" is probably required'.format(
-                    target)
-                )
+        log.debug(('target {0} is found, "git pull" '
+                   'is probably required'.format(target)))
         try:
             current_rev = __salt__['git.revision'](target, user=runas)
 
@@ -94,15 +93,21 @@ def latest(name,
                         ('Repository {0} update is probably required (current '
                          'revision is {1})').format(target, current_rev))
 
-                # check if rev is already present in repo and git-fetch otherwise
+                # check if rev is already present in repo, git-fetch otherwise
                 if bare:
-                    __salt__['git.fetch'](target, user=runas, identity=identity)
+                    __salt__['git.fetch'](target,
+                                          user=runas,
+                                          identity=identity)
                 elif rev:
 
                     cmd = "git rev-parse "+rev
-                    retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
+                    retcode = __salt__['cmd.retcode'](cmd,
+                                                      cwd=target,
+                                                      runas=runas)
                     if 0 != retcode:
-                        __salt__['git.fetch'](target, user=runas, identity=identity)
+                        __salt__['git.fetch'](target,
+                                              user=runas,
+                                              identity=identity)
 
                     __salt__['git.checkout'](target, rev, user=runas)
 
@@ -135,9 +140,8 @@ def latest(name,
         if os.path.isdir(target):
             # git clone is required, target exists but force is turned on
             if force:
-                log.debug(
-                    'target {0} found, but not a git repository. Since force option'
-                    ' is in use, deleting.'.format(target))
+                log.debug(('target {0} found, but not a git repository. Since '
+                           'force option is in use, deleting.').format(target))
                 shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
             elif os.listdir(target):
@@ -157,13 +161,19 @@ def latest(name,
         try:
             # make the clone
             opts = '--mirror' if mirror else '--bare' if bare else ''
-            __salt__['git.clone'](target, name, user=runas, opts=opts, identity=identity)
+            __salt__['git.clone'](target,
+                                  name,
+                                  user=runas,
+                                  opts=opts,
+                                  identity=identity)
 
             if rev and not bare:
                 __salt__['git.checkout'](target, rev, user=runas)
 
             if submodules:
-                __salt__['git.submodule'](target, user=runas, opts='--recursive')
+                __salt__['git.submodule'](target,
+                                          user=runas,
+                                          opts='--recursive')
 
             new_rev = None if bare else (
                    __salt__['git.revision'](cwd=target, user=runas))
@@ -193,7 +203,8 @@ def present(name, bare=True, runas=None, force=False):
     runas
         Name of the user performing repository management operations
     force
-        Force create a new repository into an pre-existing non-git directory (deletes contents)
+        Force create a new repository into an pre-existing non-git directory
+        (deletes contents)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -215,7 +226,8 @@ def present(name, bare=True, runas=None, force=False):
     # Run test is set
     if __opts__['test']:
         ret['changes']['new repository'] = name
-        return _neutral_test(ret, 'New git repo set for creation at {0}'.format(name))
+        return _neutral_test(ret, ('New git repo set for'
+                                   ' creation at {0}').format(name))
 
     if force and os.path.isdir(name):
         shutil.rmtree(name)
