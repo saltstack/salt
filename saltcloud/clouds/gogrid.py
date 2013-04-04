@@ -69,7 +69,7 @@ def __virtual__():
     if get_configured_provider() is False:
         log.info(
             'There is no GoGrid cloud provider configuration available. Not '
-            'loading module'
+            'loading module.'
         )
         return False
 
@@ -93,8 +93,12 @@ def get_conn():
     driver = get_driver(Provider.GOGRID)
     vm_ = get_configured_provider()
     return driver(
-        config.get_config_value('apikey', vm_, __opts__),
-        config.get_config_value('sharedsecret', vm_, __opts__)
+        config.get_config_value(
+            'apikey', vm_, __opts__, search_global=False
+        ),
+        config.get_config_value(
+            'sharedsecret', vm_, __opts__, search_global=False
+        )
     )
 
 
@@ -114,8 +118,11 @@ def create(vm_):
         log.error(
             'Error creating {0} on GOGRID\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment:\n'.format(vm_['name']),
-            exc_info=True
+            'run the initial deployment:\n'.format(
+                vm_['name']
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -134,11 +141,10 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            }
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
-        )
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
+        }
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__,
