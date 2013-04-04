@@ -99,6 +99,8 @@ Set up the cloud config at ``/etc/salt/cloud``:
       #
       ssh_username: ec2-user
 
+      provider: aws
+
 
     aws-southeast-private-ips:
       # Set up the location of the salt master
@@ -141,6 +143,8 @@ Set up the cloud config at ``/etc/salt/cloud``:
       # Ubuntu       -> ubuntu
       #
       ssh_username: ec2-user
+
+      provider: aws
 
 
 Access Credentials
@@ -229,6 +233,7 @@ The profile can be realized now with a salt command:
     # salt-cloud -p base_aws ami.example.com
     # salt-cloud -p base_aws_public ami.example.com
     # salt-cloud -p base_aws_private ami.example.com
+
 
 This will create an instance named ``ami.example.com`` in EC2. The minion that 
 is installed on this instance will have an ``id`` of ``ami.example.com``. If 
@@ -334,6 +339,7 @@ Bitnami).
 
     # Configure which user to use to run the deploy script
     AWS.ssh_username: ec2-user
+
 
 * Using the new cloud configuration format:
 
@@ -591,6 +597,7 @@ configuration:
 .. code-block:: yaml
 
     EC2.delvol_on_destroy: True
+
 
 * Using the new cloud configuration format:
 

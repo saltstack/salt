@@ -12,7 +12,7 @@ that Salt Cloud has been built to support.
     # Set the location of the salt-master
     #
     minion:
-        master: saltmaster.example.com
+      master: saltmaster.example.com
 
     # Configure Rackspace using the OpenStack plugin
     #
@@ -58,6 +58,8 @@ that Salt Cloud has been built to support.
       user: myname
       tenant: 123456
       apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+      provider: rackspace
 
 
 
