@@ -9,6 +9,7 @@ the fileserver_backend option in the salt master config.
 '''
 
 # Import python libs
+import glob
 import os
 import time
 import hashlib
@@ -168,27 +169,23 @@ def find_file(path, short='base', **kwargs):
     if short == 'base':
         short = 'master'
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', short, path)
-    shadest = os.path.join(
+    hashes_glob = os.path.join(__opts__['cachedir'], 'gitfs/hash', short, '{0}.hash.*'.format(path))
+    blobshadest = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',
             short,
-            '{0}.sha1'.format(path))
-    md5dest = os.path.join(
-            __opts__['cachedir'],
-            'gitfs/hash',
-            short,
-            '{0}.md5'.format(path))
+            '{0}.hash.blob_sha1'.format(path))
     lk_fn = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',
             short,
             '{0}.lk'.format(path))
     destdir = os.path.dirname(dest)
-    shadir = os.path.dirname(shadest)
+    hashdir = os.path.dirname(blobshadest)
     if not os.path.isdir(destdir):
         os.makedirs(destdir)
-    if not os.path.isdir(shadir):
-        os.makedirs(shadir)
+    if not os.path.isdir(hashdir):
+        os.makedirs(hashdir)
     repos = init()
     if 'index' in kwargs:
         try:
@@ -210,8 +207,8 @@ def find_file(path, short='base', **kwargs):
         except KeyError:
             continue
         _wait_lock(lk_fn, dest)
-        if os.path.isfile(shadest) and os.path.isfile(dest):
-            with open(shadest, 'r') as fp_:
+        if os.path.isfile(blobshadest) and os.path.isfile(dest):
+            with open(blobshadest, 'r') as fp_:
                 sha = fp_.read()
                 if sha == blob.hexsha:
                     fnd['rel'] = path
@@ -219,19 +216,19 @@ def find_file(path, short='base', **kwargs):
                     return fnd
         with open(lk_fn, 'w+') as fp_:
             fp_.write('')
+        for filename in glob.glob(hashes_glob):
+            try:
+                os.remove(filename)
+            except Exception:
+                pass
         with open(dest, 'w+') as fp_:
             blob.stream_data(fp_)
-        with open(shadest, 'w+') as fp_:
+        with open(blobshadest, 'w+') as fp_:
             fp_.write(blob.hexsha)
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
-        if os.path.isfile(md5dest):
-            try:
-                os.remove(md5dest)
-            except Exception:
-                pass
         fnd['rel'] = path
         fnd['path'] = dest
         return fnd
@@ -270,12 +267,13 @@ def file_hash(load, fnd):
     short = load['env']
     if short == 'base':
         short = 'master'
+    relpath = fnd['rel']
     path = fnd['path']
     hashdest = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',
             short,
-            '{0}.hash'.format(path))
+            '{0}.hash.{1}'.format(relpath, __opts__['hash_type']))
     if not os.path.isfile(hashdest):
         with salt.utils.fopen(path, 'rb') as fp_:
             ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
