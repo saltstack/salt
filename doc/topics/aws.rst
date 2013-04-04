@@ -194,6 +194,18 @@ Multiple security groups can also be specified in the same fashion:
       - default
       - extra
 
+Block device mappings enable you to specify additional EBS volumes or instance
+store volumes when the instance is launched. This setting is also available on
+each cloud profile:
+
+.. code-block:: yaml
+
+    AWS.block_device_mappings:
+        - DeviceName: /dev/sdb
+          VirtualName: ephemeral0
+        - DeviceName: /dev/sdc
+          VirtualName: ephemeral1
+
 
 Modify AWS Tags
 ===============
