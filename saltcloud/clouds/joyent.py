@@ -93,8 +93,8 @@ def get_conn():
     '''
     driver = get_driver(Provider.JOYENT)
     return driver(
-        config.get_config_value('user', vm_, __opts__),
-        config.get_config_value('password', vm_, __opts__)
+        config.get_config_value('user', vm_, __opts__, search_global=False),
+        config.get_config_value('password', vm_, __opts__, search_global=False)
     )
 
 
@@ -119,13 +119,9 @@ def create(vm_):
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc.message
-            )
-        )
-        log.debug(
-            'Error creating {0} on JOYENT\n\n'.format(
-                vm_['name']
             ),
-            exc_info=True
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -136,7 +132,7 @@ def create(vm_):
             'host': data.public_ips[0],
             'username': 'root',
             'key_filename': config.get_config_value(
-                'private_key', vm_, __opts__
+                'private_key', vm_, __opts__, search_global=False
             ),
             'script': deploy_script.script,
             'name': vm_['name'],
@@ -148,11 +144,10 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
-        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__,
@@ -211,7 +206,12 @@ def stop(name, call=None):
         log.debug(data)
         log.info('Stopped node {0}'.format(name))
     except Exception as exc:
-        log.error('Failed to stop node {0}'.format(name))
-        log.error(exc)
+        log.error(
+            'Failed to stop node {0}: {1}'.format(
+                name, exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
 
     return data
