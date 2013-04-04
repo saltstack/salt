@@ -995,6 +995,7 @@ def recurse(name,
             backup='',
             include_pat=None,
             exclude_pat=None,
+            maxdepth=None,
             **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -1070,6 +1071,16 @@ def recurse(name,
                                                APPDATA.02,.. for exclusion
           - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                or TEMPDATA for exclusion
+
+    maxdepth
+        When copying, only copy paths which are depth maxdepth from the source
+        path.
+        Example::
+
+          - maxdepth: 0      :: Only include files located in the source
+                                directory
+          - maxdepth: 1      :: Only include files located in the source
+                                or immediate subdirectories
     '''
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1223,6 +1234,17 @@ def recurse(name,
         # empty dir(if include_empty==true).
 
         relname = os.path.relpath(fn_, srcpath)
+
+        # Check for maxdepth of the relative path
+        if not maxdepth is None:
+            # Since paths are all master, just use posix separator
+            relpieces = relname.split('/')
+            # Handle empty directories (include_empty==true) by removing the
+            # the last piece if it is an empty string
+            if not relpieces[-1]:
+                relpieces = relpieces[:-1]
+            if len(relpieces) > maxdepth + 1:
+                continue
 
         #- Check if it is to be excluded. Match only part of the path
         # relative to the target directory
