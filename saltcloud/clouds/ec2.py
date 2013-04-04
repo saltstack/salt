@@ -91,7 +91,7 @@ from salt.exceptions import SaltException
 # Get logging started
 log = logging.getLogger(__name__)
 
-size_map = {
+SIZE_MAP = {
     'Micro Instance': 't1.micro',
     'Small Instance': 'm1.small',
     'Medium Instance': 'm1.medium',
@@ -106,6 +106,21 @@ size_map = {
     'Cluster Compute Quadruple Extra Large Instance': 'cc1.4xlarge',
     'Cluster Compute Eight Extra Large Instance': 'cc2.8xlarge',
 }
+
+
+EC2_LOCATIONS = {
+    'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
+    'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
+    'eu-west-1': Provider.EC2_EU_WEST,
+    'sa-east-1': Provider.EC2_SA_EAST,
+    'us-east-1': Provider.EC2_US_EAST,
+    'us-west-1': Provider.EC2_US_WEST,
+    'us-west-2': Provider.EC2_US_WEST_OREGON
+}
+DEFAULT_LOCATION = 'us-east-1'
+
+if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
+    EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
 
 # Only load in this module if the EC2 configurations are in place
@@ -158,20 +173,6 @@ def get_configured_provider():
         'ec2',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
     )
-
-EC2_LOCATIONS = {
-    'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
-    'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
-    'eu-west-1': Provider.EC2_EU_WEST,
-    'sa-east-1': Provider.EC2_SA_EAST,
-    'us-east-1': Provider.EC2_US_EAST,
-    'us-west-1': Provider.EC2_US_WEST,
-    'us-west-2': Provider.EC2_US_WEST_OREGON
-}
-DEFAULT_LOCATION = 'us-east-1'
-
-if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
-    EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
 
 def _xml_to_dict(xmltree):
@@ -452,14 +453,18 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return config.get_config_value('keyname', vm_, __opts__)
+    return config.get_config_value(
+        'keyname', vm_, __opts__, search_global=False
+    )
 
 
 def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return config.get_config_value('securitygroup', vm_, __opts__)
+    return config.get_config_value(
+        'securitygroup', vm_, __opts__, search_global=False
+    )
 
 
 def ssh_username(vm_):
@@ -489,7 +494,8 @@ def ssh_interface(vm_):
     or 'private_ips'.
     '''
     return config.get_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips'
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
     )
 
 
@@ -503,7 +509,9 @@ def get_location(vm_=None):
     return __opts__.get(
         'location',
         config.get_config_value(
-            'location', vm_, __opts__, default=DEFAULT_LOCATION)
+            'location', vm_, __opts__, default=DEFAULT_LOCATION,
+            #search_global=False
+        )
     )
 
 
@@ -530,7 +538,7 @@ def get_availability_zone(vm_):
     Return the availability zone to use
     '''
     avz = config.get_config_value(
-        'ssh_username', vm_, __opts__, default=None
+        'availability_zone', vm_, __opts__, search_global=False
     )
 
     if avz is None:
@@ -591,10 +599,14 @@ def create(vm_=None, call=None):
               'MinCount': '1',
               'MaxCount': '1'}
     params['ImageId'] = vm_['image']
-    if vm_['size'] in size_map:
-        params['InstanceType'] = size_map[vm_['size']]
+
+    vm_size = config.get_config_value(
+        'size', vm_, __opts__, search_global=False
+    )
+    if vm_size in SIZE_MAP:
+        params['InstanceType'] = SIZE_MAP[vm_size]
     else:
-        params['InstanceType'] = vm_['size']
+        params['InstanceType'] = vm_size
     ex_keyname = keyname(vm_)
     if ex_keyname:
         params['KeyName'] = ex_keyname
@@ -611,7 +623,7 @@ def create(vm_=None, call=None):
         params['Placement.AvailabilityZone'] = az
 
     delvol_on_destroy = config.get_config_value(
-        'delvol_on_destroy', vm_, __opts__, default=None
+        'delvol_on_destroy', vm_, __opts__, search_global=False
     )
 
     if delvol_on_destroy is not None:
@@ -632,7 +644,9 @@ def create(vm_=None, call=None):
             'Error creating {0} on EC2 when trying to run the initial '
             'deployment: \n{1}'.format(
                 vm_['name'], exc
-            )
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -646,6 +660,7 @@ def create(vm_=None, call=None):
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
+
     data, requesturl = query(params, location=location, return_url=True)
 
     while 'ipAddress' not in data[0]['instancesSet']['item']:
@@ -654,7 +669,7 @@ def create(vm_=None, call=None):
         waiting_for_ip += 1
         data = query(params, requesturl=requesturl)
 
-    if ssh_interface(vm_) == "private_ips":
+    if ssh_interface(vm_) == 'private_ips':
         ip_address = data[0]['instancesSet']['item']['privateIpAddress']
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
@@ -679,7 +694,7 @@ def create(vm_=None, call=None):
             'host': ip_address,
             'username': username,
             'key_filename': config.get_config_value(
-                'private_key', vm_, __opts__
+                'private_key', vm_, __opts__, search_global=False
             ),
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
@@ -768,18 +783,23 @@ def create_attach_volumes(name, kwargs, call=None):
     ret = []
     for volume in volumes:
         volume_name = '{0} on {1}'.format(volume['device'], name)
-        created_volume = create_volume({'size': volume['size'],
-                                        'volume_name': volume_name,
-                                        'zone': kwargs['zone']},
-                                       call='function')
+        created_volume = create_volume(
+            {
+                'size': volume['size'],
+                'volume_name': volume_name,
+                'zone': kwargs['zone']
+            },
+            call='function'
+        )
         for item in created_volume:
             if 'volumeId' in item:
                 volume_id = item['volumeId']
-        attach = attach_volume(name,
-                               {'volume_id': volume_id,
-                                'device': volume['device']},
-                               instance_id=kwargs['instance_id'],
-                               call='action')
+        attach = attach_volume(
+            name,
+            {'volume_id': volume_id, 'device': volume['device']},
+            instance_id=kwargs['instance_id'],
+            call='action'
+        )
         if attach:
             msg = (
                 '{0} attached to {1} (aka {2}) as device {3}'.format(
@@ -947,13 +967,18 @@ def destroy(name, call=None):
     )
 
     if protected == 'true':
-        log.error('This instance has been protected from being destroyed. '
-                  'Use the following command to disable protection:\n\n'
-                  'salt-cloud -a disable_term_protect {0}'.format(name))
+        log.error(
+            'This instance has been protected from being destroyed. '
+            'Use the following command to disable protection:\n\n'
+            'salt-cloud -a disable_term_protect {0}'.format(
+                name
+            )
+        )
         exit(1)
 
-    if config.get_config_value(
-            'rename_on_destroy', get_configured_provider(), __opts__) is True:
+    if config.get_config_value('rename_on_destroy',
+                               get_configured_provider(),
+                               __opts__, search_global=False) is True:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
@@ -1056,7 +1081,14 @@ def list_nodes_full(location=None):
 
 
 def _vm_provider(vm_):
-    return vm_.get('provider', __opts__['provider'])
+    if vm_['provider'] not in __opts__['providers']:
+        return __opts__.get('provider', None)
+
+    for provider in __opts__['providers'][vm_['provider']]:
+        if provider['provider'] == 'ec2':
+            return 'ec2'
+
+    return __opts__.get('provider', None)
 
 
 def _extract_name_tag(item):
@@ -1298,7 +1330,8 @@ def _toggle_delvol(name=None, instance_id=None, value=None, requesturl=None):
               'InstanceId': instance_id,
               'BlockDeviceMapping.1.DeviceName': device_name,
               'BlockDeviceMapping.1.Ebs.DeleteOnTermination': value}
-    result = query(params, return_root=True)
+
+    query(params, return_root=True)
 
     return query(requesturl=requesturl)
 
@@ -1313,11 +1346,11 @@ def create_volume(kwargs=None, call=None):
         )
         return False
 
-    if not 'zone' in kwargs:
+    if 'zone' not in kwargs:
         log.error('An availability zone must be specified to create a volume.')
         return False
 
-    if not 'size' in kwargs and not 'snapshot' in kwargs:
+    if 'size' not in kwargs and 'snapshot' not in kwargs:
         # This number represents GiB
         kwargs['size'] = '10'
 
@@ -1360,11 +1393,11 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
         log.error('Either a name or an instance_id is required.')
         return False
 
-    if not 'volume_id' in kwargs:
+    if 'volume_id' not in kwargs:
         log.error('A volume_id is required.')
         return False
 
-    if not 'device' in kwargs:
+    if 'device' not in kwargs:
         log.error('A device is required (ex. /dev/sdb1).')
         return False
 
@@ -1384,7 +1417,7 @@ def show_volume(name=None, kwargs=None, instance_id=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not 'volume_id' in kwargs:
+    if 'volume_id' not in kwargs:
         log.error('A volume_id is required.')
         return False
 
@@ -1408,7 +1441,7 @@ def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not 'volume_id' in kwargs:
+    if 'volume_id' not in kwargs:
         log.error('A volume_id is required.')
         return False
 
@@ -1426,7 +1459,7 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not 'volume_id' in kwargs:
+    if 'volume_id' not in kwargs:
         log.error('A volume_id is required.')
         return False
 
@@ -1450,7 +1483,7 @@ def create_keypair(kwargs=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not 'keyname' in kwargs:
+    if 'keyname' not in kwargs:
         log.error('A keyname is required.')
         return False
 
@@ -1474,7 +1507,7 @@ def show_keypair(kwargs=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not 'keyname' in kwargs:
+    if 'keyname' not in kwargs:
         log.error('A keyname is required.')
         return False
 
@@ -1498,7 +1531,7 @@ def delete_keypair(kwargs=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not 'keyname' in kwargs:
+    if 'keyname' not in kwargs:
         log.error('A keyname is required.')
         return False
 
