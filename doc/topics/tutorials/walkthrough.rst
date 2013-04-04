@@ -35,17 +35,17 @@ Salt is a different approach to infrastructure management, it is founded on
 the idea that high speed communication with large numbers of systems can open
 up new capabilities. This approach makes Salt a powerful multitasking system
 that can solve many specific problems in an infrastructure. The backbone of
-Salt is the remote execution engine, which creates a high speed, secure,
+Salt is the remote execution engine, which creates a high speed, secure and
 bi-directional communication net for groups of systems. On top of this
-communication system Salt provides an extremely fast, flexible, easy to use
+communication system Salt provides an extremely fast, flexible and easy to use
 configuration management system called ``Salt States``.
 
 This unique approach to management makes for a transparent control system that
 is not only amazingly easy to set up and use, but also capable of solving very
-complex problems in infrastructures, as will be explored in this walk through.
+complex problems in infrastructures; as will be explored in this walk through.
 
 Salt is being used today by some of the largest infrastructures in the world
-and has proven an ability to scale to astounding proportions without
+and has a proven ability to scale to astounding proportions without
 modification. With the proven ability to scale out well beyond many tens of
 thousands of servers, Salt has also proven to be an excellent choice for small
 deployments as well, lowering compute and management overhead for
@@ -64,7 +64,7 @@ installation in depth:
 Starting Salt
 -------------
 
-Salt functions on a master/minion topology. A master server serves as a
+Salt functions on a master/minion topology. A master server acts as a
 central control bus for the clients (called minions), and the minions connect
 back to the master.
 
@@ -91,8 +91,8 @@ Or the master can be started directly on the command line:
 
     # salt-master -d
 
-The Salt Master can also be started in the foreground in debug mode, this
-greatly increases the command output:
+The Salt Master can also be started in the foreground in debug mode, thus
+greatly increasing the command output:
 
     # salt-master -l debug
 
@@ -132,8 +132,8 @@ configuration file will need to be edited, edit the configuration option
 
     master: saltmaster.example.com
 
-Now that the master can be found start up the minion in the same way as the
-master, with the platform init system, or via the command line directly:
+Now that the master can be found, start the minion in the same way as the
+master; with the platform init system, or via the command line directly:
 
 As a daemon:
 
@@ -152,13 +152,13 @@ Using Salt Key
 
 Salt authenticates minions using public key encryption and authentication. For
 a minion to start accepting commands from the master the minion keys need to be
-accepted. The ``salt-key`` command is used manage all of the keys on the
+accepted. The ``salt-key`` command is used to manage all of the keys on the
 master. To list the keys that are on the master run a salt-key list command:
 
     # salt-key -L
 
 The keys that have been rejected, accepted and pending acceptance are listed.
-The easiest way to accept the minion key is to just accept all pending keys:
+The easiest way to accept the minion key is to accept all pending keys:
 
     # salt-key -A
 
@@ -236,7 +236,7 @@ Grains
 
 Salt uses a system called `Grains` to build up static data about minions. This
 data includes information about the operating system that is running, CPU
-architecture and many more. The grains system is used throughout Salt to
+architecture and much more. The grains system is used throughout Salt to
 deliver platform data to many components and to users.
 
 Grains can also be statically set, this makes it easy to assign values to
@@ -283,7 +283,7 @@ Nodegroup
 
 The concepts of targets are used on the command line with salt, but also
 function in many other areas as well, including the state system and the
-systems used for ACLs and user permission restrictions.
+systems used for ACLs and user permissions.
 
 Salt States
 ===========
@@ -310,7 +310,7 @@ configuration is required, states can be set up immediately.
     high layers covered here are the `sls` layer and the highest layer
     `highstate`.
 
-    Again, knowing that there are many layers of data management will help with
+    Again, knowing that there are many layers of data management, will help with
     understanding states, but they never need to be used. Just as understanding
     how a compiler functions when learning a programming language,
     understanding what is going on under the hood of a configuration management
@@ -356,7 +356,7 @@ Now to beef up the vim sls formula a vimrc can be added:
 Now the desired vimrc needs to be copied into the Salt file server to
 /srv/salt/vimrc, in Salt everything is a file, so no path redirection needs
 to be accounted for. The vimrc file is placed right next to the vim.sls file.
-The same command as above can be executed to all the vim sls formula and now
+The same command as above can be executed to all the vim sls formulas and now
 include managing the file.
 
 .. note::
@@ -369,7 +369,7 @@ Adding Some Depth
 
 Obviously maintaining sls formulas right in the root of the file server will
 not scale out to reasonably sized deployments. This is why more depth is
-required. Start by making an nginx formula a better way, make a nginx
+required. Start by making an nginx formula a better way, make an nginx
 subdirectory and add an init.sls file:
 
 `/srv/salt/nginx/init.sls`
@@ -399,7 +399,7 @@ it results in success.
     Also evaluation ordering is available in Salt as well:
     :doc:`Ordering States</ref/states/ordering>`
 
-Now this new sls formula has a special name, `init.sls`, when a sls formula is
+Now this new sls formula has a special name, `init.sls`, when an sls formula is
 named `init.sls` it inherits the name of the directory path that contains it,
 so this formula can be referenced via the following command:
 
@@ -461,7 +461,7 @@ So Much More!
 =============
 
 This concludes the initial Salt walkthrough, but there are many more things to
-yet learn! These documents will cover important core aspects of Salt:
+learn still! These documents will cover important core aspects of Salt:
 
 Pillar
     Parameters and minion private data (pillar is a core component of states):
