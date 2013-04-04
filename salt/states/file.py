@@ -1265,7 +1265,7 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](env)
         for mdir in mdirs:
-            if not mdir.startswith(srcpath): #same as above
+            if not mdir.startswith(srcpath):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
@@ -1446,7 +1446,8 @@ def comment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](name, unanchor_regex)
+    ret['result'] = __salt__['file.contains_regex_multiline'](name,
+                                                              unanchor_regex)
 
     if slines != nlines:
         # Changes happened, add them
