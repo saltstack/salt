@@ -220,7 +220,7 @@ def list_groups(name):
     return sorted(list(ugrp))
 
 
-def getent(user=None):
+def getent():
     '''
     Return the list of all info for all users
 
@@ -228,6 +228,9 @@ def getent(user=None):
 
         salt '*' user.getent
     '''
+    if 'user.getent' in __context__:
+        return __context__['user.getent']
+
     ret = []
     users = []
     startusers = False
@@ -260,9 +263,5 @@ def getent(user=None):
 
         ret.append(stuff)
 
-    if user:
-        try:
-            ret = [x for x in ret if x.get('name', '') == user][0]
-        except IndexError:
-            ret = {}
+    __context__['user.getent'] = ret
     return ret
