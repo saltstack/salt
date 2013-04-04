@@ -104,55 +104,67 @@ def create(vm_):
     '''
     Provision a single machine
     '''
-    log.info('Provisioning existing machine {0}'.format(vm_['name']))
-
-    if config.get_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        ssh_username = config.get_config_value('ssh_username', vm_, __opts__)
-        deploy_kwargs = {
-            'host': vm_['ssh_host'],
-            'username': ssh_username,
-            'script': deploy_script,
-            'name': vm_['name'],
-            'deploy_command': '/tmp/deploy.sh',
-            'start_action': __opts__['start_action'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'sudo': config.get_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'password': config.get_config_value('password', vm_, __opts__),
-            'ssh_keyfile': config.get_config_value(
-                'ssh_keyfile', vm_, __opts__
-            ),
-            'script_args': config.get_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_)
+    if config.get_config_value('deploy', vm_, __opts__) is False:
+        return {
+            'Error': {
+                'No Deploy': '\'deploy\' is not enabled. Not deploying.'
+            }
         }
 
-        # Deploy salt-master files, if necessary
-        if config.get_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
-            if master_conf:
-                deploy_kwargs['master_conf'] = master_conf
+    log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
-            if 'syndic_master' in master_conf:
-                deploy_kwargs['make_syndic'] = True
+    ssh_username = config.get_config_value('ssh_username', vm_, __opts__)
+    deploy_script = script(vm_)
+    deploy_kwargs = {
+        'host': vm_['ssh_host'],
+        'username': ssh_username,
+        'script': deploy_script,
+        'name': vm_['name'],
+        'deploy_command': '/tmp/deploy.sh',
+        'start_action': __opts__['start_action'],
+        'sock_dir': __opts__['sock_dir'],
+        'conf_file': __opts__['conf_file'],
+        'minion_pem': vm_['priv_key'],
+        'minion_pub': vm_['pub_key'],
+        'keep_tmp': __opts__['keep_tmp'],
+        'sudo': config.get_config_value(
+            'sudo', vm_, __opts__, default=(ssh_username != 'root')
+        ),
+        'password': config.get_config_value('password', vm_, __opts__),
+        'ssh_keyfile': config.get_config_value(
+            'ssh_keyfile', vm_, __opts__
+        ),
+        'script_args': config.get_config_value(
+            'script_args', vm_, __opts__
+        ),
+        'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_)
+    }
 
-        deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error('Failed to start Salt on host {0}'.format(vm_['name']))
+    # Deploy salt-master files, if necessary
+    if config.get_config_value('make_master', vm_, __opts__) is True:
+        deploy_kwargs['make_master'] = True
+        deploy_kwargs['master_pub'] = vm_['master_pub']
+        deploy_kwargs['master_pem'] = vm_['master_pem']
+        master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
+        if master_conf:
+            deploy_kwargs['master_conf'] = master_conf
 
-    return {}
+        if 'syndic_master' in master_conf:
+            deploy_kwargs['make_syndic'] = True
+
+    deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
+    if deployed:
+        log.info('Salt installed on {0}'.format(vm_['name']))
+        return {vm_['name']: True}
+
+    log.error('Failed to start Salt on host {0}'.format(vm_['name']))
+    return {
+        'Error': {
+            'Not Deployed': 'Failed to start Salt on host {0}'.format(
+                vm_['name']
+            )
+        }
+    }
 
 
 def script(vm_):
