@@ -4,8 +4,9 @@ The AWS Cloud Module
 
 The AWS cloud module is used to interact with the Amazon Web Services system.
 
-To use the AWS cloud module the following configuration parameters need to be
-set in the main cloud config:
+To use the AWS cloud module, using the old cloud providers configuration
+syntax, the following configuration parameters need to be set in the main cloud
+configuration file:
 
 .. code-block:: yaml
 
@@ -19,6 +20,24 @@ set in the main cloud config:
     AWS.securitygroup: ssh_open
     # The location of the private key which corresponds to the keyname
     AWS.private_key: /root/default.pem
+
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/aws.conf``:
+
+.. code-block:: yaml
+
+    aws-botocore-config:
+      # The AWS API authentication id
+      id: GKTADJGHEIQSXMKKRBJ08H
+      # The AWS API authentication key
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      # The ssh keyname to use
+      keyname: default
+      # The amazon security group
+      securitygroup: ssh_open
+      # The location of the private key which corresponds to the keyname
+      private_key: /root/default.pem
 
 '''
 
