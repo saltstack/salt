@@ -837,6 +837,8 @@ class Minion(object):
             self.socket.close()
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
+        if hasattr(self, 'local'):
+            del(self.local)
 
     def __del__(self):
         self.destroy()
@@ -854,11 +856,10 @@ class Syndic(Minion):
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
         self.local = salt.client.LocalClient(opts['_master_conf_file'])
+        self.local.event.subscribe('')
         opts.update(self.opts)
         self.opts = opts
         self.local.opts['interface'] = interface
-        self.event = salt.utils.event.LocalClientEvent(self.local.opts['sock_dir'])
-        self.event.subscribe('')
 
     def _handle_aes(self, load):
         '''
@@ -929,10 +930,7 @@ class Syndic(Minion):
         events, aggregate them, and send them up to the master-master
         '''
         jids = {}
-        while True:
-            event = self.event.get_event(0.5, full=True)
-            if event is None:
-                break
+        for event in self.gen_event_returns(0.5):
             if len(event.get('tag', '')) == 20:
                 if not event['tag'] in jids:
                     jids[event['tag']] = {}
