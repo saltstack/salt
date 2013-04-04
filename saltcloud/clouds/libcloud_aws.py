@@ -166,6 +166,18 @@ def securitygroup(vm_):
     return securitygroups
 
 
+def block_device_mappings(vm_):
+    '''
+    Return the block device mapping
+    e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+          {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
+    '''
+    block_device_mappings = vm_.get(
+        'block_device_mappings', __opts__.get('AWS.block_device_mappings', None)
+    )
+    return block_device_mappings
+
+
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to 'ec2-user'.
@@ -247,6 +259,9 @@ def create(vm_):
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
+    ex_blockdevicemappings = block_device_mappings(vm_)
+    if ex_blockdevicemappings:
+        kwargs['ex_blockdevicemappings'] = ex_blockdevicemappings
 
     try:
         data = conn.create_node(**kwargs)
