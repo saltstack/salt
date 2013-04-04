@@ -2,8 +2,8 @@
 OpenStack Cloud Module
 ======================
 
-The OpenStack cloud module. OpenStack is an open source project that is in  use
-by a number a cloud providers, each of which have their own ways of using it.
+OpenStack is an open source project that is in use by a number a cloud
+providers, each of which have their own ways of using it.
 
 OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
@@ -13,8 +13,8 @@ Note that there is currently a dependency upon netaddr. This can be installed
 on Debian-based systems by means of the python-netaddr package.
 
 This module has been tested to work with HP Cloud and Rackspace. See the
-documentation for specific options for either of these providers. Some examples
-are provided below:
+documentation for specific options for either of these providers. Some
+examples, using the old could configuration syntax, are provided below:
 
 .. code-block:: yaml
 
@@ -40,20 +40,64 @@ Either a password or an API key must also be specified:
     # The OpenStack API key
     OPENSTACK.apikey: 901d3f579h23c8v73q9
 
+
+And using the new format, these examples could be set up in the cloud
+configuration at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/openstack.conf``:
+
+
+.. code-block:: yaml
+
+    openstack-config:
+      # The OpenStack identity service url
+      identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+      # The OpenStack compute region
+      compute_region: az-1.region-a.geo-1
+      # The OpenStack compute service name
+      compute_name: Compute
+      # The OpenStack tenant name (not tenant ID)
+      tenant: myuser-tenant1
+      # The OpenStack user name
+      user: myuser
+      # The OpenStack keypair name
+      ssh_key_name
+
+      provider: openstack
+
+Either a password or an API key must also be specified:
+
+.. code-block:: yaml
+
+    openstack-password-or-api-config:
+      # The OpenStack password
+      password: letmein
+      # The OpenStack API key
+      apikey: 901d3f579h23c8v73q9
+
+
 For local installations that only use private IP address ranges, the
-following option may be useful:
+following option may be useful. Using the old syntax:
 
 .. code-block:: yaml
 
     # Ignore IP addresses on this network for bootstrap
     OPENSTACK.ignore_ip_addr: 192.168.50.0/24
+
+
+Using the new syntax:
+
+.. code-block:: yaml
+
+    openstack-config:
+      # Ignore IP addresses on this network for bootstrap
+      ignore_ip_addr: 192.168.50.0/24
+
 '''
 
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
 import time
-import sys
 import logging
 import socket
 
@@ -67,6 +111,7 @@ from saltcloud.libcloudfuncs import *
 from salt.exceptions import SaltException
 
 # Import saltcloud libs
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 
 # Import netaddr IP matching
@@ -95,12 +140,24 @@ list_nodes_select = namespaced_function(list_nodes_select, globals())
 # Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for OPENSTACK configs
+    Set up the libcloud functions and check for OPENSTACK configurations
     '''
-    if 'OPENSTACK.user' in __opts__:
-        log.debug('Loading Openstack cloud module')
-        return 'openstack'
-    return False
+    if get_configured_provider() is False:
+        log.info(
+            'There is no Openstack cloud provider configuration available. '
+            'Not loading module.'
+        )
+        return False
+
+    log.debug('Loading Openstack cloud module')
+    return 'openstack'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(__opts__, 'openstack', ('user',))
 
 
 def get_conn():
@@ -109,41 +166,48 @@ def get_conn():
     '''
     driver = get_driver(Provider.OPENSTACK)
     authinfo = {
-            'ex_force_auth_url': __opts__['OPENSTACK.identity_url'],
-            }
+        'ex_force_auth_url': config.get_config_value(
+            'identity_url', vm_, __opts__
+        ),
+        'ex_force_service_name': config.get_config_value(
+            'compute_name', vm_, __opts__
+        ),
+        'ex_force_service_region': config.get_config_value(
+            'compute_region', vm_, __opts__
+        ),
+        'ex_tenant_name': config.get_config_value(
+            'tenant', vm_, __opts__
+        ),
+        'ex_force_service_name': config.get_config_value(
+            'compute_name', vm_, __opts__
+        )
+    }
 
-    if 'OPENSTACK.compute_name' in __opts__:
-        authinfo['ex_force_service_name'] = __opts__['OPENSTACK.compute_name']
-
-    if 'OPENSTACK.compute_region' in __opts__:
-        authinfo['ex_force_service_region'] = __opts__['OPENSTACK.compute_region']
-
-    if 'OPENSTACK.tenant' in __opts__:
-        authinfo['ex_tenant_name'] = __opts__['OPENSTACK.tenant']
-
-    if 'OPENSTACK.password' in __opts__:
+    password = config.get_config_value('password', vm_, __opts__)
+    if password is not None:
         authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
         return driver(
-            __opts__['OPENSTACK.user'],
-            __opts__['OPENSTACK.password'],
+            config.get_config_value('user', vm_, __opts__),
+            password,
             **authinfo
-            )
-    elif 'OPENSTACK.apikey' in __opts__:
-        authinfo['ex_force_auth_version'] = '2.0_apikey'
-        log.debug('OpenStack authenticating using apikey')
-        return driver(
-            __opts__['OPENSTACK.user'],
-            __opts__['OPENSTACK.apikey'],
-            **authinfo
-            )
+        )
+
+    authinfo['ex_force_auth_version'] = '2.0_apikey'
+    log.debug('OpenStack authenticating using apikey')
+    return driver(
+        config.get_config_value('user', vm_, __opts__),
+        config.get_config_value('apikey', vm_, __opts__),
+        **authinfo
+    )
 
 
 def preferred_ip(vm_, ips):
     '''
     Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
     '''
-    proto = vm_.get('protocol', __opts__.get('OPENSTACK.protocol', 'ipv4'))
+    proto = config.get_config_value('protocol', vm_, __opts__, default='ipv4')
+
     family = socket.AF_INET
     if proto == 'ipv6':
         family = socket.AF_INET6
@@ -175,12 +239,8 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return vm_.get(
-        'ssh_interface',
-        __opts__.get(
-            'OPENSTACK.ssh_interface',
-            'public_ips'
-        )
+    return config.get_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips'
     )
 
 
@@ -191,35 +251,47 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
-    kwargs = {}
-    kwargs['name'] = vm_['name']
+    kwargs = {
+        'name': vm_['name']
+    }
 
     try:
         kwargs['image'] = get_image(conn, vm_)
     except Exception as exc:
-        err = ('Error creating {0} on OPENSTACK\n\n'
-               'Could not find image {1}\n').format(
-                       vm_['name'], vm_['image']
-                       )
-        sys.stderr.write(err)
-        log.error(err)
+        log.error(
+            'Error creating {0} on OPENSTACK\n\n'
+            'Could not find image {1}\n'.format(
+                vm_['name'], vm_['image']
+            )
+        )
+        log.debug(
+            'Error creating {0} on OPENSTACK\n\n'.format(vm_['name']),
+            exc_info=True
+        )
         return False
 
     try:
         kwargs['size'] = get_size(conn, vm_)
     except Exception as exc:
-        err = ('Error creating {0} on OPENSTACK\n\n'
-               'Could not find size {1}\n').format(
-                       vm_['name'], vm_['size']
-                       )
-        sys.stderr.write(err)
+        log.error(
+            'Error creating {0} on OPENSTACK\n\n'
+            'Could not find size {1}\n'.format(
+                vm_['name'], vm_['size']
+            )
+        )
+        log.debug(
+            'Error creating {0} on OPENSTACK\n\n'.format(vm_['name']),
+            exc_info=True
+        )
         return False
 
-    if 'OPENSTACK.ssh_key_name' in __opts__:
-        kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
+    kwargs['ex_keyname'] = config.get_config_value(
+        'ssh_key_name', vm_, __opts__
+    )
 
-    if 'security_groups' in vm_:
-        vm_groups = vm_['security_groups'].split(',')
+    security_groups = config.get_config_value('security_groups', vm_, __opts__)
+    if security_groups is not None:
+        vm_groups = security_groups.split(',')
         avail_groups = conn.ex_list_security_groups()
         group_list = []
 
@@ -227,20 +299,30 @@ def create(vm_):
             if vg in [ag.name for ag in avail_groups]:
                 group_list.append(vg)
             else:
-                raise ValueError("No such security group: '{0}'".format(group))
+                raise ValueError(
+                    'No such security group: \'{0}\''.format(
+                        group
+                    )
+                )
 
-        kwargs['ex_security_groups'] = [g for g in avail_groups
-                                        if g.name in group_list]
+        kwargs['ex_security_groups'] = [
+            g for g in avail_groups if g.name in group_list
+        ]
 
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        err = ('Error creating {0} on OPENSTACK\n\n'
-               'The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], exc
-                       )
-        sys.stderr.write(err)
+        log.error(
+            'Error creating {0} on OPENSTACK\n\n'
+            'The following exception was thrown by libcloud when trying to '
+            'run the initial deployment: \n{1}'.format(
+                vm_['name'], exc
+            )
+        )
+        log.debug(
+            'Error creating {0} on OPENSTACK\n\n'.format(vm_['name']),
+            exc_info=True
+        )
         return False
 
     not_ready = True
@@ -253,8 +335,10 @@ def create(vm_):
         public = nodelist[vm_['name']]['public_ips']
         running = nodelist[vm_['name']]['state'] == node_state(NodeState.RUNNING)
         if running and private and not public:
-            log.warn('Private IPs returned, but not public... checking for '
-                     'misidentified IPs')
+            log.warn(
+                'Private IPs returned, but not public... Checking for '
+                'misidentified IPs'
+            )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
@@ -298,50 +382,49 @@ def create(vm_):
         'keep_tmp': __opts__['keep_tmp'],
     }
 
-    if 'script_args' in vm_:
-        deploy_kwargs['script_args'] = vm_['script_args']
+    deploy_kwargs['script_args'] = config.get_config_value(
+        'script_args', vm_, __opts__
+    )
 
     deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
         __opts__,
         vm_
     )
-    if 'ssh_username' in vm_:
+
+    ssh_username = config.get_config_value('ssh_username', vm_, __opts__)
+    if ssh_username is not None:
         deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
-        deploy_kwargs['username'] = vm_['ssh_username']
+        deploy_kwargs['username'] = ssh_username
         deploy_kwargs['tty'] = True
     else:
         deploy_kwargs['username'] = 'root'
-    log.debug('Using {0} as SSH username'.format(deploy_kwargs['username']))
 
-    if 'OPENSTACK.ssh_key_file' in __opts__:
-        deploy_kwargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
+    log.debug('Using {0} as SSH username'.format(ssh_username))
+
+    ssh_key_file = config.get_config_value('ssh_key_file', vm_, __opts__)
+    if ssh_key_file is not None:
+        deploy_kwargs['key_filename'] = ssh_key_file
         log.debug(
-            'Using {0} as SSH key file'.format(
-                deploy_kwargs['key_filename']
-            )
+            'Using {0} as SSH key file'.format(ssh_key_file)
         )
     elif 'password' in data.extra:
         deploy_kwargs['password'] = data.extra['password']
         log.debug('Logging into SSH using password')
 
-    if 'sudo' in vm_:
-        deploy_kwargs['sudo'] = vm_['sudo']
+    ret = {}
+    sudo = config.get_config_value(
+        'sudo', vm_, __opts__, default=(ssh_username != 'root')
+    )
+    if sudo is not None:
+        deploy_kwargs['sudo'] = sudo
         log.debug('Running root commands using sudo')
 
-    deploy = vm_.get(
-        'deploy',
-        __opts__.get(
-            'OPENSTACK.deploy',
-            __opts__['deploy']
-        )
-    )
-    ret = {}
-    if deploy is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs['script'] = deploy_script.script
 
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
