@@ -379,7 +379,7 @@ def info(name):
         ret['homephone'] = gecos_field[3]
     except KeyError:
         ret['gid'] = ''
-        ret['groups'] = ''
+        ret['groups'] = []
         ret['home'] = ''
         ret['name'] = ''
         ret['passwd'] = ''
