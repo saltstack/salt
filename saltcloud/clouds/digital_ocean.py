@@ -171,11 +171,11 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = str(config.get_config_value('image', vm_, __opts__))
+    vm_image = str(config.get_config_value(
+        'image', vm_, __opts__, search_global=False
+    ))
     for image in images:
-        if images[image]['name'] == vm_image:
-            return images[image]['id']
-        if images[image]['id'] == vm_image:
+        if vm_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
     raise ValueError('The specified image could not be found.')
 
@@ -185,11 +185,11 @@ def get_size(vm_):
     Return the VM's size. Used by create_node().
     '''
     sizes = avail_sizes()
-    vm_size = str(config.get_config_value('size', vm_, __opts__))
+    vm_size = str(config.get_config_value(
+        'size', vm_, __opts__, search_global=False
+    ))
     for size in sizes:
-        if sizes[size]['name'] == vm_size:
-            return sizes[size]['id']
-        if sizes[size]['id'] == vm_size:
+        if vm_size in (sizes[size]['name'], sizes[size]['id']):
             return sizes[size]['id']
     raise ValueError('The specified size could not be found.')
 
@@ -199,12 +199,13 @@ def get_location(vm_):
     Return the VM's location
     '''
     locations = avail_locations()
-    vm_location = str(config.get_config_value('location', vm_, __opts__))
+    vm_location = str(config.get_config_value(
+        'location', vm_, __opts__, search_global=False
+    ))
 
     for location in locations:
-        if locations[location]['name'] == vm_location:
-            return locations[location]['id']
-        if locations[location]['id'] == vm_location:
+        if vm_location in (locations[location]['name'],
+                           locations[location]['id']):
             return locations[location]['id']
     raise ValueError('The specified location could not be found.')
 
@@ -229,7 +230,9 @@ def create(vm_):
         'image_id': get_image(vm_),
         'region_id': get_location(vm_),
         'ssh_key_ids': get_keyid(
-            config.get_config_value('ssh_key_name', vm_, __opts__)
+            config.get_config_value(
+                'ssh_key_name', vm_, __opts__, search_global=False
+            )
         )
     }
 
@@ -242,15 +245,9 @@ def create(vm_):
             'run the initial deployment: {1}'.format(
                 vm_['name'],
                 exc.message
-            )
-        )
-        log.debug(
-            'Error creating {0} on DIGITAL_OCEAN\n\n'
-            'The following exception was thrown when trying to '
-            'run the initial deployment: \n'.format(
-                vm_['name']
             ),
-            exc_info=True
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -267,7 +264,7 @@ def create(vm_):
             'host': data['ip_address'],
             'username': 'root',
             'key_filename': config.get_config_value(
-                'ssh_key_file', vm_, __opts__
+                'ssh_key_file', vm_, __opts__, search_global=False
             ),
             'script': deploy_script,
             'name': vm_['name'],
@@ -321,8 +318,12 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     if type(args) is not dict:
         args = {}
 
-    args['client_id'] = config.get_config_value('client_key', vm_, __opts__)
-    args['api_key'] = config.get_config_value('api_key', vm_, __opts__)
+    args['client_id'] = config.get_config_value(
+        'client_key', vm_, __opts__, search_global=False
+    )
+    args['api_key'] = config.get_config_value(
+        'api_key', vm_, __opts__, search_global=False
+    )
 
     path += '?%s'
     params = urllib.urlencode(args)
