@@ -250,7 +250,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     return providers
 
 
-def get_config_value(name, vm_, opts, default=None):
+def get_config_value(name, vm_, opts, default=None, search_global=True):
     '''
     Search and return a setting in a known order:
 
@@ -268,7 +268,7 @@ def get_config_value(name, vm_, opts, default=None):
         # Return it!
         return opts['providers'][vm_['provider']][name]
 
-    if opts.get(name, None) is not None:
+    if search_global is True and opts.get(name, None) is not None:
         # The setting name exists in the cloud(global) configuration
         return opts[name]
 
