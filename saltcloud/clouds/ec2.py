@@ -57,6 +57,8 @@ Using the new format, set up the cloud configuration at
       # can explicitly define the endpoint:
       endpoint: myendpoint.example.com:1138/services/Cloud
 
+      provider: ec2
+
 '''
 
 # Import python libs

@@ -30,6 +30,8 @@ Using the new format, set up the cloud configuration at
       # The apikey's shared secret
       sharedsecret: saltybacon
 
+      provider: gogrid
+
 '''
 
 # The import section is mostly libcloud boilerplate

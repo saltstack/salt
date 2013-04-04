@@ -18,7 +18,7 @@ Using the old cloud configuration syntax, it requires that the ``username`` and
 
 
 Using the new format, set up the cloud configuration at
- ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/joyent.conf``:
 
 .. code-block:: yaml
 

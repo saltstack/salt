@@ -26,7 +26,7 @@ Using the new format, set up the cloud configuration at
       # Digital Ocean account keys
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-
+      provider: digital_ocean
 
 '''
 

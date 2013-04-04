@@ -39,6 +39,8 @@ Using the new format, set up the cloud configuration at
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
 
+      provider: aws
+
 '''
 
 # Import python libs

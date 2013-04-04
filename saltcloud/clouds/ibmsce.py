@@ -36,6 +36,8 @@ Using the new format, set up the cloud configuration at
       # The ID of the datacenter to use
       location: Raleigh
 
+      provider: ibmsce
+
 
 '''
 
