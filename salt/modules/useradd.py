@@ -391,7 +391,7 @@ def info(name):
         data = pwd.getpwnam(name)
     except KeyError:
         ret['gid'] = ''
-        ret['groups'] = ''
+        ret['groups'] = []
         ret['home'] = ''
         ret['name'] = ''
         ret['passwd'] = ''
