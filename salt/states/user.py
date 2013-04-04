@@ -25,6 +25,7 @@ as either absent or present
 
 # Import python libs
 import logging
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -52,14 +53,12 @@ def _changes(name,
     if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
         lshad = __salt__['shadow.info'](name)
 
-    lusr = __salt__['user.getent'](name)
+    lusr = __salt__['user.info'](name)
     if not lusr:
         return False
 
     change = {}
-    wanted_groups = sorted(
-        list(set((groups or []) + (optional_groups or [])))
-    )
+    wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
     if uid:
         if lusr['uid'] != uid:
             change['uid'] = uid
@@ -276,6 +275,11 @@ def present(name,
             else:
                 __salt__['user.ch{0}'.format(key)](name, val)
 
+        # Clear cached groups
+        sys.modules[
+            __salt__['user.info'].__module__
+        ].__context__.pop('user.getgrall', None)
+
         post = __salt__['user.info'](name)
         spost = {}
         if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
@@ -372,7 +376,7 @@ def absent(name, purge=False, force=False):
            'result': True,
            'comment': ''}
 
-    lusr = __salt__['user.getent'](name)
+    lusr = __salt__['user.info'](name)
     if lusr:
         # The user is present, make it not present
         if __opts__['test']:
