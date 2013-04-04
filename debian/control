@@ -15,7 +15,7 @@ Build-Depends: debhelper (>= 7.0.50),
                msgpack-python
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
-#X-Python-Version: >= 2.6, <= 2.7
+XS-Python-Version: >= 2.6, <= 2.7
 
 
 Package: salt-common
