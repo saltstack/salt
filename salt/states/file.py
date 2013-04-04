@@ -995,6 +995,7 @@ def recurse(name,
             backup='',
             include_pat=None,
             exclude_pat=None,
+            maxdepth=None,
             **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirectory
@@ -1070,6 +1071,16 @@ def recurse(name,
                                                APPDATA.02,.. for exclusion
           - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                or TEMPDATA for exclusion
+
+    maxdepth
+        When copying, only copy paths which are depth maxdepth from the source
+        path.
+        Example::
+
+          - maxdepth: 0      :: Only include files located in the source
+                                directory
+          - maxdepth: 1      :: Only include files located in the source
+                                or immediate subdirectories
     '''
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1224,6 +1235,17 @@ def recurse(name,
 
         relname = os.path.relpath(fn_, srcpath)
 
+        # Check for maxdepth of the relative path
+        if not maxdepth is None:
+            # Since paths are all master, just use posix separator
+            relpieces = relname.split('/')
+            # Handle empty directories (include_empty==true) by removing the
+            # the last piece if it is an empty string
+            if not relpieces[-1]:
+                relpieces = relpieces[:-1]
+            if len(relpieces) > maxdepth + 1:
+                continue
+
         #- Check if it is to be excluded. Match only part of the path
         # relative to the target directory
         if not _check_include_exclude(relname, include_pat, exclude_pat):
@@ -1243,7 +1265,7 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](env)
         for mdir in mdirs:
-            if not mdir.startswith(srcpath): #same as above
+            if not mdir.startswith(srcpath):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
@@ -1424,7 +1446,8 @@ def comment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](name, unanchor_regex)
+    ret['result'] = __salt__['file.contains_regex_multiline'](name,
+                                                              unanchor_regex)
 
     if slines != nlines:
         # Changes happened, add them
