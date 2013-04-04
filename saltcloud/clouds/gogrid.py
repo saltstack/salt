@@ -19,7 +19,7 @@ configuration file to enable interfacing with GoGrid:
     GOGRID.sharedsecret: saltybacon
 
 
-* Using the new format, set up the cloud configuration at
+Using the new format, set up the cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/gogrid.conf``:
 
 .. code-block:: yaml
@@ -65,6 +65,10 @@ def __virtual__():
     Set up the libcloud functions and check for GOGRID configs
     '''
     if get_configured_provider() is False:
+        log.info(
+            'There is no GoGrid cloud provider configuration available. Not '
+            'loading module'
+        )
         return False
 
     log.debug('Loading GoGrid cloud module')

@@ -31,7 +31,7 @@ configuration parameters need to be set in the main cloud configuration:
     EC2.endpoint: myendpoint.example.com:1138/services/Cloud
 
 
-* Using the new format, set up the cloud configuration at
+Using the new format, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
 
 .. code-block:: yaml
