@@ -76,6 +76,9 @@ def getent():
 
         salt '*' group.getent
     '''
+    if 'group.getent' in __context__:
+        return __context__['group.getent']
+
     ret = []
     ret2 = []
     lines = __salt__['cmd.run']('net localgroup').splitlines()
@@ -104,4 +107,6 @@ def getent():
                 'name': item,
                 'passwd': 'x'}
         ret2.append(group)
+
+    __context__['group.getent'] = ret2
     return ret2
