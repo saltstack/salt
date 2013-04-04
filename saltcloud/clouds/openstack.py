@@ -167,28 +167,32 @@ def get_conn():
     driver = get_driver(Provider.OPENSTACK)
     authinfo = {
         'ex_force_auth_url': config.get_config_value(
-            'identity_url', vm_, __opts__
+            'identity_url', vm_, __opts__, search_global=False
         ),
         'ex_force_service_name': config.get_config_value(
-            'compute_name', vm_, __opts__
+            'compute_name', vm_, __opts__, search_global=False
         ),
         'ex_force_service_region': config.get_config_value(
-            'compute_region', vm_, __opts__
+            'compute_region', vm_, __opts__, search_global=False
         ),
         'ex_tenant_name': config.get_config_value(
-            'tenant', vm_, __opts__
+            'tenant', vm_, __opts__, search_global=False
         ),
         'ex_force_service_name': config.get_config_value(
-            'compute_name', vm_, __opts__
+            'compute_name', vm_, __opts__, search_global=False
         )
     }
 
-    password = config.get_config_value('password', vm_, __opts__)
+    password = config.get_config_value(
+        'password', vm_, __opts__, search_global=False
+    )
     if password is not None:
         authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
         return driver(
-            config.get_config_value('user', vm_, __opts__),
+            config.get_config_value(
+                'user', vm_, __opts__, search_global=False
+            ),
             password,
             **authinfo
         )
@@ -196,8 +200,8 @@ def get_conn():
     authinfo['ex_force_auth_version'] = '2.0_apikey'
     log.debug('OpenStack authenticating using apikey')
     return driver(
-        config.get_config_value('user', vm_, __opts__),
-        config.get_config_value('apikey', vm_, __opts__),
+        config.get_config_value('user', vm_, __opts__, search_global=False),
+        config.get_config_value('apikey', vm_, __opts__, search_global=False),
         **authinfo
     )
 
@@ -206,7 +210,9 @@ def preferred_ip(vm_, ips):
     '''
     Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
     '''
-    proto = config.get_config_value('protocol', vm_, __opts__, default='ipv4')
+    proto = config.get_config_value(
+        'protocol', vm_, __opts__, default='ipv4', search_global=False
+    )
 
     family = socket.AF_INET
     if proto == 'ipv6':
@@ -240,7 +246,8 @@ def ssh_interface(vm_):
     or 'private_ips'.
     '''
     return config.get_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips'
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
     )
 
 
@@ -260,13 +267,11 @@ def create(vm_):
     except Exception as exc:
         log.error(
             'Error creating {0} on OPENSTACK\n\n'
-            'Could not find image {1}\n'.format(
-                vm_['name'], vm_['image']
-            )
-        )
-        log.debug(
-            'Error creating {0} on OPENSTACK\n\n'.format(vm_['name']),
-            exc_info=True
+            'Could not find image {1}: {2}\n'.format(
+                vm_['name'], vm_['image'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -275,21 +280,21 @@ def create(vm_):
     except Exception as exc:
         log.error(
             'Error creating {0} on OPENSTACK\n\n'
-            'Could not find size {1}\n'.format(
-                vm_['name'], vm_['size']
-            )
-        )
-        log.debug(
-            'Error creating {0} on OPENSTACK\n\n'.format(vm_['name']),
-            exc_info=True
+            'Could not find size {1}: {2}\n'.format(
+                vm_['name'], vm_['size'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
     kwargs['ex_keyname'] = config.get_config_value(
-        'ssh_key_name', vm_, __opts__
+        'ssh_key_name', vm_, __opts__, search_global=False
     )
 
-    security_groups = config.get_config_value('security_groups', vm_, __opts__)
+    security_groups = config.get_config_value(
+        'security_groups', vm_, __opts__, search_global=False
+    )
     if security_groups is not None:
         vm_groups = security_groups.split(',')
         avail_groups = conn.ex_list_security_groups()
@@ -315,13 +320,11 @@ def create(vm_):
         log.error(
             'Error creating {0} on OPENSTACK\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n{1}'.format(
+            'run the initial deployment: {1}\n'.format(
                 vm_['name'], exc
-            )
-        )
-        log.debug(
-            'Error creating {0} on OPENSTACK\n\n'.format(vm_['name']),
-            exc_info=True
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -333,7 +336,9 @@ def create(vm_):
         nodelist = list_nodes(conn)
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
-        running = nodelist[vm_['name']]['state'] == node_state(NodeState.RUNNING)
+        running = nodelist[vm_['name']]['state'] == node_state(
+            NodeState.RUNNING
+        )
         if running and private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
@@ -380,11 +385,10 @@ def create(vm_):
         'minion_pem': vm_['priv_key'],
         'minion_pub': vm_['pub_key'],
         'keep_tmp': __opts__['keep_tmp'],
+        'script_args': config.get_config_value(
+            'script_args', vm_, __opts__
+        )
     }
-
-    deploy_kwargs['script_args'] = config.get_config_value(
-        'script_args', vm_, __opts__
-    )
 
     deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
         __opts__,
@@ -401,7 +405,9 @@ def create(vm_):
 
     log.debug('Using {0} as SSH username'.format(ssh_username))
 
-    ssh_key_file = config.get_config_value('ssh_key_file', vm_, __opts__)
+    ssh_key_file = config.get_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False
+    )
     if ssh_key_file is not None:
         deploy_kwargs['key_filename'] = ssh_key_file
         log.debug(
