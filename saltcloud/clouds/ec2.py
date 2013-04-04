@@ -841,9 +841,14 @@ def del_tags(name, kwargs, call=None):
         log.error('The del_tags action must be called with -a or --action.')
         sys.exit(1)
 
+    if not 'tags' in kwargs:
+        log.error('A tag or tags must be specified using tags=list,of,tags')
+        sys.exit(1)
+
     instance_id = _get_node(name)['instanceId']
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
+
     count = 1
     for tag in kwargs['tags'].split(','):
         params['Tag.{0}.Key'.format(count)] = tag

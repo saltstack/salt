@@ -532,6 +532,9 @@ class Map(Cloud):
                             tvm['map_minion'] = miniondict[name]['minion']
                         if 'volumes' in miniondict[name]:
                             tvm['map_volumes'] = miniondict[name]['volumes']
+                for myvar in miniondict[name]:
+                    if myvar not in ('grains', 'minion', 'volumes'):
+                        tvm[myvar] = miniondict[name][myvar]
             if self.opts['parallel']:
                 parallel_data.append({
                     'opts': self.opts,

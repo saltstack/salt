@@ -506,9 +506,15 @@ def root_cmd(command, tty, sudo, **kwargs):
 
     ssh_args = ' -oStrictHostKeyChecking=no'
     ssh_args += ' -oUserKnownHostsFile=/dev/null'
+
     if tty:
         ssh_args += ' -t'
+
     if 'key_filename' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        # tell SSH to skip password authentication
+        ssh_args += ' -oPasswordAuthentication=no'
+        # Also, specify the location of the key file
         ssh_args += ' -i {0}'.format(kwargs['key_filename'])
 
     cmd = 'ssh {0} {1}@{2} "{3}"'.format(
@@ -517,6 +523,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         kwargs['hostname'],
         command
     )
+    log.debug(cmd)
 
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
