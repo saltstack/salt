@@ -74,9 +74,14 @@ def getent():
 
         salt '*' group.getent
     '''
+    if 'group.getent' in __context__:
+        return __context__['group.getent']
+
     ret = []
     for grinfo in grp.getgrall():
         ret.append(info(grinfo.gr_name))
+
+    __context__['group.getent'] = ret
     return ret
 
 
