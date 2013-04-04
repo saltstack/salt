@@ -83,7 +83,7 @@ def get_conn():
     '''
     driver = get_driver(Provider.LINODE)
     return driver(
-        config.get_config_value('apikey', vm_, __opts__)
+        config.get_config_value('apikey', vm_, __opts__, search_global=False)
     )
 
 
@@ -105,8 +105,8 @@ def get_password(vm_):
     '''
     return config.get_config_value(
         'password', vm_, __opts__, default=config.get_config_value(
-            'passwd', vm_, __opts__
-        )
+            'passwd', vm_, __opts__, search_global=False
+        ), search_global=False
     )
 
 
@@ -131,11 +131,9 @@ def create(vm_):
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc.message
-            )
-        )
-        log.debug(
-            'Error creating {0} on LINODE\n\n'.format(vm_['name']),
-            exc_info=True
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -154,12 +152,11 @@ def create(vm_):
             'conf_file': __opts__['conf_file'],
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp']
+            'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
-        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__,
