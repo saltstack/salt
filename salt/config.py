@@ -24,6 +24,10 @@ import salt.loader
 import salt.utils
 import salt.pillar
 
+
+class MinionConfigException(Exception):
+    pass
+
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
@@ -357,7 +361,12 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    return apply_minion_config(overrides, check_dns, defaults)
+    config = apply_minion_config(overrides, check_dns, defaults)
+    if 'localhost' == config['id']:
+        message = "'id' may not be 'localhost'"
+        log.fatal(message)
+        raise MinionConfigException(message)
+    return config
 
 
 def apply_minion_config(overrides=None, check_dns=True, defaults=None):
@@ -415,7 +424,12 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
 
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
-    return apply_master_config(overrides, defaults)
+    config = apply_master_config(overrides, defaults)
+    if 'localhost' == config['id']:
+        message = "'id' may not be 'localhost'"
+        log.fatal(message)
+        raise MinionConfigException(message)
+    return config
 
 
 def apply_master_config(overrides=None, defaults=None):
