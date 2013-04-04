@@ -2,9 +2,10 @@
 Joyent Cloud Module
 ===================
 
-The Joyent Cloud module is used to intereact with the Joyent cloud system
+The Joyent Cloud module is used to interact with the Joyent cloud system.
 
-it requires that the username and password to the joyent accound be configured
+Using the old cloud configuration syntax, it requires that the ``username`` and
+``password`` to the joyent account be configured:
 
 .. code-block:: yaml
 
@@ -14,6 +15,21 @@ it requires that the username and password to the joyent accound be configured
     JOYENT.password: saltybacon
     # The location of the ssh private key that can log into the new VM
     JOYENT.private_key: /root/joyent.pem
+
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
+
+.. code-block:: yaml
+
+    joyent-config:
+      # The Joyent login user
+      user: fred
+      # The Joyent user's password
+      password: saltybacon
+      # The location of the ssh private key that can log into the new VM
+      private_key: /root/joyent.pem
+      provider: joyent
 
 '''
 
@@ -27,6 +43,7 @@ from saltcloud.libcloudfuncs import *
 
 # Import saltcloud libs
 import saltcloud.utils
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 
 # Get logging started
@@ -50,10 +67,24 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for JOYENT configs
     '''
-    if 'JOYENT.user' in __opts__ and 'JOYENT.password' in __opts__:
-        log.debug('Loading Joyent cloud module')
-        return 'joyent'
-    return False
+    if get_configured_provider() is False:
+        log.info(
+            'There is no Joyent cloud provider configuration available. Not '
+            'loading module.'
+        )
+        return False
+
+    log.debug('Loading Joyent cloud module')
+    return 'joyent'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__, 'joyent', ('user', 'password')
+    )
 
 
 def get_conn():
@@ -62,9 +93,9 @@ def get_conn():
     '''
     driver = get_driver(Provider.JOYENT)
     return driver(
-            __opts__['JOYENT.user'],
-            __opts__['JOYENT.password'],
-            )
+        config.get_config_value('user', vm_, __opts__),
+        config.get_config_value('password', vm_, __opts__)
+    )
 
 
 def create(vm_):
@@ -74,35 +105,39 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-')
     conn = get_conn()
-    kwargs = {}
-    kwargs['name'] = vm_['name']
-    kwargs['image'] = get_image(conn, vm_)
-    kwargs['size'] = get_size(conn, vm_)
+    kwargs = {
+        'name': vm_['name'],
+        'image': get_image(conn, vm_),
+        'size': get_size(conn, vm_)
+    }
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        err = ('Error creating {0} on JOYENT\n\n'
-               'The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], exc.message
-                       )
-        log.error(err)
+        log.error(
+            'Error creating {0} on JOYENT\n\n'
+            'The following exception was thrown by libcloud when trying to '
+            'run the initial deployment: \n{1}'.format(
+                vm_['name'], exc.message
+            )
+        )
+        log.debug(
+            'Error creating {0} on JOYENT\n\n'.format(
+                vm_['name']
+            ),
+            exc_info=True
+        )
         return False
 
-    deploy = vm_.get(
-        'deploy',
-        __opts__.get(
-            'JOYENT.deploy',
-            __opts__['deploy']
-        )
-    )
     ret = {}
-    if deploy is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data.public_ips[0],
             'username': 'root',
-            'key_filename': __opts__['JOYENT.private_key'],
+            'key_filename': config.get_config_value(
+                'private_key', vm_, __opts__
+            ),
             'script': deploy_script.script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
@@ -113,10 +148,11 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            }
+        }
 
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
+        deploy_kwargs['script_args'] = config.get_config_value(
+            'script_args', vm_, __opts__
+        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__,
@@ -124,7 +160,7 @@ def create(vm_):
         )
 
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -165,7 +201,7 @@ def stop(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
+        log.error('This action must be called with -a or --action.')
         sys.exit(1)
 
     conn = get_conn()
