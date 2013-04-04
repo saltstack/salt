@@ -183,7 +183,7 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(img.id), str(img.name)):
+        if vm_size and str(vm_size) in (str(size.id), str(size.name)):
             return size
     raise ValueError('The specified size could not be found.')
 
