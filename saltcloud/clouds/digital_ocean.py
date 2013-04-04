@@ -5,14 +5,28 @@ Digital Ocean Cloud Module
 The Digital Ocean cloud module is used to control access to the Digital Ocean
 VPS system.
 
-Use of this module only requires the DIGITAL_OCEAN.api_key paramater to be set
-in the cloud configuration file.
+Use of this module only requires the ``api_key`` parameter to be set. Using the
+old cloud providers configuration syntax, in the main cloud configuration
+file:
 
 .. code-block:: yaml
 
     # Digital Ocean account keys
     DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
     DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or
+ ``/etc/salt/cloud.providers.d/digital_ocean.conf``:
+
+.. code-block:: yaml
+
+    digital-ocean-config:
+      # Digital Ocean account keys
+      client_key: wFGEwgregeqw3435gDger
+      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+
 
 '''
 
@@ -28,7 +42,10 @@ import logging
 
 # Import salt libs
 import salt.utils.event
+
+# Import salt cloud libs
 import saltcloud.utils
+import saltcloud.config as config
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -37,12 +54,26 @@ log = logging.getLogger(__name__)
 # Only load in this module if the DIGITAL_OCEAN configurations are in place
 def __virtual__():
     '''
-    Check for DIGITAL_OCEAN configs
+    Check for Digital Ocean configurations
     '''
-    if 'DIGITAL_OCEAN.api_key' in __opts__:
-        log.debug('Loading Digital Ocean cloud module')
-        return 'digital_ocean'
-    return False
+    if get_configured_provider() is False:
+        log.info(
+            'There is no Digital Ocean cloud provider configuration '
+            'available. Not loading module'
+        )
+        return False
+
+    log.debug('Loading Digital Ocean cloud module')
+    return 'digital_ocean'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__, 'digital_ocean', ('apikey',)
+    )
 
 
 def avail_locations():
@@ -140,12 +171,13 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
+    vm_image = str(config.get_config_value('image', vm_, __opts__))
     for image in images:
-        if images[image]['name'] == str(vm_['image']):
+        if images[image]['name'] == vm_image:
             return images[image]['id']
-        if images[image]['id'] == str(vm_['image']):
+        if images[image]['id'] == vm_image:
             return images[image]['id']
-    raise ValueError("The specified image could not be found.")
+    raise ValueError('The specified image could not be found.')
 
 
 def get_size(vm_):
@@ -153,12 +185,13 @@ def get_size(vm_):
     Return the VM's size. Used by create_node().
     '''
     sizes = avail_sizes()
+    vm_size = str(config.get_config_value('size', vm_, __opts__))
     for size in sizes:
-        if sizes[size]['name'] == str(vm_['size']):
+        if sizes[size]['name'] == vm_size:
             return sizes[size]['id']
-        if sizes[size]['id'] == str(vm_['size']):
+        if sizes[size]['id'] == vm_size:
             return sizes[size]['id']
-    raise ValueError("The specified size could not be found.")
+    raise ValueError('The specified size could not be found.')
 
 
 def get_location(vm_):
@@ -166,21 +199,21 @@ def get_location(vm_):
     Return the VM's location
     '''
     locations = avail_locations()
+    vm_location = str(config.get_config_value('location', vm_, __opts__))
+
     for location in locations:
-        if locations[location]['name'] == str(vm_['location']):
+        if locations[location]['name'] == vm_location:
             return locations[location]['id']
-        if locations[location]['id'] == str(vm_['location']):
+        if locations[location]['id'] == vm_location:
             return locations[location]['id']
-    raise ValueError("The specified location could not be found.")
+    raise ValueError('The specified location could not be found.')
 
 
 def create_node(args):
     '''
     Create a node
     '''
-    node = query(method='droplets',
-                       command='new',
-                       args=args)
+    node = query(method='droplets', command='new', args=args)
     return node
 
 
@@ -190,23 +223,35 @@ def create(vm_):
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     deploy_script = script(vm_)
-    kwargs = {}
-    kwargs['name'] = vm_['name']
-    kwargs['size_id'] = get_size(vm_)
-    kwargs['image_id'] = get_image(vm_)
-    kwargs['region_id'] = get_location(vm_)
-    kwargs['ssh_key_ids'] = get_keyid(__opts__['DIGITAL_OCEAN.ssh_key_name'])
+    kwargs = {
+        'name': vm_['name'],
+        'size_id': get_size(vm_),
+        'image_id': get_image(vm_),
+        'region_id': get_location(vm_),
+        'ssh_key_ids': get_keyid(
+            config.get_config_value('ssh_key_name', vm_, __opts__)
+        )
+    }
 
     try:
         data = create_node(kwargs)
     except Exception as exc:
-        err = ('Error creating {0} on DIGITAL_OCEAN\n\n'
-               'The following exception was thrown when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], exc.message
-                       )
-        sys.stderr.write(err)
-        log.error(err)
+        log.error(
+            'Error creating {0} on DIGITAL_OCEAN\n\n'
+            'The following exception was thrown when trying to '
+            'run the initial deployment: {1}'.format(
+                vm_['name'],
+                exc.message
+            )
+        )
+        log.debug(
+            'Error creating {0} on DIGITAL_OCEAN\n\n'
+            'The following exception was thrown when trying to '
+            'run the initial deployment: \n'.format(
+                vm_['name']
+            ),
+            exc_info=True
+        )
         return False
 
     waiting_for_ip = 0
@@ -216,12 +261,14 @@ def create(vm_):
         waiting_for_ip += 1
         data = _get_node(vm_['name'])
 
-    if __opts__['deploy'] is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': data['ip_address'],
             'username': 'root',
-            'key_filename': __opts__['DIGITAL_OCEAN.ssh_key_file'],
+            'key_filename': config.get_config_value(
+                'ssh_key_file', vm_, __opts__
+            ),
             'script': deploy_script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
@@ -231,21 +278,31 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            }
+        }
 
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
+        deploy_kwargs['script_args'] = config.get_config_value(
+            'script_args', vm_, __opts__
+        )
 
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
+            __opts__, vm_
+        )
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
         else:
-            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+            log.error(
+                'Failed to start Salt on Cloud VM {0}'.format(
+                    vm_['name']
+                )
+            )
 
-    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
-
+    log.info(
+        'Created Cloud VM {0} with the following values:'.format(
+            vm_['name']
+        )
+    )
     return data
 
 
@@ -264,12 +321,13 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     if type(args) is not dict:
         args = {}
 
-    args['client_id'] = __opts__['DIGITAL_OCEAN.client_key']
-    args['api_key'] = __opts__['DIGITAL_OCEAN.api_key']
+    args['client_id'] = config.get_config_value('client_key', vm_, __opts__)
+    args['api_key'] = config.get_config_value('api_key', vm_, __opts__)
 
     path += '?%s'
     params = urllib.urlencode(args)
     result = urllib2.urlopen(path % params)
+    # TODO: Attention to the HTTP Code
     log.debug(result.geturl())
     content = result.read()
     result.close()
@@ -283,14 +341,8 @@ def script(vm_):
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     script = saltcloud.utils.os_script(
-        saltcloud.utils.get_option(
-            'script',
-            __opts__,
-            vm_
-        ),
-        vm_,
-        __opts__,
-        minion,
+        config.get_config_value('script', vm_, __opts__),
+        vm_, __opts__, minion,
     )
     return script
 
@@ -332,8 +384,9 @@ def list_keypairs(call=None):
     relevant data
     '''
     if call != 'function':
-        log.error('The list_keypairs function must be called with '
-                  '-f or --function.')
+        log.error(
+            'The list_keypairs function must be called with -f or --function.'
+        )
         return False
 
     items = query(method='ssh_keys')
@@ -351,14 +404,15 @@ def show_keypair(kwargs=None, call=None):
     Show the details of an SSH keypair
     '''
     if call != 'function':
-        log.error('The show_keypair function must be called with '
-                  '-f or --function.')
+        log.error(
+            'The show_keypair function must be called with -f or --function.'
+        )
         return False
 
     if not kwargs:
         kwargs = {}
 
-    if not 'keyname' in kwargs:
+    if 'keyname' not in kwargs:
         log.error('A keyname is required.')
         return False
 
@@ -379,7 +433,7 @@ def get_keyid(keyname):
     keyid = keypairs[keyname]['id']
     if keyid:
         return keyid
-    raise ValueError("The specified ssh key could not be found.")
+    raise ValueError('The specified ssh key could not be found.')
 
 
 def destroy(name, call=None):
@@ -391,7 +445,5 @@ def destroy(name, call=None):
         salt-cloud --destroy mymachine
     '''
     data = show_instance(name, call='action')
-    node = query(method='droplets',
-                       command='{0}/destroy'.format(data['id']))
-
+    node = query(method='droplets', command='{0}/destroy'.format(data['id']))
     return node
