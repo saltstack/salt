@@ -60,9 +60,9 @@ def _run_psql(cmd, runas=None, password=None, host=None,
     if runas is not None:
         kwargs["runas"] = runas
 
-    if not password:
+    if password is not None:
         password = __salt__['config.option']('postgres.pass')
-    if password:
+    if password is not None:
         kwargs["env"] = {"PGPASSWORD": password}
         # PGPASSWORD has been deprecated, supposedly leading to
         # protests. Currently, this seems the simplest way to solve
@@ -107,7 +107,7 @@ def _connection_defaults(user=None, host=None, port=None, maintenance_db=None,
         port = __salt__['config.option']('postgres.port')
     if not maintenance_db:
         maintenance_db = __salt__['config.option']('postgres.maintenance_db')
-    if not password:
+    if password is None:
         password = __salt__['config.option']('postgres.pass')
 
     return (user, host, port, maintenance_db, password)
@@ -130,7 +130,7 @@ def _psql_cmd(*args, **kwargs):
     cmd = [salt.utils.which('psql'),
            '--no-align',
            '--no-readline']
-    if not password:
+    if password is None:
         cmd += ['--no-password']
     if user:
         cmd += ['--username', user]
@@ -425,7 +425,7 @@ def _role_create(name,
         return False
 
     sub_cmd = 'CREATE {0} "{1}" WITH'.format(create_type, name, )
-    if rolepassword:
+    if rolepassword is not None:
         if encrypted:
             sub_cmd = '{0} ENCRYPTED'.format(sub_cmd, )
         escaped_password = rolepassword.replace('\'', '\'\'')
@@ -512,7 +512,7 @@ def _role_update(name,
         return False
 
     sub_cmd = 'ALTER ROLE {0} WITH'.format(name, )
-    if rolepassword:
+    if rolepassword is not None:
         sub_cmd = '{0} PASSWORD \'{1}\''.format(sub_cmd, rolepassword)
     if createdb:
         sub_cmd = '{0} CREATEDB'.format(sub_cmd, )
