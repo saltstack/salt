@@ -152,7 +152,9 @@ def __virtual__():
     script = namespaced_function(script, globals(), (conn,))
     list_nodes = namespaced_function(list_nodes, globals(), (conn,))
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
+    list_nodes_select = namespaced_function(
+        list_nodes_select, globals(), (conn,)
+    )
 
     log.debug('Loading AWS botocore cloud module')
     return 'aws'
@@ -210,8 +212,12 @@ def _toggle_term_protect(name, enabled):
     vm_ = get_configured_provider()
     session = botocore.session.get_session()
     session.set_credentials(
-        access_key=config.get_config_value('id', vm_, __opts__),
-        secret_key=config.get_config_value('key', vm_, __opts__)
+        access_key=config.get_config_value(
+            'id', vm_, __opts__, search_global=False
+        ),
+        secret_key=config.get_config_value(
+            'key', vm_, __opts__, search_global=False
+        )
     )
 
     service = session.get_service('ec2')
