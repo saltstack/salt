@@ -13,10 +13,11 @@ from functools import partial
 
 # Import salt libs
 import salt.config
-from salt.utils import parsers
+import salt.utils.parsers as parsers
 
 # Import salt cloud libs
-from saltcloud import config, version
+import saltcloud.config as config
+import saltcloud.version as version
 
 
 class CloudConfigMixIn(object):
@@ -111,6 +112,13 @@ class CloudConfigMixIn(object):
         # equal to console log_level
         if self.config['log_level_logfile'] is None:
             self.config.pop('log_level_logfile')
+
+        if 'DUMP_SALT_CLOUD_CONFIG' in os.environ:
+            import pprint
+
+            print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
+            pprint.pprint(self.config)
+            self.exit(0)
 
     def setup_config(self):
         '''
