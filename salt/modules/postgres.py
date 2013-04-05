@@ -492,7 +492,7 @@ def _role_update(name,
         sub_cmd = '{0} CREATEUSER'.format(sub_cmd, )
     if encrypted:
         sub_cmd = '{0} ENCRYPTED'.format(sub_cmd, )
-    if encrypted:
+    if replication:
         sub_cmd = '{0} REPLICATION'.format(sub_cmd, )
 
     if sub_cmd.endswith('WITH'):
