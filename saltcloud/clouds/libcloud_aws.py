@@ -206,10 +206,9 @@ def block_device_mappings(vm_):
     e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
     '''
-    block_device_mappings = vm_.get(
-        'block_device_mappings', __opts__.get('AWS.block_device_mappings', None)
+    return config.get_config_value(
+        'block_device_mappings', vm_, __opts__, search_global=False
     )
-    return block_device_mappings
 
 
 def ssh_username(vm_):
