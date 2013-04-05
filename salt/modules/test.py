@@ -156,3 +156,15 @@ def outputter(data):
         salt '*' test.outputter foobar
     '''
     return data
+
+
+def retcode(code=42):
+    '''
+    Test that the returncode system is functioning correctly
+
+    CLI Example::
+
+        salt '*' test.retcode 42
+    '''
+    __context__['retcode'] = code
+    return True
