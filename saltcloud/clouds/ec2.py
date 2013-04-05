@@ -129,7 +129,7 @@ def __virtual__():
     Set up the libcloud functions and check for EC2 configurations
     '''
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no EC2 cloud provider configuration available. Not '
             'loading module'
         )

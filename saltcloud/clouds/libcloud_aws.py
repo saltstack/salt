@@ -81,7 +81,7 @@ def __virtual__():
         pass
 
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no AWS cloud provider configuration available. Not '
             'loading module'
         )

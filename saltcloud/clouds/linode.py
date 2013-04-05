@@ -60,7 +60,7 @@ def __virtual__():
     Set up the libcloud functions and check for Linode configurations.
     '''
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no Linode cloud provider configuration available. Not '
             'loading module.'
         )
