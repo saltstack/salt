@@ -8,6 +8,7 @@ import logging
 
 # Import salt libs
 import salt.config
+import salt.utils
 
 
 CLOUD_CONFIG_DEFAULTS = {
@@ -177,15 +178,40 @@ def apply_vm_profiles_config(overrides, defaults=None):
     if overrides:
         opts.update(overrides)
 
-    vms = []
+    vms = {}
 
     for key, val in opts.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
         val['profile'] = key
-        vms.append(val)
+        vms[key] = val
 
-    return vms
+    return vms.values()
+
+    # Is any VM profile extending data!?
+    for profile, details in vms.copy():
+        if 'extends' not in details:
+            continue
+
+        extends = details.pop('extends')
+        if extends not in vms:
+            log.error(
+                'The {0!r} profile is trying to extend data from {1!r} '
+                'though {1!r} is not defined in the salt profiles loaded '
+                'data. Not extending!'.format(
+                    profile, extends
+                )
+            )
+            continue
+
+        extended = vms.get(extends).copy()
+        extended.pop('profile')
+        extended.update(details)
+
+        # Update the profile's entry with the extended data
+        vms[profile] = extended
+
+    return vms.values()
 
 
 def cloud_providers_config(path,
@@ -213,6 +239,9 @@ def cloud_providers_config(path,
 
 
 def apply_cloud_providers_config(overrides, defaults=None):
+    '''
+    Apply the loaded cloud providers configuration.
+    '''
     if defaults is None:
         defaults = PROVIDER_CONFIG_DEFAULTS
 
@@ -245,9 +274,68 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
         if not isinstance(val, (list, tuple)):
             val = [val]
+        else:
+            # Need to check for duplicate cloud provider entries per "alias" or
+            # we won't be able to properly reference it.
+            handled_providers = set()
+            for details in val:
+                if details['provider'] in handled_providers:
+                    log.error(
+                        'You can only have one entry per cloud provider. For '
+                        'example, if you have a cloud provider configuration '
+                        'section named, \'production\', you can only have a '
+                        'single entry for EC2, Joyent, Openstack, and so '
+                        'forth.'
+                    )
+                handled_providers.add(
+                    details['provider']
+                )
+
         providers[key] = val
 
-    return providers
+    # Is any provider extending data!?
+    for provider_alias, entries in providers.copy().items():
+
+        for idx, details in enumerate(entries):
+            if 'extends' not in details:
+                continue
+
+            extends = details.pop('extends')
+            if extends not in providers:
+                log.error(
+                    'The {0!r} cloud provider entry in {1!r} is trying to '
+                    'extend data from {2!r} though {2!r} is not defined in '
+                    'the salt cloud providers loaded data.'.format(
+                        details['provider'], provider_alias, extends
+                    )
+                )
+                continue
+
+            if ':' in extends:
+                alias, provider = extends.split(':')
+                for entry in providers.get(alias):
+                    if entry['provider'] == provider:
+                        extended = entry.copy()
+                        break
+            elif len(providers.get(extends)) > 1:
+                log.error(
+                    'The {0!r} cloud provider entry in {1!r} is trying to '
+                    'extend from {2!r} which has multiple entries and no '
+                    'provider is being specified. Not extending!'.format(
+                        details['provider'], provider_alias, extends
+                    )
+                )
+                continue
+            else:
+                extended = providers.get(extends)[0][:]
+
+            # Update the data to extend with the data to be extended
+            extended.update(details)
+
+            # Update the provider's entry with the extended data
+            providers[provider_alias][idx] = extended
+
+        return providers
 
 
 def get_config_value(name, vm_, opts, default=None, search_global=True):
@@ -256,7 +344,7 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
 
         1. In the virtual machines configuration
         2. In the virtual machine's provider configuration
-        3. In the salt cloud configuration
+        3. In the salt cloud configuration if global searching is enabled
         4. Return the provided default
     '''
     if name and vm_ and name in vm_:
@@ -278,6 +366,10 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
 
 
 def is_provider_configured(opts, provider, required_keys=()):
+    '''
+    Check and return the first matching and fully configured cloud provider
+    configuration.
+    '''
     for provider_details_list in opts['providers'].values():
         for provider_details in provider_details_list:
             if 'provider' not in provider_details:
