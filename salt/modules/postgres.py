@@ -50,7 +50,7 @@ def _run_psql(cmd, runas=None, password=None, host=None,
     if runas is None:
         if not host:
             host = __salt__['config.option']('postgres.host')
-        if not host or host[0] == '/':
+        if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
             else:
@@ -65,7 +65,7 @@ def _run_psql(cmd, runas=None, password=None, host=None,
         pgpassfile = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}:*:*:{1}:{2}'.format(
-                'localhost' if not host or host[0] == '/' else host,
+                'localhost' if not host or host.startswith('/') else host,
                 runas if runas else '*',
                 password
             ))
