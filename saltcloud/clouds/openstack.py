@@ -70,7 +70,11 @@ from salt.exceptions import SaltException
 from saltcloud.utils import namespaced_function
 
 # Import netaddr IP matching
-from netaddr import all_matching_cidrs
+try:
+    from netaddr import all_matching_cidrs
+    HAS_NETADDR = True
+except:
+    HAS_NETADDR = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -156,6 +160,8 @@ def ignore_ip_addr(vm_, ip):
     '''
     Return True if we are to ignore the specified IP. Compatible with IPv4.
     '''
+    if HAS_NETADDR is False:
+        return 'Error: netaddr is not installed'
 
     cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
