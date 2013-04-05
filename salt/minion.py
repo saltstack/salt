@@ -928,7 +928,8 @@ class Syndic(Minion):
         events, aggregate them, and send them up to the master-master
         '''
         jids = {}
-        for event in self.gen_event_returns(0.5):
+        for event in self.local.gen_event_returns(0.5):
+            print event
             if len(event.get('tag', '')) == 20:
                 if not event['tag'] in jids:
                     jids[event['tag']] = {}
