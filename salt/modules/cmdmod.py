@@ -72,7 +72,7 @@ def _chugid(runas):
             )
 
     # Set supplemental groups
-    if os.getgroups() != supgroups:
+    if sorted(os.getgroups()) != sorted(supgroups):
         try:
             os.setgroups(supgroups)
         except OSError, err:
