@@ -891,18 +891,6 @@ class LocalClient(object):
             yield ret
             time.sleep(0.02)
 
-    def gen_event_returns(self, timeout=5):
-        '''
-        Listen to the event bus and spit back returns in a generator
-        '''
-        while True:
-            raw = self.event.get_event(timeout, full=True)
-            if raw is None:
-                # Timeout reached
-                break
-            yield raw
-
-
     def pub(self,
             tgt,
             fun,
