@@ -320,6 +320,7 @@ def create(vm_):
     if 'sudo' in vm_.keys():
         sudo = vm_['sudo']
 
+    ret = {}
     deploy = vm_.get('deploy', __opts__.get('AWS.deploy', __opts__['deploy']))
     if deploy is True:
         deploy_script = script(vm_)
@@ -364,13 +365,13 @@ def create(vm_):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
+            ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
     log.info(
         'Created Cloud VM {name} with the following values:'.format(**vm_)
     )
-    ret = {}
     for key, val in data.__dict__.items():
         ret[key] = val
         log.debug('  {0}: {1}'.format(key, val))

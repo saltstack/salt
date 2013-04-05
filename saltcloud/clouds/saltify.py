@@ -105,9 +105,6 @@ def create(vm_):
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
     deploy_script = script(vm_)
 
-    import pprint
-    pprint.pprint(vm_)
-
     if __opts__['deploy'] is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
