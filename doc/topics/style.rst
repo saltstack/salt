@@ -164,17 +164,25 @@ The confusion arises because the pep8 program INCORRECTLY flags this as wrong, w
 PEP8, the document, cites only using 4 spaces here as wrong.
 
 Right:
+
+code_block:: python
+
     def managed(name,
             source=None,
             source_hash='',
             user=None)
 WRONG:
+
+code_block:: python
+
     def managed(name,
         source=None,
         source_hash='',
         user=None)
 
 Lining up the indent is also correct:
+
+code_block:: python
 
     def managed(name,
                 source=None,
