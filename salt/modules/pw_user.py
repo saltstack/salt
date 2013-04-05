@@ -360,17 +360,7 @@ def info(name):
         ret['workphone'] = gecos_field[2]
         ret['homephone'] = gecos_field[3]
     except KeyError:
-        ret['gid'] = ''
-        ret['groups'] = []
-        ret['home'] = ''
-        ret['name'] = ''
-        ret['passwd'] = ''
-        ret['shell'] = ''
-        ret['uid'] = ''
-        ret['fullname'] = ''
-        ret['roomnumber'] = ''
-        ret['workphone'] = ''
-        ret['homephone'] = ''
+        return {}
     return ret
 
 

@@ -390,18 +390,7 @@ def info(name):
     try:
         data = pwd.getpwnam(name)
     except KeyError:
-        ret['gid'] = ''
-        ret['groups'] = []
-        ret['home'] = ''
-        ret['name'] = ''
-        ret['passwd'] = ''
-        ret['shell'] = ''
-        ret['uid'] = ''
-        ret['fullname'] = ''
-        ret['roomnumber'] = ''
-        ret['workphone'] = ''
-        ret['homephone'] = ''
-        return ret
+        return {}
     else:
         return _format_info(data)
 
