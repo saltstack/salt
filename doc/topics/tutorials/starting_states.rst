@@ -26,7 +26,7 @@ It is All Just Data
 Before delving into the particulars, it will help to understand that the SLS 
 file is just a data structure under the hood. While understanding that the SLS 
 is just a data structure isn't critical for understanding and making use of 
-Salt States, it should help bolster your knowledge of where the real power is.
+Salt States, it should help bolster knowledge of where the real power is.
 
 SLS files are therefore, in reality, just `dictionaries`_, `lists`_,
 `strings`_, and `numbers`_. By using this approach Salt can be much more
@@ -70,11 +70,11 @@ Declaration. This ID sets the name of the thing that needs to be manipulated.
 
 The second and fourth lines are the start of the State Declarations, so they
 are using the pkg and service states respectively. The pkg state manages a
-software package to get installed via the system's native package manager,
+software package to be installed via the system's native package manager,
 and the service state manages a system daemon. 
 
 The third and fifth lines are the function to run. This function defines what 
-state the named package and service should be in. Here the package is to be 
+state the named package and service should be in. Here, the package is to be 
 installed, and the service should be running.
 
 Finally, on line six, is the word ``require``. This is called a Requisite
@@ -144,7 +144,7 @@ Moving Beyond a Single SLS
 ==========================
 
 When setting up Salt States in a scalable manner, more than one SLS will need 
-to be used. The above examples were just in a single SLS file, but two or more 
+to be used. The above examples were in a single SLS file, but two or more 
 SLS files can be combined to build out a State Tree. The above example also 
 references a file with a strange source - ``salt://apache/httpd.conf``. That 
 file will need to be available as well.
@@ -221,7 +221,7 @@ the toolkit. Consider this SSH example:
 
 .. note:: 
 
-    You may notice that we use two similar ways of denoting that a file
+    Notice that we use two similar ways of denoting that a file
     is managed by Salt. In the `/etc/ssh/sshd_config` state section above,
     we use the `file.managed` state declaration whereas with the
     `/etc/ssh/banner` state section, we use the `file` state declaration
@@ -299,7 +299,7 @@ the apache service was extended to also watch the mod_python package.
 Understanding the Render System
 ===============================
 
-Since the SLS data is simply that (data), it does not need to be represented
+Since SLS data is simply that (data), it does not need to be represented
 with YAML. Salt defaults to YAML because it is very straightforward and easy
 to learn and use. But the SLS files can be rendered from almost any imaginable
 medium, so long as a renderer module is provided.
@@ -446,7 +446,7 @@ Introducing the Python and the PyDSL Renderers
 Sometimes the chosen default renderer might not have enough logical power to
 accomplish the needed task. When this happens, the Python renderer can be
 used. Normally a YAML renderer should be used for the majority of SLS files,
-but a SLS file set to use another renderer can be easily added to the tree.
+but an SLS file set to use another renderer can be easily added to the tree.
 
 This example shows a very basic Python SLS file:
 
@@ -464,7 +464,7 @@ This example shows a very basic Python SLS file:
         return {'include': ['python'],
                 'django': {'pkg': ['installed']}}
 
-This is a very simple example, the first line has an SLS shebang line that
+This is a very simple example; the first line has an SLS shebang that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
 Then the run function is defined, the return value from the run function
 must be a Salt friendly data structure, or better known as a Salt
@@ -503,18 +503,18 @@ Running and debugging salt states.
 ----------------------------------
 
 Once the rules in an SLS are ready, they should be tested to ensure they
-work properly. To invoke these rules, simply execute ``salt '*' state.highstate``
-on the command line. If you get back only the hostnames with a `:` after,
-but no return, chances are there is a problem with the one or more of the sls
-files. Use the ``salt-call`` command: ``salt-call state.highstate -l debug``
-to examine the output for errors. This should help troubleshoot the issue.
-The minions can also be started in the foreground in debug 
-mode: ``salt-minion -l debug``.
+work properly. To invoke these rules, simply execute 
+``salt '*' state.highstate`` on the command line. If you get back only 
+hostnames with a `:` after, but no return, chances are there is a problem with 
+one or more of the sls files. Use the ``salt-call`` command: 
+``salt-call state.highstate -l debug`` to examine the output for errors. 
+This should help troubleshoot the issue. The minions can also be started in 
+the foreground in debug mode: ``salt-minion -l debug``.
 
 Next Reading
 ============
 
-With an understanding of states, it is recommended you now become familiar
+With an understanding of states, the next recommendation is to become familiar
 with Salt's pillar interface:
 
     :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
