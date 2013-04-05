@@ -154,6 +154,33 @@ instance:
             backup='',
             **kwargs):
 
+Indenting
+=========
+
+Some confusion exists in the python world about indenting things like function calls,
+the above examples use 8 spaces wnen indenting comma delimited constructs.
+
+The confusion arises because the pep8 program INCORRECTLY flags this as wrong, where
+PEP8, the document, cites only using 4 spaces here as wrong.
+
+Right:
+    def managed(name,
+            source=None,
+            source_hash='',
+            user=None)
+WRONG:
+    def managed(name,
+        source=None,
+        source_hash='',
+        user=None)
+
+Lining up the indent is also correct:
+
+    def managed(name,
+                source=None,
+                source_hash='',
+                user=None)
+
 Code Churn
 ==========
 
