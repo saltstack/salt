@@ -184,7 +184,7 @@ class Cloud(object):
                             'minion',
                             self.opts,
                             self.opts['vm'])
-                    if 'append_domain' in minion_dict:
+                    if minion_dict and 'append_domain' in minion_dict:
                         key_id = '.'.join([key_id, minion_dict['append_domain']])
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
