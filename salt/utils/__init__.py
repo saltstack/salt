@@ -941,3 +941,4 @@ def valid_url(url, protos):
     '''
     if salt._compat.urlparse.urlparse(url).scheme in protos:
         return True
+    return False
