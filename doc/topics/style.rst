@@ -194,7 +194,8 @@ Lining up the indent is also correct:
 This also applies to function calls and other hanging indents.
 
 PEP8 and Flake8 (and, by extension, the vim plugin Syntastic) will complain
-about the double indent for hanging indents.  This is a known conflict between
+about the double indent for hanging indents.  This is a `known conflict
+<https://github.com/jcrocholl/pep8/issues/167#issuecomment-15936564>`_ between
 PEP8 (the script) and the actual PEP8 standard.  It is recommended that this
 particular warning be ignored with the following lines in
 :code:`~/.config/flake8`:
