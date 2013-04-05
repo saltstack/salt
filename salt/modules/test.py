@@ -3,6 +3,8 @@ Module for running arbitrary tests
 '''
 
 # Import salt libs
+import os
+import sys
 import time
 
 
@@ -168,3 +170,24 @@ def retcode(code=42):
     '''
     __context__['retcode'] = code
     return True
+
+
+def provider(module):
+    '''
+    Pass in a function name to discover what provider is being used
+
+    CLI Example::
+
+        salt '*' test.provider service
+    '''
+    func = ''
+    for key in __salt__:
+        if not key.startswith('{0}.'.format(module)):
+            continue
+        func = key
+        break
+    if not func:
+        return ''
+    pfn = sys.modules[__salt__[func].__module__].__file__
+    pfn = os.path.basename(pfn)
+    return pfn[:pfn.rindex('.')]
