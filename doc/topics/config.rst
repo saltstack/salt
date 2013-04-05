@@ -355,3 +355,80 @@ already set) in order to find the name of the location that you want to use.
 **NOTE**: With the new providers configuration syntax you would have 
 ``provider: imbsce-config`` instead of ``provider: ibmsce`` on a profile 
 configuration.
+
+
+Extending Profiles and Cloud Providers Configuration
+====================================================
+
+As of 0.8.7, the option to extend both the profiles and cloud providers 
+configuration and avoid duplication was added. The extends feature works on the 
+current profiles configuration, but, regarding the cloud providers 
+configuration, **only** works in the new syntax and respective configuration 
+files, ie, ``/etc/salt/salt/cloud.providers`` or 
+``/etc/salt/cloud.providers.d/*.conf``.
+
+
+Extending Profiles
+------------------
+
+Some example usage on how to use ``extends`` with profiles. Consider 
+``/etc/salt/salt/cloud.profiles`` containing:
+
+.. code-block:: yaml
+
+    development-instances:
+      provider: ec2-config
+      size: Micro Instance
+      ssh_username: ec2_user
+      securitygroup:
+        - default
+      deploy: False
+
+    Amazon-Linux-AMI-2012.09-64bit:
+      image: ami-54cf5c3d
+      extends: development-instances
+
+    Fedora-17:
+      image: ami-08d97e61
+      extends: development-instances
+
+    CentOS-5:
+      provider: aws-config
+      image: ami-09b61d60
+      extends: development-instances
+
+
+The above configuration, once parsed would generate the following profiles 
+data:
+
+.. code-block:: text
+
+    [{'deploy': False,
+      'image': 'ami-08d97e61',
+      'profile': 'Fedora-17',
+      'provider': 'ec2-config',
+      'securitygroup': ['default'],
+      'size': 'Micro Instance',
+      'ssh_username': 'ec2_user'},
+     {'deploy': False,
+      'image': 'ami-09b61d60',
+      'profile': 'CentOS-5',
+      'provider': 'aws-config',
+      'securitygroup': ['default'],
+      'size': 'Micro Instance',
+      'ssh_username': 'ec2_user'},
+     {'deploy': False,
+      'image': 'ami-54cf5c3d',
+      'profile': 'Amazon-Linux-AMI-2012.09-64bit',
+      'provider': 'ec2-config',
+      'securitygroup': ['default'],
+      'size': 'Micro Instance',
+      'ssh_username': 'ec2_user'},
+     {'deploy': False,
+      'profile': 'development-instances',
+      'provider': 'ec2-config',
+      'securitygroup': ['default'],
+      'size': 'Micro Instance',
+      'ssh_username': 'ec2_user'}]
+
+Pretty cool right?
