@@ -22,6 +22,7 @@ import salt.grains.extra
 # Only available on posix systems, nonfatal on windows
 try:
     import pwd
+    import grp
 except ImportError:
     pass
 
@@ -43,10 +44,8 @@ def __virtual__():
 
 def _chugid(runas):
     uinfo = pwd.getpwnam(runas)
-
-    if os.getuid() == uinfo.pw_uid and os.getgid() == uinfo.pw_gid:
-        # No need to change user or group
-        return
+    supgroups = [g.gr_gid for g in grp.getgrall()
+                 if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid]
 
     # No logging can happen on this function
     #
@@ -69,6 +68,17 @@ def _chugid(runas):
             raise CommandExecutionError(
                 'Failed to change from gid {0} to {1}. Error: {2}'.format(
                     os.getgid(), uinfo.pw_gid, err
+                )
+            )
+
+    # Set supplemental groups
+    if os.getgroups() != supgroups:
+        try:
+            os.setgroups(supgroups)
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to set supplemental groups to {0}. Error: {1}'.format(
+                    supgroups, err
                 )
             )
 
