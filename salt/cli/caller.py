@@ -57,7 +57,7 @@ class Caller(object):
                 ret['jid'])
         if fun not in self.minion.functions:
             sys.stderr.write('Function {0} is not available\n'.format(fun))
-            sys.exit(1)
+            sys.exit(-1)
         try:
             args, kwargs = salt.minion.detect_kwargs(
                 self.minion.functions[fun], self.opts['arg'])
@@ -68,7 +68,10 @@ class Caller(object):
                     'tgt': 'salt-call'}
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(self.serial.dumps(sdata))
-            ret['return'] = self.minion.functions[fun](*args, **kwargs)
+            func = self.minion.functions[fun]
+            ret['return'] = func(*args, **kwargs)
+            ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                    'retcode', 0)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
@@ -137,3 +140,4 @@ class Caller(object):
                 out,
                 ret.get('out', 'nested'),
                 self.opts)
+        sys.exit(ret['retcode'])
