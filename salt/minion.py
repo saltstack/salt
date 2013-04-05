@@ -931,7 +931,6 @@ class Syndic(Minion):
         '''
         jids = {}
         for event in self.local.gen_event_returns(0.5):
-            print event
             if len(event.get('tag', '')) == 20:
                 if not event['tag'] in jids:
                     jids[event['tag']] = {}
