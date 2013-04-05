@@ -890,7 +890,7 @@ class LocalClient(object):
         Listen to the event bus and spit back returns in a generator
         '''
         while True:
-            raw = self.event.get_event(timeout)
+            raw = self.event.get_event(timeout, full=True)
             if raw is None:
                 # Timeout reached
                 break
