@@ -3,7 +3,7 @@ Salt Coding Style
 =================
 
 Salt is developed with a certain coding style, while the style is dominantly
-PEP-08 it is not completely PEP-08. It is also noteworthy that a few
+PEP 8 it is not completely PEP 8. It is also noteworthy that a few
 development techniques are also employed which should be adhered to. In the
 end, the code is made to be "Salty".
 
@@ -119,7 +119,7 @@ Vertical is Better
 ==================
 
 When writing Salt code, vertical code is generally preferred. This is not a hard
-rule but more of a guideline. As PEP-08 specifies Salt code should not exceed 79
+rule but more of a guideline. As PEP 8 specifies, Salt code should not exceed 79
 characters on a line, but it is preferred to separate code out into more
 newlines in some cases for better readability:
 
@@ -162,7 +162,7 @@ calls, the above examples use 8 spaces when indenting comma-delimited
 constructs.
 
 The confusion arises because the pep8 program INCORRECTLY flags this as wrong,
-where PEP8, the document, cites only using 4 spaces here as wrong, as it
+where PEP 8, the document, cites only using 4 spaces here as wrong, as it
 doesn't differentiate from a new indent level.
 
 Right:
@@ -193,10 +193,10 @@ Lining up the indent is also correct:
 
 This also applies to function calls and other hanging indents.
 
-PEP8 and Flake8 (and, by extension, the vim plugin Syntastic) will complain
+pep8 and Flake8 (and, by extension, the vim plugin Syntastic) will complain
 about the double indent for hanging indents.  This is a `known conflict
 <https://github.com/jcrocholl/pep8/issues/167#issuecomment-15936564>`_ between
-PEP8 (the script) and the actual PEP8 standard.  It is recommended that this
+pep8 (the script) and the actual PEP 8 standard.  It is recommended that this
 particular warning be ignored with the following lines in
 :code:`~/.config/flake8`:
 
@@ -205,19 +205,19 @@ particular warning be ignored with the following lines in
     [flake8]
     ignore = E226,E241,E242,E126
 
-Make sure your Flake8/PEP8 are up to date.  The first three errors are ignored
+Make sure your Flake8/pep8 are up to date.  The first three errors are ignored
 by default and are present here to keep the behavior the same.  This will also
-work for PEP8 without the Flake8 wrapper -- just replace all instances of
+work for pep8 without the Flake8 wrapper -- just replace all instances of
 'flake8' with 'pep8', including the filename.
 
 Code Churn
 ==========
 
 Many pull requests have been submitted that only churn code in the name of
-PEP-08. Code churn is a leading source of bugs and is strongly discouraged.
+PEP 8. Code churn is a leading source of bugs and is strongly discouraged.
 While style fixes are encouraged they should be isolated to a single file per
 commit, and the changes should be legitimate, if there are any questions about
 whether a style change is legitimate please reference this document and the
-official PEP-08 (http://www.python.org/dev/peps/pep-0008/) document before
-changing code. Many claims that a change is PEP-08 have been invalid, please
+official PEP 8 (http://www.python.org/dev/peps/pep-0008/) document before
+changing code. Many claims that a change is PEP 8 have been invalid, please
 double check before committing fixes.
