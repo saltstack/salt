@@ -3,7 +3,7 @@ Pillar of Salt
 ==============
 
 Pillar is an interface for Salt designed to offer global values that can be
-distributed to all minions. Pillar data is managed in a similar way to
+distributed to all minions. Pillar data is managed in a similar way as
 the Salt State Tree.
 
 Pillar was added to Salt in version 0.9.8

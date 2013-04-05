@@ -145,7 +145,7 @@ entire state tree can be freely parameterized relative to the minion's pillar.
 
 This approach allows for Salt to be very flexible while staying very
 straightforward. It also means that simple sls formulas used in the state tree
-can be directly parameterized without needed to refactor the state tree.
+can be directly parameterized without needing to refactor the state tree.
 
 A simple example is to set up a mapping of package names in pillar for
 separate Linux distributions:
@@ -155,10 +155,10 @@ separate Linux distributions:
 .. code-block:: jinja
 
     pkgs:
-      {% if grains['os_family'] == 'Debian' %}
+      {% if grains['os_family'] == 'RedHat' %}
       apache: httpd
       vim: vim-enhanced
-      {% elif grains['os_family'] == 'RedHat' %}
+      {% elif grains['os_family'] == 'Debian' %}
       apache: apache2
       vim: vim
       {% elif grains['os'] == 'Arch' %}
