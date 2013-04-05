@@ -35,6 +35,9 @@ service then set the reload value to True:
           - pkg: redis
 '''
 
+# Import python libs
+import sys
+
 
 def __virtual__():
     '''
@@ -265,6 +268,11 @@ def running(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
+
     changes = {name: __salt__['service.start'](name)}
 
     if not changes[name]:
@@ -325,6 +333,11 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
+
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
 
     changes = {name: __salt__['service.stop'](name)}
 
