@@ -19,6 +19,8 @@ if has_mock:
     SALT_STUB = {
         'config.option': Mock(),
         'cmd.run_all': Mock(),
+        'file.chown': Mock(),
+        'file.remove': Mock(),
     }
 else:
     SALT_STUB = {}
@@ -26,14 +28,6 @@ else:
 
 @skipIf(has_mock is False, "mock python module is unavailable")
 class PostgresTestCase(TestCase):
-    @patch.multiple(postgres, __grains__={'os_family': 'FreeBSD'})
-    def test_get_runas_bsd(self):
-        self.assertEqual('pgsql', postgres._get_runas())
-
-    @patch.multiple(postgres, __grains__={'os_family': 'Linux'})
-    def test_get_runas_other(self):
-        self.assertEqual('postgres', postgres._get_runas())
-
     @patch.multiple(postgres,
                     __grains__={'os_family': 'Linux'},
                     __salt__=SALT_STUB)
