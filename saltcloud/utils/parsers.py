@@ -103,7 +103,8 @@ class CloudConfigMixIn(object):
                 'for the providers configuration file, please use '
                 '`--providers-config`.'
             )
-        self.config['providers'] = self.providers_config
+        elif 'providers' not in self.config:
+            self.config['providers'] = self.providers_config
 
         # 5th - Override config with cli options
         # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
