@@ -48,7 +48,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler
-from salt.exceptions import SaltMasterError
+from salt.exceptions import SaltMasterError, MasterExit
 
 log = logging.getLogger(__name__)
 
@@ -78,13 +78,6 @@ def clean_proc(proc, wait_for_kill=10):
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
         pass
-
-
-class MasterExit(SystemExit):
-    '''
-    Named exit exception for the master process exiting
-    '''
-    pass
 
 
 class SMaster(object):
