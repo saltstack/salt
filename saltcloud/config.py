@@ -186,10 +186,8 @@ def apply_vm_profiles_config(overrides, defaults=None):
         val['profile'] = key
         vms[key] = val
 
-    return vms.values()
-
     # Is any VM profile extending data!?
-    for profile, details in vms.copy():
+    for profile, details in vms.copy().items():
         if 'extends' not in details:
             continue
 
