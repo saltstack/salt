@@ -22,6 +22,7 @@ import tempfile
 import subprocess
 import zmq
 from calendar import month_abbr as months
+import salt._compat
 
 try:
     import fcntl
@@ -932,3 +933,11 @@ def option(
     if value in pillar:
         return pillar[value]
     return default
+
+
+def valid_url(url, protos):
+    '''
+    Return true if the passed url is in the list of accepted protos
+    '''
+    if salt._compat.urlparse.urlparse(url).scheme in protos:
+        return True
