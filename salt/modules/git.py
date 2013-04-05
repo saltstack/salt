@@ -9,10 +9,11 @@ import tempfile
 # Import salt libs
 from salt import utils, exceptions
 
+
 def _git_ssh_helper(identity):
     '''
-    Returns the path to a helper script which can be used in the GIT_SSH env var
-    to use a custom private key file.
+    Returns the path to a helper script which can be used in the GIT_SSH env
+    var to use a custom private key file.
     '''
     opts = {
         'StrictHostKeyChecking': 'no',
@@ -26,7 +27,8 @@ def _git_ssh_helper(identity):
     helper.writelines([
         '#!/bin/sh\n',
         'exec ssh {opts} -i {identity} $*\n'.format(
-            opts=' '.join('-o%s=%s' % (key, value) for key, value in opts.items()),
+            opts=' '.join('-o%s=%s' % (key, value)
+                          for key, value in opts.items()),
             identity=identity,
         )
     ])
@@ -36,6 +38,7 @@ def _git_ssh_helper(identity):
     os.chmod(helper.name, 0755)
 
     return helper.name
+
 
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     '''
@@ -54,7 +57,11 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
             'GIT_SSH': helper
         }
 
-    result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=runas, env=env, **kwargs)
+    result = __salt__['cmd.run_all'](cmd,
+                                     cwd=cwd,
+                                     runas=runas,
+                                     env=env,
+                                     **kwargs)
 
     if identity:
         os.unlink(helper)
@@ -65,6 +72,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         return result['stdout']
     else:
         raise exceptions.CommandExecutionError(result['stderr'])
+
 
 def _git_getdir(cwd, user=None):
     '''
@@ -80,8 +88,13 @@ def _git_getdir(cwd, user=None):
     cmd_toplvl = 'git rev-parse --show-toplevel'
     return __salt__['cmd.run'](cmd_toplvl, cwd)
 
+
 def _check_git():
+    '''
+    Check if git is available
+    '''
     utils.check_or_die('git')
+
 
 def revision(cwd, rev='HEAD', short=False, user=None):
     '''
@@ -107,6 +120,7 @@ def revision(cwd, rev='HEAD', short=False, user=None):
 
     cmd = 'git rev-parse {0}{1}'.format('--short ' if short else '', rev)
     return _git_run(cmd, cwd, runas=user)
+
 
 def clone(cwd, repository, opts=None, user=None, identity=None):
     '''
@@ -143,6 +157,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
     return _git_run(cmd, runas=user, identity=identity)
 
+
 def describe(cwd, rev='HEAD', user=None):
     '''
     Returns the git describe string (or the SHA hash if there are no tags) for
@@ -165,6 +180,7 @@ def describe(cwd, rev='HEAD', user=None):
     '''
     cmd = 'git describe {0}'.format(rev)
     return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
+
 
 def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
     '''
@@ -200,12 +216,14 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
     basename = '{0}/'.format(os.path.basename(_git_getdir(cwd, user=user)))
 
     cmd = 'git archive{prefix}{fmt} -o {output} {rev}'.format(
-        rev = rev,
-        output = output,
-        fmt = ' --format={0}'.format(fmt) if fmt else '',
-        prefix = ' --prefix="{0}"'.format(prefix if prefix else basename))
+            rev=rev,
+            output=output,
+            fmt=' --format={0}'.format(fmt) if fmt else '',
+            prefix=' --prefix="{0}"'.format(prefix if prefix else basename)
+    )
 
     return _git_run(cmd, cwd=cwd, runas=user)
+
 
 def fetch(cwd, opts=None, user=None, identity=None):
     '''
@@ -237,6 +255,7 @@ def fetch(cwd, opts=None, user=None, identity=None):
 
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
 
+
 def pull(cwd, opts=None, user=None, identity=None):
     '''
     Perform a pull on the given repository
@@ -261,7 +280,11 @@ def pull(cwd, opts=None, user=None, identity=None):
 
     if not opts:
         opts = ''
-    return _git_run('git pull {0}'.format(opts), cwd=cwd, runas=user, identity=identity)
+    return _git_run('git pull {0}'.format(opts),
+                    cwd=cwd,
+                    runas=user,
+                    identity=identity)
+
 
 def rebase(cwd, rev='master', opts=None, user=None):
     '''
@@ -290,6 +313,7 @@ def rebase(cwd, rev='master', opts=None, user=None):
     if not opts:
         opts = ''
     return _git_run('git rebase {0}'.format(opts), cwd=cwd, runas=user)
+
 
 def checkout(cwd, rev, force=False, opts=None, user=None):
     '''
@@ -325,6 +349,7 @@ def checkout(cwd, rev, force=False, opts=None, user=None):
     cmd = 'git checkout {0} {1} {2}'.format(' -f' if force else '', rev, opts)
     return _git_run(cmd, cwd=cwd, runas=user)
 
+
 def merge(cwd, branch='@{upstream}', opts=None, user=None):
     '''
     Merge a given branch
@@ -350,11 +375,11 @@ def merge(cwd, branch='@{upstream}', opts=None, user=None):
 
     if not opts:
         opts = ''
-    cmd = 'git merge {0} {1}'.format(
-            branch,
-            opts)
+    cmd = 'git merge {0} {1}'.format(branch,
+                                     opts)
 
     return _git_run(cmd, cwd, runas=user)
+
 
 def init(cwd, opts=None, user=None):
     '''
@@ -377,6 +402,7 @@ def init(cwd, opts=None, user=None):
 
     cmd = 'git init {0} {1}'.format(cwd, opts)
     return _git_run(cmd, runas=user)
+
 
 def submodule(cwd, init=True, opts=None, user=None):
     '''
