@@ -1352,14 +1352,27 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
+
+    with salt.utils.fopen(name, 'rb') as fp_:
+        slines = fp_.readlines()
+
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
 
-    # Don't check the result -- sed is not designed to be able to check the
-    # result, because of backreferences and so forth.  Just report that sed
-    # was run, and assume it was successful (no error!)
-    ret['result'] = True
-    ret['comment'] = 'sed ran without error'
+    with salt.utils.fopen(name, 'rb') as fp_:
+        nlines = fp_.readlines()
+
+    if slines != nlines:
+        # Changes happened, add them
+        ret['changes']['diff'] = ''.join(difflib.unified_diff(slines, nlines))
+        # Don't check the result -- sed is not designed to be able to check the
+        # result, because of backreferences and so forth.  Just report that sed
+        # was run, and assume it was successful (no error!)
+        ret['result'] = True
+        ret['comment'] = 'sed ran without error'
+    else:
+        ret['result'] = False
+        ret['comment'] = 'sed ran without error, but no changes were made'
 
     return ret
 
