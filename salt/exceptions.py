@@ -21,6 +21,12 @@ class SaltMasterError(SaltException):
     '''
 
 
+class MasterExit(SystemExit):
+    '''
+    Rise when the master exits
+    '''
+
+
 class AuthenticationError(SaltException):
     '''
     If sha256 signature fails during decryption

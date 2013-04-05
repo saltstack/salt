@@ -13,14 +13,13 @@ from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
 
 try:
-    import salt.master
     from salt.utils import parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
     from salt.utils.verify import verify_files
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit
+from salt.exceptions import SaltSystemExit, MasterExit
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,7 @@ class Master(parsers.MasterOptionParser):
         if check_user(self.config['user']):
             try:
                 self.master.start()
-            except salt.master.MasterExit:
+            except MasterExit:
                 self.shutdown()
             finally:
                 sys.exit()
