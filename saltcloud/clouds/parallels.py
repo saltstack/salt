@@ -58,7 +58,7 @@ def __virtual__():
     Check for PARALLELS configurations
     '''
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no Parallels cloud provider configuration available. '
             'Not loading module.'
         )
