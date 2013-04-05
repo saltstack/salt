@@ -5,11 +5,13 @@ How Do I Use Salt States?
 Simplicity, Simplicity, Simplicity
 
 Many of the most powerful and useful engineering solutions are founded on
-simple principles. The Salt SLS system strives to do just that. K.I.S.S. (Keep It Stupidly Simple)
+simple principles. The Salt SLS system strives to do just that. K.I.S.S. 
+(Keep It Stupidly Simple)
 
 The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
-to contain this data in a simple format. This is often called configuration management.
+to contain this data in a simple format. This is often called configuration 
+management.
 
 .. note::
 
@@ -21,10 +23,10 @@ to contain this data in a simple format. This is often called configuration mana
 It is All Just Data
 ===================
 
-Before delving into the particulars, it will help to understand that the SLS file
-is just a data structure under the hood. While understanding that the SLS is
-just a data structure isn't critical for understanding and making use of Salt
-States, it should help bolster your knowledge of where the real power is.
+Before delving into the particulars, it will help to understand that the SLS 
+file is just a data structure under the hood. While understanding that the SLS 
+is just a data structure isn't critical for understanding and making use of 
+Salt States, it should help bolster your knowledge of where the real power is.
 
 SLS files are therefore, in reality, just `dictionaries`_, `lists`_,
 `strings`_, and `numbers`_. By using this approach Salt can be much more
@@ -71,8 +73,9 @@ are using the pkg and service states respectively. The pkg state manages a
 software package to get installed via the system's native package manager,
 and the service state manages a system daemon. 
 
-The third and fifth lines are the function to run. This function defines what state the named package and service should be in. Here the package is to be installed, and
-the service should be running.
+The third and fifth lines are the function to run. This function defines what 
+state the named package and service should be in. Here the package is to be 
+installed, and the service should be running.
 
 Finally, on line six, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
@@ -131,7 +134,8 @@ Next,the ``require`` statement under service was changed to watch, and is
 now watching 3 states instead of just one. The watch statement does the same
 thing as require, making sure that the other states run before running the
 state with a watch, but it adds an extra component. The ``watch`` statement
-will run the state's watcher function for any changes to the watched states. So if the package was updated, the config file changed, or the user
+will run the state's watcher function for any changes to the watched states. 
+So if the package was updated, the config file changed, or the user
 uid modified, then the service state's watcher will be run. The service
 state's watcher just restarts the service, so in this case, a change in the
 config file will also trigger a restart of the respective service.
@@ -139,12 +143,14 @@ config file will also trigger a restart of the respective service.
 Moving Beyond a Single SLS
 ==========================
 
-When setting up Salt States in a scalable manner, more than one SLS will need to be used. The above examples were just in a single SLS file, but two or more SLS files can be
-combined to build out a State Tree. The above example also references a file
-with a strange source - ``salt://apache/httpd.conf``. That file will need to
-be available as well.
+When setting up Salt States in a scalable manner, more than one SLS will need 
+to be used. The above examples were just in a single SLS file, but two or more 
+SLS files can be combined to build out a State Tree. The above example also 
+references a file with a strange source - ``salt://apache/httpd.conf``. That 
+file will need to be available as well.
 
-The SLS files are laid out in a directory structure on the Salt master; an SLS is just a file and files to download are just files.
+The SLS files are laid out in a directory structure on the Salt master; an 
+SLS is just a file and files to download are just files.
 
 The Apache example would be laid out in the root of the Salt file server like
 this: ::
@@ -155,8 +161,8 @@ this: ::
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
-But when using more than one single SLS file, more components can be added to the
-toolkit. Consider this SSH example:
+But when using more than one single SLS file, more components can be added to 
+the toolkit. Consider this SSH example:
 
 ``ssh/init.sls:``
 
@@ -248,7 +254,8 @@ Sometimes SLS data needs to be extended. Perhaps the apache service needs to
 watch additional resources, or under certain circumstances a different file
 needs to be placed.
 
-In these examples, the first will add a custom banner to ssh and the second will add more watchers to apache to include mod_python.
+In these examples, the first will add a custom banner to ssh and the second will 
+add more watchers to apache to include mod_python.
 
 ``ssh/custom-server.sls:``
 
@@ -306,10 +313,10 @@ Other renderers available are ``yaml_mako`` and ``yaml_wempy`` which each use
 the `Mako`_ or `Wempy`_ templating system respectively rather than the jinja
 templating system, and more notably, the pure Python or ``py`` and ``pydsl``
 renderers.
-The ``py`` renderer allows for SLS files to be written in pure Python, allowing
-for the utmost level of flexibility and power when preparing SLS data; while the
-:doc:`pydsl</ref/renderers/all/salt.renderers.pydsl>` renderer provides a flexible,
-domain-specific language for authoring SLS data in Python.
+The ``py`` renderer allows for SLS files to be written in pure Python, 
+allowing for the utmost level of flexibility and power when preparing SLS 
+data; while the :doc:`pydsl</ref/renderers/all/salt.renderers.pydsl>` renderer 
+provides a flexible, domain-specific language for authoring SLS data in Python.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`Mako`: http://www.makotemplates.org/
@@ -325,8 +332,8 @@ http://jinja.pocoo.org/docs
 When working with renderers a few very useful bits of data are passed in. In
 the case of templating engine based renderers, three critical components are
 available, ``salt``, ``grains``, and ``pillar``. The ``salt`` object allows for
-any Salt function to be called from within the template, and ``grains`` allows for
-the Grains to be accessed from within the template. A few examples:
+any Salt function to be called from within the template, and ``grains`` allows 
+for the Grains to be accessed from within the template. A few examples:
 
 ``apache/init.sls:``
 
@@ -488,9 +495,9 @@ This Python examples would look like this if they were written in YAML:
     django:
       pkg.installed
 
-This example clearly illustrates that; one, using the YAML renderer by default is a wise
-decision and two, unbridled power can be obtained where needed by using a pure Python SLS.
-
+This example clearly illustrates that; one, using the YAML renderer by default 
+is a wise decision and two, unbridled power can be obtained where needed by 
+using a pure Python SLS.
 
 Running and debugging salt states.
 ----------------------------------
@@ -501,7 +508,8 @@ on the command line. If you get back only the hostnames with a `:` after,
 but no return, chances are there is a problem with the one or more of the sls
 files. Use the ``salt-call`` command: ``salt-call state.highstate -l debug``
 to examine the output for errors. This should help troubleshoot the issue.
-The minions can also be started in the foreground in debug mode: ``salt-minion -l debug``.
+The minions can also be started in the foreground in debug 
+mode: ``salt-minion -l debug``.
 
 Next Reading
 ============
