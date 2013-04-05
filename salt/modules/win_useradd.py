@@ -176,7 +176,7 @@ def info(name):
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'name could not be found' in line:
-            return False
+            return {}
         if 'successfully' not in line:
             comps = line.split('    ', 1)
             if not len(comps) > 1:
