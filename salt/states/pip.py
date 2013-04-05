@@ -139,12 +139,12 @@ def installed(name,
                 'There was no error installing package \'{0}\' although '
                 'it does not show when calling \'pip.freeze\'.'.format(name)
             )
-            ret['changes']["{0}==???".format(name)] = 'Installed'
+            ret['changes']['{0}==???'.format(name)] = 'Installed'
             return ret
 
         version = list(pkg_list.values())[0]
         pkg_name = next(iter(pkg_list))
-        ret['changes']["{0}=={1}".format(pkg_name, version)] = 'Installed'
+        ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
         ret['comment'] = 'Package was successfully installed'
     elif pip_install_call:
         ret['result'] = False
@@ -169,27 +169,27 @@ def removed(name,
             user=None,
             cwd=None,
             __env__='base'):
-    """
+    '''
     Make sure that a package is not installed.
 
     name
         The name of the package to uninstall
     bin_env : None
         the pip executable or virtualenenv to use
-    """
+    '''
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        pip_list = __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](bin_env=bin_env, runas=user, cwd=cwd)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret
 
     if name not in pip_list:
-        ret["result"] = True
-        ret["comment"] = "Package is not installed."
+        ret['result'] = True
+        ret['comment'] = 'Package is not installed.'
         return ret
 
     if __opts__['test']:
@@ -197,7 +197,7 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    if __salt__["pip.uninstall"](pkgs=name,
+    if __salt__['pip.uninstall'](pkgs=name,
                                  requirements=requirements,
                                  bin_env=bin_env,
                                  log=log,
@@ -206,10 +206,10 @@ def removed(name,
                                  runas=user,
                                  cwd=cwd,
                                  __env__='base'):
-        ret["result"] = True
-        ret["changes"][name] = "Removed"
-        ret["comment"] = "Package was successfully removed."
+        ret['result'] = True
+        ret['changes'][name] = 'Removed'
+        ret['comment'] = 'Package was successfully removed.'
     else:
-        ret["result"] = False
-        ret["comment"] = "Could not remove package."
+        ret['result'] = False
+        ret['comment'] = 'Could not remove package.'
     return ret
