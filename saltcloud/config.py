@@ -119,14 +119,19 @@ def apply_cloud_config(overrides, defaults=None):
 
 
 def old_to_new(opts):
-    providers = ('AWS',
-                 'EC2',
-                 'GOGRID',
-                 'IBMSCE',
-                 'JOYENT',
-                 'LINODE',
-                 'OPENSTACK',
-                 'RACKSPACE')
+    providers = (
+        'AWS',
+        'DIGITAL_OCEAN',
+        'EC2',
+        'GOGRID',
+        'IBMSCE',
+        'JOYENT',
+        'LINODE',
+        'OPENSTACK',
+        'PARALLELS'
+        'RACKSPACE',
+        'SALTIFY'
+    )
 
     for provider in providers:
 
