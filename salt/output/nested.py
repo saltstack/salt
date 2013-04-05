@@ -1,6 +1,8 @@
 '''
 Recursively display nested data, this is the default outputter.
 '''
+# Import python libs
+from numbers import Number
 
 # Import salt libs
 import salt.utils
@@ -22,7 +24,8 @@ class NestDisplay(object):
                     prefix,
                     ret,
                     self.colors['ENDC'])
-        elif isinstance(ret, (int, float)):
+        # Number includes all python numbers types (float, int, long, complex, ...)
+        elif isinstance(ret, Number): 
             out += '{0}{1}{2}{3}{4}\n'.format(
                     ' ' * indent,
                     self.colors['YELLOW'],
