@@ -354,11 +354,34 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
         # The setting name exists in VM configuration. Return it!
         return vm_[name]
 
-    if vm_ and name and vm_['provider'] in opts['providers'] and \
-            name in opts['providers'][vm_['provider']]:
-        # The setting name exists in the VM's provider configuration.
-        # Return it!
-        return opts['providers'][vm_['provider']][name]
+    if vm_ and name:
+        if ':' in vm_['provider']:
+            # The provider is defined as <provider-alias>:<provider-name>
+            alias, provider = vm_['provider'].split(':')
+            if alias in opts['providers']:
+                for entry in opts['providers'][alias]:
+                    if entry['provider'] == provider:
+                        if name in entry:
+                            return entry[name]
+                        break
+        elif len(opts['providers'][vm_['provider']]) > 1:
+            # The provider is NOT defined as <provider-alias>:<provider-name>
+            # and there's more than one entry under the alias.
+            # WARN the user!!!!
+            log.error(
+                'The {0!r} cloud provider definition has more than one '
+                'entries. Your VM configuration should be specifying the '
+                'provider as \'provider: {0}:<provider-engine>\'. Since '
+                'it\'s not, we\'re returning the first definition which '
+                'might not be what you intended.'.format(
+                    vm_['provider']
+                )
+            )
+
+        if name in opts['providers'][vm_['provider']][0]:
+            # The setting name exists in the VM's provider configuration.
+            # Return it!
+            return opts['providers'][vm_['provider']][0][name]
 
     if search_global is True and opts.get(name, None) is not None:
         # The setting name exists in the cloud(global) configuration
