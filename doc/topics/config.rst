@@ -432,3 +432,38 @@ data:
       'ssh_username': 'ec2_user'}]
 
 Pretty cool right?
+
+
+Extending Providers
+-------------------
+
+Some example usage on how to use ``extends`` within the cloud providers 
+configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
+
+
+.. code-block:: yaml
+
+    develop-envs:
+      - id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      location: ap-southeast-1
+      availability_zone: ap-southeast-1b
+      provider: aws
+
+      - user: myuser@mycorp.com
+      password: mypass
+      ssh_key_name: mykey
+      ssh_key_file: '/etc/salt/ibm/mykey.pem'
+      location: Raleigh
+      provider: ibmsce
+
+
+    productions-envs:
+      - extends: develop-envs:ibmsce
+        user: my-production-user@mycorp.com
+        location: us-east-1
+        availability_zone: us-east-1
+

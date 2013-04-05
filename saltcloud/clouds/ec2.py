@@ -942,8 +942,6 @@ def rename(name, kwargs, call=None):
 
     log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
 
-    instance_id = _get_node(name)['instanceId']
-
     set_tags(name, {'Name': kwargs['newname']}, call='action')
 
     saltcloud.utils.rename_key(
@@ -961,6 +959,7 @@ def destroy(name, call=None):
     '''
     instance_id = _get_node(name)['instanceId']
     protected = show_term_protect(
+        name=name,
         instance_id=instance_id,
         call='action',
         quiet=True
@@ -1265,9 +1264,10 @@ def _toggle_term_protect(name, value):
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id,
               'DisableApiTermination.Value': value}
-    result = query(params, return_root=True)
 
-    return show_term_protect(name, instance_id, call='action')
+    query(params, return_root=True)
+
+    return show_term_protect(name=name, instance_id=instance_id, call='action')
 
 
 def keepvol_on_destroy(name, call=None):
