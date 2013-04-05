@@ -898,14 +898,7 @@ class Syndic(Minion):
         Override this method if you wish to handle the decoded data
         differently.
         '''
-        if self.opts['multiprocessing']:
-            multiprocessing.Process(
-                target=self.syndic_cmd, args=(data,)
-            ).start()
-        else:
-            threading.Thread(
-                target=self.syndic_cmd, args=(data,)
-            ).start()
+        self.syndic_cmd(data)
 
     def syndic_cmd(self, data):
         '''
@@ -915,7 +908,7 @@ class Syndic(Minion):
         if 'tgt_type' not in data:
             data['tgt_type'] = 'glob'
         # Send out the publication
-        pub_data = self.local.pub(
+        self.local.pub(
             data['tgt'],
             data['fun'],
             data['arg'],
@@ -924,21 +917,82 @@ class Syndic(Minion):
             data['jid'],
             data['to'])
 
-    def passive_refresh(self):
+    def tune_in(self):
         '''
-        Override the passive refresh function in the minion loop to gather
-        events, aggregate them, and send them up to the master-master
+        Lock onto the publisher. This is the main event loop for the minion
         '''
-        jids = {}
-        for event in self.local.gen_event_returns(0.5):
-            if len(event.get('tag', '')) == 20:
-                if not event['tag'] in jids:
-                    jids[event['tag']] = {}
-                    jids[event['tag']]['__fun__'] = event['data']['fun']
-                    jids[event['tag']]['__jid__'] = event['data']['jid']
-                jids[event['tag']][event['data']['id']] = event['data']['return']
-        for jid in jids:
-            self._return_pub(jids[jid], '_syndic_return')
+        signal.signal(signal.SIGTERM, self.clean_die)
+        log.debug('Syndic "{0}" trying to tune in'.format(self.opts['id']))
+        self.context = zmq.Context()
+
+        # Start with the publish socket
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
+        self.poller = zmq.Poller()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            self.socket.setsockopt(
+                zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
+            )
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+            )
+        self.socket.connect(self.master_pub)
+        self.poller.register(self.socket, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master(
+            'Syndic {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'syndic_start'
+        )
+
+        # Make sure to gracefully handle SIGUSR1
+        enable_sigusr1_handler()
+
+        loop_interval = int(self.opts['loop_interval'])
+        while True:
+            try:
+                socks = dict(self.poller.poll(
+                    loop_interval * 1000)
+                )
+                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                    payload = self.serial.loads(self.socket.recv())
+                    self._handle_payload(payload)
+                time.sleep(0.05)
+                jids = {}
+                while True:
+                    event = self.local.event.get_event(0.5, full=True)
+                    if event is None:
+                        # Timeout reached
+                        break
+                    if len(event.get('tag', '')) == 20:
+                        if not event['tag'] in jids:
+                            jids[event['tag']] = {}
+                            jids[event['tag']]['__fun__'] = event['data']['fun']
+                            jids[event['tag']]['__jid__'] = event['data']['jid']
+                        jids[event['tag']][event['data']['id']] = event['data']['return']
+                for jid in jids:
+                    self._return_pub(jids[jid], '_syndic_return')
+            except zmq.ZMQError:
+                # This is thrown by the inturupt caused by python handling the
+                # SIGCHLD. This is a safe error and we just start the poll
+                # again
+                continue
+            except Exception:
+                log.critical(traceback.format_exc())
 
 
 class Matcher(object):
