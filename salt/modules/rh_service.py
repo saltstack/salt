@@ -113,6 +113,9 @@ def _services():
     Return a dict of services and their types (sysv or upstart), as well
     as whether or not the service is enabled.
     '''
+    if 'service.all' in __context__:
+        return __context__['service.all']
+
     # First, parse sysvinit services from chkconfig
     rlevel = _runlevel()
     ret = {}
@@ -133,6 +136,7 @@ def _services():
                 continue
             ret.setdefault(name, {})['type'] = 'upstart'
             ret[name]['enabled'] = _upstart_is_enabled(name)
+    __context__['service.all'] = ret
     return ret
 
 
