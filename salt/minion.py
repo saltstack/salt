@@ -437,6 +437,8 @@ class Minion(object):
                 aspec = _getargs(minion_instance.functions[data['fun']])
                 msg = 'Missing arguments executing "{0}": {1}'
                 log.warning(msg.format(function_name, aspec))
+                dmsg = '"Missing args" caused by exc: {0}'.format(exc)
+                log.debug(dmsg)
                 ret['return'] = msg.format(function_name, aspec)
             except Exception:
                 trb = traceback.format_exc()
