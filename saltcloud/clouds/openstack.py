@@ -9,6 +9,9 @@ OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
 methods of authentication provided by OpenStack in the future.
 
+Note that there is currently a dependency upon netaddr. This can be installed
+on Debian-based systems by means of the python-netaddr package.
+
 This module has been tested to work with HP Cloud and Rackspace. See the
 documentation for specific options for either of these providers. Some examples
 are provided below:
@@ -37,6 +40,13 @@ Either a password or an API key must also be specified:
     # The OpenStack API key
     OPENSTACK.apikey: 901d3f579h23c8v73q9
 
+For local installations that only use private IP address ranges, the
+following option may be useful:
+
+.. code-block:: yaml
+
+    # Ignore IP addresses on this network for bootstrap
+    OPENSTACK.ignore_ip_addr: 192.168.50.0/24
 '''
 
 # The import section is mostly libcloud boilerplate
@@ -58,6 +68,9 @@ from salt.exceptions import SaltException
 
 # Import saltcloud libs
 from saltcloud.utils import namespaced_function
+
+# Import netaddr IP matching
+from netaddr import all_matching_cidrs
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -137,6 +150,18 @@ def preferred_ip(vm_, ips):
         except:
             continue
     return False
+
+
+def ignore_ip_addr(vm_, ip):
+    '''
+    Return True if we are to ignore the specified IP. Compatible with IPv4.
+    '''
+
+    cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
+    if cidr != '' and all_matching_cidrs(ip, [cidr]):
+        return True
+    else:
+        return False
 
 
 def ssh_interface(vm_):
@@ -232,7 +257,8 @@ def create(vm_):
                     not_ready = False
                 else:
                     log.warn('{0} is a private ip'.format(private_ip))
-                    if private_ip not in data.private_ips:
+                    ignore_ip = ignore_ip_addr(vm_, private_ip)
+                    if private_ip not in data.private_ips and not ignore_ip:
                         data.private_ips.append(private_ip)
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
                 break

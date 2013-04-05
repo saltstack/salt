@@ -132,6 +132,14 @@ password:
 You will certainly need to configure the ``user``, ``tenant`` and either
 ``password`` or ``apikey``.
 
+If your OpenStack instances only have private IP addresses and a CIDR range of
+private addresses are not reachable from the salt-master, you may set your
+preference to have Salt ignore it:
+
+.. code-block:: yaml
+
+  OPENSTACK.ignore_cidr: 192.168.0.0/16
+
 IBM SmartCloud Enterprise
 -------------------------
 
