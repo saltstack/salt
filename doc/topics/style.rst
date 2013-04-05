@@ -158,15 +158,16 @@ Indenting
 =========
 
 Some confusion exists in the python world about indenting things like function
-calls, the above examples use 8 spaces wnen indenting comma delimited
+calls, the above examples use 8 spaces when indenting comma-delimited
 constructs.
 
 The confusion arises because the pep8 program INCORRECTLY flags this as wrong,
-where PEP8, the document, cites only using 4 spaces here as wrong.
+where PEP8, the document, cites only using 4 spaces here as wrong, as it
+doesn't differentiate from a new indent level.
 
 Right:
 
-code-block:: python
+.. code-block:: python
 
     def managed(name,
             source=None,
@@ -174,7 +175,7 @@ code-block:: python
             user=None)
 WRONG:
 
-code-block:: python
+.. code-block:: python
 
     def managed(name,
         source=None,
@@ -183,7 +184,7 @@ code-block:: python
 
 Lining up the indent is also correct:
 
-code-block:: python
+.. code-block:: python
 
     def managed(name,
                 source=None,
@@ -195,9 +196,10 @@ This also applies to function calls and other hanging indents.
 PEP8 and Flake8 (and, by extension, the vim plugin Syntastic) will complain
 about the double indent for hanging indents.  This is a known conflict between
 PEP8 (the script) and the actual PEP8 standard.  It is recommended that this
-particular warning be ignored with the following lines in `~/.config/flake8`:
+particular warning be ignored with the following lines in
+:code:`~/.config/flake8`:
 
-code-block::
+.. code-block::
 
     [flake8]
     ignore = E226,E241,E242,E126
@@ -205,7 +207,7 @@ code-block::
 Make sure your Flake8/PEP8 are up to date.  The first three errors are ignored
 by default and are present here to keep the behavior the same.  This will also
 work for PEP8 without the Flake8 wrapper -- just replace all instances of
-flake8 with pep8, including the filename.
+'flake8' with 'pep8', including the filename.
 
 Code Churn
 ==========
