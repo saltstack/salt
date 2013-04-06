@@ -449,20 +449,20 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
 
     my-develop-envs:
       - id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-      keyname: test
-      securitygroup: quick-start
-      private_key: /root/test.pem
-      location: ap-southeast-1
-      availability_zone: ap-southeast-1b
-      provider: aws
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        location: ap-southeast-1
+        availability_zone: ap-southeast-1b
+        provider: aws
 
       - user: myuser@mycorp.com
-      password: mypass
-      ssh_key_name: mykey
-      ssh_key_file: '/etc/salt/ibm/mykey.pem'
-      location: Raleigh
-      provider: ibmsce
+        password: mypass
+        ssh_key_name: mykey
+        ssh_key_file: '/etc/salt/ibm/mykey.pem'
+        location: Raleigh
+        provider: ibmsce
 
 
     my-productions-envs:
