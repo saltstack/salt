@@ -158,10 +158,12 @@ class Cloud(object):
         '''
         Create/Verify the VMs in the VM data
         '''
-        ret = {}
+        ret = []
 
         for vm_ in self.opts['vm']:
-            ret = self.create(vm_)
+            ret.append(
+                {vm_['name']: self.create(vm_)}
+            )
 
         return ret
 
@@ -183,7 +185,7 @@ class Cloud(object):
             fun = '{0}.destroy'.format(prov)
             for name in names_:
                 delret = self.clouds[fun](name)
-                ret.append(delret)
+                ret.append({name: delret})
 
                 if not delret:
                     continue
@@ -195,9 +197,9 @@ class Cloud(object):
 
                 if not os.path.isfile(key_file) and not globbed_key_file:
                     # There's no such key file!? It might have been renamed
-                    if isinstance(delret, dict) and 'newname' in delret[name]:
+                    if isinstance(delret, dict) and 'newname' in delret:
                         saltcloud.utils.remove_key(
-                            self.opts['pki_dir'], delret[name]['newname']
+                            self.opts['pki_dir'], delret['newname']
                         )
                     continue
 
@@ -271,6 +273,7 @@ class Cloud(object):
         '''
         Reboot the named VMs
         '''
+        ret = []
         pmap = self.map_providers()
         acts = {}
         for prov, nodes in pmap.items():
@@ -281,7 +284,11 @@ class Cloud(object):
         for prov, names_ in acts.items():
             fun = '{0}.reboot'.format(prov)
             for name in names_:
-                self.clouds[fun](name)
+                ret.append({
+                    name: self.clouds[fun](name)
+                })
+
+        return ret
 
     def create(self, vm_):
         '''
@@ -289,12 +296,9 @@ class Cloud(object):
         '''
         output = {}
 
-        if 'minion' not in vm_:
-            # Let's grab a global minion configuration if defined
-            vm_['minion'] = self.opts.get('minion', {})
-        elif 'minion' in vm_ and vm_['minion'] is None:
-            # Let's set a sane, empty, default
-            vm_['minion'] = {}
+        minion_dict = config.get_config_value(
+            'minion', vm_, self.opts, default={}
+        )
 
         fun = '{0}.create'.format(self.provider(vm_))
         if fun not in self.clouds:
@@ -305,14 +309,9 @@ class Cloud(object):
             )
             return
 
-        deploy = vm_.get(
-            'deploy', self.opts.get(
-                '{0}.deploy'.format(self.provider(vm_).upper()),
-                self.opts.get('deploy')
-            )
-        )
+        deploy = config.get_config_value('deploy', vm_, self.opts)
 
-        if deploy is True and 'master' not in vm_.get('minion', ()):
+        if deploy is True and 'master' not in minion_dict:
             raise ValueError(
                 'There\'s no master defined on the {0!r} VM settings'.format(
                     vm_['name']
@@ -325,22 +324,20 @@ class Cloud(object):
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
 
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, self.opts):
             master_priv, master_pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', vm_, self.opts)
             )
             vm_['master_pub'] = master_pub
             vm_['master_pem'] = master_priv
 
-        if 'script' in self.opts:
-            vm_['os'] = self.opts['script']
-        if 'script' in vm_:
-            vm_['os'] = vm_['script']
+        vm_['os'] = config.get_config_value('script', vm_, self.opts)
 
         key_id = vm_['name']
-        minion_dict = config.get_config_value('minion', vm_, self.opts)
+
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
+
         saltcloud.utils.accept_key(self.opts['pki_dir'], pub, key_id)
 
         try:
@@ -350,16 +347,16 @@ class Cloud(object):
                 if self.opts['sync_after_install'] not in (
                         'all', 'modules', 'states', 'grains'):
                     log.error('Bad option for sync_after_install')
-                else:
-                    # a small pause makes the sync work reliably
-                    time.sleep(3)
-                    client = salt.client.LocalClient()
-                    ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
-                        self.opts['sync_after_install']
-                    ))
-                    log.info('Synchronized the following dynamic modules:')
-                    log.info('  {0}'.format(ret))
+                    return output
 
+                # a small pause makes the sync work reliably
+                time.sleep(3)
+                client = salt.client.LocalClient()
+                ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
+                    self.opts['sync_after_install']
+                ))
+                log.info('Synchronized the following dynamic modules:')
+                log.info('  {0}'.format(ret))
         except KeyError as exc:
             log.exception(
                 'Failed to create VM {0}. Configuration value {1} needs '
@@ -409,7 +406,7 @@ class Cloud(object):
                             target=lambda: self.create(vm_),
                         ).start()
                     else:
-                        ret = self.create(vm_)
+                        ret[name] = self.create(vm_)
         if not found:
             log.error(
                 'Profile {0} is not defined'.format(self.opts['profile'])
@@ -422,6 +419,8 @@ class Cloud(object):
         Perform an action on a VM which may be specific to this cloud provider
         '''
         pmap = self.map_providers()
+
+        ret = {}
 
         current_boxen = {}
         for provider in pmap:
@@ -442,9 +441,11 @@ class Cloud(object):
                 if name in names_:
                     fun = '{0}.{1}'.format(prov, self.opts['action'])
                     if kwargs:
-                        ret = self.clouds[fun](name, kwargs, call='action')
+                        ret[name] = self.clouds[fun](
+                            name, kwargs, call='action'
+                        )
                     else:
-                        ret = self.clouds[fun](name, call='action')
+                        ret[name] = self.clouds[fun](name, call='action')
                     completed.append(name)
 
         for name in names:
@@ -683,10 +684,10 @@ class Map(Cloud):
 
 
 def create_multiprocessing(config):
-    """
+    '''
     This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
-    """
+    '''
     config['opts']['output'] = 'json'
     cloud = Cloud(config['opts'])
     output = cloud.create(config['profile'])
