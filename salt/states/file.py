@@ -1306,11 +1306,9 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     '''
     Maintain a simple edit to a file
 
-    The file will be searched for the ``before`` pattern before making the edit
-    and then searched for the ``after`` pattern to verify the edit was
-    successful using :mod:`salt.modules.file.contains`. In general the
-    ``limit`` pattern should be as specific as possible and ``before`` and
-    ``after`` should contain the minimal text to be changed.
+    The file will be searched for the ``before`` pattern before making the
+    edit.  In general the ``limit`` pattern should be as specific as possible
+    and ``before`` and ``after`` should contain the minimal text to be changed.
 
     Usage::
 
@@ -1336,49 +1334,45 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     if not check_res:
         return _error(ret, check_msg)
 
-    # sed returns no output if the edit matches anything or not so we'll have
-    # to look for ourselves
-
     # Mandate that before and after are strings
     before = str(before)
     after = str(after)
 
     # Look for the pattern before attempting the edit
-    if not __salt__['file.contains_regex_multiline'](name, before):
-        # Pattern not found; try to guess why
-        if __salt__['file.contains'](name, after):
-            ret['comment'] = 'Edit already performed'
-            ret['result'] = True
-            return ret
-        else:
-            ret['comment'] = 'Pattern not matched'
-            return ret
+    if not __salt__['file.contains_regex'](name, before):
+        # Pattern not found; don't try to guess why, just tell the user there
+        # were no changes made, as the changes should only be made once anyway.
+        # This makes it so users can use backreferences without the state
+        # coming back as failed all the time.
+        ret['comment'] = '"before" pattern not found, no changes made'
+        ret['result'] = True
+        return ret
 
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
+
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
+
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
+
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
 
-    # check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](name, after)
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = ''.join(difflib.unified_diff(slines, nlines))
-
-    if ret['result']:
-        ret['comment'] = 'File successfully edited'
+        # Don't check the result -- sed is not designed to be able to check the
+        # result, because of backreferences and so forth.  Just report that sed
+        # was run, and assume it was successful (no error!)
+        ret['result'] = True
+        ret['comment'] = 'sed ran without error'
     else:
-        ret['comment'] = 'Expected edit does not appear in file'
-
-    # In this case, even if the `after` pattern doesn't appear in the file, we
-    # return True, as it's not necessarily an error
-    ret['result'] = True
+        ret['result'] = False
+        ret['comment'] = 'sed ran without error, but no changes were made'
 
     return ret
 

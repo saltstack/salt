@@ -54,6 +54,7 @@ log = logging.getLogger(__name__)
 # 5. connect to the publisher
 # 6. handle publications
 
+
 def resolve_dns(opts):
     '''
     Resolves the master_ip and master_uri options
@@ -92,7 +93,7 @@ def resolve_dns(opts):
         ret['master_ip'] = '127.0.0.1'
 
     ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
-                                                    port=opts['master_port'])
+                                                   port=opts['master_port'])
     return ret
 
 
@@ -417,7 +418,10 @@ class Minion(object):
                 args, kwargs = detect_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 ret['return'] = func(*args, **kwargs)
-                ret['retcode'] = sys.modules[func.__module__].__context__.get('retcode', 0)
+                ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                        'retcode',
+                        0
+                )
                 ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
@@ -437,6 +441,8 @@ class Minion(object):
                 aspec = _getargs(minion_instance.functions[data['fun']])
                 msg = 'Missing arguments executing "{0}": {1}'
                 log.warning(msg.format(function_name, aspec))
+                dmsg = '"Missing args" caused by exc: {0}'.format(exc)
+                log.debug(dmsg)
                 ret['return'] = msg.format(function_name, aspec)
             except Exception:
                 trb = traceback.format_exc()
@@ -851,7 +857,6 @@ class Syndic(Minion):
     '''
     def __init__(self, opts):
         interface = opts.get('interface')
-        sock_dir = opts['sock_dir']
         self._syndic = True
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
@@ -908,14 +913,13 @@ class Syndic(Minion):
         if 'tgt_type' not in data:
             data['tgt_type'] = 'glob'
         # Send out the publication
-        self.local.pub(
-            data['tgt'],
-            data['fun'],
-            data['arg'],
-            data['tgt_type'],
-            data['ret'],
-            data['jid'],
-            data['to'])
+        self.local.pub(data['tgt'],
+                       data['fun'],
+                       data['arg'],
+                       data['tgt_type'],
+                       data['ret'],
+                       data['jid'],
+                       data['to'])
 
     def tune_in(self):
         '''
