@@ -45,9 +45,25 @@ class Cloud(object):
         Return the top level module that will be used for the given VM data
         set
         '''
-        if 'provider' in vm_:
-            return vm_['provider']
+        provider = vm_['provider']
+        if ':' in provider:
+            # We have the alias and the provider
+            # Return the provider
+            alias, provider = provider.split(':')
+            return provider
 
+        try:
+            # There's no <alias>:<provider> entry, return the first one
+            return self.opts['providers'][provider][0]['provider']
+        except Exception, err:
+            log.error(
+                'Failed to get the proper cloud provider. '
+                'Error: {0}'.format(err),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+
+        # Let's try, as a last resort, to get the provider from self.opts
         if 'provider' in self.opts:
             if '{0}.create'.format(self.opts['provider']) in self.clouds:
                 return self.opts['provider']
@@ -72,7 +88,7 @@ class Cloud(object):
         pmap = {}
         for prov in provs:
             fun = '{0}.{1}'.format(prov, query)
-            if not fun in self.clouds:
+            if fun not in self.clouds:
                 log.error(
                     'Public cloud provider {0} is not available'.format(
                         prov
