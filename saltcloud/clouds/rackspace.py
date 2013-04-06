@@ -62,6 +62,8 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())

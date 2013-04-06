@@ -44,6 +44,8 @@ log = logging.getLogger(__name__)
 
 
 # Redirect linode functions to this module namespace
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())

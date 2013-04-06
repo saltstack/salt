@@ -133,6 +133,7 @@ def remove_key(pki_dir, id_):
     key = os.path.join(pki_dir, 'minions', id_)
     if os.path.isfile(key):
         os.remove(key)
+        log.debug('Deleted {0!r}'.format(key))
 
 
 def rename_key(pki_dir, id_, new_id):
