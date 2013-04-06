@@ -57,7 +57,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
 
 .. code-block:: yaml
 
-    aws-southeast-public-ips:
+    my-aws-southeast-public-ips:
       # Set up the location of the salt master
       #
       minion:
@@ -102,7 +102,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
       provider: aws
 
 
-    aws-southeast-private-ips:
+    my-aws-southeast-private-ips:
       # Set up the location of the salt master
       #
       minion:
@@ -214,13 +214,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
 .. code-block:: yaml
 
     base_aws_private:
-      provider: aws-southeast-private-ips
+      provider: my-aws-southeast-private-ips
       image: ami-e565ba8c
       size: Micro Instance
       ssh-user: ec2-user
 
     base_aws_public:
-      provider: aws-southeast-public-ips
+      provider: my-aws-southeast-public-ips
       image: ami-e565ba8c
       size: Micro Instance
       ssh-user: ec2-user
@@ -269,7 +269,7 @@ The following settings are always required for AWS:
 .. code-block:: yaml
 
     # Set the AWS login data
-    aws-config:
+    my-aws-config:
       id: HJGRYCILJLKJYG
       key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
       keyname: test
@@ -297,7 +297,7 @@ zones exist inside regions, and may be added to increase specificity.
 
 .. code-block:: yaml
 
-    aws-config:
+    my-aws-config:
       # Optionally configure default region
       location: ap-southeast-1
       availability_zone: ap-southeast-1b
@@ -321,7 +321,7 @@ run from another AWS instance, the private IP should be used.
 
 .. code-block:: yaml
 
-    aws-config:
+    my-aws-config:
       # Specify whether to use public or private IP for deploy script
       # private_ips or public_ips
       ssh_interface: public_ips
@@ -345,7 +345,7 @@ Bitnami).
 
 .. code-block:: yaml
 
-    aws-config
+    my-aws-config:
       # Configure which user to use to run the deploy script
       ssh_username: ec2-user
 
@@ -369,7 +369,7 @@ file:
 
 .. code-block:: yaml
 
-    aws-config:
+    my-aws-config:
       ssh_username:
         - ec2-user
         - ubuntu
@@ -387,27 +387,40 @@ Multiple security groups can also be specified in the same fashion:
       - default
       - extra
 
-Block device mappings enable you to specify additional EBS volumes or instance
-store volumes when the instance is launched. This setting is also available on
-each cloud profile:
-
-.. code-block:: yaml
-
-    AWS.block_device_mappings:
-        - DeviceName: /dev/sdb
-          VirtualName: ephemeral0
-        - DeviceName: /dev/sdc
-          VirtualName: ephemeral1
-
 
 * Using the old cloud configuration format:
 
 .. code-block:: yaml
 
-    aws-config:
+    my-aws-config:
       securitygroup:
         - default
         - extra
+
+
+Block device mappings enable you to specify additional EBS volumes or instance
+store volumes when the instance is launched. This setting is also available on
+each cloud profile. Using the old cloud configuration format:
+
+.. code-block:: yaml
+
+    AWS.block_device_mappings:
+      - DeviceName: /dev/sdb
+        VirtualName: ephemeral0
+      - DeviceName: /dev/sdc
+        VirtualName: ephemeral1
+
+
+Using the new cloud configuration syntax:
+
+.. code-block:: yaml
+
+    my-aws-config:
+      block_device_mappings:
+        - DeviceName: /dev/sdb
+          VirtualName: ephemeral0
+        - DeviceName: /dev/sdc
+          VirtualName: ephemeral1
 
 
 Modify AWS Tags
@@ -474,7 +487,7 @@ configuration file:
 
 .. code-block:: yaml
 
-    aws-config:
+    my-aws-config:
       rename_on_destroy: True
 
 
@@ -533,13 +546,14 @@ argument names:
 
 .. code-block:: yaml
 
-    ec2-config:
+    my-ec2-config:
       # Set the EC2 login data
       id: HJGRYCILJLKJYG
       key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
+      provider: ec2
 
 
 This driver contains optimizations over the old AWS driver, which increase 
@@ -603,7 +617,7 @@ configuration:
 
 .. code-block:: yaml
 
-    ec2-config:
+    my-ec2-config:
       delvol_on_destroy: True
 
 
@@ -655,6 +669,14 @@ directly in the main cloud configuration file:
 .. code-block:: yaml
 
     EC2.endpoint: myendpoint.example.com:1138/services/Cloud
+
+
+Or, when using the new cloud configuration syntax:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      endpoint: myendpoint.example.com:1138/services/Cloud
 
 
 Volume Management

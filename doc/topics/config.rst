@@ -61,7 +61,7 @@ Rackspace cloud requires two configuration options:
 
 .. code-block:: yaml
 
-    rackspace-config:
+    my-rackspace-config:
       user: example_user
       apikey: 123984bjjas87034
       provider: rackspace
@@ -92,7 +92,7 @@ A number of configuration options are required for Amazon AWS:
 
 .. code-block:: yaml
 
-    aws-quick-start:
+    my-aws-quick-start:
       id: HJGRYCILJLKJYG
       key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
       keyname: test
@@ -100,7 +100,7 @@ A number of configuration options are required for Amazon AWS:
       private_key: /root/test.pem
       provider: aws
 
-    aws-default:
+    my-aws-default:
       id: HJGRYCILJLKJYG
       key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
       keyname: test
@@ -110,8 +110,9 @@ A number of configuration options are required for Amazon AWS:
 
 
 **NOTE**: With the new providers configuration syntax you would have 
-``provider: aws-quick-start`` or ``provider: aws-default`` instead of 
+``provider: my-aws-quick-start`` or ``provider: my-aws-default`` instead of 
 ``provider: aws`` on a profile configuration.
+
 
 Linode
 ------
@@ -131,14 +132,15 @@ be set:
 
 .. code-block:: yaml
 
-    linode-foo:
+    my-linode-config:
       apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
       password: F00barbaz
       provider: linode
 
 
-**NOTE**: With the new providers configuration syntax you would have ``provider: 
-linode-foo`` instead of ``provider: linode`` on a profile configuration.
+**NOTE**: With the new providers configuration syntax you would have 
+``provider: my-linode-config`` instead of ``provider: linode`` on a profile 
+configuration.
 
 The password needs to be 8 characters and contain lowercase, uppercase and 
 numbers.
@@ -165,15 +167,16 @@ send the provisioning commands up to the freshly created virtual machine,
 
 .. code-block:: yaml
 
-    joyent-config:
+    my-joyent-config:
         user: fred
         password: saltybacon
         private_key: /root/joyent.pem
         provider: joyent
 
 
-**NOTE**: With the new providers configuration syntax you would have ``provider: 
-joyent-config`` instead of ``provider: joyent`` on a profile configuration.
+**NOTE**: With the new providers configuration syntax you would have 
+``provider: my-joyent-config`` instead of ``provider: joyent`` on a profile 
+configuration.
 
 
 GoGrid
@@ -198,14 +201,14 @@ be set in the configuration file to enable interfacing with GoGrid:
 
 .. code-block:: yaml
 
-    gogrid-config:
+    my-gogrid-config:
       apikey: asdff7896asdh789
       sharedsecret: saltybacon
       provider: gogrid
 
 
 **NOTE**: With the new providers configuration syntax you would have 
-``provider: gogrid-config`` instead of ``provider: gogrid`` on a profile 
+``provider: my-gogrid-config`` instead of ``provider: gogrid`` on a profile 
 configuration.
 
 
@@ -255,7 +258,7 @@ password:
 .. code-block:: yaml
 
     # For HP
-    openstack-hp-config:
+    my-openstack-hp-config:
       identity_url: 
       'https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/'
       compute_name: Compute
@@ -268,7 +271,7 @@ password:
       provider: openstack
 
     # For Rackspace
-    openstack-rackspace-config:
+    my-openstack-rackspace-config:
       identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
       compute_name: cloudServersOpenStack
       protocol: ipv4
@@ -285,16 +288,17 @@ password:
 
 .. code-block:: yaml
 
-    openstack-hp-config:
+    my-openstack-hp-config:
       apikey: 901d3f579h23c8v73q9
 
-    openstack-rackspace-config:
+    my-openstack-rackspace-config:
       apikey: 901d3f579h23c8v73q9
 
 
 **NOTE**: With the new providers configuration syntax you would have 
-``provider: openstack-hp-config`` or ``provider: openstack-rackspace-config`` 
-instead of ``provider: openstack`` on a profile configuration.
+``provider: my-openstack-hp-config`` or ``provider: 
+my-openstack-rackspace-config`` instead of ``provider: openstack`` on a profile 
+configuration.
 
 
 You will certainly need to configure the ``user``, ``tenant`` and either 
@@ -314,7 +318,7 @@ Using the new syntax:
 
 .. code-block:: yaml
 
-    openstack-config:
+    my-openstack-config:
       ignore_cidr: 192.168.0.0/16
 
 
@@ -343,7 +347,7 @@ already set) in order to find the name of the location that you want to use.
 
 .. code-block:: yaml
 
-    ibmsce-config:
+    my-ibmsce-config:
       user: myuser@mycorp.com
       password: mypass
       ssh_key_name: mykey
@@ -353,7 +357,7 @@ already set) in order to find the name of the location that you want to use.
 
 
 **NOTE**: With the new providers configuration syntax you would have 
-``provider: imbsce-config`` instead of ``provider: ibmsce`` on a profile 
+``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile 
 configuration.
 
 
@@ -377,7 +381,7 @@ Some example usage on how to use ``extends`` with profiles. Consider
 .. code-block:: yaml
 
     development-instances:
-      provider: ec2-config
+      provider: my-ec2-config
       size: Micro Instance
       ssh_username: ec2_user
       securitygroup:
@@ -393,7 +397,7 @@ Some example usage on how to use ``extends`` with profiles. Consider
       extends: development-instances
 
     CentOS-5:
-      provider: aws-config
+      provider: my-aws-config
       image: ami-09b61d60
       extends: development-instances
 
@@ -406,27 +410,27 @@ data:
     [{'deploy': False,
       'image': 'ami-08d97e61',
       'profile': 'Fedora-17',
-      'provider': 'ec2-config',
+      'provider': 'my-ec2-config',
       'securitygroup': ['default'],
       'size': 'Micro Instance',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-09b61d60',
       'profile': 'CentOS-5',
-      'provider': 'aws-config',
+      'provider': 'my-aws-config',
       'securitygroup': ['default'],
       'size': 'Micro Instance',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-54cf5c3d',
       'profile': 'Amazon-Linux-AMI-2012.09-64bit',
-      'provider': 'ec2-config',
+      'provider': 'my-ec2-config',
       'securitygroup': ['default'],
       'size': 'Micro Instance',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'profile': 'development-instances',
-      'provider': 'ec2-config',
+      'provider': 'my-ec2-config',
       'securitygroup': ['default'],
       'size': 'Micro Instance',
       'ssh_username': 'ec2_user'}]
@@ -443,7 +447,7 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
 
 .. code-block:: yaml
 
-    develop-envs:
+    my-develop-envs:
       - id: HJGRYCILJLKJYG
       key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
       keyname: test
@@ -461,7 +465,7 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
       provider: ibmsce
 
 
-    productions-envs:
+    my-productions-envs:
       - extends: develop-envs:ibmsce
         user: my-production-user@mycorp.com
         location: us-east-1

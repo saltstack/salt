@@ -33,7 +33,7 @@ http://www.parallels.com/products/pcs/
 
 .. code-block:: yaml
 
-    parallels-config:
+    my-parallels-config:
       # Set up the location of the salt master
       #
       minion:
@@ -78,7 +78,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     parallels-ubuntu:
-        provider: parallels-config
+        provider: my-parallels-config
         image: ubuntu-12.04-x86_64
 
 
@@ -120,7 +120,7 @@ The following settings are always required for PARALLELS:
 
 .. code-block:: yaml
 
-    parallels-config:
+    my-parallels-config:
       user: myuser
       password: badpass
       url: https://api.cloud.xmission.com:4465/paci/v1.0/

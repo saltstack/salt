@@ -37,7 +37,7 @@ that Salt Cloud has been built to support.
 
 .. code-block:: yaml
 
-    rackspace-config:
+    my-rackspace-config:
       # Set the location of the salt-master
       #
       minion:
@@ -108,7 +108,7 @@ An initial profile can be configured in ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     openstack_512:
-        provider: openstack-config
+        provider: my-openstack-config
         size: 512MB Standard Instance
         image: Ubuntu 12.04 LTS (Precise Pangolin)
 
