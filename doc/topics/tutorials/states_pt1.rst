@@ -18,8 +18,8 @@ States are stored in text files on the master and transferred to the minions on
 demand via the master's File Server. The collection of state files make up the
 :term:`State Tree`.
 
-To start using a central state system in Salt you must first set up the Salt
-File Server. Edit your master config file (:conf_master:`file_roots`) and
+To start using a central state system in Salt, the Salt File Server must first 
+be set up. Edit the master config file (:conf_master:`file_roots`) and
 uncomment the following lines:
 
 .. code-block:: yaml
@@ -43,7 +43,7 @@ Restart the Salt master in order to pick up this change:
 Preparing the Top File
 ======================
 
-On the master in the directory you uncommented in the previous step
+On the master, in the directory uncommented in the previous step,
 (``/srv/salt`` by default), create a new file called
 :conf_master:`top.sls <state_top>` and add the following:
 
@@ -71,7 +71,7 @@ minion matches is defined; for now simply specify all hosts (``*``).
 Create an ``sls`` module
 ========================
 
-In the same directory as your :term:`top file`, create an empty file, called an
+In the same directory as the :term:`top file`, create an empty file, called an
 :term:`SLS module`, named ``webserver.sls``. Type the following and save the
 file:
 
@@ -84,8 +84,9 @@ file:
 
 The first line, called the :term:`ID declaration`, is an arbitrary identifier.
 In this case it defines the name of the package to be installed. **NOTE:** the
-package name for the Apache httpd web server may differ on your OS or distro —
-for example, on Fedora it is ``httpd`` but on Debian/Ubuntu it is ``apache2``.
+package name for the Apache httpd web server may differ depending on OS or 
+distro — for example, on Fedora it is ``httpd`` but on Debian/Ubuntu it 
+is ``apache2``.
 
 The second line, called the :term:`state declaration`, defines which of the
 Salt States we are using. In this example, we are using the :mod:`pkg state
@@ -105,7 +106,7 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
     </ref/renderers/index>` and they are dead-simple to write.
 
     In this tutorial we will be using YAML in Jinja2 templates, which is the
-    default format. You can change the default by changing
+    default format. The default can be changed by editing
     :conf_master:`renderer` in the master configuration file.
 
 .. _`DSLs`: http://en.wikipedia.org/wiki/Domain-specific_language
@@ -130,7 +131,7 @@ and all changes made.
 
 .. admonition:: Troubleshooting Salt
 
-    In case you don't see the expected output, the following tips can help you
+    If the expected output isn't seen, the following tips can help to
     narrow down the problem.
 
     Turn up logging
@@ -141,7 +142,7 @@ and all changes made.
 
     Run the minion in the foreground
         By not starting the minion in daemon mode (:option:`-d <salt-minion
-        -d>`) you can view any output from the minion as it works::
+        -d>`) one can view any output from the minion as it works::
 
             salt-minion &
 
