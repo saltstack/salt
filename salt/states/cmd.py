@@ -415,15 +415,46 @@ def run(name,
         return ret
 
     if env:
-        _env = {}
-        for var in env.split():
+        if isinstance(env, basestring):
             try:
-                key, val = var.split('=')
-                _env[key] = val
-            except ValueError:
-                ret['comment'] = 'Invalid enviromental var: "{0}"'.format(var)
-                return ret
-        env = _env
+                env = yaml.safe_load(env)
+            except Exception:
+                _env = {}
+                for var in env.split():
+                    try:
+                        key, val = var.split('=')
+                        _env[key] = val
+                    except ValueError:
+                        ret['comment'] = 'Invalid enviromental var: "{0}"'.format(
+                                var)
+                        return ret
+                env = _env
+        elif isinstance(env, dict):
+            pass
+
+        elif isinstance(env, list):
+            _env = {}
+            for comp in env:
+                try:
+                    if isinstance(comp, basestring):
+                        _env.update(yaml.safe_load(comp))
+                    if isinstance(comp, dict):
+                        _env.update(comp)
+                    else:
+                        ret['comment'] = 'Invalid enviromental var: "{0}"'.format(
+                                env)
+                        return ret
+                except Exception:
+                    _env = {}
+                    for var in comp.split():
+                        try:
+                            key, val = var.split('=')
+                            _env[key] = val
+                        except ValueError:
+                            ret['comment'] = 'Invalid enviromental var: "{0}"'.format(
+                                    var)
+                            return ret
+            env = _env
 
     if HAS_GRP:
         pgid = os.getegid()
