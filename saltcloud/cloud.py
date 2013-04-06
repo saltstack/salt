@@ -177,21 +177,83 @@ class Cloud(object):
             for node in nodes:
                 if node in names:
                     dels[prov].append(node)
+
         for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
             for name in names_:
                 delret = self.clouds[fun](name)
                 ret.append(delret)
-                if delret:
-                    key_id = name
-                    minion_dict = config.get_config_value(
-                        'minion', self.opts['vm'], self.opts
-                    )
-                    if minion_dict and 'append_domain' in minion_dict:
-                        key_id = '.'.join([
-                            key_id, minion_dict['append_domain']
-                        ])
+                if not delret:
+                    continue
+
+                key_file = os.path.join(
+                    self.opts['pki_dir'], 'minions', name
+                )
+                globbed_key_file = glob.glob('{0}.*'.format(key_file))
+
+                if os.path.isfile(key_file) and not globbed_key_file:
+                    # Single key entry
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
+                    continue
+
+                if not os.path.isfile(key_file) and globbed_key_file:
+                    # Since we have globbed matches, there are probably
+                    # some keys for which their minion configuration has
+                    # append_domain set.
+                    if len(globbed_key_file) == 1:
+                        # Single entry, let's remove it!
+                        saltcloud.utils.remove_key(
+                            self.opts['pki_dir'],
+                            os.path.basename(globbed_key_file[0])
+                        )
+                        continue
+
+                # Since we can't get the profile or map entry used to create
+                # the VM, we can't also get the append_domain setting.
+                # And if we reached this point, we have several minion keys
+                # who's name starts with the machine name we're deleting.
+                # We need to ask one by one!?
+                print(
+                    'There are several minion keys who\'s name starts '
+                    'with {0!r}. We need to ask you which one should be '
+                    'deleted:'.format(
+                        name
+                    )
+                )
+                while True:
+                    for idx, filename in enumerate(globbed_key_file):
+                        print(' {0}: {1}'.format(
+                            idx, os.path.basename(filename)
+                        ))
+                    selection = raw_input(
+                        'Which minion key should be deleted(number)? '
+                    )
+                    try:
+                        selection = int(selection)
+                    except ValuError:
+                        print(
+                            '{0!r} is not a valid selection.'.format(selection)
+                        )
+
+                    try:
+                        filename = os.path.basename(
+                            globbed_key_file.pop(selection)
+                        )
+                    except:
+                        continue
+
+                    delete = raw_input(
+                        'Delete {0!r}? [Y/n]? '.format(filename)
+                    )
+                    if delete == '' or delete.lower().startswith('y'):
+                        saltcloud.utils.remove_key(
+                            self.opts['pki_dir'], filename
+                        )
+                        print('Deleted {0!r}'.format(filename))
+                        break
+
+                    print('Did not delete {0!r}'.format(filename))
+                    break
 
         return ret
 
@@ -322,7 +384,8 @@ class Cloud(object):
                     found = True
                     provider = self.profile_provider(vm_profile)
                     boxes = pmap[provider]
-                    if name in boxes and boxes[name]['state'].lower() != 'terminated':
+                    if name in boxes and \
+                            boxes[name]['state'].lower() != 'terminated':
                         # The specified VM already exists, don't make it anew
                         log.warn(
                             '{0} already exists on {1}'.format(
@@ -523,9 +586,11 @@ class Map(Cloud):
         master_name = None
         master_host = None
         try:
-            master_name, master_profile = ((name, profile) for name, profile in
-                dmap['create'].items() if 'make_master' in profile and
-                profile['make_master'] is True).next()
+            master_name, master_profile = (
+                (name, profile) for name, profile in dmap['create'].items()
+                if 'make_master' in profile and
+                profile['make_master'] is True
+            ).next()
             log.debug('Creating new master {0}'.format(master_name))
             tvm = self.vm_options(master_name,
                                   master_profile,
@@ -536,8 +601,12 @@ class Map(Cloud):
                 master_host = out['deploy_kwargs']['host']
                 output[master_name] = out
             else:
-                print('Host for new master {0} was not found, '
-                    'aborting map'.format(master_name))
+                print(
+                    'Host for new master {0} was not found, '
+                    'aborting map'.format(
+                        master_name
+                    )
+                )
                 sys.exit(1)
         except StopIteration:
             log.debug('No make_master found in map')
