@@ -369,11 +369,21 @@ class Cloud(object):
 
     def profile_provider(self, profile=None):
         for definition in self.opts['vm']:
-            if definition['profile'] == profile:
-                if 'provider' in definition:
-                    return definition['provider']
-                else:
-                    return self.opts['provider']
+            if definition['profile'] != profile:
+                continue
+
+            if 'provider' in definition:
+                provider = definition['provider']
+                if ':' in provider:
+                    # We have the alias and the provider
+                    # Return the provider
+                    alias, provider = provider.split(':')
+                    return provider
+
+                # There's no <alias>:<provider> entry, return the first one
+                return self.opts['providers'][provider][0]['provider']
+
+            return self.opts['provider']
 
     def run_profile(self):
         '''
@@ -386,27 +396,38 @@ class Cloud(object):
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
                 vm_profile = vm_['profile']
-                if vm_profile == self.opts['profile']:
-                    # It all checks out, make the VM
-                    found = True
-                    provider = self.profile_provider(vm_profile)
-                    boxes = pmap[provider]
-                    if name in boxes and \
-                            boxes[name]['state'].lower() != 'terminated':
-                        # The specified VM already exists, don't make it anew
-                        log.warn(
-                            '{0} already exists on {1}'.format(
-                                name, provider
-                            )
-                        )
-                        continue
-                    vm_['name'] = name
-                    if self.opts['parallel']:
-                        multiprocessing.Process(
-                            target=lambda: self.create(vm_),
-                        ).start()
-                    else:
-                        ret[name] = self.create(vm_)
+                if vm_profile != self.opts['profile']:
+                    continue
+
+                # It all checks out, make the VM
+                found = True
+                provider = self.profile_provider(vm_profile)
+                boxes = pmap[provider]
+                if name in boxes and \
+                        boxes[name]['state'].lower() != 'terminated':
+                    # The specified VM already exists, don't make a new one
+                    msg = '{0} already exists on {1}'.format(
+                        name, provider
+                    )
+                    log.error(msg)
+                    ret[name] = {'Error': msg}
+                    continue
+
+                vm_['name'] = name
+                if self.opts['parallel']:
+                    process = multiprocessing.Process(
+                        target=self.create,
+                        args=(vm_,)
+                    )
+                    process.start()
+                    ret[name] = {
+                        'Provisioning': 'VM being provisioned in parallel. '
+                                        'PID: {0}'.format(process.pid)
+                    }
+                    continue
+
+                ret[name] = self.create(vm_)
+
         if not found:
             log.error(
                 'Profile {0} is not defined'.format(self.opts['profile'])
