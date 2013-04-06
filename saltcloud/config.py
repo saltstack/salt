@@ -282,6 +282,14 @@ def apply_cloud_providers_config(overrides, defaults=None):
             # we won't be able to properly reference it.
             handled_providers = set()
             for details in val:
+                if 'provider' not in details:
+                    if 'extends' not in details:
+                        log.error(
+                            'Please check your cloud providers configuration. '
+                            'There\'s no \'provider\' nor \'extends\' '
+                            'definition. So it\'s pretty useless.'
+                        )
+                    continue
                 if details['provider'] in handled_providers:
                     log.error(
                         'You can only have one entry per cloud provider. For '
@@ -304,27 +312,51 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 continue
 
             extends = details.pop('extends')
-            if extends not in providers:
-                log.error(
-                    'The {0!r} cloud provider entry in {1!r} is trying to '
-                    'extend data from {2!r} though {2!r} is not defined in '
-                    'the salt cloud providers loaded data.'.format(
-                        details['provider'], provider_alias, extends
-                    )
-                )
-                continue
 
             if ':' in extends:
                 alias, provider = extends.split(':')
+                if alias not in providers:
+                    log.error(
+                        'The {0!r} cloud provider entry in {1!r} is trying '
+                        'to extend data from {2!r} though {2!r} is not '
+                        'defined in the salt cloud providers loaded '
+                        'data.'.format(
+                            details['provider'],
+                            provider_alias,
+                            alias
+                        )
+                    )
+                    continue
+
                 for entry in providers.get(alias):
                     if entry['provider'] == provider:
                         extended = entry.copy()
                         break
+                else:
+                    log.error(
+                        'The {0!r} cloud provider entry in {1!r} is trying '
+                        'to extend data from \'{2}:{3}\' though {3!r} is not '
+                        'defined in {1!r}'.format(
+                            details['provider'],
+                            provider_alias,
+                            alias,
+                            provider
+                        )
+                    )
             elif len(providers.get(extends)) > 1:
                 log.error(
                     'The {0!r} cloud provider entry in {1!r} is trying to '
                     'extend from {2!r} which has multiple entries and no '
                     'provider is being specified. Not extending!'.format(
+                        details['provider'], provider_alias, extends
+                    )
+                )
+                continue
+            elif extends not in providers:
+                log.error(
+                    'The {0!r} cloud provider entry in {1!r} is trying to '
+                    'extend data from {2!r} though {2!r} is not defined in '
+                    'the salt cloud providers loaded data.'.format(
                         details['provider'], provider_alias, extends
                     )
                 )
@@ -338,7 +370,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
             # Update the provider's entry with the extended data
             providers[provider_alias][idx] = extended
 
-        return providers
+    return providers
 
 
 def get_config_value(name, vm_, opts, default=None, search_global=True):
