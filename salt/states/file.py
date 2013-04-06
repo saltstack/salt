@@ -26,6 +26,22 @@ which makes use of the jinja templating system would look like this:
             custom_var: "default value"
             other_var: 123
 
+The ``source`` parameter can be specified as a list. IF this is done, then the
+first file to be matched will be the one that is used. This allows you to have
+a default file on which to fall back if the desired file does not exist on the
+salt fileserver. Here's an example:
+
+.. code-block:: yaml
+    /etc/foo.conf
+      file.managed:
+        - source:
+          - salt://foo.conf.{{ grains['fqdn'] }}
+          - salt://foo.conf.fallback
+        - user: foo
+        - group: users
+        - mode: 644
+
+
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
 look like this:
