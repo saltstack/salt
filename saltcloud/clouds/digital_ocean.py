@@ -57,13 +57,13 @@ def __virtual__():
     Check for Digital Ocean configurations
     '''
     if get_configured_provider() is False:
-        log.info(
+        log.debug(
             'There is no Digital Ocean cloud provider configuration '
             'available. Not loading module'
         )
         return False
 
-    log.debug('Loading Digital Ocean cloud module')
+    log.info('Loading Digital Ocean cloud module')
     return 'digital_ocean'
 
 
