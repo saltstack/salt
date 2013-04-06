@@ -19,7 +19,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    linode-config:
+    my-linode-config:
       # Linode account api key
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: linode

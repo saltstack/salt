@@ -22,7 +22,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    joyent-config:
+    my-joyent-config:
       # The Joyent login user
       user: fred
       # The Joyent user's password

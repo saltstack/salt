@@ -23,7 +23,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    parallels-config:
+    my-parallels-config:
       # Parallels account information
       user: myuser
       password: mypassword

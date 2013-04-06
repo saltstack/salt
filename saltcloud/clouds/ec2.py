@@ -36,7 +36,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    ec2-config:
+    my-ec2-config:
       # The EC2 API authentication id
       id: GKTADJGHEIQSXMKKRBJ08H
       # The EC2 API authentication key

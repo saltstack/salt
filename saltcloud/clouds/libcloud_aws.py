@@ -27,7 +27,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    aws-config:
+    my-aws-config:
       # The AWS API authentication id
       id: GKTADJGHEIQSXMKKRBJ08H
       # The AWS API authentication key

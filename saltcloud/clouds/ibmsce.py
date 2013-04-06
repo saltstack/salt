@@ -26,7 +26,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    imbsce-config:
+    my-imbsce-config:
       # The generated api key to use
       user: myuser@mycompany.com
       # The user's password

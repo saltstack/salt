@@ -26,7 +26,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    rackspace-config:
+    my-rackspace-config:
       # The Rackspace login user
       user: fred
       # The Rackspace user's apikey

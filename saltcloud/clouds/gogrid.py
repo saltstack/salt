@@ -24,7 +24,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    gogrid-config:
+    my-gogrid-config:
       # The generated api key to use
       apikey: asdff7896asdh789
       # The apikey's shared secret

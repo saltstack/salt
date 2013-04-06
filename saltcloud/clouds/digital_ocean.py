@@ -22,7 +22,7 @@ Using the new format, set up the cloud configuration at
 
 .. code-block:: yaml
 
-    digital-ocean-config:
+    my-digital-ocean-config:
       # Digital Ocean account keys
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg

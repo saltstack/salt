@@ -48,7 +48,7 @@ configuration at ``/etc/salt/cloud.providers`` or
 
 .. code-block:: yaml
 
-    openstack-config:
+    my-openstack-config:
       # The OpenStack identity service url
       identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
       # The OpenStack compute region
@@ -68,7 +68,7 @@ Either a password or an API key must also be specified:
 
 .. code-block:: yaml
 
-    openstack-password-or-api-config:
+    my-openstack-password-or-api-config:
       # The OpenStack password
       password: letmein
       # The OpenStack API key
@@ -88,7 +88,7 @@ Using the new syntax:
 
 .. code-block:: yaml
 
-    openstack-config:
+    my-openstack-config:
       # Ignore IP addresses on this network for bootstrap
       ignore_ip_addr: 192.168.50.0/24
 
