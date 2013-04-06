@@ -362,7 +362,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 )
                 continue
             else:
-                extended = providers.get(extends)[0][:]
+                extended = providers.get(extends)[:][0]
 
             # Update the data to extend with the data to be extended
             extended.update(details)
