@@ -267,6 +267,13 @@ class ExecutionOptionsMixIn(object):
             action='store_true',
             help='Do not remove files from /tmp/ after deploy.sh finishes.'
         )
+        group.add_option(
+            '--show-deploy-args',
+            default=False,
+            action='store_true',
+            help='Include the options used to deploy the minion in the data '
+                 'returned.'
+        )
         self.add_option_group(group)
 
     def process_function(self):

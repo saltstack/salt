@@ -397,13 +397,13 @@ def create(vm_):
         vm_
     )
 
-    ssh_username = config.get_config_value('ssh_username', vm_, __opts__)
-    if ssh_username is not None:
+    ssh_username = config.get_config_value(
+        'ssh_username', vm_, __opts__, default='root'
+    )
+    if ssh_username != 'root':
         deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
         deploy_kwargs['username'] = ssh_username
         deploy_kwargs['tty'] = True
-    else:
-        deploy_kwargs['username'] = 'root'
 
     log.debug('Using {0} as SSH username'.format(ssh_username))
 
@@ -446,7 +446,8 @@ def create(vm_):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
-            ret['deploy_kwargs'] = deploy_kwargs
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(

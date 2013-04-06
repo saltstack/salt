@@ -756,7 +756,8 @@ def create(vm_=None, call=None):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
-            ret['deploy_kwargs'] = deploy_kwargs
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 

@@ -237,7 +237,7 @@ def create(vm_):
     }
 
     try:
-        data = create_node(kwargs)
+        ret = create_node(kwargs)
     except Exception as exc:
         log.error(
             'Error creating {0} on DIGITAL_OCEAN\n\n'
@@ -275,11 +275,10 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
-        )
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
@@ -288,6 +287,8 @@ def create(vm_):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(
@@ -300,7 +301,7 @@ def create(vm_):
             vm_['name']
         )
     )
-    return data
+    return ret
 
 
 def query(method='droplets', droplet_id=None, command=None, args=None):

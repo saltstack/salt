@@ -111,6 +111,8 @@ def create(vm_):
             }
         }
 
+    ret = {}
+
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
     ssh_username = config.get_config_value('ssh_username', vm_, __opts__)
@@ -156,8 +158,11 @@ def create(vm_):
 
     deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
     if deployed:
+        ret['deployed'] = deployed
         log.info('Salt installed on {0}'.format(vm_['name']))
-        return {vm_['name']: True}
+        if __opts__.get('show_deploy_args', False) is True:
+            ret['deploy_kwargs'] = deploy_kwargs
+        return ret
 
     log.error('Failed to start Salt on host {0}'.format(vm_['name']))
     return {
