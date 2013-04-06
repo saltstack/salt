@@ -113,12 +113,14 @@ def __virtual__():
             )
 
     global avail_images, avail_sizes, script, destroy, list_nodes
-    global list_nodes_full, list_nodes_select
+    global list_nodes_full, list_nodes_select, get_image, get_size
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
+    get_size = namespaced_function(get_size, globals(), (conn,))
+    get_image = namespaced_function(get_image, globals(), (conn,))
     avail_images = namespaced_function(avail_images, globals(), (conn,))
     avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
@@ -289,7 +291,7 @@ def create(vm_):
     usernames = ssh_username(vm_)
     kwargs = {
         'ssh_key': config.get_config_value(
-            'privatekey', vm_, __opts__, search_global=False
+            'private_key', vm_, __opts__, search_global=False
         ),
         'name': vm_['name'],
         'image': get_image(conn, vm_),
@@ -355,7 +357,7 @@ def create(vm_):
             if saltcloud.utils.wait_for_passwd(
                     host=ip_address, username=user, ssh_timeout=60,
                     key_filename=config.get_config_value(
-                        'privatekey', vm_, __opts__, search_global=False)):
+                        'private_key', vm_, __opts__, search_global=False)):
                 username = user
                 break
         else:
@@ -368,7 +370,7 @@ def create(vm_):
             'host': ip_address,
             'username': username,
             'key_filename': config.get_config_value(
-                'privatekey', vm_, __opts__, search_global=False
+                'private_key', vm_, __opts__, search_global=False
             ),
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
@@ -635,6 +637,7 @@ def destroy(name):
                 newname
             )
         )
+        ret['newname'] = newname
 
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
@@ -644,7 +647,7 @@ def destroy(name):
     )
     try:
         result = libcloudfuncs_destroy(newname, conn)
-        ret[name] = result
+        ret.update({'Destroyed': result})
     except Exception as e:
         if not e.message.startswith('OperationNotPermitted'):
             raise e
