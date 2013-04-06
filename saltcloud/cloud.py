@@ -6,6 +6,7 @@ correct cloud modules
 import os
 import sys
 import copy
+import glob
 import multiprocessing
 import logging
 import time
@@ -183,6 +184,7 @@ class Cloud(object):
             for name in names_:
                 delret = self.clouds[fun](name)
                 ret.append(delret)
+
                 if not delret:
                     continue
 
@@ -191,8 +193,16 @@ class Cloud(object):
                 )
                 globbed_key_file = glob.glob('{0}.*'.format(key_file))
 
+                if not os.path.isfile(key_file) and not globbed_key_file:
+                    # There's no such key file!? It might have been renamed
+                    if isinstance(delret, dict) and 'newname' in delret[name]:
+                        saltcloud.utils.remove_key(
+                            self.opts['pki_dir'], delret[name]['newname']
+                        )
+                    continue
+
                 if os.path.isfile(key_file) and not globbed_key_file:
-                    # Single key entry
+                    # Single key entry. Remove it!
                     saltcloud.utils.remove_key(self.opts['pki_dir'], name)
                     continue
 
@@ -230,7 +240,7 @@ class Cloud(object):
                     )
                     try:
                         selection = int(selection)
-                    except ValuError:
+                    except ValueError:
                         print(
                             '{0!r} is not a valid selection.'.format(selection)
                         )
