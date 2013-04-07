@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 try:
     from mako.template import Template
-except:
+except ImportError:
     log.debug('Mako not available')
 
 
@@ -85,6 +85,32 @@ class Cloud(object):
             provs.add(fun[:fun.index('.')])
         return provs
 
+    def build_lookup(self, lookup):
+        if lookup == 'all':
+            providers = []
+            for alias, entries in self.opts['providers'].iteritems():
+                for entry in entries:
+                    provider = entry.get('provider', None)
+                    if provider is not None and provider not in providers:
+                        providers.append(provider)
+            return providers
+
+        if ':' in lookup:
+            alias, provider = lookup.split(':')
+            if alias not in self.opts['providers']:
+                return []
+
+            for entry in self.opts['providers'].get(alias):
+                if entry.get('provider', None) == provider:
+                    return [provider]
+            return []
+
+        return [
+            d.get('provider', None) for d in
+            self.opts['providers'].get(lookup, [{}])
+            if d and d.get('provider', None) is not None
+        ]
+
     def map_providers(self, query='list_nodes'):
         '''
         Return a mapping of what named VMs are running on what VM providers
@@ -113,19 +139,34 @@ class Cloud(object):
         '''
         Return a mapping of all location data for available providers
         '''
+
         provs = self.get_providers()
         locations = {}
+
+        lookups = self.build_lookup(lookup)
+        if not lookups:
+            return locations
+
         for prov in provs:
             # If all providers are not desired, then don't get them
-            if not lookup == 'all':
-                if not lookup == prov:
-                    continue
+            if prov not in lookups:
+                continue
+
             fun = '{0}.avail_locations'.format(prov)
-            if not fun in self.clouds:
+            if fun not in self.clouds:
                 # The capability to gather locations is not supported by this
                 # cloud module
                 continue
-            locations[prov] = self.clouds[fun]()
+            try:
+                locations[prov] = self.clouds[fun]()
+            except Exception as err:
+                log.error(
+                    'Failed to get the output of \'{0}()\': {1}'.format(
+                        fun, err,
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
         return locations
 
     def image_list(self, lookup='all'):
@@ -134,17 +175,31 @@ class Cloud(object):
         '''
         provs = self.get_providers()
         images = {}
+
+        lookups = self.build_lookup(lookup)
+        if not lookups:
+            return images
+
         for prov in provs:
             # If all providers are not desired, then don't get them
-            if not lookup == 'all':
-                if not lookup == prov:
-                    continue
+            if prov not in lookups:
+                continue
+
             fun = '{0}.avail_images'.format(prov)
             if not fun in self.clouds:
                 # The capability to gather images is not supported by this
                 # cloud module
                 continue
-            images[prov] = self.clouds[fun]()
+            try:
+                images[prov] = self.clouds[fun]()
+            except Exception as err:
+                log.error(
+                    'Failed to get the output of \'{0}()\': {1}'.format(
+                        fun, err,
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
         return images
 
     def size_list(self, lookup='all'):
@@ -153,17 +208,31 @@ class Cloud(object):
         '''
         provs = self.get_providers()
         sizes = {}
+
+        lookups = self.build_lookup(lookup)
+        if not lookups:
+            return sizes
+
         for prov in provs:
             # If all providers are not desired, then don't get them
-            if not lookup == 'all':
-                if not lookup == prov:
-                    continue
+            if prov not in lookups:
+                continue
+
             fun = '{0}.avail_sizes'.format(prov)
             if not fun in self.clouds:
                 # The capability to gather sizes is not supported by this
                 # cloud module
                 continue
-            sizes[prov] = self.clouds[fun]()
+            try:
+                sizes[prov] = self.clouds[fun]()
+            except Exception as err:
+                log.error(
+                    'Failed to get the output of \'{0}()\': {1}'.format(
+                        fun, err,
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
         return sizes
 
     def provider_list(self, lookup='all'):
@@ -172,7 +241,15 @@ class Cloud(object):
         '''
         provs = self.get_providers()
         prov_list = {}
+
+        lookups = self.build_lookup(lookup)
+        if not lookups:
+            return prov_list
+
         for prov in provs:
+            if prov not in lookups:
+                continue
+
             prov_list[prov] = {}
         return prov_list
 
