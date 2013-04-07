@@ -41,4 +41,4 @@ Join the vibrant, helpful and positive Salt Stack chat room in Freenode at
 just help and be helped! Make sure to wait for an answer, sometimes it may take
 a few moments for someone to reply.
 
-http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+http://webchat.freenode.net/?channels=salt
