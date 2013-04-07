@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 # Because on the cloud drivers we do `from saltcloud.libcloudfuncs import *`
-# which simplifies code readability, it adds some un-supported functions into
+# which simplifies code readability, it adds some unsupported functions into
 # the driver's module scope.
 # We list un-supported functions here. These will be removed from the loaded.
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
@@ -34,7 +34,7 @@ def clouds(opts):
         )
     )
     functions = load.gen_functions()
-    for funcname in CLOUD_FUNCS_NOT_SUPPORTED:
+    for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.debug(
             '{0!r} has been marked as not supported. Removing from the list '
             'of supported cloud functions'.format(
