@@ -29,8 +29,7 @@ manually authenticate them later.
 Documentation
 =============
 
-Installation instructions, getting started guides, and in-depth API
-documention.
+Installation instructions, and getting started guides.
 
 https://salt-cloud.readthedocs.org/en/latest/
 
