@@ -40,7 +40,7 @@ import logging
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -172,7 +172,7 @@ def get_image(vm_):
     for image in images:
         if vm_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
-    raise ValueError('The specified image could not be found.')
+    raise SaltCloudNotFound('The specified image could not be found.')
 
 
 def get_size(vm_):
@@ -186,7 +186,7 @@ def get_size(vm_):
     for size in sizes:
         if vm_size in (sizes[size]['name'], sizes[size]['id']):
             return sizes[size]['id']
-    raise ValueError('The specified size could not be found.')
+    raise SaltCloudNotFound('The specified size could not be found.')
 
 
 def get_location(vm_):
@@ -202,7 +202,7 @@ def get_location(vm_):
         if vm_location in (locations[location]['name'],
                            locations[location]['id']):
             return locations[location]['id']
-    raise ValueError('The specified location could not be found.')
+    raise SaltCloudNotFound('The specified location could not be found.')
 
 
 def create_node(args):
@@ -429,7 +429,7 @@ def get_keyid(keyname):
     keyid = keypairs[keyname]['id']
     if keyid:
         return keyid
-    raise ValueError('The specified ssh key could not be found.')
+    raise SaltCloudNotFound('The specified ssh key could not be found.')
 
 
 def destroy(name, call=None):

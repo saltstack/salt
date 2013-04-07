@@ -14,7 +14,11 @@ import time
 import saltcloud.utils
 import saltcloud.loader
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudNotFound,
+    SaltCloudSystemExit,
+    SaltCloudConfigError
+)
 
 # Import salt libs
 import salt.client
@@ -82,7 +86,7 @@ class Cloud(object):
     def map_providers(self, query='list_nodes'):
         '''
         Return a mapping of what named VMs are running on what VM providers
-        based on what providers are defined in the configs and VMs
+        based on what providers are defined in the configuration and VMs
         '''
         provs = self.get_providers()
         pmap = {}
@@ -328,7 +332,7 @@ class Cloud(object):
         deploy = config.get_config_value('deploy', vm_, self.opts)
 
         if deploy is True and 'master' not in minion_dict:
-            raise ValueError(
+            raise SaltCloudConfigError(
                 'There\'s no master defined on the {0!r} VM settings'.format(
                     vm_['name']
                 )
@@ -445,9 +449,9 @@ class Cloud(object):
                 ret[name] = self.create(vm_)
 
         if not found:
-            log.error(
-                'Profile {0} is not defined'.format(self.opts['profile'])
-            )
+            msg = 'Profile {0} is not defined'.format(self.opts['profile'])
+            ret['Error'] = msg
+            log.error(msg)
 
         return ret
 
@@ -556,7 +560,7 @@ class Map(Cloud):
             return {}
 
         if not os.path.isfile(self.opts['map']):
-            raise ValueError(
+            raise SaltCloudNotFound(
                 'The specified map file does not exist: {0}\n'.format(
                     self.opts['map']
                 )

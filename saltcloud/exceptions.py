@@ -27,3 +27,15 @@ class SaltCloudSystemExit(SaltCloudException):
     def __init__(self, message, exit_code=1):
         self.message = message
         self.exit_code = exit_code
+
+
+class SaltCloudConfigError(SaltCloudException):
+    '''
+    Raised when a configuration setting is not found and should exist.
+    '''
+
+
+class SaltCloudNotFound(SaltException):
+    '''
+    Raised when some cloud provider function cannot find what's being searched.
+    '''

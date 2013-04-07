@@ -22,6 +22,7 @@ import salt.utils.event
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudNotFound
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -155,7 +156,7 @@ def get_location(conn, vm_):
         if vm_location and str(vm_location) in (str(img.id), str(img.name)):
             return img
 
-    raise ValueError('The specified location could not be found.')
+    raise SaltCloudNotFound('The specified location could not be found.')
 
 
 def get_image(conn, vm_):
@@ -170,7 +171,7 @@ def get_image(conn, vm_):
         if vm_image and str(vm_image) in (str(img.id), str(img.name)):
             return img
 
-    raise ValueError('The specified image could not be found.')
+    raise SaltCloudNotFound('The specified image could not be found.')
 
 
 def get_size(conn, vm_):
@@ -185,7 +186,7 @@ def get_size(conn, vm_):
     for size in sizes:
         if vm_size and str(vm_size) in (str(size.id), str(size.name)):
             return size
-    raise ValueError('The specified size could not be found.')
+    raise SaltCloudNotFound('The specified size could not be found.')
 
 
 def script(vm_):

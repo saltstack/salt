@@ -83,7 +83,11 @@ import xml.etree.ElementTree as ET
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *
-from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudException,
+    SaltCloudSystemExit,
+    SaltCloudConfigError
+)
 
 
 # Get logging started
@@ -645,7 +649,9 @@ def create(vm_=None, call=None):
 
     if delvol_on_destroy is not None:
         if not isinstance(delvol_on_destroy, bool):
-            raise ValueError('\'delvol_on_destroy\' should be a boolean value')
+            raise SaltCloudConfigError(
+                '\'delvol_on_destroy\' should be a boolean value.'
+            )
 
         params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
         params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(

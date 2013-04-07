@@ -110,7 +110,11 @@ from saltcloud.libcloudfuncs import *
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudNotFound,
+    SaltCloudException,
+    SaltCloudSystemExit,
+)
 
 # Import netaddr IP matching
 try:
@@ -304,7 +308,7 @@ def create(vm_):
             if vg in [ag.name for ag in avail_groups]:
                 group_list.append(vg)
             else:
-                raise ValueError(
+                raise SaltCloudNotFound(
                     'No such security group: \'{0}\''.format(
                         group
                     )

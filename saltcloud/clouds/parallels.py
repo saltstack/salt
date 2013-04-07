@@ -42,7 +42,7 @@ import xml.etree.ElementTree as ET
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ def get_image(vm_):
     for image in images:
         if str(vm_image) in (images[image]['name'], images[image]['id']):
             return images[image]['id']
-    raise ValueError('The specified image could not be found.')
+    raise SaltCloudNotFound('The specified image could not be found.')
 
 
 def create_node(vm_):

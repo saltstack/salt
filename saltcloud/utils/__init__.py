@@ -28,7 +28,7 @@ import salt.utils.event
 
 # Import salt cloud libs
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudException
+from saltcloud.exceptions import SaltCloudConfigError, SaltCloudException
 
 # Import third party libs
 from jinja2 import Template
@@ -196,7 +196,9 @@ def minion_conf_string(opts, vm_):
     )
     make_master = config.get_config_value('make_master', vm_, opts)
     if 'master' not in minion and make_master is not True:
-        raise ValueError("A master was not defined.")
+        raise SaltCloudConfigError(
+            'A master setting was not defined in the minion\'s configuration.'
+        )
     minion.update(opts.get('map_minion', {}))
     minion.update(
         config.get_config_value(
