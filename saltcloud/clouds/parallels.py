@@ -33,20 +33,16 @@ Using the new format, set up the cloud configuration at
 '''
 
 # Import python libs
-import sys
 import time
 import urllib
 import urllib2
 import logging
 import xml.etree.ElementTree as ET
 
-# Import salt libs
-import salt.utils.event
-import salt.utils.xmlutil
-
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -465,10 +461,9 @@ def show_image(kwargs, call=None):
     Show the details from Parallels concerning an image
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_image function must be called with -f or --function.'
         )
-        sys.exit(1)
 
     items = query(action='template', command=kwargs['image'])
     return {items.attrib['name']: items.attrib}
@@ -479,10 +474,9 @@ def show_instance(name, call=None):
     Show the details from Parallels concerning an instance
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     items = query(action='ve', command=name)
 
@@ -551,10 +545,9 @@ def start(name, call=None):
         salt-cloud -a start mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     data = query(action='ve', command='{0}/start'.format(name), method='PUT')
 
@@ -573,10 +566,9 @@ def stop(name, call=None):
         salt-cloud -a stop mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     data = query(action='ve', command='{0}/stop'.format(name), method='PUT')
 

@@ -56,9 +56,7 @@ import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
-
-# Import salt libs
-from salt.exceptions import SaltException
+from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -92,7 +90,7 @@ def __virtual__():
             continue
 
         if not os.path.exists(details['private_key']):
-            raise SaltException(
+            raise SaltCloudException(
                 'The AWS key file {0!r} used in the {1!r} provider '
                 'configuration does not exist\n'.format(
                     details['private_key'],
@@ -104,7 +102,7 @@ def __virtual__():
             oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
         )
         if keymode not in ('0400', '0600'):
-            raise SaltException(
+            raise SaltCloudException(
                 'The AWS key file {0!r} used in the {1!r} provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
                     details['private_key'],
@@ -167,7 +165,7 @@ def get_conn(**kwargs):
     if 'location' in kwargs:
         location = kwargs['location']
         if location not in EC2_LOCATIONS:
-            raise SaltException(
+            raise SaltCloudException(
                 'The specified location does not seem to be valid: '
                 '{0}\n'.format(
                     location
@@ -459,8 +457,9 @@ def stop(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -482,8 +481,9 @@ def start(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -507,8 +507,9 @@ def set_tags(name, tags, call=None):
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -532,8 +533,9 @@ def get_tags(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -562,8 +564,9 @@ def del_tags(name, kwargs, call=None):
     ret = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -596,8 +599,9 @@ def rename(name, kwargs, call=None):
         salt-cloud -a rename mymachine newname=yourmachine
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)

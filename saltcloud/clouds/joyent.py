@@ -199,8 +199,9 @@ def stop(name, call=None):
     data = {}
 
     if call != 'action':
-        log.error('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     conn = get_conn()
     node = get_node(conn, name)

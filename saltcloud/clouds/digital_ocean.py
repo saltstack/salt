@@ -31,21 +31,16 @@ Using the new format, set up the cloud configuration at
 '''
 
 # Import python libs
-import re
-import sys
 import time
-import yaml
 import json
 import urllib
 import urllib2
 import logging
 
-# Import salt libs
-import salt.utils.event
-
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -354,10 +349,9 @@ def show_instance(name, call=None):
     Show the details from Digital Ocean concerning a droplet
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     return _get_node(name)
 

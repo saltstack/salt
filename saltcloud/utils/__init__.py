@@ -25,10 +25,10 @@ import salt.client
 import salt.config
 import salt.utils
 import salt.utils.event
-from salt.exceptions import SaltException
 
 # Import salt cloud libs
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudException
 
 # Import third party libs
 from jinja2 import Template
@@ -632,7 +632,7 @@ def check_name(name, safe_chars):
     '''
     regexp = re.compile('[^{0}]'.format(safe_chars))
     if regexp.search(name):
-        raise SaltException(
+        raise SaltCloudException(
             '{0} contains characters not supported by this cloud provider. '
             'Valid characters are: {1}'.format(
                 name, safe_chars

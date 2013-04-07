@@ -4,7 +4,6 @@ correct cloud modules
 '''
 # Import python libs
 import os
-import sys
 import copy
 import glob
 import multiprocessing
@@ -15,6 +14,7 @@ import time
 import saltcloud.utils
 import saltcloud.loader
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Import salt libs
 import salt.client
@@ -617,11 +617,12 @@ class Map(Cloud):
                 # Look for the items to delete
                 ret['destroy'] = exist.difference(defined)
             else:
-                print('The --hard map can be extremely dangerous to use, and '
-                      'therefore must explicitly be enabled in the main'
-                      'configuration file, by setting enable_hard_maps to '
-                      'True')
-                sys.exit(1)
+                raise SaltCloudSystemExit(
+                    'The --hard map can be extremely dangerous to use, '
+                    'and therefore must explicitly be enabled in the main '
+                    'configuration file, by setting \'enable_hard_maps\' '
+                    'to True'
+                )
         return ret
 
     def run_map(self, dmap):
@@ -649,13 +650,12 @@ class Map(Cloud):
                 master_host = out['deploy_kwargs']['host']
                 output[master_name] = out
             else:
-                print(
+                raise SaltCloudSystemExit(
                     'Host for new master {0} was not found, '
                     'aborting map'.format(
                         master_name
                     )
                 )
-                sys.exit(1)
         except StopIteration:
             log.debug('No make_master found in map')
 

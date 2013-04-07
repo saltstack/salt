@@ -48,10 +48,10 @@ import stat
 import logging
 
 # Import saltcloud libs
-import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
+from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloud_aws, required to latter patch __opts__
 from saltcloud.clouds import libcloud_aws
@@ -60,9 +60,6 @@ from saltcloud.clouds import libcloud_aws
 PRE_IMPORT_LOCALS_KEYS = locals().copy()
 from saltcloud.clouds.libcloud_aws import *
 POST_IMPORT_LOCALS_KEYS = locals().copy()
-
-# Import salt libs
-from salt.exceptions import SaltException
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -100,7 +97,7 @@ def __virtual__():
             continue
 
         if not os.path.exists(details['private_key']):
-            raise SaltException(
+            raise SaltCloudException(
                 'The AWS key file {0!r} used in the {1!r} provider '
                 'configuration does not exist\n'.format(
                     details['private_key'],
@@ -112,7 +109,7 @@ def __virtual__():
             oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
         )
         if keymode not in ('0400', '0600'):
-            raise SaltException(
+            raise SaltCloudException(
                 'The AWS key file {0!r} used in the {1!r} provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
                     details['private_key'],
@@ -180,8 +177,9 @@ def enable_term_protect(name, call=None):
         salt-cloud -a enable_term_protect mymachine
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     return _toggle_term_protect(name, True)
 
@@ -195,8 +193,9 @@ def disable_term_protect(name, call=None):
         salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     return _toggle_term_protect(name, False)
 

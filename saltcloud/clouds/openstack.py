@@ -107,12 +107,10 @@ from libcloud.compute.base import NodeState
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
 
-# Import salt libs
-from salt.exceptions import SaltException
-
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
+from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import netaddr IP matching
 try:
@@ -377,7 +375,7 @@ def create(vm_):
     log.debug('Using IP address {0}'.format(ip_address))
 
     if not ip_address:
-        raise SaltException('A valid IP address was not found')
+        raise SaltCloudException('A valid IP address was not found')
 
     deploy_kwargs = {
         'host': ip_address,

@@ -83,10 +83,8 @@ import xml.etree.ElementTree as ET
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.libcloudfuncs import *
+from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
-# Import salt libs
-import salt.output
-from salt.exceptions import SaltException
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -140,7 +138,7 @@ def __virtual__():
             continue
 
         if not os.path.exists(details['private_key']):
-            raise SaltException(
+            raise SaltCloudException(
                 'The EC2 key file {0!r} used in the {1!r} provider '
                 'configuration does not exist\n'.format(
                     details['private_key'],
@@ -152,7 +150,7 @@ def __virtual__():
             oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
         )
         if keymode not in ('0400', '0600'):
-            raise SaltException(
+            raise SaltCloudException(
                 'The EC2 key file {0!r} used in the {1!r} provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
                     details['private_key'],
@@ -566,7 +564,7 @@ def get_availability_zone(vm_):
 
     # Validate user-specified AZ
     if avz not in zones.keys():
-        raise SaltException(
+        raise SaltCloudException(
             'The specified availability zone isn\'t valid in this region: '
             '{0}\n'.format(
                 avz
@@ -575,7 +573,7 @@ def get_availability_zone(vm_):
 
     # check specified AZ is available
     elif zones[avz] != 'available':
-        raise SaltException(
+        raise SaltCloudException(
             'The specified availability zone isn\'t currently available: '
             '{0}\n'.format(
                 avz
@@ -607,8 +605,9 @@ def create(vm_=None, call=None):
     Create a single VM from a data dict
     '''
     if call:
-        log.error('You cannot create an instance with -a or -f.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'You cannot create an instance with -a or -f.'
+        )
 
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
@@ -788,8 +787,9 @@ def create_attach_volumes(name, kwargs, call=None):
     Create and attach volumes to created node
     '''
     if call != 'action':
-        log.error('The set_tags action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'The set_tags action must be called with -a or --action.'
+        )
 
     if not 'instance_id' in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
@@ -835,8 +835,9 @@ def stop(name, call=None):
     Stop a node
     '''
     if call != 'action':
-        log.error('The stop action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
 
     log.info('Stopping node {0}'.format(name))
 
@@ -854,8 +855,9 @@ def start(name, call=None):
     Start a node
     '''
     if call != 'action':
-        log.error('The start action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
 
     log.info('Starting node {0}'.format(name))
 
@@ -877,8 +879,9 @@ def set_tags(name, tags, call=None, location=None):
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
     if call != 'action':
-        log.error('The set_tags action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'The set_tags action must be called with -a or --action.'
+        )
 
     instance_id = _get_node(name, location)['instanceId']
     params = {'Action': 'CreateTags',
@@ -899,13 +902,9 @@ def get_tags(name, call=None, location=None):
     Retrieve tags for a node
     '''
     if call != 'action':
-        log.error('The get_tags action must be called with -a or --action.')
-        sys.exit(1)
-
-    if ',' in name:
-        names = name.split(',')
-    else:
-        names = [name]
+        raise SaltCloudSystemExit(
+            'The get_tags action must be called with -a or --action.'
+        )
 
     instances = list_nodes_full(location)
     if name in instances:
@@ -926,12 +925,14 @@ def del_tags(name, kwargs, call=None):
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
     if call != 'action':
-        log.error('The del_tags action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'The del_tags action must be called with -a or --action.'
+        )
 
     if not 'tags' in kwargs:
-        log.error('A tag or tags must be specified using tags=list,of,tags')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'A tag or tags must be specified using tags=list,of,tags'
+        )
 
     instance_id = _get_node(name)['instanceId']
     params = {'Action': 'DeleteTags',
@@ -956,8 +957,9 @@ def rename(name, kwargs, call=None):
         salt-cloud -a rename mymachine newname=yourmachine
     '''
     if call != 'action':
-        log.error('The rename action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'The rename action must be called with -a or --action.'
+        )
 
     log.info('Renaming {0} to {1}'.format(name, kwargs['newname']))
 
@@ -985,14 +987,13 @@ def destroy(name, call=None):
     )
 
     if protected == 'true':
-        log.error(
+        raise SaltCloudSystemExit(
             'This instance has been protected from being destroyed. '
             'Use the following command to disable protection:\n\n'
             'salt-cloud -a disable_term_protect {0}'.format(
                 name
             )
         )
-        exit(1)
 
     ret = {}
 
@@ -1041,10 +1042,9 @@ def show_image(kwargs, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'function':
-        log.error(
-            'The show_image function must be called with -f or --function.'
+        raise SaltCloudSystemExit(
+            'The show_image action must be called with -f or --function.'
         )
-        sys.exit(1)
 
     params = {'ImageId.1': kwargs['image'],
               'Action': 'DescribeImages'}
@@ -1059,10 +1059,9 @@ def show_instance(name, call=None):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     return _get_node(name)
 
@@ -1208,10 +1207,9 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     Show the details from EC2 concerning an AMI
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_term_protect action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     if not instance_id:
         instances = list_nodes_full()
@@ -1247,11 +1245,10 @@ def enable_term_protect(name, call=None):
         salt-cloud -a enable_term_protect mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The enable_term_protect action must be called with '
             '-a or --action.'
         )
-        sys.exit(1)
 
     return _toggle_term_protect(name, 'true')
 
@@ -1265,11 +1262,10 @@ def disable_term_protect(name, call=None):
         salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The disable_term_protect action must be called with '
             '-a or --action.'
         )
-        sys.exit(1)
 
     return _toggle_term_protect(name, 'false')
 
@@ -1302,10 +1298,9 @@ def keepvol_on_destroy(name, call=None):
         salt-cloud -a keepvol_on_destroy mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The keepvol_on_destroy action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     return _toggle_delvol(name=name, value='false')
 
@@ -1319,10 +1314,9 @@ def delvol_on_destroy(name, call=None):
         salt-cloud -a delvol_on_destroy mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The delvol_on_destroy action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     return _toggle_delvol(name=name, value='true')
 
@@ -1397,10 +1391,9 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     Attach a volume to an instance
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The attach_volume action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     if not kwargs:
         kwargs = {}
@@ -1456,10 +1449,9 @@ def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     Detach a volume from an instance
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The detach_volume action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     if not kwargs:
         kwargs = {}
