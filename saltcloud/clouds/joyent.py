@@ -95,8 +95,18 @@ def get_conn():
     '''
     driver = get_driver(Provider.JOYENT)
     return driver(
-        config.get_config_value('user', vm_, __opts__, search_global=False),
-        config.get_config_value('password', vm_, __opts__, search_global=False)
+        config.get_config_value(
+            'user',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
+        ),
+        config.get_config_value(
+            'password',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
+        )
     )
 
 
