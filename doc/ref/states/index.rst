@@ -184,4 +184,4 @@ as the serialization format. Since the rendering system can be extended simply
 by adding a new renderer to the renderers directory, it is possible that any
 structured file could be used to represent the SLS files.
 
-In the future XML and raw Python will be added, as well as many other formats.
+In the future XML will be added, as well as many other formats.
