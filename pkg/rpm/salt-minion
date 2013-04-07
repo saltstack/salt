@@ -61,7 +61,7 @@ start() {
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found" 
             RETVAL=1
-        elif $PYTHON $SALTMINION -d; then
+        elif $PYTHON $SALTMINION -d >& /dev/null; then
             echo -n "OK"
             RETVAL=0
         fi
