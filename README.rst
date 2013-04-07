@@ -26,3 +26,19 @@ deploys machines, and then properly remove them later. If Salt Cloud is run in
 this manner, minions will automatically be approved by the master; no need to
 manually authenticate them later.
 
+Documentation
+=============
+
+Installation instructions, and getting started guides.
+
+https://salt-cloud.readthedocs.org/en/latest/
+
+IRC Chat
+========
+
+Join the vibrant, helpful and positive Salt Stack chat room in Freenode at
+#salt. There is no need to introduce yourself, or ask permission to join in,
+just help and be helped! Make sure to wait for an answer, sometimes it may take
+a few moments for someone to reply.
+
+http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
