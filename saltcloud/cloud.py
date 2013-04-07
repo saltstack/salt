@@ -57,8 +57,10 @@ class Cloud(object):
             return provider
 
         try:
-            # There's no <alias>:<provider> entry, return the first one
-            return self.opts['providers'][provider][0]['provider']
+            # There's no <alias>:<provider> entry, return the first one if
+            # defined
+            if provider in self.opts['providers']:
+                return self.opts['providers'][provider][0]['provider']
         except Exception, err:
             log.error(
                 'Failed to get the proper cloud provider. '
