@@ -403,7 +403,7 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
                         if name in entry:
                             return entry[name]
                         break
-        elif len(opts['providers'][vm_['provider']]) > 1:
+        elif len(opts['providers'].get(vm_['provider'], ())) > 1:
             # The provider is NOT defined as <provider-alias>:<provider-name>
             # and there's more than one entry under the alias.
             # WARN the user!!!!
@@ -417,7 +417,7 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
                 )
             )
 
-        if name in opts['providers'][vm_['provider']][0]:
+        if name in opts['providers'].get(vm_['provider'], [{}])[0]:
             # The setting name exists in the VM's provider configuration.
             # Return it!
             return opts['providers'][vm_['provider']][0][name]
