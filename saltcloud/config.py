@@ -112,6 +112,13 @@ def apply_cloud_config(overrides, defaults=None):
     if overrides:
         opts.update(overrides)
 
+    # If the user defined providers in salt cloud's main configuration file, we
+    # need to take care for proper and expected format.
+    if 'providers' in opts:
+        for alias, details in opts.copy()['providers'].items():
+            if isinstance(details, dict):
+                opts['providers'][alias] = [details]
+
     # Migrate old configuration
     opts = old_to_new(opts)
 
