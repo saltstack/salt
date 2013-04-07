@@ -95,6 +95,13 @@ def minion_mods(opts, context=None, whitelist=None):
                     for func in funcs:
                         f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
                         functions[f_key] = funcs[func]
+                        if not hasattr(
+                                sys.modules[functions[f_key].__module__],
+                                '__context__'
+                        ):
+                            setattr(sys.modules[functions[f_key].__module__],
+                                    '__context__',
+                                    {})
     return functions
 
 
