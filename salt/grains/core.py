@@ -544,6 +544,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
+    'OpenIndiana Development': 'Solaris',
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian'
@@ -632,7 +633,7 @@ def os_data():
                         if comps[0] == 'ALT':
                             grains['lsb_distrib_release'] = comps[2]
                             grains['lsb_distrib_codename'] = \
-                                comps[3].replace('(','').replace(')','')
+                                comps[3].replace('(', '').replace(')', '')
         # Use the already intelligent platform module to get distro info
         (osname, osrelease, oscodename) = platform.linux_distribution(
             supported_dists=_supported_dists)
@@ -655,12 +656,29 @@ def os_data():
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
-        grains['os'] = 'Solaris'
+        grains['os_family'] = 'Solaris'
         if os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
                 if 'SmartOS' in rel_data:
                     grains['os'] = 'SmartOS'
+                    # FIXME: need detection of osrelease for SmartOS
+                    grains['osrelease'] = ''
+                else:
+                    try:
+                        release_re = '(Solaris|OpenIndiana(?: Development)?)' \
+                                     '\s+(\d+ \d+\/\d+|oi_\S+)?'
+                        osname, osrelease = re.search(release_re,
+                                                      rel_data).groups()
+                    except AttributeError:
+                        # Set a blank osrelease grain and fallback to 'Solaris'
+                        # as the 'os' grain.
+                        grains['os'] = 'Solaris'
+                        grains['osrelease'] = ''
+                    else:
+                        grains['os'] = osname
+                        grains['osrelease'] = osrelease
+
         grains.update(_sunos_cpudata(grains))
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
