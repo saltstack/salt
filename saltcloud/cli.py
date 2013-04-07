@@ -115,7 +115,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 except SaltCloudSystemExit as exc:
                     self.exit(exc.exit_code, exc.message)
                 except Exception as exc:
-                    self.error(
+                    log.error(
                         'There was an error listing providers: {0}'.format(
                             exc
                         ),
@@ -133,7 +133,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 except SaltCloudSystemExit as exc:
                     self.exit(exc.exit_code, exc.message)
                 except Exception as exc:
-                    self.error(
+                    log.error(
                         'There was an error with a custom map: {0}'.format(
                             exc
                         ),
@@ -150,7 +150,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 except SaltCloudSystemExit as exc:
                     self.exit(exc.exit_code, exc.message)
                 except Exception as exc:
-                    self.error(
+                    log.error(
                         'There was an error with a map: {0}'.format(
                             exc
                         ),
@@ -168,7 +168,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was an error listing locations: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -183,7 +183,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was an error listing images: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -198,7 +198,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was an error listing sizes: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -223,7 +223,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was an error destroying machines: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -262,7 +262,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was an error actioning machines: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -295,7 +295,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was an error running the function: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -308,7 +308,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was a profile error: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
@@ -346,7 +346,7 @@ class SaltCloud(parsers.SaltCloudParser):
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, exc.message)
             except Exception as exc:
-                self.error(
+                log.error(
                     'There was a query error: {0}'.format(exc),
                     # Show the traceback if the debug logging level is enabled
                     exc_info=log.isEnabledFor(logging.DEBUG)
