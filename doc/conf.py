@@ -47,6 +47,7 @@ class Mock(object):
 
 MOCK_MODULES = [
     'salt',
+    'salt.config',
     'salt.utils',
     'salt.utils.event',
     'salt.client',
