@@ -171,19 +171,34 @@ def get_conn():
     driver = get_driver(Provider.OPENSTACK)
     authinfo = {
         'ex_force_auth_url': config.get_config_value(
-            'identity_url', vm_, __opts__, search_global=False
+            'identity_url',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
         ),
         'ex_force_service_name': config.get_config_value(
-            'compute_name', vm_, __opts__, search_global=False
+            'compute_name',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
         ),
         'ex_force_service_region': config.get_config_value(
-            'compute_region', vm_, __opts__, search_global=False
+            'compute_region',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
         ),
         'ex_tenant_name': config.get_config_value(
-            'tenant', vm_, __opts__, search_global=False
+            'tenant',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
         ),
         'ex_force_service_name': config.get_config_value(
-            'compute_name', vm_, __opts__, search_global=False
+            'compute_name',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
         )
     }
 
