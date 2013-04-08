@@ -225,24 +225,23 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
+            py_code = 'import os, json;' \
+                      'print(json.dumps(os.environ.__dict__ or {}))'
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {1} -- "{2} -c \'import os, json;'
-                           'print(json.dumps(os.environ.__dict__))\'"').format(
-                                   shell, runas, sys.executable)
+                env_cmd = ('sudo -i -u {1} -- "{2}"'
+                           ).format(shell, runas, sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
-                env_cmd = ('su - {1} -c "{0} -c \'{2} -c \'\\\'\''
-                           'import os, json;'
-                           'print(json.dumps(os.environ.__dict__))\'\\\'\'\'"'
+                env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
                            ).format(shell, runas, sys.executable)
             else:
-                env_cmd = ('su -s {0} - {1} -c "{2} -c \'import os, json;'
-                           'print(json.dumps(os.environ.__dict__))\'"').format(
-                                   shell, runas, sys.executable)
+                env_cmd = ('su -s {0} - {1} -c "{2}"'
+                           ).format(shell, runas, sys.executable)
             env_json = subprocess.Popen(
                 env_cmd,
                 shell=True,
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
-            ).communicate()[0]
+            ).communicate(py_code)[0]
             env_json = filter(lambda x: x.startswith('{"') and x.endswith('}'),
                               env_json.splitlines()).pop()
             env_runas = json.loads(env_json).get('data', {})
