@@ -8,6 +8,7 @@ import os
 import re
 import socket
 import logging
+import urllib2
 import urlparse
 
 # import third party libs
@@ -22,6 +23,7 @@ except Exception:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.utils.socket_util
 import salt.pillar
 
 log = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ DEFAULT_MINION_OPTS = {
     'user': 'root',
     'root_dir': '/',
     'pki_dir': '/etc/salt/pki/minion',
-    'id': socket.getfqdn(),
+    'id': None,
     'cachedir': '/var/cache/salt/minion',
     'cache_jobs': False,
     'conf_file': '/etc/salt/minion',
@@ -360,6 +362,62 @@ def minion_config(path,
     return apply_minion_config(overrides, check_dns, defaults)
 
 
+def get_ec2_public_ip(private_ip):
+    return None
+
+
+def get_id():
+    '''
+    Guess the id of the minion.
+
+    - If socket.getfqdn() returns us something other than localhost, use it
+    - Check /etc/hosts for something that isn't localhost that maps to 127.*
+    - Look for a routeable / public IP
+    - A private IP is better than a loopback IP
+    - localhost may be better than killing the minion
+    '''
+
+    fqdn = socket.getfqdn()
+    if 'localhost' != fqdn:
+        return fqdn, False
+
+    # Can /etc/hosts help us?
+    try:
+        with open('/etc/hosts') as f:       # Is there something like this on windows?
+            line = f.readline()
+            while line:
+                names = line.split()
+                ip = names.pop(0)
+                if ip.startswith('127.'):
+                    for name in names:
+                        if name != 'localhost':
+                            return name, False
+                line = f.readline()
+    except Exception:
+        pass
+
+    # What IP addresses do we have?
+    ip_addresses = [salt.utils.socket_util.IPv4Address(a) for a
+                    in salt.utils.socket_util.ip4_addrs()
+                    if not a.startswith('127.')]
+
+    for a in ip_addresses:
+        if not a.is_private:
+            return a, True
+
+    # What about asking for the EC2 public IP? These change with machine restarts,
+    # but it's still a little better than a non-routable IP.
+    if ip_addresses:
+        try:
+            # let's go with the default timeout for this.
+            response = urllib2.urlopen('http://169.254.169.254/latest/meta-data/public-ipv4')
+            return response.read(), True
+        except Exception:
+            return ip_addresses.pop(0), True
+
+    return 'localhost', False
+
+
 def apply_minion_config(overrides=None, check_dns=True, defaults=None):
     '''
     Returns minion configurations dict.
@@ -374,7 +432,13 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
-    if 'append_domain' in opts:
+    # No ID provided. Will getfqdn save us?
+    using_ip_for_id = False
+    if opts['id'] is None:
+        id, using_ip_for_id = get_id()
+
+    # it does not make sense to append a domain to an IP based id
+    if not using_ip_for_id and 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
 
     # Enabling open mode requires that the value be set to True, and
