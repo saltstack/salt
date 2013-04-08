@@ -41,5 +41,5 @@ def clouds(opts):
                 funcname
             )
         )
-        functions.pop(funcname)
+        functions.pop(funcname, None)
     return functions
