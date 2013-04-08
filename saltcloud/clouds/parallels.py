@@ -71,19 +71,6 @@ def get_configured_provider():
     return config.is_provider_configured(__opts__, 'parallels', ('user',))
 
 
-def avail_locations():
-    '''
-    Return a dict of all available VM locations on the cloud provider with
-    relevant data
-    '''
-    return {
-        'Error': {
-            'Not Supported': '--list-locations not currently supported by '
-                             'Parallels'
-        }
-    }
-
-
 def avail_images():
     '''
     Return a list of the images that are on the provider
@@ -95,17 +82,6 @@ def avail_images():
 
     return ret
 
-
-def avail_sizes():
-    '''
-    Return a list of the image sizes that are on the provider
-    '''
-    return {
-        'Error': {
-            'Not Supported': '--list-sizes not currently supported by '
-                             'Parallels'
-        }
-    }
 
 
 def list_nodes():
