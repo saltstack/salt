@@ -104,8 +104,18 @@ def get_conn():
     '''
     driver = get_driver(Provider.RACKSPACE)
     return driver(
-        config.get_config_value('user', vm_, __opts__, search_global=False),
-        config.get_config_value('apikey', vm_, __opts__, search_global=False)
+        config.get_config_value(
+            'user',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
+        ),
+        config.get_config_value(
+            'apikey',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
+        )
     )
 
 
