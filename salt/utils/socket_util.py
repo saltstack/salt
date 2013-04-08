@@ -310,3 +310,45 @@ def ip4_addrs():
             if 'address' in inet:
                 ret.add(inet['address'])
     return sorted(ret)
+
+
+class IPv4Address(object):
+    '''
+    A very minimal subset of the IPv4Address object in the ip_address module.
+    '''
+
+    def __init__(self, address_str):
+        self.address_str = address_str
+        a = self.address_str.split('.')
+        if len(a) != 4:
+            raise ValueError("IPv4 addresses must be in dotted-quad form.")
+        try:
+            self.dotted_quad = [int(a) for a in a]
+        except ValueError, e:
+            raise ValueError("IPv4 addresses must be in dotted-quad form. {}".format(e))
+
+    def __str__(self):
+        return self.address_str
+
+    def __repr__(self):
+        return 'IPv4Address("{}")'.format(str(self))
+
+    @property
+    def is_private(self):
+        '''
+        :return: Returns True if the address is a non-routable IPv4 address. Otherwise False.
+        '''
+        if 10 == self.dotted_quad[0]:
+            return True
+        if 172 == self.dotted_quad[0]:
+            return 16 <= self.dotted_quad[1] <= 31
+        if 192 == self.dotted_quad[0]:
+            return 168 == self.dotted_quad[1]
+        return False
+
+    @property
+    def is_loopback(self):
+        '''
+        :return: True if the address is a loopback address. Otherwise False.
+        '''
+        return 127 == self.dotted_quad[0]
