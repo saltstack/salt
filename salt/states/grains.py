@@ -13,7 +13,7 @@ Note: This does NOT override any grains set in the minion file.
 .. code-block:: yaml
 
     cheese:
-      grain.present:
+      grains.present:
         - value: edam
 '''
 
