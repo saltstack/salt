@@ -57,6 +57,18 @@ def _filter_running(running):
     return ret
 
 
+def _check_pillar(kwargs):
+    '''
+    Check the pillar for errors, refuse to run the state it there are errors
+    in the pillar and return the pillar errors
+    '''
+    if kwargs.get('force'):
+        return True
+    if '_errors' in __pillar__:
+        return False
+    return True
+
+
 def running():
     '''
     Return a dict of state return data if a state function is already running.
@@ -156,6 +168,11 @@ def highstate(test=None, **kwargs):
     conflict = running()
     if conflict:
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     opts = copy.copy(__opts__)
 
     if not test is None:
@@ -202,6 +219,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     conflict = running()
     if conflict:
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     opts = copy.copy(__opts__)
 
     if not test is None:
@@ -259,6 +281,15 @@ def top(topfn):
     conflict = running()
     if conflict:
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = None
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
