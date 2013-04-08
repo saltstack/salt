@@ -22,8 +22,8 @@ minions that are created derive their configuration.
 This is the location in particular to specify the location of the salt master.
 
 
-Cloud Configurations
-====================
+New Cloud Configuration Syntax
+==============================
 
 The data specific to interacting with public clouds is set up here.
 
@@ -82,7 +82,7 @@ as an example, ``/etc/salt/cloud.providers.d/*.conf``).
 
 So, using the example configuration above, after migration in 
 ``/etc/salt/cloud.providers`` or 
-``/etc/salt/cloud.providers/aws-migrated.conf``:
+``/etc/salt/cloud.providers.d/aws-migrated.conf``:
 
 
 .. code-block:: yaml
@@ -111,9 +111,9 @@ configuration key in the defined profiles.
 .. code-block:: yaml
 
     rhel_aws:
-        provider: aws
-        image: ami-e565ba8c
-        size: Micro Instance
+      provider: aws
+      image: ami-e565ba8c
+      size: Micro Instance
 
 
 * To:
@@ -121,9 +121,9 @@ configuration key in the defined profiles.
 .. code-block:: yaml
 
     rhel_aws:
-        provider: my-aws-migrated-config
-        image: ami-e565ba8c
-        size: Micro Instance
+      provider: my-aws-migrated-config
+      image: ami-e565ba8c
+      size: Micro Instance
 
 
 This new configuration syntax even allows you to have multiple cloud 
@@ -175,7 +175,7 @@ key on any defined profile to change, see the example:
 Notice that because of the multiple entries, one has to be explicit about the 
 provider alias and name, from the above example, ``production-config:aws``.
 
-This new syntax also changes the interaction with ``salt-cloud`` binary.  
+This new syntax also changes the interaction with the ``salt-cloud`` binary.  
 ``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud 
 provider as an argument. Since 0.8.7 the argument used should be the configured 
 cloud provider alias. If the provider alias only as a single entry, use 
@@ -183,6 +183,9 @@ cloud provider alias. If the provider alias only as a single entry, use
 ``<provider-alias>:<provider-name>`` should be used.
 
 
+
+Cloud Configurations
+====================
 
 Rackspace
 ---------
