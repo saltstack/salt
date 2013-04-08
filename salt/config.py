@@ -362,10 +362,6 @@ def minion_config(path,
     return apply_minion_config(overrides, check_dns, defaults)
 
 
-def get_ec2_public_ip(private_ip):
-    return None
-
-
 def get_id():
     '''
     Guess the id of the minion.
@@ -405,15 +401,8 @@ def get_id():
         if not a.is_private:
             return a, True
 
-    # What about asking for the EC2 public IP? These change with machine restarts,
-    # but it's still a little better than a non-routable IP.
     if ip_addresses:
-        try:
-            # let's go with the default timeout for this.
-            response = urllib2.urlopen('http://169.254.169.254/latest/meta-data/public-ipv4')
-            return response.read(), True
-        except Exception:
-            return ip_addresses.pop(0), True
+        return ip_addresses.pop(0), True
 
     return 'localhost', False
 
