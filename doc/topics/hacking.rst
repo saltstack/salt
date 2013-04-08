@@ -281,6 +281,16 @@ and 103 characters on BSD-based systems.
 
     To set file descriptors on OSX, refer to the :doc:`OS X Installation </topics/installation/osx>` instructions.
 
+
+Using easy_install to Install Salt
+----------------------------------
+
+If you are installing using ``easy_install``, you will need to define a
+:strong:`USE_SETUPTOOLS` environment variable, otherwise dependencies will not
+be installed.
+
+    $ USE_SETUPTOOLS=1 easy_install salt
+
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
