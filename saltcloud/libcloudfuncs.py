@@ -18,7 +18,11 @@ from libcloud.compute.deployment import (
 
 # Import salt libs
 import salt.utils.event
+
+# Import salt cloud libs
 import saltcloud.utils
+import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudNotFound
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -40,7 +44,7 @@ def libcloud_version():
     try:
         import libcloud
     except ImportError:
-        raise ImportError("salt-cloud requires >= libcloud 0.11.4")
+        raise ImportError('salt-cloud requires >= libcloud 0.11.4')
 
     ver = libcloud.__version__
     ver = ver.replace('-', '.')
@@ -50,8 +54,8 @@ def libcloud_version():
         version.append(int(number))
     if version < [0, 11, 4]:
         raise ImportError(
-            "Your version of libcloud is {0}. salt-cloud requires >= "
-            "libcloud 0.11.4. Please upgrade.".format(libcloud.__version__)
+            'Your version of libcloud is {0}. salt-cloud requires >= '
+            'libcloud 0.11.4. Please upgrade.'.format(libcloud.__version__)
         )
     return libcloud.__version__
 
@@ -70,17 +74,15 @@ def ssh_pub(vm_):
     '''
     Deploy the primary ssh authentication key
     '''
-    ssh = ''
-    if 'ssh_auth' in vm_:
-        if not os.path.isfile(vm_['ssh_auth']):
-            return None
-        ssh = vm_['ssh_auth']
+    ssh = config.get_config_value('ssh_auth', vm_, __opts__)
     if not ssh:
-        if not os.path.isfile(__opts__['ssh_auth']):
-            return None
-        ssh = __opts__['ssh_auth']
+        return None
 
-    return SSHKeyDeployment(open(os.path.expanduser(ssh)).read())
+    ssh = os.path.expanduser(ssh)
+    if os.path.isfile(ssh):
+        return None
+
+    return SSHKeyDeployment(open(ssh).read())
 
 
 def avail_locations(conn=None):
@@ -148,12 +150,13 @@ def get_location(conn, vm_):
     Return the location object to use
     '''
     locations = conn.list_locations()
+    vm_location = config.get_config_value('location', vm_, __opts__)
+
     for img in locations:
-        if str(img.id) == str(vm_['location']):
+        if vm_location and str(vm_location) in (str(img.id), str(img.name)):
             return img
-        if img.name == str(vm_['location']):
-            return img
-    raise ValueError("The specified location could not be found.")
+
+    raise SaltCloudNotFound('The specified location could not be found.')
 
 
 def get_image(conn, vm_):
@@ -161,12 +164,14 @@ def get_image(conn, vm_):
     Return the image object to use
     '''
     images = conn.list_images()
+
+    vm_image = config.get_config_value('image', vm_, __opts__)
+
     for img in images:
-        if str(img.id) == str(vm_['image']):
+        if vm_image and str(vm_image) in (str(img.id), str(img.name)):
             return img
-        if img.name == str(vm_['image']):
-            return img
-    raise ValueError("The specified image could not be found.")
+
+    raise SaltCloudNotFound('The specified image could not be found.')
 
 
 def get_size(conn, vm_):
@@ -174,14 +179,14 @@ def get_size(conn, vm_):
     Return the VM's size object
     '''
     sizes = conn.list_sizes()
-    if not 'size' in vm_:
+    vm_size = config.get_config_value('size', vm_, __opts__)
+    if not vm_size:
         return sizes[0]
+
     for size in sizes:
-        if str(size.id) == str(vm_['size']):
+        if vm_size and str(vm_size) in (str(size.id), str(size.name)):
             return size
-        if str(size.name) == str(vm_['size']):
-            return size
-    raise ValueError("The specified size could not be found.")
+    raise SaltCloudNotFound('The specified size could not be found.')
 
 
 def script(vm_):
@@ -191,14 +196,8 @@ def script(vm_):
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     return ScriptDeployment(
         saltcloud.utils.os_script(
-            saltcloud.utils.get_option(
-                'os',
-                __opts__,
-                vm_
-            ),
-            vm_,
-            __opts__,
-            minion,
+            config.get_config_value('os', vm_, __opts__),
+            vm_, __opts__, minion
         )
     )
 
@@ -252,9 +251,9 @@ def reboot(name, conn=None):
         )
         event.fire_event('{0} has been rebooted'.format(name), 'salt-cloud')
         return True
-    else:
-        log.error('Failed to reboot VM: {0}'.format(name))
-        return False
+
+    log.error('Failed to reboot VM: {0}'.format(name))
+    return False
 
 
 def list_nodes(conn=None):

@@ -17,15 +17,16 @@ import getpass
 import logging
 
 # Import salt libs
-import saltcloud.config
-import saltcloud.output
 import salt.config
 import salt.output
 import salt.utils
 from salt.utils.verify import verify_env, verify_files
 
 # Import saltcloud libs
+import saltcloud.config
+import saltcloud.output
 from saltcloud.utils import parsers
+from saltcloud.exceptions import SaltCloudSystemExit
 from saltcloud.libcloudfuncs import libcloud_version
 
 
@@ -111,12 +112,19 @@ class SaltCloud(parsers.SaltCloudParser):
                     saltcloud.output.double_layer(
                         mapper.provider_list()
                     )
-                except Exception as exc:
-                    log.debug(
-                        'There was an error listing providers.', exc_info=True
+                except SaltCloudSystemExit as exc:
+                    self.exit(
+                        exc.exit_code,
+                        'Error: {0}\n'.format(exc.message.rstrip())
                     )
-                    self.error(
-                        'There was an error listing providers: {0}'.format(exc)
+                except Exception as exc:
+                    log.error(
+                        'There was an error listing providers: {0}'.format(
+                            exc
+                        ),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
                     )
                     self.exit(1)
             if self.config.get('map', None):
@@ -125,14 +133,19 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.interpolated_map(
                         query=self.selected_query_option
                     )
-                except Exception as exc:
-                    log.debug(
-                        'There was an error with a custom map.', exc_info=True
+                except SaltCloudSystemExit as exc:
+                    self.exit(
+                        exc.exit_code,
+                        'Error: {0}\n'.format(exc.message.rstrip())
                     )
-                    self.error(
+                except Exception as exc:
+                    log.error(
                         'There was an error with a custom map: {0}'.format(
                             exc
-                        )
+                        ),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
                     )
                     self.exit(1)
             else:
@@ -140,10 +153,19 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.map_providers(
                         query=self.selected_query_option
                     )
+                except SaltCloudSystemExit as exc:
+                    self.exit(
+                        exc.exit_code,
+                        'Error: {0}\n'.format(exc.message.rstrip())
+                    )
                 except Exception as exc:
-                    log.debug('There was an error with a map.', exc_info=True)
-                    self.error(
-                        'There was an error with a map: {0}'.format(exc)
+                    log.error(
+                        'There was an error with a map: {0}'.format(
+                            exc
+                        ),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
                     )
                     self.exit(1)
 
@@ -152,12 +174,16 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.location_list(self.options.list_locations)
                 )
-            except Exception as exc:
-                log.debug(
-                    'There was an error listing locations.', exc_info=True
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
                 )
-                self.error(
-                    'There was an error listing locations: {0}'.format(exc)
+            except Exception as exc:
+                log.error(
+                    'There was an error listing locations: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 self.exit(1)
 
@@ -166,10 +192,16 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.image_list(self.options.list_images)
                 )
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
-                log.debug('There was an error listing images.', exc_info=True)
-                self.error(
-                    'There was an error listing images: {0}'.format(exc)
+                log.error(
+                    'There was an error listing images: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 self.exit(1)
 
@@ -178,10 +210,16 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.size_list(self.options.list_sizes)
                 )
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
-                log.debug('There was an error listing sizes.', exc_info=True)
-                self.error(
-                    'There was an error listing sizes: {0}'.format(exc)
+                log.error(
+                    'There was an error listing sizes: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 self.exit(1)
 
@@ -200,12 +238,16 @@ class SaltCloud(parsers.SaltCloudParser):
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names)
-            except Exception as exc:
-                log.debug(
-                    'There was an error destroying machines.', exc_info=True
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
                 )
-                self.error(
-                    'There was an error destroy machines: {0}'.format(exc)
+            except Exception as exc:
+                log.error(
+                    'There was an error destroying machines: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 self.exit(1)
 
@@ -238,12 +280,16 @@ class SaltCloud(parsers.SaltCloudParser):
             try:
                 if self.print_confirm(msg):
                     ret = mapper.do_action(names, kwargs)
-            except Exception as exc:
-                log.debug(
-                    'There was a error actioning machines.', exc_info=True
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
                 )
-                self.error(
-                    'There was an error actioning machines: {0}'.format(exc)
+            except Exception as exc:
+                log.error(
+                    'There was an error actioning machines: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 self.exit(1)
 
@@ -270,21 +316,30 @@ class SaltCloud(parsers.SaltCloudParser):
                 ret = mapper.do_function(
                     self.function_provider, self.function_name, kwargs
                 )
+            except SaltCloudSystemExit as exc:
+                self.exit(exc.exit_code, '{0}\n'.format(exc.message.rstrip()))
             except Exception as exc:
-                log.debug(
-                    'There was a error running the function.', exc_info=True
-                )
-                self.error(
-                    'There was an error running the function: {0}'.format(exc)
+                log.error(
+                    'There was an error running the function: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
                 )
                 self.exit(1)
 
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
-                log.debug('There was a profile error.', exc_info=True)
-                self.error('There was a profile error: {0}'.format(exc))
+                log.error(
+                    'There was a profile error: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
                 self.exit(1)
 
         elif self.config.get('map', None) and \
@@ -315,9 +370,17 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.config.get('parallel', False) is False:
                     log.info('Complete')
 
+            except SaltCloudSystemExit as exc:
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
-                log.debug('There was a query error.', exc_info=True)
-                self.error('There was a query error: {0}'.format(exc))
+                log.error(
+                    'There was a query error: {0}'.format(exc),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
                 self.exit(1)
 
         # display output using salt's outputter system

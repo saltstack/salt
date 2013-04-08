@@ -7,7 +7,10 @@ libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
 The rackspace cloud module interfaces with the Rackspace public cloud service
-and requires that two configuration paramaters be set for use:
+and requires that two configuration parameters be set for use, ``user`` and
+``apikey``.
+
+Using the old cloud providers configuration syntax:
 
 .. code-block:: yaml
 
@@ -15,6 +18,21 @@ and requires that two configuration paramaters be set for use:
     RACKSPACE.user: fred
     # The Rackspace user's apikey
     RACKSPACE.apikey: 901d3f579h23c8v73q9
+
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or
+ ``/etc/salt/cloud.providers.d/rackspace.conf``:
+
+.. code-block:: yaml
+
+    my-rackspace-config:
+      # The Rackspace login user
+      user: fred
+      # The Rackspace user's apikey
+      apikey: 901d3f579h23c8v73q9
+
+      provider: rackspace
 
 '''
 
@@ -33,6 +51,7 @@ from libcloud.compute.base import NodeState
 from saltcloud.libcloudfuncs import *
 
 # Import saltcloud libs
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 
 
@@ -43,6 +62,8 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
@@ -55,12 +76,26 @@ list_nodes_select = namespaced_function(list_nodes_select, globals())
 # Only load in this module is the RACKSPACE configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for RACKSPACE configs
+    Set up the libcloud functions and check for Rackspace configuration.
     '''
-    if 'RACKSPACE.user' in __opts__ and 'RACKSPACE.apikey' in __opts__:
-        log.debug('Loading Rackspace cloud module')
-        return 'rackspace'
-    return False
+    if get_configured_provider() is False:
+        log.debug(
+            'There is no Rackspace cloud provider configuration available. '
+            'Not loading module.'
+        )
+        return False
+
+    log.debug('Loading Rackspace cloud module')
+    return 'rackspace'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__, 'rackspace', ('user', 'apikey')
+    )
 
 
 def get_conn():
@@ -69,8 +104,18 @@ def get_conn():
     '''
     driver = get_driver(Provider.RACKSPACE)
     return driver(
-        __opts__['RACKSPACE.user'],
-        __opts__['RACKSPACE.apikey'],
+        config.get_config_value(
+            'user',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
+        ),
+        config.get_config_value(
+            'apikey',
+            get_configured_provider(),
+            __opts__,
+            search_global=False
+        )
     )
 
 
@@ -78,7 +123,9 @@ def preferred_ip(vm_, ips):
     '''
     Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
     '''
-    proto = vm_.get('protocol', __opts__.get('RACKSPACE.protocol', 'ipv4'))
+    proto = config.get_config_value(
+        'protocol', vm_, __opts__, default='ipv4', search_global=False
+    )
     family = socket.AF_INET
     if proto == 'ipv6':
         family = socket.AF_INET6
@@ -96,12 +143,9 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return vm_.get(
-        'ssh_interface',
-        __opts__.get(
-            'RACKSPACE.ssh_interface',
-            'public_ips'
-        )
+    return config.get_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
     )
 
 
@@ -118,13 +162,15 @@ def create(vm_):
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        err = ('Error creating {0} on RACKSPACE\n\n'
-               'The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], exc
-                       )
-        sys.stderr.write(err)
-        log.error(err)
+        log.error(
+            'Error creating {0} on RACKSPACE\n\n'
+            'The following exception was thrown by libcloud when trying to '
+            'run the initial deployment: \n{1}'.format(
+                vm_['name'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
         return False
 
     not_ready = True
@@ -137,8 +183,10 @@ def create(vm_):
         running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
 
         if running and private and not public:
-            log.warn('Private IPs returned, but not public... checking for '
-                     'misidentified IPs')
+            log.warn(
+                'Private IPs returned, but not public... checking for '
+                'misidentified IPs'
+            )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
@@ -171,15 +219,8 @@ def create(vm_):
     if not ip_address:
         raise
 
-    deploy = vm_.get(
-        'deploy',
-        __opts__.get(
-            'RACKSPACE.deploy',
-            __opts__['deploy']
-        )
-    )
     ret = {}
-    if deploy is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
@@ -193,10 +234,10 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            }
-
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
+        }
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__,
@@ -204,7 +245,7 @@ def create(vm_):
         )
 
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -218,7 +259,8 @@ def create(vm_):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
-            ret['deploy_kwargs'] = deploy_kwargs
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(

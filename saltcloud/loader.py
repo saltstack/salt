@@ -3,10 +3,22 @@ The salt cloud module loader interface
 '''
 # Import python libs
 import os
+import logging
 
 # Import Salt libs
 import salt.loader
 import saltcloud
+
+log = logging.getLogger(__name__)
+
+
+# Because on the cloud drivers we do `from saltcloud.libcloudfuncs import *`
+# which simplifies code readability, it adds some unsupported functions into
+# the driver's module scope.
+# We list un-supported functions here. These will be removed from the loaded.
+LIBCLOUD_FUNCS_NOT_SUPPORTED = (
+    'joyent.avail_locations',
+)
 
 
 def clouds(opts):
@@ -21,4 +33,13 @@ def clouds(opts):
             saltcloud.__file__
         )
     )
-    return load.gen_functions()
+    functions = load.gen_functions()
+    for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
+        log.debug(
+            '{0!r} has been marked as not supported. Removing from the list '
+            'of supported cloud functions'.format(
+                funcname
+            )
+        )
+        functions.pop(funcname, None)
+    return functions

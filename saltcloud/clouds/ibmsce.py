@@ -6,7 +6,8 @@ The IBM SCE cloud module. This module interfaces with the IBM SCE public cloud
 service. To use Salt Cloud with IBM SCE log into the IBM SCE web interface and
 create an SSH key.
 
-The following paramters are required in order to create a node:
+Using the old configuration syntax, the following parameters are required in
+order to create a node:
 
 .. code-block:: yaml
 
@@ -18,6 +19,25 @@ The following paramters are required in order to create a node:
     IBMSCE.ssh_key_name: mykey
     # The ID of the datacenter to use
     IBMSCE.location: Raleigh
+
+
+Using the new format, set up the cloud configuration at
+``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ibmsce.conf``:
+
+.. code-block:: yaml
+
+    my-imbsce-config:
+      # The generated api key to use
+      user: myuser@mycompany.com
+      # The user's password
+      password: saltybacon
+      # The name of the ssh key to use
+      ssh_key_name: mykey
+      # The ID of the datacenter to use
+      location: Raleigh
+
+      provider: ibmsce
+
 
 '''
 
@@ -34,6 +54,7 @@ from libcloud.compute.base import NodeAuthSSHKey
 from saltcloud.libcloudfuncs import *
 
 # Import saltcloud libs
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 
 # Get logging started
@@ -42,6 +63,8 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
@@ -54,22 +77,37 @@ list_nodes_select = namespaced_function(list_nodes_select, globals())
 # Only load in this module is the IBMSCE configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for RACKSPACE configs
+    Set up the libcloud functions and check for RACKSPACE configs
     '''
-    if 'IBMSCE.user' in __opts__ and 'IBMSCE.password' in __opts__:
-        log.debug('Loading IBM SCE cloud module')
-        return 'ibmsce'
-    return False
+    if get_configured_provider() is False:
+        log.debug(
+            'There is no IBM SCE cloud provider configuration available. Not '
+            'loading module.'
+        )
+        return False
+
+    log.debug('Loading IBM SCE cloud module')
+    return 'ibmsce'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__, 'ibmsce', ('user', 'password')
+    )
 
 
 def get_conn():
     '''
     Return a conn object for the passed VM data
     '''
+    vm_ = get_configured_provider()
     driver = get_driver(Provider.IBM)
     return driver(
-        __opts__['IBMSCE.user'],
-        __opts__['IBMSCE.password'],
+        config.get_config_value('user', vm_, __opts__, search_global=False),
+        config.get_config_value('password', vm_, __opts__, search_global=False)
     )
 
 
@@ -79,13 +117,17 @@ def create(vm_):
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
-    kwargs = {}
-    vm_['location'] = __opts__['IBMSCE.location']
-    kwargs['name'] = vm_['name']
-    kwargs['image'] = get_image(conn, vm_)
-    kwargs['size'] = get_size(conn, vm_)
-    kwargs['location'] = get_location(conn, vm_)
-    kwargs['auth'] = NodeAuthSSHKey(__opts__['IBMSCE.ssh_key_name'])
+
+    vm_['location'] = config.get_config_value('location', vm_, __opts__)
+    kwargs = {
+        'name': vm_['name'],
+        'image': get_image(conn, vm_),
+        'size': get_size(conn, vm_),
+        'location': get_location(conn, vm_),
+        'auth': NodeAuthSSHKey(
+            config.get_config_value('ssh_key_name', vm_, __opts__)
+        )
+    }
 
     log.debug(
         'Creating instance on {0} at {1}'.format(
@@ -100,8 +142,10 @@ def create(vm_):
             'Error creating {0} on IBMSCE\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
-            )
+                vm_['name'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False
 
@@ -128,15 +172,8 @@ def create(vm_):
             not_ready = False
         time.sleep(15)
 
-    deploy = vm_.get(
-        'deploy',
-        __opts__.get(
-            'IBMSCE.deploy',
-            __opts__['deploy']
-        )
-    )
     ret = {}
-    if deploy is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         log.debug(
             'Deploying {0} using IP address {1}'.format(
@@ -149,7 +186,9 @@ def create(vm_):
             'username': 'idcuser',
             'provider': 'ibmsce',
             'password': data.extra['password'],
-            'key_filename': __opts__['IBMSCE.ssh_key_file'],
+            'key_filename': config.get_config_value(
+                'ssh_key_file', vm_, __opts__, search_global=False
+            ),
             'script': deploy_script.script,
             'name': vm_['name'],
             'sudo': True,
@@ -159,17 +198,17 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
-
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
 
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
 
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -183,7 +222,8 @@ def create(vm_):
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
-            ret['deploy_kwargs'] = deploy_kwargs
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(vm_['name'])

@@ -4,8 +4,9 @@ The AWS Cloud Module
 
 The AWS cloud module is used to interact with the Amazon Web Services system.
 
-To use the AWS cloud module the following configuration parameters need to be
-set in the main cloud config:
+To use the AWS cloud module, using the old cloud providers configuration
+syntax, the following configuration parameters need to be set in the main cloud
+configuration file:
 
 .. code-block:: yaml
 
@@ -20,6 +21,25 @@ set in the main cloud config:
     # The location of the private key which corresponds to the keyname
     AWS.private_key: /root/default.pem
 
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/aws.conf``:
+
+.. code-block:: yaml
+
+    my-aws-botocore-config:
+      # The AWS API authentication id
+      id: GKTADJGHEIQSXMKKRBJ08H
+      # The AWS API authentication key
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      # The ssh keyname to use
+      keyname: default
+      # The amazon security group
+      securitygroup: ssh_open
+      # The location of the private key which corresponds to the keyname
+      private_key: /root/default.pem
+      provider: aws
+
 '''
 
 # Import python libs
@@ -28,9 +48,10 @@ import stat
 import logging
 
 # Import saltcloud libs
-import saltcloud.utils
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
+from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloud_aws, required to latter patch __opts__
 from saltcloud.clouds import libcloud_aws
@@ -39,9 +60,6 @@ from saltcloud.clouds import libcloud_aws
 PRE_IMPORT_LOCALS_KEYS = locals().copy()
 from saltcloud.clouds.libcloud_aws import *
 POST_IMPORT_LOCALS_KEYS = locals().copy()
-
-# Import salt libs
-from salt.exceptions import SaltException
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -58,41 +76,46 @@ def __virtual__():
     except ImportError:
         # Botocore is not available, the Libcloud AWS module will be loaded
         # instead.
+        log.debug(
+            'The \'botocore\' library is not installed. The libcloud AWS '
+            'support will be loaded instead.'
+        )
         return False
 
     # "Patch" the imported libcloud_aws to have the current __opts__
     libcloud_aws.__opts__ = __opts__
 
-    confs = [
-        'AWS.id',
-        'AWS.key',
-        'AWS.keyname',
-        'AWS.securitygroup',
-        'AWS.private_key',
-    ]
-    for conf in confs:
-        if conf not in __opts__:
-            log.debug(
-                '{0!r} not found in options. Not loading module.'.format(conf)
-            )
-            return False
+    if get_configured_provider() is False:
+        log.info(
+            'There is no AWS cloud provider configuration available. Not '
+            'loading module'
+        )
+        return False
 
-    if not os.path.exists(__opts__['AWS.private_key']):
-        raise SaltException(
-            'The AWS key file {0} does not exist\n'.format(
-                __opts__['AWS.private_key']
+    for provider, details in __opts__['providers'].iteritems():
+        if 'provider' not in details or details['provider'] != 'aws':
+            continue
+
+        if not os.path.exists(details['private_key']):
+            raise SaltCloudException(
+                'The AWS key file {0!r} used in the {1!r} provider '
+                'configuration does not exist\n'.format(
+                    details['private_key'],
+                    provider
+                )
             )
+
+        keymode = str(
+            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
         )
-    keymode = str(
-        oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode))
-    )
-    if keymode not in ('0400', '0600'):
-        raise SaltException(
-            'The AWS key file {0} needs to be set to mode 0400 or '
-            '0600\n'.format(
-                __opts__['AWS.private_key']
+        if keymode not in ('0400', '0600'):
+            raise SaltCloudException(
+                'The AWS key file {0!r} used in the {1!r} provider '
+                'configuration needs to be set to mode 0400 or 0600\n'.format(
+                    details['private_key'],
+                    provider
+                )
             )
-        )
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.
@@ -126,10 +149,23 @@ def __virtual__():
     script = namespaced_function(script, globals(), (conn,))
     list_nodes = namespaced_function(list_nodes, globals(), (conn,))
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
+    list_nodes_select = namespaced_function(
+        list_nodes_select, globals(), (conn,)
+    )
 
     log.debug('Loading AWS botocore cloud module')
     return 'aws'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__,
+        'aws',
+        ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
 
 
 def enable_term_protect(name, call=None):
@@ -141,8 +177,9 @@ def enable_term_protect(name, call=None):
         salt-cloud -a enable_term_protect mymachine
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     return _toggle_term_protect(name, True)
 
@@ -156,8 +193,9 @@ def disable_term_protect(name, call=None):
         salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     return _toggle_term_protect(name, False)
 
@@ -170,10 +208,15 @@ def _toggle_term_protect(name, enabled):
     region = get_location(None)
 
     # init botocore
+    vm_ = get_configured_provider()
     session = botocore.session.get_session()
     session.set_credentials(
-        access_key=__opts__['AWS.id'],
-        secret_key=__opts__['AWS.key'],
+        access_key=config.get_config_value(
+            'id', vm_, __opts__, search_global=False
+        ),
+        secret_key=config.get_config_value(
+            'key', vm_, __opts__, search_global=False
+        )
     )
 
     service = session.get_service('ec2')
@@ -194,19 +237,14 @@ def _toggle_term_protect(name, enabled):
     http_response, response_data = operation.call(endpoint, **params)
 
     if http_response.status_code == 200:
-        msg = (
-            'Termination protection successfully {0} on {1}'.format(
-                enabled and 'enabled' or 'disabled',
-                name
-            )
+        msg = 'Termination protection successfully {0} on {1}'.format(
+            enabled and 'enabled' or 'disabled',
+            name
         )
         log.info(msg)
         return msg
-    else:
-        msg = (
-            'Bad response from AWS: {0}'.format(
-                http_response.status_code
-            )
-        )
-        log.error(msg)
-        return msg
+
+    # No proper HTTP response!?
+    msg = 'Bad response from AWS: {0}'.format(http_response.status_code)
+    log.error(msg)
+    return msg

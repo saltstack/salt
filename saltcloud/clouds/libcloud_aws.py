@@ -4,8 +4,9 @@ The AWS Cloud Module
 
 The AWS cloud module is used to interact with the Amazon Web Services system.
 
-To use the AWS cloud module the following configuration parameters need to be
-set in the main cloud config:
+To use the AWS cloud module, using the old cloud providers configuration
+syntax, the following configuration parameters need to be set in the main cloud
+configuration file:
 
 .. code-block:: yaml
 
@@ -20,6 +21,26 @@ set in the main cloud config:
     # The location of the private key which corresponds to the keyname
     AWS.private_key: /root/default.pem
 
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/aws.conf``:
+
+.. code-block:: yaml
+
+    my-aws-config:
+      # The AWS API authentication id
+      id: GKTADJGHEIQSXMKKRBJ08H
+      # The AWS API authentication key
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      # The ssh keyname to use
+      keyname: default
+      # The amazon security group
+      securitygroup: ssh_open
+      # The location of the private key which corresponds to the keyname
+      private_key: /root/default.pem
+
+      provider: aws
+
 '''
 
 # Import python libs
@@ -32,11 +53,10 @@ import logging
 
 # Import saltcloud libs
 import saltcloud.utils
+import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
-
-# Import salt libs
-from salt.exceptions import SaltException
+from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -50,54 +70,65 @@ def __virtual__():
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
+        log.debug(
+            'The \'botocore\' library is installed. The libcloud AWS support '
+            'will not be loaded.'
+        )
         return False
     except ImportError:
         pass
 
-    confs = [
-        'AWS.id',
-        'AWS.key',
-        'AWS.keyname',
-        'AWS.securitygroup',
-        'AWS.private_key',
-    ]
-    for conf in confs:
-        if conf not in __opts__:
-            log.debug(
-                '{0!r} not found in options. Not loading module.'.format(conf)
-            )
-            return False
+    if get_configured_provider() is False:
+        log.debug(
+            'There is no AWS cloud provider configuration available. Not '
+            'loading module'
+        )
+        return False
 
-    if not os.path.exists(__opts__['AWS.private_key']):
-        raise SaltException(
-            'The AWS key file {0} does not exist\n'.format(
-                __opts__['AWS.private_key']
+    for provider, details in __opts__['providers'].iteritems():
+        if 'provider' not in details or details['provider'] != 'aws':
+            continue
+
+        if not os.path.exists(details['private_key']):
+            raise SaltCloudException(
+                'The AWS key file {0!r} used in the {1!r} provider '
+                'configuration does not exist\n'.format(
+                    details['private_key'],
+                    provider
+                )
             )
+
+        keymode = str(
+            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
         )
-    keymode = str(
-        oct(stat.S_IMODE(os.stat(__opts__['AWS.private_key']).st_mode))
-    )
-    if keymode not in ('0400', '0600'):
-        raise SaltException(
-            'The AWS key file {0} needs to be set to mode 0400 or '
-            '0600\n'.format(
-                __opts__['AWS.private_key']
+        if keymode not in ('0400', '0600'):
+            raise SaltCloudException(
+                'The AWS key file {0!r} used in the {1!r} provider '
+                'configuration needs to be set to mode 0400 or 0600\n'.format(
+                    details['private_key'],
+                    provider
+                )
             )
-        )
 
     global avail_images, avail_sizes, script, destroy, list_nodes
-    global list_nodes_full, list_nodes_select
+    global avail_locations, list_nodes_full, list_nodes_select, get_image
+    global get_size
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
+    get_size = namespaced_function(get_size, globals(), (conn,))
+    get_image = namespaced_function(get_image, globals(), (conn,))
+    avail_locations = namespaced_function(avail_locations, globals(), (conn,))
     avail_images = namespaced_function(avail_images, globals(), (conn,))
     avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
     list_nodes = namespaced_function(list_nodes, globals(), (conn,))
     list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(), (conn,))
+    list_nodes_select = namespaced_function(
+        list_nodes_select, globals(), (conn,)
+    )
 
     log.debug('Loading Libcloud AWS cloud module')
     return 'aws'
@@ -118,6 +149,17 @@ if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
     EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
 
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(
+        __opts__,
+        'aws',
+        ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
 def get_conn(**kwargs):
     '''
     Return a conn object for the passed VM data
@@ -125,7 +167,7 @@ def get_conn(**kwargs):
     if 'location' in kwargs:
         location = kwargs['location']
         if location not in EC2_LOCATIONS:
-            raise SaltException(
+            raise SaltCloudException(
                 'The specified location does not seem to be valid: '
                 '{0}\n'.format(
                     location
@@ -135,9 +177,10 @@ def get_conn(**kwargs):
         location = DEFAULT_LOCATION
 
     driver = get_driver(EC2_LOCATIONS[location])
+    vm_ = get_configured_provider()
     return driver(
-        __opts__['AWS.id'],
-        __opts__['AWS.key'],
+        config.get_config_value('id', vm_, __opts__, search_global=False),
+        config.get_config_value('key', vm_, __opts__, search_global=False)
     )
 
 
@@ -145,25 +188,18 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return str(vm_.get('keyname', __opts__.get('AWS.keyname', '')))
+    return config.get_config_value(
+        'keyname', vm_, __opts__, search_global=False
+    )
 
 
 def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return vm_.get(
-        'securitygroup', __opts__.get('AWS.securitygroup', 'default')
+    return config.get_config_value(
+        'securitygroup', vm_, __opts__, search_global=False
     )
-
-    # XXX: This code won't get executed. On purpose?
-    securitygroups = vm_.get(
-        'securitygroup', __opts__.get('AWS.securitygroup', 'default')
-    )
-    if not isinstance(securitygroups, list):
-        securitygroup = securitygroups
-        securitygroups = [securitygroup]
-    return securitygroups
 
 
 def block_device_mappings(vm_):
@@ -172,17 +208,19 @@ def block_device_mappings(vm_):
     e.g. [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
     '''
-    block_device_mappings = vm_.get(
-        'block_device_mappings', __opts__.get('AWS.block_device_mappings', None)
+    return config.get_config_value(
+        'block_device_mappings', vm_, __opts__, search_global=False
     )
-    return block_device_mappings
 
 
 def ssh_username(vm_):
     '''
     Return the ssh_username. Defaults to 'ec2-user'.
     '''
-    usernames = vm_.get('ssh_username', __opts__.get('AWS.ssh_username', []))
+    usernames = config.get_config_value(
+        'ssh_username', vm_, __opts__
+    )
+
     if not isinstance(usernames, list):
         usernames = [usernames]
 
@@ -201,8 +239,9 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return vm_.get(
-        'ssh_interface', __opts__.get('AWS.ssh_interface', 'public_ips')
+    return config.get_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
     )
 
 
@@ -213,28 +252,30 @@ def get_location(vm_=None):
         - Cloud profile setting
         - Global salt-cloud config
     '''
-    if __opts__['location'] != '':
-        return __opts__['location']
-    elif vm_ is not None and 'location' in vm_:
-        return vm_['location']
-    else:
-        return __opts__.get('AWS.location', DEFAULT_LOCATION)
+    return __opts__.get(
+        'location',
+        config.get_config_value(
+            'location',
+            vm_ or get_configured_provider(), __opts__,
+            default=DEFAULT_LOCATION
+        )
+    )
 
 
 def get_availability_zone(conn, vm_):
     '''
     Return the availability zone to use
     '''
+    avz = config.get_config_value(
+        'availability_zone', vm_, __opts__, search_global=False
+    )
+
     locations = conn.list_locations()
-    avz = None
-    if 'availability_zone' in vm_:
-        avz = vm_['availability_zone']
-    elif 'AWS.availability_zone' in __opts__:
-        avz = __opts__['AWS.availability_zone']
 
     if avz is None:
         # Default to first zone
         return locations[0]
+
     for loc in locations:
         if loc.availability_zone.name == avz:
             return loc
@@ -248,11 +289,15 @@ def create(vm_):
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     conn = get_conn(location=location)
     usernames = ssh_username(vm_)
-    kwargs = {'ssh_key': __opts__['AWS.private_key']}
-    kwargs['name'] = vm_['name']
-    kwargs['image'] = get_image(conn, vm_)
-    kwargs['size'] = get_size(conn, vm_)
-    kwargs['location'] = get_availability_zone(conn, vm_)
+    kwargs = {
+        'ssh_key': config.get_config_value(
+            'private_key', vm_, __opts__, search_global=False
+        ),
+        'name': vm_['name'],
+        'image': get_image(conn, vm_),
+        'size': get_size(conn, vm_),
+        'location': get_availability_zone(conn, vm_)
+    }
     ex_keyname = keyname(vm_)
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
@@ -266,14 +311,15 @@ def create(vm_):
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        err = (
+        log.error(
             'Error creating {0} on AWS\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n{1}').format(
+            'run the initial deployment: {1}\n'.format(
                 vm_['name'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
-        sys.stderr.write(err)
-        log.error(err)
         return False
 
     log.info('Created node {0}'.format(vm_['name']))
@@ -298,7 +344,7 @@ def create(vm_):
         if data.public_ips:
             break
         log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
-    if ssh_interface(vm_) == "private_ips":
+    if ssh_interface(vm_) == 'private_ips':
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
         ip_address = data.private_ips[0]
     else:
@@ -310,45 +356,46 @@ def create(vm_):
         for user in usernames:
             if saltcloud.utils.wait_for_passwd(
                     host=ip_address, username=user, ssh_timeout=60,
-                    key_filename=__opts__['AWS.private_key']):
+                    key_filename=config.get_config_value(
+                        'private_key', vm_, __opts__, search_global=False)):
                 username = user
                 break
         else:
             return {vm_['name']: 'Failed to authenticate'}
 
-    sudo = True
-    if 'sudo' in vm_.keys():
-        sudo = vm_['sudo']
-
     ret = {}
-    deploy = vm_.get('deploy', __opts__.get('AWS.deploy', __opts__['deploy']))
-    if deploy is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
-            'key_filename': __opts__['AWS.private_key'],
-            'deploy_command': 'bash /tmp/deploy.sh',
+            'key_filename': config.get_config_value(
+                'private_key', vm_, __opts__, search_global=False
+            ),
+            'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script.script,
             'name': vm_['name'],
-            'sudo': sudo,
+            'sudo': config.get_config_value(
+                'sudo', vm_, __opts__, default=(username != 'root')
+            ),
             'start_action': __opts__['start_action'],
             'conf_file': __opts__['conf_file'],
             'sock_dir': __opts__['sock_dir'],
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
+
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
 
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
-
         # Deploy salt-master files, if necessary
-        if 'make_master' in vm_ and vm_['make_master'] is True:
+        if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
@@ -359,13 +406,11 @@ def create(vm_):
             if 'syndic_master' in master_conf:
                 deploy_kwargs['make_syndic'] = True
 
-        if username == 'root':
-            deploy_kwargs['deploy_command'] = '/tmp/deploy.sh'
-
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
-            ret['deploy_kwargs'] = deploy_kwargs
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
@@ -375,7 +420,9 @@ def create(vm_):
     for key, val in data.__dict__.items():
         ret[key] = val
         log.debug('  {0}: {1}'.format(key, val))
-    volumes = vm_.get('map_volumes')
+    volumes = config.get_config_value(
+        'map_volumes', vm_, __opts__, search_global=False
+    )
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
@@ -412,8 +459,9 @@ def stop(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -422,9 +470,8 @@ def stop(name, call=None):
         data = conn.ex_stop_node(node=node)
         log.debug(data)
         log.info('Stopped node {0}'.format(name))
-    except Exception as exc:
-        log.error('Failed to stop node {0}'.format(name))
-        log.error(exc)
+    except Exception:
+        log.error('Failed to stop node {0}\n'.format(name), exc_info=True)
 
     return data
 
@@ -436,8 +483,9 @@ def start(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -446,9 +494,8 @@ def start(name, call=None):
         data = conn.ex_start_node(node=node)
         log.debug(data)
         log.info('Started node {0}'.format(name))
-    except Exception as exc:
-        log.error('Failed to start node {0}'.format(name))
-        log.error(exc)
+    except Exception:
+        log.error('Failed to start node {0}\n'.format(name), exc_info=True)
 
     return data
 
@@ -462,8 +509,9 @@ def set_tags(name, tags, call=None):
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -475,11 +523,9 @@ def set_tags(name, tags, call=None):
         # print the new tags- with special handling for renaming of a node
         if 'Name' in tags:
             return get_tags(tags['Name'])
-        else:
-            return get_tags(name)
-    except Exception as exc:
-        log.error('Failed to set tags for {0}'.format(name))
-        log.error(exc)
+        return get_tags(name)
+    except Exception:
+        log.error('Failed to set tags for {0}\n'.format(name), exc_info=True)
 
 
 def get_tags(name, call=None):
@@ -489,8 +535,9 @@ def get_tags(name, call=None):
     data = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -499,9 +546,11 @@ def get_tags(name, call=None):
         log.info('Retrieving tags from {0}'.format(name))
         data = conn.ex_describe_tags(resource=node)
         log.info(data)
-    except Exception as exc:
-        log.error('Failed to retrieve tags from {0}'.format(name))
-        log.error(exc)
+    except Exception:
+        log.error(
+            'Failed to retrieve tags from {0}\n'.format(name),
+            exc_info=True
+        )
 
     return data
 
@@ -517,8 +566,9 @@ def del_tags(name, kwargs, call=None):
     ret = {}
 
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -533,9 +583,11 @@ def del_tags(name, kwargs, call=None):
         conn.ex_delete_tags(resource=node, tags=tags)
         log.info('Deleting tags from {0}'.format(name))
         ret = get_tags(name)
-    except Exception as exc:
-        log.error('Failed to delete tags from {0}'.format(name))
-        log.error(exc)
+    except Exception:
+        log.error(
+            'Failed to delete tags from {0}\n'.format(name),
+            exc_info=True
+        )
 
     return ret
 
@@ -549,8 +601,9 @@ def rename(name, kwargs, call=None):
         salt-cloud -a rename mymachine newname=yourmachine
     '''
     if call != 'action':
-        print('This action must be called with -a or --action.')
-        sys.exit(1)
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
 
     location = get_location()
     conn = get_conn(location=location)
@@ -562,13 +615,14 @@ def rename(name, kwargs, call=None):
         saltcloud.utils.rename_key(
             __opts__['pki_dir'], name, kwargs['newname']
         )
-    except Exception as exc:
+    except Exception, exc:
         log.error(
-            'Failed to rename {0} to {1}'.format(
-                name, kwargs['newname']
-            )
+            'Failed to rename {0} to {1}: {2}\n'.format(
+                name, kwargs['newname'], exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
         )
-        log.error(exc)
 
 
 def destroy(name):
@@ -579,16 +633,18 @@ def destroy(name):
     ret = {}
 
     newname = name
-    if 'AWS.rename_on_destroy' in __opts__:
-        if __opts__['AWS.rename_on_destroy'] is True:
-            newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
-            rename(name, kwargs={'newname': newname}, call='action')
-            log.info(
-                'Machine will be identified as {0} until it has been '
-                'cleaned up by AWS.'.format(
-                    newname
-                )
+    if config.get_config_value('rename_on_destroy',
+                               get_configured_provider(),
+                               __opts__, search_global=False) is True:
+        newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
+        rename(name, kwargs={'newname': newname}, call='action')
+        log.info(
+            'Machine will be identified as {0} until it has been '
+            'cleaned up by AWS.'.format(
+                newname
             )
+        )
+        ret['newname'] = newname
 
     from saltcloud.libcloudfuncs import destroy as libcloudfuncs_destroy
     location = get_location()
@@ -598,15 +654,15 @@ def destroy(name):
     )
     try:
         result = libcloudfuncs_destroy(newname, conn)
-        ret[name] = result
+        ret.update({'Destroyed': result})
     except Exception as e:
-        if e.message.startswith('OperationNotPermitted'):
-            log.info(
-                'Failed: termination protection is enabled on {0}'.format(
-                    name
-                )
-            )
-        else:
+        if not e.message.startswith('OperationNotPermitted'):
             raise e
+
+        log.info(
+            'Failed: termination protection is enabled on {0}'.format(
+                name
+            )
+        )
 
     return ret

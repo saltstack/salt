@@ -5,8 +5,8 @@ Parallels Cloud Module
 The Parallels cloud module is used to control access to cloud providers using
 the Parallels VPS system.
 
-Use of this module requires the following PARALLELS paramaters to be set in the
-cloud configuration file.
+Use of this module requires, if using the old salt cloud configuration syntax,
+the following PARALLELS parameters to be set in the cloud configuration file.
 
 .. code-block:: yaml
 
@@ -15,23 +15,34 @@ cloud configuration file.
     PARALLELS.password: mypassword
     PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
 
+
+Using the new format, set up the cloud configuration at
+ ``/etc/salt/cloud.providers`` or
+ ``/etc/salt/cloud.providers.d/parallels.conf``:
+
+
+.. code-block:: yaml
+
+    my-parallels-config:
+      # Parallels account information
+      user: myuser
+      password: mypassword
+      url: https://api.cloud.xmission.com:4465/paci/v1.0/
+      provider: parallels
+
 '''
 
 # Import python libs
-import re
-import sys
 import time
-import yaml
-import json
 import urllib
 import urllib2
 import logging
 import xml.etree.ElementTree as ET
 
-# Import salt libs
-import salt.utils.event
-import salt.utils.xmlutil
+# Import salt cloud libs
 import saltcloud.utils
+import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -40,12 +51,24 @@ log = logging.getLogger(__name__)
 # Only load in this module if the PARALLELS configurations are in place
 def __virtual__():
     '''
-    Check for PARALLELS configs
+    Check for PARALLELS configurations
     '''
-    if 'PARALLELS.user' in __opts__:
-        log.debug('Loading Parallels cloud module')
-        return 'parallels'
-    return False
+    if get_configured_provider() is False:
+        log.debug(
+            'There is no Parallels cloud provider configuration available. '
+            'Not loading module.'
+        )
+        return False
+
+    log.debug('Loading Parallels cloud module')
+    return 'parallels'
+
+
+def get_configured_provider():
+    '''
+    Return the first configured instance.
+    '''
+    return config.is_provider_configured(__opts__, 'parallels', ('user',))
 
 
 def avail_locations():
@@ -53,11 +76,12 @@ def avail_locations():
     Return a dict of all available VM locations on the cloud provider with
     relevant data
     '''
-    return {'Error':
-               {'Not Supported':
-                   '--list-locations not currently supported by Parallels'
-               }
-           }
+    return {
+        'Error': {
+            'Not Supported': '--list-locations not currently supported by '
+                             'Parallels'
+        }
+    }
 
 
 def avail_images():
@@ -76,11 +100,12 @@ def avail_sizes():
     '''
     Return a list of the image sizes that are on the provider
     '''
-    return {'Error':
-               {'Not Supported':
-                   '--list-sizes not currently supported by Parallels'
-               }
-           }
+    return {
+        'Error': {
+            'Not Supported': '--list-sizes not currently supported by '
+                             'Parallels'
+        }
+    }
 
 
 def list_nodes():
@@ -121,9 +146,13 @@ def list_nodes_full():
         ret[name] = node
         ret[name]['image'] = node['platform']['template-info']['name']
         if 'private-ip' in node['network']:
-            ret[name]['private_ips'] = [node['network']['private-ip']['address']]
+            ret[name]['private_ips'] = [
+                node['network']['private-ip']['address']
+            ]
         if 'public-ip' in node['network']:
-            ret[name]['public_ips'] = [node['network']['public-ip']['address']]
+            ret[name]['public_ips'] = [
+                node['network']['public-ip']['address']
+            ]
 
     return ret
 
@@ -152,12 +181,13 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
+    vm_image = config.get_config_value(
+        'image', vm_, __opts__, search_global=False
+    )
     for image in images:
-        if images[image]['name'] == str(vm_['image']):
+        if str(vm_image) in (images[image]['name'], images[image]['id']):
             return images[image]['id']
-        if images[image]['id'] == str(vm_['image']):
-            return images[image]['id']
-    raise ValueError("The specified image could not be found.")
+    raise SaltCloudNotFound('The specified image could not be found.')
 
 
 def create_node(vm_):
@@ -173,49 +203,68 @@ def create_node(vm_):
 
     # Description, defaults to name
     desc = ET.SubElement(content, 'description')
-    desc.text = vm_.get('desc', vm_['name'])
+    desc.text = config.get_config_value(
+        'desc', vm_, __opts__, default=vm_['name'], search_global=False
+    )
 
     # How many CPU cores, and how fast they are
     cpu = ET.SubElement(content, 'cpu')
-    cpu.attrib['number'] = vm_.get('cpu_number', '1')
-    cpu.attrib['power'] = vm_.get('cpu_power', '1000')
+    cpu.attrib['number'] = config.get_config_value(
+        'cpu_number', vm_, __opts__, default='1', search_global=False
+    )
+    cpu.attrib['power'] = config.get_config_value(
+        'cpu_power', vm_, __opts__, default='1000', search_global=False
+    )
 
     # How many megabytes of RAM
     ram = ET.SubElement(content, 'ram-size')
-    ram.text = vm_.get('ram', '256')
+    ram.text = config.get_config_value(
+        'ram', vm_, __opts__, default='256', search_global=False
+    )
 
     # Bandwidth available, in kbps
     bandwidth = ET.SubElement(content, 'bandwidth')
-    bandwidth.text = vm_.get('bandwidth', '100')
+    bandwidth.text = config.get_config_value(
+        'bandwidth', vm_, __opts__, default='100', search_global=False
+    )
 
     # How many public IPs will be assigned to this instance
     ip_num = ET.SubElement(content, 'no-of-public-ip')
-    ip_num.text = vm_.get('ip_num', '1')
+    ip_num.text = config.get_config_value(
+        'ip_num', vm_, __opts__, default='1', search_global=False
+    )
 
     # Size of the instance disk
     disk = ET.SubElement(content, 've-disk')
     disk.attrib['local'] = 'true'
-    disk.attrib['size'] = vm_.get('disk_size', '10')
+    disk.attrib['size'] = config.get_config_value(
+        'disk_size', vm_, __opts__, default='10', search_global=False
+    )
 
     # Attributes for the image
-    image = show_image({'image': vm_['image']}, call='function')
+    vm_image = config.get_config_value(
+        'image', vm_, __opts__, search_global=False
+    )
+    image = show_image({'image': vm_image}, call='function')
     platform = ET.SubElement(content, 'platform')
     template = ET.SubElement(platform, 'template-info')
-    template.attrib['name'] = vm_['image']
+    template.attrib['name'] = vm_image
     os = ET.SubElement(platform, 'os-info')
-    os.attrib['technology'] = image[vm_['image']]['technology']
-    os.attrib['type'] = image[vm_['image']]['osType']
+    os.attrib['technology'] = image[vm_image]['technology']
+    os.attrib['type'] = image[vm_image]['osType']
 
     # Username and password
     admin = ET.SubElement(content, 'admin')
-    admin.attrib['login'] = vm_.get('ssh_username', 'root')
-    admin.attrib['password'] = __opts__['PARALLELS.password']
+    admin.attrib['login'] = config.get_config_value(
+        'ssh_username', vm_, __opts__, default='root'
+    )
+    admin.attrib['password'] = config.get_config_value(
+        'password', vm_, __opts__, search_global=False
+    )
 
     data = ET.tostring(content, encoding='UTF-8')
 
-    node = query(action='ve',
-                 method='POST',
-                 data=data)
+    node = query(action='ve', method='POST', data=data)
     return node
 
 
@@ -224,18 +273,19 @@ def create(vm_):
     Create a single VM from a data dict
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
-    deploy_script = script(vm_)
 
     try:
         data = create_node(vm_)
     except Exception as exc:
-        err = ('Error creating {0} on PARALLELS\n\n'
-               'The following exception was thrown when trying to '
-               'run the initial deployment: \n{1}').format(
-                       vm_['name'], exc.message
-                       )
-        sys.stderr.write(err)
-        log.error(err)
+        log.error(
+            'Error creating {0} on PARALLELS\n\n'
+            'The following exception was thrown when trying to '
+            'run the initial deployment: \n{1}'.format(
+                vm_['name'], exc.message
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
         return False
 
     name = vm_['name']
@@ -258,12 +308,14 @@ def create(vm_):
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
 
-    if __opts__['deploy'] is True:
+    if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
             'host': public_ip,
             'username': 'root',
-            'password': __opts__['PARALLELS.password'],
+            'password': config.get_config_value(
+                'password', vm_, __opts__, search_global=False
+            ),
             'script': deploy_script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
@@ -273,20 +325,44 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            }
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
+        }
 
-        if 'script_args' in vm_:
-            deploy_kwargs['script_args'] = vm_['script_args']
+        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
+            __opts__, vm_
+        )
 
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(__opts__, vm_)
+        # Deploy salt-master files, if necessary
+        if config.get_config_value('make_master', vm_, __opts__) is True:
+            deploy_kwargs['make_master'] = True
+            deploy_kwargs['master_pub'] = vm_['master_pub']
+            deploy_kwargs['master_pem'] = vm_['master_pem']
+            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
+            if master_conf:
+                deploy_kwargs['master_conf'] = master_conf
+
+            if 'syndic_master' in master_conf:
+                deploy_kwargs['make_syndic'] = True
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
+            if __opts__.get('show_deploy_args', False) is True:
+                ret['deploy_kwargs'] = deploy_kwargs
         else:
-            log.error('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+            log.error(
+                'Failed to start Salt on Cloud VM {0}'.format(
+                    vm_['name']
+                )
+            )
 
-    log.info('Created Cloud VM {0} with the following values:'.format(vm_['name']))
+    log.info(
+        'Created Cloud VM {0} with the following values:'.format(
+            vm_['name']
+        )
+    )
 
     return data
 
@@ -295,12 +371,21 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     '''
     Make a web call to a Parallels provider
     '''
-    path = __opts__['PARALLELS.url']
+    path = config.get_config_value(
+        'url', get_configured_provider(), __opts__, search_global=False
+    )
     auth_handler = urllib2.HTTPBasicAuthHandler()
-    auth_handler.add_password(realm='Parallels Instance Manager',
-                              uri=path,
-                              user=__opts__['PARALLELS.user'],
-                              passwd=__opts__['PARALLELS.password'])
+    auth_handler.add_password(
+        realm='Parallels Instance Manager',
+        uri=path,
+        user=config.get_config_value(
+            'user', get_configured_provider(), __opts__, search_global=False
+        ),
+        passwd=config.get_config_value(
+            'password', get_configured_provider(), __opts__,
+            search_global=False
+        )
+    )
     opener = urllib2.build_opener(auth_handler)
     urllib2.install_opener(opener)
 
@@ -334,18 +419,26 @@ def query(action=None, command=None, args=None, method='GET', data=None):
 
     try:
         result = urllib2.urlopen(req)
-        log.debug('PARALLELS Response Status Code: {0}'.format(result.getcode()))
+        log.debug(
+            'PARALLELS Response Status Code: {0}'.format(
+                result.getcode()
+            )
+        )
 
         if 'content-length' in result.headers:
             content = result.read()
             result.close()
             items = ET.fromstring(content)
             return items
-        else:
-            return {}
+
+        return {}
     except urllib2.URLError as exc:
-        log.error('PARALLELS Response Status Code: {0} {1}'.format(exc.code,
-                                                             exc.msg))
+        log.error(
+            'PARALLELS Response Status Code: {0} {1}'.format(
+                exc.code,
+                exc.msg
+            )
+        )
         root = ET.fromstring(exc.read())
         log.error(_xml_to_dict(root))
         return {'error': _xml_to_dict(root)}
@@ -357,14 +450,8 @@ def script(vm_):
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     script = saltcloud.utils.os_script(
-        saltcloud.utils.get_option(
-            'script',
-            __opts__,
-            vm_
-        ),
-        vm_,
-        __opts__,
-        minion,
+        config.get_config_value('script', vm_, __opts__),
+        vm_, __opts__, minion
     )
     return script
 
@@ -374,10 +461,9 @@ def show_image(kwargs, call=None):
     Show the details from Parallels concerning an image
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_image function must be called with -f or --function.'
         )
-        sys.exit(1)
 
     items = query(action='template', command=kwargs['image'])
     return {items.attrib['name']: items.attrib}
@@ -388,10 +474,9 @@ def show_instance(name, call=None):
     Show the details from Parallels concerning an instance
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     items = query(action='ve', command=name)
 
@@ -437,7 +522,11 @@ def destroy(name, call=None):
     if node['state'] == 'STARTED':
         stop(name, call='action')
         if not wait_until(name, 'STOPPED'):
-            return {'Error': 'Unable to destroy {0}, command timed out'.format(name)}
+            return {
+                'Error': 'Unable to destroy {0}, command timed out'.format(
+                    name
+                )
+            }
 
     data = query(action='ve', command=name, method='DELETE')
 
@@ -456,10 +545,9 @@ def start(name, call=None):
         salt-cloud -a start mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     data = query(action='ve', command='{0}/start'.format(name), method='PUT')
 
@@ -478,10 +566,9 @@ def stop(name, call=None):
         salt-cloud -a stop mymachine
     '''
     if call != 'action':
-        log.error(
+        raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        sys.exit(1)
 
     data = query(action='ve', command='{0}/stop'.format(name), method='PUT')
 
