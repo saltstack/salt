@@ -76,7 +76,7 @@ class Cloud(object):
 
     def get_providers(self):
         '''
-        Return the providers configured within the VM settings
+        Return the providers configured within the VM settings.
         '''
         provs = set()
         for fun in self.clouds:
@@ -93,23 +93,47 @@ class Cloud(object):
                     provider = entry.get('provider', None)
                     if provider is not None and provider not in providers:
                         providers.append(provider)
+
+            if not providers:
+                raise SaltCloudSystemExit(
+                    'There are now cloud providers configured'
+                )
+
             return providers
 
         if ':' in lookup:
             alias, provider = lookup.split(':')
             if alias not in self.opts['providers']:
-                return []
+                raise SaltCloudSystemExit(
+                    'No cloud providers matched {0!r}. Available: {1}'.format(
+                        lookup, ', '.join(self.opts['providers'].keys())
+                    )
+                )
 
             for entry in self.opts['providers'].get(alias):
                 if entry.get('provider', None) == provider:
                     return [provider]
-            return []
 
-        return [
+            raise SaltCloudSystemExit(
+                'No cloud providers matched {0!r}. Available: {1}'.format(
+                    lookup, ', '.join(self.opts['providers'].keys())
+                )
+            )
+
+        providers = [
             d.get('provider', None) for d in
             self.opts['providers'].get(lookup, [{}])
             if d and d.get('provider', None) is not None
         ]
+        if not providers:
+            raise SaltCloudSystemExit(
+                'No cloud providers matched {0!r}. '
+                'Available selections: {1}'.format(
+                    lookup, ', '.join(self.opts['providers'].keys())
+                )
+            )
+        return providers
+
 
     def map_providers(self, query='list_nodes'):
         '''

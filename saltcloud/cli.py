@@ -113,7 +113,10 @@ class SaltCloud(parsers.SaltCloudParser):
                         mapper.provider_list()
                     )
                 except SaltCloudSystemExit as exc:
-                    self.exit(exc.exit_code, exc.message)
+                    self.exit(
+                        exc.exit_code,
+                        'Error: {0}\n'.format(exc.message.rstrip())
+                    )
                 except Exception as exc:
                     log.error(
                         'There was an error listing providers: {0}'.format(
@@ -131,7 +134,10 @@ class SaltCloud(parsers.SaltCloudParser):
                         query=self.selected_query_option
                     )
                 except SaltCloudSystemExit as exc:
-                    self.exit(exc.exit_code, exc.message)
+                    self.exit(
+                        exc.exit_code,
+                        'Error: {0}\n'.format(exc.message.rstrip())
+                    )
                 except Exception as exc:
                     log.error(
                         'There was an error with a custom map: {0}'.format(
@@ -148,7 +154,10 @@ class SaltCloud(parsers.SaltCloudParser):
                         query=self.selected_query_option
                     )
                 except SaltCloudSystemExit as exc:
-                    self.exit(exc.exit_code, exc.message)
+                    self.exit(
+                        exc.exit_code,
+                        'Error: {0}\n'.format(exc.message.rstrip())
+                    )
                 except Exception as exc:
                     log.error(
                         'There was an error with a map: {0}'.format(
@@ -166,7 +175,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.location_list(self.options.list_locations)
                 )
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was an error listing locations: {0}'.format(exc),
@@ -181,7 +193,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.image_list(self.options.list_images)
                 )
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was an error listing images: {0}'.format(exc),
@@ -196,7 +211,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.size_list(self.options.list_sizes)
                 )
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was an error listing sizes: {0}'.format(exc),
@@ -221,7 +239,10 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names)
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was an error destroying machines: {0}'.format(exc),
@@ -260,7 +281,10 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.print_confirm(msg):
                     ret = mapper.do_action(names, kwargs)
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was an error actioning machines: {0}'.format(exc),
@@ -293,7 +317,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.function_provider, self.function_name, kwargs
                 )
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(exc.exit_code, '{0}\n'.format(exc.message.rstrip()))
             except Exception as exc:
                 log.error(
                     'There was an error running the function: {0}'.format(exc),
@@ -306,7 +330,10 @@ class SaltCloud(parsers.SaltCloudParser):
             try:
                 ret = mapper.run_profile()
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was a profile error: {0}'.format(exc),
@@ -344,7 +371,10 @@ class SaltCloud(parsers.SaltCloudParser):
                     log.info('Complete')
 
             except SaltCloudSystemExit as exc:
-                self.exit(exc.exit_code, exc.message)
+                self.exit(
+                    exc.exit_code,
+                    'Error: {0}\n'.format(exc.message.rstrip())
+                )
             except Exception as exc:
                 log.error(
                     'There was a query error: {0}'.format(exc),
