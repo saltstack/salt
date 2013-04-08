@@ -11,19 +11,7 @@ documentation.
 '''
 
 # Import python libs
-import re
-import sys
-import time
-import yaml
-import json
-import urllib
-import urllib2
 import logging
-import xml.etree.ElementTree as ET
-
-# Import salt libs
-import salt.utils.event
-import salt.utils.xmlutil
 
 # Import salt cloud libs
 import saltcloud.utils
@@ -38,42 +26,6 @@ def __virtual__():
     Needs no special configuration
     '''
     return 'saltify'
-
-
-def avail_locations():
-    '''
-    Because this module is not specific to any cloud providers, there will be
-    no locations to list.
-    '''
-    return {
-        'Error': {
-            'Not Supported': '--list-locations not supported by Saltify'
-        }
-    }
-
-
-def avail_images():
-    '''
-    Because this module is not specific to any cloud providers, there will be
-    no images to list.
-    '''
-    return {
-        'Error': {
-            'Not Supported': '--list-images not supported by Saltify'
-        }
-    }
-
-
-def avail_sizes():
-    '''
-    Because this module is not specific to any cloud providers, there will be
-    no sizes to list.
-    '''
-    return {
-        'Error': {
-            'Not Supported': '--list-sizes not supported by Saltify'
-        }
-    }
 
 
 def list_nodes():
@@ -184,16 +136,3 @@ def script(vm_):
         vm_, __opts__, minion
     )
     return script
-
-
-def destroy(name, call=None):
-    '''
-    Because this module is not specific to any cloud providers, it is not
-    possible to destroy a node.
-    '''
-    return {
-        'Error': {
-            'Not Supported': '--destroy and --action destroy not supported '
-                             'by Saltify'
-        }
-    }

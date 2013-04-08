@@ -18,6 +18,13 @@ log = logging.getLogger(__name__)
 # We list un-supported functions here. These will be removed from the loaded.
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'joyent.avail_locations',
+    'parallels.avail_sizes',
+    'parallels.avail_locations',
+    'saltify.destroy',
+    'saltify.avail_sizes',
+    'saltify.avail_images',
+    'saltify.avail_locations',
+
 )
 
 
