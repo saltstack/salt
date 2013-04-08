@@ -201,9 +201,9 @@ def wants_html():
 # preserve order of preference.
 ct_out_map = (
     ('application/json', json.dumps),
-    ('application/x-yaml', yaml.dump),
+    ('application/x-yaml', functools.partial(
+        yaml.safe_dump, default_flow_style=False)),
 )
-
 
 def hypermedia_handler(*args, **kwargs):
     '''
