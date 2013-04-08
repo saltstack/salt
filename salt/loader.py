@@ -474,6 +474,13 @@ class Loader(object):
                 self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
+        try:
+            context = sys.modules[
+                    functions[functions.keys()[0]].__module__
+                    ].__context__
+        except AttributeError:
+            context = {}
+        mod.__context__ = context
         return funcs
 
     def gen_functions(self, pack=None, virtual_enable=True, whitelist=None):
