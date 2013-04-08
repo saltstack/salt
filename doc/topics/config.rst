@@ -466,6 +466,67 @@ Using the new syntax:
       ignore_cidr: 192.168.0.0/16
 
 
+Digital Ocean
+-------------
+
+Using Salt for Digital Ocean requires a client_key and an api_key. These can be
+found in the Digital Ocean web interface, in the "My Settings" section, under
+the API Access tab.
+
+* Using the old format:
+
+.. code-block:: yaml
+
+    DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
+    DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+
+
+* Using the new configuration format:
+
+.. code-block:: yaml
+
+    my-digitalocean-config:
+      client_key: wFGEwgregeqw3435gDger
+      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      provider: digital_ocean
+
+
+**NOTE**: With the new providers configuration syntax you would have 
+``provider: my-digitalocean-config`` instead of ``provider: digital_ocean`` on a
+profile configuration.
+
+
+Parallels
+---------
+
+Using Salt with Parallels requires a user, password and url. These can be
+obtained from your cloud provider.
+
+* Using the old format:
+
+.. code-block:: yaml
+
+    PARALLELS.user: myuser
+    PARALLELS.password: xyzzy
+    PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
+
+
+* Using the new configuration format:
+
+.. code-block:: yaml
+
+    my-parallels-config:
+      user: myuser
+      password: xyzzy
+      url: https://api.cloud.xmission.com:4465/paci/v1.0/
+      provider: parallels
+
+
+**NOTE**: With the new providers configuration syntax you would have 
+``provider: my-parallels-config`` instead of ``provider: parallels`` on a
+profile configuration.
+
+
 IBM SmartCloud Enterprise
 -------------------------
 
@@ -503,6 +564,35 @@ already set) in order to find the name of the location that you want to use.
 **NOTE**: With the new providers configuration syntax you would have 
 ``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile 
 configuration.
+
+
+Saltify
+-------
+
+The Saltify driver is a new, experimental driver for installing Salt on
+existing machines (virtual or bare metal). Because it does not use an actual
+cloud provider, it needs no configuration in the main cloud config file.
+However, it does still require a profile to be set up, and is most useful when
+used inside a map file. The key parameters to be set are ``ssh_host``,
+``ssh_username`` and either ``ssh_keyfile`` or ``ssh_password``. These may all
+be set in either the profile or the map. An example configuration might use the
+following in cloud.profiles:
+
+.. code-block:: yaml
+
+    make_salty:
+      provider: saltify
+
+And in the map file:
+
+.. code-block:: yaml
+
+    make_salty:
+      - myinstance:
+        ssh_host: 54.262.11.38
+        ssh_username: ubuntu
+        ssh_keyfile: '/etc/salt/mysshkey.pem'
+        sudo: True
 
 
 Extending Profiles and Cloud Providers Configuration
