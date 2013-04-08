@@ -335,8 +335,9 @@ def installed(
                 'result': None,
                 'comment': comment}
 
+    comment = []
     if refresh or os.path.isfile(rtag):
-        changes = __salt__['pkg.install'](name,
+        pkg_ret = __salt__['pkg.install'](name,
                                           refresh=True,
                                           version=version,
                                           fromrepo=fromrepo,
@@ -347,7 +348,7 @@ def installed(
         if os.path.isfile(rtag):
             os.remove(rtag)
     else:
-        changes = __salt__['pkg.install'](name,
+        pkg_ret = __salt__['pkg.install'](name,
                                           refresh=False,
                                           version=version,
                                           fromrepo=fromrepo,
@@ -355,6 +356,13 @@ def installed(
                                           pkgs=pkgs,
                                           sources=sources,
                                           **kwargs)
+    if isinstance(pkg_ret, dict):
+        changes = pkg_ret
+    elif isinstance(pkg_ret, basestring):
+        changes = {}
+        comment.append(pkg_ret)
+    else:
+        changes = {}
 
     if sources:
         modified = [x for x in changes.keys() if x in targets]
@@ -365,7 +373,6 @@ def installed(
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok if x not in targets]
 
-    comment = []
     if modified:
         if sources:
             summary = ', '.join(modified)
