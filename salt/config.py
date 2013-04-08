@@ -106,6 +106,7 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 5000,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': '/var/run/salt-minion.pid',
+    'range_server': 'range:80',
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
