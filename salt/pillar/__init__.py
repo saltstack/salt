@@ -366,5 +366,5 @@ class Pillar(object):
         if errors:
             for error in errors:
                 log.critical('Pillar render error: {0}'.format(error))
-            return {}
+            pillar['_errors'] = errors
         return pillar
