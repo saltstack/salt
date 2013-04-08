@@ -315,10 +315,10 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
         args = {}
 
     args['client_id'] = config.get_config_value(
-        'client_key', vm_, __opts__, search_global=False
+        'client_key', get_configured_provider(), __opts__, search_global=False
     )
     args['api_key'] = config.get_config_value(
-        'api_key', vm_, __opts__, search_global=False
+        'api_key', get_configured_provider(), __opts__, search_global=False
     )
 
     path += '?%s'
