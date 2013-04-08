@@ -50,6 +50,17 @@ def __gen_rtag():
     return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
+def _fulfills_version_spec(versions, oper, desired_version):
+    '''
+    Returns True if any of the installed versions match the specified version,
+    otherwise returns False
+    '''
+    for ver in versions:
+        if __salt__['pkg.compare'](pkg1=ver, oper=oper, pkg2=desired_version):
+            return True
+    return False
+
+
 def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -61,7 +72,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
                 'result': False,
                 'comment': 'Only one of "pkgs" and "sources" is permitted.'}
 
-    cur_pkgs = __salt__['pkg.list_pkgs']()
+    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True)
     if any((pkgs, sources)):
         if pkgs:
             desired = __salt__['pkg_resource.pack_pkgs'](pkgs)
@@ -80,14 +91,14 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
     else:
         desired = {name: version}
 
-        cver = cur_pkgs.get(name, '')
-        if cver == version:
+        cver = cur_pkgs.get(name, [])
+        if version in cver:
             # The package is installed and is the correct version
             return {'name': name,
                     'changes': {},
                     'result': True,
-                    'comment': ('Package {0} is already installed and is the '
-                                'correct version').format(name)}
+                    'comment': ('Version {0} of package "{1}" is already '
+                                'installed').format(version, name)}
 
         # if cver is not an empty string, the package is already installed
         elif cver and version is None:
@@ -112,7 +123,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
         targets = {}
         problems = []
         for pkgname, pkgver in desired.iteritems():
-            cver = cur_pkgs.get(pkgname, '')
+            cver = cur_pkgs.get(pkgname, [])
             # Package not yet installed, so add to targets
             if not cver:
                 targets[pkgname] = pkgver
@@ -134,8 +145,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
                 # Change it to "==" so that it works in pkg.compare.
                 if comparison in ['=', '']:
                     comparison = '=='
-                if not __salt__['pkg.compare'](pkg1=cver, oper=comparison,
-                                               pkg2=verstr):
+                if not _fulfills_version_spec(cver, comparison, verstr):
                     # Current version did not match desired, add to targets
                     targets[pkgname] = pkgver
 
@@ -180,7 +190,7 @@ def _verify_install(desired, new_pkgs):
         # Change it to "==" so that it works in pkg.compare.
         if comparison in ('=', ''):
             comparison = '=='
-        if __salt__['pkg.compare'](pkg1=cver, oper=comparison, pkg2=verstr):
+        if _fulfills_version_spec(cver, comparison, verstr):
             ok.append(pkgname)
         else:
             failed.append(pkgname)
@@ -362,7 +372,9 @@ def installed(
         not_modified = [x for x in desired if x not in targets]
         failed = [x for x in targets if x not in modified]
     else:
-        ok, failed = _verify_install(desired, __salt__['pkg.list_pkgs']())
+        ok, failed = \
+            _verify_install(desired,
+                            __salt__['pkg.list_pkgs'](versions_as_list=True))
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok if x not in targets]
 
