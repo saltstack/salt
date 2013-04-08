@@ -34,13 +34,154 @@ EC2 instance. While the old format is still supported and automatically
 migrated every time salt-cloud configuration is parsed, a choice was made to 
 warn the user or even exit with an error if both formats are mixed.
 
+
+Migrating Configurations
+------------------------
+
+If you wish to migrate, there are several alternatives. Since the old syntax 
+was mainly done on the main cloud configuration file, see the next before and 
+after migration example.
+
+* Before migration in ``/etc/salt/cloud``:
+
+.. code-block:: yaml
+
+    AWS.id: HJGRYCILJLKJYG
+    AWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+    AWS.keyname: test
+    AWS.securitygroup: quick-start
+    AWS.private_key: /root/test.pem
+
+
+* After migration in ``/etc/salt/cloud``:
+
+.. code-block:: yaml
+
+    providers:
+      my-aws-migrated-config:
+        id: HJGRYCILJLKJYG
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        provider: aws
+
+
+Notice that it's not longer required to name a cloud provider's configuration 
+after it's provider, it can be an alias, though, an additional configuration 
+key is added, ``provider``. This allows for multiple configuration for the same 
+cloud provider to coexist.
+
 While moving towards an improved and extensible configuration handling 
 regarding the cloud providers, ``--providers-config``, which defaults to 
-``/etc/salt/cloud.providers`` was added to the cli parser.  It allows for the 
+``/etc/salt/cloud.providers``, was added to the cli parser.  It allows for the 
 cloud providers configuration to be provided in a different file, and/or even 
 any matching file on a sub-directory, ``cloud.providers.d/*.conf`` which is 
 relative to the providers configuration file(with the above configuration file 
 as an example, ``/etc/salt/cloud.providers.d/*.conf``).
+
+So, using the example configuration above, after migration in 
+``/etc/salt/cloud.providers`` or 
+``/etc/salt/cloud.providers/aws-migrated.conf``:
+
+
+.. code-block:: yaml
+
+    my-aws-migrated-config:
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      provider: aws
+
+
+
+Notice that on this last migrated example, it **no longer** includes the 
+``providers`` starting key.
+
+
+While migrating the cloud providers configuration, if the provider alias(from 
+the above example ``my-aws-migrated-config``) changes from what you had(from 
+the above example ``aws``), you will also need to change the ``provider`` 
+configuration key in the defined profiles.
+
+* From:
+
+.. code-block:: yaml
+
+    rhel_aws:
+        provider: aws
+        image: ami-e565ba8c
+        size: Micro Instance
+
+
+* To:
+
+.. code-block:: yaml
+
+    rhel_aws:
+        provider: my-aws-migrated-config
+        image: ami-e565ba8c
+        size: Micro Instance
+
+
+This new configuration syntax even allows you to have multiple cloud 
+configurations under the same alias, for example:
+
+
+.. code-block:: yaml
+
+    production-config:
+      - id: HJGRYCILJLKJYG
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+
+      - user: example_user
+        apikey: 123984bjjas87034
+        provider: rackspace
+
+
+
+**Notice the dash and indentation on the above example.**
+
+
+Having multiple entries for a configuration alias also makes the ``provider`` 
+key on any defined profile to change, see the example:
+
+
+.. code-block:: yaml
+
+    rhel_aws_dev:
+      provider: production-config:aws
+      image: ami-e565ba8c
+      size: Micro Instance
+
+    rhel_aws_prod:
+      provider: production-config:aws
+      image: ami-e565ba8c
+      size: High-CPU Extra Large Instance
+
+
+    database_prod:
+      provider: production-config:rackspace
+      image: Ubuntu 12.04 LTS
+      size: 256 server
+
+
+
+Notice that because of the multiple entries, one has to be explicit about the 
+provider alias and name, from the above example, ``production-config:aws``.
+
+This new syntax also changes the interaction with ``salt-cloud`` binary.  
+``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud 
+provider as an argument. Since 0.8.7 the argument used should be the configured 
+cloud provider alias. If the provider alias only as a single entry, use 
+``<provider-alias>``.  If it has multiple entries, 
+``<provider-alias>:<provider-name>`` should be used.
+
 
 
 Rackspace
