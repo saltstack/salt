@@ -68,6 +68,18 @@ def _set_retcode(ret):
         __context__['retcode'] = 2
 
 
+def _check_pillar(kwargs):
+    '''
+    Check the pillar for errors, refuse to run the state it there are errors
+    in the pillar and return the pillar errors
+    '''
+    if kwargs.get('force'):
+        return True
+    if '_errors' in __pillar__:
+        return False
+    return True
+
+
 def running():
     '''
     Return a dict of state return data if a state function is already running.
@@ -184,6 +196,11 @@ def highstate(test=None, **kwargs):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     opts = copy.copy(__opts__)
 
     if salt.utils.test_mode(test=test, **kwargs):
@@ -237,6 +254,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     opts = copy.copy(__opts__)
 
     if salt.utils.test_mode(test=test, **kwargs):
@@ -310,6 +332,11 @@ def top(topfn, test=None, **kwargs):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
