@@ -529,7 +529,10 @@ def get_location(vm_=None):
     return __opts__.get(
         'location',
         config.get_config_value(
-            'location', vm_, __opts__, default=DEFAULT_LOCATION,
+            'location',
+            vm_ or get_configured_provider(),
+            __opts__,
+            default=DEFAULT_LOCATION,
             #search_global=False
         )
     )
