@@ -109,22 +109,26 @@ def output(data):
                     colors
                 ))
                 changes = '        Changes:   '
-                for key in ret['changes']:
-                    if isinstance(ret['changes'][key], string_types):
-                        changes += (key + ': ' + ret['changes'][key] +
-                                    '\n                   ')
-                    elif isinstance(ret['changes'][key], dict):
-                        innerdict = '{ '
-                        for k, v in ret['changes'][key].iteritems():
-                            innerdict += '{0} : {1}\n'.format(k, v)
-                        innerdict += '}'
-                        changes += (key + ': ' +
-                                    innerdict +
-                                    '\n                   ')
-                    else:
-                        changes += (key + ': ' +
-                                    pprint.pformat(ret['changes'][key]) +
-                                    '\n                   ')
+                if not isinstance(ret['changes'], dict):
+                    changes += 'Invalid Changes data: {0}'.format(
+                            ret['changes'])
+                else:
+                    for key in ret['changes']:
+                        if isinstance(ret['changes'][key], string_types):
+                            changes += (key + ': ' + ret['changes'][key] +
+                                        '\n                   ')
+                        elif isinstance(ret['changes'][key], dict):
+                            innerdict = '{ '
+                            for k, v in ret['changes'][key].iteritems():
+                                innerdict += '{0} : {1}\n'.format(k, v)
+                            innerdict += '}'
+                            changes += (key + ': ' +
+                                        innerdict +
+                                        '\n                   ')
+                        else:
+                            changes += (key + ': ' +
+                                        pprint.pformat(ret['changes'][key]) +
+                                        '\n                   ')
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
         hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
