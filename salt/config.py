@@ -374,8 +374,10 @@ def get_id():
     - localhost may be better than killing the minion
     '''
 
+    log.warning('Guessing ID. Perhaps you should set the id explicitly in %s', '/etc/salt/minion')
     fqdn = socket.getfqdn()
     if 'localhost' != fqdn:
+        log.info('get_id found id from getfqdn(): %s', fqdn)
         return fqdn, False
 
     # Can /etc/hosts help us?
@@ -388,6 +390,7 @@ def get_id():
                 if ip.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
+                            log.info('get_id found id in /etc/hosts: %s', name)
                             return name, False
                 line = f.readline()
     except Exception:
@@ -400,11 +403,15 @@ def get_id():
 
     for a in ip_addresses:
         if not a.is_private:
+            log.info('get_id using public ip address: %s', a)
             return a, True
 
     if ip_addresses:
-        return ip_addresses.pop(0), True
+        a = ip_addresses.pop(0)
+        log.warning('get_id using private ip address: %s', a)
+        return a, True
 
+    log.error('get_id could not find anything better than localhost')
     return 'localhost', False
 
 
