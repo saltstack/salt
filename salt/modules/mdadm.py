@@ -91,6 +91,34 @@ def detail(device='/dev/md0'):
     return ret
 
 
+def destroy(device):
+    '''
+    Destroy a RAID device.
+
+    WARNING This will zero the superblock of all members of the RAID array..
+
+    CLI Example::
+
+        salt '*' raid.destroy /dev/md0
+    '''
+    try:
+        details = detail(device)
+    except CommandExecutionError:
+        return False
+
+    stop_cmd = 'mdadm --stop {0}'.format(device)
+    zero_cmd = 'mdadm --zero-superblock {0}'
+
+    if __salt__['cmd.retcode'](stop_cmd):
+        for number in details['members']:
+            __salt__['cmd.retcode'](zero_cmd.format(number['device']))
+
+    if __salt__['raid.list']().get(device) is None:
+        return True
+    else:
+        return False
+
+
 def create(*args):
     '''
     Create a RAID device.
