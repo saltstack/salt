@@ -24,15 +24,15 @@ try:
 except ImportError:
     ppa_format_support = False
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
                     ' {3} main'
+
+_MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
+                        'file', 'dist'])
 
 
 def __virtual__():
@@ -879,8 +879,6 @@ def mod_repo(repo, refresh=False, **kwargs):
 
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
-    _MODIFY_OK = set(
-        ['uri', 'comps', 'architectures', 'disabled', 'file', 'dist'])
     if repo.startswith('ppa:'):
         is_ppa = True
         if __grains__['os'] == 'Ubuntu':
@@ -900,7 +898,14 @@ def mod_repo(repo, refresh=False, **kwargs):
                 else:
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
-                owner_name, ppa_name = repo[4:].split('/')
+                try:
+                    owner_name, ppa_name = repo[4:].split('/', 1)
+                except ValueError:
+                    err_str = 'Unable to get PPA info from argument. ' \
+                              'Expected format "<PPA_OWNER>/<PPA_NAME>" ' \
+                              '(e.g. saltstack/salt) not found.  Received ' \
+                              '"{0}" instead.'
+                    raise Exception(err_str.format(repo[4:]))
                 dist = __grains__['lsb_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
@@ -993,7 +998,7 @@ def mod_repo(repo, refresh=False, **kwargs):
                     cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                            '--recv-keys {1}')
                     out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid))
-                    if not out.find('imported') or out.find('not changed'):
+                    if not (out.find('imported') or out.find('not changed')):
                         error_str = 'Error: key retrieval failed: {0}'
                         raise Exception(
                             error_str.format(
@@ -1117,3 +1122,50 @@ def file_dict(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_dict'](*packages)
+
+
+def expand_repo_def(repokwargs):
+    '''
+    Take a repository definition and expand it to the full pkg repository dict
+    that can be used for comparison.  This is a helper function to make
+    the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
+
+    There is no use to calling this function via the CLI.
+    '''
+    sanitized = {}
+
+    if not apt_support:
+        msg = 'Error: aptsources.sourceslist python module not found'
+        raise Exception(msg)
+
+    repo = repokwargs['repo']
+
+    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+        dist = __grains__['lsb_codename']
+        owner_name, ppa_name = repo[4:].split('/', 1)
+        if 'ppa_auth' in repokwargs:
+            auth_info = '{0}@'.format(repokwargs['ppa_auth'])
+            repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name,
+                                            dist)
+        else:
+            if ppa_format_support:
+                repo = softwareproperties.ppa_expand_ppa_line(
+                    repo, dist)[0]
+            else:
+                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
+
+    source_entry = sourceslist.SourceEntry(repo)
+    for kwarg in _MODIFY_OK:
+        if kwarg in repokwargs:
+            setattr(source_entry, kwarg, repokwargs[kwarg])
+
+    sanitized['file'] = source_entry.file
+    sanitized['comps'] = getattr(source_entry, 'comps', [])
+    sanitized['disabled'] = source_entry.disabled
+    sanitized['dist'] = source_entry.dist
+    sanitized['type'] = source_entry.type
+    sanitized['uri'] = source_entry.uri
+    sanitized['line'] = source_entry.line
+    sanitized['architectures'] = getattr(source_entry, 'architectures', [])
+
+    return sanitized
