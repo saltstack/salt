@@ -161,20 +161,19 @@ name. For instance:
 .. code-block:: bash
 
     production-config:
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-      keyname: test
-      securitygroup: quick-start
-      private_key: /root/test.pem
-      provider: aws
+      - id: HJGRYCILJLKJYG
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        provider: aws
 
-    production-config:
-      id: LJLKJYGHJGRYCI
-      key: 'rigjksjdhasdfgnkdjgfsgm;woormgl/ase'
-      keyname: test
-      securitygroup: quick-start
-      private_key: /root/test.pem
-      provider: ec2
+      - id: LJLKJYGHJGRYCI
+        key: 'rigjksjdhasdfgnkdjgfsgm;woormgl/ase'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        provider: ec2
 
 With this configuration, you can then set up the following profiles:
 
