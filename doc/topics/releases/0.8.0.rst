@@ -123,7 +123,7 @@ Logout
 ------
 
 An URL has been added
-(:py:class:`/run <saltapi.netapi.rest_cherrypy.app.Logout>`) that will cause
+(:py:class:`/logout <saltapi.netapi.rest_cherrypy.app.Logout>`) that will cause
 the client-side to expire the session cookie and the server-side session to be
 invalidated.
 
