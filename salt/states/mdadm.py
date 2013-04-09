@@ -98,3 +98,40 @@ def present(name, opts=None):
         ret['result'] = False
 
     return ret
+
+
+def absent(name):
+    '''
+    Verify that the raid is absent
+
+    name
+        The name of raid device to be destroyed
+
+    .. code-block:: yaml
+
+        /dev/md0:
+          raid:
+            - absent
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    # Raid does not exist
+    if name not in __salt__['raid.list']():
+        ret['comment'] = 'Raid {0} already absent'.format(name)
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Raid {0} is set to be destroyed'.format(name)
+        ret['result'] = None
+        return ret
+    else:
+        # Attempt to destroy raid
+        ret['result'] = __salt__['raid.destroy'](name)
+
+        if ret['result']:
+            ret['comment'] = 'Raid {0} has been destroyed'.format(name)
+        else:
+            ret['comment'] = 'Raid {0} failed to be destroyed'.format(name)
+        return ret
