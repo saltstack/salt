@@ -79,7 +79,7 @@ def start():
     '''
     root, apiopts, conf = app.get_app(__opts__)
 
-    if apiopts['debug']:
+    if apiopts.get('debug', False):
         # Start the development server
         cherrypy.quickstart(root, '/', conf)
     else:
