@@ -191,3 +191,19 @@ def provider(module):
     pfn = sys.modules[__salt__[func].__module__].__file__
     pfn = os.path.basename(pfn)
     return pfn[:pfn.rindex('.')]
+
+
+def providers():
+    '''
+    Return a dict of the provider names and the files that provided them
+
+    CLI Example::
+
+        salt '*' test.providers
+    '''
+    ret = {}
+    for funcname in __salt__:
+        modname = funcname.split('.')[0]
+        if modname not in ret:
+            ret[provider(modname)] = modname
+    return ret
