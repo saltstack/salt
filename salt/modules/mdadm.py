@@ -146,6 +146,8 @@ def create(*args):
             arguments['opt_val'][opt] = val
         elif str(arg) in ['readonly', 'run', 'force']:
             arguments['opt_raw'].append(arg)
+        elif str(arg) in ['missing']:
+            arguments['disks_to_array'].append(arg)
         else:
             msg = "Invalid argument - {0} !"
             raise CommandExecutionError(msg.format(arg))
