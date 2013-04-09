@@ -8,9 +8,9 @@ specific requirements for third-party libraries and configuration (which goes
 in the master config file). Read the documentation for each netapi module to
 determine what is needed.
 
-For example, the :py:mod:`~saltapi.netapi.rest_cherrypy` netapi module requires
-that CherryPy be installed and that a ``rest_cherrypy`` section be added to the
-master config that specifies which port to listen on.
+For example, the :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>`
+netapi module requires that CherryPy be installed and that a ``rest_cherrypy``
+section be added to the master config that specifies which port to listen on.
 
 Installation
 ============
