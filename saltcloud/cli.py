@@ -26,7 +26,7 @@ from salt.utils.verify import verify_env, verify_files
 import saltcloud.config
 import saltcloud.output
 from saltcloud.utils import parsers
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 from saltcloud.libcloudfuncs import libcloud_version
 
 
@@ -112,6 +112,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     saltcloud.output.double_layer(
                         mapper.provider_list()
                     )
+                except SaltCloudConfigError as exc:
+                    self.error(exc.message)
                 except SaltCloudSystemExit as exc:
                     self.exit(
                         exc.exit_code,
@@ -133,6 +135,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.interpolated_map(
                         query=self.selected_query_option
                     )
+                except SaltCloudConfigError as exc:
+                    self.error(exc.message)
                 except SaltCloudSystemExit as exc:
                     self.exit(
                         exc.exit_code,
@@ -153,6 +157,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.map_providers(
                         query=self.selected_query_option
                     )
+                except SaltCloudConfigError as exc:
+                    self.error(exc.message)
                 except SaltCloudSystemExit as exc:
                     self.exit(
                         exc.exit_code,
@@ -174,6 +180,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.location_list(self.options.list_locations)
                 )
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
@@ -192,6 +200,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.image_list(self.options.list_images)
                 )
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
@@ -210,6 +220,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.size_list(self.options.list_sizes)
                 )
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
@@ -238,6 +250,8 @@ class SaltCloud(parsers.SaltCloudParser):
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names)
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
@@ -280,6 +294,8 @@ class SaltCloud(parsers.SaltCloudParser):
             try:
                 if self.print_confirm(msg):
                     ret = mapper.do_action(names, kwargs)
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
@@ -316,6 +332,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 ret = mapper.do_function(
                     self.function_provider, self.function_name, kwargs
                 )
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(exc.exit_code, '{0}\n'.format(exc.message.rstrip()))
             except Exception as exc:
@@ -329,6 +347,8 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
@@ -370,6 +390,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 if self.config.get('parallel', False) is False:
                     log.info('Complete')
 
+            except SaltCloudConfigError as exc:
+                self.error(exc.message)
             except SaltCloudSystemExit as exc:
                 self.exit(
                     exc.exit_code,
