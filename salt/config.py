@@ -425,7 +425,7 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
     if opts['id'] is None:
-        id, using_ip_for_id = get_id()
+        opts['id'], using_ip_for_id = get_id()
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
