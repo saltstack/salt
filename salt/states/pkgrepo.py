@@ -202,7 +202,7 @@ def managed(name, **kwargs):
             if kwarg not in repo.keys():
                 notset = True
             else:
-                if repokwargs[kwarg] != repo[kwarg]:
+                if sanitizedkwargs[kwarg] != repo[kwarg]:
                     notset = True
         if notset is False:
             ret['comment'] = 'Package repo {0} already configured'.format(name)
