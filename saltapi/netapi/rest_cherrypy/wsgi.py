@@ -24,7 +24,7 @@ like::
 
         DocumentRoot /var/www/example.com/htdocs
 
-        WSGIScriptAlias / /path/to/saltapi/netapi/rest_cherrypy/app.wsgi
+        WSGIScriptAlias / /path/to/saltapi/netapi/rest_cherrypy/wsgi.py
     </VirtualHost>
 
 '''
