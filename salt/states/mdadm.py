@@ -10,7 +10,6 @@ Managing software raids with mdadm
 '''
 
 # Import python libs
-import os
 import logging
 
 # Import salt libs
