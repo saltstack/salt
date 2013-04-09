@@ -374,15 +374,18 @@ def get_id():
     - localhost may be better than killing the minion
     '''
 
-    log.warning('Guessing ID. Perhaps you should set the id explicitly in %s', '/etc/salt/minion')
+    log.debug('Guessing ID. The id can be explicitly in set {0}'.format(
+            '/etc/salt/minion')
+            )
     fqdn = socket.getfqdn()
     if 'localhost' != fqdn:
-        log.info('get_id found id from getfqdn(): %s', fqdn)
+        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
         return fqdn, False
 
     # Can /etc/hosts help us?
     try:
-        with open('/etc/hosts') as f:       # Is there something like this on windows?
+        # TODO Add windoes host file support
+        with open('/etc/hosts') as f:
             line = f.readline()
             while line:
                 names = line.split()
@@ -390,7 +393,8 @@ def get_id():
                 if ip.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
-                            log.info('get_id found id in /etc/hosts: %s', name)
+                            log.info(('Found minion id in hosts file: {0}'
+                                ).format(name))
                             return name, False
                 line = f.readline()
     except Exception:
@@ -403,15 +407,15 @@ def get_id():
 
     for a in ip_addresses:
         if not a.is_private:
-            log.info('get_id using public ip address: %s', a)
+            log.info('Using public ip address for id: {0}'.format(a))
             return a, True
 
     if ip_addresses:
         a = ip_addresses.pop(0)
-        log.warning('get_id using private ip address: %s', a)
+        log.info('Using private ip address for id: {0}'.format(a))
         return a, True
 
-    log.error('get_id could not find anything better than localhost')
+    log.error('No id found, falling back to localhost')
     return 'localhost', False
 
 
