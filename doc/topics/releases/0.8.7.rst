@@ -1,0 +1,281 @@
+==============================
+Salt Cloud 0.8.7 Release Notes
+==============================
+
+Welcome to 0.8.7! This is a landmark release which adds two new cloud providers,
+one pseudo cloud provider, and an exciting, flexible new configuration format!
+Don't worry, the old config format will still work, and you can wait to migrate
+to the new format when you're ready. However, the old and new formats are not
+compatible, so don't try and mix them.
+
+We would like to extend a special thanks to the folks at X-Mission for granting
+us access to their cloud so that we could develop the Parallels driver! Without
+their help, this driver would not exist. Please take a moment to take a look at
+their cloud offering:
+
+http://xmission.com/cloud_hosting
+
+We would also like to thank Digital Ocean for their help and resources while
+developing the driver for their cloud offering. The folks over there have been
+very friendly and helpful! Please take a moment to check them out:
+
+https://www.digitalocean.com/
+
+For more details, read on!
+
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+http://salt-cloud.readthedocs.org
+
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi:
+
+http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.7.tar.gz
+
+Some packages have been made available for salt-cloud and more on on their
+way. Packages for Arch and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. The Ubuntu PPA is being managed by Sean Channel. Package
+availability will be announced on the salt mailing list.
+
+
+Added Parallels Support
+=======================
+As mentioned above, X-Mission was kind enough to lend us the resources to write
+a cloud driver for Parallels-based cloud providers. This driver requires only
+a ``user``, ``password`` and a ``url``. These can be obtained from your cloud
+provider.
+
+* Using the legacy configuration format:
+
+.. code-block:: yaml
+
+    PARALLELS.user: myuser
+    PARALLELS.password: xyzzy
+    PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
+
+
+Added Digital Ocean Support
+===========================
+Digital Ocean has been a highly-requested cloud provider, and we are pleased to
+be able to meet the demand. Only a ``client_key`` and an ``api_key`` are
+required for Digital Ocean.
+
+* Using the legacy configuration format:
+
+.. code-block:: yaml
+
+    DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
+    DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+
+
+Updated Configuration Format
+============================
+This is a massive change that we have been wanting for months to add. We would
+like to extend special thanks to Pedro Algarvio (s0undt3ch) for his tireless
+efforts, which included significant changes to the codebase.
+
+The old configuration format will still function as before, so there is no
+pressure just yet to move over. However, the configuration formats are not
+compatible with each other, so when you're ready to switch over, make sure to
+switch everything over at once.
+
+Luckily, the changes are not difficult to get used to. The old format looked
+like the following:
+
+.. code-block:: yaml
+
+    SOMEPROVIDER.option1: some_stuff
+    SOMEPROVIDER.option2: some_other_stuff
+
+The new format for the above would look like:
+
+.. code-block:: yaml
+
+    my_provider:
+      option1: some_stuff
+      option2: some_other_stuff
+      provider: someprovider
+
+This update allows for multiple accounts using the same provider. For instance,
+if using multiple accounts with Amazon EC2, your configuration may look like:
+
+.. code-block:: yaml
+
+    my-first-ec2:
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      provider: ec2
+
+    my-second-ec2:
+      id: LJLKJYGHJGRYCI
+      key: 'rigjksjdhasdfgnkdjgfsgm;woormgl/ase'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      provider: ec2
+
+Profiles are then configured using the name of the configuration block, rather
+than the provider name. For instance:
+
+.. code-block:: yaml
+
+    rhel-ec2:
+        provider: my-second-ec2
+        image: ami-e565ba8c
+        size: Micro Instance
+
+Likewise, issuing commands will reference the name of the configuration block,
+rather than the provider name. For instance:
+
+.. code-block:: bash
+
+    salt-cloud --list-sizes my-first-ec2
+
+This is critical for using multiple clouds, which use the same Salt Cloud
+driver. For instance, Salt Cloud has been gaining popularity for usage with
+private clouds utilizing OpenStack. The following two commands are likely to
+return different data:
+
+.. code-block:: bash
+
+    salt-cloud --list-images openstack-hp
+    salt-cloud --list-images openstack-rackspace
+
+
+Provider Aliases
+================
+It is also possible to have multiple providers configured with the same name.
+This allows for similar environments across multiple providers to share the same
+name. For instance:
+
+.. code-block:: bash
+
+    production-config:
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      provider: aws
+
+    production-config:
+      id: LJLKJYGHJGRYCI
+      key: 'rigjksjdhasdfgnkdjgfsgm;woormgl/ase'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      provider: ec2
+
+With this configuration, you can then set up the following profiles:
+
+.. code-block:: bash
+
+    development-instances:
+      provider: production-config:aws
+      size: Micro Instance
+      ssh_username: ec2_user
+      securitygroup: default
+
+    staging-instances:
+      provider: production-config:ec2
+      size: Micro Instance
+      ssh_username: ec2_user
+      securitygroup: default
+
+Keep in mind that if there is only one configured provider with a specific name,
+you do not have to specify an alias. But if multiple are set up as above, you
+must use the aliased name.
+
+.. code-block:: bash
+
+    salt-cloud --list-sizes production-config:ec2
+
+
+Extending Profiles
+==================
+If using the new configuration format, you will have the ability to extend
+profile definitions. This can make profile configuration much easier to read and
+manage. For instance:
+
+.. code-block:: yaml
+
+    development-instances:
+      provider: my-ec2-config
+      size: Micro Instance
+      ssh_username: ec2_user
+      securitygroup:
+        - default
+      deploy: False
+
+    Amazon-Linux-AMI-2012.09-64bit:
+      image: ami-54cf5c3d
+      extends: development-instances
+
+    Fedora-17:
+      image: ami-08d97e61
+      extends: development-instances
+
+    CentOS-5:
+      provider: my-aws-config
+      image: ami-09b61d60
+      extends: development-instances
+
+In this case, the CentOS-5 profile will in fact look like:
+
+.. code-block:: yaml
+
+    CentOS-5:
+      provider: my-aws-config
+      size: Micro Instance
+      ssh_username: ec2_user
+      securitygroup:
+        - default
+      deploy: False
+      image: ami-09b61d60
+
+Because it copied all of the configuration from ``development-instances``, and
+overrode the provider with a new provider.
+
+
+Extending Providers
+===================
+If using the new configuration format, providers can be extended in the same
+way. For instance, the following will set up two different providers, each
+sharing some of the same configuration:
+
+.. code-block:: yaml
+
+    my-develop-envs:
+      - id: HJGRYCILJLKJYG
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        location: ap-southeast-1
+        availability_zone: ap-southeast-1b
+        provider: aws
+
+      - user: myuser@mycorp.com
+        password: mypass
+        ssh_key_name: mykey
+        ssh_key_file: '/etc/salt/ibm/mykey.pem'
+        location: Raleigh
+        provider: ibmsce
+
+
+    my-productions-envs:
+      - extends: my-develop-envs:ibmsce
+        user: my-production-user@mycorp.com
+        location: us-east-1
+        availability_zone: us-east-1
+
