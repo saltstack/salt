@@ -27,15 +27,22 @@ https://pypi.python.org/pypi/salt-api
 RHEL, Fedora, CentOS
 --------------------
 
-We have RPMs available in the Fedora repositories and EPEL::
+RPMs are available in the Fedora repositories and EPEL::
 
     yum install salt-api
 
 Ubuntu
 ------
 
-We have PPA packages available for Ubuntu::
+PPA packages available for Ubuntu on LaunchPad::
 
     sudo add-apt-repository ppa:saltstack/salt
     sudo apt-get update
     sudo apt-get install salt-api
+
+openSUSE, SLES
+--------------
+
+RPMs are available via the OBS::
+
+    zypper install salt-api
