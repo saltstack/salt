@@ -2,10 +2,13 @@
 Module for running arbitrary tests
 '''
 
-# Import salt libs
+# Import Python libs
 import os
 import sys
 import time
+
+# Import Salt libs
+import salt.loader
 
 
 def echo(text):
@@ -207,3 +210,28 @@ def providers():
         if modname not in ret:
             ret[provider(modname)] = modname
     return ret
+
+
+def not_loaded():
+    '''
+    List the modules that were not loaded by the salt loader system
+
+    CLI Example::
+
+        salt '*' test.not_loaded
+    '''
+    prov = providers()
+    ret = set()
+    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
+    for mod_dir in loader.module_dirs:
+        if not os.path.isabs(mod_dir):
+            continue
+        if not os.path.isdir(mod_dir):
+            continue
+        for fn_ in os.listdir(mod_dir):
+            if fn_.startswith('_'):
+                continue
+            name = fn_.split('.')[0]
+            if not name in prov:
+                ret.add(name)
+    return sorted(ret)
