@@ -546,7 +546,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if 'dns' in opts:
         result['dns'] = opts['dns']
-        result['peernds'] = 'yes'
+        result['peerdns'] = 'yes'
 
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
