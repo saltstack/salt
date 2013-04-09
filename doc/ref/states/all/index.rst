@@ -29,6 +29,7 @@ Full list of builtin state modules
     libvirt
     locale
     makeconf
+    mdadm
     module
     mongodb_database
     mongodb_user
