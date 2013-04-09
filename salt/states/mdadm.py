@@ -2,8 +2,6 @@
 Managing software raids with mdadm
 ==================================
 
-A state module to create raid arrays.
-
 .. code-block:: yaml
 
     /dev/md0:
@@ -41,6 +39,26 @@ def present(name, opts=None):
     opts
         The mdadm options to use to create the raid. See
         :mod:`mdadm <salt.modules.mdadm>` for more information.
+        Opts can be expressed as a single string of options.
+
+        .. code-block:: yaml
+
+            /dev/md0:
+              raid.present:
+                - opts: level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde
+
+        Or as a list of options.
+
+        .. code-block:: yaml
+
+            /dev/md0:
+              raid.present:
+                - opts:
+                  - level=1
+                  - chunk=256
+                  - raid-devices=2
+                  - /dev/xvdd
+                  - /dev/xvde
     '''
     ret = {'changes': {},
            'comment': '',
@@ -48,6 +66,9 @@ def present(name, opts=None):
            'result': True}
 
     args = [name]
+    if isinstance(opts, str):
+        opts = opts.split()
+
     args.extend(opts)
 
     # Device exists
