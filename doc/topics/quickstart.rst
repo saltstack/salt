@@ -2,39 +2,40 @@
 salt-api Quickstart
 ===================
 
-Getting started with :program:`salt-api` is fast and easy. When you are done
-with this document you will have basic salt-api interface using the
-:py:mod:`~saltapi.netapi.rest_cherrypy` netapi module.
+:program:`salt-api` manages :term:`netapi modules` which are modules that
+(usually) bind to a port and start a service. Each netapi module will have
+specific requirements for third-party libraries and configuration (which goes
+in the master config file). Read the documentation for each netapi module to
+determine what is needed.
 
-.. note::
-
-    This document describes a setup that should be used for testing purposes
-    only. Additional configuration is needed before moving to a production
-    environment.
+For example, the :py:mod:`~saltapi.netapi.rest_cherrypy` netapi module requires
+that CherryPy be installed and that a ``rest_cherrypy`` section be added to the
+master config that specifies which port to listen on.
 
 Installation
------------------
-* Download and install `cherrypy`__ as a dependency.
-* Download salt-api::
+============
 
-    git clone https://github.com/saltstack/salt-api.git
+PyPI
+----
 
-* Change dirctory to the :file:`salt-api` folder and install salt-api::
+https://pypi.python.org/pypi/salt-api
 
-    python setup.py install
+::
 
-* Run salt-api by issuing::
+    pip install salt-api
 
-    salt-api
+RHEL, Fedora, CentOS
+--------------------
 
-.. __: http://cherrypy.org/
+We have RPMs available in the Fedora repositories and EPEL::
 
-Configuration
------------------
-* Setup :ref:`external_auth <acl-eauth>` in Salt master configuration file
+    yum install salt-api
 
-* Include the ``rest_cherrypy`` in your master configuration file::
+Ubuntu
+------
 
-   rest_cherrypy:
-     port: 8000
-     debug: True
+We have PPA packages available for Ubuntu::
+
+    sudo add-apt-repository ppa:saltstack/salt
+    sudo apt-get update
+    sudo apt-get install salt-api
