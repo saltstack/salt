@@ -13,7 +13,7 @@ The Salt Master runs 2 network services. First is the ZeroMQ PUB system. This
 service by default runs on port ``4505`` and can be configured via the
 ``publish_port`` option in the master configuration.
 
-Second is the ZeroMQ REP system. This is a seperate interface used for all
+Second is the ZeroMQ REP system. This is a separate interface used for all
 bi-directional communication with minions. By default this system binds to
 port ``4506`` and can be configured via the ``ret_port`` option in the master.
 
