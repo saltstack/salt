@@ -50,10 +50,9 @@ class SaltCloud(parsers.SaltCloudParser):
                     getpass.getuser()
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and (
-                        not logfile.startswith('tcp://') or
-                        not logfile.startswith('udp://') or
-                        not logfile.startswith('file://')):
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], getpass.getuser())
         except (IOError, OSError) as err:
