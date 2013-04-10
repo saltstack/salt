@@ -59,7 +59,7 @@ singleton access pattern applys to all declaration objects created with the DSL.
     assert state('example').cmd is state('example').cmd
     assert state('example').cmd.running is state('example').cmd.running
 
-The `id` argument is optional. If ommitted, an UUID will be generated and used as
+The `id` argument is optional. If omitted, an UUID will be generated and used as
 the `id`.
 
 ``state(id)`` returns an object under which you can create a :term:`state declaration`
