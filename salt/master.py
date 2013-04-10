@@ -1127,7 +1127,12 @@ class AESFuncs(object):
             return self.crypticle.dumps({})
         # Run the func
         if hasattr(self, func):
-            ret = getattr(self, func)(load)
+            try:
+                ret = getattr(self, func)(load)
+            except Exception:
+                trb = traceback.format_exc()
+                ret = ''
+                log.error('Error in function {0}:\n{1}'.format(func, trb))
         else:
             log.error(
                 'Received function {0} which is unavailable on the master, '
