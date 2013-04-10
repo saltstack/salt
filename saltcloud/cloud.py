@@ -406,6 +406,8 @@ class Cloud(object):
                     print('Did not delete {0!r}'.format(filename))
                     break
 
+        if not ret:
+            raise SaltCloudSystemExit('No machines were destroyed!')
         return ret
 
     def reboot(self, names):
