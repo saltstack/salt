@@ -597,7 +597,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
+            minion_tgt, function, arg, timeout=timeout, **kwargs
         )
 
         if minion_tgt not in orig:
