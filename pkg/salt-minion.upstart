@@ -5,6 +5,7 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
+normal exit 0
 respawn
 respawn limit 10 5
 
