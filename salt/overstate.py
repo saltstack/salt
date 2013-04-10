@@ -207,6 +207,8 @@ class OverState(object):
             else:
                 local_cmd = self.local.cmd_iter
             for minion in local_cmd(**cmd_kwargs):
+                if not 'id' in minion and not 'return' in minion and not 'fun' in minion:
+                    continue
                 ret.update({minion['id']: 
                         {
                         'ret': minion['return'],
