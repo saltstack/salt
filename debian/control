@@ -4,8 +4,7 @@ Priority: optional
 Maintainer: Sean Channel <pentabular@gmail.com>
 Build-Depends: debhelper (>= 7.0.50),
                python | python-all | python-dev | python-all-dev,
-               python-setuptools,
-               python-cherrypy
+               python-setuptools
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
 #X-Python-Version: >= 2.6, <= 2.7
@@ -17,7 +16,8 @@ Depends: ${python:Depends},
          ${misc:Depends},
          ${shlibs:Depends},
          python,
-         salt-common
+         salt-master
+Recommends: python-cherrypy3
 Description: Generic, modular network access system
  a modular interface on top of Salt that can provide a variety of entry points
  into a running Salt system. It can start and manage multiple interfaces
