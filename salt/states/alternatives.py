@@ -6,19 +6,25 @@ Control the alternatives system
 
 .. code-block:: yaml
 
+  {% set my_hadoop_conf = '/opt/hadoop/conf' %}
+
+  {{ my_hadoop_conf }}:
+    file.directory
+
   hadoop-0.20-conf:
     alternatives.install:
       - name: hadoop-0.20-conf
       - link: /etc/hadoop-0.20/conf
-      - path: /opt/hadoop/conf
+      - path: {{ my_hadoop_conf }}
       - priority: 30
+      - require:
+        - file: {{ my_hadoop_conf }}
 
   hadoop-0.20-conf:
-    alternatives:
-        - remove
+    alternatives.remove:
         - name: hadoop-0.20-conf
-        - path: /opt/hadoop/conf
-    
+        - path: {{ my_hadoop_conf }}
+
 '''
 
 def install(name, link, path, priority):
@@ -34,8 +40,9 @@ def install(name, link, path, priority):
         (e.g. /usr/bin/pager)
 
     path
-        is the location of one of the alternative target files.
-        (e.g. /usr/bin/less) 
+        is the location of the new alternative target.
+        NB: This file / directory must already exist.
+        (e.g. /usr/bin/less)
 
     priority
         is an integer; options with higher numbers have higher priority in
@@ -79,7 +86,7 @@ def remove(name, path):
 
     path
         is the location of one of the alternative target files.
-        (e.g. /usr/bin/less) 
+        (e.g. /usr/bin/less)
     '''
     ret = {'name': name,
            'path': path,
@@ -111,7 +118,7 @@ def remove(name, path):
         ).format(name, current)
         return ret
 
-   
+
     ret['result'] = False
     ret['comment'] = (
 	'Alternative for {0} doesn\'t exist'
