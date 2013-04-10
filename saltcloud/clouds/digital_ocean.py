@@ -218,18 +218,17 @@ def create(vm_):
     Create a single VM from a data dict
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
-    deploy_script = script(vm_)
     kwargs = {
         'name': vm_['name'],
         'size_id': get_size(vm_),
         'image_id': get_image(vm_),
         'region_id': get_location(vm_),
-        'ssh_key_ids': get_keyid(
-            config.get_config_value(
-                'ssh_key_name', vm_, __opts__, search_global=False
-            )
-        )
     }
+    ssh_key_name = config.get_config_value(
+        'ssh_key_name', vm_, __opts__, search_global=False
+    )
+    if ssh_key_name:
+        kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
 
     try:
         ret = create_node(kwargs)
@@ -247,11 +246,13 @@ def create(vm_):
         return False
 
     waiting_for_ip = 0
-    while 'ip_address' not in data:
+    while True:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
         time.sleep(5)
         waiting_for_ip += 1
         data = _get_node(vm_['name'])
+        if 'ip_address' in data:
+            break
 
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
@@ -296,6 +297,10 @@ def create(vm_):
             vm_['name']
         )
     )
+    for key, val in data.iteritems():
+        ret[key] = val
+        log.debug('  {0}: {1}'.format(key, val))
+
     return ret
 
 
@@ -425,6 +430,8 @@ def get_keyid(keyname):
     '''
     Return the ID of the keyname
     '''
+    if not keyname:
+        return None
     keypairs = list_keypairs(call='function')
     keyid = keypairs[keyname]['id']
     if keyid:
