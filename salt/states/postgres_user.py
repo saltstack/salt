@@ -45,7 +45,7 @@ def present(name,
         The user's pasword
 
     groups
-        A string of comma seperated groups the user should be in
+        A string of comma separated groups the user should be in
 
     runas
         System user all operation should be preformed on behalf of
