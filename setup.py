@@ -47,42 +47,68 @@ exec(
 
 
 class build(distutils_build):
-    def run(self):
-        # Let's update the bootstrap-script to the version defined to be
-        # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
-        url = (
-            'https://github.com/saltstack/salt-bootstrap/raw/{0}'
-            '/bootstrap-salt.sh'.format(
-                BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION
+    user_options = distutils_build.user_options + [
+        ('skip-bootstrap-download', None,
+         'Skip downloading the bootstrap-salt.sh script. This can also be '
+         'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
+         'variable.')
+    ]
+    boolean_options = distutils_build.boolean_options + [
+        'skip-bootstrap-download'
+    ]
+
+    def initialize_options(self):
+        distutils_build.initialize_options(self)
+        self.skip_bootstrap_download = False
+
+    def finalize_options(self):
+        distutils_build.finalize_options(self)
+        if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
+            skip_bootstrap_download = os.environ.get(
+                'SKIP_BOOTSTRAP_DOWNLOAD', '0'
             )
-        )
-        req = urllib2.urlopen(url)
-        deploy_path = os.path.join(
-            SALTCLOUD_SOURCE_DIR, 'saltcloud', 'deploy', 'bootstrap-salt.sh'
-        )
-        if req.getcode() == 200:
-            try:
-                log.info(
-                    'Updating bootstrap-salt.sh.'
-                    '\n\tSource:      {0}'
-                    '\n\tDestination: {1}'.format(
-                        url,
-                        deploy_path
+            self.skip_bootstrap_download = skip_bootstrap_download == '1'
+
+    def run(self):
+        if self.skip_bootstrap_download is False:
+            # Let's update the bootstrap-script to the version defined to be
+            # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
+            url = (
+                'https://github.com/saltstack/salt-bootstrap/raw/{0}'
+                '/bootstrap-salt.sh'.format(
+                    BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION
+                )
+            )
+            req = urllib2.urlopen(url)
+            deploy_path = os.path.join(
+                SALTCLOUD_SOURCE_DIR,
+                'saltcloud',
+                'deploy',
+                'bootstrap-salt.sh'
+            )
+            if req.getcode() == 200:
+                try:
+                    log.info(
+                        'Updating bootstrap-salt.sh.'
+                        '\n\tSource:      {0}'
+                        '\n\tDestination: {1}'.format(
+                            url,
+                            deploy_path
+                        )
+                    )
+                    with open(deploy_path, 'w') as fp_:
+                        fp_.write(req.read())
+                except (OSError, IOError), err:
+                    log.error(
+                        'Failed to write the updated script: {0}'.format(err)
+                    )
+            else:
+                log.error(
+                    'Failed to update the bootstrap-salt.sh script. HTTP '
+                    'Error code: {0}'.format(
+                        req.getcode()
                     )
                 )
-                with open(deploy_path, 'w') as fp_:
-                    fp_.write(req.read())
-            except (OSError, IOError), err:
-                log.error(
-                    'Failed to write the updated script: {0}'.format(err)
-                )
-        else:
-            log.error(
-                'Failed to update the bootstrap-salt.sh script. HTTP Error '
-                'code: {0}'.format(
-                    req.getcode()
-                )
-            )
 
         # Let's the rest of the build command
         distutils_build.run(self)
