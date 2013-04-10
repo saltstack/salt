@@ -120,35 +120,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing providers: {0}'
-                    if isinstance(exc, SaltCloudException):
-                        # It's a know exception an we know own to handle it
-                        msg = '{0}\n'.format(msg)
-                        if isinstance(exc, SaltCloudSystemExit):
-                            # This is a salt cloud system exit
-                            if exc.exit_code > 1:
-                                # the exit code is bigger than 0, it's an error
-                                msg = 'Error: {0}'.format(msg)
-                            self.exit(
-                                exc.exit_code,
-                                '{0}: {1}'.format(
-                                    msg,
-                                    exc.message.rstrip()
-                                )
-                            )
-                        # It's not a system exit but it's an error we can
-                        # handle
-                        self.error(
-                            msg.format(exc.message)
-                        )
-                    # This is a generic exception, log it, include traceback if
-                    # debug logging is enabled and exit.
-                    log.error(
-                        msg.format(exc),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    self.exit(1)
+                    self.handle_exception(msg, exc)
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
@@ -157,35 +129,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error with a custom map: {0}'
-                    if isinstance(exc, SaltCloudException):
-                        # It's a know exception an we know own to handle it
-                        msg = '{0}\n'.format(msg)
-                        if isinstance(exc, SaltCloudSystemExit):
-                            # This is a salt cloud system exit
-                            if exc.exit_code > 1:
-                                # the exit code is bigger than 0, it's an error
-                                msg = 'Error: {0}'.format(msg)
-                            self.exit(
-                                exc.exit_code,
-                                '{0}: {1}'.format(
-                                    msg,
-                                    exc.message.rstrip()
-                                )
-                            )
-                        # It's not a system exit but it's an error we can
-                        # handle
-                        self.error(
-                            msg.format(exc.message)
-                        )
-                    # This is a generic exception, log it, include traceback if
-                    # debug logging is enabled and exit.
-                    log.error(
-                        msg.format(exc),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    self.exit(1)
+                    self.handle_exception(msg, exc)
             else:
                 try:
                     ret = mapper.map_providers(
@@ -193,35 +137,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     )
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error with a map: {0}'
-                    if isinstance(exc, SaltCloudException):
-                        # It's a know exception an we know own to handle it
-                        msg = '{0}\n'.format(msg)
-                        if isinstance(exc, SaltCloudSystemExit):
-                            # This is a salt cloud system exit
-                            if exc.exit_code > 1:
-                                # the exit code is bigger than 0, it's an error
-                                msg = 'Error: {0}'.format(msg)
-                            self.exit(
-                                exc.exit_code,
-                                '{0}: {1}'.format(
-                                    msg,
-                                    exc.message.rstrip()
-                                )
-                            )
-                        # It's not a system exit but it's an error we can
-                        # handle
-                        self.error(
-                            msg.format(exc.message)
-                        )
-                    # This is a generic exception, log it, include traceback if
-                    # debug logging is enabled and exit.
-                    log.error(
-                        msg.format(exc),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    self.exit(1)
+                    self.handle_exception(msg, exc)
 
         elif self.options.list_locations is not None:
             try:
@@ -230,35 +146,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 )
             except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing locations: {0}'
-                    if isinstance(exc, SaltCloudException):
-                        # It's a know exception an we know own to handle it
-                        msg = '{0}\n'.format(msg)
-                        if isinstance(exc, SaltCloudSystemExit):
-                            # This is a salt cloud system exit
-                            if exc.exit_code > 1:
-                                # the exit code is bigger than 0, it's an error
-                                msg = 'Error: {0}'.format(msg)
-                            self.exit(
-                                exc.exit_code,
-                                '{0}: {1}'.format(
-                                    msg,
-                                    exc.message.rstrip()
-                                )
-                            )
-                        # It's not a system exit but it's an error we can
-                        # handle
-                        self.error(
-                            msg.format(exc.message)
-                        )
-                    # This is a generic exception, log it, include traceback if
-                    # debug logging is enabled and exit.
-                    log.error(
-                        msg.format(exc),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    self.exit(1)
+                    self.handle_exception(msg, exc)
 
         elif self.options.list_images is not None:
             try:
@@ -266,36 +154,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.image_list(self.options.list_images)
                 )
             except (SaltCloudException, Exception) as exc:
-                    msg = 'There was an error listing images: {0}'
-                    if isinstance(exc, SaltCloudException):
-                        # It's a know exception an we know own to handle it
-                        msg = '{0}\n'.format(msg)
-                        if isinstance(exc, SaltCloudSystemExit):
-                            # This is a salt cloud system exit
-                            if exc.exit_code > 1:
-                                # the exit code is bigger than 0, it's an error
-                                msg = 'Error: {0}'.format(msg)
-                            self.exit(
-                                exc.exit_code,
-                                '{0}: {1}'.format(
-                                    msg,
-                                    exc.message.rstrip()
-                                )
-                            )
-                        # It's not a system exit but it's an error we can
-                        # handle
-                        self.error(
-                            msg.format(exc.message)
-                        )
-                    # This is a generic exception, log it, include traceback if
-                    # debug logging is enabled and exit.
-                    log.error(
-                        msg.format(exc),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    self.exit(1)
+                msg = 'There was an error listing images: {0}'
+                self.handle_exception(msg, exc)
 
         elif self.options.list_sizes is not None:
             try:
@@ -303,36 +163,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.size_list(self.options.list_sizes)
                 )
             except (SaltCloudException, Exception) as exc:
-                    msg = 'There was an error listing sizes: {0}'
-                    if isinstance(exc, SaltCloudException):
-                        # It's a know exception an we know own to handle it
-                        msg = '{0}\n'.format(msg)
-                        if isinstance(exc, SaltCloudSystemExit):
-                            # This is a salt cloud system exit
-                            if exc.exit_code > 1:
-                                # the exit code is bigger than 0, it's an error
-                                msg = 'Error: {0}'.format(msg)
-                            self.exit(
-                                exc.exit_code,
-                                '{0}: {1}'.format(
-                                    msg,
-                                    exc.message.rstrip()
-                                )
-                            )
-                        # It's not a system exit but it's an error we can
-                        # handle
-                        self.error(
-                            msg.format(exc.message)
-                        )
-                    # This is a generic exception, log it, include traceback if
-                    # debug logging is enabled and exit.
-                    log.error(
-                        msg.format(exc),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    self.exit(1)
+                msg = 'There was an error listing sizes: {0}'
+                self.handle_exception(msg, exc)
 
         elif self.options.destroy and (self.config.get('names', None) or
                                        self.config.get('map', None)):
@@ -351,35 +183,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.destroy(names)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error destroying machines: {0}'
-                if isinstance(exc, SaltCloudException):
-                    # It's a know exception an we know own to handle it
-                    msg = '{0}\n'.format(msg)
-                    if isinstance(exc, SaltCloudSystemExit):
-                        # This is a salt cloud system exit
-                        if exc.exit_code > 1:
-                            # the exit code is bigger than 0, it's an error
-                            msg = 'Error: {0}'.format(msg)
-                        self.exit(
-                            exc.exit_code,
-                            '{0}: {1}'.format(
-                                msg,
-                                exc.message.rstrip()
-                            )
-                        )
-                    # It's not a system exit but it's an error we can
-                    # handle
-                    self.error(
-                        msg.format(exc.message)
-                    )
-                # This is a generic exception, log it, include traceback if
-                # debug logging is enabled and exit.
-                log.error(
-                    msg.format(exc),
-                    # Show the traceback if the debug logging level is
-                    # enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
-                )
-                self.exit(1)
+                self.handle_exception(msg, exc)
 
         elif self.options.action and (self.config.get('names', None) or
                                       self.config.get('map', None)):
@@ -412,35 +216,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.do_action(names, kwargs)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error actioning machines: {0}'
-                if isinstance(exc, SaltCloudException):
-                    # It's a know exception an we know own to handle it
-                    msg = '{0}\n'.format(msg)
-                    if isinstance(exc, SaltCloudSystemExit):
-                        # This is a salt cloud system exit
-                        if exc.exit_code > 1:
-                            # the exit code is bigger than 0, it's an error
-                            msg = 'Error: {0}'.format(msg)
-                        self.exit(
-                            exc.exit_code,
-                            '{0}: {1}'.format(
-                                msg,
-                                exc.message.rstrip()
-                            )
-                        )
-                    # It's not a system exit but it's an error we can
-                    # handle
-                    self.error(
-                        msg.format(exc.message)
-                    )
-                # This is a generic exception, log it, include traceback if
-                # debug logging is enabled and exit.
-                log.error(
-                    msg.format(exc),
-                    # Show the traceback if the debug logging level is
-                    # enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
-                )
-                self.exit(1)
+                self.handle_exception(msg, exc)
 
         elif self.options.function:
             prov_func = '{0}.{1}'.format(
@@ -467,70 +243,15 @@ class SaltCloud(parsers.SaltCloudParser):
                 )
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error running the function: {0}'
-                if isinstance(exc, SaltCloudException):
-                    # It's a know exception an we know own to handle it
-                    msg = '{0}\n'.format(msg)
-                    if isinstance(exc, SaltCloudSystemExit):
-                        # This is a salt cloud system exit
-                        if exc.exit_code > 1:
-                            # the exit code is bigger than 0, it's an error
-                            msg = 'Error: {0}'.format(msg)
-                        self.exit(
-                            exc.exit_code,
-                            '{0}: {1}'.format(
-                                msg,
-                                exc.message.rstrip()
-                            )
-                        )
-                    # It's not a system exit but it's an error we can
-                    # handle
-                    self.error(
-                        msg.format(exc.message)
-                    )
-                # This is a generic exception, log it, include traceback if
-                # debug logging is enabled and exit.
-                log.error(
-                    msg.format(exc),
-                    # Show the traceback if the debug logging level is
-                    # enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
-                )
-                self.exit(1)
+                self.handle_exception(msg, exc)
 
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
+                print 123, ret
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a profile error: {0}'
-                if isinstance(exc, SaltCloudException):
-                    # It's a know exception an we know own to handle it
-                    msg = '{0}\n'.format(msg)
-                    if isinstance(exc, SaltCloudSystemExit):
-                        # This is a salt cloud system exit
-                        if exc.exit_code > 1:
-                            # the exit code is bigger than 0, it's an error
-                            msg = 'Error: {0}'.format(msg)
-                        self.exit(
-                            exc.exit_code,
-                            '{0}: {1}'.format(
-                                msg,
-                                exc.message.rstrip()
-                            )
-                        )
-                    # It's not a system exit but it's an error we can
-                    # handle
-                    self.error(
-                        msg.format(exc.message)
-                    )
-                # This is a generic exception, log it, include traceback if
-                # debug logging is enabled and exit.
-                log.error(
-                    msg.format(exc),
-                    # Show the traceback if the debug logging level is
-                    # enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
-                )
-                self.exit(1)
+                self.handle_exception(msg, exc)
 
         elif self.config.get('map', None) and \
                 self.selected_query_option is None:
@@ -562,39 +283,10 @@ class SaltCloud(parsers.SaltCloudParser):
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
-                if isinstance(exc, SaltCloudException):
-                    # It's a know exception an we know own to handle it
-                    msg = '{0}\n'.format(msg)
-                    if isinstance(exc, SaltCloudSystemExit):
-                        # This is a salt cloud system exit
-                        if exc.exit_code > 1:
-                            # the exit code is bigger than 0, it's an error
-                            msg = 'Error: {0}'.format(msg)
-                        self.exit(
-                            exc.exit_code,
-                            '{0}: {1}'.format(
-                                msg,
-                                exc.message.rstrip()
-                            )
-                        )
-                    # It's not a system exit but it's an error we can
-                    # handle
-                    self.error(
-                        msg.format(exc.message)
-                    )
-                # This is a generic exception, log it, include traceback if
-                # debug logging is enabled and exit.
-                log.error(
-                    msg.format(exc),
-                    # Show the traceback if the debug logging level is
-                    # enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
-                )
-                self.exit(1)
+                self.handle_exception(msg, exc)
 
         # display output using salt's outputter system
-        self.display_output(ret)
-        self.exit(0)
+        self.exit(0, '\n{0}'.format(self.display_output(ret)))
 
     def print_confirm(self, msg):
         if self.options.assume_yes:
@@ -605,3 +297,32 @@ class SaltCloud(parsers.SaltCloudParser):
             return False
         print('... proceeding')
         return True
+
+    def handle_exception(self, msg, exc):
+        if isinstance(exc, SaltCloudException):
+            # It's a know exception an we know own to handle it
+            if isinstance(exc, SaltCloudSystemExit):
+                # This is a salt cloud system exit
+                if exc.exit_code > 0:
+                    # the exit code is bigger than 0, it's an error
+                    msg = 'Error: {0}'.format(msg)
+                self.exit(
+                    exc.exit_code,
+                    '{0}\n'.format(
+                        msg.format(exc.message.rstrip())
+                    )
+                )
+            # It's not a system exit but it's an error we can
+            # handle
+            self.error(
+                msg.format(exc.message)
+            )
+        # This is a generic exception, log it, include traceback if
+        # debug logging is enabled and exit.
+        log.error(
+            msg.format(exc),
+            # Show the traceback if the debug logging level is
+            # enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
+        self.exit(1)
