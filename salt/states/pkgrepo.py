@@ -111,7 +111,7 @@ def managed(name, **kwargs):
 
     disabled
         On apt-based systems, disabled toggles whether or not the repo is
-        used for resolving dependancies and/or installing packages
+        used for resolving dependencies and/or installing packages
 
     comps
         On apt-based systems, comps dictate the types of packages to be
