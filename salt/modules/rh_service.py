@@ -258,7 +258,7 @@ def status(name, sig=None):
     '''
     if _service_is_upstart(name):
         cmd = 'status {0}'.format(name)
-        return 'start/running' in __salt___['cmd.run'](cmd)
+        return 'start/running' in __salt__['cmd.run'](cmd)
     _add_custom_initscript(name)
     if sig:
         return bool(__salt__['status.pid'](sig))
