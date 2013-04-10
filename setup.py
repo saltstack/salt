@@ -25,7 +25,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 if 'USE_SETUPTOOLS' in os.environ:
     try:
         from setuptools import setup
-        from setuptools.command import sdist as original_sdist
+        from setuptools.command.sdist import sdist as original_sdist
         USE_SETUPTOOLS = True
         saltcloud_reqs = os.path.join(SALTCLOUD_SOURCE_DIR, 'requirements.txt')
         requirements = ''
