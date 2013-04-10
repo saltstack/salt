@@ -1,3 +1,9 @@
+salt-api (0.8.0) unstable; urgency=low
+
+  * new stable release
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 10 Apr 2013 06:40:14 -0800
+
 salt-api (0.7.5) quantal; urgency=low
 
   * initial package for salt-api
