@@ -16,8 +16,8 @@ Depends: ${python:Depends},
          ${misc:Depends},
          ${shlibs:Depends},
          python,
-         python-cherrypy,
          salt-master
+Recommends: python-cherrypy3
 Description: Generic, modular network access system
  a modular interface on top of Salt that can provide a variety of entry points
  into a running Salt system. It can start and manage multiple interfaces
