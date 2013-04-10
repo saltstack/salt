@@ -1095,7 +1095,7 @@ class AESFuncs(object):
                   ' "{arg}", target: "{tgt}"').format(**load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method based on the form data sent
-        ret_form = clear_load['form'] if 'form' in clear_load else 'clean'
+        ret_form = clear_load.get('form', 'clean')
         if ret_form == 'clean':
             return self.local.get_returns(
                 jid,
