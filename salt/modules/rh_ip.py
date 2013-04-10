@@ -43,7 +43,7 @@ _ETHTOOL_CONFIG_OPTS = [
 ]
 _RH_CONFIG_OPTS = [
     'domain', 'peerdns', 'defroute',
-    'mtu', 'static-routes'
+    'mtu', 'static-routes', 'gateway'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -596,7 +596,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain']:
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
             result[opt] = opts[opt]
 
