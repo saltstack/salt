@@ -1,8 +1,10 @@
 #!/usr/bin/make -f
 
 COPYRIGHT=LICENSE
+PKGFILES = pkg/*.service pkg/*.upstart
 
 %:
+	cp $(PKGFILES) debian
 	cp $(COPYRIGHT) debian/copyright
 	dh $@ 
 
