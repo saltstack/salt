@@ -430,3 +430,120 @@ def submodule(cwd, init=True, opts=None, user=None):
         opts = ''
     cmd = 'git submodule update {0} {1}'.format('--init' if init else '', opts)
     return _git_run(cmd, cwd=cwd, runas=user)
+
+def status(cwd, user=None):
+    '''
+    Return the status of the repository. The returned format uses the status
+    codes of gits 'porcelain' output mode
+
+    cwd
+        The path to the Git repository
+
+    user : None
+        Run git as a user other than what the minion runs as
+    '''
+    cmd = 'git status -z --porcelain'
+    stdout = _git_run(cmd, cwd=cwd, runas=user)
+    status = []
+    for line in stdout.split("\0"):
+        state = line[:2]
+        filename = line[3:]
+        if filename != '' and state != '':
+            status.append((state, filename))
+    return status
+
+def add(cwd, file_name, user=None, opts=None):
+    '''
+    add a file to git
+
+    cwd
+        The path to the Git repository
+
+    file_name
+        Path to the file in the cwd
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+    '''
+
+    if not opts:
+        opts = ''
+    cmd = 'git add {0} {1}'.format(file_name, opts)
+    return _git_run(cmd, cwd=cwd, runas=user)
+
+def rm(cwd, file_name, user=None, opts=None):
+    '''
+    Remove a file from git
+
+    cwd
+        The path to the Git repository
+
+    file_name
+        Path to the file in the cwd
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+    '''
+
+    if not opts:
+        opts = ''
+    cmd = 'git add {0} {1}'.format(file_name, opts)
+    return _git_run(cmd, cwd=cwd, runas=user)
+
+
+def commit(cwd, message, user=None, opts=None):
+    '''
+    create a commit
+
+    cwd
+        The path to the Git repository
+
+    message
+        The commit message
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+    '''
+
+    if not opts:
+        opts = ''
+    cmd = 'git commit -m {0} {1}'.format(pipes.quote(message), opts)
+    return _git_run(cmd, cwd=cwd, runas=user)
+
+
+def push(cwd, remote_name, branch='master', user=None, opts=None, identity=None):
+    '''
+    Push to remote
+
+    cwd
+        The path to the Git repository
+
+    remote_name
+        Name of the remote to push to
+
+    branch : master
+        Name of the branch to push
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+
+    identity : None
+        A path to a private key to use over SSH
+    '''
+
+    if not opts:
+        opts = ''
+    cmd = 'git push {0} {1} {2}'.format(remote_name, branch, opts)
+    return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
