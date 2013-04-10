@@ -520,6 +520,33 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     return __salt__['cmd.run'](cmd)
 
 
+def sed_contains(path, text, limit='', flags='g'):
+    '''
+    Return True if the file at ``path`` contains ``text``. Utilizes sed to
+    perform the search (line-wise search).
+
+    Note: the ``p`` flag will be added to any flags you pass in.
+
+    Usage::
+
+        salt '*' file.contains /etc/crontab 'mymaintenance.sh'
+    '''
+    # Largely inspired by Fabric's contrib.files.contains()
+
+    if not os.path.exists(path):
+        return False
+
+    result = __salt__['file.sed'](path,
+                                  text,
+                                  '&',
+                                  limit=limit,
+                                  backup='',
+                                  options='-n -r -e',
+                                  flags='p{0}'.format(flags))
+
+    return bool(result)
+
+
 def psed(path, before, after, limit='', backup='.bak', flags='gMS',
          escape_all=False, multi=False):
     '''
