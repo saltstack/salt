@@ -210,7 +210,7 @@ def install(pkgs=None,
                 treq = salt.utils.mkstemp()
                 shutil.copyfile(req, treq)
             else:
-                treq = requirements
+                treq = cached_requirements
         cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=treq or requirements)
 
