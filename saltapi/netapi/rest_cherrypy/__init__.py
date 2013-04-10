@@ -23,9 +23,6 @@ except ImportError as exc:
 # Import Salt libs
 import salt.log
 
-# Import salt-api libs
-from . import app
-
 logger = salt.log.logging.getLogger(__name__)
 cpy_min = '3.2.2'
 
@@ -77,6 +74,8 @@ def start():
     '''
     Start the server loop
     '''
+    from . import app
+
     root, apiopts, conf = app.get_app(__opts__)
 
     if apiopts.get('debug', False):
