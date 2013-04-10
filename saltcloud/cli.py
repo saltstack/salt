@@ -99,6 +99,12 @@ class SaltCloud(parsers.SaltCloudParser):
                     continue
             self.error('Failed to update the bootstrap script')
 
+        # Setup the outputter soon so we don't get late logging when trying to
+        # finally display the data
+        self.display_output = salt.output.get_printout(
+            self.options.output, self.config
+        )
+
         # Late imports so logging works as expected
         log.info('salt-cloud starting')
         import saltcloud.cloud
@@ -125,7 +131,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             self.exit(
                                 exc.exit_code,
                                 '{0}: {1}'.format(
-                                    msg
+                                    msg,
                                     exc.message.rstrip()
                                 )
                             )
@@ -162,7 +168,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             self.exit(
                                 exc.exit_code,
                                 '{0}: {1}'.format(
-                                    msg
+                                    msg,
                                     exc.message.rstrip()
                                 )
                             )
@@ -198,7 +204,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             self.exit(
                                 exc.exit_code,
                                 '{0}: {1}'.format(
-                                    msg
+                                    msg,
                                     exc.message.rstrip()
                                 )
                             )
@@ -235,7 +241,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             self.exit(
                                 exc.exit_code,
                                 '{0}: {1}'.format(
-                                    msg
+                                    msg,
                                     exc.message.rstrip()
                                 )
                             )
@@ -272,7 +278,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             self.exit(
                                 exc.exit_code,
                                 '{0}: {1}'.format(
-                                    msg
+                                    msg,
                                     exc.message.rstrip()
                                 )
                             )
@@ -309,7 +315,7 @@ class SaltCloud(parsers.SaltCloudParser):
                             self.exit(
                                 exc.exit_code,
                                 '{0}: {1}'.format(
-                                    msg
+                                    msg,
                                     exc.message.rstrip()
                                 )
                             )
@@ -356,7 +362,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         self.exit(
                             exc.exit_code,
                             '{0}: {1}'.format(
-                                msg
+                                msg,
                                 exc.message.rstrip()
                             )
                         )
@@ -417,7 +423,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         self.exit(
                             exc.exit_code,
                             '{0}: {1}'.format(
-                                msg
+                                msg,
                                 exc.message.rstrip()
                             )
                         )
@@ -472,7 +478,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         self.exit(
                             exc.exit_code,
                             '{0}: {1}'.format(
-                                msg
+                                msg,
                                 exc.message.rstrip()
                             )
                         )
@@ -507,7 +513,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         self.exit(
                             exc.exit_code,
                             '{0}: {1}'.format(
-                                msg
+                                msg,
                                 exc.message.rstrip()
                             )
                         )
@@ -567,7 +573,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         self.exit(
                             exc.exit_code,
                             '{0}: {1}'.format(
-                                msg
+                                msg,
                                 exc.message.rstrip()
                             )
                         )
@@ -587,7 +593,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.exit(1)
 
         # display output using salt's outputter system
-        salt.output.display_output(ret, self.options.output, self.config)
+        self.display_output(ret)
         self.exit(0)
 
     def print_confirm(self, msg):
