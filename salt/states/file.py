@@ -1355,7 +1355,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
 
     # Look for the pattern before attempting the edit
-    if not __salt__['file.contains_regex'](name, before):
+    if not __salt__['file.sed_contains'](name,
+                                         before,
+                                         limit=limit,
+                                         flags=flags):
         # Pattern not found; don't try to guess why, just tell the user there
         # were no changes made, as the changes should only be made once anyway.
         # This makes it so users can use backreferences without the state
