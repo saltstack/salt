@@ -142,7 +142,10 @@ def list_nodes_full():
     for node in items['droplets']:
         ret[node['name']] = {}
         for item in node.keys():
-            ret[node['name']][item] = str(node[item])
+            value = node[item]
+            if value is not None:
+                value = str(value)
+            ret[node['name']][item] = value
     return ret
 
 
@@ -218,18 +221,17 @@ def create(vm_):
     Create a single VM from a data dict
     '''
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
-    deploy_script = script(vm_)
     kwargs = {
         'name': vm_['name'],
         'size_id': get_size(vm_),
         'image_id': get_image(vm_),
         'region_id': get_location(vm_),
-        'ssh_key_ids': get_keyid(
-            config.get_config_value(
-                'ssh_key_name', vm_, __opts__, search_global=False
-            )
-        )
     }
+    ssh_key_name = config.get_config_value(
+        'ssh_key_name', vm_, __opts__, search_global=False
+    )
+    if ssh_key_name:
+        kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
 
     try:
         ret = create_node(kwargs)
@@ -247,11 +249,13 @@ def create(vm_):
         return False
 
     waiting_for_ip = 0
-    while 'ip_address' not in data:
+    while True:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
         time.sleep(5)
         waiting_for_ip += 1
         data = _get_node(vm_['name'])
+        if data.get('ip_address', None):
+            break
 
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
@@ -296,6 +300,10 @@ def create(vm_):
             vm_['name']
         )
     )
+    for key, val in data.iteritems():
+        ret[key] = val
+        log.debug('  {0}: {1}'.format(key, val))
+
     return ret
 
 
@@ -323,13 +331,31 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
 
     path += '?%s'
     params = urllib.urlencode(args)
-    result = urllib2.urlopen(path % params)
-    # TODO: Attention to the HTTP Code
-    log.debug(result.geturl())
-    content = result.read()
-    result.close()
+    request = urllib2.urlopen(path % params)
+    if request.getcode() != 200:
+        raise SaltCloudSystemExit(
+            'An error occurred while querying Digital Ocean. HTTP Code: {0}  '
+            'Error: {1!r}'.format(
+                request.getcode(),
+                request.read()
+            )
+        )
 
-    return json.loads(content)
+    log.debug(request.geturl())
+
+    content = request.read()
+    request.close()
+
+    result = json.loads(content)
+    if result.get('status', '').lower() == 'error':
+        raise SaltCloudSystemExit(
+            ''.join(
+                '{0}: {1}\n'.format(k, '\n'.join(v)) for (k, v) in
+                result.get('error_message', {}).items()
+            )
+        )
+
+    return result
 
 
 def script(vm_):
@@ -425,6 +451,8 @@ def get_keyid(keyname):
     '''
     Return the ID of the keyname
     '''
+    if not keyname:
+        return None
     keypairs = list_keypairs(call='function')
     keyid = keypairs[keyname]['id']
     if keyid:

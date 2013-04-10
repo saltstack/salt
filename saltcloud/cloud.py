@@ -85,6 +85,23 @@ class Cloud(object):
             provs.add(fun[:fun.index('.')])
         return provs
 
+    def get_configured_providers(self):
+        providers = []
+        for alias, entries in self.opts['providers'].iteritems():
+            for entry in entries:
+                provider = entry.get('provider', None)
+                if provider is None:
+                    log.warn(
+                        'There\'s a configured provider under {0} lacking the '
+                        '\'provider\' required configuration setting.'.format(
+                            alias
+                        )
+                    )
+                    continue
+                if provider is not None and provider not in providers:
+                    providers.append(provider)
+        return providers
+
     def build_lookup(self, lookup):
         if lookup == 'all':
             providers = []
@@ -96,7 +113,7 @@ class Cloud(object):
 
             if not providers:
                 raise SaltCloudSystemExit(
-                    'There are now cloud providers configured'
+                    'There are no cloud providers configured.'
                 )
 
             return providers
@@ -106,7 +123,7 @@ class Cloud(object):
             if alias not in self.opts['providers']:
                 raise SaltCloudSystemExit(
                     'No cloud providers matched {0!r}. Available: {1}'.format(
-                        lookup, ', '.join(self.opts['providers'].keys())
+                        lookup, ', '.join(self.get_configured_providers())
                     )
                 )
 
@@ -116,7 +133,7 @@ class Cloud(object):
 
             raise SaltCloudSystemExit(
                 'No cloud providers matched {0!r}. Available: {1}'.format(
-                    lookup, ', '.join(self.opts['providers'].keys())
+                    lookup, ', '.join(self.get_configured_providers())
                 )
             )
 
@@ -129,11 +146,10 @@ class Cloud(object):
             raise SaltCloudSystemExit(
                 'No cloud providers matched {0!r}. '
                 'Available selections: {1}'.format(
-                    lookup, ', '.join(self.opts['providers'].keys())
+                    lookup, ', '.join(self.get_configured_providers())
                 )
             )
         return providers
-
 
     def map_providers(self, query='list_nodes'):
         '''
@@ -295,6 +311,7 @@ class Cloud(object):
         Destroy the named VMs
         '''
         ret = []
+        names = set(names)
 
         pmap = self.map_providers()
         dels = {}
@@ -303,12 +320,13 @@ class Cloud(object):
             for node in nodes:
                 if node in names:
                     dels[prov].append(node)
+                    names.remove(node)
 
         for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
             for name in names_:
                 delret = self.clouds[fun](name)
-                ret.append({name: delret})
+                ret.append({name: (True, delret)})
 
                 if not delret:
                     continue
@@ -389,6 +407,13 @@ class Cloud(object):
 
                     print('Did not delete {0!r}'.format(filename))
                     break
+
+        # This machine was asked to be destroyed but could not be found
+        for name in names:
+            ret.append({name: False})
+
+        if not ret:
+            raise SaltCloudSystemExit('No machines were destroyed!')
 
         return ret
 
@@ -549,7 +574,12 @@ class Cloud(object):
                     }
                     continue
 
-                ret[name] = self.create(vm_)
+                try:
+                    ret[name] = self.create(vm_)
+                except (SaltCloudSystemExit, SaltCloudConfigError), exc:
+                    if len(self.opts['names']) == 1:
+                        raise
+                    ret['name'] = {'Error': exc.message}
 
         if not found:
             msg = 'Profile {0} is not defined'.format(self.opts['profile'])
