@@ -980,6 +980,9 @@ class Syndic(Minion):
                         break
                     if len(event.get('tag', '')) == 20:
                         if not event['tag'] in jids:
+                            if not 'fun' in event['data'] and not 'jid' in event['data']:
+                                # Not a job return
+                                continue
                             jids[event['tag']] = {}
                             jids[event['tag']]['__fun__'] = event['data']['fun']
                             jids[event['tag']]['__jid__'] = event['data']['jid']
