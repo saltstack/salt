@@ -134,7 +134,6 @@ class Cloud(object):
             )
         return providers
 
-
     def map_providers(self, query='list_nodes'):
         '''
         Return a mapping of what named VMs are running on what VM providers
@@ -525,6 +524,13 @@ class Cloud(object):
                 # It all checks out, make the VM
                 found = True
                 provider = self.profile_provider(vm_profile)
+                if provider not in pmap:
+                    ret[name] = {
+                        'Error': 'The defined profile provider {0!r} was not '
+                                 'found.'.format(vm_['provider'])
+                    }
+                    continue
+
                 boxes = pmap[provider]
                 if name in boxes and \
                         boxes[name]['state'].lower() != 'terminated':
