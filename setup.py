@@ -7,7 +7,7 @@ import os
 import urllib2
 from distutils import log
 from distutils.core import setup
-from distutils.command.build import build as distutils_build
+from distutils.command.sdist import sdist as original_sdist
 
 setup_kwargs = {}
 USE_SETUPTOOLS = False
@@ -25,6 +25,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 if 'USE_SETUPTOOLS' in os.environ:
     try:
         from setuptools import setup
+        from setuptools.command import sdist as original_sdist
         USE_SETUPTOOLS = True
         saltcloud_reqs = os.path.join(SALTCLOUD_SOURCE_DIR, 'requirements.txt')
         requirements = ''
@@ -46,23 +47,23 @@ exec(
 )
 
 
-class build(distutils_build):
-    user_options = distutils_build.user_options + [
+class sdist(original_sdist):
+    user_options = original_sdist.user_options + [
         ('skip-bootstrap-download', None,
          'Skip downloading the bootstrap-salt.sh script. This can also be '
          'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
          'variable.')
     ]
-    boolean_options = distutils_build.boolean_options + [
+    boolean_options = original_sdist.boolean_options + [
         'skip-bootstrap-download'
     ]
 
     def initialize_options(self):
-        distutils_build.initialize_options(self)
+        original_sdist.initialize_options(self)
         self.skip_bootstrap_download = False
 
     def finalize_options(self):
-        distutils_build.finalize_options(self)
+        original_sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
             skip_bootstrap_download = os.environ.get(
                 'SKIP_BOOTSTRAP_DOWNLOAD', '0'
@@ -111,7 +112,7 @@ class build(distutils_build):
                 )
 
         # Let's the rest of the build command
-        distutils_build.run(self)
+        original_sdist.run(self)
 
 
 NAME = 'salt-cloud'
@@ -149,7 +150,7 @@ setup(name=NAME,
                   ],
       scripts=['scripts/salt-cloud'],
       cmdclass={
-          'build': build
+          'sdist': sdist
       },
       **setup_kwargs
       )
