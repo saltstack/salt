@@ -86,7 +86,7 @@ def remove(name, path):
 
     path
         is the location of one of the alternative target files.
-        (e.g. /usr/bin/less) 
+        (e.g. /usr/bin/less)
     '''
     ret = {'name': name,
            'path': path,
@@ -118,7 +118,7 @@ def remove(name, path):
         ).format(name, current)
         return ret
 
-   
+
     ret['result'] = False
     ret['comment'] = (
 	'Alternative for {0} doesn\'t exist'
