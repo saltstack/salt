@@ -1,6 +1,7 @@
 import os
 import integration
 import tempfile
+import sys
 
 from saltunittest import skipIf
 
@@ -41,7 +42,7 @@ class CMDModuleTest(integration.ModuleCase):
         loads_mock, popen_mock, getpwnam_mock = mocks
 
         popen_mock.return_value = Mock(
-            communicate=lambda *args, **kwags: ['hi', None],
+            communicate=lambda *args, **kwags: ['{}', None],
             pid=lambda: 1,
             retcode=0
         )
@@ -51,18 +52,23 @@ class CMDModuleTest(integration.ModuleCase):
         from salt.modules import cmdmod
 
         cmdmod.__grains__ = {'os': 'darwin'}
+        if sys.platform.startswith('freebsd'):
+            shell = '/bin/sh'
+        else:
+            shell = '/bin/bash'
+
         try:
             cmdmod._run('ls',
                         cwd=tempfile.gettempdir(),
                         runas='foobar',
-                        shell='/bin/bash')
+                        shell=shell)
 
             environment2 = os.environ.copy()
 
             self.assertEquals(environment, environment2)
 
             getpwnam_mock.assert_called_with('foobar')
-            loads_mock.assert_called_with('hi')
+            loads_mock.assert_called_with('{}')
         finally:
             delattr(cmdmod, '__grains__')
 
@@ -78,8 +84,15 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_stderr
         '''
+        if sys.platform.startswith('freebsd'):
+            shell = '/bin/sh'
+        else:
+            shell = '/bin/bash'
+
         self.assertEqual(self.run_function('cmd.run_stderr',
-                                           ['echo "cheese" 1>&2']).rstrip(),
+                                           ['echo "cheese" 1>&2',
+                                            'shell={0}'.format(shell)]
+                                           ).rstrip(),
                          'cheese')
 
     def test_run_all(self):
@@ -87,7 +100,14 @@ class CMDModuleTest(integration.ModuleCase):
         cmd.run_all
         '''
         from salt._compat import string_types
-        ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2'])
+
+        if sys.platform.startswith('freebsd'):
+            shell = '/bin/sh'
+        else:
+            shell = '/bin/bash'
+
+        ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2',
+                                                'shell={0}'.format(shell)])
         self.assertTrue('pid' in ret)
         self.assertTrue('retcode' in ret)
         self.assertTrue('stdout' in ret)

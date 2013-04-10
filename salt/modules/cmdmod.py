@@ -226,7 +226,7 @@ def _run(cmd,
             # Getting the environment for the runas user
             # There must be a better way to do this.
             py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__ or {}))'
+                      'print(json.dumps(os.environ.__dict__))'
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo -i -u {1} -- "{2}"'
                            ).format(shell, runas, sys.executable)
@@ -242,8 +242,8 @@ def _run(cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = filter(lambda x: x.startswith('{"') and x.endswith('}'),
-                              env_json.splitlines()).pop()
+            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
+                               env_json.splitlines()) or ['{}']).pop()
             env_runas = json.loads(env_json).get('data', {})
             env_runas.update(env)
             env = env_runas
