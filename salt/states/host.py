@@ -11,7 +11,7 @@ The /etc/hosts file can be managed to contain definitions for specific hosts:
         - ip: 192.168.0.42
 
 Or using the "names:" directive, you can put several names for the same IP.
-(Do not try one name with space-seperated values).
+(Do not try one name with space-separated values).
 
 .. code-block:: yaml
 

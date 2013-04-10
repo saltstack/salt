@@ -1,4 +1,4 @@
-.TH "SALT" "7" "February 12, 2013" "0.13.0" "Salt"
+.TH "SALT" "7" "April 10, 2013" "0.14.0" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -3895,7 +3895,7 @@ Pillar was added to Salt in version 0.9.8
 .IP Note
 Storing sensitive data
 .sp
-Unlike state tree, pillar data is only available for the targetted
+Unlike state tree, pillar data is only available for the targeted
 minion specified by the matcher type.  This makes it useful for
 storing sensitive data specific to a particular minion.
 .RE
@@ -8911,7 +8911,7 @@ salt \(aq*\(aq cmd.has_exec cat
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.retcode(cmd, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=(), template=None)
+.B salt.modules.cmdmod.retcode(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None)
 Execute a shell command and return the command\(aqs return code.
 .sp
 CLI Example:
@@ -8934,7 +8934,7 @@ salt \(aq*\(aq cmd.retcode template=jinja "file {{grains.pythonpath[0]}}/python"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run(cmd, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=(), template=None, rstrip=True)
+.B salt.modules.cmdmod.run(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True)
 Execute the passed command and return the output as a string
 .sp
 CLI Example:
@@ -8957,7 +8957,7 @@ salt \(aq*\(aq cmd.run template=jinja "ls \-l /tmp/{{grains.id}} | awk \(aq/foo/
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_all(cmd, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=(), template=None, rstrip=True)
+.B salt.modules.cmdmod.run_all(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True)
 Execute the passed command and return a dict of return data
 .sp
 CLI Example:
@@ -8980,7 +8980,7 @@ salt \(aq*\(aq cmd.run_all template=jinja "ls \-l /tmp/{{grains.id}} | awk \(aq/
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_stderr(cmd, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=(), template=None, rstrip=True)
+.B salt.modules.cmdmod.run_stderr(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True)
 Execute a command and only return the standard error
 .sp
 CLI Example:
@@ -9003,7 +9003,7 @@ salt \(aq*\(aq cmd.run_stderr template=jinja "ls \-l /tmp/{{grains.id}} | awk \(
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.run_stdout(cmd, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=(), template=None, rstrip=True)
+.B salt.modules.cmdmod.run_stdout(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=(), template=None, rstrip=True)
 Execute a command, and only return the standard out
 .sp
 CLI Example:
@@ -9026,7 +9026,7 @@ salt \(aq*\(aq cmd.run_stdout template=jinja "ls \-l /tmp/{{grains.id}} | awk \(
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.script(source, args=None, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, **kwargs)
+.B salt.modules.cmdmod.script(source, args=None, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, **kwargs)
 Download a script from a remote location and execute the script locally.
 The script can be located on the salt master file server or on an http/ftp
 server.
@@ -9048,7 +9048,7 @@ salt \(aq*\(aq cmd.script salt://scripts/runme.sh \(aqarg1 arg2 "arg 3"\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmdmod.script_retcode(source, cwd=None, runas=None, shell=\(aq/bin/zsh\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, **kwargs)
+.B salt.modules.cmdmod.script_retcode(source, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=\(aqbase\(aq, template=\(aqjinja\(aq, **kwargs)
 Download a script from a remote location and execute the script locally.
 The script can be located on the salt master file server or on an http/ftp
 server.
@@ -17843,7 +17843,7 @@ salt \(aq*\(aq pecl.update fuse
 Extract the pillar data for this minion
 .INDENT 0.0
 .TP
-.B salt.modules.pillar.data()
+.B salt.modules.pillar.data(key=\(aq\(aq)
 Returns the pillar derived from the configured pillar source. The pillar
 source is derived from the file_client option in the minion config
 .sp
@@ -17854,10 +17854,19 @@ CLI Example:
 salt \(aq*\(aq pillar.data
 .ft P
 .fi
+.sp
+With the optional key argument, you can select a subtree of the
+pillar data.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pillar.data key=\(aqroles\(aq
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.pillar.raw()
+.B salt.modules.pillar.raw(key=\(aq\(aq)
 Return the raw pillar data that is available in the module. This will
 show the pillar as it is loaded as the __pillar__ dict.
 .sp
@@ -17866,6 +17875,15 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq pillar.raw
+.ft P
+.fi
+.sp
+With the optional key argument, you can select a subtree of the
+pillar raw data.:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pillar.raw key=\(aqroles\(aq
 .ft P
 .fi
 .UNINDENT
@@ -19152,7 +19170,7 @@ overwrite options passed into pillar
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.db_create(name, user=None, host=None, port=None, tablespace=None, encoding=None, locale=None, lc_collate=None, lc_ctype=None, owner=None, template=None, runas=None)
+.B salt.modules.postgres.db_create(name, user=None, host=None, port=None, db=None, tablespace=None, encoding=None, locale=None, lc_collate=None, lc_ctype=None, owner=None, template=None, runas=None)
 Adds a databases to the Postgres server.
 .sp
 CLI Example:
@@ -19167,7 +19185,7 @@ salt \(aq*\(aq postgres.db_create \(aqdbname\(aq template=template_postgis
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.db_exists(name, user=None, host=None, port=None, runas=None)
+.B salt.modules.postgres.db_exists(name, user=None, host=None, port=None, db=None, runas=None)
 Checks if a database exists on the Postgres server.
 .sp
 CLI Example:
@@ -19180,9 +19198,8 @@ salt \(aq*\(aq postgres.db_exists \(aqdbname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.db_list(user=None, host=None, port=None, runas=None)
-Return a list of databases of a Postgres server using the output
-from the \fBpsql \-l\fP query.
+.B salt.modules.postgres.db_list(user=None, host=None, port=None, db=None, runas=None)
+Return dictionary with information about databases of a Postgres server.
 .sp
 CLI Example:
 .sp
@@ -19194,7 +19211,7 @@ salt \(aq*\(aq postgres.db_list
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.db_remove(name, user=None, host=None, port=None, runas=None)
+.B salt.modules.postgres.db_remove(name, user=None, host=None, port=None, db=None, runas=None)
 Removes a databases from the Postgres server.
 .sp
 CLI Example:
@@ -19207,7 +19224,7 @@ salt \(aq*\(aq postgres.db_remove \(aqdbname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_create(groupname, user=None, host=None, port=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, password=None, groups=None, runas=None)
+.B salt.modules.postgres.group_create(groupname, user=None, host=None, port=None, db=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, password=None, groups=None, runas=None)
 Creates a Postgres group. A group is postgres is similar to a user, but
 cannot login.
 .sp
@@ -19221,7 +19238,7 @@ salt \(aq*\(aq postgres.group_create \(aqgroupname\(aq user=\(aquser\(aq host=\(
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_remove(groupname, user=None, host=None, port=None, runas=None)
+.B salt.modules.postgres.group_remove(groupname, user=None, host=None, port=None, db=None, runas=None)
 Removes a group from the Postgres server.
 .sp
 CLI Example:
@@ -19234,7 +19251,7 @@ salt \(aq*\(aq postgres.group_remove \(aqgroupname\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.group_update(groupname, user=None, host=None, port=None, createdb=False, createuser=False, encrypted=False, replication=False, password=None, groups=None, runas=None)
+.B salt.modules.postgres.group_update(groupname, user=None, host=None, port=None, db=None, createdb=False, createuser=False, encrypted=False, replication=False, password=None, groups=None, runas=None)
 Updated a postgres group
 .sp
 CLI Examples:
@@ -19247,7 +19264,7 @@ salt \(aq*\(aq postgres.group_update \(aqusername\(aq user=\(aquser\(aq host=\(a
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_create(username, user=None, host=None, port=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, password=None, groups=None, runas=None)
+.B salt.modules.postgres.user_create(username, user=None, host=None, port=None, db=None, createdb=False, createuser=False, encrypted=False, superuser=False, replication=False, password=None, groups=None, runas=None)
 Creates a Postgres user.
 .sp
 CLI Examples:
@@ -19260,7 +19277,7 @@ salt \(aq*\(aq postgres.user_create \(aqusername\(aq user=\(aquser\(aq host=\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_exists(name, user=None, host=None, port=None, runas=None)
+.B salt.modules.postgres.user_exists(name, user=None, host=None, port=None, db=None, runas=None)
 Checks if a user exists on the Postgres server.
 .sp
 CLI Example:
@@ -19273,8 +19290,8 @@ salt \(aq*\(aq postgres.user_exists \(aqusername\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_list(user=None, host=None, port=None, runas=None)
-Return a list of users of a Postgres server.
+.B salt.modules.postgres.user_list(user=None, host=None, port=None, db=None, runas=None)
+Return a dict with information about users of a Postgres server.
 .sp
 CLI Example:
 .sp
@@ -19286,7 +19303,7 @@ salt \(aq*\(aq postgres.user_list
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_remove(username, user=None, host=None, port=None, runas=None)
+.B salt.modules.postgres.user_remove(username, user=None, host=None, port=None, db=None, runas=None)
 Removes a user from the Postgres server.
 .sp
 CLI Example:
@@ -19299,7 +19316,7 @@ salt \(aq*\(aq postgres.user_remove \(aqusername\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.user_update(username, user=None, host=None, port=None, createdb=False, createuser=False, encrypted=False, replication=False, password=None, groups=None, runas=None)
+.B salt.modules.postgres.user_update(username, user=None, host=None, port=None, db=None, createdb=False, createuser=False, encrypted=False, replication=False, password=None, groups=None, runas=None)
 Creates a Postgres user.
 .sp
 CLI Examples:
@@ -19312,9 +19329,8 @@ salt \(aq*\(aq postgres.user_create \(aqusername\(aq user=\(aquser\(aq host=\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.postgres.version()
-Return the version of a Postgres server using the output
-from the \fBpsql \-\-version\fP cmd.
+.B salt.modules.postgres.version(user=None, host=None, port=None, db=None, runas=None)
+Return the version of a Postgres server.
 .sp
 CLI Example:
 .sp
@@ -25596,6 +25612,19 @@ salt \(aq*\(aq virt.get_xml <vm name>
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.virt.init(name, cpu, mem, image, nic=\(aqdefault\(aq, **kwargs)
+Initialize a new vm
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aqhypervisor\(aq vm_name 4 512 salt://path/to/image.raw
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.virt.is_hyper()
 Returns a bool whether or not this node is a hypervisor of any kind
 .sp
@@ -29857,6 +29886,14 @@ successfully.
 The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
+.IP Note
+Requisite matching
+.sp
+Requisites match on both the ID Declaration and the \fBname\fP parameter.
+Therefore, if you are using the \fBpkgs\fP or \fBsources\fP argument to install
+a list of packages in a pkg state, it\(aqs important to note that you cannot
+have a requisite that matches on an individual package in the list.
+.RE
 .SS Multiple Requisites
 .sp
 The requisite statement is passed as a list, allowing for the easy addition of
@@ -30251,6 +30288,22 @@ the other way around. The vim package is saying "/etc/vimrc depends on me".
 .sp
 In the end a single dependency map is created and everything is executed in a
 finite and predictable order.
+.IP Note
+Requisite matching
+.sp
+Requisites match on both the ID Declaration and the \fBname\fP parameter.
+This means that in the example above, the \fBrequire_in\fP requisite would
+also have been matched if the \fB/etc/vimrc\fP state was written as follows:
+.sp
+.nf
+.ft C
+vimrc:
+  file.managed:
+    \- name: /etc/vimrc
+    \- source: salt://edit/vimrc
+.ft P
+.fi
+.RE
 .SS Requisite and Requisite in types
 .sp
 There are three requisite statements that can be used in Salt. the \fBrequire\fP,
@@ -31369,7 +31422,7 @@ Execute a cmd function based on a watch call
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.cmd.run(name, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None, env=(), stateful=False, **kwargs)
+.B salt.states.cmd.run(name, onlyif=None, unless=None, cwd=None, user=None, group=None, shell=None, env=(), stateful=False, **kwargs)
 Run a command if certain circumstances are met
 .INDENT 7.0
 .TP
@@ -31409,7 +31462,7 @@ a state
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.cmd.script(name, source=None, template=None, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None, env=None, stateful=False, **kwargs)
+.B salt.states.cmd.script(name, source=None, template=None, onlyif=None, unless=None, cwd=None, user=None, group=None, shell=None, env=None, stateful=False, **kwargs)
 Download a script from a remote source and execute it. The name can be the
 source or the source value can be defined.
 .INDENT 7.0
@@ -31461,7 +31514,7 @@ a state
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.cmd.wait(name, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None, stateful=False, **kwargs)
+.B salt.states.cmd.wait(name, onlyif=None, unless=None, cwd=None, user=None, group=None, shell=None, stateful=False, **kwargs)
 Run the given command only if the watch statement calls it
 .INDENT 7.0
 .TP
@@ -31501,7 +31554,7 @@ a state
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.cmd.wait_script(name, source=None, template=None, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None, env=None, stateful=False, **kwargs)
+.B salt.states.cmd.wait_script(name, source=None, template=None, onlyif=None, unless=None, cwd=None, user=None, group=None, shell=None, env=None, stateful=False, **kwargs)
 Download a script from a remote source and execute it only if a watch
 statement calls it.
 .INDENT 7.0
@@ -32605,7 +32658,7 @@ salt\-master:
 .fi
 .sp
 Or using the "names:" directive, you can put several names for the same IP.
-(Do not try one name with space\-seperated values).
+(Do not try one name with space\-separated values).
 .sp
 .nf
 .ft C
@@ -33755,7 +33808,7 @@ EXAMPLE: deb \fI\%http://us.archive.ubuntu.com/ubuntu/\fP precise main
 .TP
 .B disabled
 On apt\-based systems, disabled toggles whether or not the repo is
-used for resolving dependancies and/or installing packages
+used for resolving dependencies and/or installing packages
 .TP
 .B comps
 On apt\-based systems, comps dictate the types of packages to be
@@ -33903,7 +33956,7 @@ Should the new user be allowed to initiate streaming replication
 The user\(aqs pasword
 .TP
 .B groups
-A string of comma seperated groups the user should be in
+A string of comma separated groups the user should be in
 .TP
 .B runas
 System user all operation should be preformed on behalf of
@@ -33961,7 +34014,7 @@ Should the new group be allowed to initiate streaming replication
 The group\(aqs pasword
 .TP
 .B groups
-A string of comma seperated groups the group should be in
+A string of comma separated groups the group should be in
 .TP
 .B runas
 System user all operation should be preformed on behalf of
@@ -35330,7 +35383,7 @@ assert state(\(aqexample\(aq).cmd.running is state(\(aqexample\(aq).cmd.running
 .ft P
 .fi
 .sp
-The \fIid\fP argument is optional. If ommitted, an UUID will be generated and used as
+The \fIid\fP argument is optional. If omitted, an UUID will be generated and used as
 the \fIid\fP.
 .sp
 \fBstate(id)\fP returns an object under which you can create a \fIstate declaration\fP
@@ -39955,7 +40008,7 @@ The Salt Master runs 2 network services. First is the ZeroMQ PUB system. This
 service by default runs on port \fB4505\fP and can be configured via the
 \fBpublish_port\fP option in the master configuration.
 .sp
-Second is the ZeroMQ REP system. This is a seperate interface used for all
+Second is the ZeroMQ REP system. This is a separate interface used for all
 bi\-directional communication with minions. By default this system binds to
 port \fB4506\fP and can be configured via the \fBret_port\fP option in the master.
 .SS PUB/SUB
@@ -41870,7 +41923,7 @@ The lucky number 13 has turned the corner! From cli notifications when quitting
 a salt command, to substantial improvements on Windows, Salt 0.13.0 has
 arrived!
 .SS Major Features
-.SS Improved file.recuse Performance
+.SS Improved file.recurse Performance
 .sp
 The file.recurse system has been deployed and used in a vast array of
 situations. Fixes to the file state and module have led towards opening up
@@ -41918,6 +41971,20 @@ drop to a shell prompt, this caused confusion with users who expected the
 remote executions to also quit. Now a message is displayed showing what
 command can be used to track the execution and what the job id is for the
 execution.
+.SS Version Specification in Muliple\-Package States
+.sp
+Versions can now be specified within multiple\-package \fBpkg.installed\fP states. An example can be found below:
+.sp
+.nf
+.ft C
+mypkgs:
+  pkg.installed:
+    \- pkgs:
+      \- foo
+      \- bar: 1.2.3\-4
+      \- baz
+.ft P
+.fi
 .SS Noteworthy Changes
 .sp
 The configuration subsystem in Salt has been overhauled to make the \fBopts\fP
