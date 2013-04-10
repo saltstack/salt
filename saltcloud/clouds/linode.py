@@ -69,7 +69,7 @@ def __virtual__():
         return False
 
     log.debug('Loading Linode cloud module')
-    return False
+    return True
 
 
 def get_configured_provider():
