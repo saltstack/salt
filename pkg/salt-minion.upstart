@@ -5,9 +5,12 @@ start on (net-device-up
           and runlevel [2345])
 stop on runlevel [!2345]
 
-normal exit 0
-respawn
-respawn limit 10 5
+# The respawn in the minion is known to cause problems
+# because if the main minion process dies it has done
+# so most likely for a good reason. Uncomment these
+# two lines to enable respawn
+#respawn
+#respawn limit 10 5
 
 script
 exec salt-minion
