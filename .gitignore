@@ -29,6 +29,3 @@ coverage.xml
 htmlcov/
 /.project
 /.pydevproject
-
-# The bootstrap script
-saltcloud/deploy/bootstrap-salt.sh
