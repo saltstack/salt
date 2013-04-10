@@ -311,6 +311,7 @@ class Cloud(object):
         Destroy the named VMs
         '''
         ret = []
+        names = set(names)
 
         pmap = self.map_providers()
         dels = {}
@@ -319,12 +320,13 @@ class Cloud(object):
             for node in nodes:
                 if node in names:
                     dels[prov].append(node)
+                    names.remove(node)
 
         for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
             for name in names_:
                 delret = self.clouds[fun](name)
-                ret.append({name: delret})
+                ret.append({name: (True, delret)})
 
                 if not delret:
                     continue
@@ -406,8 +408,13 @@ class Cloud(object):
                     print('Did not delete {0!r}'.format(filename))
                     break
 
+        # This machine was asked to be destroyed but could not be found
+        for name in names:
+            ret.append({name: False})
+
         if not ret:
             raise SaltCloudSystemExit('No machines were destroyed!')
+
         return ret
 
     def reboot(self, names):
@@ -567,7 +574,12 @@ class Cloud(object):
                     }
                     continue
 
-                ret[name] = self.create(vm_)
+                try:
+                    ret[name] = self.create(vm_)
+                except (SaltCloudSystemExit, SaltCloudConfigError), exc:
+                    if len(self.opts['names']) == 1:
+                        raise
+                    ret['name'] = {'Error': exc.message}
 
         if not found:
             msg = 'Profile {0} is not defined'.format(self.opts['profile'])
