@@ -142,7 +142,10 @@ def list_nodes_full():
     for node in items['droplets']:
         ret[node['name']] = {}
         for item in node.keys():
-            ret[node['name']][item] = str(node[item])
+            value = node[item]
+            if value is not None:
+                value = str(value)
+            ret[node['name']][item] = value
     return ret
 
 
@@ -251,7 +254,7 @@ def create(vm_):
         time.sleep(5)
         waiting_for_ip += 1
         data = _get_node(vm_['name'])
-        if 'ip_address' in data:
+        if data.get('ip_address', None):
             break
 
     if config.get_config_value('deploy', vm_, __opts__) is True:
@@ -328,13 +331,31 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
 
     path += '?%s'
     params = urllib.urlencode(args)
-    result = urllib2.urlopen(path % params)
-    # TODO: Attention to the HTTP Code
-    log.debug(result.geturl())
-    content = result.read()
-    result.close()
+    request = urllib2.urlopen(path % params)
+    if request.getcode() != 200:
+        raise SaltCloudSystemExit(
+            'An error occurred while querying Digital Ocean. HTTP Code: {0}  '
+            'Error: {1!r}'.format(
+                request.getcode(),
+                request.read()
+            )
+        )
 
-    return json.loads(content)
+    log.debug(request.geturl())
+
+    content = request.read()
+    request.close()
+
+    result = json.loads(content)
+    if result.get('status', '').lower() == 'error':
+        raise SaltCloudSystemExit(
+            ''.join(
+                '{0}: {1}\n'.format(k, '\n'.join(v)) for (k, v) in
+                result.get('error_message', {}).items()
+            )
+        )
+
+    return result
 
 
 def script(vm_):
