@@ -536,13 +536,20 @@ def sed_contains(path, text, limit='', flags='g'):
     if not os.path.exists(path):
         return False
 
-    result = __salt__['file.sed'](path,
-                                  text,
-                                  '&',
-                                  limit=limit,
-                                  backup='',
-                                  options='-n -r -e',
-                                  flags='p{0}'.format(flags))
+    before = _sed_esc(str(text), False)
+    limit = _sed_esc(str(limit), False)
+    options = '-n -r -e'
+    if sys.platform == 'darwin':
+        options = options.replace('-r', '-E')
+
+    cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
+            options='-n -r -e',
+            limit='/{0}/ '.format(limit) if limit else '',
+            before=before,
+            flags='p{0}'.format(flags),
+            path=path)
+
+    result = __salt__['cmd.run'](cmd)
 
     return bool(result)
 
