@@ -75,6 +75,7 @@ def managed(name,
                 )
             })
             return ret
+        requirements = cached_requirements
 
     # If it already exists, grab the version for posterity
     if venv_exists and clear:
