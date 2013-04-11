@@ -992,7 +992,7 @@ class Syndic(Minion):
                             jids[event['tag']]['__jid__'] = event['data']['jid']
                             jids[event['tag']]['__load__'] = salt.utils.jid_load(
                                     event['data']['jid'],
-                                    self.opts['cachedir'],
+                                    self.local.opts['cachedir'],
                                     self.opts['hash_type'])
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                 for jid in jids:
