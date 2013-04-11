@@ -809,6 +809,9 @@ class LocalClient(object):
         while True:
             raw = self.event.get_event(timeout, jid)
             if not raw is None:
+                if 'minions' in raw.get('data', {}):
+                    minions.update(raw['data']['minions'])
+                    continue
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
                     continue
