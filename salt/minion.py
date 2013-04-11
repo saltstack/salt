@@ -272,14 +272,19 @@ class Minion(object):
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
-    def _fire_master(self, data, tag):
+    def _fire_master(self, data=None, tag=None, events=None):
         '''
         Fire an event on the master
         '''
         load = {'id': self.opts['id'],
-                'tag': tag,
-                'data': data,
                 'cmd': '_minion_event'}
+        if events:
+            load['events'] = events
+        elif data and tag:
+            load['data'] = data
+            load['tag'] = tag
+        else:
+            return
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.crypticle.dumps(load))
@@ -920,7 +925,7 @@ class Syndic(Minion):
 
     def tune_in(self):
         '''
-        Lock onto the publisher. This is the main event loop for the minion
+        Lock onto the publisher. This is the main event loop for the syndic
         '''
         signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic "{0}" trying to tune in'.format(self.opts['id']))
@@ -974,6 +979,7 @@ class Syndic(Minion):
                     self._handle_payload(payload)
                 time.sleep(0.05)
                 jids = {}
+                raw_events = []
                 while True:
                     event = self.local.event.get_event(0.5, full=True)
                     if event is None:
@@ -994,9 +1000,12 @@ class Syndic(Minion):
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                     else:
                         # Add generic event aggregation here
-                        pass
+                        if not 'retcode' in event['data']:
+                            raw_events.append(event)
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
+                if raw_events:
+                    self.fire_master(events=raw_events)
             except zmq.ZMQError:
                 # This is thrown by the inturupt caused by python handling the
                 # SIGCHLD. This is a safe error and we just start the poll
