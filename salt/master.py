@@ -881,11 +881,10 @@ class AESFuncs(object):
                 self.opts['hash_type']
                 )
         if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: {jid}'.format(**load)
-            )
-            return False
+            os.makedirs(jid_dir)
+            if 'load' in load:
+                with open(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                    self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
             with salt.utils.fopen(wtag, 'w+') as fp_:
