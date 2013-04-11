@@ -210,6 +210,7 @@ class SaltEvent(object):
             if load['fun'] in SUB_EVENT:
                 try:
                     for tag, data in load.get('return', {}).items():
+                        data['retcode'] = load['retcode']
                         tag = tag.split('_|-')
                         if data.get('result') is False:
                             self.fire_event(
