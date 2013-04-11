@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "April 08, 2013" "0.8.7" "salt-cloud"
+.TH "SALT-CLOUD" "7" "April 11, 2013" "0.8.8" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -35,6 +35,8 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 Salt cloud designates virtual machines inside the profile configuration file.
 The profile configuration file defaults to \fB/etc/salt/cloud.profiles\fP and is
 a yaml configuration. The syntax for declaring profiles is simple:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -45,9 +47,13 @@ fedora_rackspace:
     script: Fedora
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 A few key pieces of information need to be declared and can change based on the
 public cloud provider. A number of additional parameters can also be inserted:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -63,10 +69,14 @@ centos_rackspace:
         role: webserver
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The image must be selected from available images. Similarly, sizes must be
 selected from the list of sizes. To get a list of available images and sizes
 use the following command:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -74,6 +84,8 @@ salt\-cloud \-\-list\-images openstack
 salt\-cloud \-\-list\-sizes openstack
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Some parameters can be specified in the main Salt cloud configuration file and
 then are applied to all cloud profiles. For instance if only a single cloud
@@ -88,6 +100,8 @@ example, \fB/etc/salt/cloud.profiles.d/*.conf\fP).  This allows for more
 extensible configuration, and plays nicely with various configuration
 management tools as well as version control systems.
 .SS Larger Example
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -142,6 +156,8 @@ cent_joyent:
     size: Small 1GB
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH CLOUD MAP FILE
 .sp
 A number of options exist when creating virtual machines. They can be managed
@@ -151,6 +167,8 @@ be created and associated with specific profiles.
 .sp
 Map files have a simple format, specify a profile and then a list of virtual
 machines to make from said profile:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -168,46 +186,66 @@ cent_high:
     \- riak3
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This map file can then be called to roll out all of these virtual machines. Map
 files are called from the salt\-cloud command with the \-m option:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-m /path/to/mapfile
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Remember, that as with direct profile provisioning the \-P option can be passed
 to create the virtual machines in parallel:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-m /path/to/mapfile \-P
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 A map file can also be enforced to represent the total state of a cloud
 deployment by using the \fB\-\-hard\fP option. When using the hard option any vms
 that exist but are not specified in the map file will be destroyed:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-m /path/to/mapfile \-P \-H
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Be careful with this argument, it is very dangerous! In fact, it is so
 dangerous that in order to use it, you must explicitly enable it in the main
 configuration file.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 enable_hard_maps: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 A map file can include grains and minion configuration options:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -226,8 +264,12 @@ fedora_small:
             omelet: with peppers
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 A map file may also be used with the various query options:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -241,8 +283,12 @@ $ salt\-cloud \-m /path/to/mapfile \-Q
          \(aqweb2\(aq: {\(aqAbsent\(aq}}
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 ...or with the delete option:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -254,6 +300,8 @@ The following virtual machines are set to be destroyed:
 Proceed? [N/y]
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH WRITING CLOUD PROVIDER MODULES
 .sp
 Salt Cloud runs on a module system similar to the main Salt project. The
@@ -336,12 +384,16 @@ Once a minion has been deployed, it has the option to run a salt command.
 Normally, this would be the state.highstate command, which would finish
 provisioning the VM. Another common option is state.sls, or for just testing,
 test.ping. This is configured in the main cloud config file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 start_action: state.highstate
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This is currently considered to be experimental functionality, and may not work
 well with all providers. If you experience problems with Salt Cloud hanging
@@ -353,22 +405,32 @@ after Salt is deployed, consider using Startup States instead:
 For whatever reason, you may want to skip the deploy script altogether. This
 results in a VM being spun up much faster, with absolutely no configuration.
 This can be set from the command line:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-\-no\-deploy \-p micro_aws my_instance
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Or it can be set from the main cloud config file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 deploy: False
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Or it can be set from the provider\(aqs configuration:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -377,8 +439,12 @@ RACKSPACE.apikey: 123984bjjas87034
 RACKSPACE.deploy: False
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Or even on the VM\(aqs profile settings:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -389,22 +455,30 @@ ubuntu_aws:
   deploy: False
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The default for deploy is True.
 .sp
 In the profile, you may also set the script option to \fBNone\fP:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 script: None
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This is the slowest option, since it still uploads the None deploy script and
 executes it.
 .SS Updating Salt Bootstrap
 .sp
 Salt Bootstrap can be updated automatically with salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -412,6 +486,8 @@ salt\-cloud \-u
 salt\-cloud \-\-update\-bootstrap
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Bear in mind that this updates to the latest (unstable) version, so use with
 caution.
@@ -421,12 +497,16 @@ When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
 salt\-bootstrap to put in place. After the script has run, they are deleted. To
 keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
 can be added:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 For those wondering why /tmp/ was used instead of /root/, this had to be done
 for images which require the use of sudo, and therefore do not allow remote
@@ -437,6 +517,8 @@ Custom deploy scripts are unlikely to need custom arguments to be passed to
 them, but salt\-bootstrap has been extended quite a bit, and this may be
 necessary. script_args can be specified in either the profile or the map file,
 to pass arguments to the deploy script:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -449,14 +531,20 @@ aws\-amazon:
     script_args: \-c /tmp/
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This has also been tested to work with pipes, if needed:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 script_args: | head
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH CORE CONFIGURATION
 .sp
 A number of core configuration options and some options that are global to the
@@ -466,6 +554,8 @@ located at \fB/etc/salt/cloud\fP.
 .sp
 The default minion configuration is set up in this file. This is where the
 minions that are created derive their configuration.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -473,6 +563,8 @@ minion:
     master: saltmaster.example.com
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This is the location in particular to specify the location of the salt master.
 .SS New Cloud Configuration Syntax
@@ -494,6 +586,8 @@ after migration example.
 .IP \(bu 2
 Before migration in \fB/etc/salt/cloud\fP:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -504,10 +598,14 @@ AWS.securitygroup: quick\-start
 AWS.private_key: /root/test.pem
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 After migration in \fB/etc/salt/cloud\fP:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -521,6 +619,8 @@ providers:
     provider: aws
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Notice that it\(aqs not longer required to name a cloud provider\(aqs configuration
 after it\(aqs provider, it can be an alias, though, an additional configuration
@@ -538,6 +638,8 @@ as an example, \fB/etc/salt/cloud.providers.d/*.conf\fP).
 So, using the example configuration above, after migration in
 \fB/etc/salt/cloud.providers\fP or
 \fB/etc/salt/cloud.providers.d/aws\-migrated.conf\fP:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -550,6 +652,8 @@ my\-aws\-migrated\-config:
   provider: aws
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Notice that on this last migrated example, it \fBno longer\fP includes the
 \fBproviders\fP starting key.
@@ -562,6 +666,8 @@ configuration key in the defined profiles.
 .IP \(bu 2
 From:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -571,10 +677,14 @@ rhel_aws:
   size: Micro Instance
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 To:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -584,9 +694,13 @@ rhel_aws:
   size: Micro Instance
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This new configuration syntax even allows you to have multiple cloud
 configurations under the same alias, for example:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -602,11 +716,15 @@ production\-config:
     provider: rackspace
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNotice the dash and indentation on the above example.\fP
 .sp
 Having multiple entries for a configuration alias also makes the \fBprovider\fP
 key on any defined profile to change, see the example:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -627,6 +745,8 @@ database_prod:
   size: 256 server
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Notice that because of the multiple entries, one has to be explicit about the
 provider alias and name, from the above example, \fBproduction\-config:aws\fP.
@@ -645,6 +765,8 @@ Rackspace cloud requires two configuration options:
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -652,10 +774,14 @@ RACKSPACE.user: example_user
 RACKSPACE.apikey: 123984bjjas87034
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -665,6 +791,8 @@ my\-rackspace\-config:
   provider: rackspace
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have \fBprovider:
 rackspace\-config\fP instead of \fBprovider: rackspace\fP on a profile
@@ -676,6 +804,8 @@ A number of configuration options are required for Amazon AWS:
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -686,10 +816,14 @@ AWS.securitygroup: quick\-start
 AWS.private_key: /root/test.pem
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -710,6 +844,8 @@ my\-aws\-default:
   provider: aws
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-aws\-quick\-start\fP or \fBprovider: my\-aws\-default\fP instead of
@@ -722,6 +858,8 @@ be set:
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -729,10 +867,14 @@ LINODE.apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
 LINODE.password: F00barbaz
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -742,6 +884,8 @@ my\-linode\-config:
   provider: linode
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-linode\-config\fP instead of \fBprovider: linode\fP on a profile
@@ -759,6 +903,8 @@ send the provisioning commands up to the freshly created virtual machine,
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -767,10 +913,14 @@ JOYENT.password: saltybacon
 JOYENT.private_key: /root/joyent.pem
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -781,6 +931,8 @@ my\-joyent\-config:
     provider: joyent
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-joyent\-config\fP instead of \fBprovider: joyent\fP on a profile
@@ -797,6 +949,8 @@ be set in the configuration file to enable interfacing with GoGrid:
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -804,10 +958,14 @@ GOGRID.apikey: asdff7896asdh789
 GOGRID.sharedsecret: saltybacon
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -817,6 +975,8 @@ my\-gogrid\-config:
   provider: gogrid
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-gogrid\-config\fP instead of \fBprovider: gogrid\fP on a profile
@@ -831,6 +991,8 @@ both.
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -855,19 +1017,27 @@ OPENSTACK.tenant: 5555555
 OPENSTACK.password: mypass
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 If you have an API key for your provider, it may be specified instead of a
 password:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 OPENSTACK.apikey: 901d3f579h23c8v73q9
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -897,9 +1067,13 @@ my\-openstack\-rackspace\-config:
   provider: openstack
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 If you have an API key for your provider, it may be specified instead of a
 password:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -910,6 +1084,8 @@ my\-openstack\-rackspace\-config:
   apikey: 901d3f579h23c8v73q9
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-openstack\-hp\-config\fP or \fBprovider:
@@ -922,14 +1098,20 @@ You will certainly need to configure the \fBuser\fP, \fBtenant\fP and either
 If your OpenStack instances only have private IP addresses and a CIDR range of
 private addresses are not reachable from the salt\-master, you may set your
 preference to have Salt ignore it. Using the old could configurations syntax:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 OPENSTACK.ignore_cidr: 192.168.0.0/16
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Using the new syntax:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -937,6 +1119,8 @@ my\-openstack\-config:
   ignore_cidr: 192.168.0.0/16
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Digital Ocean
 .sp
 Using Salt for Digital Ocean requires a client_key and an api_key. These can be
@@ -946,6 +1130,8 @@ the API Access tab.
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -953,10 +1139,14 @@ DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
 DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -966,6 +1156,8 @@ my\-digitalocean\-config:
   provider: digital_ocean
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-digitalocean\-config\fP instead of \fBprovider: digital_ocean\fP on a
@@ -978,6 +1170,8 @@ obtained from your cloud provider.
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -986,10 +1180,14 @@ PARALLELS.password: xyzzy
 PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1000,6 +1198,8 @@ my\-parallels\-config:
   provider: parallels
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-parallels\-config\fP instead of \fBprovider: parallels\fP on a
@@ -1015,6 +1215,8 @@ already set) in order to find the name of the location that you want to use.
 .IP \(bu 2
 Using the old format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1025,10 +1227,14 @@ IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
 IBMSCE.location: Raleigh
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .IP \(bu 2
 Using the new configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1041,6 +1247,8 @@ my\-ibmsce\-config:
   provider: ibmsce
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 \fBNOTE\fP: With the new providers configuration syntax you would have
 \fBprovider: my\-imbsce\-config\fP instead of \fBprovider: ibmsce\fP on a profile
@@ -1055,6 +1263,8 @@ used inside a map file. The key parameters to be set are \fBssh_host\fP,
 \fBssh_username\fP and either \fBssh_keyfile\fP or \fBssh_password\fP. These may all
 be set in either the profile or the map. An example configuration might use the
 following in cloud.profiles:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1062,8 +1272,12 @@ make_salty:
   provider: saltify
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 And in the map file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1075,6 +1289,8 @@ make_salty:
     sudo: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Extending Profiles and Cloud Providers Configuration
 .sp
 As of 0.8.7, the option to extend both the profiles and cloud providers
@@ -1087,6 +1303,8 @@ files, ie, \fB/etc/salt/salt/cloud.providers\fP or
 .sp
 Some example usage on how to use \fBextends\fP with profiles. Consider
 \fB/etc/salt/salt/cloud.profiles\fP containing:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1112,9 +1330,13 @@ CentOS\-5:
   extends: development\-instances
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The above configuration, once parsed would generate the following profiles
 data:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1147,12 +1369,16 @@ data:
   \(aqssh_username\(aq: \(aqec2_user\(aq}]
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Pretty cool right?
 .SS Extending Providers
 .sp
 Some example usage on how to use \fBextends\fP within the cloud providers
 configuration.  Consider \fB/etc/salt/salt/cloud.providers\fP containing:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1181,9 +1407,13 @@ my\-productions\-envs:
     availability_zone: us\-east\-1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The above configuration, once parsed would generate the following providers
 data:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1219,6 +1449,8 @@ data:
 }
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH CLOUD ACTIONS
 .sp
 Once a VM has been created, there are a number of actions that can be performed
@@ -1226,6 +1458,8 @@ on it. The "reboot" action can be used across all providers, but all other
 actions are specific to the cloud provider. In order to perform an action, you
 may specify it from the command line, including the name(s) of the VM to
 perform the action on:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1233,16 +1467,24 @@ $ salt\-cloud \-a reboot vm_name
 $ salt\-cloud \-a reboot vm1 vm2 vm2
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Or you may specify a map which includes all VMs to perform the action on:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-a reboot \-m /path/to/mapfile
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The following is a list of actions currently supported by salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1255,18 +1497,24 @@ joyent:
     \- stop
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH CLOUD FUNCTIONS
 .sp
 Cloud functions work much the same way as cloud actions, except that they don\(aqt
 perform an operation on a specific instance, and so do not need a machine name
 to be specified. However, since they perform an operation on a specific cloud
 provider, that provider must be specified.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH MISCELLANEOUS SALT CLOUD OPTIONS
 .sp
 This page describes various miscellaneous options available in Salt Cloud
@@ -1276,6 +1524,8 @@ Custom deploy scripts are unlikely to need custom arguments to be passed to
 them, but salt\-bootstrap has been extended quite a bit, and this may be
 necessary. script_args can be specified in either the profile or the map file,
 to pass arguments to the deploy script:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1288,14 +1538,20 @@ aws\-amazon:
     script_args: \-c /tmp/
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This has also been tested to work with pipes, if needed:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 script_args: | head
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Sync After Install
 .sp
 Salt allows users to create custom modules, grains and states which can be
@@ -1305,14 +1561,20 @@ This option will inform Salt Cloud to synchronise your custom modules, grains,
 states or all these to the minion just after it has been created. For this to
 happen, the following line needs to be added to the main cloud
 configuration file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 sync_after_install: all
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The available options for this setting are:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1322,6 +1584,8 @@ states
 all
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Setting up New Salt Masters
 .sp
 It has become increasingly common for users to set up multi\-hierarchal
@@ -1329,12 +1593,16 @@ infrastructures using Salt Cloud. This sometimes involves setting up an
 instance to be a master in addition to a minion. With that in mind, you can
 now law down master configuration on a machine by specifying master options
 in the profile or map file.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 make_master: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This will cause Salt Cloud to generate master keys for the instance, and tell
 salt\-bootstrap to install the salt\-master package, in addition to the
@@ -1343,6 +1611,8 @@ salt\-minion package.
 The default master configuration is usually appropriate for most users, and
 will not be changed unless specific master configuration has been added to the
 profile or map:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1351,6 +1621,8 @@ master:
     interface: 0.0.0.0
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Delete SSH Keys
 .sp
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
@@ -1363,24 +1635,32 @@ in the known_hosts file will cause a conflict.
 In order to mitigate this issue, Salt Cloud can be configured to remove old
 keys from the known_hosts file when destroying the node. In order to do this,
 the following line needs to be added to the main cloud configuration file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 delete_sshkeys: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Keeping /tmp/ Files
 .sp
 When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
 salt\-bootstrap to put in place. After the script has run, they are deleted. To
 keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
 can be added:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 For those wondering why /tmp/ was used instead of /root/, this had to be done
 for images which require the use of sudo, and therefore do not allow remote
@@ -1391,12 +1671,16 @@ By default Salt Cloud will stream the output from the minion deploy script
 directly to STDOUT. Although this can been very useful, in certain cases you
 may wish to switch this off. The following config option is there to enable or
 disable this output:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 display_ssh_output: False
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
 .SS Salt Cloud 0.6.0 Release Notes
 .sp
@@ -1437,6 +1721,8 @@ module and everything cleanly links together.
 .sp
 The way a vms is created is done via profiles. Profiles are used to define what
 properties a vm will have, the cloud provider, the size and the image.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1451,18 +1737,24 @@ centos_rackspace:
     master: salt.example.com
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
 image and the Rackspace 1024 vm size. Particulars of the minion config can
 also be specified.
 .sp
 Individual vms can be created from profiles:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 # salt\-cloud \-p centos_rackspace web1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This command creates a vms with the name web1 on the Rackspace cloud and
 connects the new vm to a Salt Master located at salt.example.com. The new VM
@@ -1471,6 +1763,8 @@ has the Salt id of web1.
 .sp
 When it is desired to have a predefined mapping of many, or a specific group
 of vms then a cloud map can be defined:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1492,16 +1786,22 @@ ubuntu_ec2:
   cassandra3
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This map file will create vms named web 1\-4 using the centos_rackspace profile
 on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
 ec2. It can be run with salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 # salt\-cloud \-m mapfile
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 When creating more than one vm the \-P option can be passed, to make the vms
 provision in parallel, greatly speeding up large scale expansions of vms.
@@ -1556,6 +1856,8 @@ The following cloud providers are now supported:
 Setting up Salt Cloud requires knowlege of the available sizes and images on
 cloud providers. Listing the available images and sizes can now be done with
 the salt\-cloud command:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1633,22 +1935,30 @@ linode
     uuid: e08f8a57551297b9310545430c67667f59120606
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Destroy!
 .sp
 Salt Cloud can now destroy cloud vms as easily as it can create them. The new
 \fB\-\-destroy\fP option can be passed to end the life of a vm:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-d web1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The map operation can now also destroy vms, the new \fBhard\fP option can be
 passed which makes vm maps much more stateful. With the \fBhard\fP option the
 vm maps are viewed as the absolute source of information for the state of
 cloud resources, and any vm that is not specified in the map file will be
 destroyed:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1663,6 +1973,8 @@ The following virtual machines are set to be destroyed:
 Proceed? [N/y]
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Salt Cloud 0.8.0 Release Notes
 .sp
 Salt Cloud has reached another milestone, with the 0.8.0 release. This
@@ -1688,6 +2000,8 @@ by Clint Savage. Package availability will be announced on the salt mailing list
 .sp
 Additional options have been added to salt\-cloud \-Q, to support the same kinds
 of formatting already available in Salt:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1698,6 +2012,8 @@ of formatting already available in Salt:
 \-\-no\-color
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS More Helpful Error Messages
 .sp
 As an ongoing effort, we have been cleaning up and adding error messages in an
@@ -1708,6 +2024,8 @@ includes displaying messages as they are received from libcloud.
 Previously, map files only had the ability to specify a profile name, and the
 node names that would be associated with it. Now you can also specify grains
 that will be laid down in each individual node:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1719,9 +2037,13 @@ vm_profile:
       fromage: tasty
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 These grains can also be specified in the profile itself. When this happens,
 the grains in map files will override grains in the profile. For example:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1736,6 +2058,8 @@ vm_profile:
     french: fries
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 In this example, mynodename will include grains for both fromage and french,
 but the master will be salt\-master, not salt\-mycompany.com.
@@ -1809,6 +2133,8 @@ AWS allows for multiple security groups to be applied to any given VM, but
 until this release, Salt Cloud only supported managing one. This update allows
 a list of security groups to be specified. In the main configuration file, an
 example of multiple security groups would look like:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1817,8 +2143,12 @@ AWS.securitygroup:
   \- extra
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 In a profile, an example would be:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1832,6 +2162,8 @@ micro_amazon:
       \- extra
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Bug Fixes
 .sp
 A number of bugs have been fixed in this release. Most of these were internal
@@ -1881,6 +2213,8 @@ or \-\-select\-query option, which lets you specify which fields to display. Any
 fields not specified will not be displayed, and if you specify a field that
 doesn\(aqt exist on a particular provider, it will be ignored for them. Just
 add a query.selection option to /etc/salt/cloud like such:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1892,6 +2226,8 @@ query.selection:
   \- TOTALXFER
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS os vs script
 .sp
 In a cloud profile, you need to specify which deploy script to use to install
@@ -1907,6 +2243,8 @@ is also not yet supported. When this script is used for deployment, it will
 automatically install the required libraries and build ZeroMQ, and then use
 easy_install to install the latest versions of PyZMQ and Salt. To use this,
 just specify SmartOS as the \(aqos\(aq or \(aqscript\(aq option in your cloud.profiles:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1917,6 +2255,8 @@ joyent_smartos:
   script: SmartOS
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS OpenStack and IBM Modules
 .sp
 Support has been added for clouds using OpenStack (OPENSTACK) and for IBM\(aqs
@@ -1925,6 +2265,8 @@ started using the OpenStack module, because pull requests have already been
 merged from the community. This module has been tested against both the HP
 and the Rackspace implementations of OpenStack. This can be a tricky module
 to configure, depending on your provider, so some examples are provided here:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1948,12 +2290,16 @@ OPENSTACK.password: mypass
 OPENSTACK.protocol: ipv4
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 It is important to note that currently, only password\-based authentication is
 provided through the Salt Cloud OpenStack module.
 .sp
 IBM has fewer things that need to be configured, but setting them up can be
 tricky as well. An example might look like:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1964,6 +2310,8 @@ IBMSCE.ssh_key_file: \(aq/etc/salt/ibm/mykey.pem\(aq
 IBMSCE.location: Raleigh
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The location currently must be configured in order to create an instance, but
 not to query the IBM cloud. This is important, because you need to use
@@ -1982,6 +2330,8 @@ of logging support. With this release, Salt Cloud has started to implement
 the logging features already available in Salt. The default log location is
 /var/log/salt/cloud (with a default level of warn), but it can be changed in
 your cloud configuration file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -1989,15 +2339,21 @@ log_file: /var/log/salt/cloud
 log_level_logfile: debug
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 If you would like to change the default logging level for the command line, you
 can also configure that in the same place:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 log_level: debug
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Check salt\-cloud \-\-help for a list of logging levels, which can also be
 specified from the command line.
@@ -2031,12 +2387,16 @@ instances, you can add the \-\-no\-deploy argument to the salt\-cloud command to
 skip running the deploy script.
 .sp
 It is also possible to configure Salt Cloud to default to never deploying:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 deploy: False
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Firing Events
 .sp
 Salt Cloud is starting to make use of Salt\(aqs event system. If you are watching
@@ -2046,12 +2406,16 @@ minions are created or destroyed.
 .sp
 This is an experimental feature which some users may find handy. You may now
 configure a start_action for a deployed VM:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 start_action: state.highstate
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 If configured, when the salt\-cloud command runs the deploy script, it will open
 a subprocess to wait for the salt\-minion service to start, and check in with
@@ -2075,20 +2439,28 @@ are critical in certain instances. For instance, most providers will shut down
 a VM for you when you send a destroy command, but Joyent requires you to
 manually shut it down first. This was previously only doable via their web
 interface. You may now pass a supported \-\-action (or \-a) to a cloud provider:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-\-action stop joyentvm1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 All cloud providers support the destroy command via an action:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-a destroy mymachine1 mymachine2 mymachine2
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Human\-Readable States
 .sp
 Most of our cloud providers are accessed via libcloud, which provides a
@@ -2161,6 +2533,8 @@ the latest version of Salt accordingly. For more information, see:
 .sp
 To use this deploy script explicitly, set the script option to
 bootstrap\-salt\-minion in the profile for your VM. For instance:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2172,6 +2546,8 @@ aws\-archlinux:
     ssh_username: root
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 For those of you still using "os" in your profiles, it should be noted that
 this option was renamed to "script" in 0.8.2, and your configuration should
@@ -2185,28 +2561,40 @@ If you do not want any deployment scripts run, you still have the following
 options available to you.
 .sp
 From the command line, use the \-\-no\-deploy option:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-\-no\-deploy \-p myprofile mymachine
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 In the Salt Cloud configuration, set:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 deploy: False
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Or in the profile, set the script option to None:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 script: None
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Other Generic Deploy Scripts
 .sp
 If you want to be assured of always using the latest Salt Bootstrap script,
@@ -2255,6 +2643,8 @@ updated accordingly.
 If you like running the latest and greatest version of salt\-bootstrap, but
 you\(aqre sick of tracking down the source directory to update it, a new option
 has been added to update it for you.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2262,6 +2652,8 @@ salt\-cloud \-u
 salt\-cloud \-\-update\-bootstrap
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Bear in mind that this updates to the latest (unstable) version, so use with
 caution.
@@ -2271,6 +2663,8 @@ One of the features of AWS is the ability to tag resources. In fact, under the
 hood, the names given to EC2 instances by salt\-cloud are actually just stored
 as a tag called Name. The ability to manage tags on AWS instances has now been
 added to Salt Cloud.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2279,21 +2673,29 @@ salt\-cloud \-a set_tags mymachine tag1=somestuff tag2=\(aqOther stuff\(aq
 salt\-cloud \-a del_tags mymachine tag1,tag2,tag3
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Rename AWS Instances
 .sp
 As mentioned above, AWS instances are named via a tag. However, renaming an
 instance by renaming its tag will cause the salt keys to mismatch. A rename
 function has been added which renames both the instance, and the salt keys.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-a rename mymachine newname=yourmachine
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS AWS Termination Protection
 .sp
 AWS allows the user to enable and disable termination protection on a specific
 instance. An instance with this protection enabled cannot be destroyed.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2301,6 +2703,8 @@ salt\-cloud \-a enable_term_protect mymachine
 salt\-cloud \-a disable_term_protect mymachine
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Setting up New Salt Masters
 .sp
 It has become increasingly common for users to set up multi\-hierarchal
@@ -2308,12 +2712,16 @@ infrastructures using Salt Cloud. This sometimes involves setting up an
 instance to be a master in addition to a minion. With that in mind, you can
 now law down master configuration on a machine by specifying master options
 in the profile or map file.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 make_master: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This will cause Salt Cloud to generate master keys for the instance, and tell
 salt\-bootstrap to install the salt\-master package, in addition to the
@@ -2322,6 +2730,8 @@ salt\-minion package.
 The default master configuration is usually appropriate for most users, and
 will not be changed unless specific master configuration has been added to the
 profile or map:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2330,18 +2740,24 @@ master:
     interface: 0.0.0.0
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Keeping /tmp/ Files
 .sp
 When Salt Cloud deploys an instance, it uploads temporary files to /tmp/ for
 salt\-bootstrap to put in place. After the script has run, they are deleted. To
 keep these files around (mostly for debugging purposes), the \-\-keep\-tmp option
 can be added:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-p myprofile mymachine \-\-keep\-tmp
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 For those wondering why /tmp/ was used instead of /root/, this had to be done
 for images which require the use of sudo, and therefore do not allow remote
@@ -2352,6 +2768,8 @@ Custom deploy scripts are unlikely to need custom arguments to be passed to
 them, but salt\-bootstrap has been extended quite a bit, and this may be
 necessary. script_args can be specified in either the profile or the map
 file, to pass arguments to the deploy script:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2364,26 +2782,36 @@ aws\-amazon:
     script_args: \-c /tmp/
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This has also been tested to work with pipes, if needed:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 script_args: | head
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Remove Old SSH Keys
 .sp
 When an instance is destroyed, its IP address is usually recycled back into
 the IP pool. When such an IP is reassigned to you, and the old key is still in
 your known_hosts file, the deploy script will fail due to mismatched SSH keys.
 To mitigate this, add the following to your main cloud configuration:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 delete_sshkeys: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Salt Cloud 0.8.6 Release Notes
 .sp
 Welcome to 0.8.6! This is an exciting release, especially for EC2 users. To see
@@ -2437,24 +2865,32 @@ rename instances when they are destroyed. The new name will look something like:
 .sp
 In order to enable this, add AWS.rename_on_destroy line to the main
 configuration file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 AWS.rename_on_destroy: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS New Action: show_instance
 .sp
 This action is a thin wrapper around \-\-full\-query, which displays details on a
 single instance only. In an environment with several machines, this will save a
 user from having to sort through all instance data, just to examine a single
 instance.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-a show_instance myinstance
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Actions vs Functions
 .sp
 Salt Cloud 0.8.3 introduced the concept of provider\-specific actions. However,
@@ -2465,12 +2901,16 @@ functions have been added. Currently, only EC2 takes advantage of these.
 .sp
 This is a function that describes an AMI on EC2. This will give insight as to
 the defaults that will be applied to an instance using a particular AMI.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS EC2: delvol_on_destroy
 .sp
 This argument overrides the default DeleteOnTermination setting in the AMI for
@@ -2478,23 +2918,33 @@ the root EBS volume for an instance. Many AMIs contain \(aqfalse\(aq as a defaul
 resulting in orphaned volumes in the EC2 account, which may unknowingly be
 charged to the account. This setting can be added to the profile or map file
 for an instance.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 delvol_on_destroy: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This can also be set as a global setting in the EC2 cloud configuration:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 EC2.delvol_on_destroy: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The setting for this may be changed on an existing instance using one of the
 following commands:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2502,11 +2952,15 @@ salt\-cloud \-a delvol_on_destroy myinstance
 salt\-cloud \-a keepvol_on_destroy myinstance
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS EC2 Termination Protection
 .sp
 AWS allows the user to enable and disable termination protection on a specific
 instance. An instance with this protection enabled cannot be destroyed. The EC2
 driver adds a show_term_protect action to the regular AWS functionality.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2515,34 +2969,48 @@ salt\-cloud \-a enable_term_protect mymachine
 salt\-cloud \-a disable_term_protect mymachine
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS EC2 Alternate Endpoint
 .sp
 Normally, ec2 endpoints are build using the region and the service_url. The
 resulting endpoint would follow this pattern:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 ec2.<region>.<service_url>
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This results in an endpoint that looks like:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 ec2.us\-east\-1.amazonaws.com
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 There are other projects that support an EC2 compatibility layer, which this
 scheme does not account for. This can be overridden by specifying the endpoint
 directly in the main cloud configuration file:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 EC2.endpoint: myendpoint.example.com:1138/services/Cloud
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS EC2 Volume Management
 .sp
 The EC2 driver has several functions and actions for management of EBS volumes.
@@ -2552,6 +3020,8 @@ A volume may be created, independent of an instance. A zone must be specified.
 A size or a snapshot may be specified (in GiB). If neither is given, a default
 size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
 will be used.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2560,19 +3030,27 @@ salt\-cloud \-f create_volume ec2 zone=us\-east\-1b size=10
 salt\-cloud \-f create_volume ec2 zone=us\-east\-1b snapshot=snap12345678
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Attaching Volumes
 .sp
 Unattached volumes may be attached to an instance. The following values are
 required: name or instance_id, volume_id and device.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-a attach_volume myinstance volume_id=vol\-12345 device=/dev/sdb1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Show a Volume
 .sp
 The details about an existing volume may be retreived.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2580,24 +3058,34 @@ salt\-cloud \-a show_volume myinstance volume_id=vol\-12345
 salt\-cloud \-f show_volume ec2 volume_id=vol\-12345
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Detaching Volumes
 .sp
 An existing volume may be detached from an instance.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-a detach_volume myinstance volume_id=vol\-12345
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Deleting Volumes
 .sp
 A volume that is not attached to an instance may be deleted.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-f delete_volume ec2 volume_id=vol\-12345
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Managing Key Pairs on EC2
 .sp
 The EC2 driver has the ability to manage key pairs.
@@ -2607,31 +3095,43 @@ A key pair is required in order to create an instance. When creating a key pair
 with this function, the return data will contain a copy of the private key.
 This private key is not stored by Amazon, and will not be obtainable past this
 point, and should be stored immediately.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-f create_keypair ec2 keyname=mykeypair
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Show a Key Pair
 .sp
 This function will show the details related to a key pair, not including the
 private key itself (which is not stored by Amazon).
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-f delete_keypair ec2 keyname=mykeypair
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Delete a Key Pair
 .sp
 This function removes the key pair from Amazon.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-f delete_keypair ec2 keyname=mykeypair
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Salt Cloud 0.8.7 Release Notes
 .sp
 Welcome to 0.8.7! This is a landmark release which adds two new cloud providers,
@@ -2679,6 +3179,8 @@ provider.
 .IP \(bu 2
 Using the legacy configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2687,6 +3189,8 @@ PARALLELS.password: xyzzy
 PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Added Digital Ocean Support
 .sp
 Digital Ocean has been a highly\-requested cloud provider, and we are pleased to
@@ -2696,6 +3200,8 @@ required for Digital Ocean.
 .IP \(bu 2
 Using the legacy configuration format:
 .UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2703,6 +3209,8 @@ DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
 DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Updated Configuration Format
 .sp
 This is a massive change that we have been wanting for months to add. We would
@@ -2716,6 +3224,8 @@ switch everything over at once.
 .sp
 Luckily, the changes are not difficult to get used to. The old format looked
 like the following:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2723,8 +3233,12 @@ SOMEPROVIDER.option1: some_stuff
 SOMEPROVIDER.option2: some_other_stuff
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The new format for the above would look like:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2734,9 +3248,13 @@ my_provider:
   provider: someprovider
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This update allows for multiple accounts using the same provider. For instance,
 if using multiple accounts with Amazon EC2, your configuration may look like:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2757,9 +3275,13 @@ my\-second\-ec2:
   provider: ec2
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Profiles are then configured using the name of the configuration block, rather
 than the provider name. For instance:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2769,20 +3291,28 @@ rhel\-ec2:
     size: Micro Instance
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Likewise, issuing commands will reference the name of the configuration block,
 rather than the provider name. For instance:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-\-list\-sizes my\-first\-ec2
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This is critical for using multiple clouds, which use the same Salt Cloud
 driver. For instance, Salt Cloud has been gaining popularity for usage with
 private clouds utilizing OpenStack. The following two commands are likely to
 return different data:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2790,33 +3320,40 @@ salt\-cloud \-\-list\-images openstack\-hp
 salt\-cloud \-\-list\-images openstack\-rackspace
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Provider Aliases
 .sp
 It is also possible to have multiple providers configured with the same name.
 This allows for similar environments across multiple providers to share the same
 name. For instance:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 production\-config:
-  id: HJGRYCILJLKJYG
-  key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
-  keyname: test
-  securitygroup: quick\-start
-  private_key: /root/test.pem
-  provider: aws
+  \- id: HJGRYCILJLKJYG
+    key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    provider: aws
 
-production\-config:
-  id: LJLKJYGHJGRYCI
-  key: \(aqrigjksjdhasdfgnkdjgfsgm;woormgl/ase\(aq
-  keyname: test
-  securitygroup: quick\-start
-  private_key: /root/test.pem
-  provider: ec2
+  \- id: LJLKJYGHJGRYCI
+    key: \(aqrigjksjdhasdfgnkdjgfsgm;woormgl/ase\(aq
+    keyname: test
+    securitygroup: quick\-start
+    private_key: /root/test.pem
+    provider: ec2
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 With this configuration, you can then set up the following profiles:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2833,21 +3370,29 @@ staging\-instances:
   securitygroup: default
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Keep in mind that if there is only one configured provider with a specific name,
 you do not have to specify an alias. But if multiple are set up as above, you
 must use the aliased name.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 salt\-cloud \-\-list\-sizes production\-config:ec2
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Extending Profiles
 .sp
 If using the new configuration format, you will have the ability to extend
 profile definitions. This can make profile configuration much easier to read and
 manage. For instance:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2873,8 +3418,12 @@ CentOS\-5:
   extends: development\-instances
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 In this case, the CentOS\-5 profile will in fact look like:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2888,6 +3437,8 @@ CentOS\-5:
   image: ami\-09b61d60
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 Because it copied all of the configuration from \fBdevelopment\-instances\fP, and
 overrode the provider with a new provider.
@@ -2896,6 +3447,8 @@ overrode the provider with a new provider.
 If using the new configuration format, providers can be extended in the same
 way. For instance, the following will set up two different providers, each
 sharing some of the same configuration:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2924,6 +3477,8 @@ my\-productions\-envs:
     availability_zone: us\-east\-1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
@@ -2963,6 +3518,8 @@ module and everything cleanly links together.
 .sp
 The way a vms is created is done via profiles. Profiles are used to define what
 properties a vm will have, the cloud provider, the size and the image.
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -2977,18 +3534,24 @@ centos_rackspace:
     master: salt.example.com
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
 image and the Rackspace 1024 vm size. Particulars of the minion config can
 also be specified.
 .sp
 Individual vms can be created from profiles:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 # salt\-cloud \-p centos_rackspace web1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This command creates a vms with the name web1 on the Rackspace cloud and
 connects the new vm to a Salt Master located at salt.example.com. The new VM
@@ -2997,6 +3560,8 @@ has the Salt id of web1.
 .sp
 When it is desired to have a predefined mapping of many, or a specific group
 of vms then a cloud map can be defined:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -3018,16 +3583,22 @@ ubuntu_ec2:
   cassandra3
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 This map file will create vms named web 1\-4 using the centos_rackspace profile
 on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
 ec2. It can be run with salt\-cloud:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 # salt\-cloud \-m mapfile
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 When creating more than one vm the \-P option can be passed, to make the vms
 provision in parallel, greatly speeding up large scale expansions of vms.
@@ -3082,6 +3653,8 @@ The following cloud providers are now supported:
 Setting up Salt Cloud requires knowlege of the available sizes and images on
 cloud providers. Listing the available images and sizes can now be done with
 the salt\-cloud command:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -3159,22 +3732,30 @@ linode
     uuid: e08f8a57551297b9310545430c67667f59120606
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SS Destroy!
 .sp
 Salt Cloud can now destroy cloud vms as easily as it can create them. The new
 \fB\-\-destroy\fP option can be passed to end the life of a vm:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
 $ salt\-cloud \-d web1
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .sp
 The map operation can now also destroy vms, the new \fBhard\fP option can be
 passed which makes vm maps much more stateful. With the \fBhard\fP option the
 vm maps are viewed as the absolute source of information for the state of
 cloud resources, and any vm that is not specified in the map file will be
 destroyed:
+.INDENT 0.0
+.INDENT 3.5
 .sp
 .nf
 .ft C
@@ -3189,6 +3770,8 @@ The following virtual machines are set to be destroyed:
 Proceed? [N/y]
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
 .SH AUTHOR
 Thomas S. Hatch <thatch@saltstack.com> and many others, please see the Authors file
 .SH COPYRIGHT
