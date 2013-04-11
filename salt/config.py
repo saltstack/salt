@@ -310,7 +310,7 @@ def include_config(include, orig_path, verbose):
                     '"{0}" matches no files'.format(path)
                 )
 
-        for fn_ in glob.glob(path):
+        for fn_ in sorted(glob.glob(path)):
             try:
                 log.debug('Including configuration from {0}'.format(fn_))
                 include_config.update(_read_conf_file(fn_))
