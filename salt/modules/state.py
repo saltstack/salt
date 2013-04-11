@@ -209,6 +209,9 @@ def highstate(test=None, **kwargs):
     else:
         opts['test'] = None
 
+    if 'env' in kwargs:
+        opts['environment'] = kwargs['env']
+
     pillar = __resolve_struct(
             kwargs.get('pillar', ''),
             kwargs.get('kwval_as', 'yaml'))
