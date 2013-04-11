@@ -985,9 +985,9 @@ class Syndic(Minion):
                     if event is None:
                         # Timeout reached
                         break
-                    if salt.utils.is_jid(event['tag']):
+                    if salt.utils.is_jid(event['tag']) and 'fun' in event['data']:
                         if not event['tag'] in jids:
-                            if not 'fun' in event['data'] or not 'jid' in event['data']:
+                            if not 'jid' in event['data']:
                                 # Not a job return
                                 continue
                             jids[event['tag']] = {}
@@ -1002,10 +1002,10 @@ class Syndic(Minion):
                         # Add generic event aggregation here
                         if not 'retcode' in event['data']:
                             raw_events.append(event)
+                if raw_events:
+                    self._fire_master(events=raw_events)
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
-                if raw_events:
-                    self.fire_master(events=raw_events)
             except zmq.ZMQError:
                 # This is thrown by the inturupt caused by python handling the
                 # SIGCHLD. This is a safe error and we just start the poll
