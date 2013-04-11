@@ -1627,7 +1627,7 @@ def makedirs(path, user=None, group=None, mode=None):
 
         salt '*' file.makedirs /opt/code
     '''
-    directory = os.path.dirname(os.path.normpath(path))
+    directory = os.path.normpath(path)
 
     if not os.path.isdir(directory):
         # turn on the executable bits for user, group and others.
