@@ -895,18 +895,49 @@ def set_tags(name, tags, call=None, location=None):
     instance_id = _get_node(name, location)['instanceId']
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
-    count = 1
-    for tag in tags:
-        params['Tag.{0}.Key'.format(count)] = tag
-        params['Tag.{0}.Value'.format(count)] = tags[tag]
-        count += 1
 
-    query(params, setname='tagSet', location=location)
+    for idx, (tag_k, tag_v) in enumerate(tags.iteritems()):
+        params['Tag.{0}.Key'.format(idx)] = tag_k
+        params['Tag.{0}.Value'.format(idx)] = tag_v
 
-    return get_tags(name, call='action', location=location)
+    attempts = 5
+    while attempts > 0:
+        query(params, setname='tagSet', location=location)
+
+        settags = get_tags(
+            instance_id=instance_id, call='action', location=location
+        )
+
+        log.debug('SETTAGS: {0}'.format(settags))
+
+        failed_to_set_tags = False
+        for tag in settags:
+            if tag['key'] not in tags:
+                # We were not setting this tag
+                continue
+
+            if tags.get(tag['key']) != tag['value']:
+                # Not set to the proper value!?
+                failed_to_set_tags = True
+                break
+
+        if failed_to_set_tags:
+            log.warn(
+                'Failed to set tags. Remaining attempts {0}'.format(
+                    attempts
+                )
+            )
+            attempts -= 1
+            continue
+
+        return settags
+
+    return {
+        'Error': 'Failed to set tags!'
+    }
 
 
-def get_tags(name, call=None, location=None):
+def get_tags(name=None, instance_id=None, call=None, location=None):
     '''
     Retrieve tags for a node
     '''
@@ -915,14 +946,15 @@ def get_tags(name, call=None, location=None):
             'The get_tags action must be called with -a or --action.'
         )
 
-    instances = list_nodes_full(location)
-    if name in instances:
-        instance_id = instances[name]['instanceId']
-        params = {'Action': 'DescribeTags',
-                  'Filter.1.Name': 'resource-id',
-                  'Filter.1.Value': instance_id}
-        return query(params, setname='tagSet', location=location)
-    return []
+    if instance_id is None:
+        instances = list_nodes_full(location)
+        if name in instances:
+            instance_id = instances[name]['instanceId']
+
+    params = {'Action': 'DescribeTags',
+              'Filter.1.Name': 'resource-id',
+              'Filter.1.Value': instance_id}
+    return query(params, setname='tagSet', location=location)
 
 
 def del_tags(name, kwargs, call=None):
@@ -947,10 +979,8 @@ def del_tags(name, kwargs, call=None):
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
 
-    count = 1
-    for tag in kwargs['tags'].split(','):
-        params['Tag.{0}.Key'.format(count)] = tag
-        count += 1
+    for idx, tag in enumerate(kwargs['tags'].split(',')):
+        params['Tag.{0}.Key'.format(idx)] = tag
 
     query(params, setname='tagSet')
 
