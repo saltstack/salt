@@ -544,7 +544,8 @@ class Minion(object):
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
                     'jid': jid,
-                    'fun': fun}
+                    'fun': fun,
+                    'load': ret.get('__load__')}
             load['return'] = {}
             for key, value in ret.items():
                 if key.startswith('__'):
