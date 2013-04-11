@@ -272,8 +272,10 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
         )
         root = ET.fromstring(exc.read())
-        log.error(_xml_to_dict(root))
-        return {'error': _xml_to_dict(root)}
+        data = _xml_to_dict(root)
+        if return_url:
+            return {'error': data}, requesturl
+        return {'error': data}
 
     response = result.read()
     result.close()
@@ -692,6 +694,11 @@ def create(vm_=None, call=None):
               'InstanceId.1': instance_id}
 
     data, requesturl = query(params, location=location, return_url=True)
+
+    if isinstance(data, dict) and 'error' in data:
+        raise SaltCloudSystemExit(
+            'An error occurred while creating VM: {0}'.format(data['error'])
+        )
 
     while 'ipAddress' not in data[0]['instancesSet']['item']:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
