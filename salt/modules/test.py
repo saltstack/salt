@@ -6,6 +6,7 @@ Module for running arbitrary tests
 import os
 import sys
 import time
+import random
 
 # Import Salt libs
 import salt.loader
@@ -44,6 +45,19 @@ def sleep(length):
         salt '*' test.sleep 20
     '''
     time.sleep(int(length))
+    return True
+
+
+def rand_sleep(max=60):
+    '''
+    Sleep for a random number of seconds, used to test long runnign commands
+    and minions returning at differing intervals
+
+    CLI Example::
+
+        salt '*' test.rand_sleep 60
+    '''
+    time.sleep(random.randint(0, max))
     return True
 
 
