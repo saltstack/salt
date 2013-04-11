@@ -1822,6 +1822,7 @@ class ClearFuncs(object):
                         'minions': minions
                     }
                 }
+        self.event.fire_event({'minions': minions}, clear_load['jid'])
         # Retrieve the jid
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
