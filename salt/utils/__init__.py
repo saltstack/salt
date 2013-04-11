@@ -398,6 +398,19 @@ def jid_dir(jid, cachedir, sum_type):
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
 
+def jid_load(jid, cachedir, sum_type, serial='msgpack'):
+    '''
+    Return the load data for a given job id
+    '''
+    _dir = jid_dir(jid, cachedir, sum_type)
+    load_fn = os.path.join(_dir, '.load.p')
+    if not os.path.isfile(load_fn):
+        return {}
+    serial = salt.payload.Serial(serial)
+    with open(load_fn) as fp_:
+        return serial.load(fp_)
+
+
 def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
