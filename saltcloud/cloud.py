@@ -528,6 +528,16 @@ class Cloud(object):
                     alias, provider = provider.split(':')
                     return provider
 
+                if provider not in self.opts['providers']:
+                    # We do not know the provider, send the one, if any,
+                    # specified from CLI
+                    if 'provider' in self.opts:
+                        return self.opts['provider']
+
+                    raise SaltCloudSystemExit(
+                        'The {0!r} provider is not known'.format(provider)
+                    )
+
                 # There's no <alias>:<provider> entry, return the first one
                 return self.opts['providers'][provider][0]['provider']
 
