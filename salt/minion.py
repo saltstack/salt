@@ -986,6 +986,10 @@ class Syndic(Minion):
                             jids[event['tag']] = {}
                             jids[event['tag']]['__fun__'] = event['data']['fun']
                             jids[event['tag']]['__jid__'] = event['data']['jid']
+                            jids[event['tag']]['__load__'] = salt.utils.jid_load(
+                                    event['data']['jid'],
+                                    self.opts['cachedir'],
+                                    self.opts['sum_type'])
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
