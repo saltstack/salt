@@ -578,6 +578,9 @@ class LocalClient(object):
         while True:
             raw = self.event.get_event(timeout, jid)
             if not raw is None:
+                if 'minions' in raw.get('data', {}):
+                    minions.update(raw['data']['minions'])
+                    continue
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
                     continue
@@ -741,6 +744,9 @@ class LocalClient(object):
         while True:
             raw = self.event.get_event(timeout, jid)
             if not raw is None:
+                if 'minions' in raw.get('data', {}):
+                    minions.update(raw['data']['minions'])
+                    continue
                 found.add(raw['id'])
                 ret[raw['id']] = {'ret': raw['return']}
                 if 'out' in raw:
@@ -815,7 +821,7 @@ class LocalClient(object):
                 if 'syndic' in raw:
                     minions.update(raw['syndic'])
                     continue
-                found.add(raw['id'])
+                found.add(raw.get('id'))
                 ret = {raw['id']: {'ret': raw['return']}}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
@@ -881,6 +887,8 @@ class LocalClient(object):
             if raw is None:
                 # Timeout reached
                 break
+            if 'minions' in raw.get('data', {}):
+                continue
             found.add(raw['id'])
             ret = {raw['id']: {'ret': raw['return']}}
             if 'out' in raw:
