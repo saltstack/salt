@@ -693,9 +693,23 @@ def create(vm_=None, call=None):
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
-    data, requesturl = query(params, location=location, return_url=True)
+    attempts = 5
+    while attempts > 0:
+        data, requesturl = query(params, location=location, return_url=True)
+        log.debug('The query returned: {0}'.format(data))
 
-    if isinstance(data, dict) and 'error' in data:
+        if isinstance(data, dict) and 'error' in data:
+            log.warn(
+                'There was an error in the query. {0} attempts '
+                'remaining: {1}'.format(
+                    attempts, data['error']
+                )
+            )
+            attempts -= 1
+            continue
+
+        break
+    else:
         raise SaltCloudSystemExit(
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
