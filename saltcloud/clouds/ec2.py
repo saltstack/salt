@@ -273,7 +273,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         )
         root = ET.fromstring(exc.read())
         data = _xml_to_dict(root)
-        if return_url:
+        if return_url is True:
             return {'error': data}, requesturl
         return {'error': data}
 
@@ -923,12 +923,14 @@ def set_tags(name, tags, call=None, location=None, instance_id=None):
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
 
+    log.debug('Tags to set for {0}: {1}'.format(name, tags))
+
     for idx, (tag_k, tag_v) in enumerate(tags.iteritems()):
         params['Tag.{0}.Key'.format(idx)] = tag_k
         params['Tag.{0}.Value'.format(idx)] = tag_v
 
     attempts = 5
-    while attempts > 0:
+    while attempts >= 0:
         query(params, setname='tagSet', location=location)
 
         settags = get_tags(
@@ -959,9 +961,9 @@ def set_tags(name, tags, call=None, location=None, instance_id=None):
 
         return settags
 
-    return {
-        'Error': 'Failed to set tags!'
-    }
+    raise SaltCloudSystemExit(
+        'Failed to set tags on {0}!'.format(name)
+    )
 
 
 def get_tags(name=None, instance_id=None, call=None, location=None):
