@@ -411,6 +411,22 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
         return serial.load(fp_)
 
 
+def is_jid(jid):
+    '''
+    Returns True if the passed in value is a job id
+    '''
+    if not isinstance(jid, basestring):
+        return False
+    if not len(jid) == 20:
+        return False
+    try:
+        int(jid)
+        return True
+    except ValueError:
+        return False
+    return False
+
+
 def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
