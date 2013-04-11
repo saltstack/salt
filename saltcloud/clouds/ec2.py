@@ -523,8 +523,8 @@ def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
         - CLI parameter
+        - VM parameter
         - Cloud profile setting
-        - Global salt-cloud config
     '''
     return __opts__.get(
         'location',
@@ -533,7 +533,7 @@ def get_location(vm_=None):
             vm_ or get_configured_provider(),
             __opts__,
             default=DEFAULT_LOCATION,
-            #search_global=False
+            search_global=False
         )
     )
 
@@ -677,11 +677,15 @@ def create(vm_=None, call=None):
         return False
 
     instance_id = data[0]['instanceId']
-    log.debug('instance_id is {0}'.format(instance_id))
+
+    log.debug('The new VM instance_id is {0}'.format(instance_id))
+
     set_tags(
-        instance_id, {'Name': vm_['name']}, call='action', location=location
+        vm_['name'], {'Name': vm_['name']},
+        instance_id=instance_id, call='action', location=location
     )
     log.info('Created node {0}'.format(vm_['name']))
+
     waiting_for_ip = 0
 
     params = {'Action': 'DescribeInstances',
@@ -879,7 +883,7 @@ def start(name, call=None):
     return result
 
 
-def set_tags(name, tags, call=None, location=None):
+def set_tags(name, tags, call=None, location=None, instance_id=None):
     '''
     Set tags for a node
 
@@ -892,7 +896,9 @@ def set_tags(name, tags, call=None, location=None):
             'The set_tags action must be called with -a or --action.'
         )
 
-    instance_id = _get_node(name, location)['instanceId']
+    if instance_id is None:
+        instance_id = _get_node(name, location)['instanceId']
+
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
 
