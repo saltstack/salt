@@ -1619,15 +1619,15 @@ def manage_file(name,
         return ret
 
 
-def makedirs(path, user=None, group=None, mode=None):
+def mkdir(dir_path, user=None, group=None, mode=None):
     '''
-    Ensure that the directory containing this path is available.
+    Ensure that a directory is available.
 
     CLI Example::
 
-        salt '*' file.makedirs /opt/code
+        salt '*' file.mkdir /opt/jetty/context
     '''
-    directory = os.path.dirname(os.path.normpath(path))
+    directory = os.path.normpath(dir_path)
 
     if not os.path.isdir(directory):
         # turn on the executable bits for user, group and others.
@@ -1640,6 +1640,17 @@ def makedirs(path, user=None, group=None, mode=None):
         # makedirs=True, make sure that any created dirs
         # are created with the same user  and  group  to
         # follow the principal of least surprise method.
+
+
+def makedirs(path, user=None, group=None, mode=None):
+    '''
+    Ensure that the directory containing this path is available.
+
+    CLI Example::
+
+        salt '*' file.makedirs /opt/code
+    '''
+    return mkdir(os.path.dirname(path), user=user, group=group, mode=mode)
 
 
 def makedirs_perms(name, user=None, group=None, mode='0755'):
