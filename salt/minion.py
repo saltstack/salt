@@ -983,7 +983,7 @@ class Syndic(Minion):
                     if event is None:
                         # Timeout reached
                         break
-                    if len(event.get('tag', '')) == 20:
+                    if salt.utils.is_jid(event['tag']):
                         if not event['tag'] in jids:
                             if not 'fun' in event['data'] or not 'jid' in event['data']:
                                 # Not a job return
@@ -996,6 +996,9 @@ class Syndic(Minion):
                                     self.local.opts['cachedir'],
                                     self.opts['hash_type'])
                         jids[event['tag']][event['data']['id']] = event['data']['return']
+                    else:
+                        # Add generic event aggregation here
+                        pass
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
