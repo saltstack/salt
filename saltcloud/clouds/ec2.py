@@ -908,7 +908,7 @@ def set_tags(name, tags, call=None, location=None):
             instance_id=instance_id, call='action', location=location
         )
 
-        log.debug('SETTAGS: {0}'.format(settags))
+        log.debug('Setting the tags returned: {0}'.format(settags))
 
         failed_to_set_tags = False
         for tag in settags:
