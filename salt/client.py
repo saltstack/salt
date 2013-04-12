@@ -992,8 +992,6 @@ class LocalClient(object):
         )
         payload = sreq.send('clear', payload_kwargs)
 
-        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-
         if not payload:
             # The master key could have changed out from under us! Regen
             # and try again if the key has changed
@@ -1005,6 +1003,8 @@ class LocalClient(object):
             payload = sreq.send('clear', payload_kwargs)
             if not payload:
                 return payload
+
+        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
         del(sreq)
 
         return {'jid': payload['load']['jid'],
