@@ -99,6 +99,12 @@ the context into the included file is required:
 
 .. _imports: http://jinja.pocoo.org/docs/templates/#import
 
+Template Inheritance
+====================
+
+`Template inheritance`_ works fine from state files and files. The search path
+starts at the root of the state tree or pillar.
+
 Macros
 ======
 
@@ -135,6 +141,7 @@ depending on the packaging system's naming convention. The whitespace of the
 macro was eliminated, so that the macro would return a string without line
 breaks, using `whitespace control`_.
 
+.. _`Template inheritance`: http://jinja.pocoo.org/docs/templates/#template-inheritance
 .. _`Macros`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
