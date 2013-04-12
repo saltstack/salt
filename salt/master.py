@@ -1611,7 +1611,7 @@ class ClearFuncs(object):
 
     def mk_token(self, clear_load):
         '''
-        Create aand return an authentication token, the clear load needs to
+        Create and return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
         if not 'eauth' in clear_load:
