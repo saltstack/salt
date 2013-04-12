@@ -115,6 +115,18 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    deploy = config.get_config_value('deploy', vm_, __opts__)
+    ssh_key_file = config.get_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False, default=None
+    )
+    if deploy is True and ssh_key_file is None and \
+            salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
+            'is not set and \'sshpass\' binary is not present on the '
+            'system for the password.'
+        )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
 
@@ -186,9 +198,7 @@ def create(vm_):
             'username': 'idcuser',
             'provider': 'ibmsce',
             'password': data.extra['password'],
-            'key_filename': config.get_config_value(
-                'ssh_key_file', vm_, __opts__, search_global=False
-            ),
+            'key_filename': ssh_key_file,
             'script': deploy_script.script,
             'name': vm_['name'],
             'sudo': True,

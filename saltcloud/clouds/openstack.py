@@ -107,14 +107,13 @@ from libcloud.compute.base import NodeState
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
 
+# Import salt libs
+import salt.utils
+
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.exceptions import (
-    SaltCloudNotFound,
-    SaltCloudException,
-    SaltCloudSystemExit,
-)
+from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Import netaddr IP matching
 try:
@@ -261,6 +260,18 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    deploy = config.get_config_value('deploy', vm_, __opts__)
+    ssh_key_file = config.get_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False, default=None
+    )
+    if deploy is True and ssh_key_file is None and \
+            salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
+            'is not set and \'sshpass\' binary is not present on the '
+            'system for the password.'
+        )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
@@ -373,7 +384,6 @@ def create(vm_):
             )
         )
 
-
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         running = nodelist[vm_['name']]['state'] == node_state(
@@ -451,9 +461,6 @@ def create(vm_):
 
     log.debug('Using {0} as SSH username'.format(ssh_username))
 
-    ssh_key_file = config.get_config_value(
-        'ssh_key_file', vm_, __opts__, search_global=False
-    )
     if ssh_key_file is not None:
         deploy_kwargs['key_filename'] = ssh_key_file
         log.debug(
