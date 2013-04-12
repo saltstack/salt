@@ -830,6 +830,7 @@ def is_linux():
     '''
     return sys.platform.startswith('linux')
 
+
 @memoize
 def is_darwin():
     '''
@@ -943,11 +944,8 @@ def rm_rf(path):
 
     shutil.rmtree(path, onerror=_onerror)
 
-def option(
-        value,
-        default='',
-        opts=None,
-        pillar=None):
+
+def option(value, default='', opts=None, pillar=None):
     '''
     Pass in a generic option and receive the value that will be assigned
     '''
