@@ -6,6 +6,7 @@ Render the pillar data
 import os
 import collections
 import logging
+import sys
 
 # Import salt libs
 import salt.loader
@@ -261,6 +262,9 @@ class Pillar(object):
             errors.append(('Specified SLS {0} in environment {1} is not'
                            ' available on the salt master').format(sls, env))
         state = None
+        for root in self.opts['file_roots'][env]:
+            if root not in sys.path:
+                sys.path.append(root)
         try:
             state = compile_template(
                 fn_, self.rend, self.opts['renderer'], env, sls)
