@@ -339,17 +339,11 @@ def required_module_list(docstring=None):
     '''
     Return a list of python modules required by a salt module that aren't
     in stdlib and don't exist on the current pythonpath.
-
-    NOTE: this function expects docstring to include something like:
-    Required python modules: win32api, win32con, win32security, ntsecuritycon
     '''
-    ret = []
-    txt = 'Required python modules: '
-    data = docstring.splitlines() if docstring else []
-    mod_list = list(x for x in data if x.startswith(txt))
-    if not mod_list:
+    if not docstring:
         return []
-    modules = mod_list[0].replace(txt, '').split(', ')
+    ret = []
+    modules = parse_docstring(docstring).get('deps', [])
     for mod in modules:
         try:
             imp.find_module(mod)
