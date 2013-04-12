@@ -989,13 +989,13 @@ class Syndic(Minion):
                     if event is None:
                         # Timeout reached
                         break
-                    if salt.utils.is_jid(event['tag']) and 'fun' in event['data']:
+                    if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
                         if not event['tag'] in jids:
                             if not 'jid' in event['data']:
                                 # Not a job return
                                 continue
                             jids[event['tag']] = {}
-                            jids[event['tag']]['__fun__'] = event['data']['fun']
+                            jids[event['tag']]['__fun__'] = event['data'].get('fun')
                             jids[event['tag']]['__jid__'] = event['data']['jid']
                             jids[event['tag']]['__load__'] = salt.utils.jid_load(
                                     event['data']['jid'],
