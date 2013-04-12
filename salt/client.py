@@ -1002,7 +1002,18 @@ class LocalClient(object):
         del(sreq)
 
         if not payload:
-            return payload
+            # The master key could have changed out from under us! Regen
+            # and try again if the key has changed
+            key = self.__read_master_key()
+            if key == self.key:
+                return payload
+            self.key = key
+            payload_kwargs['key'] = self.key
+            payload = sreq.send('clear', payload_kwargs)
+            if not payload:
+                return payload
+        del(sreq)
+
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
 
