@@ -339,17 +339,11 @@ def required_module_list(docstring=None):
     '''
     Return a list of python modules required by a salt module that aren't
     in stdlib and don't exist on the current pythonpath.
-
-    NOTE: this function expects docstring to include something like:
-    Required python modules: win32api, win32con, win32security, ntsecuritycon
     '''
-    ret = []
-    txt = 'Required python modules: '
-    data = docstring.splitlines() if docstring else []
-    mod_list = list(x for x in data if x.startswith(txt))
-    if not mod_list:
+    if not docstring:
         return []
-    modules = mod_list[0].replace(txt, '').split(', ')
+    ret = []
+    modules = parse_docstring(docstring).get('deps', [])
     for mod in modules:
         try:
             imp.find_module(mod)
@@ -830,6 +824,7 @@ def is_linux():
     '''
     return sys.platform.startswith('linux')
 
+
 @memoize
 def is_darwin():
     '''
@@ -943,11 +938,8 @@ def rm_rf(path):
 
     shutil.rmtree(path, onerror=_onerror)
 
-def option(
-        value,
-        default='',
-        opts=None,
-        pillar=None):
+
+def option(value, default='', opts=None, pillar=None):
     '''
     Pass in a generic option and receive the value that will be assigned
     '''
@@ -971,3 +963,41 @@ def valid_url(url, protos):
     if salt._compat.urlparse.urlparse(url).scheme in protos:
         return True
     return False
+
+
+def parse_docstring(docstring):
+    '''
+    Parse a docstring into its parts.
+
+    Currently only parses dependencies, can be extended to parse whatever is
+    needed.
+
+    Parses into a dictionary:
+        {
+            'full': full docstring,
+            'deps': list of dependencies (empty list if none)
+        }
+    '''
+    # First try with regex search for :depends:
+    ret = {}
+    ret['full'] = docstring
+    regex = r'([ \t]*):depends:[ \t]+- (\w+)[^\n]*\n(\1[ \t]+- (\w+)[^\n]*\n)*'
+    match = re.search(regex, docstring, re.M)
+    if match:
+        deps = []
+        regex = r'- (\w+)'
+        for line in match.group(0).strip().splitlines():
+            deps.append(re.search(regex, line).group(1))
+        ret['deps'] = deps
+        return ret
+    # Try searching for a one-liner instead
+    else:
+        txt = 'Required python modules: '
+        data = docstring.splitlines()
+        dep_list = list(x for x in data if x.strip().startswith(txt))
+        if not dep_list:
+            ret['deps'] = []
+            return ret
+        deps = dep_list[0].replace(txt, '').strip().split(', ')
+        ret['deps'] = deps
+        return ret
