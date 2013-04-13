@@ -113,7 +113,7 @@ files by using an :term:`include declaration`. For example:
 .. code-block:: yaml
 
     include:
-      - python-libs
+      - python.python-libs
 
     django:
       pkg.installed:
