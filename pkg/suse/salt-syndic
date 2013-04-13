@@ -167,7 +167,7 @@ case "$1" in
 	echo -n "Starting salt-syndic daemon: "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
-	/sbin/startproc $SALTSYNDIC
+	/sbin/startproc $SALTSYNDIC -d
 	
 	# Remember status and be verbose
 	rc_status -v
