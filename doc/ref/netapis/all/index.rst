@@ -8,3 +8,4 @@ Full list of netapi modules
     :maxdepth: 2
 
     saltapi.netapi.rest_cherrypy
+    saltapi.netapi.rest_wsgi
