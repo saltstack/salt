@@ -1,16 +1,25 @@
 #!/usr/bin/env python
 '''
-A WSGI app to start a REST interface to Salt
+Deployment
+==========
 
-This WSGI app can be used with any WSGI-compliant server. See the rest_cherrypy
-netapi module to see how this app is run with the CherryPy WSGI server.
+The ``rest_cherrypy`` netapi module is a standard Python WSGI app. It can be
+deployed one of two ways.
 
-Apache's mod_wsgi instructions
-------------------------------
+:program:`salt-api` using the CherryPy server
+---------------------------------------------
 
-Add the path to this script as a WSGIScriptAlias in the Apache configuration
-for your site. For example a virtual host configuration may look something
-like::
+The default configuration is to run this module using :program:`salt-api` to
+start the Python-based CherryPy server. This server is lightweight,
+multi-threaded, encrypted with SSL, and should be considered production-ready.
+
+Using a WSGI-compliant web server
+---------------------------------
+
+This module may be deplayed on any WSGI-compliant server such as Apache with
+mod_wsgi or Nginx with FastCGI, to name just two (there are many).
+
+An example Apache virtual host configuration::
 
     <VirtualHost *:80>
         ServerName example.com
