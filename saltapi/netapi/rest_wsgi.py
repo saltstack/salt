@@ -1,5 +1,133 @@
 '''
-A bare WSGI app that wraps salt-api's client interfaces
+A minimalist REST API for Salt
+==============================
+
+This ``rest_wsgi`` module provides a no-frills REST interface to a running Salt
+master. There are no dependencies.
+
+Please read this introductory section in entirety before deploying this module.
+
+:configuration: All authentication is done through Salt's :ref:`external auth
+    <acl-eauth>` system. Be sure that it is enabled and the user you are
+    authenticating as has permissions for all the functions you will be
+    running.
+
+    The configuration options for this module resides in the Salt master config
+    file. All available options are detailed below.
+
+    port
+        **Required**
+
+        The port for the webserver to listen on.
+
+    Example configuration:
+
+    .. code-block:: yaml
+
+        rest_wsgi:
+          port: 8001
+
+This API is not very "RESTful"; please note the following:
+
+* All requests must be sent to the root URL (``/``).
+* All requests must be sent as a POST request with JSON content in the request
+  body.
+* All responses are in JSON.
+
+.. seealso:: :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>`
+
+    The :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` module is
+    more full-featured, production-ready, and has builtin security features.
+
+Deployment
+==========
+
+The ``rest_wsgi`` netapi module is a standard Python WSGI app. It can be
+deployed one of two ways.
+
+:program:`salt-api` using a development-only server
+---------------------------------------------------
+
+If run directly via salt-api it uses the `wsgiref.simple_server()`__ that ships
+in the Python standard library. This is a single-threaded server that is
+intended for testing and development. This server does **not** use encryption;
+please note that raw Salt authentication credentials must be sent with every
+HTTP request.
+
+**Running this module via salt-api is not recommended for most use!**
+
+.. __: http://docs.python.org/2/library/wsgiref.html#module-wsgiref.simple_server
+
+Using a WSGI-compliant web server
+---------------------------------
+
+This module may be run via any WSGI-compliant production server such as Apache
+with mod_wsgi or Nginx with FastCGI.
+
+It is highly recommended that this app be used with a server that supports
+HTTPS encryption since raw Salt authentication credentials must be sent with
+every request. Any apps that access Salt through this interface will need to
+manually manage authentication credentials (either username and password or a
+Salt token). Tread carefully.
+
+Usage examples
+==============
+
+.. http:post:: /
+
+    **Example request** for a basic ``test.ping``::
+
+        % curl -sS -i \\
+                -H 'Content-Type: application/json' \\
+                -d '[{"eauth":"pam","username":"saltdev","password":"saltdev","client":"local","tgt":"*","fun":"test.ping"}]' localhost:8001
+
+    **Example response**:
+
+    .. code-block:: http
+
+        HTTP/1.0 200 OK
+        Content-Length: 89
+        Content-Type: application/json
+
+        {"return": [{"ms--4": true, "ms--3": true, "ms--2": true, "ms--1": true, "ms--0": true}]}
+
+    **Example request** for an asyncronous ``test.ping``::
+
+        % curl -sS -i \\
+                -H 'Content-Type: application/json' \\
+                -d '[{"eauth":"pam","username":"saltdev","password":"saltdev","client":"local_async","tgt":"*","fun":"test.ping"}]' localhost:8001
+
+    **Example response**:
+
+    .. code-block:: http
+
+        HTTP/1.0 200 OK
+        Content-Length: 103
+        Content-Type: application/json
+
+        {"return": [{"jid": "20130412192112593739", "minions": ["ms--4", "ms--3", "ms--2", "ms--1", "ms--0"]}]}
+
+    **Example request** for looking up a job ID::
+
+        % curl -sS -i \\
+                -H 'Content-Type: application/json' \\
+                -d '[{"eauth":"pam","username":"saltdev","password":"saltdev","client":"runner","fun":"jobs.lookup_jid","jid":"20130412192112593739"}]' localhost:8001
+
+    **Example response**:
+
+    .. code-block:: http
+
+        HTTP/1.0 200 OK
+        Content-Length: 89
+        Content-Type: application/json
+
+        {"return": [{"ms--4": true, "ms--3": true, "ms--2": true, "ms--1": true, "ms--0": true}]}
+
+:form lowstate: A list of :term:`lowstate` data appropriate for the
+    :ref:`client <client-apis>` interface you are calling.
+:status 200: success
+:status 401: authentication required
+
 '''
 import errno
 import json
