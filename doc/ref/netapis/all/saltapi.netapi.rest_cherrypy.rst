@@ -4,7 +4,12 @@ rest_cherrypy
 
 .. automodule:: saltapi.netapi.rest_cherrypy.app
 
+.. automodule:: saltapi.netapi.rest_cherrypy.wsgi
+
 .. ............................................................................
+
+REST URI Reference
+==================
 
 .. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
 
