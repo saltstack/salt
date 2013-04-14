@@ -36,6 +36,13 @@ def parse():
             dest='master',
             default='salt',
             help='The location of the salt master that this swarm will serve')
+    parser.add_option('--name',
+            '-n',
+            dest='name',
+            default='ms-',
+            help=('Give the minions an alternative id prefix, this is used '
+                  'when minons from many systems are being aggregated onto '
+                  'a single master'))
     parser.add_option('-k',
             '--keep-modules',
             dest='keep',
@@ -109,7 +116,10 @@ class Swarm(object):
         '''
         Create a config file for a single minion
         '''
-        minion_id = 'ms-{0}'.format(str(idx).zfill(self.__zfill))
+        minion_id = '{0}-{1}'.format(
+                self.opts['name'],
+                str(idx).zfill(self.__zfill)
+                )
 
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
