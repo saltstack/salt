@@ -992,7 +992,8 @@ class AESFuncs(object):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
-                'Minion id {0} is not who it says it is!'.format(
+                ('Minion id {0} is not who it says it is and is attempting '
+                 'to issue a peer command').format(
                     clear_load['id']
                 )
             )
