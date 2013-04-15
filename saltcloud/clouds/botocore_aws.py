@@ -53,7 +53,8 @@ from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *
 from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
-# Import libcloud_aws, required to latter patch __opts__
+# Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
+from saltcloud import libcloudfuncs
 from saltcloud.clouds import libcloud_aws
 # Import libcloud_aws, storing pre and post locals so we can namespace any
 # callable to this module.
@@ -84,6 +85,7 @@ def __virtual__():
 
     # "Patch" the imported libcloud_aws to have the current __opts__
     libcloud_aws.__opts__ = __opts__
+    libcloudfuncs.__opts__ = __opts__
 
     if get_configured_provider() is False:
         log.info(
