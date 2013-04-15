@@ -112,3 +112,42 @@ def removed(name,
     ret["comment"] = "Package was successfully removed."
 
     return ret
+
+def bootstrap(
+            name,
+            runas=None):
+    '''
+    Bootstraps a node.js application.
+
+    will execute npm install --json on the specified directory
+
+
+    runas
+        The user to run NPM with
+
+
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    try:
+        call = __salt__['npm.install'](
+            dir=name,
+            runas=runas,
+            pkg=None
+        )
+
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
+        return ret
+
+    if call:
+        ret['result'] = True
+        ret['changes'] = name,'Bootstrapped'
+        ret['comment'] = 'Directory was successfully bootstrapped'
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Could not bootstrap directory'
+
+    return ret
+
