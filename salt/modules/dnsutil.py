@@ -217,7 +217,7 @@ def SPF(domain, record='SPF', nameserver=None):
         return SPF(domain, 'TXT', nameserver)
 
     t = re.sub('"', '', t).split()
-    if t[0] != 'v=spf1':
+    if len(t) == 0 or t[0] != 'v=spf1':
         return []
 
     return [ x for x in map(_process, t) if x is not None ]
