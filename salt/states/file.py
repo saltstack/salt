@@ -1390,7 +1390,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['result'] = True
         ret['comment'] = 'sed ran without error'
     else:
-        ret['result'] = False
+        ret['result'] = True
         ret['comment'] = 'sed ran without error, but no changes were made'
 
     return ret
