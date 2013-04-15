@@ -115,7 +115,7 @@ def latest(name,
                                                remote_url=name,
                                                user=runas,
                                                identity=identity)
-                    ret['changes']['remote/{}'.format(remote_name)] = "{} => {}".format(str(remote), name)
+                    ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
 
                 # check if rev is already present in repo, git-fetch otherwise
                 if bare:
@@ -189,7 +189,7 @@ def latest(name,
             opts = '--mirror' if mirror else '--bare' if bare else ''
             # if remote_name is not origin add --origin <name> to opts
             if not remote_name == 'origin':
-                opts += ' --origin {}'.format(remote_name)
+                opts += ' --origin {0}'.format(remote_name)
             # do the clone
             __salt__['git.clone'](target,
                                   name,

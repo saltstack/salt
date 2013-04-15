@@ -597,7 +597,7 @@ def remote_get(cwd, remote='origin', user=None, identity=None):
         salt '*' git.remote_get /path/to/repo upstream
     '''
     try:
-        cmd = 'git remote show -n {}'.format(remote)
+        cmd = 'git remote show -n {0}'.format(remote)
         ret = _git_run(cmd, cwd=cwd, runas=user, identity=identity)
         lines = ret.splitlines()
         remote_fetch_url = lines[1].replace('Fetch URL: ', '').strip()
@@ -633,8 +633,8 @@ def remote_set(cwd, name='origin', url=None, user=None, opts=None, identity=None
         salt '*' git.remote_set /path/to/repo origin git@github.com:saltstack/salt.git
     '''
     if remote_get(cwd, name):
-        cmd = 'git remote rm {}'.format(name)
+        cmd = 'git remote rm {0}'.format(name)
         _git_run(cmd, cwd=cwd, runas=user, identity=identity)
-    cmd = 'git remote add {} {}'.format(name, url)
+    cmd = 'git remote add {0} {1}'.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user, identity=identity)
     return remote_get(cwd=cwd, remote=name, user=None, identity=identity)
