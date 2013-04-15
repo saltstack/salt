@@ -43,6 +43,7 @@ def __virtual__():
         'Fedora',
         'ALT',
         'OEL',
+        'SUSE  Enterprise Server'
     ]
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Fedora':
