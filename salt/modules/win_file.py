@@ -526,13 +526,21 @@ def contains(path, text, limit=''):
 
     .. versionadded:: 0.9.5
     '''
-    # Largely inspired by Fabric's contrib.files.contains()
-
     if not os.path.exists(path):
         return False
 
-    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options='-n -r -e', flags='gp')
+    before = _sed_esc(str(text), False)
+    limit = _sed_esc(str(limit), False)
+    options = '-n -r -e'
+
+    cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
+            options=options,
+            limit='/{0}/ '.format(limit) if limit else '',
+            before=before,
+            flags='p{0}'.format(flags),
+            path=path)
+
+    result = __salt__['cmd.run'](cmd)
 
     return bool(result)
 
