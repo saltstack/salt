@@ -517,7 +517,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
             flags=flags,
             path=path)
 
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run_all'](cmd)
 
 
 def sed_contains(path, text, limit='', flags='g'):
@@ -543,7 +543,7 @@ def sed_contains(path, text, limit='', flags='g'):
         options = options.replace('-r', '-E')
 
     cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
-            options='-n -r -e',
+            options=options,
             limit='/{0}/ '.format(limit) if limit else '',
             before=before,
             flags='p{0}'.format(flags),
