@@ -1376,7 +1376,19 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         slines = fp_.readlines()
 
     # should be ok now; perform the edit
-    __salt__['file.sed'](name, before, after, limit, backup, options, flags)
+    retcode = __salt__['file.sed'](name,
+                                   before,
+                                   after,
+                                   limit,
+                                   backup,
+                                   options,
+                                   flags)['retcode']
+
+    if retcode != 0:
+        ret['result'] = False
+        ret['comment'] = ('There was an error running sed.  '
+                          'Return code {0}').format(retcode)
+        return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
