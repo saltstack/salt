@@ -65,8 +65,9 @@ def latest(name,
         True if the repository is to be a bare clone of the remote repository.
         This is incompatible with rev, as nothing will be checked out.
     remote_name
-        default ist the well known origin you can also define a different name for the first clone
-        this given name is set to default, else it is just to a additional remote. (Default: 'origin')
+        defines a different remote name.
+        For the first clone the given name is set to the default remote,
+        else it is just a additional remote. (Default: 'origin')
     identity
         A path to a private key to use over SSH
     '''
