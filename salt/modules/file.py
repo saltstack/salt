@@ -517,7 +517,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
             flags=flags,
             path=path)
 
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run_all'](cmd)
 
 
 def sed_contains(path, text, limit='', flags='g'):
