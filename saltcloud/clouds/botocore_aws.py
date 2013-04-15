@@ -137,13 +137,14 @@ def __virtual__():
             }
         )
 
-    global avail_images, avail_sizes, script, destroy, list_nodes
-    global list_nodes_full, list_nodes_select
+    global avail_images, avail_sizes, avail_locations, script, destroy
+    global list_nodes, list_nodes_full, list_nodes_select
 
     # open a connection in a specific region
     conn = get_conn(**{'location': get_location()})
 
     # Init the libcloud functions
+    avail_locations = namespaced_function(avail_locations, globals(), (conn,))
     avail_images = namespaced_function(avail_images, globals(), (conn,))
     avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
     script = namespaced_function(script, globals(), (conn,))
