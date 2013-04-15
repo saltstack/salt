@@ -108,6 +108,13 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    deploy = config.get_config_value('deploy', vm_, __opts__)
+    if deploy is True and salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
+            'present on the system.'
+        )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     kwargs = {}

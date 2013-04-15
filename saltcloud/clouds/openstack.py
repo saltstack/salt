@@ -107,14 +107,13 @@ from libcloud.compute.base import NodeState
 # Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
 
+# Import salt libs
+import salt.utils
+
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.exceptions import (
-    SaltCloudNotFound,
-    SaltCloudException,
-    SaltCloudSystemExit,
-)
+from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Import netaddr IP matching
 try:
@@ -132,6 +131,7 @@ log = logging.getLogger(__name__)
 # this module namespace
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
+avail_locations = namespaced_function(avail_locations, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
@@ -260,6 +260,18 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    deploy = config.get_config_value('deploy', vm_, __opts__)
+    ssh_key_file = config.get_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False, default=None
+    )
+    if deploy is True and ssh_key_file is None and \
+            salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
+            'is not set and \'sshpass\' binary is not present on the '
+            'system for the password.'
+        )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
@@ -334,11 +346,44 @@ def create(vm_):
         return False
 
     not_ready = True
-    nr_total = 50
-    nr_count = nr_total
+    nr_count = 50
+    sleep_time = 15
+    failures = 0
     while not_ready:
-        log.debug('Looking for IP addresses')
-        nodelist = list_nodes(conn)
+        if failures > 5:
+            raise SaltCloudSystemExit(
+                'Failed to get information too many times.'
+            )
+        try:
+            nodelist = list_nodes()
+            log.debug(
+                'Loaded node data for {0}:\n{1}'.format(
+                    vm_['name'],
+                    pprint.pformat(
+                        nodelist[vm_['name']]
+                    )
+                )
+            )
+        except Exception, err:
+            log.error(
+                'Failed to get nodes list: {0}'.format(
+                    err
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            failures += 1
+            continue
+
+        log.debug(
+            'Waiting for VM to become ready. Giving up in {0} seconds. '
+            'State(current/desired): {1}/{2}'.format(
+                nr_count * sleep_time,
+                nodelist[vm_['name']]['state'],
+                node_state(NodeState.RUNNING)
+            )
+        )
+
         private = nodelist[vm_['name']]['private_ips']
         public = nodelist[vm_['name']]['public_ips']
         running = nodelist[vm_['name']]['state'] == node_state(
@@ -361,17 +406,23 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         data.private_ips.append(private_ip)
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+                not_ready = False
                 break
 
         if running and public:
             data.public_ips = public
             not_ready = False
 
+        if not_ready is False:
+            break
+
         nr_count -= 1
         if nr_count == 0:
             log.warn('Timed out waiting for a public ip, continuing anyway')
             break
-        time.sleep(nr_total - nr_count + 5)
+        time.sleep(sleep_time)
+
+    log.debug('VM is now running')
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
@@ -380,7 +431,7 @@ def create(vm_):
     log.debug('Using IP address {0}'.format(ip_address))
 
     if not ip_address:
-        raise SaltCloudException('A valid IP address was not found')
+        raise SaltCloudSystemExit('A valid IP address was not found')
 
     deploy_kwargs = {
         'host': ip_address,
@@ -410,9 +461,6 @@ def create(vm_):
 
     log.debug('Using {0} as SSH username'.format(ssh_username))
 
-    ssh_key_file = config.get_config_value(
-        'ssh_key_file', vm_, __opts__, search_global=False
-    )
     if ssh_key_file is not None:
         deploy_kwargs['key_filename'] = ssh_key_file
         log.debug(
@@ -453,7 +501,7 @@ def create(vm_):
                 ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
+                'Failed to deploy and start Salt on Cloud VM {0}'.format(
                     vm_['name']
                 )
             )

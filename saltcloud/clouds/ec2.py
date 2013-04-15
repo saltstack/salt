@@ -272,8 +272,10 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
         )
         root = ET.fromstring(exc.read())
-        log.error(_xml_to_dict(root))
-        return {'error': _xml_to_dict(root)}
+        data = _xml_to_dict(root)
+        if return_url is True:
+            return {'error': data}, requesturl
+        return {'error': data}
 
     response = result.read()
     result.close()
@@ -523,8 +525,8 @@ def get_location(vm_=None):
     '''
     Return the EC2 region to use, in this order:
         - CLI parameter
+        - VM parameter
         - Cloud profile setting
-        - Global salt-cloud config
     '''
     return __opts__.get(
         'location',
@@ -533,7 +535,7 @@ def get_location(vm_=None):
             vm_ or get_configured_provider(),
             __opts__,
             default=DEFAULT_LOCATION,
-            #search_global=False
+            search_global=False
         )
     )
 
@@ -677,17 +679,40 @@ def create(vm_=None, call=None):
         return False
 
     instance_id = data[0]['instanceId']
-    log.debug('instance_id is {0}'.format(instance_id))
+
+    log.debug('The new VM instance_id is {0}'.format(instance_id))
+
     set_tags(
-        instance_id, {'Name': vm_['name']}, call='action', location=location
+        vm_['name'], {'Name': vm_['name']},
+        instance_id=instance_id, call='action', location=location
     )
     log.info('Created node {0}'.format(vm_['name']))
+
     waiting_for_ip = 0
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
-    data, requesturl = query(params, location=location, return_url=True)
+    attempts = 5
+    while attempts > 0:
+        data, requesturl = query(params, location=location, return_url=True)
+        log.debug('The query returned: {0}'.format(data))
+
+        if isinstance(data, dict) and 'error' in data:
+            log.warn(
+                'There was an error in the query. {0} attempts '
+                'remaining: {1}'.format(
+                    attempts, data['error']
+                )
+            )
+            attempts -= 1
+            continue
+
+        break
+    else:
+        raise SaltCloudSystemExit(
+            'An error occurred while creating VM: {0}'.format(data['error'])
+        )
 
     while 'ipAddress' not in data[0]['instancesSet']['item']:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
@@ -879,7 +904,7 @@ def start(name, call=None):
     return result
 
 
-def set_tags(name, tags, call=None, location=None):
+def set_tags(name, tags, call=None, location=None, instance_id=None):
     '''
     Set tags for a node
 
@@ -892,16 +917,20 @@ def set_tags(name, tags, call=None, location=None):
             'The set_tags action must be called with -a or --action.'
         )
 
-    instance_id = _get_node(name, location)['instanceId']
+    if instance_id is None:
+        instance_id = _get_node(name, location)['instanceId']
+
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
+
+    log.debug('Tags to set for {0}: {1}'.format(name, tags))
 
     for idx, (tag_k, tag_v) in enumerate(tags.iteritems()):
         params['Tag.{0}.Key'.format(idx)] = tag_k
         params['Tag.{0}.Value'.format(idx)] = tag_v
 
     attempts = 5
-    while attempts > 0:
+    while attempts >= 0:
         query(params, setname='tagSet', location=location)
 
         settags = get_tags(
@@ -932,9 +961,9 @@ def set_tags(name, tags, call=None, location=None):
 
         return settags
 
-    return {
-        'Error': 'Failed to set tags!'
-    }
+    raise SaltCloudSystemExit(
+        'Failed to set tags on {0}!'.format(name)
+    )
 
 
 def get_tags(name=None, instance_id=None, call=None, location=None):

@@ -13,9 +13,13 @@ documentation.
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -62,6 +66,15 @@ def create(vm_):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
+    ssh_keyfile = config.get_config_value(
+        'ssh_keyfile', vm_, __opts__, search_global=False, default=None
+    )
+    if ssh_keyfile is None and salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
+            'is not set and \'sshpass\' binary is not present on the '
+            'system for the password.'
+        )
 
     ret = {}
 
@@ -87,9 +100,7 @@ def create(vm_):
         'password': config.get_config_value(
             'password', vm_, __opts__, search_global=False
         ),
-        'ssh_keyfile': config.get_config_value(
-            'ssh_keyfile', vm_, __opts__, search_global=False
-        ),
+        'ssh_keyfile': ssh_keyfile,
         'script_args': config.get_config_value(
             'script_args', vm_, __opts__
         ),

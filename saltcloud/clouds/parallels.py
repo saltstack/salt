@@ -39,6 +39,9 @@ import urllib2
 import logging
 import xml.etree.ElementTree as ET
 
+# Import salt libs
+import salt.utils
+
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
@@ -81,7 +84,6 @@ def avail_images():
         ret[item.attrib['name']] = item.attrib
 
     return ret
-
 
 
 def list_nodes():
@@ -248,6 +250,13 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    deploy = config.get_config_value('deploy', vm_, __opts__)
+    if deploy is True and salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
+            'present on the system.'
+        )
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
     try:
@@ -326,7 +335,7 @@ def create(vm_):
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
             if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
+                data['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(
@@ -416,8 +425,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             )
         )
         root = ET.fromstring(exc.read())
-        log.error(_xml_to_dict(root))
-        return {'error': _xml_to_dict(root)}
+        log.error(root)
+        return {'error': root}
 
 
 def script(vm_):
