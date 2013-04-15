@@ -7,14 +7,19 @@ import salt.utils
 
 # Import python libs
 import logging
+import re
+import subprocess
 
 log = logging.getLogger(__name__)
 
+no_dig = bool(subprocess.call([ 'which', 'dig' ]))
 
 def __virtual__():
     '''
     Generic, should work on any platform
     '''
+    if no_dig:
+        log.warning("'dig' does not appear to be in PATH. Will return empty lists.")
     return 'dnsutil'
 
 
@@ -114,5 +119,142 @@ def _to_seconds(time):
     if time < 604800:
         time = 604800
     return time
+
+
+def check_IP(x):
+    '''
+    Check that string x is a valid IP
+    '''
+    # This is probably validating. Tacked on the CIDR bit myself.
+    ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(/([0-9]|[12][0-9]|3[0-2]))?$'
+    return bool(re.match(ip_regex, x))
+
+def A(host, nameserver=None):
+    '''
+    Return the A record for 'host'.
+
+    Always returns a list.
+    '''
+    if no_dig:
+        return []
+    dig = [ 'dig', '+short', str(host), 'A' ]
+    if nameserver is not None:
+        dig.append('@'+str(nameserver))
+    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
+    if cmd.returncode is not None:
+        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        return []
+    else:
+        t = cmd.communicate()[0].split("\n")
+        # last element is always a ''
+        t.pop()
+    # now that we have a list, make sure they are all IPs
+    return [ x for x in t if check_IP(x) ]
+
+
+def NS(domain, resolve=True, nameserver=None):
+    '''
+    Return a list of IPs of the nameservers for 'domain'
+
+    If 'resolve' is False, don't resolve names.
+    '''
+    if no_dig:
+        return []
+    dig = [ 'dig', '+short', str(domain), 'NS' ]
+    if nameserver is not None:
+        dig.append('@'+str(nameserver))
+    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
+    if cmd.returncode is not None:
+        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        return []
+    else:
+        t = cmd.communicate()[0].split("\n")
+        # last element is always a ''
+        t.pop()
+
+    if resolve:
+        ret = []
+        for ns in t:
+            for a in A(ns, nameserver):
+                ret.append(a)
+    else:
+        ret = t
+
+    return ret
+
+
+def SPF(domain, record='SPF', nameserver=None):
+    '''
+    Return the allowed IPv4 ranges in the SPF record for 'domain'.
+
+    If record is 'SPF' and the SPF record is empty, the TXT record will be
+    searched automatically. If you know the domain uses TXT and not SPF, specifying
+    that will save a lookup.
+    '''
+    if no_dig:
+        return []
+    def _process(x):
+        '''
+        Parse out valid IP bits of an spf record.
+        '''
+        m = re.match(r"(\+|~)?ip4:([0-9./]+)", x)
+        if m:
+            if check_IP(m.group(2)):
+                return m.group(2)
+        return None
+
+    dig = [ 'dig', '+short', str(domain), record ]
+    if nameserver is not None:
+        dig.append('@'+str(nameserver))
+    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
+    if cmd.returncode is not None:
+        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        return []
+    else:
+        t = cmd.communicate()[0]
+    if t == "" and record == 'SPF':
+        # empty string is sucessful query, but nothing to return. So, try TXT record.
+        return SPF(domain, 'TXT', nameserver)
+
+    t = re.sub('"', '', t).split()
+    if t[0] != 'v=spf1':
+        return []
+
+    return [ x for x in map(_process, t) if x is not None ]
+
+
+def MX(domain, ip=False, nameserver=None):
+    '''
+    Return a list of lists for the MX of 'domain'. Example:
+
+    >>> dnsutil.MX('saltstack.org')
+    [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
+
+    If the 'ip' argument is True, resolve IPs for the servers.
+
+    It's limited to one IP, because although in practice it's very rarely a round
+    robin, it is an acceptable configuration and pulling just one IP lets the data
+    be similar to the non-resolved version. If you think an MX has multiple IPs,
+    don't use the resolver here, resolve them in a separate step.
+    '''
+    if no_dig:
+        return []
+    dig = [ 'dig', '+short', str(domain), 'MX' ]
+    if nameserver is not None:
+        dig.append('@'+str(nameserver))
+    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
+    if cmd.returncode is not None:
+        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        return []
+    else:
+        t = cmd.communicate()[0].split("\n")
+        # last element is always a ''
+        t.pop()
+        t = [ x.split() for x in t ]
+
+    if ip:
+        t = [ (lambda x: [ x[0], A(x[1], nameserver)[0] ])(x) for x in t ]
+
+    return t
 
 
