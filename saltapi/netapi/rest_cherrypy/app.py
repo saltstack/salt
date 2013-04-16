@@ -479,6 +479,7 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate()),
         }
 
+
 class Minions(LowDataAdapter):
     def GET(self, mid=None):
         '''
@@ -584,16 +585,6 @@ class Minions(LowDataAdapter):
             'return': job_data,
         }]
 
-class Vmstatus(LowDataAdapter):
-    def GET(self, mid=None):
-        '''
-        '''
-        cherrypy.request.lowstate = [{
-            'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
-        }]
-        return {
-            'return': list(self.exec_lowstate()),
-        }
 
 class Jobs(LowDataAdapter):
     def GET(self, jid=None):
