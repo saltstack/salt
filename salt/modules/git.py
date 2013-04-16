@@ -552,7 +552,7 @@ def push(cwd, remote_name, branch='master', user=None, opts=None, identity=None)
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
 
 
-def remotes(cwd, user=None, identity=None):
+def remotes(cwd, user=None):
     '''
     Get remotes like git remote -v
 
@@ -562,23 +562,20 @@ def remotes(cwd, user=None, identity=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    identity : None
-        A path to a private key to use over SSH
-
     CLI Example::
 
         salt '*' git.remotes /path/to/repo
     '''
     cmd = 'git remote'
-    ret = _git_run(cmd, cwd=cwd, runas=user, identity=identity)
+    ret = _git_run(cmd, cwd=cwd, runas=user)
     res = dict()
     for remote_name in ret.splitlines():
         remote = remote_name.strip()
-        res[remote] = remote_get(cwd, remote, user=user, identity=identity)
+        res[remote] = remote_get(cwd, remote, user=user)
     return res
 
 
-def remote_get(cwd, remote='origin', user=None, identity=None):
+def remote_get(cwd, remote='origin', user=None):
     '''
     get fetch und push url for a specified remote name
 
@@ -588,9 +585,6 @@ def remote_get(cwd, remote='origin', user=None, identity=None):
     user : None
         Run git as a user other than what the minion runs as
 
-    identity : None
-        A path to a private key to use over SSH
-
     CLI Example::
 
         salt '*' git.remote_get /path/to/repo
@@ -598,7 +592,7 @@ def remote_get(cwd, remote='origin', user=None, identity=None):
     '''
     try:
         cmd = 'git remote show -n {0}'.format(remote)
-        ret = _git_run(cmd, cwd=cwd, runas=user, identity=identity)
+        ret = _git_run(cmd, cwd=cwd, runas=user)
         lines = ret.splitlines()
         remote_fetch_url = lines[1].replace('Fetch URL: ', '').strip()
         remote_push_url = lines[2].replace('Push  URL: ', '').strip()
@@ -611,7 +605,7 @@ def remote_get(cwd, remote='origin', user=None, identity=None):
         return None
 
 
-def remote_set(cwd, name='origin', url=None, user=None, opts=None, identity=None):
+def remote_set(cwd, name='origin', url=None, user=None):
     '''
     sets a remote with name and url like git remote add <remote_name> <remote_url>
 
@@ -624,9 +618,6 @@ def remote_set(cwd, name='origin', url=None, user=None, opts=None, identity=None
     user : None
         Run git as a user other than what the minion runs as
 
-    identity : None
-        A path to a private key to use over SSH
-
     CLI Example::
 
         salt '*' git.remote_set /path/to/repo remote_url=git@github.com:saltstack/salt.git
@@ -634,7 +625,7 @@ def remote_set(cwd, name='origin', url=None, user=None, opts=None, identity=None
     '''
     if remote_get(cwd, name):
         cmd = 'git remote rm {0}'.format(name)
-        _git_run(cmd, cwd=cwd, runas=user, identity=identity)
+        _git_run(cmd, cwd=cwd, runas=user)
     cmd = 'git remote add {0} {1}'.format(name, url)
-    _git_run(cmd, cwd=cwd, runas=user, identity=identity)
-    return remote_get(cwd=cwd, remote=name, user=None, identity=identity)
+    _git_run(cmd, cwd=cwd, runas=user)
+    return remote_get(cwd=cwd, remote=name, user=None)

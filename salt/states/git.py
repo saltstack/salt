@@ -107,14 +107,12 @@ def latest(name,
                 # check remote if fetch_url not == name set it
                 remote = __salt__['git.remote_get'](target,
                                                     remote=remote_name,
-                                                    user=runas,
-                                                    identity=identity)
+                                                    user=runas)
                 if remote == None or not remote[0] == name:
                     __salt__['git.remote_set'](target,
                                                remote_name=remote_name,
                                                remote_url=name,
-                                               user=runas,
-                                               identity=identity)
+                                               user=runas)
                     ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
 
                 # check if rev is already present in repo, git-fetch otherwise
@@ -125,10 +123,11 @@ def latest(name,
                                           identity=identity)
                 elif rev:
 
-                    cmd = "git rev-parse "+rev
+                    cmd = "git rev-parse " + rev
                     retcode = __salt__['cmd.retcode'](cmd,
                                                       cwd=target,
                                                       runas=runas)
+                    # there is a issues #3938 addressing this
                     if 0 != retcode:
                         __salt__['git.fetch'](target,
                                               opts=fetch_opts,
@@ -141,8 +140,10 @@ def latest(name,
                 cmd = "git symbolic-ref -q HEAD > /dev/null"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
                 if 0 == retcode:
-                    __salt__['git.fetch' if bare else 'git.pull'](
-                        target, user=runas, identity=identity)
+                    __salt__['git.fetch' if bare else 'git.pull'](target,
+                                                                  opts=fetch_opts,
+                                                                  user=runas,
+                                                                  identity=identity)
 
                 if submodules:
                     __salt__['git.submodule'](target, user=runas,
