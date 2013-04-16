@@ -174,6 +174,7 @@ def on(device):
     '''
     cmd = 'quotaon {0}'.format(device)
     __salt__['cmd.run'](cmd)
+    return True
 
 
 def off(device):
@@ -186,6 +187,7 @@ def off(device):
     '''
     cmd = 'quotaoff {0}'.format(device)
     __salt__['cmd.run'](cmd)
+    return True
 
 
 def get_mode(device):
