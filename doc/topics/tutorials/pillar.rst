@@ -109,7 +109,7 @@ instance sets up user data with a UID:
     The same directory lookups that exist in states exist in pillar, so the
     file users/init.sls can be referenced with `users` in the top file
 
-The top file will need to updated to include this sls file:
+The top file will need to be updated to include this sls file:
 
 `/srv/pillar/top.sls`
 
