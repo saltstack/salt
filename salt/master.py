@@ -992,7 +992,8 @@ class AESFuncs(object):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warn(
-                'Minion id {0} is not who it says it is!'.format(
+                ('Minion id {0} is not who it says it is and is attempting '
+                 'to issue a peer command').format(
                     clear_load['id']
                 )
             )
@@ -1018,50 +1019,25 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type'],
-                clear_load.get('nocache', False)
-                )
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
-                'tgt_type': clear_load.get('tgt_type', 'glob'),
+                'expr_form': clear_load.get('tgt_type', 'glob'),
                 'tgt': clear_load['tgt'],
-                'jid': jid,
                 'ret': clear_load['ret'],
                 'id': clear_load['id'],
                }
-        self.serial.dump(
-                load, salt.utils.fopen(
-                    os.path.join(
-                        salt.utils.jid_dir(
-                            jid,
-                            self.opts['cachedir'],
-                            self.opts['hash_type']
-                            ),
-                        '.load.p'
-                        ),
-                    'w+')
-                )
-        # Save the load to the ext_job_cace if it is turned on
-        if self.opts['ext_job_cache']:
-            try:
-                fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
-            except KeyError:
-                log.critical(
-                    'The specified returner used for the external job cache '
-                    '"{0}" does not have a save_load function!'.format(
-                        self.opts['ext_job_cache']
-                    )
-                )
-        payload = {'enc': 'aes'}
-        expr_form = 'glob'
-        timeout = 5
         if 'tmo' in clear_load:
             try:
-                timeout = int(clear_load['tmo'])
+                load['timeout'] = int(clear_load['tmo'])
+            except ValueError:
+                msg = 'Failed to parse timeout value: {0}'.format(
+                        clear_load['tmo'])
+                log.warn(msg)
+                return {}
+        if 'timeout' in clear_load:
+            try:
+                load['timeout'] = int(clear_load['timeout'])
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
                         clear_load['tmo'])
@@ -1071,51 +1047,26 @@ class AESFuncs(object):
             if clear_load['tgt_type'].startswith('node'):
                 if clear_load['tgt'] in self.opts['nodegroups']:
                     load['tgt'] = self.opts['nodegroups'][clear_load['tgt']]
-                    load['tgt_type'] = 'compound'
-                    expr_form = load['tgt_type']
+                    load['expr_form_type'] = 'compound'
                 else:
                     return {}
             else:
-                load['tgt_type'] = clear_load['tgt_type']
-                expr_form = load['tgt_type']
-        if 'timeout' in clear_load:
-            timeout = clear_load['timeout']
-        # Encrypt!
-        payload['load'] = self.crypticle.dumps(load)
-        # Set the subscriber to the the jid before publishing the command
-        self.local.event.subscribe(load['jid'])
-        # Connect to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
-        pub_sock.connect(pull_uri)
-        log.info(('Publishing minion job: #{jid}, func: "{fun}", args:'
-                  ' "{arg}", target: "{tgt}"').format(**load))
-        pub_sock.send(self.serial.dumps(payload))
-        # Run the client get_returns method based on the form data sent
-        ret_form = clear_load.get('form', 'clean')
-        if ret_form == 'clean':
-            return self.local.get_returns(
-                jid,
-                self.ckminions.check_minions(
-                    clear_load['tgt'],
-                    expr_form
-                ),
-                timeout
-            )
-        elif ret_form == 'full':
-            ret = self.local.get_full_returns(
-                    jid,
-                    self.ckminions.check_minions(
-                        clear_load['tgt'],
-                        expr_form
-                        ),
-                    timeout
-                    )
-            ret['__jid__'] = jid
-            return ret
+                load['expr_form'] = clear_load['tgt_type']
+        if clear_load.get('form', '') == 'full':
+            load['raw'] = True
+        ret = {}
+        for minion in self.local.cmd_iter(**load):
+            if load.get('raw', False):
+                data = minion
+                if 'jid' in minion:
+                    ret['__jid__'] = minion['jid']
+                data['ret'] = data.pop('return')
+                ret[minion['id']] = data
+            else:
+                id_ = minion.keys()[0]
+                ret[id_] = minion[id_].get('ret', None)
+        return ret
+        
 
     def run_func(self, func, load):
         '''

@@ -188,3 +188,14 @@ def off(device):
     __salt__['cmd.run'](cmd)
 
 
+def get_mode(device):
+    '''
+    Report whether the quota system for this device is on or off
+
+    CLI Example::
+
+        salt '*' quota.get_mode
+    '''
+    cmd = 'quotaon -p {0}'.format(device)
+    ret = __salt__['cmd.run'](cmd)
+    return ret

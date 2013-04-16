@@ -29,7 +29,7 @@ import salt.utils
 from salt.exceptions import SaltInvocationError
 from file import check_hash, check_managed, check_perms, contains_regex,\
         directory_exists, get_managed, makedirs, makedirs_perms, manage_file,\
-        patch, remove, source_list
+        patch, remove, source_list, sed_contains
 
 
 log = logging.getLogger(__name__)
@@ -374,11 +374,16 @@ def find(path, **kwargs):
     return ret
 
 
-def _sed_esc(string):
+def _sed_esc(string, escape_all=False):
     '''
     Escape single quotes and forward slashes
     '''
-    return '{0}'.format(string).replace("'", "'\"'\"'").replace("/", "\/")
+    special_chars = "^.[$()|*+?{"
+    string = string.replace("'", "'\"'\"'").replace("/", "\/")
+    if escape_all is True:
+        for char in special_chars:
+            string = string.replace(char, "\\" + char)
+    return string
 
 
 def sed(path, before, after, limit='', backup='.bak', options='-r -e',
@@ -521,13 +526,21 @@ def contains(path, text, limit=''):
 
     .. versionadded:: 0.9.5
     '''
-    # Largely inspired by Fabric's contrib.files.contains()
-
     if not os.path.exists(path):
         return False
 
-    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options='-n -r -e', flags='gp')
+    before = _sed_esc(str(text), False)
+    limit = _sed_esc(str(limit), False)
+    options = '-n -r -e'
+
+    cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
+            options=options,
+            limit='/{0}/ '.format(limit) if limit else '',
+            before=before,
+            flags='p{0}'.format(flags),
+            path=path)
+
+    result = __salt__['cmd.run'](cmd)
 
     return bool(result)
 
