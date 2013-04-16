@@ -116,6 +116,17 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
 
+    if aspec[1] and aspec[1] in kwargs:
+        varargs = kwargs.pop(aspec[1])
+
+        if type(varargs) is not list:
+            msg = "'{0}' must be a list."
+            ret['comment'] = msg.format(aspec[1])
+            ret['result'] = False
+            return ret
+
+        args.extend(varargs)
+
     try:
         if aspec[2]:
             mret = __salt__[name](*args, **kwargs)
