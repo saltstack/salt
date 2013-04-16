@@ -1218,7 +1218,11 @@ class Matcher(object):
         '''
         if HAS_RANGE:
             range = seco.range.Range(self.opts['range_server'])
-            return self.opts['grains']['fqdn'] in range.expand(tgt)
+            try:
+                return self.opts['grains']['fqdn'] in range.expand(tgt)
+            except seco.range.RangeException as e:
+                log.debug('Range exception in compound match: {0}'.format(e))
+                return False
         return
 
     def compound_match(self, tgt):
