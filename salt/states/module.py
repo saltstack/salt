@@ -79,7 +79,7 @@ def run(name, **kwargs):
                 continue
             defaults[key] = kwargs[key]
     # Match up the defaults with the respective args
-    for ind in range(arglen - 1, 0, -1):
+    for ind in range(arglen - 1, -1, -1):
         minus = arglen - ind
         if deflen - minus > -1:
             defaults[aspec[0][ind]] = aspec[3][-minus]
