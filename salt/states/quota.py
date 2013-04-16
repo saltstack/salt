@@ -6,8 +6,10 @@ The quota can be managed for the system:
 
 .. code-block:: yaml
 
-    en_US.UTF-8:
-      quota.system
+    /:
+      quota.mode:
+        mode: off
+        quotatype: user
 '''
 
 
