@@ -7,8 +7,14 @@ import os
 import sys
 import logging
 
-# Import salt libs, the try block below bypasses an issue at build time so
-# that modules don't cause the build to fail
+# Import salt libs
+# We import log ASAP because we NEED to make sure that any logger instance salt
+# instantiates is using salt.log.SaltLoggingClass
+import salt.log
+
+
+# the try block below bypasses an issue at build time so that modules don't
+# cause the build to fail
 from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
 
@@ -21,7 +27,10 @@ except ImportError as e:
         raise
 from salt.exceptions import SaltSystemExit, MasterExit
 
-logger = logging.getLogger(__name__)
+
+# Let's instantiate logger using salt.log.logging.getLogger() so pylint leaves
+# us alone and stops complaining about an un-used import
+logger = salt.log.logging.getLogger(__name__)
 
 
 class Master(parsers.MasterOptionParser):
