@@ -8,18 +8,20 @@ import salt.utils
 # Import python libs
 import logging
 import re
-import subprocess
 
 log = logging.getLogger(__name__)
 
-no_dig = bool(subprocess.call([ 'which', 'dig' ]))
+NO_DIG = salt.utils.which('dig') is None
+
 
 def __virtual__():
     '''
     Generic, should work on any platform
     '''
-    if no_dig:
-        log.warning("'dig' does not appear to be in PATH. Will return empty lists.")
+    if NO_DIG:
+        log.warn(
+            '\'dig\' does not appear to be in PATH. Will return empty lists.'
+        )
     return 'dnsutil'
 
 
@@ -49,7 +51,7 @@ def parse_zone(zonefile=None, zone=None):
             continue
         comps = line.split()
         if line.startswith('$'):
-            zonedict[comps[0].replace('$','')] = comps[1]
+            zonedict[comps[0].replace('$', '')] = comps[1]
             continue
         if '(' in line and not ')' in line:
             mode = 'multi'
@@ -58,11 +60,11 @@ def parse_zone(zonefile=None, zone=None):
             multi += ' {0}'.format(line)
             if ')' in line:
                 mode = 'single'
-                line = multi.replace('(','').replace(')','')
+                line = multi.replace('(', '').replace(')', '')
             else:
                 continue
         if 'ORIGIN' in zonedict.keys():
-            comps = line.replace('@',zonedict['ORIGIN']).split()
+            comps = line.replace('@', zonedict['ORIGIN']).split()
         else:
             comps = line.split()
         if 'SOA' in line:
@@ -71,7 +73,7 @@ def parse_zone(zonefile=None, zone=None):
             zonedict['ORIGIN'] = comps[0]
             zonedict['NETWORK'] = comps[1]
             zonedict['SOURCE'] = comps[3]
-            zonedict['CONTACT'] = comps[4].replace('.','@',1)
+            zonedict['CONTACT'] = comps[4].replace('.', '@', 1)
             zonedict['SERIAL'] = comps[5]
             zonedict['REFRESH'] = _to_seconds(comps[6])
             zonedict['RETRY'] = _to_seconds(comps[7])
@@ -79,7 +81,7 @@ def parse_zone(zonefile=None, zone=None):
             zonedict['MINTTL'] = _to_seconds(comps[9])
             continue
         if comps[0] == 'IN':
-            comps.insert(0, zonedict['ORIGIN']) 
+            comps.insert(0, zonedict['ORIGIN'])
         if not comps[0].endswith('.'):
             comps[0] = '{0}.{1}'.format(comps[0], zonedict['ORIGIN'])
         if comps[2] == 'NS':
@@ -106,9 +108,9 @@ def _to_seconds(time):
     unreadable) will be set to one week (604800 seconds).
     '''
     if 'H' in time.upper():
-        time = int(time.upper().replace('H','')) * 3600
+        time = int(time.upper().replace('H', '')) * 3600
     elif 'D' in time.upper():
-        time = int(time.upper().replace('D','')) * 86400
+        time = int(time.upper().replace('D', '')) * 86400
     elif 'W' in time.upper():
         time = 604800
     else:
@@ -126,8 +128,13 @@ def check_IP(x):
     Check that string x is a valid IP
     '''
     # This is probably validating. Tacked on the CIDR bit myself.
-    ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(/([0-9]|[12][0-9]|3[0-2]))?$'
+    ip_regex = (
+        r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}'
+        r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
+        r'(/([0-9]|[12][0-9]|3[0-2]))?$'
+    )
     return bool(re.match(ip_regex, x))
+
 
 def A(host, nameserver=None):
     '''
@@ -135,21 +142,26 @@ def A(host, nameserver=None):
 
     Always returns a list.
     '''
-    if no_dig:
+    if NO_DIG:
         return []
-    dig = [ 'dig', '+short', str(host), 'A' ]
+
+    dig = ['dig', '+short', str(host), 'A']
+
     if nameserver is not None:
-        dig.append('@'+str(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
-        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        dig.append('@{0}'.format(nameserver))
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
+        log.warn(
+            'dig returned exit code \'{0}\'. Returning empty list as '
+            'fallback.'.format(
+                cmd['retcode']
+            )
+        )
         return []
-    else:
-        t = cmd.communicate()[0].split("\n")
-        # last element is always a ''
-        t.pop()
-    # now that we have a list, make sure they are all IPs
-    return [ x for x in t if check_IP(x) ]
+
+    # make sure all entries are IPs
+    return [x for x in cmd['stdout'].split('\n') if check_IP(x)]
 
 
 def NS(domain, resolve=True, nameserver=None):
@@ -158,29 +170,32 @@ def NS(domain, resolve=True, nameserver=None):
 
     If 'resolve' is False, don't resolve names.
     '''
-    if no_dig:
+    if NO_DIG:
         return []
-    dig = [ 'dig', '+short', str(domain), 'NS' ]
+
+    dig = ['dig', '+short', str(domain), 'NS']
+
     if nameserver is not None:
-        dig.append('@'+str(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
-        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        dig.append('@{0}'.format(nameserver))
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
+        log.warn(
+            'dig returned exit code \'{0}\'. Returning empty list as '
+            'fallback.'.format(
+                cmd['retcode']
+            )
+        )
         return []
-    else:
-        t = cmd.communicate()[0].split("\n")
-        # last element is always a ''
-        t.pop()
 
     if resolve:
         ret = []
-        for ns in t:
+        for ns in cmd['stdout'].split('\n'):
             for a in A(ns, nameserver):
                 ret.append(a)
-    else:
-        ret = t
+        return ret
 
-    return ret
+    return cmd['stdout'].split('\n')
 
 
 def SPF(domain, record='SPF', nameserver=None):
@@ -188,39 +203,48 @@ def SPF(domain, record='SPF', nameserver=None):
     Return the allowed IPv4 ranges in the SPF record for 'domain'.
 
     If record is 'SPF' and the SPF record is empty, the TXT record will be
-    searched automatically. If you know the domain uses TXT and not SPF, specifying
-    that will save a lookup.
+    searched automatically. If you know the domain uses TXT and not SPF,
+    specifying that will save a lookup.
     '''
-    if no_dig:
+    if NO_DIG:
         return []
+
     def _process(x):
         '''
         Parse out valid IP bits of an spf record.
         '''
-        m = re.match(r"(\+|~)?ip4:([0-9./]+)", x)
+        m = re.match(r'(\+|~)?ip4:([0-9./]+)', x)
         if m:
             if check_IP(m.group(2)):
                 return m.group(2)
         return None
 
-    dig = [ 'dig', '+short', str(domain), record ]
+    dig = ['dig', '+short', str(domain), record]
+
     if nameserver is not None:
-        dig.append('@'+str(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
-        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        dig.append('@{0}'.format(nameserver))
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
+        log.warn(
+            'dig returned exit code \'{0}\'. Returning empty list as '
+            'fallback.'.format(
+                cmd['retcode']
+            )
+        )
         return []
-    else:
-        t = cmd.communicate()[0]
-    if t == "" and record == 'SPF':
-        # empty string is sucessful query, but nothing to return. So, try TXT record.
+
+    stdout = cmd['stdout']
+    if stdout == '' and record == 'SPF':
+        # empty string is successful query, but nothing to return. So, try TXT
+        # record.
         return SPF(domain, 'TXT', nameserver)
 
-    t = re.sub('"', '', t).split()
-    if len(t) == 0 or t[0] != 'v=spf1':
+    stdout = re.sub('"', '', stdout).split()
+    if len(stdout) == 0 or stdout[0] != 'v=spf1':
         return []
 
-    return [ x for x in map(_process, t) if x is not None ]
+    return [x for x in map(_process, stdout) if x is not None]
 
 
 def MX(domain, ip=False, nameserver=None):
@@ -232,29 +256,34 @@ def MX(domain, ip=False, nameserver=None):
 
     If the 'ip' argument is True, resolve IPs for the servers.
 
-    It's limited to one IP, because although in practice it's very rarely a round
-    robin, it is an acceptable configuration and pulling just one IP lets the data
-    be similar to the non-resolved version. If you think an MX has multiple IPs,
-    don't use the resolver here, resolve them in a separate step.
+    It's limited to one IP, because although in practice it's very rarely a
+    round robin, it is an acceptable configuration and pulling just one IP lets
+    the data be similar to the non-resolved version. If you think an MX has
+    multiple IPs, don't use the resolver here, resolve them in a separate step.
     '''
-    if no_dig:
+    if NO_DIG:
         return []
-    dig = [ 'dig', '+short', str(domain), 'MX' ]
+
+    dig = ['dig', '+short', str(domain), 'MX']
+
     if nameserver is not None:
-        dig.append('@'+str(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
-        log.warning("dig returned exit code '{0}'. Returning empty list as fallback.".format(cmd.returncode))
+        dig.append('@{0}'.format(nameserver))
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
+        log.warn(
+            'dig returned exit code \'{0}\'. Returning empty list as '
+            'fallback.'.format(
+                cmd['retcode']
+            )
+        )
         return []
-    else:
-        t = cmd.communicate()[0].split("\n")
-        # last element is always a ''
-        t.pop()
-        t = [ x.split() for x in t ]
+
+    stdout = [x.split() for x in cmd['stdout'].split('\n')]
 
     if ip:
-        t = [ (lambda x: [ x[0], A(x[1], nameserver)[0] ])(x) for x in t ]
+        return [
+            (lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout
+        ]
 
-    return t
-
-
+    return stdout
