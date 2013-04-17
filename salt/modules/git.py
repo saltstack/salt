@@ -5,6 +5,7 @@ Support for the Git SCM
 # Import python libs
 import os
 import tempfile
+import pipes
 
 # Import salt libs
 from salt import utils, exceptions
