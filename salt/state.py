@@ -952,9 +952,10 @@ class State(object):
                 if name not in high:
                     errors.append(
                         'Cannot extend ID {0} in "{1}:{2}". It is not part '
-                        'of the high state.'.format(name,
-                                                    body['__env__'],
-                                                    body['__sls__'])
+                        'of the high state.'.format(
+                            name,
+                            body.get('__env__', 'base'),
+                            body.get('__sls__', 'base'))
                         )
                     continue
                 for state, run in body.items():
