@@ -247,7 +247,7 @@ def SPF(domain, record='SPF', nameserver=None):
     return [x for x in map(_process, stdout) if x is not None]
 
 
-def MX(domain, ip=False, nameserver=None):
+def MX(domain, resolve=False, nameserver=None):
     '''
     Return a list of lists for the MX of 'domain'. Example:
 
@@ -281,7 +281,7 @@ def MX(domain, ip=False, nameserver=None):
 
     stdout = [x.split() for x in cmd['stdout'].split('\n')]
 
-    if ip:
+    if resolve:
         return [
             (lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout
         ]
