@@ -109,7 +109,7 @@ def set(device, **kwargs):
             return {'Error': 'Please specify a user or group, not both.'}
         cmd += ' -g {0} '.format(kwargs['group'])
         parsed = _parse_quota(device, '-g')
-        if kwargs['user'] in parsed:
+        if kwargs['group'] in parsed:
             current = parsed['Groups'][kwargs['group']]
         else:
             current = empty
@@ -174,6 +174,7 @@ def on(device):
     '''
     cmd = 'quotaon {0}'.format(device)
     __salt__['cmd.run'](cmd)
+    return True
 
 
 def off(device):
@@ -186,6 +187,7 @@ def off(device):
     '''
     cmd = 'quotaoff {0}'.format(device)
     __salt__['cmd.run'](cmd)
+    return True
 
 
 def get_mode(device):
@@ -196,6 +198,15 @@ def get_mode(device):
 
         salt '*' quota.get_mode
     '''
+    ret = {}
     cmd = 'quotaon -p {0}'.format(device)
-    ret = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.strip().split()
+        if not comps[3] in ret:
+            ret[comps[3]] = {
+                'device': comps[4].replace('(', '').replace(')', ''),
+            }
+        ret[comps[3]][comps[0]] = comps[6]
     return ret
+
