@@ -254,7 +254,7 @@ def MX(domain, resolve=False, nameserver=None):
     >>> dnsutil.MX('saltstack.org')
     [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
 
-    If the 'ip' argument is True, resolve IPs for the servers.
+    If the 'resolve' argument is True, resolve IPs for the servers.
 
     It's limited to one IP, because although in practice it's very rarely a
     round robin, it is an acceptable configuration and pulling just one IP lets
