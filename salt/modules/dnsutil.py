@@ -8,7 +8,6 @@ import salt.utils
 # Import python libs
 import logging
 import re
-import subprocess
 
 log = logging.getLogger(__name__)
 
@@ -145,24 +144,24 @@ def A(host, nameserver=None):
     '''
     if NO_DIG:
         return []
+
     dig = ['dig', '+short', str(host), 'A']
+
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
-                cmd.returncode
+                cmd['retcode']
             )
         )
         return []
-    else:
-        t = cmd.communicate()[0].split("\n")
-        # last element is always a ''
-        t.pop()
-    # now that we have a list, make sure they are all IPs
-    return [x for x in t if check_IP(x)]
+
+    # make sure all entries are IPs
+    return [x for x in cmd['stdout'].split('\n') if check_IP(x)]
 
 
 def NS(domain, resolve=True, nameserver=None):
@@ -173,32 +172,30 @@ def NS(domain, resolve=True, nameserver=None):
     '''
     if NO_DIG:
         return []
+
     dig = ['dig', '+short', str(domain), 'NS']
+
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
-                cmd.returncode
+                cmd['retcode']
             )
         )
         return []
-    else:
-        t = cmd.communicate()[0].split("\n")
-        # last element is always a ''
-        t.pop()
 
     if resolve:
         ret = []
-        for ns in t:
+        for ns in cmd['stdout'].split('\n'):
             for a in A(ns, nameserver):
                 ret.append(a)
-    else:
-        ret = t
+        return ret
 
-    return ret
+    return cmd['stdout'].split('\n')
 
 
 def SPF(domain, record='SPF', nameserver=None):
@@ -216,36 +213,38 @@ def SPF(domain, record='SPF', nameserver=None):
         '''
         Parse out valid IP bits of an spf record.
         '''
-        m = re.match(r"(\+|~)?ip4:([0-9./]+)", x)
+        m = re.match(r'(\+|~)?ip4:([0-9./]+)', x)
         if m:
             if check_IP(m.group(2)):
                 return m.group(2)
         return None
 
     dig = ['dig', '+short', str(domain), record]
+
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
-                cmd.returncode
+                cmd['retcode']
             )
         )
         return []
-    else:
-        t = cmd.communicate()[0]
-    if t == '' and record == 'SPF':
-        # empty string is sucessful query, but nothing to return. So, try TXT
+
+    stdout = cmd['stdout']
+    if stdout == '' and record == 'SPF':
+        # empty string is successful query, but nothing to return. So, try TXT
         # record.
         return SPF(domain, 'TXT', nameserver)
 
-    t = re.sub('"', '', t).split()
-    if len(t) == 0 or t[0] != 'v=spf1':
+    stdout = re.sub('"', '', stdout).split()
+    if len(stdout) == 0 or stdout[0] != 'v=spf1':
         return []
 
-    return [x for x in map(_process, t) if x is not None]
+    return [x for x in map(_process, stdout) if x is not None]
 
 
 def MX(domain, ip=False, nameserver=None):
@@ -264,25 +263,27 @@ def MX(domain, ip=False, nameserver=None):
     '''
     if NO_DIG:
         return []
+
     dig = ['dig', '+short', str(domain), 'MX']
+
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
-    cmd = subprocess.Popen(dig, stdout=subprocess.PIPE)
-    if cmd.returncode is not None:
+
+    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    if cmd['retcode'] is not 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
-                cmd.returncode
+                cmd['retcode']
             )
         )
         return []
-    else:
-        t = cmd.communicate()[0].split('\n')
-        # last element is always a ''
-        t.pop()
-        t = [x.split() for x in t]
+
+    stdout = [x.split() for x in cmd['stdout'].split('\n')]
 
     if ip:
-        t = [(lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in t]
+        return [
+            (lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout
+        ]
 
-    return t
+    return stdout
