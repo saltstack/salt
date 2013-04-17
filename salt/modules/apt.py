@@ -24,15 +24,15 @@ try:
 except ImportError:
     ppa_format_support = False
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
                     ' {3} main'
+
+_MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
+                        'file', 'dist'])
 
 
 def __virtual__():
@@ -679,7 +679,7 @@ def list_repos():
         repo['dist'] = source.dist
         repo['type'] = source.type
         repo['uri'] = source.uri
-        repo['line'] = source.line
+        repo['line'] = source.line.strip()
         repo['architectures'] = getattr(source, 'architectures', [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
@@ -867,6 +867,11 @@ def mod_repo(repo, refresh=False, **kwargs):
         key_url (URl to a gpg key to add to the apt gpg keyring)
         consolidate (if true, will attempt to de-dup and consolidate sources)
 
+        * Note: Due to the way keys are stored for apt, there is a known issue
+                where the key wont be updated unless another change is made
+                at the same time.  Keys should be properly added on initial
+                configuration.
+
     CLI Examples::
 
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
@@ -879,8 +884,6 @@ def mod_repo(repo, refresh=False, **kwargs):
 
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
-    _MODIFY_OK = set(
-        ['uri', 'comps', 'architectures', 'disabled', 'file', 'dist'])
     if repo.startswith('ppa:'):
         is_ppa = True
         if __grains__['os'] == 'Ubuntu':
@@ -900,7 +903,14 @@ def mod_repo(repo, refresh=False, **kwargs):
                 else:
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
-                owner_name, ppa_name = repo[4:].split('/')
+                try:
+                    owner_name, ppa_name = repo[4:].split('/', 1)
+                except ValueError:
+                    err_str = 'Unable to get PPA info from argument. ' \
+                              'Expected format "<PPA_OWNER>/<PPA_NAME>" ' \
+                              '(e.g. saltstack/salt) not found.  Received ' \
+                              '"{0}" instead.'
+                    raise Exception(err_str.format(repo[4:]))
                 dist = __grains__['lsb_codename']
                 # ppa has a lot of implicit arguments. Make them explicit.
                 # These will defer to any user-defined variants
@@ -968,125 +978,123 @@ def mod_repo(repo, refresh=False, **kwargs):
         sources = _consolidate_repo_sources(sources)
 
     repos = filter(lambda s: not s.invalid, sources)
-    if repos:
-        mod_source = None
-        try:
-            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(
-                repo)
-        except SyntaxError:
-            error_str = 'Error: repo "{0}" not a well formatted definition'
-            raise SyntaxError(error_str.format(repo))
+    mod_source = None
+    try:
+        repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(
+            repo)
+    except SyntaxError:
+        error_str = 'Error: repo "{0}" not a well formatted definition'
+        raise SyntaxError(error_str.format(repo))
 
-        full_comp_list = set(repo_comps)
+    full_comp_list = set(repo_comps)
 
-        if 'keyid' in kwargs:
-            keyid = kwargs.pop('keyid', None)
-            ks = kwargs.pop('keyserver', None)
-            if not keyid or not ks:
-                error_str = 'both keyserver and keyid options required.'
-                raise NameError(error_str)
-            cmd = 'apt-key export {0}'.format(keyid)
-            output = __salt__['cmd.run_stdout'](cmd)
-            imported = output.startswith('-----BEGIN PGP')
-            if ks:
-                if not imported:
-                    cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
-                           '--recv-keys {1}')
-                    out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid))
-                    if not out.find('imported') or out.find('not changed'):
-                        error_str = 'Error: key retrieval failed: {0}'
-                        raise Exception(
-                            error_str.format(
-                                cmd.format(
-                                    ks,
-                                    keyid
-                                )
+    if 'keyid' in kwargs:
+        keyid = kwargs.pop('keyid', None)
+        ks = kwargs.pop('keyserver', None)
+        if not keyid or not ks:
+            error_str = 'both keyserver and keyid options required.'
+            raise NameError(error_str)
+        cmd = 'apt-key export {0}'.format(keyid)
+        output = __salt__['cmd.run_stdout'](cmd)
+        imported = output.startswith('-----BEGIN PGP')
+        if ks:
+            if not imported:
+                cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
+                       '--recv-keys {1}')
+                out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid))
+                if not (out.find('imported') or out.find('not changed')):
+                    error_str = 'Error: key retrieval failed: {0}'
+                    raise Exception(
+                        error_str.format(
+                            cmd.format(
+                                ks,
+                                keyid
                             )
                         )
-        elif 'key_url' in kwargs:
-            fn_ = __salt__['cp.cache_file'](kwargs['key_url'])
-            cmd = 'apt-key add {0}'.format(fn_)
-            out = __salt__['cmd.run_stdout'](cmd)
-            if not out.upper().startswith('OK'):
-                error_str = 'Error: key retrieval failed: {0}'
-                raise Exception(error_str.format(cmd.format(key_url)))
+                    )
+    elif 'key_url' in kwargs:
+        fn_ = __salt__['cp.cache_file'](kwargs['key_url'])
+        cmd = 'apt-key add {0}'.format(fn_)
+        out = __salt__['cmd.run_stdout'](cmd)
+        if not out.upper().startswith('OK'):
+            error_str = 'Error: key retrieval failed: {0}'
+            raise Exception(error_str.format(cmd.format(key_url)))
 
-        if 'comps' in kwargs:
-            kwargs['comps'] = kwargs['comps'].split(',')
-            full_comp_list.union(set(kwargs['comps']))
+    if 'comps' in kwargs:
+        kwargs['comps'] = kwargs['comps'].split(',')
+        full_comp_list.union(set(kwargs['comps']))
+    else:
+        kwargs['comps'] = list(full_comp_list)
+
+    if 'architectures' in kwargs:
+        kwargs['architectures'] = kwargs['architectures'].split(',')
+
+    if 'disabled' in kwargs:
+        kw_disabled = kwargs['disabled']
+        if kw_disabled is True or str(kw_disabled).lower() == 'true':
+            kwargs['disabled'] = True
         else:
-            kwargs['comps'] = list(full_comp_list)
+            kwargs['disabled'] = False
 
-        if 'architectures' in kwargs:
-            kwargs['architectures'] = kwargs['architectures'].split(',')
+    kw_type = kwargs.get('type')
+    kw_dist = kwargs.get('dist')
 
-        if 'disabled' in kwargs:
-            kw_disabled = kwargs['disabled']
-            if kw_disabled is True or str(kw_disabled).lower() == 'true':
-                kwargs['disabled'] = True
-            else:
-                kwargs['disabled'] = False
+    for source in repos:
+        # This series of checks will identify the starting source line
+        # and the resulting source line.  The idea here is to ensure
+        # we are not retuning bogus data because the source line
+        # has already been modified on a previous run.
+        if ((source.type == repo_type and source.uri == repo_uri
+             and source.dist == repo_dist) or
+            (source.dist == kw_dist and source.type == kw_type
+             and source.type == kw_type)):
 
-        kw_type = kwargs.get('type')
-        kw_dist = kwargs.get('dist')
-
-        for source in repos:
-            # This series of checks will identify the starting source line
-            # and the resulting source line.  The idea here is to ensure
-            # we are not retuning bogus data because the source line
-            # has already been modified on a previous run.
-            if ((source.type == repo_type and source.uri == repo_uri
-                 and source.dist == repo_dist) or
-                (source.dist == kw_dist and source.type == kw_type
-                 and source.type == kw_type)):
-
-                for comp in full_comp_list:
-                    if comp in getattr(source, 'comps', []):
-                        mod_source = source
-                if not source.comps:
+            for comp in full_comp_list:
+                if comp in getattr(source, 'comps', []):
                     mod_source = source
-                if mod_source:
-                    break
+            if not source.comps:
+                mod_source = source
+            if mod_source:
+                break
 
-        if not mod_source:
-            mod_source = sourceslist.SourceEntry(repo)
-            sources.list.append(mod_source)
+    if not mod_source:
+        mod_source = sourceslist.SourceEntry(repo)
+        sources.list.append(mod_source)
 
-        # if all comps aren't part of the disable
-        # match, it is important we keep the comps
-        # not destined to be disabled/enabled in
-        # the original state
-        if ('disabled' in kwargs and
-                mod_source.disabled != kwargs['disabled']):
+    # if all comps aren't part of the disable
+    # match, it is important we keep the comps
+    # not destined to be disabled/enabled in
+    # the original state
+    if ('disabled' in kwargs and
+            mod_source.disabled != kwargs['disabled']):
 
-            s_comps = set(mod_source.comps)
-            r_comps = set(repo_comps)
-            if s_comps.symmetric_difference(r_comps):
-                new_source = sourceslist.SourceEntry(source.line)
-                new_source.file = source.file
-                new_source.comps = list(r_comps.difference(s_comps))
-                source.comps = list(s_comps.difference(r_comps))
-                sources.insert(sources.index(source), new_source)
-                sources.save()
+        s_comps = set(mod_source.comps)
+        r_comps = set(repo_comps)
+        if s_comps.symmetric_difference(r_comps):
+            new_source = sourceslist.SourceEntry(source.line)
+            new_source.file = source.file
+            new_source.comps = list(r_comps.difference(s_comps))
+            source.comps = list(s_comps.difference(r_comps))
+            sources.insert(sources.index(source), new_source)
+            sources.save()
 
-        for key in kwargs:
-            if key in _MODIFY_OK and hasattr(mod_source, key):
-                if type(getattr(mod_source, key)) == type(kwargs[key]):
-                    setattr(mod_source, key, kwargs[key])
-        sources.save()
-        # on changes, explicitly refresh
-        refresh_db()
-        return {
-            repo: {
-                'architectures': getattr(mod_source, 'architectures', []),
-                'comps': mod_source.comps,
-                'disabled': mod_source.disabled,
-                'file': mod_source.file,
-                'type': mod_source.type,
-                'uri': mod_source.uri,
-                'line': mod_source.line
-            }
+    for key in kwargs:
+        if key in _MODIFY_OK and hasattr(mod_source, key):
+            setattr(mod_source, key, kwargs[key])
+    sources.save()
+    # on changes, explicitly refresh
+    refresh_db()
+    return {
+        repo: {
+            'architectures': getattr(mod_source, 'architectures', []),
+            'comps': mod_source.comps,
+            'disabled': mod_source.disabled,
+            'file': mod_source.file,
+            'type': mod_source.type,
+            'uri': mod_source.uri,
+            'line': mod_source.line
         }
+    }
 
 
 def file_list(*packages):
@@ -1117,3 +1125,55 @@ def file_dict(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_dict'](*packages)
+
+
+def expand_repo_def(repokwargs):
+    '''
+    Take a repository definition and expand it to the full pkg repository dict
+    that can be used for comparison.  This is a helper function to make
+    the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
+
+    There is no use to calling this function via the CLI.
+    '''
+    sanitized = {}
+
+    if not apt_support:
+        msg = 'Error: aptsources.sourceslist python module not found'
+        raise Exception(msg)
+
+    repo = repokwargs['repo']
+
+    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+        dist = __grains__['lsb_codename']
+        owner_name, ppa_name = repo[4:].split('/', 1)
+        if 'ppa_auth' in repokwargs:
+            auth_info = '{0}@'.format(repokwargs['ppa_auth'])
+            repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name,
+                                            dist)
+        else:
+            if ppa_format_support:
+                repo = softwareproperties.ppa_expand_ppa_line(
+                    repo, dist)[0]
+            else:
+                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
+
+        if not file in repokwargs:
+            filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
+            repokwargs['file'] = filename.format(owner_name, ppa_name,
+                                                 dist)
+
+    source_entry = sourceslist.SourceEntry(repo)
+    for kwarg in _MODIFY_OK:
+        if kwarg in repokwargs:
+            setattr(source_entry, kwarg, repokwargs[kwarg])
+
+    sanitized['file'] = source_entry.file
+    sanitized['comps'] = getattr(source_entry, 'comps', [])
+    sanitized['disabled'] = source_entry.disabled
+    sanitized['dist'] = source_entry.dist
+    sanitized['type'] = source_entry.type
+    sanitized['uri'] = source_entry.uri
+    sanitized['line'] = source_entry.line.strip()
+    sanitized['architectures'] = getattr(source_entry, 'architectures', [])
+
+    return sanitized
