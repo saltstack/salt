@@ -39,6 +39,7 @@ def latest(name,
            submodules=False,
            mirror=False,
            bare=False,
+           remote_name='origin',
            identity=None,
            **kwargs):
     '''
@@ -63,6 +64,10 @@ def latest(name,
     bare
         True if the repository is to be a bare clone of the remote repository.
         This is incompatible with rev, as nothing will be checked out.
+    remote_name
+        defines a different remote name.
+        For the first clone the given name is set to the default remote,
+        else it is just a additional remote. (Default: 'origin')
     identity
         A path to a private key to use over SSH
     '''
@@ -93,19 +98,39 @@ def latest(name,
                         ('Repository {0} update is probably required (current '
                          'revision is {1})').format(target, current_rev))
 
+                # if remote_name is defined set fetch_opts to remote_name
+                if not remote_name == 'origin':
+                    fetch_opts = remote_name
+                else:
+                    fetch_opts = ''
+
+                # check remote if fetch_url not == name set it
+                remote = __salt__['git.remote_get'](target,
+                                                    remote=remote_name,
+                                                    user=runas)
+                if remote == None or not remote[0] == name:
+                    __salt__['git.remote_set'](target,
+                                               remote_name=remote_name,
+                                               remote_url=name,
+                                               user=runas)
+                    ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
+
                 # check if rev is already present in repo, git-fetch otherwise
                 if bare:
                     __salt__['git.fetch'](target,
+                                          opts=fetch_opts,
                                           user=runas,
                                           identity=identity)
                 elif rev:
 
-                    cmd = "git rev-parse "+rev
+                    cmd = "git rev-parse " + rev
                     retcode = __salt__['cmd.retcode'](cmd,
                                                       cwd=target,
                                                       runas=runas)
+                    # there is a issues #3938 addressing this
                     if 0 != retcode:
                         __salt__['git.fetch'](target,
+                                              opts=fetch_opts,
                                               user=runas,
                                               identity=identity)
 
@@ -115,8 +140,10 @@ def latest(name,
                 cmd = "git symbolic-ref -q HEAD > /dev/null"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=runas)
                 if 0 == retcode:
-                    __salt__['git.fetch' if bare else 'git.pull'](
-                        target, user=runas, identity=identity)
+                    __salt__['git.fetch' if bare else 'git.pull'](target,
+                                                                  opts=fetch_opts,
+                                                                  user=runas,
+                                                                  identity=identity)
 
                 if submodules:
                     __salt__['git.submodule'](target, user=runas,
@@ -161,6 +188,10 @@ def latest(name,
         try:
             # make the clone
             opts = '--mirror' if mirror else '--bare' if bare else ''
+            # if remote_name is not origin add --origin <name> to opts
+            if not remote_name == 'origin':
+                opts += ' --origin {0}'.format(remote_name)
+            # do the clone
             __salt__['git.clone'](target,
                                   name,
                                   user=runas,
