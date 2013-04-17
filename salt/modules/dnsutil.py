@@ -247,14 +247,14 @@ def SPF(domain, record='SPF', nameserver=None):
     return [x for x in map(_process, stdout) if x is not None]
 
 
-def MX(domain, ip=False, nameserver=None):
+def MX(domain, resolve=False, nameserver=None):
     '''
     Return a list of lists for the MX of 'domain'. Example:
 
     >>> dnsutil.MX('saltstack.org')
     [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
 
-    If the 'ip' argument is True, resolve IPs for the servers.
+    If the 'resolve' argument is True, resolve IPs for the servers.
 
     It's limited to one IP, because although in practice it's very rarely a
     round robin, it is an acceptable configuration and pulling just one IP lets
@@ -281,7 +281,7 @@ def MX(domain, ip=False, nameserver=None):
 
     stdout = [x.split() for x in cmd['stdout'].split('\n')]
 
-    if ip:
+    if resolve:
         return [
             (lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout
         ]

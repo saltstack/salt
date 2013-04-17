@@ -321,22 +321,27 @@ class IPv4Address(object):
         self.address_str = address_str
         a = self.address_str.split('.')
         if len(a) != 4:
-            raise ValueError("IPv4 addresses must be in dotted-quad form.")
+            raise ValueError(
+                'IPv4 addresses must be in dotted-quad form.'
+            )
         try:
             self.dotted_quad = [int(a) for a in a]
         except ValueError, e:
-            raise ValueError("IPv4 addresses must be in dotted-quad form. {}".format(e))
+            raise ValueError(
+                'IPv4 addresses must be in dotted-quad form. {0}'.format(e)
+            )
 
     def __str__(self):
         return self.address_str
 
     def __repr__(self):
-        return 'IPv4Address("{}")'.format(str(self))
+        return 'IPv4Address("{0}")'.format(str(self))
 
     @property
     def is_private(self):
         '''
-        :return: Returns True if the address is a non-routable IPv4 address. Otherwise False.
+        :return: Returns True if the address is a non-routable IPv4 address.
+                 Otherwise False.
         '''
         if 10 == self.dotted_quad[0]:
             return True
