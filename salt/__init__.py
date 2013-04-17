@@ -58,15 +58,11 @@ class Master(parsers.MasterOptionParser):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and (
-                        not logfile.startswith('tcp://') or
-                        not logfile.startswith('udp://') or
-                        not logfile.startswith('file://')):
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                        verify_files(
-                            [logfile],
-                            self.config['user']
-                        )
+                    verify_files([logfile], self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
@@ -150,17 +146,12 @@ class Minion(parsers.MinionOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                    verify_files(
-                        [self.config['log_file']],
-                        self.config['user']
-                    )
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user'])
+                    verify_files([logfile], self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
@@ -237,14 +228,12 @@ class Syndic(parsers.SyndicOptionParser):
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if (not self.config['log_file'].startswith('tcp://') or
-                    not self.config['log_file'].startswith('udp://') or
-                    not self.config['log_file'].startswith('file://')):
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
                     # Logfile is not using Syslog, verify
-                    verify_files(
-                        [self.config['log_file']],
-                        self.config['user']
-                    )
+                    verify_files([logfile], self.config['user'])
         except OSError as err:
             sys.exit(err.errno)
 
