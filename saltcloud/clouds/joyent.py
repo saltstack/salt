@@ -59,7 +59,7 @@ JOYENT_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
-
+conn = None
 
 # Only load in this module is the JOYENT configurations are in place
 def __virtual__():
@@ -73,6 +73,7 @@ def __virtual__():
         )
         return False
 
+    global conn
     global get_size, get_image, avail_images, avail_sizes, script, destroy
     global list_nodes, list_nodes_full, list_nodes_select
 
@@ -132,6 +133,8 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    global conn
+    
     deploy = config.get_config_value('deploy', vm_, __opts__)
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -238,6 +241,8 @@ def stop(name, call=None):
     '''
     Stop a node
     '''
+    global conn
+    
     data = {}
 
     if call != 'action':
