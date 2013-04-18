@@ -27,7 +27,8 @@ def _create_loader(
         ext_dirs=True,
         ext_type_dirs=None,
         base_path=None,
-        loaded_base_name=LOADED_BASE_NAME):
+        loaded_base_name=LOADED_BASE_NAME,
+        mod_type_check=_mod_type):
     '''
     Creates Loader instance
 
@@ -68,7 +69,13 @@ def _create_loader(
     _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
     _generate_module('{0}.ext'.format(loaded_base_name))
     _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
-    return Loader(module_dirs, opts, tag, loaded_base_name=loaded_base_name)
+    return Loader(
+        module_dirs,
+        opts,
+        tag,
+        loaded_base_name=loaded_base_name,
+        mod_type_check=mod_type_check
+    )
 
 
 def minion_mods(opts, context=None, whitelist=None):
@@ -310,7 +317,7 @@ class Loader(object):
     call modules in an arbitrary directory directly.
     '''
     def __init__(self, module_dirs, opts=dict(), tag='module',
-                 loaded_base_name=LOADED_BASE_NAME):
+                 loaded_base_name=LOADED_BASE_NAME, mod_type_check=_mod_type):
         self.module_dirs = module_dirs
         if '_' in tag:
             raise LoaderError('Cannot tag loader with an "_"')
@@ -325,6 +332,7 @@ class Loader(object):
             self.pillar = {}
         self.opts = self.__prep_mod_opts(opts)
         self.loaded_base_name = loaded_base_name
+        self.mod_type_check = mod_type_check
 
     def __prep_mod_opts(self, opts):
         '''
@@ -407,7 +415,10 @@ class Loader(object):
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
                     '{0}.{1}.{2}.{3}'.format(
-                        self.loaded_base_name, _mod_type(path), self.tag, name
+                        self.loaded_base_name,
+                        self.mod_type_check(path),
+                        self.tag,
+                        name
                     ), fn_, path, desc
                 )
         except ImportError:
@@ -555,7 +566,7 @@ class Loader(object):
                     mod = pyximport.load_module(
                         '{0}.{1}.{2}.{3}'.format(
                             self.loaded_base_name,
-                            _mod_type(names[name]),
+                            self.mod_type_check(names[name]),
                             self.tag,
                             name
                         ), names[name], tempfile.gettempdir()
@@ -565,7 +576,7 @@ class Loader(object):
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
                             self.loaded_base_name,
-                            _mod_type(path),
+                            self.mod_type_check(path),
                             self.tag,
                             name
                         ), fn_, path, desc
