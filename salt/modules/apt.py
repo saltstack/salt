@@ -1152,7 +1152,7 @@ def expand_repo_def(repokwargs):
                                             dist)
         else:
             if ppa_format_support:
-                repo = softwareproperties.ppa_expand_ppa_line(
+                repo = softwareproperties.ppa.expand_ppa_line(
                     repo, dist)[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
