@@ -24,7 +24,6 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'saltify.avail_sizes',
     'saltify.avail_images',
     'saltify.avail_locations',
-
 )
 
 
@@ -32,14 +31,31 @@ def clouds(opts):
     '''
     Return the cloud functions
     '''
-    load = salt.loader._create_loader(
-        opts,
-        'clouds',
-        'cloud',
-        base_path=os.path.dirname(
-            saltcloud.__file__
+    salt_base_path = os.path.dirname(saltcloud.__file__)
+
+    def saltcloud_mod_type_check(modpath):
+        if modpath.startswith(salt_base_path):
+            return 'int'
+        return 'ext'
+
+    try:
+        load = salt.loader._create_loader(
+            opts,
+            'clouds',
+            'cloud',
+            base_path=salt_base_path,
+            loaded_base_name='saltcloud.loaded',
+            mod_type_check=saltcloud_mod_type_check
         )
-    )
+    except TypeError:
+        # Salt is not recent enough
+        load = salt.loader._create_loader(
+            opts,
+            'clouds',
+            'cloud',
+            base_path=salt_base_path,
+        )
+
     functions = load.gen_functions()
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.debug(
