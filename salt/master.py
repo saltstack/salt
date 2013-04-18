@@ -18,7 +18,6 @@ import datetime
 import pwd
 import getpass
 import resource
-import traceback
 import subprocess
 import multiprocessing
 import sys
@@ -1066,7 +1065,7 @@ class AESFuncs(object):
                 id_ = minion.keys()[0]
                 ret[id_] = minion[id_].get('ret', None)
         return ret
-        
+
 
     def run_func(self, func, load):
         '''
@@ -1080,9 +1079,11 @@ class AESFuncs(object):
             try:
                 ret = getattr(self, func)(load)
             except Exception:
-                trb = traceback.format_exc()
                 ret = ''
-                log.error('Error in function {0}:\n{1}'.format(func, trb))
+                log.error(
+                    'Error in function {0}:\n'.format(func),
+                    exc_info=True
+                )
         else:
             log.error(
                 'Received function {0} which is unavailable on the master, '
@@ -1806,11 +1807,10 @@ class ClearFuncs(object):
                     )
                 )
             except Exception:
-                trb = traceback.format_exc()
                 log.critical(
-                        'The specified returner threw a stack trace:\n{0}'
-                        ''.format(trb)
-                    )
+                    'The specified returner threw a stack trace:\n',
+                    exc_info=True
+                )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here

@@ -130,9 +130,11 @@ class OptionParser(optparse.OptionParser):
             try:
                 process_option_func()
             except Exception, err:
-                self.error('Error while processing {0}: {1}'.format(
-                    process_option_func, traceback.format_exc(err)
-                ))
+                self.error(
+                    'Error while processing {0}: {1}'.format(
+                        process_option_func, traceback.format_exc(err)
+                    )
+                )
 
         # Run the functions on self._mixin_after_parsed_funcs
         for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
