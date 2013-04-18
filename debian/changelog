@@ -1,3 +1,9 @@
+salt (0.14.1-1) unstable; urgency=low
+
+  * new version
+
+ -- Will Platnick <wplatnick@gmail.com>  Wed, 17 Apr 2013 20:10:10 -0700
+
 salt (0.14.0-1) unstable; urgency=low
 
   * new version
