@@ -22,6 +22,7 @@ GRAINMAP = {
            'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
            'SUSE  Enterprise Server': '/etc/init.d',
+           'openSUSE': '/etc/init.d',
            'OEL': '/etc/init.d',
           }
 
