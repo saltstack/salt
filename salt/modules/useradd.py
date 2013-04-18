@@ -12,6 +12,7 @@ import logging
 import copy
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 log = logging.getLogger(__name__)
@@ -22,15 +23,20 @@ def __virtual__():
     Set the user module if the kernel is Linux or OpenBSD
     and remove some of the functionality on OS X
     '''
+    # XXX: Why are these imports in __virtual__?
     import sys
     from salt._compat import callable
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
             if callable(getattr(mod, attr)):
-                if not attr in ('_format_info', 'getent', 'info', 'list_groups', 'list_users', '__virtual__'):
+                if not attr in ('_format_info', 'getent', 'info',
+                                'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
-    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD') else False
+    return (
+        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD')
+        else False
+    )
 
 
 def _get_gecos(name):
@@ -91,14 +97,12 @@ def add(name,
         def usergroups():
             retval = False
             try:
-                for line in open("/etc/login.defs"):
-                    if "USERGROUPS_ENAB" in line[:15]:
+                for line in salt.utils.fopen('/etc/login.defs'):
+                    if 'USERGROUPS_ENAB' in line[:15]:
                         if "yes" in line:
                             retval = True
             except Exception:
-                import traceback
-                log.debug("Error reading /etc/login.defs")
-                log.debug(traceback.format_exc())
+                log.debug('Error reading /etc/login.defs', exc_info=True)
             return retval
         if usergroups():
             cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
