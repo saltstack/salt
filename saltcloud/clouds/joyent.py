@@ -18,8 +18,6 @@ Using the old cloud configuration syntax, it requires that the ``username`` and
     # the Datacenter location associated with the new VMS
     JOYENT.location: us-east-1
 
-
-
 Using the new format, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/joyent.conf``:
 
@@ -151,7 +149,6 @@ def create(vm_):
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],vm_['location']))
 
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-')
-    conn = get_conn()
     kwargs = {
         'name': vm_['name'],
         'image': get_image(conn, vm_),
@@ -248,7 +245,6 @@ def stop(name, call=None):
             'This action must be called with -a or --action.'
         )
 
-    conn = get_conn()
     node = get_node(conn, name)
     try:
         data = conn.ex_stop_node(node=node)
