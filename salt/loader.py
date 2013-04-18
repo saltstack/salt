@@ -27,8 +27,8 @@ def _create_loader(
         ext_dirs=True,
         ext_type_dirs=None,
         base_path=None,
-        loaded_base_name=LOADED_BASE_NAME,
-        mod_type_check=_mod_type):
+        loaded_base_name=None,
+        mod_type_check=None):
     '''
     Creates Loader instance
 
@@ -63,6 +63,12 @@ def _create_loader(
         maybe_dir = os.path.join(_dir, '_{0}'.format(ext_type))
         if (os.path.isdir(maybe_dir)):
             cli_module_dirs.insert(0, maybe_dir)
+
+    if loaded_base_name is None:
+        loaded_base_name = LOADED_BASE_NAME
+
+    if mod_type_check is None:
+        mod_type_check = _mod_type
 
     module_dirs = cli_module_dirs + ext_type_types + [ext_types, sys_types]
     _generate_module('{0}.int'.format(loaded_base_name))
@@ -317,7 +323,7 @@ class Loader(object):
     call modules in an arbitrary directory directly.
     '''
     def __init__(self, module_dirs, opts=dict(), tag='module',
-                 loaded_base_name=LOADED_BASE_NAME, mod_type_check=_mod_type):
+                 loaded_base_name=None, mod_type_check=None):
         self.module_dirs = module_dirs
         if '_' in tag:
             raise LoaderError('Cannot tag loader with an "_"')
@@ -331,8 +337,8 @@ class Loader(object):
         else:
             self.pillar = {}
         self.opts = self.__prep_mod_opts(opts)
-        self.loaded_base_name = loaded_base_name
-        self.mod_type_check = mod_type_check
+        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        self.mod_type_check = mod_type_check or _mod_type
 
     def __prep_mod_opts(self, opts):
         '''
