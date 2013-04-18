@@ -45,7 +45,7 @@ def __virtual__():
     
     return 'tomcat' if 'tomcat.status' in __salt__ else False
 
-def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base'):
+def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base', timeout=180):
     '''
     Enforce that the war will be deployed and started in the context path
     it will make use of war versions
@@ -77,7 +77,7 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base')
        'comment': ''}
     basename = war.split('/')[-1]
     version = basename.replace('.war', '');
-    webapps =  __salt__['tomcat.ls']()
+    webapps =  __salt__['tomcat.ls'](url, timeout)
     deploy = False
     undeploy = False
     status = True
@@ -107,25 +107,25 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base')
     # make sure the webapp is up if deployed
     if deploy == False:
         if status == False:
-            ret['comment'] = __salt__['tomcat.start'](name, url)
+            ret['comment'] = __salt__['tomcat.start'](name, url, timeout=timeout)
             ret['result'] = ret['comment'].startswith('OK')
         return ret
     
     # Undeploy
     if undeploy:
-        un = __salt__['tomcat.undeploy'](name)
+        un = __salt__['tomcat.undeploy'](name, url, timeout=timeout)
         if un.startswith('FAIL'):
             ret['result'] = False
             ret['comment'] = un
             return ret
     
     # Deploy
-    deploy_res = __salt__['tomcat.deploy_war'](war, name, 'yes', url, __env__)
+    deploy_res = __salt__['tomcat.deploy_war'](war, name, 'yes', url, __env__, timeout)
     
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = __salt__['tomcat.ls']()[name]
+        ret['comment'] = __salt__['tomcat.ls'](url, timeout)[name]
         ret['changes']['deploy'] = 'deployed {0} in version {1}'.format(name, version)
     else:
         ret['result'] = False
