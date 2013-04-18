@@ -5,6 +5,10 @@
 
     This is where Salt's logging gets set up.
 
+    This module should be imported as soon as possible, preferably the first
+    module salt or any salt depending library imports so any new logging
+    logger instance uses our ``salt.log.SaltLoggingClass``.
+
 
     :copyright: 2011-2012 :email:`Pedro Algarvio (pedro@algarvio.me)`
     :license: Apache 2.0, see LICENSE for more details.
