@@ -9,7 +9,6 @@ The final result set is merged with the pillar data.
 # Import python libs
 import os
 import logging
-import traceback
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
@@ -139,11 +138,8 @@ def _do_search(conf):
     except IndexError:  # we got no results for this search
         result = {}
     except Exception:
-        trace = traceback.format_exc()
         log.critical(
-            'Failed to retrieve pillar data from LDAP: {0}'.format(
-                trace
-            )
+            'Failed to retrieve pillar data from LDAP:\n', exc_info=True
         )
         return {}
     return result

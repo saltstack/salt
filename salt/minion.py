@@ -329,11 +329,14 @@ class Minion(object):
         #if data['fun'] not in self.functions:
         #    return
         if 'user' in data:
-            log.info(('User {0[user]} Executing command {0[fun]} with jid '
-                      '{0[jid]}'.format(data)))
+            log.info(
+                'User {0[user]} Executing command {0[fun]} with jid '
+                '{0[jid]}'.format(data)
+            )
         else:
-            log.info(('Executing command {0[fun]} with jid {0[jid]}'
-                      .format(data)))
+            log.info(
+                'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+            )
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -514,7 +517,7 @@ class Minion(object):
                 trb = traceback.format_exc()
                 log.warning(
                     'The minion function caused an exception: {0}'.format(
-                    exc
+                        exc
                     )
                 )
                 ret['return'][data['fun'][ind]] = trb
@@ -828,7 +831,10 @@ class Minion(object):
                 # again
                 continue
             except Exception:
-                log.critical(traceback.format_exc())
+                log.critical(
+                    'An exception occurred while polling the minion',
+                    exc_info=True
+                )
 
     def destroy(self):
         if hasattr(self, 'poller'):
@@ -1016,7 +1022,10 @@ class Syndic(Minion):
                 # again
                 continue
             except Exception:
-                log.critical(traceback.format_exc())
+                log.critical(
+                    'An exception occurred while polling the syndic',
+                    exc_info=True
+                )
 
 
 class Matcher(object):
