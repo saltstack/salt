@@ -180,7 +180,6 @@ def add_host(ip, alias):
         salt '*' hosts.add_host <ip> <alias>
     '''
     hfn = __get_hosts_filename()
-    ovr = False
     if not os.path.isfile(hfn):
         return False
     lines = salt.utils.fopen(hfn).readlines()
@@ -192,21 +191,11 @@ def add_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = comps[0] + '\t'
             for existing in comps[1:]:
-                newline += '\t' + existing
-            newline += '\t' + alias + '\n'
-            lines.remove(lines[ind])
-            lines.append(newline)
-            ovr = True
-            # leave any other matching entries alone
-            break
-    if not ovr:
-        # make sure there is a newline
-        if lines and not lines[-1].endswith(('\n', '\r')):
-            lines[-1] = '{0}\n'.format(lines[-1])
-        line = ip + '\t\t' + alias + '\n'
-        lines.append(line)
+                if existing == alias:
+                    return True
+    line = ip + '\t\t' + alias + '\n'
+    lines.append(line)
     with salt.utils.fopen(hfn, 'w+') as ofile:
         ofile.writelines(lines)
     return True
