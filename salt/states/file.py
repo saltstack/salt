@@ -900,14 +900,12 @@ def directory(name,
 
     if not os.path.isdir(name):
         # The dir does not exist, make it
-        if not os.path.isdir(os.path.dirname(name)):
-            if makedirs:
-                __salt__['file.makedirs'](name, user=user,
-                                          group=group, mode=dir_mode)
-            else:
-                return _error(
-                    ret, 'No directory to create {0} in'.format(name))
-        os.makedirs(name)
+        if makedirs:
+            __salt__['file.makedirs'](name, user=user,
+                                      group=group, mode=dir_mode)
+        else:
+            return _error(
+                ret, 'No directory to create {0} in'.format(name))
         ret['changes'][name] = 'New Dir'
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
