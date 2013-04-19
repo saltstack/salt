@@ -522,7 +522,7 @@ class MWorker(multiprocessing.Process):
         self.crypticle = crypticle
         self.mkey = mkey
         self.key = key
-        self.k_mtime = ''
+        self.k_mtime = 0
 
     def __bind(self):
         '''
