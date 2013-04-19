@@ -11,17 +11,13 @@ import re
 
 log = logging.getLogger(__name__)
 
-NO_DIG = salt.utils.which('dig') is None
-
 
 def __virtual__():
     '''
     Generic, should work on any platform
     '''
-    if NO_DIG:
-        log.warn(
-            '\'dig\' does not appear to be in PATH. Will return empty lists.'
-        )
+    if not salt.utils.which('dig'):
+        return None
     return 'dnsutil'
 
 
@@ -142,9 +138,6 @@ def A(host, nameserver=None):
 
     Always returns a list.
     '''
-    if NO_DIG:
-        return []
-
     dig = ['dig', '+short', str(host), 'A']
 
     if nameserver is not None:
@@ -170,9 +163,6 @@ def NS(domain, resolve=True, nameserver=None):
 
     If 'resolve' is False, don't resolve names.
     '''
-    if NO_DIG:
-        return []
-
     dig = ['dig', '+short', str(domain), 'NS']
 
     if nameserver is not None:
@@ -206,9 +196,6 @@ def SPF(domain, record='SPF', nameserver=None):
     searched automatically. If you know the domain uses TXT and not SPF,
     specifying that will save a lookup.
     '''
-    if NO_DIG:
-        return []
-
     def _process(x):
         '''
         Parse out valid IP bits of an spf record.
@@ -261,9 +248,6 @@ def MX(domain, resolve=False, nameserver=None):
     the data be similar to the non-resolved version. If you think an MX has
     multiple IPs, don't use the resolver here, resolve them in a separate step.
     '''
-    if NO_DIG:
-        return []
-
     dig = ['dig', '+short', str(domain), 'MX']
 
     if nameserver is not None:
