@@ -428,6 +428,12 @@ class ReqServer(object):
         '''
         Binds the reply server
         '''
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        if os.path.isfile(dfn):
+            try:
+                os.remove(dfn)
+            except os.error:
+                pass
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
         self.work_procs = []
@@ -516,6 +522,7 @@ class MWorker(multiprocessing.Process):
         self.crypticle = crypticle
         self.mkey = mkey
         self.key = key
+        self.k_mtime = ''
 
     def __bind(self):
         '''
@@ -533,6 +540,7 @@ class MWorker(multiprocessing.Process):
             while True:
                 try:
                     package = socket.recv()
+                    self._update_aes()
                     payload = self.serial.loads(package)
                     ret = self.serial.dumps(self._handle_payload(payload))
                     socket.send(ret)
@@ -586,6 +594,30 @@ class MWorker(multiprocessing.Process):
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
         return self.aes_funcs.run_func(data['cmd'], data)
+
+    def _update_aes(self):
+        '''
+        Check to see if a fresh aes key is available and update the components
+        of the worker
+        '''
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        try:
+            stats = os.stat(dfn)
+        except os.error:
+            return
+        if not oct(stats.st_mode) == '0100400':
+            # Invalid dfn, return
+            return
+        if stats.st_mtime > self.k_mtime:
+            # new key, refresh crypticle
+            with open(dfn) as fp_:
+                aes = fp_.read()
+            if not len(aes) == 76:
+                return
+            self.crypticle = salt.crypt.Crypticle(self.opts, aes)
+            self.clear_funcs.crypticle = self.crypticle
+            self.aes_funcs.crypticle = self.crypticle
+            self.k_mtime = stats.st_mtime
 
     def run(self):
         '''
@@ -1246,13 +1278,13 @@ class ClearFuncs(object):
         if self.opts['auto_accept']:
             return True
 
-        autosign_file = self.opts.get("autosign_file", None)
+        autosign_file = self.opts.get('autosign_file', None)
 
         if not autosign_file or not os.path.exists(autosign_file):
             return False
 
         if not self._check_permissions(autosign_file):
-            message = "Wrong permissions for {0}, ignoring content"
+            message = 'Wrong permissions for {0}, ignoring content'
             log.warn(message.format(autosign_file))
             return False
 
