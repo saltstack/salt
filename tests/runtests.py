@@ -244,6 +244,7 @@ def parse_opts():
         help='Don\'t clean up test environment before and after integration '
              'testing (speed up test process)'
     )
+    parser.add_option_group(fs_cleanup_options_group)
 
     output_options_group = optparse.OptionGroup(parser, "Output Options")
     output_options_group.add_option(
