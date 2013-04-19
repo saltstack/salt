@@ -17,7 +17,6 @@ log = logging.getLogger(__name__)
 # the driver's module scope.
 # We list un-supported functions here. These will be removed from the loaded.
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
-    'joyent.avail_locations',
     'parallels.avail_sizes',
     'parallels.avail_locations',
     'saltify.destroy',

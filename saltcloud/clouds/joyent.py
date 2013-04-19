@@ -15,7 +15,8 @@ Using the old cloud configuration syntax, it requires that the ``username`` and
     JOYENT.password: saltybacon
     # The location of the ssh private key that can log into the new VM
     JOYENT.private_key: /root/joyent.pem
-
+    # the Datacenter location associated with the new VMS
+    JOYENT.location: us-east-1
 
 Using the new format, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/joyent.conf``:
@@ -30,6 +31,7 @@ Using the new format, set up the cloud configuration at
       # The location of the ssh private key that can log into the new VM
       private_key: /root/joyent.pem
       provider: joyent
+      location: us-east-1
 
 '''
 
@@ -50,19 +52,13 @@ from saltcloud.utils import namespaced_function
 log = logging.getLogger(__name__)
 
 
-# Some of the libcloud functions need to be in the same namespace as the
-# functions defined in the module, so we create new function objects inside
-# this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
-avail_images = namespaced_function(avail_images, globals())
-avail_sizes = namespaced_function(avail_sizes, globals())
-script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
-list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
-list_nodes_select = namespaced_function(list_nodes_select, globals())
-
+JOYENT_LOCATIONS = {
+    'us-east-1': 'North Virginia, USA',
+    'us-west-1': 'Bay Area, California, USA',
+    'us-sw-1': 'Las Vegas, Nevada, USA',
+    'eu-ams-1': 'Amsterdam, Netherlands'
+}
+DEFAULT_LOCATION = 'us-east-1'
 
 # Only load in this module is the JOYENT configurations are in place
 def __virtual__():
@@ -75,6 +71,22 @@ def __virtual__():
             'loading module.'
         )
         return False
+
+    global get_size, get_image, avail_images, avail_sizes, script, destroy
+    global list_nodes, list_nodes_full, list_nodes_select
+
+    conn = get_conn(get_location())
+
+    get_size = namespaced_function(get_size, globals(),(conn,))
+    get_image = namespaced_function(get_image, globals(),(conn,))
+    avail_images = namespaced_function(avail_images, globals(),(conn,))
+    avail_sizes = namespaced_function(avail_sizes, globals(),(conn,))
+    script = namespaced_function(script, globals(),(conn,))
+    destroy = namespaced_function(destroy, globals(),(conn,))
+    list_nodes = namespaced_function(list_nodes, globals(),(conn,))
+    list_nodes_full = namespaced_function(list_nodes_full, globals(),(conn,))
+    list_nodes_select = namespaced_function(list_nodes_select, globals(),(conn,))
+
 
     log.debug('Loading Joyent cloud module')
     return 'joyent'
@@ -89,11 +101,14 @@ def get_configured_provider():
     )
 
 
-def get_conn():
+def get_conn(location=DEFAULT_LOCATION):
     '''
     Return a conn object for the passed VM data
     '''
     driver = get_driver(Provider.JOYENT)
+
+    log.debug("Loading driver for connection to {0}".format(location))
+
     return driver(
         config.get_config_value(
             'user',
@@ -105,15 +120,18 @@ def get_conn():
             'password',
             get_configured_provider(),
             __opts__,
-            search_global=False
-        )
+            search_global=False,
+        ),
+        location=location
     )
+
 
 
 def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    
     deploy = config.get_config_value('deploy', vm_, __opts__)
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -126,13 +144,18 @@ def create(vm_):
             'system for the password.'
         )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    vm_['location'] = get_location()
+    conn = get_conn(get_location())
+
+    log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],vm_['location']))
+
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-')
-    conn = get_conn()
     kwargs = {
         'name': vm_['name'],
         'image': get_image(conn, vm_),
-        'size': get_size(conn, vm_)
+        'size': get_size(conn, vm_),
+        'location': vm_['location']
+
     }
 
     try:
@@ -216,6 +239,7 @@ def stop(name, call=None):
     '''
     Stop a node
     '''
+    
     data = {}
 
     if call != 'action':
@@ -223,7 +247,7 @@ def stop(name, call=None):
             'This action must be called with -a or --action.'
         )
 
-    conn = get_conn()
+    conn = get_conn(get_location())
     node = get_node(conn, name)
     try:
         data = conn.ex_stop_node(node=node)
@@ -239,3 +263,37 @@ def stop(name, call=None):
         )
 
     return data
+
+
+def get_location(vm_=None):
+    '''
+    Return the joyent datacenter to use, in this order:
+        - CLI parameter
+        - VM parameter
+        - Cloud profile setting
+    '''
+    return __opts__.get(
+        'location',
+        config.get_config_value(
+            'location',
+            vm_ or get_configured_provider(),
+            __opts__,
+            default=DEFAULT_LOCATION,
+            search_global=False
+        )
+    )
+
+def avail_locations():
+    '''
+    List all available locations
+    '''
+    ret = {}
+
+    for key in JOYENT_LOCATIONS:
+        ret[key] = {
+            'name': key,
+            'region' : JOYENT_LOCATIONS[key]
+        }
+
+    return ret
+
