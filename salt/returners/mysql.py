@@ -22,7 +22,7 @@ Use the following mysql database schema::
       DEFAULT CHARACTER SET utf8
       DEFAULT COLLATE utf8_general_ci;
 
-    USE `salt`;
+    USE `salt`;  
 
     --
     -- Table structure for table `jids`
@@ -109,7 +109,7 @@ def returner(ret):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `salt`.`salt_returns`
+        sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
         cur.execute(sql, (ret['fun'], ret['jid'],
@@ -123,7 +123,7 @@ def save_load(jid, load):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `salt`.`jids`
+        sql = '''INSERT INTO `jids`
                (`jid`, `load`)
                 VALUES (%s, %s)'''
 
@@ -136,7 +136,7 @@ def get_load(jid):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''SELECT load FROM `salt`.`jids`
+        sql = '''SELECT load FROM `jids`
                 WHERE `jid` = '%s';'''
 
         cur.execute(sql, (jid,))
@@ -152,7 +152,7 @@ def get_jid(jid):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''SELECT id, full_ret FROM `salt`.`salt_returns`
+        sql = '''SELECT id, full_ret FROM `salt_returns`
                 WHERE `jid` = %s'''
 
         cur.execute(sql, (jid,))
@@ -171,9 +171,9 @@ def get_fun(fun):
     with _get_serv(commit=True) as cur:
 
         sql = '''SELECT s.id,s.jid, s.full_ret
-                FROM `salt`.`salt_returns` s
+                FROM `salt_returns` s
                 JOIN ( SELECT MAX(`jid`) as jid
-                    from `salt`.`salt_returns` GROUP BY fun, id) max
+                    from `salt_returns` GROUP BY fun, id) max
                 ON s.jid = max.jid
                 WHERE s.fun = %s
                 '''
@@ -195,7 +195,7 @@ def get_jids():
     with _get_serv(commit=True) as cur:
 
         sql = '''SELECT DISTINCT jid
-                FROM `salt`.`jids`'''
+                FROM `jids`'''
 
         cur.execute(sql)
         data = cur.fetchall()
@@ -212,7 +212,7 @@ def get_minions():
     with _get_serv(commit=True) as cur:
 
         sql = '''SELECT DISTINCT id
-                FROM `salt`.`salt_returns`'''
+                FROM `salt_returns`'''
 
         cur.execute(sql)
         data = cur.fetchall()
