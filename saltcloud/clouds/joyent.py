@@ -174,9 +174,13 @@ def create(vm_):
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
+        host = data.public_ips[0] 
+        if ssh_interface(vm_) == 'private_ips':
+            host = data.private_ips[0]
+
         deploy_script = script(vm_)
         deploy_kwargs = {
-            'host': data.public_ips[0],
+            'host': host,
             'username': 'root',
             'key_filename': key_filename,
             'script': deploy_script.script,
@@ -263,6 +267,17 @@ def stop(name, call=None):
         )
 
     return data
+
+def ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    return config.get_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
+    )
+
 
 
 def get_location(vm_=None):
