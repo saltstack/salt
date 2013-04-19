@@ -31,6 +31,7 @@ Using the new format, set up the cloud configuration at
       # The location of the ssh private key that can log into the new VM
       private_key: /root/joyent.pem
       provider: joyent
+      location: us-east-1
 
 '''
 
@@ -59,8 +60,6 @@ JOYENT_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
-conn = None
-
 # Only load in this module is the JOYENT configurations are in place
 def __virtual__():
     '''
@@ -73,7 +72,6 @@ def __virtual__():
         )
         return False
 
-    global conn
     global get_size, get_image, avail_images, avail_sizes, script, destroy
     global list_nodes, list_nodes_full, list_nodes_select
 
@@ -103,13 +101,13 @@ def get_configured_provider():
     )
 
 
-def get_conn(location):
+def get_conn(location=DEFAULT_LOCATION):
     '''
     Return a conn object for the passed VM data
     '''
     driver = get_driver(Provider.JOYENT)
 
-    log.info("Loading driver for connection to {0}".format(location))
+    log.debug("Loading driver for connection to {0}".format(location))
 
     return driver(
         config.get_config_value(
@@ -133,7 +131,6 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    global conn
     
     deploy = config.get_config_value('deploy', vm_, __opts__)
     key_filename = config.get_config_value(
@@ -148,6 +145,7 @@ def create(vm_):
         )
 
     vm_['location'] = get_location()
+    conn = get_conn(get_location())
 
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],vm_['location']))
 
@@ -241,7 +239,6 @@ def stop(name, call=None):
     '''
     Stop a node
     '''
-    global conn
     
     data = {}
 
@@ -250,6 +247,7 @@ def stop(name, call=None):
             'This action must be called with -a or --action.'
         )
 
+    conn = get_conn(get_location())
     node = get_node(conn, name)
     try:
         data = conn.ex_stop_node(node=node)
