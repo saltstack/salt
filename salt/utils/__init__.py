@@ -965,18 +965,6 @@ def valid_url(url, protos):
     return False
 
 
-def dropfile():
-    '''
-    Set an aes dropfile to update the publish session key
-    '''
-    dfn = os.path.join(self.opts['cachedir'], '.dfn')
-    aes = salt.crypt.Crypticle.generate_key_string()
-    mask = os.umask(191)
-    with open(dfn, 'w+') as fp_:
-        fp_.write(aes)
-    os.umask(mask)
-
-
 def parse_docstring(docstring):
     '''
     Parse a docstring into its parts.

@@ -27,6 +27,18 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
+def dropfile():
+    '''
+    Set an aes dropfile to update the publish session key
+    '''
+    dfn = os.path.join(self.opts['cachedir'], '.dfn')
+    aes = Crypticle.generate_key_string()
+    mask = os.umask(191)
+    with open(dfn, 'w+') as fp_:
+        fp_.write(aes)
+    os.umask(mask)
+
+
 def gen_keys(keydir, keyname, keysize):
     '''
     Generate a keypair for use with salt
