@@ -17,7 +17,7 @@ def __virtual__():
     Generic, should work on any platform
     '''
     if not salt.utils.which('dig'):
-        return None
+        return False
     return 'dnsutil'
 
 
