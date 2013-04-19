@@ -1528,7 +1528,7 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
@@ -1539,7 +1539,7 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name],
+                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
@@ -1575,7 +1575,7 @@ class ClearFuncs(object):
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
@@ -1640,11 +1640,11 @@ class ClearFuncs(object):
             if not token['eauth'] in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not token['name'] in self.opts['external_auth'][token['eauth']]:
+            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) | ('*' in self.opts['external_auth'][token['eauth']])):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']],
+                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
@@ -1664,7 +1664,7 @@ class ClearFuncs(object):
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
-                if not name in self.opts['external_auth'][extra['eauth']]:
+                if not ((name in self.opts['external_auth'][extra['eauth']]) | ('*' in self.opts['external_auth'][extra['eauth']])):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -1680,7 +1680,7 @@ class ClearFuncs(object):
                 )
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name],
+                    self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
