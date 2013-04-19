@@ -398,7 +398,7 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.list_keys()
 
     def delete_all(self):
@@ -416,7 +416,7 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.list_keys()
 
     def reject(self, match):
@@ -444,7 +444,7 @@ class Key(object):
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.name_match(match)
 
     def reject_all(self):
@@ -471,7 +471,7 @@ class Key(object):
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
-        salt.crypt.dropfile()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.list_keys()
 
     def finger(self, match):

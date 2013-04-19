@@ -27,11 +27,11 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile():
+def dropfile(cachedir):
     '''
     Set an aes dropfile to update the publish session key
     '''
-    dfn = os.path.join(self.opts['cachedir'], '.dfn')
+    dfn = os.path.join(cachedir, '.dfn')
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
     with open(dfn, 'w+') as fp_:
