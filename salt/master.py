@@ -163,6 +163,7 @@ class Master(SMaster):
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = int(time.time())
+        rotate = int(time.time())
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
@@ -189,8 +190,12 @@ class Master(SMaster):
                                     self.opts['keep_jobs']:
                                 shutil.rmtree(f_path)
 
+            if self.opts.get('publish_sesion'):
+                if now - rotate >= self.opts['publish_session'] * 60:
+                    salt.crypt.dropfile(self.opts['cachedir'])
+                    rotate = now
             if self.opts.get('search'):
-                if now - last > self.opts['search_index_interval']:
+                if now - last >= self.opts['search_index_interval']:
                     search.index()
             try:
                 if not fileserver.servers:
@@ -212,6 +217,7 @@ class Master(SMaster):
                 log.error(
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
+            last = now
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:

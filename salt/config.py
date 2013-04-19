@@ -174,6 +174,7 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'pidfile': '/var/run/salt-master.pid',
+    'publish_session': 86400,
     'cluster_masters': [],
     'cluster_mode': 'paranoid',
     'range_server': 'range:80',
