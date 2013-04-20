@@ -905,9 +905,10 @@ def mod_repo(repo, refresh=False, **kwargs):
                 return {repo: out}
             else:
                 if not ppa_format_support:
-                    log.warning('Unable to use functions from '
-                                '"python-software-properties" package, making '
-                                'best guess at ppa format: {0}')
+                    warning_str = 'Unable to use functions from ' \
+                                  '"python-software-properties" package, ' \
+                                  'making best guess at ppa format: {0}'
+                    log.warning(warning_str.format(repo))
                 else:
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
