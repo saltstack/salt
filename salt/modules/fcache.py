@@ -36,6 +36,8 @@ def update():
                 data[func] = __salt__[func](*f_data[func])
             else:
                 data[func] = __salt__[func]()
+        except Exception:
+            continue
     load = {
             'cmd': '_fcache',
             'data': data,
