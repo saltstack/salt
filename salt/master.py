@@ -778,6 +778,33 @@ class AESFuncs(object):
         mopts['file_roots'] = file_roots
         return mopts
 
+    def _fcache_get(self, load):
+        '''
+        Gathers the data from the specified minions' fcache
+        '''
+        if 'id' not in load or 'tgt' not in load or 'fun' not in load:
+            return False
+        ret = {}
+        checker = salt.utils.minions.CkMinions(__opts__)
+        minions = checker.check_minions(
+                load['tgt'],
+                load.get('expr_form', 'glob')
+                )
+        for minion in minions:
+            fcache = os.path.join(
+                    self.opts['cachedir'],
+                    'minions',
+                    load['id'],
+                    'fcache.p')
+            try:
+                with salt.utils.fopen(fcache) as fp_:
+                    fdata = self.serial.load(fp_).get(load['fun'])
+                    if fdata:
+                        ret[minion] = fdata
+            except os.error:
+                continue
+        return ret
+
     def _fcache(self, load):
         '''
         Returnt he fcache data
