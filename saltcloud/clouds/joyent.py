@@ -126,7 +126,6 @@ def get_conn(location=DEFAULT_LOCATION):
     )
 
 
-
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -238,10 +237,47 @@ def create(vm_):
 
     return ret
 
+def reboot(name, call=None):
+    '''
+    Reboot a node.
+
+    CLI Example::
+
+        salt-cloud -a reboot mymachine
+    '''
+    data = {}
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
+
+    conn = get_conn(get_location())
+    node = get_node(conn, name)
+    try:
+        data = conn.reboot_node(node=node)
+        log.debug(data)
+        log.info('Rebooted node {0}'.format(name))
+    except Exception as exc:
+        log.error(
+            'Failed to reboot node {0}: {1}'.format(
+                name, exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
+
+    return data
+
+
 
 def stop(name, call=None):
     '''
     Stop a node
+
+    CLI Example::
+
+        salt-cloud -a stop mymachine
     '''
     
     data = {}
