@@ -816,7 +816,7 @@ class Login(LowDataAdapter):
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
 
         # Grab eauth config for the current backend for the current user
-        perms = self.opts['external_auth'][token['eauth']][token['name']]
+        perms = self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'] 
 
         return {'return': [{
             'token': cherrypy.session.id,
