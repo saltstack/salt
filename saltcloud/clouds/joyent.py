@@ -271,15 +271,6 @@ def start(name, call=None):
     '''
     return __take_action(name,call,'start_node','Started','start')
 
-def test(name, call=None):
-    '''
-    Stop a node
-
-    CLI Example::
-
-        salt-cloud -a stop mymachine
-    '''
-    return __take_action(name,call,'test_node','Tested','test')
     
 def __take_action(name, call=None, action = None, atext= None, btext=None):
     data = {}
