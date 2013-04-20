@@ -247,33 +247,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    data = {}
-
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'This action must be called with -a or --action.'
-        )
-
-    conn = get_conn(get_location())
-    node = get_node(conn, name)
-    try:
-        data = conn.reboot_node(node=node)
-        log.debug(data)
-        log.info('Rebooted node {0}'.format(name))
-    except Exception as exc:
-        if 'InvalidState' in str(exc):
-	    data = "False"
-        else:
-            log.error(
-                'Failed to reboot node {0}: {1}'.format(
-                    name, exc
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
-            )
-
-    return data
-
+    return __take_action(name, call, 'reboot_node','Rebooting','reboot')
 
 
 def stop(name, call=None):
@@ -284,33 +258,8 @@ def stop(name, call=None):
 
         salt-cloud -a stop mymachine
     '''
-    
-    data = {}
+    return __take_action(name,call,'ex_stop_node','Stopped','stop')
 
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'This action must be called with -a or --action.'
-        )
-
-    conn = get_conn(get_location())
-    node = get_node(conn, name)
-    try:
-        data = conn.ex_stop_node(node=node)
-        log.debug(data)
-        log.info('Stopped node {0}'.format(name))
-    except Exception as exc:
-        if 'InvalidState' in str(exc):
-	    data = "False"
-        else:
-            log.error(
-                'Failed to stop node {0}: {1}'.format(
-                    name, exc
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
-            )
-
-    return data
 
 def start(name, call=None):
     '''
@@ -320,7 +269,19 @@ def start(name, call=None):
 
         salt-cloud -a stop mymachine
     '''
+    return __take_action(name,call,'start_node','Started','start')
+
+def test(name, call=None):
+    '''
+    Stop a node
+
+    CLI Example::
+
+        salt-cloud -a stop mymachine
+    '''
+    return __take_action(name,call,'test_node','Tested','test')
     
+def __take_action(name, call=None, action = None, atext= None, btext=None):
     data = {}
 
     if call != 'action':
@@ -329,22 +290,26 @@ def start(name, call=None):
         )
 
     conn = get_conn(get_location())
+    if atext is None:
+        atext = action
+    if btext is None:
+        btext = atext
 
-    if not has_method(conn, 'start_node'):
+    if not conn_has_method(conn, action):
         return data
 
     node = get_node(conn, name)
     try:
-        data = conn.start_node(node=node)
+        data = getattr(conn, action)(node=node)
         log.debug(data)
-        log.info('Started node {0}'.format(name))
+        log.info('{0} node {1}'.format(atext,name))
     except Exception as exc:
         if 'InvalidState' in str(exc):
 	    data = "False"
         else:
             log.error(
-                'Failed to start node {0}: {1}'.format(
-                    name, exc
+                'Failed to {0} node {1}: {2}'.format(
+                    btext,name, exc
                 ),
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)

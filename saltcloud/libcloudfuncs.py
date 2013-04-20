@@ -313,3 +313,17 @@ def list_nodes_select(conn=None):
                 pairs[key] = value
         ret[node.name] = pairs
     return ret
+
+def conn_has_method(conn, method_name):
+    ret = dir( conn )
+
+    if method_name in dir(conn):
+        return True;
+
+    log.error(
+            "Method '{0}' not yet supported!".format(
+                method_name
+            )
+    )
+    return False;
+
