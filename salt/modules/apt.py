@@ -12,19 +12,25 @@ import json
 # Import salt libs
 import salt.utils
 
+
+log = logging.getLogger(__name__)
+
+
 try:
     from aptsources import sourceslist
     apt_support = True
-except ImportError:
+except ImportError, e:
     apt_support = False
+    err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
+    log.error(err_str.format(str(e)))
 
 try:
     import softwareproperties.ppa
     ppa_format_support = True
-except ImportError:
+except ImportError, e:
     ppa_format_support = False
-
-log = logging.getLogger(__name__)
+    err_str = 'Unable to import "softwareproperties.ppa": {0}'
+    log.warning(err_str.format(str(e)))
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -774,8 +780,9 @@ def del_repo(repo, refresh=False, **kwargs):
         is_ppa = True
         dist = __grains__['lsb_codename']
         if not ppa_format_support:
-            warning_str = 'python-software-properties package not ' \
-                          'installed, making best guess at ppa format: {0}'
+            warning_str = 'Unable to use functions from ' \
+                          '"python-software-properties" package, making ' \
+                          'best guess at ppa format: {0}'
             log.warning(warning_str.format(repo))
             owner_name, ppa_name = repo[4:].split('/')
             if 'ppa_auth' in kwargs:
@@ -898,8 +905,10 @@ def mod_repo(repo, refresh=False, **kwargs):
                 return {repo: out}
             else:
                 if not ppa_format_support:
-                    log.warning('software-python-properties not installed, '
-                                'falling back to using urllib method for PPA.')
+                    warning_str = 'Unable to use functions from ' \
+                                  '"python-software-properties" package, ' \
+                                  'making best guess at ppa format: {0}'
+                    log.warning(warning_str.format(repo))
                 else:
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
