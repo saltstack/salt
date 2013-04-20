@@ -60,6 +60,7 @@ JOYENT_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
+
 # Only load in this module is the JOYENT configurations are in place
 def __virtual__():
     '''
@@ -124,7 +125,6 @@ def get_conn(location=DEFAULT_LOCATION):
         ),
         location=location
     )
-
 
 
 def create(vm_):
@@ -239,9 +239,50 @@ def create(vm_):
     return ret
 
 
+def reboot(name, call=None):
+    '''
+    Reboot a node.
+
+    CLI Example::
+
+        salt-cloud -a reboot mymachine
+    '''
+    data = {}
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
+        )
+
+    conn = get_conn(get_location())
+    node = get_node(conn, name)
+    try:
+        data = conn.reboot_node(node=node)
+        log.debug(data)
+        log.info('Rebooted node {0}'.format(name))
+    except Exception as exc:
+        if 'InvalidState' in str(exc):
+	    data = "False"
+        else:
+            log.error(
+                'Failed to reboot node {0}: {1}'.format(
+                    name, exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+
+    return data
+
+
+
 def stop(name, call=None):
     '''
     Stop a node
+
+    CLI Example::
+
+        salt-cloud -a stop mymachine
     '''
     
     data = {}
@@ -258,13 +299,56 @@ def stop(name, call=None):
         log.debug(data)
         log.info('Stopped node {0}'.format(name))
     except Exception as exc:
-        log.error(
-            'Failed to stop node {0}: {1}'.format(
-                name, exc
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+        if 'InvalidState' in str(exc):
+	    data = "False"
+        else:
+            log.error(
+                'Failed to stop node {0}: {1}'.format(
+                    name, exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+
+    return data
+
+def start(name, call=None):
+    '''
+    Stop a node
+
+    CLI Example::
+
+        salt-cloud -a stop mymachine
+    '''
+    
+    data = {}
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'This action must be called with -a or --action.'
         )
+
+    conn = get_conn(get_location())
+
+    if not has_method(conn, 'start_node'):
+        return data
+
+    node = get_node(conn, name)
+    try:
+        data = conn.start_node(node=node)
+        log.debug(data)
+        log.info('Started node {0}'.format(name))
+    except Exception as exc:
+        if 'InvalidState' in str(exc):
+	    data = "False"
+        else:
+            log.error(
+                'Failed to start node {0}: {1}'.format(
+                    name, exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
 
     return data
 
@@ -311,4 +395,17 @@ def avail_locations():
         }
 
     return ret
+
+def has_method(obj, method_name):
+    ret = dir( obj )
+
+    if method_name in dir(obj):
+        return True;
+
+    log.error(
+            "Method '{0}' not yet supported!".format(
+                method_name
+            )
+    )
+    return False;
 
