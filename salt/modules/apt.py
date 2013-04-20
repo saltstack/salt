@@ -21,16 +21,12 @@ try:
     apt_support = True
 except ImportError, e:
     apt_support = False
-    err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
-    log.error(err_str.format(str(e)))
 
 try:
     import softwareproperties.ppa
     ppa_format_support = True
 except ImportError, e:
     ppa_format_support = False
-    err_str = 'Unable to import "softwareproperties.ppa": {0}'
-    log.warning(err_str.format(str(e)))
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -45,7 +41,15 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'pkg' if __grains__['os_family'] == 'Debian' else False
+    if not __grains__['os_family'] == 'Debian':
+        return False
+    if not apt_support:
+        err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
+        log.error(err_str.format(str(e)))
+    if not ppa_format_support:
+        err_str = 'Unable to import "softwareproperties.ppa": {0}'
+        log.warning(err_str.format(str(e)))
+    return 'pkg'
 
 
 def __init__(opts):
