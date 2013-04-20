@@ -778,6 +778,21 @@ class AESFuncs(object):
         mopts['file_roots'] = file_roots
         return mopts
 
+    def _fcache(self, load):
+        '''
+        Returnt he fcache data
+        '''
+        if 'id' not in load or 'data' not in load:
+            return False
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                os.makedirs(cdir)
+            datap = os.path.join(cdir, 'fcache.p')
+            with salt.utils.fopen(datap, 'w+') as fp_:
+                fp_.write(self.serial.dumps(load['data']))
+        return True
+
     def _pillar(self, load):
         '''
         Return the pillar data for the minion
