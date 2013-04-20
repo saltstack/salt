@@ -219,6 +219,9 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'result': True,
            'comment': ''}
 
+    # Get just the key
+    name = name.split(' ')[0]
+
     if __opts__['test']:
         check = __salt__['ssh.check_key'](
                 user,
