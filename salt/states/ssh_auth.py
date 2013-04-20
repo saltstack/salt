@@ -231,7 +231,7 @@ def absent(name, user, config='.ssh/authorized_keys'):
                 [],
                 config)
         if check == 'update' or check == 'exists':
-            ret['return'] = None
+            ret['result'] = None
             ret['comment'] = 'Key {0} is set for removal'.format(name)
             return ret
         else:
