@@ -24,7 +24,7 @@ def update():
     The function cache will be populated with information from executing these
     functions
     '''
-    f_data = __salt__['config.merge']('function_cache')
+    f_data = __salt__['config.option']('function_cache', {})
     data = {}
     for func in f_data:
         if not func in __salt__:
