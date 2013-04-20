@@ -149,7 +149,7 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],vm_['location']))
 
-    saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-')
+    saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
         'image': get_image(conn, vm_),
