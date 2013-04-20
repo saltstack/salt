@@ -8,6 +8,15 @@ import salt.crypt
 import salt.payload
 
 
+def _auth():
+    '''
+    Return the auth object
+    '''
+    if not 'fcache.auth' in __context__:
+        __context__['fcache.auth'] = salt.crypt.SAuth(__opts__)
+    return __context__['fcache.auth']
+
+
 def update():
     '''
     Execute the configured functions and send the data back up to the master
@@ -23,6 +32,10 @@ def update():
 
     The function cache will be populated with information from executing these
     functions
+
+    CLI Example::
+
+        salt '*' fcache.update
     '''
     f_data = __salt__['config.option']('function_cache', {})
     data = {}
@@ -45,8 +58,28 @@ def update():
             }
     serial = salt.payload.Serial(__opts__)
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    auth = salt.crypt.SAuth(__opts__)
+    auth = _auth()
     try:
         sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
     except Exception:
         pass
+
+
+def get(tgt, fun, expr_form='glob'):
+    '''
+    Get data from the fcache based on the target, function and expr_form
+
+    CLI Example::
+
+        salt '*' fcache.get '*' network.interfaces
+    '''
+    auth = _auth()
+    load = {
+            'cmd': '_fcache_get',
+            'id': __opts__['id'],
+            'tgt': tgt,
+            'fun': fun,
+            'expr_form': expr_form,
+            }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    return sreq.send('aes', auth.crypticle.dumps(load))
