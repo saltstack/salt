@@ -12,9 +12,9 @@ def _auth():
     '''
     Return the auth object
     '''
-    if not 'fcache.auth' in __context__:
-        __context__['fcache.auth'] = salt.crypt.SAuth(__opts__)
-    return __context__['fcache.auth']
+    if not 'mine.auth' in __context__:
+        __context__['mine.auth'] = salt.crypt.SAuth(__opts__)
+    return __context__['mine.auth']
 
 
 def update():
@@ -25,7 +25,7 @@ def update():
 
     .. code-block:: yaml
 
-        function_cache:
+        mine_functions:
           network.ip_addrs:
             - eth0
           disk.usage: []
@@ -35,24 +35,24 @@ def update():
 
     CLI Example::
 
-        salt '*' fcache.update
+        salt '*' mine.update
     '''
-    f_data = __salt__['config.option']('function_cache', {})
+    m_data = __salt__['config.option']('mine_functions', {})
     data = {}
-    for func in f_data:
+    for func in m_data:
         if not func in __salt__:
             continue
         try:
-            if f_data[func] and isinstance(f_data[func], dict):
-                data[func] = __salt__[func](**f_data[func])
-            elif f_data[func] and isinstance(f_data[func], list):
-                data[func] = __salt__[func](*f_data[func])
+            if m_data[func] and isinstance(m_data[func], dict):
+                data[func] = __salt__[func](**m_data[func])
+            elif f_data[func] and isinstance(m_data[func], list):
+                data[func] = __salt__[func](*m_data[func])
             else:
                 data[func] = __salt__[func]()
         except Exception:
             continue
     load = {
-            'cmd': '_fcache',
+            'cmd': '_mine',
             'data': data,
             'id': __opts__['id']
             }
@@ -67,15 +67,15 @@ def update():
 
 def get(tgt, fun, expr_form='glob'):
     '''
-    Get data from the fcache based on the target, function and expr_form
+    Get data from the mine based on the target, function and expr_form
 
     CLI Example::
 
-        salt '*' fcache.get '*' network.interfaces
+        salt '*' mine.get '*' network.interfaces
     '''
     auth = _auth()
     load = {
-            'cmd': '_fcache_get',
+            'cmd': '_mine_get',
             'id': __opts__['id'],
             'tgt': tgt,
             'fun': fun,
