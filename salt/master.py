@@ -778,9 +778,9 @@ class AESFuncs(object):
         mopts['file_roots'] = file_roots
         return mopts
 
-    def _fcache_get(self, load):
+    def _mine_get(self, load):
         '''
-        Gathers the data from the specified minions' fcache
+        Gathers the data from the specified minions' mine
         '''
         if 'id' not in load or 'tgt' not in load or 'fun' not in load:
             return False
@@ -791,13 +791,13 @@ class AESFuncs(object):
                 load.get('expr_form', 'glob')
                 )
         for minion in minions:
-            fcache = os.path.join(
+            mine = os.path.join(
                     self.opts['cachedir'],
                     'minions',
                     load['id'],
-                    'fcache.p')
+                    'mine.p')
             try:
-                with salt.utils.fopen(fcache) as fp_:
+                with salt.utils.fopen(mine) as fp_:
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
@@ -805,9 +805,9 @@ class AESFuncs(object):
                 continue
         return ret
 
-    def _fcache(self, load):
+    def _mine(self, load):
         '''
-        Returnt he fcache data
+        Returnt he mine data
         '''
         if 'id' not in load or 'data' not in load:
             return False
@@ -815,7 +815,7 @@ class AESFuncs(object):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
-            datap = os.path.join(cdir, 'fcache.p')
+            datap = os.path.join(cdir, 'mine.p')
             with salt.utils.fopen(datap, 'w+') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
