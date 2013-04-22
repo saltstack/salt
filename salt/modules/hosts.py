@@ -15,10 +15,10 @@ def __get_hosts_filename():
     Return the path to the appropriate hosts file
     '''
     # TODO: Investigate using  "%SystemRoot%\system32" for this
-    if __grains__['kernel'].startswith('Windows'):
+    if salt.utils.is_windows():
         return 'C:\Windows\System32\drivers\etc\hosts'
-    else:
-        return __salt__['config.option']('hosts.file')
+
+    return __salt__['config.option']('hosts.file')
 
 
 def list_hosts():
@@ -43,11 +43,8 @@ def list_hosts():
             if line.startswith('#'):
                 continue
             comps = line.split()
-            if comps[0] in ret:
-                # maybe log a warning ?
-                ret[comps[0]].extend(comps[1:])
-            else:
-                ret[comps[0]] = comps[1:]
+            ip = comps.pop(0)
+            ret.setdefault(ip, []).extend(comps)
     return ret
 
 
@@ -182,20 +179,27 @@ def add_host(ip, alias):
     hfn = __get_hosts_filename()
     if not os.path.isfile(hfn):
         return False
-    lines = salt.utils.fopen(hfn).readlines()
-    for ind in range(len(lines)):
-        tmpline = lines[ind].strip()
-        if not tmpline:
-            continue
-        if tmpline.startswith('#'):
-            continue
-        comps = tmpline.split()
-        if comps[0] == ip:
-            for existing in comps[1:]:
-                if existing == alias:
-                    return True
-    line = ip + '\t\t' + alias + '\n'
-    lines.append(line)
-    with salt.utils.fopen(hfn, 'w+') as ofile:
-        ofile.writelines(lines)
+
+    if has_pair(ip, alias):
+        return True
+
+    hosts = list_hosts()
+    hosts.setdefault(ip, []).append(alias)
+    _write_hosts(hosts)
     return True
+
+
+def _write_hosts(hosts):
+    lines = []
+    for ip in sorted(hosts.keys()):
+        lines.append(
+            '{0}\t\t{1}'.format(ip, '\t'.join(sorted(hosts[ip])))
+        )
+
+    hfn = __get_hosts_filename()
+    with salt.utils.fopen(hfn, 'w+') as ofile:
+        ofile.write(
+            '\n'.join(
+                [l.strip() for l in lines if l.strip()]
+            )
+        )

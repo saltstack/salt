@@ -16,6 +16,9 @@ class HostsModuleTest(integration.ModuleCase):
     '''
     Test the hosts module
     '''
+
+    maxDiff = None
+
     def __clean_hosts(self):
         '''
         Clean out the hosts file
@@ -103,12 +106,16 @@ class HostsModuleTest(integration.ModuleCase):
         hosts.set_hosts
         '''
         self.__clean_hosts()
-        assert self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
+        self.assertTrue(
+            self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
+        )
         self.assertTrue(
             self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
         )
+        self.assertTrue(
+            self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
-        assert self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
         self.assertFalse(
             self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']),
             'should remove second entry'
@@ -119,13 +126,15 @@ class HostsModuleTest(integration.ModuleCase):
         hosts.add_host
         '''
         self.__clean_hosts()
-        assert self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
+        )
         self.assertTrue(
             self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
         )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
-        assert self.run_function(
-            'hosts.add_host', ['127.0.0.1', 'othernameip']
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
         )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
 
@@ -170,10 +179,10 @@ class HostsModuleTest(integration.ModuleCase):
         # now read the lines and ensure they're formatted correctly
         lines = salt.utils.fopen(HFN, 'r').readlines()
         self.assertEqual(lines, [
-            "192.168.1.3\t\thost3.fqdn.com\n",
-            "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\thost2-reorder\n",
-            "192.168.1.1\t\thost1.fqdn.com\thost1\thost1-reorder\n",
-            ])
+            '192.168.1.1\t\thost1\thost1-reorder\thost1.fqdn.com\n',
+            '192.168.1.2\t\thost2\thost2-reorder\thost2.fqdn.com\toldhost2\n',
+            '192.168.1.3\t\thost3.fqdn.com'
+        ])
 
 
 if __name__ == '__main__':
