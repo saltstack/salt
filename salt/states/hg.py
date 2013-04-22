@@ -46,7 +46,7 @@ def latest(name,
            force=False,
         ):
     '''
-    Make sure the repository is cloned to to given directory and is up to date
+    Make sure the repository is cloned to the given directory and is up to date
 
     name
         Address of the remote repository as passed to "hg clone"

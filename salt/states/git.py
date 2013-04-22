@@ -234,7 +234,7 @@ def present(name, bare=True, runas=None, force=False):
     runas
         Name of the user performing repository management operations
     force
-        Force create a new repository into an pre-existing non-git directory
+        Force-create a new repository into an pre-existing non-git directory
         (deletes contents)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
