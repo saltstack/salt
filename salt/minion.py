@@ -447,11 +447,15 @@ class Minion(object):
                 )
             except TypeError as exc:
                 aspec = _getargs(minion_instance.functions[data['fun']])
-                msg = 'Missing arguments executing "{0}": {1}'
-                log.warning(msg.format(function_name, aspec))
-                dmsg = '"Missing args" caused by exc: {0}'.format(exc)
-                log.debug(dmsg)
-                ret['return'] = msg.format(function_name, aspec)
+                msg = 'Missing arguments executing "{0}": {1}'.format(
+                    function_name, aspec
+                )
+                log.warning(msg)
+                log.debug(
+                    '"Missing args" caused by exc: {0}'.format(exc),
+                    exc_info=True
+                )
+                ret['return'] = msg
             except Exception:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
