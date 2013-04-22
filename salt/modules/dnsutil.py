@@ -144,7 +144,7 @@ def A(host, nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -169,7 +169,7 @@ def NS(domain, resolve=True, nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -212,7 +212,7 @@ def SPF(domain, record='SPF', nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -254,7 +254,7 @@ def MX(domain, resolve=False, nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
