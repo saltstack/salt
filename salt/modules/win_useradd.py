@@ -214,7 +214,7 @@ def info(name):
                 continue
             items[comps[0].strip()] = comps[1].strip()
     grouplist = []
-    groups = items['Local Group Memberships'].split(' ')
+    groups = items['Local Group Memberships'].split('  ')
     for group in groups:
         if not group:
             continue
