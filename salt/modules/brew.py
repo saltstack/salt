@@ -2,6 +2,9 @@
 Homebrew for Mac OS X
 '''
 
+# Import python libs
+import copy
+
 # Import salt libs
 import salt.utils
 
@@ -27,6 +30,15 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     cmd = 'brew list --versions'
     for line in __salt__['cmd.run'](cmd).splitlines():
@@ -37,6 +49,7 @@ def list_pkgs(versions_as_list=False):
         __salt__['pkg_resource.add_pkg'](ret, name, version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = ret
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -81,20 +94,39 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def remove(pkgs, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
-    Removes packages with ``brew uninstall``
+    Removes packages with ``brew uninstall``.
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
-        salt '*' pkg.remove <package,package,package>
+        salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    formulas = ' '.join(pkgs.split(','))
-    cmd = 'brew uninstall {0}'.format(formulas)
-
-    return __salt__['cmd.run'](cmd)
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    cmd = 'brew uninstall {0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def install(name=None, pkgs=None, **kwargs):
@@ -143,7 +175,7 @@ def install(name=None, pkgs=None, **kwargs):
         __salt__['cmd.run'](cmd, runas=user)
     else:
         __salt__['cmd.run'](cmd)
-
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
