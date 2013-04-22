@@ -208,6 +208,7 @@ def info(name):
     ret['profile'] = items['User profile']
     ret['home'] = items['Home directory']
     ret['groups'] = grouplist
+    ret['gid'] = ''
 
     return ret
 
