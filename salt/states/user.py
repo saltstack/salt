@@ -66,14 +66,14 @@ def _changes(name,
         if lusr['gid'] not in (gid, __salt__['file.group_to_gid'](gid)):
             change['gid'] = gid
     # remove the default group from the list for comparison purposes
-    if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
+    if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
             lusr['groups']:
         lusr['groups'].remove(
             __salt__['file.gid_to_group'](gid or lusr['gid'])
         )
     # remove default group from wanted_groups, as this requirement is
     # already met
-    if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
+    if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
             wanted_groups:
         wanted_groups.remove(
             __salt__['file.gid_to_group'](gid or lusr['gid']))
