@@ -383,8 +383,9 @@ def install(name=None, refresh=False, **kwargs):
         cached_pkg = pkginfo[version]['installer']
     cached_pkg = cached_pkg.replace('/', '\\')
     cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version]['install_flags'])
-    if pkginfo[version]['msiexec']:
-        cmd = 'msiexec /i ' + cmd
+    if 'msiexec' in pkginfo[version]:
+        if pkginfo[version]['msiexec']:
+            cmd = 'msiexec /i ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
@@ -442,8 +443,9 @@ def remove(name, version=None, **kwargs):
         cached_pkg = cached_pkg.replace('(x86)', '')
     cmd = '"' + str(os.path.expandvars(
         cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
-    if pkginfo[version]['msiexec']:
-        cmd = 'msiexec /x ' + cmd
+    if 'msiexec'in pkginfo[version]:
+        if pkginfo[version]['msiexec']:
+            cmd = 'msiexec /x ' + cmd
     stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
     if stderr:
         log.error(stderr)
