@@ -753,6 +753,9 @@ class Login(LowDataAdapter):
 
         .. versionchanged:: 0.8.0
             No longer returns a 302 redirect on success.
+        
+        .. versionchanged:: 0.8.0
+            Returns 401 on authentication failure
 
         .. http:post:: /login
 
@@ -802,6 +805,7 @@ class Login(LowDataAdapter):
         :form username: username
         :form password: password
         :status 200: success
+        :status 401: could not authenticate using provided credentials
         :status 406: requested Content-Type not available
         '''
         # the urlencoded_processor will wrap this in a list
@@ -811,6 +815,9 @@ class Login(LowDataAdapter):
             creds = cherrypy.serving.request.lowstate
 
         token = self.auth.mk_token(creds)
+        if not 'token' in token:
+            raise cherrypy.HTTPError(401, 'Could not authenticate using provided credentials')
+            
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
