@@ -508,14 +508,18 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
-    cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
+    cmd = (
+        r'''sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}'''
+        .format(
             backup='-i{0} '.format(backup) if backup else '-i ',
             options=options,
             limit='/{0}/ '.format(limit) if limit else '',
             before=before,
             after=after,
             flags=flags,
-            path=path)
+            path=path
+        )
+    )
 
     return __salt__['cmd.run_all'](cmd)
 
@@ -527,7 +531,7 @@ def sed_contains(path, text, limit='', flags='g'):
 
     Note: the ``p`` flag will be added to any flags you pass in.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
     '''
