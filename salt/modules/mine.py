@@ -3,10 +3,15 @@ The function cache system allows for data to be stored on the master so it
 can be easily read by other minions
 '''
 
+# Import python libs
+import logging
+
 # Import salt libs
 import salt.crypt
 import salt.payload
 
+
+log = logging.getLogger(__name__)
 
 def _auth():
     '''
@@ -41,15 +46,25 @@ def update():
     data = {}
     for func in m_data:
         if not func in __salt__:
+            log.error(
+                    'Function {0} in mine_functions not available'.format(
+                        func
+                        )
+                    )
             continue
         try:
             if m_data[func] and isinstance(m_data[func], dict):
                 data[func] = __salt__[func](**m_data[func])
-            elif f_data[func] and isinstance(m_data[func], list):
+            elif m_data[func] and isinstance(m_data[func], list):
                 data[func] = __salt__[func](*m_data[func])
             else:
                 data[func] = __salt__[func]()
         except Exception:
+            log.error(
+                    'Function {0} in mine_functions failed to execute'.format(
+                        func
+                        )
+                    )
             continue
     load = {
             'cmd': '_mine',
