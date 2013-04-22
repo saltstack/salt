@@ -302,7 +302,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         return [x[2] for x in srcinfo], 'file'
 
     elif name and __grains__['os_family'] != 'Solaris':
-        return {name: None}, 'repository'
+        return dict([(x, None) for x in name.split(',')]), 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')
