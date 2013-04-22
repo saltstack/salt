@@ -589,7 +589,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=30,
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=10,
                      **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -661,7 +661,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=30)
+        orig = self.client.cmd('minion', function, arg, timeout=10)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
