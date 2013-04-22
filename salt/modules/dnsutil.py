@@ -137,6 +137,11 @@ def A(host, nameserver=None):
     Return the A record for 'host'.
 
     Always returns a list.
+
+    Example::
+
+        salt ns1 dnsutil.A www.google.com
+
     '''
     dig = ['dig', '+short', str(host), 'A']
 
@@ -162,6 +167,11 @@ def NS(domain, resolve=True, nameserver=None):
     Return a list of IPs of the nameservers for 'domain'
 
     If 'resolve' is False, don't resolve names.
+
+    Example::
+
+        salt ns1 dnsutil.NS google.com
+
     '''
     dig = ['dig', '+short', str(domain), 'NS']
 
@@ -195,6 +205,11 @@ def SPF(domain, record='SPF', nameserver=None):
     If record is 'SPF' and the SPF record is empty, the TXT record will be
     searched automatically. If you know the domain uses TXT and not SPF,
     specifying that will save a lookup.
+
+    Example::
+
+        salt ns1 dnsutil.SPF google.com
+
     '''
     def _process(x):
         '''
@@ -247,6 +262,11 @@ def MX(domain, resolve=False, nameserver=None):
     round robin, it is an acceptable configuration and pulling just one IP lets
     the data be similar to the non-resolved version. If you think an MX has
     multiple IPs, don't use the resolver here, resolve them in a separate step.
+
+    Example::
+
+        salt ns1 dnsutil.MX google.com
+
     '''
     dig = ['dig', '+short', str(domain), 'MX']
 
