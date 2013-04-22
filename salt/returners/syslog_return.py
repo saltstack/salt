@@ -8,7 +8,6 @@ facility to log return data
 '''
 
 # Import python libs
-import syslog
 import json
 try:
     import syslog
