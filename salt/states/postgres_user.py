@@ -42,13 +42,13 @@ def present(name,
         Should the new user be allowed to initiate streaming replication
 
     password
-        The user's pasword
+        The user's password
 
     groups
         A string of comma separated groups the user should be in
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},
@@ -90,7 +90,7 @@ def absent(name, runas=None):
         The username of the user to remove
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},
