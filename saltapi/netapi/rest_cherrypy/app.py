@@ -754,7 +754,7 @@ class Login(LowDataAdapter):
         .. versionchanged:: 0.8.0
             No longer returns a 302 redirect on success.
         
-        .. versionchanged:: 0.8.0
+        .. versionchanged:: 0.8.1
             Returns 401 on authentication failure
 
         .. http:post:: /login
