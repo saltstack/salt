@@ -147,6 +147,26 @@ def chprofile(name, profile):
         return post_info['profile'] == profile
     return False
 
+def chfullname(name, fullname):
+    '''
+    Change the full name of the user
+
+    CLI Example::
+
+        salt '*' user.chfullname user 'First Last'
+    '''
+    pre_info = info(name)
+    if not pre_info:
+        return False
+    if fullname == pre_info['fullname']:
+        return True
+    cmd = 'net user {0} /fullname:"{1}"'.format(name, fullname)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['fullname'] != pre_info['fullname']:
+        return post_info['fullname'] == fullname
+    return False
+
 
 def chgroups(name, groups, append=False):
     '''
