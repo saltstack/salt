@@ -138,7 +138,7 @@ def A(host, nameserver=None):
 
     Always returns a list.
 
-    Example::
+    CLI Example::
 
         salt ns1 dnsutil.A www.google.com
 
@@ -168,7 +168,7 @@ def NS(domain, resolve=True, nameserver=None):
 
     If 'resolve' is False, don't resolve names.
 
-    Example::
+    CLI Example::
 
         salt ns1 dnsutil.NS google.com
 
@@ -206,7 +206,7 @@ def SPF(domain, record='SPF', nameserver=None):
     searched automatically. If you know the domain uses TXT and not SPF,
     specifying that will save a lookup.
 
-    Example::
+    CLI Example::
 
         salt ns1 dnsutil.SPF google.com
 
@@ -263,7 +263,7 @@ def MX(domain, resolve=False, nameserver=None):
     the data be similar to the non-resolved version. If you think an MX has
     multiple IPs, don't use the resolver here, resolve them in a separate step.
 
-    Example::
+    CLI Example::
 
         salt ns1 dnsutil.MX google.com
 
