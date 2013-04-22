@@ -942,7 +942,6 @@ class Syndic(Minion):
         self.context = zmq.Context()
 
         # Start with the publish socket
-        id_hash = hashlib.md5(self.opts['id']).hexdigest()
         self.poller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
