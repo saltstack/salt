@@ -868,15 +868,12 @@ class Syndic(Minion):
     master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
-        interface = opts.get('interface')
+        self._syndic_interface = opts.get('interface')
         self._syndic = True
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
-        self.local = salt.client.LocalClient(opts['_master_conf_file'])
-        self.local.event.subscribe('')
         opts.update(self.opts)
         self.opts = opts
-        self.local.opts['interface'] = interface
 
     def _handle_aes(self, load):
         '''
@@ -937,8 +934,14 @@ class Syndic(Minion):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
+        # Instantiate the local client
+        self.local = salt.client.LocalClient(self.opts['_master_conf_file'])
+        self.local.event.subscribe('')
+        self.local.opts['interface'] = self._syndic_interface
+
         signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic "{0}" trying to tune in'.format(self.opts['id']))
+
         self.context = zmq.Context()
 
         # Start with the publish socket
