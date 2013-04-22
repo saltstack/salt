@@ -7,7 +7,7 @@ of ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
 downloads files from the salt master and places them on the target system.
-The downloaded files can be rendered as a jinja, mako, or wempy template
+The downloaded files can be rendered as a jinja, mako, or wempy template,
 adding a dynamic component to file management. An example of ``file.managed``
 which makes use of the jinja templating system would look like this:
 
@@ -26,7 +26,7 @@ which makes use of the jinja templating system would look like this:
             custom_var: "default value"
             other_var: 123
 
-The ``source`` parameter can be specified as a list. IF this is done, then the
+The ``source`` parameter can be specified as a list. If this is done, then the
 first file to be matched will be the one that is used. This allows you to have
 a default file on which to fall back if the desired file does not exist on the
 salt fileserver. Here's an example:
@@ -88,7 +88,7 @@ specify both directory and file permissions, use this form:
           - group
           - mode
 
-Symlinks can be easily created, the symlink function is very simple and only
+Symlinks can be easily created; the symlink function is very simple and only
 takes a few arguments:
 
 .. code-block:: yaml
@@ -100,8 +100,8 @@ takes a few arguments:
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
 master to be recursively copied down to the minion. This is a great tool for
-deploying large code and configuration systems. A recurse state would look
-something like this:
+deploying large code and configuration systems. A state using ``recurse``
+would look something like this:
 
 .. code-block:: yaml
 
@@ -382,10 +382,10 @@ def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
      'path_str' string and return True/False conditions as follows.
       - Default: return 'True' if no include_pat or exclude_pat patterns are
         supplied
-      - If only include_pat or exclude_pat is supplied. Return 'True' if string
-        passes the include_pat test or failed exclude_pat test respectively
-      - If both include_pat and exclude_pat are supplied, return Ture if
-        include_pat matches 'AND' exclude_pat does not matches
+      - If only include_pat or exclude_pat is supplied: return 'True' if string
+        passes the include_pat test or fails exclude_pat test respectively
+      - If both include_pat and exclude_pat are supplied: return 'True' if
+        include_pat matches AND exclude_pat does not match
     '''
     ret = True  # -- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
@@ -580,8 +580,9 @@ def absent(name):
 def exists(name):
     '''
     Verify that the named file or directory is present or exists.
-    Ensures pre-requisites outside of salts purview have been previously
-    satisified (aka, keytabs, private keys, etc.) before deployment
+    Ensures pre-requisites outside of Salt's purview
+    (e.g., keytabs, private keys, etc.) have been previously satisfied before
+    deployment.
 
     name
         Absolute path which must exist
@@ -672,7 +673,7 @@ def managed(name,
     replace
         If this file should be replaced.  If false, this command will
         not overwrite file contents but will enforce permissions if the file
-        exists already.  Default is true.
+        exists already.  Default is True.
 
     context
         Overrides default context variables passed to the template.
@@ -684,7 +685,7 @@ def managed(name,
         Overrides the default backup mode for this specific file.
 
     show_diff
-        If set to false, the diff will not be shown.
+        If set to False, the diff will not be shown.
 
     create
         Default is True, if create is set to False then the file will only be
@@ -814,11 +815,11 @@ def directory(name,
         The location to create or manage a directory
 
     user
-        The user to own the directory, this defaults to the user salt is
+        The user to own the directory; this defaults to the user salt is
         running as on the minion
 
     group
-        The group ownership set for the directory, this defaults to the group
+        The group ownership set for the directory; this defaults to the group
         salt is running as on the minion
 
     recurse
@@ -1063,7 +1064,7 @@ def recurse(name,
 
     include_pat
         When copying, include only this pattern from the source. Default
-        is glob match , if prefixed with E@ then regexp match
+        is glob match; if prefixed with 'E@', then regexp match.
         Example::
 
           - include_pat: hello*       :: glob matches 'hello01', 'hello02'
@@ -1074,10 +1075,10 @@ def recurse(name,
     exclude_pat
         When copying, exclude this pattern from the source. If both
         include_pat and exclude_pat are supplied, then it will apply
-        conditions cumulatively. i.e. first select based on include_pat and
-        then with in that result, applies exclude_pat.
+        conditions cumulatively. i.e. first select based on include_pat, and
+        then within that result apply exclude_pat.
 
-        Also when 'clean=True', exclude this pattern from the removal
+        Also, when 'clean=True', exclude this pattern from the removal
         list and preserve in the destination.
         Example::
 
@@ -1909,7 +1910,7 @@ def accumulated(name, filename, text, **kwargs):
 
     filename
         Filename which would receive this accumulator (see file.managed state
-        documentation about ''name``)
+        documentation about ``name``)
 
     text
         String or list for adding in accumulator

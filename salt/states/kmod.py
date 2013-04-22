@@ -16,7 +16,7 @@ module:
 
 def __virtual__():
     '''
-    only load if kmod is available
+    Only load if the kmod module is available in __salt__
     '''
     return 'kmod' if 'kmod.available' in __salt__ else False
 

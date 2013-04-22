@@ -43,7 +43,7 @@ def present(name, value=None, contains=None, excludes=None):
         Enforce that the value of the variable is set to the provided value
 
     contains
-        Enforce that the value of the variable cotains the provided value
+        Enforce that the value of the variable contains the provided value
 
     excludes
         Enforce that the value of the variable does not contain the provided

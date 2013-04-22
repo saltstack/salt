@@ -43,7 +43,7 @@ def removed(name):
     Make sure that a pecl extension is not installed.
 
     name
-        The pecl exntension name to uninstall
+        The pecl extension name to uninstall
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if name not in __salt__['pecl.list']():
