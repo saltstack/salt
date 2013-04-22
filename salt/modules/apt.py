@@ -145,10 +145,7 @@ def latest_version(*names, **kwargs):
         if fromrepo else ''
     for name in names:
         cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
-        out = __salt__['cmd.run_all'](cmd, **kwargs)
-        if out['retcode'] != 0:
-            msg = 'Error:  ' + out['stderr']
-            log.error(msg)
+        out = __salt__['cmd.run_all'](cmd)
         candidate = out['stdout'].split()
         if len(candidate) >= 2:
             candidate = candidate[-1]
@@ -203,11 +200,7 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    out = __salt__['cmd.run_all'](cmd)
-    if out['retcode'] != 0:
-        msg = 'Error:  ' + out['stderr']
-        log.error(msg)
-    out = out['stdout']
+    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
 
     lines = out.splitlines()
     for line in lines:
@@ -525,12 +518,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_all'](cmd)
-    if out['retcode'] != 0:
-        msg = 'Error:  ' + out['stderr']
-        log.error(msg)
-
-    out = out['stdout']
+    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
