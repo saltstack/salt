@@ -15,7 +15,18 @@ def __virtual__():
     return 'user' if __grains__['kernel'] == 'Windows' else False
 
 
-def add(name, uid=None, gid=None, groups=None, home=False, shell=None, system=False):
+def add(name,
+        uid=None,
+        gid=None,
+        groups=None,
+        home=False,
+        shell=None,
+        unique=False,
+        system=False,
+        fullname=False,
+        roomnumber=False,
+        workphone=False,
+        homephone=False):
     '''
     Add a user to the minion
 
