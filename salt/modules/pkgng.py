@@ -304,7 +304,7 @@ def install(pkg_name, orphan=False, force=False, glob=False, local=False,
 
 
 def delete(pkg_name, all_installed=False, force=False, glob=False,
-            dryrun=False, recurse=False, regex=False, pcre=False):
+           dryrun=False, recurse=False, regex=False, pcre=False):
     '''
     Delete a package from the database and system
 
@@ -470,7 +470,6 @@ def upgrade(force=False, local=False, dryrun=False):
 
                 salt '*' pkgng.update dryrun=True
     '''
-
     opts = ''
     if force:
         opts += 'f'
@@ -503,19 +502,16 @@ def clean():
 def autoremove(dryrun=False):
     '''
     Delete packages which were automatically installed as dependencies and are
-    not required anymore
-
-    CLI Example::
-
-	    salt '*' pkgng.autoremove
+    not required anymore.
 
         dryrun
             Dry-run mode. The list of changes to packages is always printed,
             but no changes are actually made.
 
-            CLI Example::
+    CLI Example::
 
-                salt '*' pkgng.autoremove dryrun=True
+         salt '*' pkgng.autoremove
+         salt '*' pkgng.autoremove dryrun=True
     '''
 
     opts = ''
@@ -606,8 +602,8 @@ def which(file_name, origin=False, quiet=False):
 
 
 def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
-            comment=False, desc=False, full=False, depends=False,
-            size=False, quiet=False, origin=False, prefix=False, ):
+           comment=False, desc=False, full=False, depends=False,
+           size=False, quiet=False, origin=False, prefix=False):
     '''
     Searches in remote package repositories
 
@@ -734,7 +730,7 @@ def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
 
 
 def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
-            regex=False, pcre=False, local=False, depends=False):
+          regex=False, pcre=False, local=False, depends=False):
     '''
     Fetches remote packages
 
