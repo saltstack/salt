@@ -753,7 +753,7 @@ class Login(LowDataAdapter):
 
         .. versionchanged:: 0.8.0
             No longer returns a 302 redirect on success.
-        
+
         .. versionchanged:: 0.8.1
             Returns 401 on authentication failure
 
@@ -816,14 +816,18 @@ class Login(LowDataAdapter):
 
         token = self.auth.mk_token(creds)
         if not 'token' in token:
-            raise cherrypy.HTTPError(401, 'Could not authenticate using provided credentials')
-            
+            raise cherrypy.HTTPError(401,
+                    'Could not authenticate using provided credentials')
+
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
 
         # Grab eauth config for the current backend for the current user
-        perms = self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'] 
+        if token['name'] in self.opts['external_auth'][token['eauth']]:
+            perms = self.opts['external_auth'][token['eauth']][token['name']]
+        else:
+            perms = self.opts['external_auth'][token['eauth']]['*']
 
         return {'return': [{
             'token': cherrypy.session.id,
