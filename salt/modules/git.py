@@ -443,6 +443,10 @@ def status(cwd, user=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.status /path/to/git/repo
     '''
     cmd = 'git status -z --porcelain'
     stdout = _git_run(cmd, cwd=cwd, runas=user)
@@ -470,6 +474,11 @@ def add(cwd, file_name, user=None, opts=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.add /path/to/git/repo /path/to/file
+
     '''
 
     if not opts:
@@ -493,6 +502,10 @@ def rm(cwd, file_name, user=None, opts=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.rm /path/to/git/repo /path/to/file
     '''
 
     if not opts:
@@ -516,6 +529,10 @@ def commit(cwd, message, user=None, opts=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.commit /path/to/git/repo 'The commit message'
     '''
 
     if not opts:
@@ -524,7 +541,8 @@ def commit(cwd, message, user=None, opts=None):
     return _git_run(cmd, cwd=cwd, runas=user)
 
 
-def push(cwd, remote_name, branch='master', user=None, opts=None, identity=None):
+def push(cwd, remote_name, branch='master', user=None, opts=None,
+         identity=None):
     '''
     Push to remote
 
@@ -545,6 +563,11 @@ def push(cwd, remote_name, branch='master', user=None, opts=None, identity=None)
 
     identity : None
         A path to a private key to use over SSH
+
+
+    CLI Example::
+
+        salt '*' git.push /path/to/git/repo remote-name
     '''
 
     if not opts:
