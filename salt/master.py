@@ -807,7 +807,7 @@ class AESFuncs(object):
 
     def _mine(self, load):
         '''
-        Returnt he mine data
+        Return the mine data
         '''
         if 'id' not in load or 'data' not in load:
             return False
