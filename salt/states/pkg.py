@@ -64,7 +64,7 @@ def _fulfills_version_spec(versions, oper, desired_version):
 def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
-    be installed. Return a dict of desired packages, a dict of those
+    be installed. Return a dict of desired packages
     '''
     if all((pkgs, sources)):
         return {'name': name,
@@ -141,7 +141,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
                 gt_lt, eq, verstr = match.groups()
                 comparison = gt_lt or ''
                 comparison += eq or ''
-                # A comparison operator of "=" is redundant, but possbile.
+                # A comparison operator of "=" is redundant, but possible.
                 # Change it to "==" so that it works in pkg.compare.
                 if comparison in ['=', '']:
                     comparison = '=='
@@ -186,7 +186,7 @@ def _verify_install(desired, new_pkgs):
         gt_lt, eq, verstr = match.groups()
         comparison = gt_lt or ''
         comparison += eq or ''
-        # A comparison operator of "=" is redundant, but possbile.
+        # A comparison operator of "=" is redundant, but possible.
         # Change it to "==" so that it works in pkg.compare.
         if comparison in ('=', ''):
             comparison = '=='
@@ -683,9 +683,9 @@ def purged(name, **kwargs):
 def mod_init(low):
     '''
     Set a flag to tell the install functions to refresh the package database.
-    This ensures that the package database is refreshed only once durring
-    a state run significaltly improving the speed of package management
-    durring a state run.
+    This ensures that the package database is refreshed only once during
+    a state run significantly improving the speed of package management
+    during a state run.
 
     It sets a flag for a number of reasons, primarily due to timeline logic.
     When originally setting up the mod_init for pkg a number of corner cases

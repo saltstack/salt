@@ -157,7 +157,7 @@ def managed(name, type, enabled=True, **kwargs):
 
     '''
     # For this function we are purposefully overwriting a bif
-    # to enance the user experience. This does not look like
+    # to enhance the user experience. This does not look like
     # it will cause a problem. Just giving a heads up in case
     # it does create a problem.
 

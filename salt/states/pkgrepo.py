@@ -147,7 +147,7 @@ def managed(name, **kwargs):
        option only needs to be set on one repo managed by salt to take effect.
 
     require_in
-        Set this to a list of pkg.installed or pkg.lastest to trigger the
+        Set this to a list of pkg.installed or pkg.latest to trigger the
         running of apt-get update prior to attempting to install these
         packages. Setting a require in the pkg will not work for this.
     '''

@@ -30,7 +30,7 @@ syslog if there is no disk space:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test
 
-Note that when executing a command or script, the state(ie, changed or not) of
+Note that when executing a command or script, the state (i.e., changed or not) of
 the command is unknown to Salt's state system. Therefore, by default, the
 ``cmd`` state assumes that any command execution results in a changed state.
 
@@ -48,14 +48,14 @@ a simple protocol described below:
     must be a string of key=value pairs delimited by spaces(no spaces on the
     sides of ``=``).
 
-    If it's JSON then it must be a JSON object(ie, {}).
+    If it's JSON then it must be a JSON object (e.g., {}).
     If it's key=value pairs then quoting may be used to include spaces.
     (Python's shlex module is used to parse the key=value string)
 
     Two special keys or attributes are recognized in the output::
 
-      changed: bool (ie, 'yes', 'no', 'true', 'false', case-insensitive)
-      comment: str  (ie, any string)
+      changed: bool (i.e., 'yes', 'no', 'true', 'false', case-insensitive)
+      comment: str  (i.e., any string)
 
     So, only if 'changed' is true then assume the command execution has changed
     the state, and any other key values or attributes in the output will be set
@@ -90,7 +90,7 @@ a simple protocol described below:
             - watch:
               - cmd: Run myscript
 
-    Note that if the ``cmd.wait`` state also specfies ``stateful: true``
+    Note that if the ``cmd.wait`` state also specifies ``stateful: true``
     it can then be watched by some other states as well.
 
 ``cmd.wait`` is not restricted to watching only cmd states. For example
@@ -135,7 +135,7 @@ log = logging.getLogger(__name__)
 
 def _reinterpreted_state(state):
     '''
-    Re-interpret the state return by salt.sate.run using our protocol.
+    Re-interpret the state returned by salt.sate.run using our protocol.
     '''
     ret = state['changes']
     state['changes'] = {}
@@ -152,7 +152,7 @@ def _reinterpreted_state(state):
         data = json.loads(out)
         if not isinstance(data, dict):
             return _failout(state,
-                       'script JSON output must be a JSON object(ie, {})!')
+                       'script JSON output must be a JSON object (e.g., {})!')
         is_json = True
     except Exception:
         idx = out.rstrip().rfind('\n')
@@ -425,7 +425,7 @@ def run(name,
                         key, val = var.split('=')
                         _env[key] = val
                     except ValueError:
-                        ret['comment'] = 'Invalid enviromental var: "{0}"'.format(
+                        ret['comment'] = 'Invalid environmental var: "{0}"'.format(
                                 var)
                         return ret
                 env = _env
@@ -441,7 +441,7 @@ def run(name,
                     if isinstance(comp, dict):
                         _env.update(comp)
                     else:
-                        ret['comment'] = 'Invalid enviromental var: "{0}"'.format(
+                        ret['comment'] = 'Invalid environmental var: "{0}"'.format(
                                 env)
                         return ret
                 except Exception:
@@ -451,7 +451,7 @@ def run(name,
                             key, val = var.split('=')
                             _env[key] = val
                         except ValueError:
-                            ret['comment'] = 'Invalid enviromental var: "{0}"'.format(
+                            ret['comment'] = 'Invalid environmental var: "{0}"'.format(
                                     var)
                             return ret
             env = _env
@@ -633,7 +633,7 @@ def call(name, func, args=(), kws=None,
     declaration. This function is mainly used by the :mod:`salt.renderers.pydsl`
     renderer.
 
-    The intepretation of `onlyif` and `unless` arguments are identical to those
+    The interpretation of `onlyif` and `unless` arguments are identical to those
     of :func:`salt.states.cmd.run`, and all other arguments(`cwd`, `runas`, ...)
     allowed by `cmd.run` are allowed here, except that their effects apply only
     to the commands specified in `onlyif` and `unless` rather than to the function
@@ -724,7 +724,7 @@ def mod_watch(name, **kwargs):
     return {'name': name,
             'changes': {},
             'comment': ('cmd.{0} does not work with the watch requisite, '
-                       'please use cmd.wait of cmd.wait_script').format(
+                       'please use cmd.wait or cmd.wait_script').format(
                            kwargs['sfun']
                            ),
             'result': False}
