@@ -7,6 +7,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.odict as odict
 
 
 # pylint: disable-msg=C0103
@@ -21,18 +22,12 @@ def __get_hosts_filename():
     return __salt__['config.option']('hosts.file')
 
 
-def list_hosts():
+def _list_hosts():
     '''
-    Return the hosts found in the hosts file in this format::
-
-        {'<ip addr>': ['alias1', 'alias2', ...]}
-
-    CLI Example::
-
-        salt '*' hosts.list_hosts
+    Return the hosts found in the hosts file in as an OrderedDict
     '''
     hfn = __get_hosts_filename()
-    ret = {}
+    ret = odict.OrderedDict()
     if not os.path.isfile(hfn):
         return ret
     with salt.utils.fopen(hfn) as ifile:
@@ -48,6 +43,20 @@ def list_hosts():
     return ret
 
 
+def list_hosts():
+    '''
+    Return the hosts found in the hosts file in this format::
+
+        {'<ip addr>': ['alias1', 'alias2', ...]}
+
+    CLI Example::
+
+        salt '*' hosts.list_hosts
+    '''
+    # msgpack does not like OrderedDict's
+    return dict(_list_hosts())
+
+
 def get_ip(host):
     '''
     Return the ip associated with the named host
@@ -56,7 +65,7 @@ def get_ip(host):
 
         salt '*' hosts.get_ip <hostname>
     '''
-    hosts = list_hosts()
+    hosts = _list_hosts()
     if not hosts:
         return ''
     # Look for the op
@@ -75,7 +84,7 @@ def get_alias(ip):
 
         salt '*' hosts.get_alias <ip addr>
     '''
-    hosts = list_hosts()
+    hosts = _list_hosts()
     if ip in hosts:
         return hosts[ip]
     return []
@@ -89,7 +98,7 @@ def has_pair(ip, alias):
 
         salt '*' hosts.has_pair <ip> <alias>
     '''
-    hosts = list_hosts()
+    hosts = _list_hosts()
     return ip in hosts and alias in hosts[ip]
 
 
@@ -183,7 +192,7 @@ def add_host(ip, alias):
     if has_pair(ip, alias):
         return True
 
-    hosts = list_hosts()
+    hosts = _list_hosts()
     hosts.setdefault(ip, []).append(alias)
     _write_hosts(hosts)
     return True
@@ -191,9 +200,9 @@ def add_host(ip, alias):
 
 def _write_hosts(hosts):
     lines = []
-    for ip in sorted(hosts.keys()):
+    for ip, aliases in hosts.iteritems():
         lines.append(
-            '{0}\t\t{1}'.format(ip, '\t'.join(sorted(hosts[ip])))
+            '{0}\t\t{1}'.format(ip, '\t'.join(aliases))
         )
 
     hfn = __get_hosts_filename()
