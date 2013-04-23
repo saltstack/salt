@@ -1932,6 +1932,10 @@ class BaseHighState(object):
     def _handle_extend(self, state, sls, env, errors):
         if 'extend' in state:
             ext = state.pop('extend')
+            if not isinstance(ext, dict):
+                errors.append(('Extension value in sls {0} is not a '
+                               'dictionary').format(sls))
+                return
             for name in ext:
                 if not isinstance(ext[name], dict):
                     errors.append(('Extension name {0} in sls {1} is '
