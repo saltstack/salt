@@ -84,7 +84,7 @@ def _changes(name,
         else:
             for wanted_group in wanted_groups:
                 if not wanted_group in lusr['groups']:
-                    if not groups in change:
+                    if not 'groups' in change:
                         change['groups'] = []
                     change['groups'].append(wanted_group)
     if home:
