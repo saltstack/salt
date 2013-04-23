@@ -97,7 +97,7 @@ class PyDslError(Exception):
     pass
 
 
-class Options(OrderedDict):
+class Options(dict):
     def __getattr__(self, name):
         return self.get(name)
 
