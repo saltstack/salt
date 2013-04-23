@@ -235,27 +235,14 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
         salt '*' pkg_resource.parse_targets
     '''
-
-    # For Solaris, there is no repository, and only the "sources" param can be
-    # used. Warn if "name" or "pkgs" is provided, and require that "sources" is
-    # present.
-    if __grains__['os_family'] == 'Solaris':
-        if name:
-            log.warning('Parameter "name" ignored on Solaris hosts.')
-        if pkgs:
-            log.warning('Parameter "pkgs" ignored on Solaris hosts.')
-        if not sources:
-            log.error('"sources" option required with Solaris pkg installs')
-            return None, None
-    elif __grains__['os'] == 'MacOS' and sources:
+    if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
-    # "pkgs" is always ignored on Solaris.
-    if pkgs and sources and __grains__['os_family'] != 'Solaris':
+    if pkgs and sources:
         log.error('Only one of "pkgs" and "sources" can be used.')
         return None, None
 
-    elif pkgs and __grains__['os_family'] != 'Solaris':
+    elif pkgs:
         if name:
             log.warning('"name" parameter will be ignored in favor of "pkgs"')
         pkgs = pack_pkgs(pkgs)
@@ -266,7 +253,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
 
     elif sources and __grains__['os'] != 'MacOS':
         # No need to warn for Solaris, warning taken care of above.
-        if name and __grains__['os_family'] != 'Solaris':
+        if name:
             log.warning('"name" parameter will be ignored in favor of '
                         '"sources".')
         sources = pack_sources(sources)
@@ -301,7 +288,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         # the package path (3rd element of tuple).
         return [x[2] for x in srcinfo], 'file'
 
-    elif name and __grains__['os_family'] != 'Solaris':
+    elif name:
         return dict([(x, None) for x in name.split(',')]), 'repository'
 
     else:
