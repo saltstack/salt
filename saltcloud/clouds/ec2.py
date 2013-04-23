@@ -819,6 +819,9 @@ def create(vm_=None, call=None):
             'display_ssh_output': config.get_config_value(
                 'display_ssh_output', vm_, __opts__, default=True
             ),
+            'stream_ssh_output'] = config.get_config_value(
+                'stream_ssh_output', vm_, __opts__, default=False
+            ),
             'minion_conf': saltcloud.utils.minion_conf_string(
                 __opts__, vm_
             ),
