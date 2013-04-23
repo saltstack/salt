@@ -1788,11 +1788,15 @@ class BaseHighState(object):
                 rendered_sls=mods
             )
         except Exception as exc:
-            errors.append(
-                'Rendering SLS {0} failed, render error:\n{1}\n{2}'.format(
-                    sls, traceback.format_exc(), exc
-                )
+            msg = 'Rendering SLS {0} failed, render error: {1}'.format(
+                sls, exc
             )
+            log.error(
+                msg,
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
         mods.add(sls)
         if state:
             if not isinstance(state, dict):
