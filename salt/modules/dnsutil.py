@@ -122,6 +122,10 @@ def _to_seconds(time):
 def check_IP(x):
     '''
     Check that string x is a valid IP
+
+    CLI Example::
+
+        salt ns1 dnsutil.check_IP 127.0.0.1
     '''
     # This is probably validating. Tacked on the CIDR bit myself.
     ip_regex = (
