@@ -100,6 +100,7 @@ Using the new syntax:
 import time
 import logging
 import socket
+import pprint
 
 # Import libcloud
 from libcloud.compute.base import NodeState
