@@ -17,7 +17,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    return 'pkg' if __grains__['os'] == 'Arch' else False
+    return 'pkg' if __grains__['os'] in ('Arch', 'Arch ARM') else False
 
 
 def _list_removed(old, new):
