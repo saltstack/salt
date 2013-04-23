@@ -1,1 +1,2 @@
-/etc/salt/cloud.d/
+/etc/salt/cloud.conf.d/
+/etc/salt/cloud.profiles.d/
