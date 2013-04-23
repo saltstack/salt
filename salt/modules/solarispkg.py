@@ -260,12 +260,16 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     Note: the ID declaration is ignored, as the package name is read from the
     "sources" parameter.
     '''
-
     pkg_params, pkg_type = \
         __salt__['pkg_resource.parse_targets'](name,
                                                kwargs.get('pkgs'),
                                                sources)
+
     if pkg_params is None or len(pkg_params) == 0:
+        return {}
+
+    if not sources:
+        log.error('"sources" param required for solaris pkg_add installs')
         return {}
 
     if 'admin_source' in kwargs:
