@@ -430,8 +430,14 @@ class ReactWrap(object):
         '''
         l_fun = getattr(self, low['state'])
         f_call = salt.utils.format_call(l_fun, low)
-
-        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        try:
+            ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        except Exception:
+            log.error(
+                    'Failed to exeute {0}: {1}\n'.format(low['state'], l_fun),
+                    exc_info=True
+                    )
+            return ret
         return ret
 
     def cmd(self, *args, **kwargs):
