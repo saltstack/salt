@@ -720,6 +720,12 @@ def managed(name,
         ret['result'] = False
         return ret
 
+    if context is None:
+        context = {}
+    if not isinstance(context, dict):
+        return _error(
+            ret, ('Context must be formed as a dict'))
+
     if not replace:
         if os.path.exists(name):
            # Check and set the permissions if necessary
