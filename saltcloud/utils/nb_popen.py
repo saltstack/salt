@@ -14,6 +14,7 @@
 import os
 import sys
 import fcntl
+import logging
 import subprocess
 
 
@@ -21,6 +22,8 @@ class NonBlockingPopen(subprocess.Popen):
 
     def __init__(self, *args, **kwargs):
         self.stream_stds = kwargs.pop('stream_stds', False)
+        self.olog = logging.getLogger('{0}.stdout'.format(__name__))
+        self.elog = logging.getLogger('{0}.stderr'.format(__name__))
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
         if self.stdout is not None and self.stream_stds:
             fod = self.stdout.fileno()
@@ -41,7 +44,9 @@ class NonBlockingPopen(subprocess.Popen):
             try:
                 obuff = self.stdout.read()
                 self.obuff += obuff
-                sys.stdout.write(obuff)
+                if obuff:
+                    self.olog.warn(obuff)
+                #sys.stdout.write(obuff)
             except IOError, err:
                 if err.errno not in (11, 35):
                     # We only handle Resource not ready properly, any other
@@ -51,7 +56,9 @@ class NonBlockingPopen(subprocess.Popen):
             try:
                 ebuff = self.stderr.read()
                 self.ebuff += ebuff
-                sys.stderr.write(ebuff)
+                if ebuff:
+                    self.elog.warn(ebuff)
+                #sys.stderr.write(ebuff)
             except IOError, err:
                 if err.errno not in (11, 35):
                     # We only handle Resource not ready properly, any other
