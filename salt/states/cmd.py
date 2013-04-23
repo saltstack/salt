@@ -5,15 +5,8 @@ Execution of arbitrary commands.
 The cmd state module manages the enforcement of executed commands, this
 state can tell a command to run under certain circumstances.
 
-Available Functions
--------------------
 
-The ``run`` function
-
-run
-    Execute a command given certain conditions
-
-    A simple example:
+A simple example to execute a command:
 
     .. code-block:: yaml
 
