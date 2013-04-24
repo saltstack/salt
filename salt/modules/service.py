@@ -12,6 +12,7 @@ import salt.utils
 
 GRAINMAP = {
            'Arch': '/etc/rc.d',
+           'Arch ARM': '/etc/rc.d',
            'Debian': '/etc/init.d',
            'Fedora': '/etc/init.d',
            'RedHat': '/etc/init.d',
@@ -42,6 +43,7 @@ def __virtual__():
                'Ubuntu',
                'Debian',
                'Arch',
+               'Arch ARM',
                'ALT',
                'OEL',
               ]
