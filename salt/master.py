@@ -622,7 +622,9 @@ class MWorker(multiprocessing.Process):
                 return
             self.crypticle = salt.crypt.Crypticle(self.opts, aes)
             self.clear_funcs.crypticle = self.crypticle
+            self.clear_funcs.opts['aes'] = aes
             self.aes_funcs.crypticle = self.crypticle
+            self.aes_funcs.opts['aes'] = aes
             self.k_mtime = stats.st_mtime
 
     def run(self):
