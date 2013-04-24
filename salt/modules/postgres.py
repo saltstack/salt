@@ -24,6 +24,7 @@ import logging
 import csv
 import StringIO
 import os
+import tempfile
 
 # Import salt libs
 import salt.utils
@@ -755,3 +756,73 @@ def group_remove(groupname,
     '''
     return _role_remove(groupname, user, host, port, maintenance_db,
                         password, runas)
+
+def owner_to(dbname,
+                ownername,
+                user=None,
+                host=None,
+                port=None,
+                password=None,
+                runas=None):
+    '''
+    Set the owner of all schemas, functions, tables, views and sequences to
+    the given username.
+
+    CLI Example::
+
+        salt '*' postgres.owner_to 'dbname' 'username'
+    '''
+
+    sqlfile = tempfile.NamedTemporaryFile()
+    sqlfile.write('begin;\n')
+    sqlfile.write('alter database {0} owner to {1};\n'.format(dbname, ownername))
+
+    queries = (
+        #schemas
+        ( 
+         'alter schema %(n)s owner to %(owner)s;',
+         'select quote_ident(schema_name) as n from information_schema.schemata;'
+         ),
+        # tables and views
+        (
+         'alter table %(n)s owner to %(owner)s;',
+         "select quote_ident(table_schema)||'.'||quote_ident(table_name) as n " +
+            "from information_schema.tables where table_schema not in ('pg_catalog', 'information_schema');"
+         ),
+        # functions
+        (
+         'alter function %(n)s owner to %(owner)s;',
+         "select p.oid::regprocedure::text as n from pg_catalog.pg_proc p " +
+            "join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where ns.nspname not in ('pg_catalog', 'information_schema') " +
+            " and not p.proisagg;"
+         ),
+        # aggregate functions
+        (
+         'alter aggregate %(n)s owner to %(owner)s;',
+         "select p.oid::regprocedure::text as n from pg_catalog.pg_proc p " +
+            "join pg_catalog.pg_namespace ns on p.pronamespace=ns.oid where ns.nspname not in ('pg_catalog', 'information_schema') " +
+            " and p.proisagg;"
+         ),
+        # sequences
+        (
+         'alter sequence %{n}s owner to %{owner}s;',
+         "select quote_ident(sequence_schema)||'.'||quote_ident(sequence_name) as n from information_schema.sequences;"
+        )
+    )
+
+    for fmt, query in queries:
+        ret = psql_query(query, user=user, host=host, port=port, maintenance_db=dbname,
+                   password=password, runas=runas);
+        for row in ret:
+            line = fmt % {'owner': ownername, 'n':row['n']}
+            sqlfile.write(line+"\n")
+
+    sqlfile.write('commit;\n')
+    sqlfile.flush()
+    os.chmod(sqlfile.name, 0644) # ensure psql can read the file
+
+    # run the generated sqlfile in the db
+    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port, \
+                password=password, maintenance_db=dbname)
+    cmdret = _run_psql(cmd, runas=runas, password=password)
+    return cmdret
