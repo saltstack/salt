@@ -114,9 +114,11 @@ del __get_version
 
 def versions_report():
     '''
-    Report on all of the versions for dependant software
+    Report on all of the versions for dependant software components
     '''
-    libs = (
+    components = (
+        ('Salt', None, lambda: __version__),
+        ('Python', None, lambda: sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
         ('M2Crypto', 'M2Crypto', 'version'),
         ('msgpack-python', 'msgpack', 'version'),
@@ -127,20 +129,20 @@ def versions_report():
         ('ZMQ', 'zmq', 'zmq_version'),
     )
 
-    padding = len(max([lib[0] for lib in libs], key=len)) + 1
+    padding = len(max([lib[0] for lib in components], key=len)) + 1
 
     fmt = '{0:>{pad}}: {1}'
 
-    yield fmt.format('Salt', __version__, pad=padding)
-
-    yield fmt.format(
-        'Python', sys.version.rsplit('\n')[0].strip(), pad=padding
-    )
-
-    for name, imp, attr in libs:
+    for name, imp, version_entity in components:
         try:
-            imp = __import__(imp)
-            version = getattr(imp, attr)
+            if not imp is None:
+                imp = __import__(imp)
+
+            if callable(version_entity):
+                version = version_entity()
+            else:
+                version = getattr(imp, version_entity)
+            
             if callable(version):
                 version = version()
             if isinstance(version, (tuple, list)):
