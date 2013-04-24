@@ -255,7 +255,7 @@ class Client(object):
         '''
         if '.' in sls:
             sls = sls.replace('.', '/')
-        for path in ['salt://' + sls + '.sls',
+        for path in ['salt://{0}.sls'.format(sls),
                      os.path.join('salt://', sls, 'init.sls')]:
             dest = self.cache_file(path, env)
             if dest:
