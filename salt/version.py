@@ -124,6 +124,7 @@ def versions_report():
         ('pycrypto', 'Crypto', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
+        ('ZMQ', 'zmq', 'zmq_version'),
     )
 
     padding = len(max([lib[0] for lib in libs], key=len)) + 1
@@ -140,7 +141,9 @@ def versions_report():
         try:
             imp = __import__(imp)
             version = getattr(imp, attr)
-            if not isinstance(version, basestring):
+            if callable(version):
+                version = version()
+            if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield fmt.format(name, version, pad=padding)
         except ImportError:
