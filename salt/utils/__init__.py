@@ -859,19 +859,19 @@ def check_state_result(running):
     if not running:
         return False
     for host in running:
-        if len(host.split('_|-')) = 5:
-            # This is a single ret, no host associated
-            if not isinstance(running[host], dict):
-                return False
-            if not 'result' in running[host]:
-                return False
-            if running[host]['result'] is False:
-                return False
-            return True
         if not isinstance(running[host], dict):
             return False
-        for tag, ret in running[host].items():
-            if not 'result' in ret:
+
+        if host.find('_|-') == 4:
+            # This is a single ret, no host associated
+            rets = running[host]
+        else:
+            rets = running[host].values()
+
+        for ret in rets:
+            if not isinstance(ret, dict):
+                return False
+            if 'result' not in ret:
                 return False
             if ret['result'] is False:
                 return False
