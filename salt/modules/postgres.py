@@ -805,7 +805,7 @@ def owner_to(dbname,
          ),
         # sequences
         (
-         'alter sequence %{n}s owner to %{owner}s;',
+         'alter sequence %(n)s owner to %(owner)s;',
          "select quote_ident(sequence_schema)||'.'||quote_ident(sequence_name) as n from information_schema.sequences;"
         )
     )
