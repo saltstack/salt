@@ -79,10 +79,10 @@ def versions_report():
 
     CLI Example::
 
-        salt '*' test.version
+        salt '*' test.versions_report
     '''
     import salt.version
-    return "\n".join(salt.version.versions_report())
+    return '\n'.join(salt.version.versions_report())
 
 
 def conf_test():
