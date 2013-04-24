@@ -301,10 +301,15 @@ class TestDaemon(object):
         Kill the minion and master processes
         '''
         self.sub_minion_process.terminate()
+        self.sub_minion_process.join()
         self.minion_process.terminate()
+        self.minion_process.join()
         self.master_process.terminate()
+        self.master_process.join()
         self.syndic_process.terminate()
+        self.syndic_process.join()
         self.smaster_process.terminate()
+        self.smaster_process.join()
         self._exit_mockbin()
         self._clean()
 
