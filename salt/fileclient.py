@@ -242,7 +242,7 @@ class Client(object):
         for path in self.file_list(env):
             if path.endswith('.sls'):
                 # is an sls module!
-                if path.endswith('{0}init.sls'.format(os.sep)):
+                if path.endswith('{0}init.sls'.format('/')):
                     states.append(path.replace('/', '.')[:-9])
                 else:
                     states.append(path.replace('/', '.')[:-4])
