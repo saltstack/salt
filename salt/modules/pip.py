@@ -189,17 +189,20 @@ def install(pkgs=None,
     treq = None
     if requirements:
         if requirements.startswith('salt://'):
-            cached_requirements = __salt__['cp.is_cached'](requirements,
-                    __env__)
+            cached_requirements = __salt__['cp.is_cached'](
+                requirements, __env__
+            )
             if not cached_requirements:
                 # It's not cached, let's cache it.
-                cached_requirements = __salt__['cp.cache_file'](requirements,
-                        __env__)
+                cached_requirements = __salt__['cp.cache_file'](
+                    requirements, __env__
+                )
             # Check if the master version has changed.
             if __salt__['cp.hash_file'](requirements, __env__) != \
                     __salt__['cp.hash_file'](cached_requirements, __env__):
-                cached_requirements = __salt__['cp.cache_file'](requirements,
-                        __env__)
+                cached_requirements = __salt__['cp.cache_file'](
+                    requirements, __env__
+                )
             if not cached_requirements:
                 return {
                     'result': False,
@@ -210,19 +213,23 @@ def install(pkgs=None,
                     )
                 }
 
-                treq = salt.utils.mkstemp()
-                shutil.copyfile(req, treq)
-            else:
-                treq = cached_requirements
-        cmd = '{cmd} --requirement "{requirements}" '.format(
-            cmd=cmd, requirements=treq or requirements)
+            requirements = cached_requirements
 
-    if treq is not None and runas:
-        logger.debug(
-            'Changing ownership of requirements file \'{0}\' to '
-            'user \'{1}\''.format(treq, runas)
+        if runas:
+            # Need to make a temporary copy since the runas user will, most
+            # likely, not have the right permissions to read the file
+            treq = salt.utils.mkstemp()
+            shutil.copyfile(requirements, treq)
+            logger.debug(
+                'Changing ownership of requirements file \'{0}\' to '
+                'user \'{1}\''.format(treq, runas)
+            )
+            __salt__['file.chown'](treq, runas, None)
+
+        cmd = '{cmd} --requirement "{requirements}" '.format(
+            cmd=cmd,
+            requirements=treq or requirements
         )
-        __salt__['file.chown'](treq, runas, None)
 
     if log:
         try:
@@ -338,15 +345,13 @@ def install(pkgs=None,
         cmd = '{cmd} {opts} '.format(cmd=cmd, opts=opts)
 
     try:
-        result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+        return __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
     finally:
-        if treq and requirements.startswith('salt://'):
+        if treq is not None:
             try:
                 os.remove(treq)
             except Exception:
                 pass
-
-    return result
 
 
 def uninstall(pkgs=None,
