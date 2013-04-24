@@ -146,6 +146,9 @@ def versions_report():
         except ImportError:
             yield fmt.format(name, 'not installed', pad=padding)
 
+    from zmq import zmq_version
+    yield fmt.format('libzmq', zmq_version(), pad=padding)
+
 
 if __name__ == '__main__':
     print(__version__)
