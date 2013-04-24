@@ -73,6 +73,18 @@ def version():
     return salt.__version__
 
 
+def versions_report():
+    '''
+    Returns versions of components used by salt
+
+    CLI Example::
+
+        salt '*' test.versions_report
+    '''
+    import salt.version
+    return '\n'.join(salt.version.versions_report())
+
+
 def conf_test():
     '''
     Return the value for test.foo in the minion configuration file, or return
