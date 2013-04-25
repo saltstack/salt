@@ -1656,19 +1656,18 @@ def makedirs(path, user=None, group=None, mode=None):
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    normpath = os.path.normpath(path)
+    dirname = os.path.normpath(os.path.dirname(path))
 
-    if os.path.isdir(normpath):
+    if os.path.isdir(dirname):
         # There's nothing for us to do
         return 'Directory {0!r} already exists'.format(path)
 
-    if os.path.exists(normpath):
+    if os.path.exists(dirname):
         return 'The path {0!r} already exists and is not a directory'.format(
             path
         )
 
-    dirname = os.path.dirname(normpath)
-    directories_to_create = [normpath]
+    directories_to_create = []
     while True:
         if os.path.isdir(dirname):
             break
