@@ -68,7 +68,7 @@ class VirtualenvTest(integration.ModuleCase,
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
 
-        # Out state template
+        # Our state template
         template = [
             '{0}:'.format(venv_path),
             '  virtualenv.managed:',

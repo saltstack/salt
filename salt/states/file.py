@@ -124,7 +124,6 @@ import fnmatch
 import salt.utils
 import salt.utils.templates
 from salt._compat import string_types
-from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
@@ -175,8 +174,7 @@ def _check_file(name):
 
     if not os.path.isabs(name):
         ret = False
-        msg = ('Specified file {0} is not an absolute'
-               ' path').format(name)
+        msg = 'Specified file {0} is not an absolute path'.format(name)
     elif not os.path.exists(name):
         ret = False
         msg = '{0}: file not found'.format(name)
@@ -710,8 +708,7 @@ def managed(name,
         return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
-            ret, ('Specified file {0} is not an absolute'
-                  ' path').format(name))
+            ret, 'Specified file {0} is not an absolute path'.format(name))
     if env is None:
         env = kwargs.get('__env__', 'base')
 
@@ -722,9 +719,9 @@ def managed(name,
 
     if context is None:
         context = {}
-    if not isinstance(context, dict):
+    elif not isinstance(context, dict):
         return _error(
-            ret, ('Context must be formed as a dict'))
+            ret, 'Context must be formed as a dict')
 
     if not replace:
         if os.path.exists(name):
@@ -738,7 +735,7 @@ def managed(name,
                 ret['comment'] = 'File {0} not updated'.format(name)
             elif not ret['changes'] and ret['result']:
                 ret['comment'] = ('File {0} exists with proper permissions. '
-                                  'No changes made.').format(name)
+                                  'No changes made.'.format(name))
             return ret
         if not source:
             return touch(name, makedirs=makedirs)
@@ -788,19 +785,19 @@ def managed(name,
     )
     if comment:
         return _error(ret, comment)
-    else:
-        return __salt__['file.manage_file'](name,
-                                            sfn,
-                                            ret,
-                                            source,
-                                            source_sum,
-                                            user,
-                                            group,
-                                            mode,
-                                            env,
-                                            backup,
-                                            template,
-                                            show_diff)
+
+    return __salt__['file.manage_file'](name,
+                                        sfn,
+                                        ret,
+                                        source,
+                                        source_sum,
+                                        user,
+                                        group,
+                                        mode,
+                                        env,
+                                        backup,
+                                        template,
+                                        show_diff)
 
 
 def directory(name,
@@ -1529,12 +1526,13 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex_multiline'](name, '^[ \t]*' + regex.lstrip('^')):
+    if __salt__['file.contains_regex_multiline'](
+            name, '^[ \t]*{0}'.format(regex.lstrip('^'))):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex_multiline'](name,
-                                         char + '[ \t]*' + regex.lstrip('^')):
+    elif __salt__['file.contains_regex_multiline'](
+            name, '{0}[ \t]*{1}'.format(char, regex.lstrip('^'))):
         # Line exists and is commented
         pass
     else:
@@ -1555,8 +1553,9 @@ def uncomment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = \
-        __salt__['file.contains_regex_multiline'](name, '^[ \t]*' + regex.lstrip('^'))
+    ret['result'] = __salt__['file.contains_regex_multiline'](
+        name, '^[ \t]*{0}'.format(regex.lstrip('^'))
+    )
 
     if slines != nlines:
         # Changes happened, add them
@@ -1605,10 +1604,10 @@ def append(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    if makedirs:
+    if makedirs is True:
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
-            __salt__['file.makedirs'](name)
+            __salt__['file.makedirs'](dirname)
             check_res, check_msg = _check_directory(
                 dirname, None, None, False, None, False, False
             )
@@ -1805,9 +1804,10 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         return _error(
             ret, 'Directory not present to touch file {0}'.format(name)
         )
-    exists = os.path.exists(name)
+
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
+    exists = os.path.exists(name)
     if not exists and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
@@ -1857,7 +1857,7 @@ def rename(name, source, force=False, makedirs=False):
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
             ret['comment'] = ('The target file "{0}" exists and will not be '
-                              'overwritten').format(name)
+                              'overwritten'.format(name))
             ret['result'] = False
             return ret
         elif not __opts__['test']:
@@ -1871,8 +1871,10 @@ def rename(name, source, force=False, makedirs=False):
                     shutil.rmtree(name)
             except (IOError, OSError):
                 return _error(
-                    ret, ('Failed to delete "{0}" in preparation for '
-                          'forced move').format(name))
+                    ret,
+                    'Failed to delete "{0}" in preparation for '
+                    'forced move'.format(name)
+                )
 
     if __opts__['test']:
         ret['comment'] = 'File "{0}" is set to be moved to "{1}"'.format(
@@ -1881,6 +1883,7 @@ def rename(name, source, force=False, makedirs=False):
         )
         ret['result'] = None
         return ret
+
     # Run makedirs
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
@@ -1935,9 +1938,11 @@ def accumulated(name, filename, text, **kwargs):
     if not filter(lambda x: 'file' in x,
                   kwargs.get('require_in', []) + kwargs.get('watch_in', [])):
         ret['result'] = False
-        ret['comment'] = ('Orphaned accumulator {0} in '
-                          '{1}:{2}'.format(name, kwargs['__sls__'],
-                          kwargs['__id__']))
+        ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
+            name,
+            kwargs['__sls__'],
+            kwargs['__id__']
+        )
         return ret
     if isinstance(text, string_types):
         text = (text,)
@@ -1949,5 +1954,5 @@ def accumulated(name, filename, text, **kwargs):
         if chunk not in _ACCUMULATORS[filename][name]:
             _ACCUMULATORS[filename][name].append(chunk)
             ret['comment'] = ('Accumulator {0} for file {1} '
-                              'was charged by text').format(name, filename)
+                              'was charged by text'.format(name, filename))
     return ret
