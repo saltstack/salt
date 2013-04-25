@@ -128,22 +128,9 @@ def versions_information():
         ('PyZMQ', 'zmq', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version')
     )
-    return libs
-
-
-def versions_report():
-    '''
-    Yield each library properly formatted for a console clean output.
-    '''
-    libs = versions_information()
-
-    padding = len(max([lib[0] for lib in libs], key=len)) + 1
-
-    fmt = '{0:>{pad}}: {1}'
-
     for name, imp, attr in libs:
         if imp is None:
-            yield fmt.format(name, attr, pad=padding)
+            yield name, attr
             continue
         try:
             imp = __import__(imp)
@@ -152,9 +139,24 @@ def versions_report():
                 version = version()
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
-            yield fmt.format(name, version, pad=padding)
+            yield name, version
         except ImportError:
-            yield fmt.format(name, 'not installed', pad=padding)
+            yield name, None
+
+
+def versions_report():
+    '''
+    Yield each library properly formatted for a console clean output.
+    '''
+    print dict(versions_information())
+    libs = list(versions_information())
+
+    padding = len(max([lib[0] for lib in libs], key=len)) + 1
+
+    fmt = '{0:>{pad}}: {1}'
+
+    for name, version in libs:
+        yield fmt.format(name, version or 'Not Installed', pad=padding)
 
 
 if __name__ == '__main__':
