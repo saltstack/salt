@@ -579,14 +579,14 @@ def script(
     '''
     if not salt.utils.is_windows():
         path = salt.utils.mkstemp(dir=cwd)
+    else:
+        path = __salt__['cp.cache_file'](source, env)
     if template:
         __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
-        fn_ = __salt__['cp.cache_file'](source, env)
         if not salt.utils.is_windows():
+            fn_ = __salt__['cp.cache_file'](source, env)
             shutil.copyfile(fn_, path)
-        else:
-            path = fn_
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
