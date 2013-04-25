@@ -46,7 +46,7 @@ def present(name,
         The template database from which to build this database
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},
@@ -119,7 +119,7 @@ def absent(name, runas=None):
         The name of the database to remove
 
     runas
-        System user all operation should be preformed on behalf of
+        System user all operations should be performed on behalf of
     '''
     ret = {'name': name,
            'changes': {},

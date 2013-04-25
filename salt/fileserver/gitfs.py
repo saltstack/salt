@@ -147,11 +147,15 @@ def envs():
     ret = set()
     repos = init()
     for repo in repos:
+        remote = repo.remote()
         for ref in repo.refs:
-            if isinstance(ref, git.Head) or isinstance(ref, git.Tag):
-                short = os.path.basename(ref.name)
+            short = os.path.basename(ref.name)
+            if isinstance(ref, git.Head):
                 if short == 'master':
                     short = 'base'
+                if ref not in remote.stale_refs:
+                    ret.add(short)
+            elif isinstance(ref, git.Tag):
                 ret.add(short)
     return list(ret)
 
