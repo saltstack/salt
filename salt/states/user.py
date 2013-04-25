@@ -66,14 +66,14 @@ def _changes(name,
         if lusr['gid'] not in (gid, __salt__['file.group_to_gid'](gid)):
             change['gid'] = gid
     # remove the default group from the list for comparison purposes
-    if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
+    if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
             lusr['groups']:
         lusr['groups'].remove(
             __salt__['file.gid_to_group'](gid or lusr['gid'])
         )
     # remove default group from wanted_groups, as this requirement is
     # already met
-    if __salt__['file.gid_to_group'](gid or lusr['gid']) in \
+    if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
             wanted_groups:
         wanted_groups.remove(
             __salt__['file.gid_to_group'](gid or lusr['gid']))
@@ -84,7 +84,7 @@ def _changes(name,
         else:
             for wanted_group in wanted_groups:
                 if not wanted_group in lusr['groups']:
-                    if not groups in change:
+                    if not 'groups' in change:
                         change['groups'] = []
                     change['groups'].append(wanted_group)
     if home:
@@ -365,7 +365,7 @@ def absent(name, purge=False, force=False):
         The name of the user to remove
 
     purge
-        Set purge to delete all of the user's file as well as the user
+        Set purge to delete all of the user's files as well as the user
 
     force
         If the user is logged in the absent state will fail, set the force

@@ -22,7 +22,7 @@ def present(name, gid=None, system=False):
         The name of the group to manage
 
     gid
-        The group id to assign to the named group, if left empty then the next
+        The group id to assign to the named group; if left empty, then the next
         available group id will be assigned
     '''
     ret = {'name': name,

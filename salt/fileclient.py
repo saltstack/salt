@@ -242,7 +242,7 @@ class Client(object):
         for path in self.file_list(env):
             if path.endswith('.sls'):
                 # is an sls module!
-                if path.endswith('{0}init.sls'.format(os.sep)):
+                if path.endswith('{0}init.sls'.format('/')):
                     states.append(path.replace('/', '.')[:-9])
                 else:
                     states.append(path.replace('/', '.')[:-4])
@@ -255,8 +255,8 @@ class Client(object):
         '''
         if '.' in sls:
             sls = sls.replace('.', '/')
-        for path in ['salt://' + sls + '.sls',
-                     os.path.join('salt://', sls, 'init.sls')]:
+        for path in ['salt://{0}.sls'.format(sls),
+                     '/'.join(['salt:/', sls, 'init.sls'])]:
             dest = self.cache_file(path, env)
             if dest:
                 return dest

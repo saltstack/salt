@@ -11,17 +11,13 @@ import re
 
 log = logging.getLogger(__name__)
 
-NO_DIG = salt.utils.which('dig') is None
-
 
 def __virtual__():
     '''
     Generic, should work on any platform
     '''
-    if NO_DIG:
-        log.warn(
-            '\'dig\' does not appear to be in PATH. Will return empty lists.'
-        )
+    if not salt.utils.which('dig'):
+        return False
     return 'dnsutil'
 
 
@@ -126,6 +122,10 @@ def _to_seconds(time):
 def check_IP(x):
     '''
     Check that string x is a valid IP
+
+    CLI Example::
+
+        salt ns1 dnsutil.check_IP 127.0.0.1
     '''
     # This is probably validating. Tacked on the CIDR bit myself.
     ip_regex = (
@@ -141,17 +141,19 @@ def A(host, nameserver=None):
     Return the A record for 'host'.
 
     Always returns a list.
-    '''
-    if NO_DIG:
-        return []
 
+    CLI Example::
+
+        salt ns1 dnsutil.A www.google.com
+
+    '''
     dig = ['dig', '+short', str(host), 'A']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -169,17 +171,19 @@ def NS(domain, resolve=True, nameserver=None):
     Return a list of IPs of the nameservers for 'domain'
 
     If 'resolve' is False, don't resolve names.
-    '''
-    if NO_DIG:
-        return []
 
+    CLI Example::
+
+        salt ns1 dnsutil.NS google.com
+
+    '''
     dig = ['dig', '+short', str(domain), 'NS']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -205,10 +209,12 @@ def SPF(domain, record='SPF', nameserver=None):
     If record is 'SPF' and the SPF record is empty, the TXT record will be
     searched automatically. If you know the domain uses TXT and not SPF,
     specifying that will save a lookup.
-    '''
-    if NO_DIG:
-        return []
 
+    CLI Example::
+
+        salt ns1 dnsutil.SPF google.com
+
+    '''
     def _process(x):
         '''
         Parse out valid IP bits of an spf record.
@@ -225,7 +231,7 @@ def SPF(domain, record='SPF', nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
@@ -260,17 +266,19 @@ def MX(domain, resolve=False, nameserver=None):
     round robin, it is an acceptable configuration and pulling just one IP lets
     the data be similar to the non-resolved version. If you think an MX has
     multiple IPs, don't use the resolver here, resolve them in a separate step.
-    '''
-    if NO_DIG:
-        return []
 
+    CLI Example::
+
+        salt ns1 dnsutil.MX google.com
+
+    '''
     dig = ['dig', '+short', str(domain), 'MX']
 
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
-    if cmd['retcode'] is not 0:
+    if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(

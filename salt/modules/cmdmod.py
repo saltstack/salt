@@ -289,7 +289,10 @@ def _run(cmd,
         _umask = None
 
     if runas or umask:
-        kwargs['preexec_fn'] = functools.partial(_chugid_and_umask, runas, _umask)
+        kwargs['preexec_fn'] = functools.partial(
+                _chugid_and_umask,
+                runas,
+                _umask)
 
     if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
@@ -321,24 +324,56 @@ def _run(cmd,
     return ret
 
 
-def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None, umask=None):
+def _run_quiet(cmd,
+               cwd=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               env=(),
+               template=None,
+               umask=None):
     '''
     Helper for running commands quietly for minion startup
     '''
-    return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT,
-                quiet=True, shell=shell, env=env, template=template, umask=umask)['stdout']
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stderr=subprocess.STDOUT,
+                quiet=True,
+                shell=shell,
+                env=env,
+                template=template,
+                umask=umask)['stdout']
 
 
-def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(), template=None, umask=None):
+def _run_all_quiet(cmd,
+                   cwd=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   env=(),
+                   template=None,
+                   umask=None):
     '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data
     '''
-    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True, template=template, umask=umask)
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                shell=shell,
+                env=env,
+                quiet=True,
+                template=template,
+                umask=umask)
 
 
-def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-        template=None, rstrip=True, umask=None):
+def run(cmd,
+        cwd=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        env=(),
+        template=None,
+        rstrip=True,
+        umask=None):
     '''
     Execute the passed command and return the output as a string
 
@@ -353,15 +388,27 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
         salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    out = _run(cmd, runas=runas, shell=shell, cwd=cwd,
-               stderr=subprocess.STDOUT, env=env, template=template,
-               rstrip=rstrip, umask=umask)['stdout']
+    out = _run(cmd,
+               runas=runas,
+               shell=shell,
+               cwd=cwd,
+               stderr=subprocess.STDOUT,
+               env=env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask)['stdout']
     log.debug('output: {0}'.format(out))
     return out
 
 
-def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True, umask=None):
+def run_stdout(cmd,
+               cwd=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               env=(),
+               template=None,
+               rstrip=True,
+               umask=None):
     '''
     Execute a command, and only return the standard out
 
@@ -376,14 +423,26 @@ def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
         salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip, umask=umask)["stdout"]
+    stdout = _run(cmd,
+                  runas=runas,
+                  cwd=cwd,
+                  shell=shell,
+                  env=env,
+                  template=template,
+                  rstrip=rstrip,
+                  umask=umask)["stdout"]
     log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
-def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-               template=None, rstrip=True, umask=None):
+def run_stderr(cmd,
+               cwd=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               env=(),
+               template=None,
+               rstrip=True,
+               umask=None):
     '''
     Execute a command and only return the standard error
 
@@ -398,14 +457,26 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
         salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-                  template=template, rstrip=rstrip, umask=umask)["stderr"]
+    stderr = _run(cmd,
+                  runas=runas,
+                  cwd=cwd,
+                  shell=shell,
+                  env=env,
+                  template=template,
+                  rstrip=rstrip,
+                  umask=umask)["stderr"]
     log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
-def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, rstrip=True, umask=None):
+def run_all(cmd,
+            cwd=None,
+            runas=None,
+            shell=DEFAULT_SHELL,
+            env=(),
+            template=None,
+            rstrip=True,
+            umask=None):
     '''
     Execute the passed command and return a dict of return data
 
@@ -420,8 +491,14 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
         salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print $2}'"
 
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env,
-               template=template, rstrip=rstrip, umask=umask)
+    ret = _run(cmd,
+               runas=runas,
+               cwd=cwd,
+               shell=shell,
+               env=env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask)
 
     if ret['retcode'] != 0:
         rcode = ret['retcode']
@@ -441,8 +518,13 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=(),
-            template=None, umask=None):
+def retcode(cmd,
+            cwd=None,
+            runas=None,
+            shell=DEFAULT_SHELL,
+            env=(),
+            template=None,
+            umask=None):
     '''
     Execute a shell command and return the command's return code.
 

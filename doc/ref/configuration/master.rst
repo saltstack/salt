@@ -97,6 +97,9 @@ The number of threads to start for receiving commands and replies from minions.
 If minions are stalling on replies because you have many minions, raise the
 worker_threads value.
 
+Worker threads should not be put below 3 when using the peer system, but can
+drop down to 1 worker otherwise.
+
 .. code-block:: yaml
 
     worker_threads: 5

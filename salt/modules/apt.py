@@ -12,19 +12,21 @@ import json
 # Import salt libs
 import salt.utils
 
+
+log = logging.getLogger(__name__)
+
+
 try:
     from aptsources import sourceslist
     apt_support = True
-except ImportError:
+except ImportError, e:
     apt_support = False
 
 try:
     import softwareproperties.ppa
     ppa_format_support = True
-except ImportError:
+except ImportError, e:
     ppa_format_support = False
-
-log = logging.getLogger(__name__)
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -39,7 +41,15 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return 'pkg' if __grains__['os_family'] == 'Debian' else False
+    if not __grains__['os_family'] == 'Debian':
+        return False
+    if not apt_support:
+        err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
+        log.error(err_str.format(str(e)))
+    if not ppa_format_support:
+        err_str = 'Unable to import "softwareproperties.ppa": {0}'
+        log.warning(err_str.format(str(e)))
+    return 'pkg'
 
 
 def __init__(opts):
@@ -774,8 +784,9 @@ def del_repo(repo, refresh=False, **kwargs):
         is_ppa = True
         dist = __grains__['lsb_codename']
         if not ppa_format_support:
-            warning_str = 'python-software-properties package not ' \
-                          'installed, making best guess at ppa format: {0}'
+            warning_str = 'Unable to use functions from ' \
+                          '"python-software-properties" package, making ' \
+                          'best guess at ppa format: {0}'
             log.warning(warning_str.format(repo))
             owner_name, ppa_name = repo[4:].split('/')
             if 'ppa_auth' in kwargs:
@@ -898,8 +909,10 @@ def mod_repo(repo, refresh=False, **kwargs):
                 return {repo: out}
             else:
                 if not ppa_format_support:
-                    log.warning('software-python-properties not installed, '
-                                'falling back to using urllib method for PPA.')
+                    warning_str = 'Unable to use functions from ' \
+                                  '"python-software-properties" package, ' \
+                                  'making best guess at ppa format: {0}'
+                    log.warning(warning_str.format(repo))
                 else:
                     log.info('falling back to urllib method for private PPA ')
                 #fall back to urllib style
@@ -1152,7 +1165,7 @@ def expand_repo_def(repokwargs):
                                             dist)
         else:
             if ppa_format_support:
-                repo = softwareproperties.ppa_expand_ppa_line(
+                repo = softwareproperties.ppa.expand_ppa_line(
                     repo, dist)[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)

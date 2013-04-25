@@ -8,11 +8,17 @@ facility to log return data
 '''
 
 # Import python libs
-import syslog
 import json
+try:
+    import syslog
+    HAS_SYSLOG = True
+except ImportError:
+    HAS_SYSLOG = False
 
 
 def __virtual__():
+    if not HAS_SYSLOG:
+        return False
     return 'syslog'
 
 

@@ -329,11 +329,14 @@ class Minion(object):
         #if data['fun'] not in self.functions:
         #    return
         if 'user' in data:
-            log.info(('User {0[user]} Executing command {0[fun]} with jid '
-                      '{0[jid]}'.format(data)))
+            log.info(
+                'User {0[user]} Executing command {0[fun]} with jid '
+                '{0[jid]}'.format(data)
+            )
         else:
-            log.info(('Executing command {0[fun]} with jid {0[jid]}'
-                      .format(data)))
+            log.info(
+                'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+            )
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -444,11 +447,15 @@ class Minion(object):
                 )
             except TypeError as exc:
                 aspec = _getargs(minion_instance.functions[data['fun']])
-                msg = 'Missing arguments executing "{0}": {1}'
-                log.warning(msg.format(function_name, aspec))
-                dmsg = '"Missing args" caused by exc: {0}'.format(exc)
-                log.debug(dmsg)
-                ret['return'] = msg.format(function_name, aspec)
+                msg = 'Missing arguments executing "{0}": {1}'.format(
+                    function_name, aspec
+                )
+                log.warning(msg)
+                log.debug(
+                    '"Missing args" caused by exc: {0}'.format(exc),
+                    exc_info=True
+                )
+                ret['return'] = msg
             except Exception:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
@@ -514,7 +521,7 @@ class Minion(object):
                 trb = traceback.format_exc()
                 log.warning(
                     'The minion function caused an exception: {0}'.format(
-                    exc
+                        exc
                     )
                 )
                 ret['return'][data['fun'][ind]] = trb
@@ -828,7 +835,10 @@ class Minion(object):
                 # again
                 continue
             except Exception:
-                log.critical(traceback.format_exc())
+                log.critical(
+                    'An exception occurred while polling the minion',
+                    exc_info=True
+                )
 
     def destroy(self):
         if hasattr(self, 'poller'):
@@ -862,15 +872,12 @@ class Syndic(Minion):
     master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
-        interface = opts.get('interface')
+        self._syndic_interface = opts.get('interface')
         self._syndic = True
         opts['loop_interval'] = 1
         Minion.__init__(self, opts)
-        self.local = salt.client.LocalClient(opts['_master_conf_file'])
-        self.local.event.subscribe('')
         opts.update(self.opts)
         self.opts = opts
-        self.local.opts['interface'] = interface
 
     def _handle_aes(self, load):
         '''
@@ -931,12 +938,17 @@ class Syndic(Minion):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
+        # Instantiate the local client
+        self.local = salt.client.LocalClient(self.opts['_master_conf_file'])
+        self.local.event.subscribe('')
+        self.local.opts['interface'] = self._syndic_interface
+
         signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic "{0}" trying to tune in'.format(self.opts['id']))
+
         self.context = zmq.Context()
 
         # Start with the publish socket
-        id_hash = hashlib.md5(self.opts['id']).hexdigest()
         self.poller = zmq.Poller()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -1016,7 +1028,10 @@ class Syndic(Minion):
                 # again
                 continue
             except Exception:
-                log.critical(traceback.format_exc())
+                log.critical(
+                    'An exception occurred while polling the syndic',
+                    exc_info=True
+                )
 
 
 class Matcher(object):

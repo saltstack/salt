@@ -456,7 +456,7 @@ def user_password_update(id=None,         # pylint: disable-msg=C0103
 
         salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_delete id=c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete name=nova pasword=12345
+        salt '*' keystone.user_delete name=nova password=12345
     '''
     kstone = auth()
     if name:

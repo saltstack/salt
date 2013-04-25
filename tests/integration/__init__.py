@@ -301,10 +301,15 @@ class TestDaemon(object):
         Kill the minion and master processes
         '''
         self.sub_minion_process.terminate()
+        self.sub_minion_process.join()
         self.minion_process.terminate()
+        self.minion_process.join()
         self.master_process.terminate()
+        self.master_process.join()
         self.syndic_process.terminate()
+        self.syndic_process.join()
         self.smaster_process.terminate()
+        self.smaster_process.join()
         self._exit_mockbin()
         self._clean()
 
@@ -589,7 +594,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=30,
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=10,
                      **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -597,7 +602,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=timeout, **kwargs
+            minion_tgt, function, arg, timeout=timeout, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
@@ -661,7 +666,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=30)
+        orig = self.client.cmd('minion', function, arg, timeout=10)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '

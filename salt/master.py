@@ -18,7 +18,6 @@ import datetime
 import pwd
 import getpass
 import resource
-import traceback
 import subprocess
 import multiprocessing
 import sys
@@ -164,6 +163,7 @@ class Master(SMaster):
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = int(time.time())
+        rotate = int(time.time())
         fileserver = salt.fileserver.Fileserver(self.opts)
         runners = salt.loader.runner(self.opts)
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
@@ -190,8 +190,12 @@ class Master(SMaster):
                                     self.opts['keep_jobs']:
                                 shutil.rmtree(f_path)
 
+            if self.opts.get('publish_sesion'):
+                if now - rotate >= self.opts['publish_session'] * 60:
+                    salt.crypt.dropfile(self.opts['cachedir'])
+                    rotate = now
             if self.opts.get('search'):
-                if now - last > self.opts['search_index_interval']:
+                if now - last >= self.opts['search_index_interval']:
                     search.index()
             try:
                 if not fileserver.servers:
@@ -213,6 +217,7 @@ class Master(SMaster):
                 log.error(
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
+            last = now
             try:
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
@@ -429,6 +434,12 @@ class ReqServer(object):
         '''
         Binds the reply server
         '''
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        if os.path.isfile(dfn):
+            try:
+                os.remove(dfn)
+            except os.error:
+                pass
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
         self.work_procs = []
@@ -517,6 +528,7 @@ class MWorker(multiprocessing.Process):
         self.crypticle = crypticle
         self.mkey = mkey
         self.key = key
+        self.k_mtime = 0
 
     def __bind(self):
         '''
@@ -534,6 +546,7 @@ class MWorker(multiprocessing.Process):
             while True:
                 try:
                     package = socket.recv()
+                    self._update_aes()
                     payload = self.serial.loads(package)
                     ret = self.serial.dumps(self._handle_payload(payload))
                     socket.send(ret)
@@ -587,6 +600,32 @@ class MWorker(multiprocessing.Process):
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
         return self.aes_funcs.run_func(data['cmd'], data)
+
+    def _update_aes(self):
+        '''
+        Check to see if a fresh aes key is available and update the components
+        of the worker
+        '''
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        try:
+            stats = os.stat(dfn)
+        except os.error:
+            return
+        if not oct(stats.st_mode) == '0100400':
+            # Invalid dfn, return
+            return
+        if stats.st_mtime > self.k_mtime:
+            # new key, refresh crypticle
+            with open(dfn) as fp_:
+                aes = fp_.read()
+            if not len(aes) == 76:
+                return
+            self.crypticle = salt.crypt.Crypticle(self.opts, aes)
+            self.clear_funcs.crypticle = self.crypticle
+            self.clear_funcs.opts['aes'] = aes
+            self.aes_funcs.crypticle = self.crypticle
+            self.aes_funcs.opts['aes'] = aes
+            self.k_mtime = stats.st_mtime
 
     def run(self):
         '''
@@ -740,6 +779,48 @@ class AESFuncs(object):
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
         return mopts
+
+    def _mine_get(self, load):
+        '''
+        Gathers the data from the specified minions' mine
+        '''
+        if 'id' not in load or 'tgt' not in load or 'fun' not in load:
+            return False
+        ret = {}
+        checker = salt.utils.minions.CkMinions(__opts__)
+        minions = checker.check_minions(
+                load['tgt'],
+                load.get('expr_form', 'glob')
+                )
+        for minion in minions:
+            mine = os.path.join(
+                    self.opts['cachedir'],
+                    'minions',
+                    load['id'],
+                    'mine.p')
+            try:
+                with salt.utils.fopen(mine) as fp_:
+                    fdata = self.serial.load(fp_).get(load['fun'])
+                    if fdata:
+                        ret[minion] = fdata
+            except os.error:
+                continue
+        return ret
+
+    def _mine(self, load):
+        '''
+        Return the mine data
+        '''
+        if 'id' not in load or 'data' not in load:
+            return False
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                os.makedirs(cdir)
+            datap = os.path.join(cdir, 'mine.p')
+            with salt.utils.fopen(datap, 'w+') as fp_:
+                fp_.write(self.serial.dumps(load['data']))
+        return True
 
     def _pillar(self, load):
         '''
@@ -1066,7 +1147,7 @@ class AESFuncs(object):
                 id_ = minion.keys()[0]
                 ret[id_] = minion[id_].get('ret', None)
         return ret
-        
+
 
     def run_func(self, func, load):
         '''
@@ -1080,9 +1161,11 @@ class AESFuncs(object):
             try:
                 ret = getattr(self, func)(load)
             except Exception:
-                trb = traceback.format_exc()
                 ret = ''
-                log.error('Error in function {0}:\n{1}'.format(func, trb))
+                log.error(
+                    'Error in function {0}:\n'.format(func),
+                    exc_info=True
+                )
         else:
             log.error(
                 'Received function {0} which is unavailable on the master, '
@@ -1245,13 +1328,13 @@ class ClearFuncs(object):
         if self.opts['auto_accept']:
             return True
 
-        autosign_file = self.opts.get("autosign_file", None)
+        autosign_file = self.opts.get('autosign_file', None)
 
         if not autosign_file or not os.path.exists(autosign_file):
             return False
 
         if not self._check_permissions(autosign_file):
-            message = "Wrong permissions for {0}, ignoring content"
+            message = 'Wrong permissions for {0}, ignoring content'
             log.warn(message.format(autosign_file))
             return False
 
@@ -1527,7 +1610,7 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
@@ -1538,7 +1621,7 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return ''
             good = self.ckminions.wheel_check(
-                    self.opts['external_auth'][clear_load['eauth']][name],
+                    self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
@@ -1574,7 +1657,7 @@ class ClearFuncs(object):
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
-            if not name in self.opts['external_auth'][clear_load['eauth']]:
+            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
             if not self.loadauth.time_auth(clear_load):
@@ -1639,11 +1722,11 @@ class ClearFuncs(object):
             if not token['eauth'] in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not token['name'] in self.opts['external_auth'][token['eauth']]:
+            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) | ('*' in self.opts['external_auth'][token['eauth']])):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][token['eauth']][token['name']],
+                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
@@ -1663,7 +1746,7 @@ class ClearFuncs(object):
                 return ''
             try:
                 name = self.loadauth.load_name(extra)
-                if not name in self.opts['external_auth'][extra['eauth']]:
+                if not ((name in self.opts['external_auth'][extra['eauth']]) | ('*' in self.opts['external_auth'][extra['eauth']])):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -1679,7 +1762,7 @@ class ClearFuncs(object):
                 )
                 return ''
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name],
+                    self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*'],
                     clear_load['fun'],
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
@@ -1806,11 +1889,10 @@ class ClearFuncs(object):
                     )
                 )
             except Exception:
-                trb = traceback.format_exc()
                 log.critical(
-                        'The specified returner threw a stack trace:\n{0}'
-                        ''.format(trb)
-                    )
+                    'The specified returner threw a stack trace:\n',
+                    exc_info=True
+                )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here

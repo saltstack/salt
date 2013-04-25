@@ -861,8 +861,17 @@ def check_state_result(running):
     for host in running:
         if not isinstance(running[host], dict):
             return False
-        for tag, ret in running[host].items():
-            if not 'result' in ret:
+
+        if host.find('_|-') == 4:
+            # This is a single ret, no host associated
+            rets = running[host]
+        else:
+            rets = running[host].values()
+
+        for ret in rets:
+            if not isinstance(ret, dict):
+                return False
+            if 'result' not in ret:
                 return False
             if ret['result'] is False:
                 return False

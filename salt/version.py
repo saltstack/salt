@@ -112,11 +112,13 @@ __version__, __version_info__ = __get_version(__version__, __version_info__)
 del __get_version
 
 
-def versions_report():
+def versions_information():
     '''
     Report on all of the versions for dependant software
     '''
     libs = (
+        ('Salt', None, __version__),
+        ('Python', None, sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
         ('M2Crypto', 'M2Crypto', 'version'),
         ('msgpack-python', 'msgpack', 'version'),
@@ -124,27 +126,37 @@ def versions_report():
         ('pycrypto', 'Crypto', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
+        ('ZMQ', 'zmq', 'zmq_version')
     )
+    for name, imp, attr in libs:
+        if imp is None:
+            yield name, attr
+            continue
+        try:
+            imp = __import__(imp)
+            version = getattr(imp, attr)
+            if callable(version):
+                version = version()
+            if isinstance(version, (tuple, list)):
+                version = '.'.join(map(str, version))
+            yield name, version
+        except ImportError:
+            yield name, None
+
+
+def versions_report():
+    '''
+    Yield each library properly formatted for a console clean output.
+    '''
+    print dict(versions_information())
+    libs = list(versions_information())
 
     padding = len(max([lib[0] for lib in libs], key=len)) + 1
 
     fmt = '{0:>{pad}}: {1}'
 
-    yield fmt.format('Salt', __version__, pad=padding)
-
-    yield fmt.format(
-        'Python', sys.version.rsplit('\n')[0].strip(), pad=padding
-    )
-
-    for name, imp, attr in libs:
-        try:
-            imp = __import__(imp)
-            version = getattr(imp, attr)
-            if not isinstance(version, basestring):
-                version = '.'.join(map(str, version))
-            yield fmt.format(name, version, pad=padding)
-        except ImportError:
-            yield fmt.format(name, 'not installed', pad=padding)
+    for name, version in libs:
+        yield fmt.format(name, version or 'Not Installed', pad=padding)
 
 
 if __name__ == '__main__':

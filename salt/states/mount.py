@@ -102,7 +102,7 @@ def mounted(
             if not name in fstab_data:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is mounted but needs to '
-                                  'be set to be made persistant').format(name)
+                                  'be set to be made persistent').format(name)
                 return ret
 
         # present, new, change, bad config

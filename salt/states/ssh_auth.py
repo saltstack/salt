@@ -219,6 +219,9 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'result': True,
            'comment': ''}
 
+    # Get just the key
+    name = name.split(' ')[0]
+
     if __opts__['test']:
         check = __salt__['ssh.check_key'](
                 user,
@@ -228,7 +231,7 @@ def absent(name, user, config='.ssh/authorized_keys'):
                 [],
                 config)
         if check == 'update' or check == 'exists':
-            ret['return'] = None
+            ret['result'] = None
             ret['comment'] = 'Key {0} is set for removal'.format(name)
             return ret
         else:

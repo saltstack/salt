@@ -337,6 +337,9 @@ class IPv4Address(object):
     def __repr__(self):
         return 'IPv4Address("{0}")'.format(str(self))
 
+    def __cmp__(self, other):
+        return cmp(self.dotted_quad, other.dotted_quad)
+
     @property
     def is_private(self):
         '''

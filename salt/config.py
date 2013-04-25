@@ -78,6 +78,7 @@ DEFAULT_MINION_OPTS = {
     'clean_dynamic_modules': True,
     'open_mode': False,
     'multiprocessing': True,
+    'mine_interval': 60,
     'ipc_mode': 'ipc',
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -174,6 +175,7 @@ DEFAULT_MASTER_OPTS = {
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'pidfile': '/var/run/salt-master.pid',
+    'publish_session': 86400,
     'cluster_masters': [],
     'cluster_mode': 'paranoid',
     'range_server': 'range:80',
@@ -463,6 +465,16 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
+    if '__mine_interval' not in opts.get('schedule', {}):
+        if not 'schedule' in opts:
+            opts['schedule'] = {}
+        opts['schedule'] = {
+                '__mine_interval':
+                {
+                    'function': 'mine.update',
+                    'minutes': opts['mine_interval']
+                    }
+                }
     return opts
 
 

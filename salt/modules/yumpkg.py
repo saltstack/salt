@@ -378,7 +378,6 @@ def group_install(name=None,
 
 def install(name=None,
             refresh=False,
-            fromrepo=None,
             skip_verify=False,
             pkgs=None,
             sources=None,

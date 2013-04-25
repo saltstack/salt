@@ -95,7 +95,7 @@ def installed(name,
     if repo:
         name = repo
 
-    # If a requirements file is specified,only install the contents of the
+    # If a requirements file is specified, only install the contents of the
     # requirements file
     if requirements:
         name = ''

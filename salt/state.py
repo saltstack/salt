@@ -1222,7 +1222,7 @@ class State(object):
                 'result': False,
                 'name': cdata['args'][0],
                 'changes': {},
-                'comment': 'An exception occured in this state: {0}'.format(
+                'comment': 'An exception occurred in this state: {0}'.format(
                     trb)
                 }
         ret['__run_num__'] = self.__run_num
@@ -1784,16 +1784,25 @@ class BaseHighState(object):
         state = None
         try:
             state = compile_template(
-                fn_, self.state.rend, self.state.opts['renderer'], env, sls, rendered_sls=mods)
+                fn_, self.state.rend, self.state.opts['renderer'], env, sls,
+                rendered_sls=mods
+            )
         except Exception as exc:
-            import traceback
-            errors.append(('Rendering SLS {0} failed, render error:\n{1}\n{2}'
-                           .format(sls, traceback.format_exc(), exc)))
+            msg = 'Rendering SLS {0} failed, render error: {1}'.format(
+                sls, exc
+            )
+            log.error(
+                msg,
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
         mods.add(sls)
         if state:
             if not isinstance(state, dict):
-                errors.append(('SLS {0} does not render to a dictionary'
-                               .format(sls)))
+                errors.append(
+                    'SLS {0} does not render to a dictionary'.format(sls)
+                )
             else:
                 include = []
                 if 'include' in state:
@@ -1927,6 +1936,10 @@ class BaseHighState(object):
     def _handle_extend(self, state, sls, env, errors):
         if 'extend' in state:
             ext = state.pop('extend')
+            if not isinstance(ext, dict):
+                errors.append(('Extension value in sls {0} is not a '
+                               'dictionary').format(sls))
+                return
             for name in ext:
                 if not isinstance(ext[name], dict):
                     errors.append(('Extension name {0} in sls {1} is '
