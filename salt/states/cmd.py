@@ -358,6 +358,7 @@ def run(name,
         env=(),
         stateful=False,
         umask=None,
+        quiet=False,
         **kwargs):
     '''
     Run a command if certain circumstances are met
@@ -392,7 +393,11 @@ def run(name,
         environments are defined in the master config file.
 
     umask
-         The umask (in octal) to use when running the command.
+        The umask (in octal) to use when running the command.
+
+    quiet
+        The command will be executed quietly, meaning no log entries of the
+        actual command or its return data
 
     stateful
         The command being executed is expected to return data about executing
@@ -456,7 +461,8 @@ def run(name,
                   'runas': user,
                   'shell': shell or __grains__['shell'],
                   'env': env,
-                  'umask': umask}
+                  'umask': umask,
+                  'quiet': quiet}
 
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)

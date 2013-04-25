@@ -302,9 +302,9 @@ def _run(cmd,
 
     # Setting stdout to None seems to cause the Process to fail.
     # See bug #2640 for more info
-    if retcode:
+    #if retcode:
         #kwargs['stdout'] = None
-        kwargs['stderr'] = None
+        #kwargs['stderr'] = None
 
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
@@ -373,7 +373,8 @@ def run(cmd,
         env=(),
         template=None,
         rstrip=True,
-        umask=None):
+        umask=None,
+        quiet=False):
     '''
     Execute the passed command and return the output as a string
 
@@ -396,8 +397,10 @@ def run(cmd,
                env=env,
                template=template,
                rstrip=rstrip,
-               umask=umask)['stdout']
-    log.debug('output: {0}'.format(out))
+               umask=umask,
+               quiet=quiet)['stdout']
+    if not quiet:
+        log.debug('output: {0}'.format(out))
     return out
 
 
@@ -408,7 +411,8 @@ def run_stdout(cmd,
                env=(),
                template=None,
                rstrip=True,
-               umask=None):
+               umask=None,
+               quiet=False):
     '''
     Execute a command, and only return the standard out
 
@@ -430,8 +434,10 @@ def run_stdout(cmd,
                   env=env,
                   template=template,
                   rstrip=rstrip,
-                  umask=umask)["stdout"]
-    log.debug('stdout: {0}'.format(stdout))
+                  umask=umask,
+                  quiet=quiet)["stdout"]
+    if not quiet:
+        log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
@@ -442,7 +448,8 @@ def run_stderr(cmd,
                env=(),
                template=None,
                rstrip=True,
-               umask=None):
+               umask=None,
+               quiet=False):
     '''
     Execute a command and only return the standard error
 
@@ -464,8 +471,10 @@ def run_stderr(cmd,
                   env=env,
                   template=template,
                   rstrip=rstrip,
-                  umask=umask)["stderr"]
-    log.debug('stderr: {0}'.format(stderr))
+                  umask=umask,
+                  quiet=quiet)["stderr"]
+    if not quiet:
+        log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
@@ -476,7 +485,8 @@ def run_all(cmd,
             env=(),
             template=None,
             rstrip=True,
-            umask=None):
+            umask=None,
+            quiet=False):
     '''
     Execute the passed command and return a dict of return data
 
@@ -498,23 +508,25 @@ def run_all(cmd,
                env=env,
                template=template,
                rstrip=rstrip,
-               umask=umask)
+               umask=umask,
+               quiet=quiet)
 
-    if ret['retcode'] != 0:
-        rcode = ret['retcode']
-        msg = 'Command \'{0}\' failed with return code: {1}'
-        log.error(msg.format(cmd, rcode))
-        # Don't log a blank line if there is no stderr or stdout
-        if ret['stdout']:
-            log.error('stdout: {0}'.format(ret['stdout']))
-        if ret['stderr']:
-            log.error('stderr: {0}'.format(ret['stderr']))
-    else:
-        # No need to always log output on success to the logs
-        if ret['stdout']:
-            log.debug('stdout: {0}'.format(ret['stdout']))
-        if ret['stderr']:
-            log.debug('stderr: {0}'.format(ret['stderr']))
+    if not quiet:
+        if ret['retcode'] != 0:
+            rcode = ret['retcode']
+            msg = 'Command \'{0}\' failed with return code: {1}'
+            log.error(msg.format(cmd, rcode))
+            # Don't log a blank line if there is no stderr or stdout
+            if ret['stdout']:
+                log.error('stdout: {0}'.format(ret['stdout']))
+            if ret['stderr']:
+                log.error('stderr: {0}'.format(ret['stderr']))
+        else:
+            # No need to always log output on success to the logs
+            if ret['stdout']:
+                log.debug('stdout: {0}'.format(ret['stdout']))
+            if ret['stderr']:
+                log.debug('stderr: {0}'.format(ret['stderr']))
     return ret
 
 
@@ -524,7 +536,8 @@ def retcode(cmd,
             shell=DEFAULT_SHELL,
             env=(),
             template=None,
-            umask=None):
+            umask=None,
+            quiet=False):
     '''
     Execute a shell command and return the command's return code.
 
@@ -547,8 +560,8 @@ def retcode(cmd,
             env=env,
             retcode=True,
             template=template,
-            umask=umask
-            )['retcode']
+            umask=umask,
+            quiet=quiet)['retcode']
 
 
 def script(
