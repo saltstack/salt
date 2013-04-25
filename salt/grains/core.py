@@ -547,7 +547,8 @@ _OS_FAMILY_MAP = {
     'OpenIndiana Development': 'Solaris',
     'Arch ARM': 'Arch',
     'ALT': 'RedHat',
-    'Trisquel': 'Debian'
+    'Trisquel': 'Debian',
+    'GCEL': 'Debian'
 }
 
 
