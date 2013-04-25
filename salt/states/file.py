@@ -905,8 +905,9 @@ def directory(name,
     if not os.path.isdir(name):
         # The dir does not exist, make it
         if makedirs:
-            __salt__['file.makedirs'](name, user=user,
-                                      group=group, mode=dir_mode)
+            __salt__['file.mkdir'](
+                name, user=user, group=group, mode=dir_mode
+            )
         else:
             return _error(
                 ret, 'No directory to create {0} in'.format(name))
