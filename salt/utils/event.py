@@ -434,7 +434,7 @@ class ReactWrap(object):
             ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(
-                    'Failed to exeute {0}: {1}\n'.format(low['state'], l_fun),
+                    'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
                     )
             return ret
