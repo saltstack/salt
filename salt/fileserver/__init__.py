@@ -117,7 +117,7 @@ class Fileserver(object):
                'rel': ''}
         if os.path.isabs(path):
             return fnd
-        if path.startswith('../'):
+        if '../' in path:
             return fnd
         if path.startswith('|'):
             # The path arguments are escaped
