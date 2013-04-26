@@ -695,7 +695,7 @@ def list_repos():
     return repos
 
 
-def get_repo(repo, ppa_auth=None):
+def get_repo(repo, **kwargs):
     '''
     Display a repo from the sources.list / sources.list.d
 
@@ -709,6 +709,7 @@ def get_repo(repo, ppa_auth=None):
         msg = 'Error: aptsources.sourceslist python module not found'
         raise Exception(msg)
 
+    ppa_auth = kwargs.get('ppa_auth', None)
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':

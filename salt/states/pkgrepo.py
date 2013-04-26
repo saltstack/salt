@@ -185,8 +185,10 @@ def managed(name, **kwargs):
         repokwargs['repo'] = name
 
     try:
-        repo = __salt__['pkg.get_repo'](repokwargs['repo'],
-                                        repokwargs.get('ppa_auth', None))
+        repo = __salt__['pkg.get_repo'](
+                repokwargs['repo'],
+                ppa_auth=repokwargs.get('ppa_auth', None)
+                )
     except:
         pass
 
