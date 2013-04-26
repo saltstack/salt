@@ -18,7 +18,10 @@ import logging
 HAS_GIT = False
 try:
     import git
-    HAS_GIT = True
+    _ver = git.__version__.split('.')
+    # check for version 0.3.x and up
+    if _ver[0] >= 0 and _ver[1] >= 3:
+        HAS_GIT = True
 except ImportError:
     pass
 
