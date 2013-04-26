@@ -62,7 +62,7 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
-        if salt.util.is_windows():
+        if salt.utils.is_windows():
             self.functions = salt.loader.minion_mods(self.opts)
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
