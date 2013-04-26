@@ -40,9 +40,4 @@ def render(template_file, env='', sls='', argline='',
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
         )
-    log.debug('Rendered data from template file {0}:\n{1}'.format(
-            template_file,
-            tmp_data.get('data', '')
-            )
-        )
     return StringIO(tmp_data['data'])
