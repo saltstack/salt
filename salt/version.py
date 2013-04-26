@@ -148,7 +148,6 @@ def versions_report():
     '''
     Yield each library properly formatted for a console clean output.
     '''
-    print dict(versions_information())
     libs = list(versions_information())
 
     padding = len(max([lib[0] for lib in libs], key=len)) + 1
