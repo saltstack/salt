@@ -8,7 +8,9 @@ import multiprocessing
 import os
 import sys
 import shutil
+import pprint
 import tempfile
+import logging
 import time
 import signal
 import subprocess
@@ -54,6 +56,9 @@ TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+
+
+log = logging.getLogger(__name__)
 
 
 def print_header(header, sep='~', top=True, bottom=True, inline=False,
@@ -594,7 +599,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=10,
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=25,
                      **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -666,7 +671,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=10)
+        orig = self.client.cmd('minion', function, arg, timeout=25)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
@@ -961,28 +966,32 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
+            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
                         **(ret.values()[0])
                     )
                 )
-            except AttributeError:
+            except (AttributeError, IndexError):
                 raise AssertionError(
-                    'Failed to get result. Salt Returned: {0}'.format(ret)
+                    'Failed to get result. Salt Returned:\n{0}'.format(
+                        pprint.pformat(ret)
+                    )
                 )
 
     def assertSaltFalseReturn(self, ret):
         try:
             self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
+            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
                         **(ret.values()[0])
                     )
                 )
-            except AttributeError:
+            except (AttributeError, IndexError):
                 raise AssertionError(
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )
@@ -991,13 +1000,14 @@ class SaltReturnAssertsMixIn(object):
         try:
             self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
         except AssertionError:
+            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(
                         **(ret.values()[0])
                     )
                 )
-            except AttributeError:
+            except (AttributeError, IndexError):
                 raise AssertionError(
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )

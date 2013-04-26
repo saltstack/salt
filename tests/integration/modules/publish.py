@@ -1,7 +1,8 @@
 import integration
 
 
-class PublishModuleTest(integration.ModuleCase):
+class PublishModuleTest(integration.ModuleCase,
+                        integration.SaltReturnAssertsMixIn):
     '''
     Validate the publish module
     '''
@@ -10,20 +11,17 @@ class PublishModuleTest(integration.ModuleCase):
         publish.publish
         '''
         ret = self.run_function('publish.publish', ['minion', 'test.ping'])
-        self.assertTrue(ret['minion'])
+        self.assertSaltTrueReturn(ret)
 
     def test_full_data(self):
         '''
         publish.full_data
         '''
         ret = self.run_function(
-                'publish.full_data',
-                [
-                    'minion',
-                    'test.fib',
-                    ['40']
-                ]
-                )
+            'publish.full_data',
+            ['minion', 'test.fib', ['40']]
+        )
+        self.assertSaltTrueReturn(ret)
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
 
     def test_kwarg(self):
@@ -31,13 +29,13 @@ class PublishModuleTest(integration.ModuleCase):
         Verify that the pub data is making it to the minion functions
         '''
         ret = self.run_function(
-                'publish.full_data',
-                [
-                    'minion',
-                    'test.kwarg',
-                    'cheese=spam',
-                ]
-                )['minion']['ret']
+            'publish.full_data',
+            ['minion', 'test.kwarg', 'cheese=spam']
+        )
+
+        self.assertSaltTrueReturn(ret)
+        ret = ret['minion']['ret']
+
         check_true = (
             'cheese',
             '__pub_arg',
@@ -61,13 +59,9 @@ class PublishModuleTest(integration.ModuleCase):
         Test bad authentication
         '''
         ret = self.run_function(
-                'publish.publish',
-                [
-                    'minion',
-                    'cmd.run',
-                    ['echo foo']
-                ]
-                )
+            'publish.publish',
+            ['minion', 'cmd.run', ['echo foo']]
+        )
         self.assertEqual(ret, {})
 
 

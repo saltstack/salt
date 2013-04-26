@@ -124,7 +124,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             fp_.write('test_managed_show_diff_false\n')
 
         ret = self.run_state(
-            'file.managed', name=name, source='salt://grail/scene33', show_diff=False
+            'file.managed', name=name, source='salt://grail/scene33',
+            show_diff=False
         )
 
         changes = ret.values()[0]['changes']
@@ -362,7 +363,13 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(integration.TMP, fname)
+        try:
+            self.assertFalse(os.path.exists(name))
+        except AssertionError:
+            os.remove(name)
+
         ret = self.run_state('file.append', name=name, text='cheese')
+        # A non existing file is touched, the text is NOT appended.
         self.assertSaltFalseReturn(ret)
 
         try:
