@@ -1656,24 +1656,35 @@ def makedirs(path, user=None, group=None, mode=None):
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    dirname = os.path.dirname(os.path.normpath(path))
-    dirname_next = os.path.dirname(dirname)
+    dirname = os.path.normpath(os.path.dirname(path))
+
+    if os.path.isdir(dirname):
+        # There's nothing for us to do
+        return 'Directory {0!r} already exists'.format(path)
+
+    if os.path.exists(dirname):
+        return 'The path {0!r} already exists and is not a directory'.format(
+            path
+        )
+
     directories_to_create = []
-    while dirname != dirname_next:
+    while True:
         if os.path.isdir(dirname):
             break
+
         directories_to_create.append(dirname)
-        dirname = dirname_next
-        dirname_next = os.path.dirname(dirname)
+        dirname = os.path.dirname(dirname)
 
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
     for directory_to_create in directories_to_create:
         if directory_to_create == os.path.normpath(path):
-            # only the directory passed to this function gets the user, group, ... set
+            # only the directory passed to this function gets the user, group,
+            # set
             mkdir(directory_to_create, user=user, group=group, mode=mode)
-        else:
-            mkdir(directory_to_create)
+            continue
+        # Create the directory
+        mkdir(directory_to_create)
 
 
 def makedirs_perms(name, user=None, group=None, mode='0755'):
