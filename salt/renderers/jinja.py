@@ -2,10 +2,14 @@ from __future__ import absolute_import
 
 # Import python libs
 from StringIO import StringIO
+import logging
 
 # Import salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
+
+
+log = logging.getLogger(__name__)
 
 
 def render(template_file, env='', sls='', argline='',
@@ -35,5 +39,10 @@ def render(template_file, env='', sls='', argline='',
     if not tmp_data.get('result', False):
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
+        )
+    log.debug('Rendered data from template file {0}:\n{1}'.format(
+            template_file,
+            tmp_data.get('data', '')
+            )
         )
     return StringIO(tmp_data['data'])
