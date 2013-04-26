@@ -73,6 +73,18 @@ def version():
     return salt.__version__
 
 
+def versions_information():
+    '''
+    Returns versions of components used by salt as a dict
+
+    CLI Example::
+
+        salt '*' test.versions_information
+    '''
+    import salt.version
+    return dict(salt.version.versions_information())
+
+
 def versions_report():
     '''
     Returns versions of components used by salt
