@@ -117,13 +117,6 @@ class Fileserver(object):
                'rel': ''}
         if os.path.isabs(path):
             return fnd
-        else:
-            # User requested a relative path; sanity-check is inside file_roots
-            check_abs = os.path.abspath(path)
-            if not any(check_abs.startswith(i)
-                    for i in self.opts['file_roots'][env]):
-                return fnd
-
         if path.startswith('|'):
             # The path arguments are escaped
             path = path[1:]
