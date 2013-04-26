@@ -9,6 +9,8 @@ import time
 import random
 
 # Import Salt libs
+import salt
+import salt.version
 import salt.loader
 
 
@@ -69,7 +71,6 @@ def version():
 
         salt '*' test.version
     '''
-    import salt
     return salt.__version__
 
 
@@ -81,7 +82,6 @@ def versions_information():
 
         salt '*' test.versions_information
     '''
-    import salt.version
     return dict(salt.version.versions_information())
 
 
@@ -93,7 +93,6 @@ def versions_report():
 
         salt '*' test.versions_report
     '''
-    import salt.version
     return '\n'.join(salt.version.versions_report())
 
 
