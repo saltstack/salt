@@ -39,7 +39,7 @@ def dropfile(cachedir):
     os.umask(mask)
 
 
-def gen_keys(keydir, keyname, keysize):
+def gen_keys(keydir, keyname, keysize, user=None):
     '''
     Generate a keypair for use with salt
     '''
@@ -53,6 +53,16 @@ def gen_keys(keydir, keyname, keysize):
     os.umask(cumask)
     gen.save_pub_key(pub)
     os.chmod(priv, 256)
+    if user:
+        try:
+            import pwd
+            uid = pwd.getpwnam(user).pw_uid
+            os.chown(priv, uid, -1)
+            os.chown(pub, uid, -1)
+        except KeyError, ImportError:
+            # The specified user was not found, allow the backup systems to
+            # report the error
+            pass
     return priv
 
 
@@ -77,7 +87,11 @@ class MasterKeys(dict):
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            gen_keys(self.opts['pki_dir'], 'master', 4096)
+            gen_keys(
+                    self.opts['pki_dir'],
+                    'master',
+                    4096,
+                    self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
 
@@ -128,7 +142,11 @@ class Auth(object):
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            gen_keys(self.opts['pki_dir'], 'minion', 4096)
+            gen_keys(
+                    self.opts['pki_dir'],
+                    'minion',
+                    4096,
+                    self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
 
