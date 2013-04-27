@@ -39,6 +39,7 @@ import salt.auth
 import salt.wheel
 import salt.minion
 import salt.search
+import salt.key
 import salt.utils
 import salt.fileserver
 import salt.utils.atomicfile
@@ -1148,6 +1149,25 @@ class AESFuncs(object):
                 ret[id_] = minion[id_].get('ret', None)
         return ret
 
+    def revoke_auth(self, load):
+        '''
+        Allow a minion to request revokation of it's own key
+        '''
+        if 'id' not in load or 'tok' not in load:
+            return False
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                ('Minion id {0} is not who it says it is and is attempting '
+                 'to revoke the key for {0}').format(
+                    clear_load['id']
+                )
+            )
+            return False
+        keyapi = salt.key.Key(self.opts)
+        keyapi.delete_key(load['id'])
+        return True
 
     def run_func(self, func, load):
         '''
