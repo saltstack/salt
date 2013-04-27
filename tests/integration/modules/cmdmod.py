@@ -161,6 +161,7 @@ sys.stdout.write('cheese')
         result = self.run_function('cmd.run_stdout', [cmd]).strip()
         self.assertEqual(result, expected_result)
 
+    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
     def test_quotes_runas(self):
         '''
         cmd.run with quoted command
