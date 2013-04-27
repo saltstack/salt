@@ -67,7 +67,7 @@ def compile_template(template, renderers, default, env='', sls='', **kwargs):
             time.sleep(0.01)
             ret = render(input_data, env, sls, **render_kwargs)
         input_data = ret
-        if log.getEffectiveLevel() == 1:
+        if log.isEnabledFor(logging.GARBAGE):
             try:
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
