@@ -153,6 +153,7 @@ def A(host, nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
+    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
@@ -183,6 +184,7 @@ def NS(domain, resolve=True, nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
+    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
@@ -231,6 +233,7 @@ def SPF(domain, record='SPF', nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
+    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
@@ -278,6 +281,7 @@ def MX(domain, resolve=False, nameserver=None):
         dig.append('@{0}'.format(nameserver))
 
     cmd = __salt__['cmd.run_all'](' '.join(dig))
+    # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
             'dig returned exit code \'{0}\'. Returning empty list as '
