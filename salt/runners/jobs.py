@@ -103,7 +103,8 @@ def list_jobs():
                         'Function': load['fun'],
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
-                        'Target-type': load['tgt_type']}
+                        'Target-type': load['tgt_type'],
+                        'User': load.get('user', 'root')}
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
