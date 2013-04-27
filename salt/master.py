@@ -1931,6 +1931,8 @@ class ClearFuncs(object):
                 'ret': clear_load['ret'],
                }
 
+        if 'id' in extra:
+            load['id'] = extra['id']
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
