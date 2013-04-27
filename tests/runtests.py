@@ -346,14 +346,23 @@ def parse_opts():
         'Test suite is running under PID {0}'.format(os.getpid()), bottom=False
     )
 
-
     # With greater verbosity we can also log to the console
     if options.verbosity > 2:
         consolehandler = logging.StreamHandler(sys.stderr)
         consolehandler.setLevel(logging.INFO)       # -vv
         consolehandler.setFormatter(formatter)
+        handled_levels = {
+            3: logging.DEBUG,   # -vvv
+            4: logging.TRACE,   # -vvvv
+            5: logging.GARBAGE  # -vvvvv
+        }
         if options.verbosity > 3:
-            consolehandler.setLevel(logging.DEBUG)  # -vvv
+            consolehandler.setLevel(
+                handled_levels.get(
+                    options.verbosity,
+                    options.verbosity > 5 and 5 or 3
+                )
+            )
 
         logging.root.addHandler(consolehandler)
 
