@@ -59,7 +59,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
             uid = pwd.getpwnam(user).pw_uid
             os.chown(priv, uid, -1)
             os.chown(pub, uid, -1)
-        except KeyError, ImportError:
+        except (KeyError, ImportError, OSError):
             # The specified user was not found, allow the backup systems to
             # report the error
             pass
