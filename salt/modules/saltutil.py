@@ -413,7 +413,7 @@ def kill_job(jid):
     return signal_job(jid, signal.SIGKILL)
 
 
-def revoke_key():
+def revoke_auth():
     '''
     The minion sends a request to the master to revoke its own key, note that
     the minion session will be revoked and the minion may not be able to return
@@ -426,7 +426,7 @@ def revoke_key():
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
-    load = {'cmd': 'revoke_key',
+    load = {'cmd': 'revoke_auth',
             'id': __opts__['id'],
             'tok': tok}
     try:
