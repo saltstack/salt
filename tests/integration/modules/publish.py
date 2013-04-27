@@ -11,7 +11,7 @@ class PublishModuleTest(integration.ModuleCase,
         publish.publish
         '''
         ret = self.run_function('publish.publish', ['minion', 'test.ping'])
-        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret)
 
     def test_full_data(self):
         '''
@@ -21,7 +21,7 @@ class PublishModuleTest(integration.ModuleCase,
             'publish.full_data',
             ['minion', 'test.fib', ['40']]
         )
-        self.assertSaltTrueReturn(ret)
+        self.assertTrue(ret)
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
 
     def test_kwarg(self):
@@ -33,7 +33,6 @@ class PublishModuleTest(integration.ModuleCase,
             ['minion', 'test.kwarg', 'cheese=spam']
         )
 
-        self.assertSaltTrueReturn(ret)
         ret = ret['minion']['ret']
 
         check_true = (
@@ -47,6 +46,8 @@ class PublishModuleTest(integration.ModuleCase,
             '__pub_tgt_type',
         )
         for name in check_true:
+            if not name in ret:
+                print name
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
