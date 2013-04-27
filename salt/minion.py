@@ -621,6 +621,9 @@ class Minion(object):
 
     @property
     def master_pub(self):
+        '''
+        Return the master publish port
+        '''
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
                                           port=self.publish_port)
 
