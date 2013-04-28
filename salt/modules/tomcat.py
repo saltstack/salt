@@ -50,6 +50,7 @@ import os
 # Import Salt libs
 import salt.utils
 
+# Private
 def __virtual__():
     '''
     Only load tomcat if it is installed or if grains/pillar config exists
@@ -168,13 +169,14 @@ def _simple_cmd(cmd, app, url='http://localhost:8080/manager', timeout=180):
         return 'FAIL - No context exists for path {0}'.format(app)
 
 
+# Functions
 def leaks(url='http://localhost:8080/manager', timeout=180):
     '''
     Find memory leaks in tomcat
     
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -191,7 +193,7 @@ def status(url='http://localhost:8080/manager', timeout=180):
     
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -209,7 +211,7 @@ def ls(url='http://localhost:8080/manager', timeout=180):
     
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -246,7 +248,7 @@ def stop(app, url='http://localhost:8080/manager', timeout=180):
         the webapp context path
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -286,7 +288,7 @@ def reload(app, url='http://localhost:8080/manager', timeout=180):
         the webapp context path
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -306,7 +308,7 @@ def sessions(app, url='http://localhost:8080/manager', timeout=180):
         the webapp context path
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -326,7 +328,7 @@ def status_webapp(app, url='http://localhost:8080/manager', timeout=180):
         the webapp context path
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -349,7 +351,7 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
     
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -379,7 +381,7 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
         the webapp context path
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -404,10 +406,10 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
         set True to deploy the webapp even one is deployed in the context
     url : http://localhost:8080/manager
         the url of the server manager webapp
-    env
+    env : base
         the environment for war file in used by salt.modules.cp.get_file
         function
-    timeout
+    timeout : 180
         timeout for http request
     
     CLI Examples::
@@ -456,6 +458,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     return res
 
 
+# Non-Manager functions
 def version():
     '''
     Return server version from catalina.sh version
@@ -514,3 +517,4 @@ def signal(signal=None):
         __catalina_home(), valid_signals[signal]
     )
     __salt__['cmd.run'](cmd)
+
