@@ -718,9 +718,9 @@ class Map(Cloud):
         try:
             with open(self.opts['map'], 'rb') as fp_:
                 try:
-                    #open mako file
+                    # open mako file
                     temp_ = Template(open(fp_, 'r').read())
-                    #render as yaml
+                    # render as yaml
                     map_ = temp_.render()
                 except:
                     map_ = yaml.load(fp_.read())
@@ -734,6 +734,24 @@ class Map(Cloud):
 
         if 'include' in map_:
             map_ = salt.config.include_config(map_, self.opts['map'])
+
+        # Create expected data format if needed
+        for profile, mapped in map_.copy().items():
+            if isinstance(mapped, dict):
+                # Convert the dictionary mapping to a list of dictionaries
+                entries = []
+                for name, overrides in mapped.iteritems():
+                    overrides.setdefault('name', name)
+                    entries.append(overrides)
+                map_[profile] = entries
+                continue
+
+            if isinstance(mapped, basestring):
+                # If it's a single string entry, let's make iterable because of
+                # the next step
+                mapped = [mapped]
+
+            map_[profile] = [{'name': name} for name in mapped]
         return map_
 
     def map_data(self):
@@ -750,33 +768,46 @@ class Map(Cloud):
             for pdef in self.opts['vm']:
                 # The named profile does not exist
                 if pdef.get('profile', '') == profile:
-                    pdata = pdef
+                    pdata = pdef.copy()
             if not pdata:
                 continue
-            for name in self.map[profile]:
-                nodename = name
-                if isinstance(name, dict):
-                    nodename = (name.keys()[0])
-                defined.add(nodename)
+
+            for overrides in self.map[profile]:
+                # Get the VM name
+                nodename = overrides.pop('name')
+                # Update profile data with the map overrides
+                pdata.update(overrides)
+                # Add the computed information to the return data
                 ret['create'][nodename] = pdata
+                # Add the node name to the defined set
+                defined.add(nodename)
+
         for prov in pmap:
             for name in pmap[prov]:
                 exist.add(name)
-                if name in ret['create']:
-                    #FIXME: what about other providers?
-                    if prov != 'aws' or pmap['aws'][name]['state'] != 2:
-                        ret['create'].pop(name)
+                if name not in ret['create']:
+                    continue
+
+                # FIXME: what about other providers?
+                if prov != 'aws' or pmap['aws'][name]['state'] != 'TERMINATED':
+                    log.info(
+                        '{0!r} already exists, removing from the '
+                        'create map'.format(name)
+                    )
+                    ret['create'].pop(name)
+
         if self.opts['hard']:
-            if self.opts['enable_hard_maps'] is True:
-                # Look for the items to delete
-                ret['destroy'] = exist.difference(defined)
-            else:
+            if self.opts['enable_hard_maps'] is False:
                 raise SaltCloudSystemExit(
                     'The --hard map can be extremely dangerous to use, '
                     'and therefore must explicitly be enabled in the main '
                     'configuration file, by setting \'enable_hard_maps\' '
                     'to True'
                 )
+
+            # Hard maps are enabled, Look for the items to delete.
+            ret['destroy'] = exist.difference(defined)
+
         return ret
 
     def run_map(self, dmap):
@@ -791,8 +822,7 @@ class Map(Cloud):
         try:
             master_name, master_profile = (
                 (name, profile) for name, profile in dmap['create'].items()
-                if 'make_master' in profile and
-                profile['make_master'] is True
+                if profile.get('make_master', False) is True
             ).next()
             log.debug('Creating new master {0}'.format(master_name))
             tvm = self.vm_options(master_name,
@@ -815,7 +845,7 @@ class Map(Cloud):
 
         # Generate the fingerprint of the master pubkey in
         #     order to mitigate man-in-the-middle attacks
-        master_pub = self.opts['pki_dir'] + '/master.pub'
+        master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
         master_finger = ''
         if os.path.isfile(master_pub) and hasattr(salt.utils, 'pem_finger'):
             master_finger = salt.utils.pem_finger(master_pub)
