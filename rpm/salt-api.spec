@@ -12,7 +12,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt-api
-Version: 0.8.0
+Version: 0.8.1
 Release: 0%{?dist}
 Summary: A web api for to access salt the parallel remote execution system
 
@@ -145,6 +145,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue Apr 29 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.8.1-0
+- Minor bugfix version released
+
 * Tue Apr 16 2013 Andrew Niemantsverdriet <andrewniemants@gmail.com> - 0.8.0-0
 - New version released
 
