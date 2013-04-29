@@ -33,3 +33,5 @@ grains:
       - susan
       - ian
       - barbara
+
+ipv6: False

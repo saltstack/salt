@@ -20,3 +20,5 @@ file_buffer_size: 8192
 
 ext_pillar:
   - cmd_yaml: cat ext.yaml
+
+ipv6: False
