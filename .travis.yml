@@ -15,9 +15,3 @@ before_install:
 install: pip install -r requirements.txt --use-mirrors --mirrors=http://testpypi.python.org/pypi
 
 script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v'"
-
-notifications:
-  irc:
-    channels: "irc.freenode.org#salt-devel"
-    on_success: change
-    on_failure: change
