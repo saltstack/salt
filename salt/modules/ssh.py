@@ -554,6 +554,9 @@ def rm_known_host(user, hostname, config='.ssh/known_hosts'):
                 'error': 'Known hosts file {0} does not exist'.format(full)}
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
     cmd_result = __salt__['cmd.run'](cmd)
+    # ssh-keygen creates a new file, thus a chown is required.
+    if os.geteuid() == 0:
+        os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'removed', 'comment': cmd_result}
 
 
