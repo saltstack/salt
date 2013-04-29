@@ -18,6 +18,32 @@ def __virtual__():
     return False
 
 
+def pv_present(name, devices, **kwargs):
+    '''
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    if __salt__['lvm.pvdisplay'](name):
+        ret['comment'] = 'Physical Volume {0} already present'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Physical Volume {0} is set to be created'.format(name)
+        ret['result'] = None
+        return ret
+    else:
+        changes = __salt__['lvm.pvcreate'](name, devices, **kwargs)
+
+        if __salt__['lvm.pvdisplay'](name):
+            ret['comment'] = 'Created Physical Volume {0}'.format(name)
+            ret['changes'] = changes
+        else:
+            ret['comment'] = 'Failed to create Physical Volume {0}'.format(name)
+            ret['result'] = False
+    return ret
+
+
 def vg_present(name, devices, **kwargs):
     '''
     '''
@@ -124,4 +150,3 @@ def lv_absent(name, vgname):
             ret['comment'] = 'Failed to remove Logical Volume {0}'.format(name)
             ret['result'] = False
     return ret
-
