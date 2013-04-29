@@ -96,7 +96,7 @@ class Schedule(object):
                     rets.append(self.schedule_returner)
             for returner in rets:
                 if returner in self.returners:
-                    self.returners[returner](ret)
+                    self.returners['{0}.returner'.format(returner)](ret)
                 else:
                     log.info(
                         'Job {1} using invalid returner: {0} Ignoring.'.format(
