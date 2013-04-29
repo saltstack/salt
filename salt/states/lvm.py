@@ -3,6 +3,11 @@ Mangement of linux logical volumes
 ==================================
 
 A state module to manage lvms
+
+.. code-block:: yaml
+
+    :
+      pip.installed
 '''
 
 # Import salt libs
@@ -18,8 +23,16 @@ def __virtual__():
     return False
 
 
-def pv_present(name, devices, **kwargs):
+def pv_present(name, **kwargs):
     '''
+    Set a physical device to be used as an LVM physical volume
+
+    name
+        The device name to initialize.
+
+    kwargs
+        Any supported options to pvcreate. See
+        :mod:`linux_lvm <salt.modules.linux_lvm>` for more details.
     '''
     ret = {'changes': {},
            'comment': '',
@@ -33,7 +46,7 @@ def pv_present(name, devices, **kwargs):
         ret['result'] = None
         return ret
     else:
-        changes = __salt__['lvm.pvcreate'](name, devices, **kwargs)
+        changes = __salt__['lvm.pvcreate'](name, **kwargs)
 
         if __salt__['lvm.pvdisplay'](name):
             ret['comment'] = 'Created Physical Volume {0}'.format(name)
@@ -46,6 +59,17 @@ def pv_present(name, devices, **kwargs):
 
 def vg_present(name, devices, **kwargs):
     '''
+    Create an LVM volume group
+
+    name
+        The volume group name to create
+
+    devices
+        A list of devices that will be added to the volume group
+
+    kwargs
+        Any supported options to vgcreate. See
+        :mod:`linux_lvm <salt.modules.linux_lvm>` for more details.
     '''
     ret = {'changes': {},
            'comment': '',
@@ -72,6 +96,10 @@ def vg_present(name, devices, **kwargs):
 
 def vg_absent(name):
     '''
+    Remove an LVM volume group
+
+    name
+        The volume group to remove
     '''
     ret = {'changes': {},
            'comment': '',
@@ -98,6 +126,22 @@ def vg_absent(name):
 
 def lv_present(name, vgname, size=None, extents=None, pv=''):
     '''
+    Create a new logical volume
+
+    name
+        The name of the logical volume
+
+    vgname
+        The volume group name for this logical volume
+
+    size
+        The initial size of the logical volume
+
+    extents
+        The number of logical extents to allocate
+
+    pv
+        The physical volume to use
     '''
     ret = {'changes': {},
            'comment': '',
@@ -128,6 +172,13 @@ def lv_present(name, vgname, size=None, extents=None, pv=''):
 
 def lv_absent(name, vgname):
     '''
+    Remove a given existing logical volume from a named existing volume group
+
+    name
+        The logical volume to remove
+
+    vgname
+        The volume group name
     '''
     ret = {'changes': {},
            'comment': '',
