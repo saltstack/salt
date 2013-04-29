@@ -728,7 +728,7 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Some of the opts need to be changed to match the needed opts
         # in the minion class.
         opts['master'] = opts['syndic_master']
-        opts['master_ip'] = utils.dns_check(opts['master'])
+        opts['master_ip'] = utils.dns_check(opts['master'], ipv6=opts['ipv6'])
 
         opts['master_uri'] = 'tcp://{0}:{1}'.format(
             opts['master_ip'], str(opts['master_port'])
