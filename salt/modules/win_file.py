@@ -28,7 +28,7 @@ except ImportError:
 import salt.utils
 from salt.exceptions import SaltInvocationError
 from file import check_hash, check_managed, check_perms, contains_regex,\
-        directory_exists, get_managed, makedirs, makedirs_perms, manage_file,\
+        directory_exists, get_managed, mkdir, makedirs, makedirs_perms, manage_file,\
         patch, remove, source_list, sed_contains
 
 
