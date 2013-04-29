@@ -67,6 +67,7 @@ import sys
 import stat
 import time
 import uuid
+import pprint
 import logging
 import yaml
 
@@ -786,16 +787,17 @@ def create(vm_=None, call=None):
             if 'syndic_master' in master_conf:
                 deploy_kwargs['make_syndic'] = True
 
+        ret['deploy_kwargs'] = deploy_kwargs
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
-            if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
     log.info(
-        'Created Cloud VM {name} with the following values:'.format(**vm_)
+        'Created Cloud VM {name} with the following values:\n{0}'.format(
+            pprint.pformat(data[0]['instancesSet']['item']), **vm_
+        )
     )
     ret.update(data[0]['instancesSet']['item'])
 

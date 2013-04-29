@@ -45,10 +45,10 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import os
-import sys
 import stat
 import time
 import uuid
+import pprint
 import logging
 
 # Import saltcloud libs
@@ -406,20 +406,14 @@ def create(vm_):
             if 'syndic_master' in master_conf:
                 deploy_kwargs['make_syndic'] = True
 
+        ret['deploy_kwargs'] = deploy_kwargs
+
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
-            if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    log.info(
-        'Created Cloud VM {name} with the following values:'.format(**vm_)
-    )
-    for key, val in data.__dict__.items():
-        ret[key] = val
-        log.debug('  {0}: {1}'.format(key, val))
     volumes = config.get_config_value(
         'map_volumes', vm_, __opts__, search_global=False
     )
@@ -427,6 +421,12 @@ def create(vm_):
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
 
+    log.info(
+        'Created Cloud VM {name} with the following values:\n{0}'.format(
+            pprint.pformat(data), **vm_
+        )
+    )
+    ret.update(data)
     return ret
 
 

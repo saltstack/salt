@@ -593,6 +593,8 @@ class Cloud(object):
 
                 try:
                     ret[name] = self.create(vm_)
+                    if self.opts.get('show_deploy_args', False) is False:
+                        ret[name].pop('deploy_kwargs', None)
                 except (SaltCloudSystemExit, SaltCloudConfigError), exc:
                     if len(self.opts['names']) == 1:
                         raise
@@ -682,9 +684,7 @@ class Map(Cloud):
                     )
                 )
                 continue
-            vms = [i.keys() if type(i) == dict else [i] for i in vmap]
-            vms = [item for sublist in vms for item in sublist]
-            for vm in vms:
+            for vm in [vm.get('name') for vm in vmap]:
                 if provider not in full_map:
                     full_map[provider] = {}
 
@@ -767,18 +767,19 @@ class Map(Cloud):
             pdata = {}
             for pdef in self.opts['vm']:
                 # The named profile does not exist
-                if pdef.get('profile', '') == profile:
+                if pdef.get('profile', None) == profile:
                     pdata = pdef.copy()
+
             if not pdata:
                 continue
 
             for overrides in self.map[profile]:
                 # Get the VM name
-                nodename = overrides.pop('name')
+                nodename = overrides.get('name')
                 # Update profile data with the map overrides
                 pdata.update(overrides)
                 # Add the computed information to the return data
-                ret['create'][nodename] = pdata
+                ret['create'][nodename] = pdata.copy()
                 # Add the node name to the defined set
                 defined.add(nodename)
 
@@ -789,12 +790,14 @@ class Map(Cloud):
                     continue
 
                 # FIXME: what about other providers?
-                if prov != 'aws' or pmap['aws'][name]['state'] != 'TERMINATED':
-                    log.info(
-                        '{0!r} already exists, removing from the '
-                        'create map'.format(name)
-                    )
-                    ret['create'].pop(name)
+                if prov not in ('aws', 'ec2'):
+                    if pmap['aws'][name]['state'] != 'TERMINATED' or \
+                            pmap['ec2'][name]['state'] != 'TERMINATED':
+                        log.info(
+                            '{0!r} already exists, removing from the '
+                            'create map'.format(name)
+                        )
+                        ret['create'].pop(name)
 
         if self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
@@ -807,7 +810,6 @@ class Map(Cloud):
 
             # Hard maps are enabled, Look for the items to delete.
             ret['destroy'] = exist.difference(defined)
-
         return ret
 
     def run_map(self, dmap):
@@ -825,64 +827,69 @@ class Map(Cloud):
                 if profile.get('make_master', False) is True
             ).next()
             log.debug('Creating new master {0}'.format(master_name))
-            tvm = self.vm_options(master_name,
-                                  master_profile,
-                                  None,
-                                  ['grains', 'volumes'])
-            out = self.create(tvm)
-            if 'deploy_kwargs' in out and 'host' in out['deploy_kwargs']:
-                master_host = out['deploy_kwargs']['host']
-                output[master_name] = out
-            else:
+            if config.get_config_value('deploy',
+                                       master_profile,
+                                       self.opts) is False:
+                raise SaltCloudSystemExit(
+                    'Cannot proceed with \'make_master\' when salt deployment '
+                    'is disabled(ex: --no-deploy).'
+                )
+            out = self.create(master_profile)
+            deploy_kwargs = (
+                self.opts.get('show_deploy_args', False) is True and
+                # Get the needed data
+                out.get('deploy_kwargs', {}) or
+                # Strip the deploy_kwargs from the returned data since we don't
+                # want it shown in the console.
+                out.pop('deploy_kwargs', {})
+            )
+
+            master_host = deploy_kwargs.get('host', None)
+            if master_host is None:
                 raise SaltCloudSystemExit(
                     'Host for new master {0} was not found, '
                     'aborting map'.format(
                         master_name
                     )
                 )
+            output[master_name] = out
         except StopIteration:
             log.debug('No make_master found in map')
 
         # Generate the fingerprint of the master pubkey in
         #     order to mitigate man-in-the-middle attacks
         master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
-        master_finger = ''
+        master_finger = None
         if os.path.isfile(master_pub) and hasattr(salt.utils, 'pem_finger'):
             master_finger = salt.utils.pem_finger(master_pub)
 
-        option_types = ['grains', 'minion', 'volumes']
         for name, profile in dmap['create'].items():
-            if master_name and name is master_name:
+            if name == master_name:
+                # Already deployed
                 continue
-            if master_host and 'master' not in profile['minion']:
-                profile['minion']['master'] = master_host
-            tvm = self.vm_options(name, profile, master_finger, option_types)
-            tvm['name'] = name
-            tvm['master_finger'] = master_finger
-            for miniondict in self.map[tvm['profile']]:
-                if isinstance(miniondict, dict):
-                    if name in miniondict:
-                        if 'grains' in miniondict[name]:
-                            tvm['map_grains'] = miniondict[name]['grains']
-                        if 'minion' in miniondict[name]:
-                            tvm['map_minion'] = miniondict[name]['minion']
-                        if 'volumes' in miniondict[name]:
-                            tvm['map_volumes'] = miniondict[name]['volumes']
-                for myvar in miniondict[name]:
-                    if myvar not in ('grains', 'minion', 'volumes'):
-                        tvm[myvar] = miniondict[name][myvar]
-            if 'minion' not in tvm:
-                tvm['minion'] = tvm['map_minion']
+
+            if master_finger is not None:
+                profile['master_finger'] = master_finger
+
+            if master_host is not None:
+                profile.setdefault(
+                    'minion', {}).setdefault(
+                        'master', master_host)
+
             if self.opts['parallel']:
                 parallel_data.append({
                     'opts': self.opts,
                     'name': name,
-                    'profile': tvm,
+                    'profile': profile,
                 })
             else:
-                output[name] = self.create(tvm)
-        for name in dmap.get('destroy', set()):
+                output[name] = self.create(profile)
+                if self.opts.get('show_deploy_args', False) is False:
+                    output[name].pop('deploy_kwargs', None)
+
+        for name in dmap.get('destroy', ()):
             output[name] = self.destroy(name)
+
         if self.opts['parallel'] and len(parallel_data) > 0:
             output_multip = multiprocessing.Pool(len(parallel_data)).map(
                 func=create_multiprocessing,
@@ -890,18 +897,8 @@ class Map(Cloud):
             )
             for obj in output_multip:
                 output.update(obj)
-        return output
 
-    def vm_options(self, name, profile, master_finger, option_types):
-        tvm = copy.deepcopy(profile)
-        tvm['name'] = name
-        tvm['master_finger'] = master_finger
-        for miniondict in self.map[tvm['profile']]:
-            if isinstance(miniondict, dict) and name in miniondict:
-                for option in option_types:
-                    if option in miniondict[name]:
-                        tvm['map_{0}'.format(option)] = miniondict[name][option]
-        return tvm
+        return output
 
 
 def create_multiprocessing(config):
@@ -912,4 +909,6 @@ def create_multiprocessing(config):
     config['opts']['output'] = 'json'
     cloud = Cloud(config['opts'])
     output = cloud.create(config['profile'])
+    if config.get('show_deploy_args', False) is False:
+        output.pop('deploy_kwargs', None)
     return {config['name']: output}

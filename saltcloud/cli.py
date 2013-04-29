@@ -247,6 +247,10 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
+                if self.optionss.get('show_deploy_args', False) is False:
+                    # Strip deploy_args from the returned data since we don't
+                    # want to see it
+                    ret.pop('deploy_kwargs', None)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a profile error: {0}'
                 self.handle_exception(msg, exc)

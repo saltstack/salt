@@ -33,6 +33,7 @@ Using the new format, set up the cloud configuration at
 # Import python libs
 import time
 import json
+import pprint
 import urllib
 import urllib2
 import logging
@@ -282,12 +283,11 @@ def create(vm_):
         deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
             __opts__, vm_
         )
+        ret['deploy_kwargs'] = deploy_kwargs
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
-            if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(
@@ -296,14 +296,11 @@ def create(vm_):
             )
 
     log.info(
-        'Created Cloud VM {0} with the following values:'.format(
-            vm_['name']
+        'Created Cloud VM {name} with the following values:\n{0}'.format(
+            pprint.pformat(data), **vm_
         )
     )
-    for key, val in data.iteritems():
-        ret[key] = val
-        log.debug('  {0}: {1}'.format(key, val))
-
+    ret.update(data)
     return ret
 
 
