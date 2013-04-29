@@ -266,8 +266,8 @@ def wait_for_ssh(host, port=22, timeout=900):
             sock.connect((host, port))
             sock.shutdown(2)
             return True
-        except Exception as e:
-            log.debug('Caught exception in wait_for_ssh: {0}'.format(e))
+        except Exception as exc:
+            log.debug('Caught exception in wait_for_ssh: {0}'.format(exc))
             time.sleep(1)
             if time.time() - start > timeout:
                 log.error('SSH connection timed out: {0}'.format(timeout))

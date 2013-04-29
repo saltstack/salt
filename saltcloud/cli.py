@@ -23,6 +23,7 @@ import salt.utils
 from salt.utils.verify import verify_env, verify_files
 
 # Import saltcloud libs
+import saltcloud.cloud
 import saltcloud.config
 import saltcloud.output
 from saltcloud.utils import parsers
@@ -106,7 +107,6 @@ class SaltCloud(parsers.SaltCloudParser):
 
         # Late imports so logging works as expected
         log.info('salt-cloud starting')
-        import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
         ret = {}
@@ -144,8 +144,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.location_list(self.options.list_locations)
                 )
             except (SaltCloudException, Exception) as exc:
-                    msg = 'There was an error listing locations: {0}'
-                    self.handle_exception(msg, exc)
+                msg = 'There was an error listing locations: {0}'
+                self.handle_exception(msg, exc)
 
         elif self.options.list_images is not None:
             try:
@@ -247,7 +247,7 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
-                if self.optionss.get('show_deploy_args', False) is False:
+                if self.options.get('show_deploy_args', False) is False:
                     # Strip deploy_args from the returned data since we don't
                     # want to see it
                     ret.pop('deploy_kwargs', None)

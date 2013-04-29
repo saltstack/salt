@@ -106,7 +106,7 @@ import pprint
 from libcloud.compute.base import NodeState
 
 # Import generic libcloud functions
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 
 # Import salt libs
 import salt.utils
@@ -318,9 +318,9 @@ def create(vm_):
         avail_groups = conn.ex_list_security_groups()
         group_list = []
 
-        for vg in vm_groups:
-            if vg in [ag.name for ag in avail_groups]:
-                group_list.append(vg)
+        for vmg in vm_groups:
+            if vmg in [ag.name for ag in avail_groups]:
+                group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
                     'No such security group: \'{0}\''.format(vg)

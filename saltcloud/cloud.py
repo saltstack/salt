@@ -4,7 +4,6 @@ correct cloud modules
 '''
 # Import python libs
 import os
-import copy
 import glob
 import multiprocessing
 import logging
@@ -901,14 +900,14 @@ class Map(Cloud):
         return output
 
 
-def create_multiprocessing(config):
+def create_multiprocessing(parallel_data):
     '''
     This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
     '''
-    config['opts']['output'] = 'json'
-    cloud = Cloud(config['opts'])
-    output = cloud.create(config['profile'])
-    if config.get('show_deploy_args', False) is False:
+    parallel_data['opts']['output'] = 'json'
+    cloud = Cloud(parallel_data['opts'])
+    output = cloud.create(parallel_data['profile'])
+    if parallel_data['opts'].get('show_deploy_args', False) is False:
         output.pop('deploy_kwargs', None)
-    return {config['name']: output}
+    return {parallel_data['name']: output}

@@ -228,9 +228,9 @@ def create_node(vm_):
     platform = ET.SubElement(content, 'platform')
     template = ET.SubElement(platform, 'template-info')
     template.attrib['name'] = vm_image
-    os = ET.SubElement(platform, 'os-info')
-    os.attrib['technology'] = image[vm_image]['technology']
-    os.attrib['type'] = image[vm_image]['osType']
+    os_info = ET.SubElement(platform, 'os-info')
+    os_info.attrib['technology'] = image[vm_image]['technology']
+    os_info.attrib['type'] = image[vm_image]['osType']
 
     # Username and password
     admin = ET.SubElement(content, 'admin')

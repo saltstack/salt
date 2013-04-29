@@ -50,7 +50,7 @@ import logging
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *        # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
@@ -59,7 +59,7 @@ from saltcloud.clouds import libcloud_aws
 # Import libcloud_aws, storing pre and post locals so we can namespace any
 # callable to this module.
 PRE_IMPORT_LOCALS_KEYS = locals().copy()
-from saltcloud.clouds.libcloud_aws import *
+from saltcloud.clouds.libcloud_aws import *  # pylint: disable-msg=W0614,W0401
 POST_IMPORT_LOCALS_KEYS = locals().copy()
 
 # Get logging started
@@ -139,7 +139,7 @@ def __virtual__():
             }
         )
 
-    global avail_images, avail_sizes, avail_locations, script, destroy
+    global avail_images, avail_sizes, avail_locations, script
     global list_nodes, list_nodes_full, list_nodes_select
 
     # open a connection in a specific region

@@ -48,7 +48,7 @@ import time
 from libcloud.compute.base import NodeState
 
 # Import generic libcloud functions
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 
 # Import salt libs
 import salt.utils

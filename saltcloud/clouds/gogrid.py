@@ -41,11 +41,12 @@ import pprint
 import logging
 
 # Import generic libcloud functions
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 
 # Import salt cloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)

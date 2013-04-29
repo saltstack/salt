@@ -83,7 +83,7 @@ import xml.etree.ElementTree as ET
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
@@ -642,12 +642,12 @@ def create(vm_=None, call=None):
         if not isinstance(ex_securitygroup, list):
             params['SecurityGroup.1'] = ex_securitygroup
         else:
-            for (counter, sg) in enumerate(ex_securitygroup):
-                params['SecurityGroup.{0}'.format(counter)] = sg
+            for (counter, sg_) in enumerate(ex_securitygroup):
+                params['SecurityGroup.{0}'.format(counter)] = sg_
 
-    az = get_availability_zone(vm_)
-    if az is not None:
-        params['Placement.AvailabilityZone'] = az
+    az_ = get_availability_zone(vm_)
+    if az_ is not None:
+        params['Placement.AvailabilityZone'] = az_
 
     delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False

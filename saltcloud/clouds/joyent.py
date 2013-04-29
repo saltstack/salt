@@ -46,12 +46,13 @@ import urllib2
 import logging
 
 # Import generic libcloud functions
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -83,16 +84,17 @@ def __virtual__():
 
     conn = get_conn(get_location())
 
-    get_size = namespaced_function(get_size, globals(),(conn,))
-    get_image = namespaced_function(get_image, globals(),(conn,))
-    avail_images = namespaced_function(avail_images, globals(),(conn,))
-    avail_sizes = namespaced_function(avail_sizes, globals(),(conn,))
-    script = namespaced_function(script, globals(),(conn,))
-    destroy = namespaced_function(destroy, globals(),(conn,))
-    list_nodes = namespaced_function(list_nodes, globals(),(conn,))
-    list_nodes_full = namespaced_function(list_nodes_full, globals(),(conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(),(conn,))
-
+    get_size = namespaced_function(get_size, globals(), (conn,))
+    get_image = namespaced_function(get_image, globals(), (conn,))
+    avail_images = namespaced_function(avail_images, globals(), (conn,))
+    avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
+    script = namespaced_function(script, globals(), (conn,))
+    destroy = namespaced_function(destroy, globals(), (conn,))
+    list_nodes = namespaced_function(list_nodes, globals(), (conn,))
+    list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
+    list_nodes_select = namespaced_function(
+        list_nodes_select, globals(), (conn,)
+    )
 
     log.debug('Loading Joyent cloud module')
     return 'joyent'
@@ -152,7 +154,11 @@ def create(vm_):
     vm_['location'] = get_location()
     conn = get_conn(get_location())
 
-    log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],vm_['location']))
+    log.info(
+        'Creating Cloud VM {0} in {1}'.format(
+            vm_['name'], vm_['location']
+        )
+    )
 
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
@@ -249,7 +255,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    return __take_action(name, call, 'reboot_node','Rebooting','reboot')
+    return __take_action(name, call, 'reboot_node', 'Rebooting', 'reboot')
 
 
 def stop(name, call=None):
@@ -260,7 +266,7 @@ def stop(name, call=None):
 
         salt-cloud -a stop mymachine
     '''
-    return __take_action(name,call,'ex_stop_node','Stopped','stop')
+    return __take_action(name, call, 'ex_stop_node', 'Stopped', 'stop')
 
 
 def start(name, call=None):
@@ -271,10 +277,10 @@ def start(name, call=None):
 
         salt-cloud -a start mymachine
     '''
-    return __take_action(name,call,'start_node','Started','start')
+    return __take_action(name, call, 'start_node', 'Started', 'start')
 
 
-def __take_action(name, call=None, action = None, atext= None, btext=None):
+def __take_action(name, call=None, action=None, atext=None, btext=None):
     data = {}
 
     if call != 'action':
@@ -295,20 +301,21 @@ def __take_action(name, call=None, action = None, atext= None, btext=None):
     try:
         data = getattr(conn, action)(node=node)
         log.debug(data)
-        log.info('{0} node {1}'.format(atext,name))
+        log.info('{0} node {1}'.format(atext, name))
     except Exception as exc:
         if 'InvalidState' in str(exc):
-	    data = "False"
+            data = 'False'
         else:
             log.error(
                 'Failed to {0} node {1}: {2}'.format(
-                    btext,name, exc
+                    btext, name, exc
                 ),
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
 
     return data
+
 
 def ssh_interface(vm_):
     '''
@@ -319,7 +326,6 @@ def ssh_interface(vm_):
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
-
 
 
 def get_location(vm_=None):
@@ -340,6 +346,7 @@ def get_location(vm_=None):
         )
     )
 
+
 def avail_locations():
     '''
     List all available locations
@@ -349,23 +356,25 @@ def avail_locations():
     for key in JOYENT_LOCATIONS:
         ret[key] = {
             'name': key,
-            'region' : JOYENT_LOCATIONS[key]
+            'region': JOYENT_LOCATIONS[key]
         }
 
     return ret
 
-def has_method(obj, method_name):
-    ret = dir( obj )
 
+def has_method(obj, method_name):
+    '''
+    Find if the provided object has a specific method
+    '''
     if method_name in dir(obj):
-        return True;
+        return True
 
     log.error(
-            "Method '{0}' not yet supported!".format(
-                method_name
-            )
+        'Method {0!r} not yet supported!'.format(
+            method_name
+        )
     )
-    return False;
+    return False
 
 
 def list_keys(kwargs=None, call=None):

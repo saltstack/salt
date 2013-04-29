@@ -55,7 +55,7 @@ import logging
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
@@ -110,7 +110,7 @@ def __virtual__():
                 )
             )
 
-    global avail_images, avail_sizes, script, destroy, list_nodes
+    global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
     global get_size
 
@@ -655,14 +655,13 @@ def destroy(name):
     try:
         result = libcloudfuncs_destroy(newname, conn)
         ret.update({'Destroyed': result})
-    except Exception as e:
-        if not e.message.startswith('OperationNotPermitted'):
-            raise e
+    except Exception as exc:
+        if not exc.message.startswith('OperationNotPermitted'):
+            raise exc
 
         log.info(
             'Failed: termination protection is enabled on {0}'.format(
                 name
             )
         )
-
     return ret
