@@ -314,7 +314,7 @@ def ip_bracket(addr):
     return addr
 
 
-def dns_check(addr, safe=False):
+def dns_check(addr, safe=False, ipv6=False):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution.
@@ -326,8 +326,13 @@ def dns_check(addr, safe=False):
         if not hostnames:
             error = True
         else:
-            h = hostnames[0]
-            addr = ip_bracket(h[4][0])
+            addr = False
+            for h in hostnames:
+                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
+                    addr = ip_bracket(h[4][0])
+                    break
+            if not addr:
+                error = True
     except socket.gaierror:
         error = True
 

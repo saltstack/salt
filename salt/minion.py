@@ -68,7 +68,7 @@ def resolve_dns(opts):
         # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
-            ret['master_ip'] = salt.utils.dns_check(opts['master'], True)
+            ret['master_ip'] = salt.utils.dns_check(opts['master'], True, opts['ipv6'])
         except SaltClientError:
             if opts['retry_dns']:
                 while True:
@@ -82,7 +82,7 @@ def resolve_dns(opts):
                     time.sleep(opts['retry_dns'])
                     try:
                         ret['master_ip'] = salt.utils.dns_check(
-                            opts['master'], True
+                            opts['master'], True, opts['ipv6']
                         )
                         break
                     except SaltClientError:

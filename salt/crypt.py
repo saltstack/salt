@@ -246,7 +246,8 @@ class Auth(object):
         try:
             self.opts['master_ip'] = salt.utils.dns_check(
                     self.opts['master'],
-                    True
+                    True,
+                    self.opts['ipv6']
                     )
         except SaltClientError:
             return 'retry'
