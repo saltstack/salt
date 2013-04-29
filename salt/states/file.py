@@ -908,7 +908,7 @@ def directory(name,
             # The parent directory does not exist, create them
             if makedirs:
                 __salt__['file.makedirs'](
-                    name, user=user, group=group, mode=dir_mode, makedirs=True
+                    name, user=user, group=group, mode=dir_mode
                 )
             else:
                 return _error(
