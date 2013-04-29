@@ -569,6 +569,16 @@ def apply_master_config(overrides=None, defaults=None):
         if isinstance(opts['file_ignore_glob'], str):
             opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
+    # Let's make sure `worker_threads` does not drop bellow 3 which has proven
+    # to make `salt.modules.publish` not work under the test-suite.
+    if opts['worker_threads'] < 3:
+        log.warning(
+            'The \'worker_threads\' setting on {0!r} cannot be lower than 3. '
+            'Resetting it to the default value of 3.'.format(
+                opts['conf_file']
+            )
+        )
+        opts['worker_threads'] = 3
     return opts
 
 
