@@ -10,10 +10,18 @@ import logging
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.crypt
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+def _auth():
+    '''
+    Return the auth object
+    '''
+    if not 'auth' in __context__:
+        __context__['auth'] = salt.crypt.SAuth(__opts__)
+    return __context__['auth']
 
 def recv(files, dest):
     '''
@@ -362,3 +370,42 @@ def hash_file(path, env='base'):
     '''
     _mk_client()
     return __context__['cp.fileclient'].hash_file(path, env)
+
+
+def push(path):
+    '''
+    Push a file from the minion up to the master, the file will be saved to
+    the salt master in the master's minion files cachedir
+    (defaults to /var/cache/salt/master/minions/files)
+
+    Since this feature allows a minion to push a file up to the master server
+    it is disabled by default for security purposes. To enable add the option:
+    file_recv: True
+    to the master configuration and restart the master
+
+    CLI Example::
+
+        salt '*' cp.push /etc/fstab
+    '''
+    if '../' in path or not os.path.isabs(path):
+        return False
+    path = os.path.realpath(path)
+    if not os.path.isfile(path):
+        return False
+    auth  = _auth()
+    
+    load = {
+            'cmd': '_file_recv',
+            'id': __opts__['id'],
+            'path': path.lstrip(os.sep),
+            }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    with salt.utils.fopen(path) as fp_:
+        while True:
+            load['loc'] = fp_.tell()
+            load['data'] = fp_.read(__opts__['file_buffer_size'])
+            if not load['data']:
+                return True
+            ret = sreq.send('aes', auth.crypticle.dumps(load))
+            if not ret:
+                return ret
