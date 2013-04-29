@@ -58,6 +58,8 @@ def pvdisplay(pvname=''):
     cmd = 'pvdisplay -c {0}'.format(pvname)
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
+        if 'Failed to read physical volume' in line:
+            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Physical Volume Device': comps[0],
@@ -87,7 +89,7 @@ def vgdisplay(vgname=''):
     cmd = 'vgdisplay -c {0}'.format(vgname)
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
-        if 'No volume groups found' in line:
+        if 'No volume groups found' in line or 'not found' in line:
             return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
@@ -124,7 +126,7 @@ def lvdisplay(lvname=''):
     cmd = 'lvdisplay -c {0}'.format(lvname)
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
-        if 'No volume groups found' in line:
+        if 'No volume groups found' in line or 'not found' in line:
             return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
