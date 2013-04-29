@@ -198,7 +198,7 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ == '/':
+                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\'])]:
                     break
 
     for roots, dirs, files in os.walk(root):
@@ -908,7 +908,7 @@ def directory(name,
             # The parent directory does not exist, create them
             if makedirs:
                 __salt__['file.makedirs'](
-                    name, user=user, group=group, mode=dir_mode, makedirs=True
+                    name, user=user, group=group, mode=dir_mode
                 )
             else:
                 return _error(
