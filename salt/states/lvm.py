@@ -6,8 +6,17 @@ A state module to manage lvms
 
 .. code-block:: yaml
 
-    :
-      pip.installed
+    /dev/sda:
+      lvm.pv_present
+
+    my_vg:
+      lvm.vg_present:
+        - devices: /dev/sda
+
+    lvroot:
+      lvm.lv_present:
+        - vgname: my_vg
+        - size: 10G
 '''
 
 # Import salt libs
@@ -57,7 +66,7 @@ def pv_present(name, **kwargs):
     return ret
 
 
-def vg_present(name, devices, **kwargs):
+def vg_present(name, devices=None, **kwargs):
     '''
     Create an LVM volume group
 
@@ -124,7 +133,7 @@ def vg_absent(name):
     return ret
 
 
-def lv_present(name, vgname, size=None, extents=None, pv=''):
+def lv_present(name, vgname=None, size=None, extents=None, pv=''):
     '''
     Create a new logical volume
 
