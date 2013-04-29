@@ -995,6 +995,7 @@ class LocalClient(object):
 
         sreq = salt.payload.SREQ(
             'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            ipv6=self.opts['ipv6']
         )
         payload = sreq.send('clear', payload_kwargs)
 

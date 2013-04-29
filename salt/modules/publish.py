@@ -47,7 +47,7 @@ def _publish(
     arg = _normalize_arg(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'], ipv6=__opts__['ipv6'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_publish',
@@ -143,7 +143,7 @@ def runner(fun, arg=None):
     arg = _normalize_arg(arg)
 
     log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'], ipv6=__opts__['ipv6'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',

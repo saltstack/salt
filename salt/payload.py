@@ -120,7 +120,7 @@ class SREQ(object):
     '''
     Create a generic interface to wrap salt zeromq req calls.
     '''
-    def __init__(self, master, id_='', serial='msgpack', linger=0):
+    def __init__(self, master, id_='', serial='msgpack', linger=0, ipv6=False):
         self.master = master
         self.serial = Serial(serial)
         self.context = zmq.Context()
@@ -129,7 +129,7 @@ class SREQ(object):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, 5000
             )
-        if hasattr(zmq, 'IPV4ONLY'):
+        if ipv6 is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = linger

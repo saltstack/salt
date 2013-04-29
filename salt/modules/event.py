@@ -21,7 +21,7 @@ def fire_master(data, tag):
             'data': data,
             'cmd': '_minion_event'}
     auth = salt.crypt.SAuth(__opts__)
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'], ipv6=__opts__['ipv6'])
     try:
         sreq.send('aes', auth.crypticle.dumps(load))
     except:

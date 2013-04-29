@@ -82,7 +82,8 @@ class Master(parsers.MasterOptionParser):
                              self.config['publish_port'],
                              self.config['ret_port']):
             self.exit(4, 'The ports are not available to bind\n')
-        self.config['interface'] = ip_bracket(self.config['interface'])
+        if self.config['ipv6'] is True:
+            self.config['interface'] = ip_bracket(self.config['interface'])
         migrations.migrate_paths(self.config)
 
         # Late import so logging works correctly

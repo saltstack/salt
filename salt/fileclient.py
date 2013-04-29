@@ -555,7 +555,10 @@ class RemoteClient(Client):
     def __init__(self, opts):
         Client.__init__(self, opts)
         self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
+        self.sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
 
     def get_file(self, path, dest='', makedirs=False, env='base', gzip=None):
         '''
