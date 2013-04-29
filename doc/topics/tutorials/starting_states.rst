@@ -50,6 +50,14 @@ serialization formats available - `YAML`_.
 
 A typical SLS file will often look like this in YAML:
 
+.. note::
+
+    These demos use some generic service and package names, different
+    distributions often use different names for packages and services. For
+    instance `apache` should be replaced with `httpd` on a Red Hat system.
+    Information on how to make states work with multiple distributions
+    is later in the tutorial.
+
 .. code-block:: yaml
    :linenos:
 
