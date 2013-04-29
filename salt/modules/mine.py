@@ -17,9 +17,9 @@ def _auth():
     '''
     Return the auth object
     '''
-    if not 'mine.auth' in __context__:
-        __context__['mine.auth'] = salt.crypt.SAuth(__opts__)
-    return __context__['mine.auth']
+    if not 'auth' in __context__:
+        __context__['auth'] = salt.crypt.SAuth(__opts__)
+    return __context__['auth']
 
 
 def update():
