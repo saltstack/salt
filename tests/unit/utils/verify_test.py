@@ -10,6 +10,7 @@ import stat
 import shutil
 import resource
 import tempfile
+import socket
 
 # Import Salt libs
 import salt.utils
@@ -75,6 +76,10 @@ class TestVerify(TestCase):
 
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
+        if socket.has_ipv6:
+            # Only run if Python is built with IPv6 support; otherwise
+            # this will just fail.
+            self.assertTrue(verify_socket('::', 18000, 18001))
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment does not like too many open files')

@@ -83,13 +83,31 @@ def zmq_version():
             sys.stderr.write('CRITICAL {0}\n'.format(msg))
     return False
 
+def lookup_family(hostname):
+    '''
+    Lookup a hostname and determine its address family. The first address returned
+    will be AF_INET6 if the system is IPv6-enabled, and AF_INET otherwise.
+    '''
+    # If lookups fail, fall back to AF_INET sockets (and v4 addresses).
+    fallback = socket.AF_INET
+    try:
+        hostnames = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC,
+                                       socket.SOCK_STREAM)
+        if not hostnames:
+            return fallback
+        h = hostnames[0]
+        return h[0]
+    except socket.gaierror:
+        return fallback
 
 def verify_socket(interface, pub_port, ret_port):
     '''
     Attempt to bind to the sockets to verify that they are available
     '''
-    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    addr_family = lookup_family(interface)
+    pubsock = socket.socket(addr_family, socket.SOCK_STREAM)
+    retsock = socket.socket(addr_family, socket.SOCK_STREAM)
     try:
         pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         pubsock.bind((interface, int(pub_port)))
