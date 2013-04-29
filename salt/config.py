@@ -81,6 +81,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': 'ipc',
     'ipv6': False,
+    'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
     'log_file': '/var/log/salt/minion',
