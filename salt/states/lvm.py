@@ -18,7 +18,7 @@ def __virtual__():
     return False
 
 
-def vgpresent(name, devices, **kwargs):
+def vg_present(name, devices, **kwargs):
     '''
     '''
     ret = {'changes': {},
@@ -44,7 +44,7 @@ def vgpresent(name, devices, **kwargs):
     return ret
 
 
-def vgabsent(name):
+def vg_absent(name):
     '''
     '''
     ret = {'changes': {},
@@ -66,6 +66,62 @@ def vgabsent(name):
             ret['changes'] = changes
         else:
             ret['comment'] = 'Failed to remove Volume Group {0}'.format(name)
+            ret['result'] = False
+    return ret
+
+
+def lv_present(name, vgname, size=None, extents=None, pv=''):
+    '''
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    if __salt__['lvm.lvdisplay'](name):
+        ret['comment'] = 'Logical Volume {0} already present'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Logical Volume {0} is set to be created'.format(name)
+        ret['result'] = None
+        return ret
+    else:
+        changes = __salt__['lvm.lvcreate'](name,
+                                           vgname,
+                                           size=size,
+                                           extents=extents,
+                                           pv=pv)
+
+        if __salt__['lvm.lvdisplay'](name):
+            ret['comment'] = 'Created Logical Volume {0}'.format(name)
+            ret['changes'] = changes
+        else:
+            ret['comment'] = 'Failed to create Logical Volume {0}'.format(name)
+            ret['result'] = False
+    return ret
+
+
+def lv_absent(name, vgname):
+    '''
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    if not __salt__['lvm.lvdisplay'](name):
+        ret['comment'] = 'Logical Volume {0} already absent'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Logical Volume {0} is set to be removed'.format(name)
+        ret['result'] = None
+        return ret
+    else:
+        changes = __salt__['lvm.lvremove'](name, vgname)
+
+        if not __salt__['lvm.lvdisplay'](name):
+            ret['comment'] = 'Removed Logical Volume {0}'.format(name)
+            ret['changes'] = changes
+        else:
+            ret['comment'] = 'Failed to remove Logical Volume {0}'.format(name)
             ret['result'] = False
     return ret
 
