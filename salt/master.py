@@ -371,9 +371,10 @@ class Publisher(multiprocessing.Process):
         except AttributeError:
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
-        if hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+        if self.opts['ipv6']:
+            if hasattr(zmq, 'IPV4ONLY'):
+                # IPv6 sockets work for both IPv6 and IPv4 addresses
+                pub_sock.setsockopt(zmq.IPV4ONLY, 0)
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -426,9 +427,10 @@ class ReqServer(object):
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
         self.clients = self.context.socket(zmq.ROUTER)
-        if hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        if self.opts['ipv6']:
+            if hasattr(zmq, 'IPV4ONLY'):
+                # IPv6 sockets work for both IPv6 and IPv4 addresses
+                self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
