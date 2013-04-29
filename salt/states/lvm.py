@@ -148,7 +148,8 @@ def lv_present(name, vgname, size=None, extents=None, pv=''):
            'name': name,
            'result': True}
 
-    if __salt__['lvm.lvdisplay'](name):
+    lvpath = '/dev/{0}/{1}'.format(vgname, name)
+    if __salt__['lvm.lvdisplay'](lvpath):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Logical Volume {0} is set to be created'.format(name)
@@ -161,7 +162,7 @@ def lv_present(name, vgname, size=None, extents=None, pv=''):
                                            extents=extents,
                                            pv=pv)
 
-        if __salt__['lvm.lvdisplay'](name):
+        if __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Created Logical Volume {0}'.format(name)
             ret['changes'] = changes
         else:
@@ -185,7 +186,8 @@ def lv_absent(name, vgname):
            'name': name,
            'result': True}
 
-    if not __salt__['lvm.lvdisplay'](name):
+    lvpath = '/dev/{0}/{1}'.format(vgname, name)
+    if not __salt__['lvm.lvdisplay'](lvpath):
         ret['comment'] = 'Logical Volume {0} already absent'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Logical Volume {0} is set to be removed'.format(name)
@@ -194,7 +196,7 @@ def lv_absent(name, vgname):
     else:
         changes = __salt__['lvm.lvremove'](name, vgname)
 
-        if not __salt__['lvm.lvdisplay'](name):
+        if not __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Removed Logical Volume {0}'.format(name)
             ret['changes'] = changes
         else:
