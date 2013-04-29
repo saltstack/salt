@@ -19,7 +19,7 @@ from salt.version import __version__  # pylint: disable-msg=W402
 from salt.utils import migrations
 
 try:
-    from salt.utils import parsers
+    from salt.utils import parsers, ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
     from salt.utils.verify import verify_files
 except ImportError as e:
@@ -82,6 +82,7 @@ class Master(parsers.MasterOptionParser):
                              self.config['publish_port'],
                              self.config['ret_port']):
             self.exit(4, 'The ports are not available to bind\n')
+        self.config['interface'] = ip_bracket(self.config['interface'])
         migrations.migrate_paths(self.config)
 
         # Late import so logging works correctly
