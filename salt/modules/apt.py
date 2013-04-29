@@ -46,7 +46,7 @@ def __virtual__():
     if not apt_support:
         err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
         log.error(err_str.format(str(e)))
-    if not ppa_format_support:
+    if not ppa_format_support and __grains__['os'] == 'Ubuntu':
         err_str = 'Unable to import "softwareproperties.ppa": {0}'
         log.warning(err_str.format(str(e)))
     return 'pkg'
