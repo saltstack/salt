@@ -831,6 +831,40 @@ class AESFuncs(object):
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
+    def _file_recv(self, load):
+        '''
+        Allows minions to send files to the master, files are sent to the
+        master file cache
+        '''
+        if 'id' not in load or 'path' not in load or 'loc' not in load:
+            return False
+        if not self.opts['file_recv'] or os.path.isabs(load['path']):
+            return False
+        if os.path.isabs(load['path']) or '../' in load['path']:
+            # Can overwrite master files!!
+            return False
+        cpath = os.path.join(
+                self.opts['cachedir'],
+                'minions',
+                load['id'],
+                'files',
+                load['path'])
+        cdir = os.path.dirname(cpath)
+        if not os.path.isdir(cdir):
+            try:
+                os.makedirs(cdir)
+            except os.error:
+                pass
+        if os.path.isfile(cpath):
+            mode = 'w'
+        else:
+            mode = 'w+'
+        with salt.utils.fopen(cpath, mode) as fp_:
+            if load['loc']:
+                fp_.seek(load['loc'])
+            fp_.write(load['data'])
+        return True
+
     def _pillar(self, load):
         '''
         Return the pillar data for the minion
