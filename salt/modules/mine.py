@@ -13,6 +13,7 @@ import salt.payload
 
 log = logging.getLogger(__name__)
 
+
 def _auth():
     '''
     Return the auth object
@@ -47,10 +48,10 @@ def update():
     for func in m_data:
         if not func in __salt__:
             log.error(
-                    'Function {0} in mine_functions not available'.format(
-                        func
-                        )
-                    )
+                'Function {0} in mine_functions not available'.format(
+                    func
+                )
+            )
             continue
         try:
             if m_data[func] and isinstance(m_data[func], dict):
@@ -61,18 +62,17 @@ def update():
                 data[func] = __salt__[func]()
         except Exception:
             log.error(
-                    'Function {0} in mine_functions failed to execute'.format(
-                        func
-                        )
-                    )
+                'Function {0} in mine_functions failed to execute'.format(
+                    func
+                )
+            )
             continue
-    load = {
-            'cmd': '_mine',
+
+    load = {'cmd': '_mine',
             'data': data,
             'id': __opts__['id']
             }
-    serial = salt.payload.Serial(__opts__)
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'], ipv6=__opts__['ipv6'])
     auth = _auth()
     try:
         sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
@@ -89,12 +89,11 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get '*' network.interfaces
     '''
     auth = _auth()
-    load = {
-            'cmd': '_mine_get',
+    load = {'cmd': '_mine_get',
             'id': __opts__['id'],
             'tgt': tgt,
             'fun': fun,
             'expr_form': expr_form,
             }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'], ipv6=__opts__['ipv6'])
     return sreq.send('aes', auth.crypticle.dumps(load))

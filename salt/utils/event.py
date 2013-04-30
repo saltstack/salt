@@ -489,7 +489,10 @@ class StateFire(object):
                 'tag': tag,
                 'data': data,
                 'cmd': '_minion_event'}
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
         except:
@@ -519,7 +522,10 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
         except:

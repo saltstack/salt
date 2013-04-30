@@ -33,3 +33,4 @@ grains:
       - zoe
 
 ipc_mode: tcp
+ipv6: False

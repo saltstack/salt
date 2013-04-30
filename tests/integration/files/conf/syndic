@@ -12,3 +12,5 @@ log_file: minion
 order_masters: True
 interface: 0.0.0.0
 ret_port: 64506
+
+ipv6: False

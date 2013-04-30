@@ -2218,7 +2218,10 @@ class RemoteHighState(object):
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
+        self.sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
 
     def compile_master(self):
         '''

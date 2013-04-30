@@ -47,7 +47,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    gen = RSA.gen_key(keysize, 1, callback=lambda x,y,z:None)
+    gen = RSA.gen_key(keysize, 1, callback=lambda x, y, z: None)
     cumask = os.umask(191)
     gen.save_key(priv, None)
     os.umask(cumask)
@@ -245,16 +245,17 @@ class Auth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         try:
             self.opts['master_ip'] = salt.utils.dns_check(
-                    self.opts['master'],
-                    True,
-                    self.opts['ipv6']
-                    )
+                self.opts['master'],
+                True,
+                self.opts['ipv6']
+            )
         except SaltClientError:
             return 'retry'
         sreq = salt.payload.SREQ(
-                self.opts['master_uri'],
-                self.opts.get('id', '')
-                )
+            self.opts['master_uri'],
+            self.opts.get('id', ''),
+            ipv6=self.opts['ipv6']
+        )
         try:
             payload = sreq.send_auto(self.minion_sign_in_payload())
         except SaltReqTimeoutError:
@@ -293,17 +294,17 @@ class Auth(object):
             sys.exit(42)
         if self.opts.get('master_finger', False):
             if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
-                log.critical((
+                log.critical(
                     'The specified fingerprint in the master configuration '
                     'file:\n{0}\nDoes not match the authenticating master\'s '
                     'key:\n{1}\nVerify that the configured fingerprint '
                     'matches the fingerprint of the correct master and that '
                     'this minion is not subject to a man in the middle attack'
-                    ).format(
+                    .format(
                         self.opts['master_finger'],
                         salt.utils.pem_finger(m_pub_fn)
-                        )
                     )
+                )
                 sys.exit(42)
         auth['publish_port'] = payload['publish_port']
         return auth

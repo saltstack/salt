@@ -423,7 +423,7 @@ def revoke_auth():
 
         salt '*' saltutil.revoke_key
     '''
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'], ipv6=__opts__['ipv6'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'revoke_auth',

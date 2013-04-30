@@ -286,7 +286,10 @@ class Minion(object):
             load['tag'] = tag
         else:
             return
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
         try:
             sreq.send('aes', self.crypticle.dumps(load))
         except:
@@ -557,7 +560,10 @@ class Minion(object):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(jid))
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
@@ -764,10 +770,9 @@ class Minion(object):
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        if self.opts['ipv6']:
-            if hasattr(zmq, 'IPV4ONLY'):
-                # IPv6 sockets work for both IPv6 and IPv4 addresses
-                self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']

@@ -193,8 +193,9 @@ class Resolver(object):
         load['cmd'] = 'mk_token'
         load['eauth'] = eauth
         sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
+            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            ipv6=self.opts['ipv6']
+        )
         tdata = sreq.send('clear', load)
         if not 'token' in tdata:
             return tdata

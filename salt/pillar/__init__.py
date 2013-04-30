@@ -40,7 +40,10 @@ class RemotePillar(object):
         self.grains = grains
         self.id_ = id_
         self.serial = salt.payload.Serial(self.opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
+        self.sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+            ipv6=self.opts['ipv6']
+        )
         self.auth = salt.crypt.SAuth(opts)
 
     def compile_pillar(self):
