@@ -523,8 +523,7 @@ def list_pkgs(versions_as_list=False):
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
             if realpkg in ret:
-                for virtname in provides.split(', '):
-                    virtpkgs.add(virtname)
+                virtpkgs.update(provides.split(', '))
         for virtname in virtpkgs:
             # Set virtual package versions to '1'
             __salt__['pkg_resource.add_pkg'](ret, virtname, '1')
