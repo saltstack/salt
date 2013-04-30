@@ -203,7 +203,7 @@ def gemset_present(name, ruby='default', runas=None):
     ruby : default
         The ruby version this gemset belongs to.
     runas : None
-        The use user to run rvm as.
+        The user to run rvm as.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
