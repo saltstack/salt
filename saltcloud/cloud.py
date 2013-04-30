@@ -85,7 +85,7 @@ class Cloud(object):
         return provs
 
     def get_configured_providers(self):
-        providers = []
+        providers = set()
         for alias, entries in self.opts['providers'].iteritems():
             for entry in entries:
                 provider = entry.get('provider', None)
@@ -98,7 +98,7 @@ class Cloud(object):
                     )
                     continue
                 if provider is not None and provider not in providers:
-                    providers.append(provider)
+                    providers.add(alias)
         return providers
 
     def build_lookup(self, lookup):
