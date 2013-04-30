@@ -801,7 +801,13 @@ def create(vm_=None, call=None):
     )
     ret.update(data[0]['instancesSet']['item'])
 
-    volumes = vm_.get('map_volumes')
+    # Get ANY defined volumes settings, merging data, in the following order
+    # 1. VM config
+    # 2. Profile config
+    # 3. Global configuration
+    volumes = config.get_config_value(
+        'volumes', vm_, __opts__, search_global=True
+    )
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
         created = create_attach_volumes(

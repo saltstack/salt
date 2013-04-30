@@ -188,32 +188,32 @@ def minion_conf_string(opts, vm_):
     master_finger = config.get_config_value('master_finger', vm_, opts)
     if master_finger is not None:
         minion['master_finger'] = master_finger
-    minion.update(opts.get('minion', {}))
     minion.update(
+        # Get ANY defined minion settings, merging data, in the following order
+        # 1. VM config
+        # 2. Profile config
+        # 3. Global configuration
         config.get_config_value(
-            'minion', vm_, opts, default={}, search_global=False
+            'minion', vm_, opts, default={}, search_global=True
         )
     )
+
     make_master = config.get_config_value('make_master', vm_, opts)
     if 'master' not in minion and make_master is not True:
         raise SaltCloudConfigError(
             'A master setting was not defined in the minion\'s configuration.'
         )
-    minion.update(opts.get('map_minion', {}))
-    minion.update(
+
+    # Get ANY defined grains settings, merging data, in the following order
+    # 1. VM config
+    # 2. Profile config
+    # 3. Global configuration
+    minion.setdefault('grains', {}).update(
         config.get_config_value(
-            'map_minion', vm_, opts, default={}, search_global=False
+            'grains', vm_, opts, default={}, search_global=True
         )
     )
-    optsgrains = opts.get('map_grains', {})
-    if optsgrains:
-        minion.setdefault('grains', {}).update(optsgrains)
 
-    vmgrains = config.get_config_value(
-        'map_minion', vm_, opts, default={}, search_global=False
-    )
-    if vmgrains:
-        minion.setdefault('grains', {}).update(vmgrains)
     return yaml.safe_dump(minion, default_flow_style=False)
 
 
@@ -231,20 +231,15 @@ def master_conf_string(opts, vm_):
         log_level_logfile='info'
     )
 
-    master.update(opts.get('master', {}))
+    # Get ANY defined master setting, merging data, in the following order
+    # 1. VM config
+    # 2. Profile config
+    # 3. Global configuration
     master.update(
         config.get_config_value(
-            'master', vm_, opts, default={}, search_global=False
+            'master', vm_, opts, default={}, search_global=True
         )
     )
-
-    master.update(opts.get('map_master', {}))
-    master.update(
-        config.get_config_value(
-            'map_master', vm_, opts, default={}, search_global=False
-        )
-    )
-
     return yaml.safe_dump(master, default_flow_style=False)
 
 

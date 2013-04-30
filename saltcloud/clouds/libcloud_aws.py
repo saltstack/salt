@@ -415,7 +415,7 @@ def create(vm_):
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
     volumes = config.get_config_value(
-        'map_volumes', vm_, __opts__, search_global=False
+        'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
