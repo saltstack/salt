@@ -39,7 +39,6 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import urllib2
-import json
 import yaml
 import logging
 
