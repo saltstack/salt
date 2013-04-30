@@ -150,7 +150,7 @@ def versions_report():
     '''
     libs = list(versions_information())
 
-    padding = len(max([lib[0] for lib in libs], key=len)) + 1
+    padding = max(len(lib[0]) for lib in libs) + 1
 
     fmt = '{0:>{pad}}: {1}'
 
