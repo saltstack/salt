@@ -458,7 +458,8 @@ class Cloud(object):
 
         deploy = config.get_config_value('deploy', vm_, self.opts)
 
-        if deploy is True and 'master' not in minion_dict:
+        if deploy is True and 'make_master' not in vm_ and \
+                'master' not in minion_dict:
             raise SaltCloudConfigError(
                 'There\'s no master defined on the {0!r} VM settings'.format(
                     vm_['name']
@@ -793,7 +794,7 @@ class Map(Cloud):
             for pdef in self.opts['vm']:
                 # The named profile does not exist
                 if pdef.get('profile', None) == profile:
-                    pdata = pdef.copy()
+                    pdata = pdef
 
             if not pdata:
                 continue
@@ -801,23 +802,24 @@ class Map(Cloud):
             for overrides in self.map[profile]:
                 # Get the VM name
                 nodename = overrides.get('name')
+                nodedata = pdata.copy()
                 # Update profile data with the map overrides
-                for setting in ('grains', 'minion', 'volumes'):
+                for setting in ('grains', 'master', 'minion', 'volumes'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
                         log.warn(
-                            'The use of {0!r} on the {2!r} mapping has '
+                            'The use of {0!r} on the {1!r} mapping has '
                             'been deprecated. The preferred way now is to '
-                            'just define {3!r}. For now, salt-cloud will do '
+                            'just define {2!r}. For now, salt-cloud will do '
                             'the proper thing and convert the deprecated '
                             'mapping into the preferred one.'.format(
                                 deprecated, nodename, setting
                             )
                         )
                         overrides[setting] = overrides.pop(deprecated)
-                pdata.update(overrides)
+                nodedata.update(overrides)
                 # Add the computed information to the return data
-                ret['create'][nodename] = pdata.copy()
+                ret['create'][nodename] = nodedata
                 # Add the node name to the defined set
                 defined.add(nodename)
 
