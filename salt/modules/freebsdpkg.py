@@ -4,6 +4,7 @@ Package support for FreeBSD
 
 # Import python libs
 import logging
+import os
 
 # Import salt libs
 import salt.utils
