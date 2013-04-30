@@ -739,7 +739,17 @@ class Map(Cloud):
             if isinstance(mapped, (list, tuple)):
                 entries = []
                 for mapping in mapped:
+                    if isinstance(mapping, basestring):
+                        # Foo:
+                        #   - bar1
+                        #   - bar2
+                        mapping = {mapping: None}
                     for name, overrides in mapping.iteritems():
+                        if overrides is None:
+                            # Foo:
+                            #   - bar1:
+                            #   - bar2:
+                            overrides = {}
                         overrides.setdefault('name', name)
                         entries.append(overrides)
                 map_[profile] = entries
@@ -747,6 +757,13 @@ class Map(Cloud):
 
             if isinstance(mapped, dict):
                 # Convert the dictionary mapping to a list of dictionaries
+                # Foo:
+                #  bar1:
+                #    grains:
+                #      foo: bar
+                #  bar2:
+                #    grains:
+                #      foo: bar
                 entries = []
                 for name, overrides in mapped.iteritems():
                     overrides.setdefault('name', name)
