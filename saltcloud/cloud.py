@@ -802,6 +802,19 @@ class Map(Cloud):
                 # Get the VM name
                 nodename = overrides.get('name')
                 # Update profile data with the map overrides
+                for setting in ('grains', 'minion', 'volumes'):
+                    deprecated = 'map_{0}'.format(setting)
+                    if deprecated in overrides:
+                        log.warn(
+                            'The use of {0!r} on the {2!r} mapping has '
+                            'been deprecated. The preferred way now is to '
+                            'just define {3!r}. For now, salt-cloud will do '
+                            'the proper thing and convert the deprecated '
+                            'mapping into the preferred one.'.format(
+                                deprecated, nodename, setting
+                            )
+                        )
+                        overrides[setting] = overrides.pop(deprecated)
                 pdata.update(overrides)
                 # Add the computed information to the return data
                 ret['create'][nodename] = pdata.copy()
