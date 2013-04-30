@@ -612,6 +612,7 @@ def managed(name,
             backup='',
             show_diff=True,
             create=True,
+            static_contents=None,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -748,18 +749,19 @@ def managed(name,
 
     if __opts__['test']:
         ret['result'], ret['comment'] = __salt__['file.check_managed'](
-            name,
-            source,
-            source_hash,
-            user,
-            group,
-            mode,
-            template,
-            makedirs,
-            context,
-            defaults,
-            env,
-            **kwargs
+                name,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                template,
+                makedirs,
+                context,
+                defaults,
+                env,
+                static_contents,
+                **kwargs
         )
         return ret
 
@@ -784,21 +786,22 @@ def managed(name,
         defaults,
         **kwargs
     )
-    if comment:
+    if comment and not static_contents is None:
         return _error(ret, comment)
-
-    return __salt__['file.manage_file'](name,
-                                        sfn,
-                                        ret,
-                                        source,
-                                        source_sum,
-                                        user,
-                                        group,
-                                        mode,
-                                        env,
-                                        backup,
-                                        template,
-                                        show_diff)
+    else:
+        return __salt__['file.manage_file'](name,
+                                            sfn,
+                                            ret,
+                                            source,
+                                            source_sum,
+                                            user,
+                                            group,
+                                            mode,
+                                            env,
+                                            backup,
+                                            template,
+                                            show_diff,
+                                            static_contents)
 
 
 def directory(name,

@@ -1326,6 +1326,7 @@ def check_managed(
         context,
         defaults,
         env,
+        static_contents=None,
         **kwargs):
     '''
     Check to see what changes need to be made for a file
@@ -1451,17 +1452,18 @@ def get_diff(
 
 
 def manage_file(name,
-        sfn,
-        ret,
-        source,
-        source_sum,
-        user,
-        group,
-        mode,
-        env,
-        backup,
-        template=None,
-        show_diff=True):
+                sfn,
+                ret,
+                source,
+                source_sum,
+                user,
+                group,
+                mode,
+                env,
+                backup,
+                template=None,
+                show_diff=True,
+                static_contents=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -1532,6 +1534,38 @@ def manage_file(name,
                 return _error(
                     ret, 'Failed to commit change, permission error')
 
+        if not static_contents is None:
+            # Write the static contents to a temporary file
+            tmp = salt.utils.mkstemp(text=True)
+            with salt.utils.fopen(tmp, 'w') as tmp_:
+                tmp_.write(static_contents)
+
+            # Retrieve contents of file for diff
+            with contextlib.nested(
+                    salt.utils.fopen(tmp, 'rb'),
+                    salt.utils.fopen(name, 'rb')) as (src, name_):
+                slines = src.readlines()
+                nlines = name_.readlines()
+                if __salt__['config.option']('obfuscate_templates'):
+                    ret['changes']['diff'] = '<Obfuscated Template>'
+                elif not show_diff:
+                    ret['changes']['diff'] = '<show_diff=False>'
+                else:
+                    ret['changes']['diff'] = (
+                            ''.join(difflib.unified_diff(nlines, slines)))
+
+            # Pre requisites are met, and the file needs to be replaced, do it
+            try:
+                salt.utils.copyfile(
+                        tmp,
+                        name,
+                        __salt__['config.backup_mode'](backup),
+                        __opts__['cachedir'])
+            except IOError:
+                __clean_tmp(tmp)
+                return _error(
+                    ret, 'Failed to commit change, permission error')
+
         ret, perms = check_perms(name, ret, user, group, mode)
 
         if ret['changes']:
@@ -1586,20 +1620,40 @@ def manage_file(name,
                 current_umask = os.umask(63)
 
             # Create a new file when test is False and source is None
-            if not __opts__['test']:
-                if __salt__['file.touch'](name):
-                    ret['changes']['new'] = 'file {0} created'.format(name)
-                    ret['comment'] = 'Empty file'
-                else:
-                    return _error(
-                        ret, 'Empty file {0} not created'.format(name)
-                    )
+            if static_contents is None:
+                if not __opts__['test']:
+                    if __salt__['file.touch'](name):
+                        ret['changes']['new'] = 'file {0} created'.format(name)
+                        ret['comment'] = 'Empty file'
+                    else:
+                        return _error(
+                            ret, 'Empty file {0} not created'.format(name)
+                        )
+            else:
+                if not __opts__['test']:
+                    if __salt__['file.touch'](name):
+                        ret['changes']['diff'] = 'New file'
+                    else:
+                        return _error(
+                            ret, 'File {0} not created'.format(name)
+                        )
 
             if mode:
                 os.umask(current_umask)
 
+        if not static_contents is None:
+            # Write the static contents to a temporary file
+            tmp = salt.utils.mkstemp(text=True)
+            with salt.utils.fopen(tmp, 'w') as tmp_:
+                tmp_.write(static_contents)
+            salt.utils.copyfile(
+                    tmp,
+                    name,
+                    __salt__['config.backup_mode'](backup),
+                    __opts__['cachedir'])
+            __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
-        if sfn:
+        elif sfn:
             salt.utils.copyfile(
                     sfn,
                     name,
