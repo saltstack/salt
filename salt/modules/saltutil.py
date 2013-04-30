@@ -17,6 +17,7 @@ import sys
 # Import salt libs
 import salt.payload
 import salt.state
+from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
 
 # Import third party libs

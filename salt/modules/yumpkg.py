@@ -198,7 +198,7 @@ def latest_version(*names, **kwargs):
     yumbase = yum.YumBase()
     error = _set_repo_options(yumbase, **kwargs)
     if error:
-        log.error(e)
+        log.error(error)
 
     # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
@@ -477,7 +477,7 @@ def install(name=None,
 
     error = _set_repo_options(yumbase, **kwargs)
     if error:
-        log.error(e)
+        log.error(error)
         return {}
 
     try:
