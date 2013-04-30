@@ -27,7 +27,7 @@ class VirtualenvTest(integration.ModuleCase,
             self.skipTest('virtualenv not installed')
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
         if not self.run_function('user.add', [user]):
