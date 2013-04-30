@@ -2,9 +2,6 @@
 Various XML utilities
 '''
 
-# Import python libs
-import xml.etree.ElementTree as ET
-
 def to_dict(xmltree):
     ''' 
     Convert an XML tree into a dict. The tree that is passed in must be an

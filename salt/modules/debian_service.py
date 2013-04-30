@@ -8,7 +8,6 @@ import glob
 import re
 
 # Import salt libs
-import salt.utils
 from .systemd import _sd_booted
 
 

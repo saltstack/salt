@@ -6,7 +6,6 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
-import os
 import optparse
 import pprint
 import time

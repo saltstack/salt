@@ -5,9 +5,6 @@ Provide the service module for systemd
 import os
 import re
 
-# Import salt libs
-import salt.utils
-
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']

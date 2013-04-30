@@ -11,7 +11,6 @@ import os
 import glob
 import tempfile
 import time
-import shutil
 
 # Import third party tools
 import yaml

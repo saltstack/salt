@@ -8,7 +8,6 @@ import os
 import re
 import socket
 import logging
-import urllib2
 import urlparse
 
 # import third party libs
