@@ -2,7 +2,6 @@ import tempfile
 
 from saltunittest import TestCase, TestLoader, TextTestRunner
 
-from salt import config as sconfig
 from salt.modules import file as filemod
 from salt.modules import cmdmod
 

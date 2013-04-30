@@ -25,12 +25,6 @@ Connection module for Amazon S3
 '''
 
 # Import Python libs
-import hmac
-import hashlib
-import binascii
-import datetime
-import urllib
-import urllib2
 import logging
 
 # Import Salt libs

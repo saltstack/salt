@@ -6,10 +6,8 @@ import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
+
 
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',

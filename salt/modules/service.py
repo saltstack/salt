@@ -6,9 +6,6 @@ to this basic module
 # Import python libs
 import os
 
-# Import salt libs
-import salt.utils
-
 
 GRAINMAP = {
            'Arch': '/etc/rc.d',

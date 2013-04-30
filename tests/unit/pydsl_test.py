@@ -1,6 +1,5 @@
 # Import Python libs
 import os
-import sys
 import shutil
 import tempfile
 from cStringIO import StringIO
@@ -9,7 +8,7 @@ from cStringIO import StringIO
 from saltunittest import TestCase
 import salt.loader
 import salt.config
-from salt.state import State, HighState
+from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']

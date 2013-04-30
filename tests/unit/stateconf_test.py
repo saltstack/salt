@@ -1,5 +1,4 @@
 # Import Python libs
-import sys
 from cStringIO import StringIO
 
 # Import Salt libs
