@@ -84,7 +84,6 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base',
     deploy = False
     undeploy = False
     status = True
-    context = '{0}##{1}'.format(name, version)
     
     # Determine what to do
     try:
