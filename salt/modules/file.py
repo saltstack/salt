@@ -1326,7 +1326,7 @@ def check_managed(
         context,
         defaults,
         env,
-        static_contents=None,
+        contents=None,
         **kwargs):
     '''
     Check to see what changes need to be made for a file
@@ -1340,7 +1340,7 @@ def check_managed(
 
     sfn, source_sum, comment = '', None, ''
 
-    if static_contents is None:
+    if contents is None:
         # Gather the source file from the server
         sfn, source_sum, comment = get_managed(
                 name,
@@ -1358,7 +1358,7 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, env, template, static_contents)
+                              group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -1378,7 +1378,7 @@ def check_file_meta(
         mode,
         env,
         template=None,
-        static_contents=None):
+        contents=None):
     '''
     Check for the changes in the file metadata.
 
@@ -1412,11 +1412,11 @@ def check_file_meta(
                             ''.join(difflib.unified_diff(nlines, slines)))
             else:
                 changes['sum'] = 'Checksum differs'
-    if not static_contents is None:
+    if not contents is None:
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(tmp, 'w') as tmp_:
-            tmp_.write(static_contents)
+            tmp_.write(contents)
         # Compare the static contents with the named file
         with contextlib.nested(
                 salt.utils.fopen(tmp, 'rb'),
@@ -1486,7 +1486,7 @@ def manage_file(name,
                 backup,
                 template=None,
                 show_diff=True,
-                static_contents=None):
+                contents=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -1557,11 +1557,11 @@ def manage_file(name,
                 return _error(
                     ret, 'Failed to commit change, permission error')
 
-        if not static_contents is None:
+        if not contents is None:
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(static_contents)
+                tmp_.write(contents)
 
             # Compare contents of files to know if we need to replace
             with contextlib.nested(
@@ -1647,7 +1647,7 @@ def manage_file(name,
                 current_umask = os.umask(63)
 
             # Create a new file when test is False and source is None
-            if static_contents is None:
+            if contents is None:
                 if not __opts__['test']:
                     if __salt__['file.touch'](name):
                         ret['changes']['new'] = 'file {0} created'.format(name)
@@ -1668,11 +1668,11 @@ def manage_file(name,
             if mode:
                 os.umask(current_umask)
 
-        if not static_contents is None:
+        if not contents is None:
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(static_contents)
+                tmp_.write(contents)
             # Copy into place
             salt.utils.copyfile(
                     tmp,
