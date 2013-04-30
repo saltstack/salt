@@ -1349,8 +1349,7 @@ def check_managed(
             env,
             context,
             defaults,
-            **kwargs
-            )
+            **kwargs)
     if comment:
         __clean_tmp(sfn)
         return False, comment
@@ -1476,6 +1475,7 @@ def manage_file(name,
                'changes': {},
                'comment': '',
                'result': True}
+
     # Check changes if the target file exists
     if os.path.isfile(name):
         # Only test the checksums on files with managed contents
@@ -1499,8 +1499,7 @@ def manage_file(name,
                                       ).format(
                                               name,
                                               source_sum['hsum'],
-                                              dl_sum
-                                              )
+                                              dl_sum)
                     ret['result'] = False
                     return ret
 
@@ -1508,8 +1507,9 @@ def manage_file(name,
             if _is_bin(sfn) or _is_bin(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
-                with contextlib.nested(salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(name, 'rb')) as (src, name_):
+                with contextlib.nested(
+                        salt.utils.fopen(sfn, 'rb'),
+                        salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
                     # Print a diff equivalent to diff -u old new
@@ -1519,8 +1519,7 @@ def manage_file(name,
                         ret['changes']['diff'] = '<show_diff=False>'
                     else:
                         ret['changes']['diff'] = (
-                                ''.join(difflib.unified_diff(nlines, slines))
-                                )
+                                ''.join(difflib.unified_diff(nlines, slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
@@ -1563,8 +1562,7 @@ def manage_file(name,
                                       ).format(
                                               name,
                                               source_sum['hsum'],
-                                              dl_sum
-                                              )
+                                              dl_sum)
                     ret['result'] = False
                     return ret
 
