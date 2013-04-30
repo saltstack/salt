@@ -180,7 +180,7 @@ def lv_present(name, vgname=None, size=None, extents=None, pv=''):
     return ret
 
 
-def lv_absent(name, vgname):
+def lv_absent(name, vgname=None):
     '''
     Remove a given existing logical volume from a named existing volume group
 
