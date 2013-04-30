@@ -38,6 +38,8 @@ Using the new format, set up the cloud configuration at
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
+import urllib2
+import yaml
 import logging
 
 # Import generic libcloud functions
@@ -364,3 +366,96 @@ def has_method(obj, method_name):
             )
     )
     return False;
+
+
+def list_keys(kwargs=None, call=None):
+    '''
+    List the keys available
+    '''
+    if call != 'function':
+        log.error(
+            'The list_keys function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    ret = {}
+    data = query(action='/my/keys')
+    for pair in data:
+        ret[pair['name']] = pair['key']
+    return {'keys': ret}
+
+
+def query(action=None, command=None, args=None, method='GET', data=None):
+    '''
+    Make a web call to Joyent
+    '''
+    location = get_location()
+    path = 'http://{0}.api.joyentcloud.com'.format(location)
+    auth_handler = urllib2.HTTPBasicAuthHandler()
+    auth_handler.add_password(
+        realm='SmartDataCenter',
+        uri=path,
+        user=config.get_config_value(
+            'user', get_configured_provider(), __opts__, search_global=False
+        ),
+        passwd=config.get_config_value(
+            'password', get_configured_provider(), __opts__,
+            search_global=False
+        )
+    )
+    opener = urllib2.build_opener(auth_handler)
+    urllib2.install_opener(opener)
+
+    if action:
+        path += action
+
+    if command:
+        path += '/{0}'.format(command)
+
+    if type(args) is not dict:
+        args = {}
+
+    kwargs = {'data': data}
+    kwargs['headers'] = {
+        'Accept': 'application/json',
+        'X-Api-Version': '~6.5',
+    }
+
+    if args:
+        path += '?%s'
+        params = urllib.urlencode(args)
+        req = urllib2.Request(url=path % params, **kwargs)
+    else:
+        req = urllib2.Request(url=path, **kwargs)
+
+    req.get_method = lambda: method
+
+    log.debug('{0} {1}'.format(method, req.get_full_url()))
+    if data:
+        log.debug(data)
+
+    try:
+        result = urllib2.urlopen(req)
+        log.debug(
+            'Joyent Response Status Code: {0}'.format(
+                result.getcode()
+            )
+        )
+
+        content = result.read()
+        result.close()
+
+        data = yaml.safe_load(content)
+        return data
+    except urllib2.URLError as exc:
+        log.error(
+            'Joyent Response Status Code: {0} {1}'.format(
+                exc.code,
+                exc.msg
+            )
+        )
+        log.error(exc)
+        return {'error': exc}
