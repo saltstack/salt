@@ -638,7 +638,7 @@ def is_replication_enabled(host=None, core_name=None):
                 enabled = slave['masterDetails']['master'][
                     'replicationEnabled']
                 #if replication is turned off on the master, or polling is
-                #disabled we need to return false. These may not not errors,
+                #disabled we need to return false. These may not be errors,
                 #but the purpose of this call is to check to see if the slaves
                 #can replicate.
             if enabled == 'false':
@@ -1095,7 +1095,7 @@ def abort_import(handler, host=None, core_name=None, verbose=False):
     '''
     MASTER ONLY
     Aborts an existing import command to the specified handler.
-    This command can only be run if the minion is is configured with
+    This command can only be run if the minion is configured with
     solr.type=master
 
     handler : str
@@ -1134,7 +1134,7 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
     '''
     MASTER ONLY
     Submits an import command to the specified handler using specified options.
-    This command can only be run if the minion is is configured with
+    This command can only be run if the minion is configured with
     solr.type=master
 
     handler : str
@@ -1188,7 +1188,7 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
 def delta_import(handler, host=None, core_name=None, options=None, extra=None):
     '''
     Submits an import command to the specified handler using specified options.
-    This command can only be run if the minion is is configured with
+    This command can only be run if the minion is configured with
     solr.type=master
 
     handler : str
@@ -1240,7 +1240,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
 def import_status(handler, host=None, core_name=None, verbose=False):
     '''
     Submits an import command to the specified handler using specified options.
-    This command can only be run if the minion is is configured with
+    This command can only be run if the minion is configured with
     solr.type: 'master'
 
     handler : str

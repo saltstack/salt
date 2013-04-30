@@ -36,7 +36,7 @@ __opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
 
 def top(**kwargs):
     '''
-    Look up top data in Cobbler for for a minion.
+    Look up top data in Cobbler for a minion.
     '''
     url = __opts__['cobbler.url']
     user = __opts__['cobbler.user']

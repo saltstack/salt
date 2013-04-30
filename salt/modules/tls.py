@@ -50,7 +50,7 @@ def _cert_base_path():
 
 def _new_serial(ca_name, CN):
     '''
-    Return a serial number in hex using md5sum, based upon the the ca_name and
+    Return a serial number in hex using md5sum, based upon the ca_name and
     CN values
 
     ca_name
@@ -603,7 +603,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     ca_name
         name of the CA
     CN
-        common name matching the the certificate signing request
+        common name matching the certificate signing request
     passphrase
         used to unlock the PKCS#12 certificate when loaded into the browser
 
