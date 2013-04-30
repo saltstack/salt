@@ -12,6 +12,8 @@ import os
 # Import salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
+
 # Import upstart module if needed
 HAS_UPSTART = False
 if salt.utils.which('initctl'):
@@ -26,7 +28,6 @@ if salt.utils.which('initctl'):
     else:
         HAS_UPSTART = True
 
-log = logging.getLogger(__name__)
 
 
 def __virtual__():

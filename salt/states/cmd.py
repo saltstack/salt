@@ -119,6 +119,7 @@ import copy
 import json
 import shlex
 import logging
+import yaml
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
