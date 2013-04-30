@@ -5,6 +5,7 @@ Support for iptables
 # Import python libs
 import os
 import sys
+import re
 
 # Import salt libs
 import salt.utils
@@ -263,10 +264,10 @@ def _parse_conf(conf_file=None, in_mem=False):
             parser = _parser()
             parsed_args = []
             if sys.version.startswith('2.6'):
-                (opts, args) = parser.parse_args(line.split())
+                (opts, args) = parser.parse_args(list(map(str.strip,re.split('(\-[\w-]+) ',line)[1:])))
                 parsed_args = vars(opts)
             else:
-                parsed_args = vars(parser.parse_args(line.split()))
+                parsed_args = vars(parser.parse_args(list(map(str.strip,re.split('(\-[\w-]+) ',line)[1:]))))
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:
