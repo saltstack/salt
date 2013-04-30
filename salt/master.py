@@ -1193,7 +1193,7 @@ class AESFuncs(object):
 
     def revoke_auth(self, load):
         '''
-        Allow a minion to request revokation of it's own key
+        Allow a minion to request revocation of its own key
         '''
         if 'id' not in load or 'tok' not in load:
             return False
