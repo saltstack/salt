@@ -41,3 +41,16 @@ def restart(name):
 
     return not __salt__['cmd.retcode'](cmd)
 
+
+def unmonitor(name):
+    '''
+    Unmonitor service via monit
+
+    CLI Example::
+
+        salt '*' monit.unmonitor <service name>
+    '''
+    cmd = "monit unmonitor {0}".format(name)
+
+    return not __salt__['cmd.retcode'](cmd)
+
