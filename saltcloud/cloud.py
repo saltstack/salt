@@ -97,7 +97,7 @@ class Cloud(object):
                         )
                     )
                     continue
-                if provider is not None and provider not in providers:
+                if provider is not None and alias not in providers:
                     providers.add(alias)
         return providers
 
