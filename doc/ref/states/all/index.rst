@@ -28,6 +28,7 @@ Full list of builtin state modules
     layman
     libvirt
     locale
+    lvm
     makeconf
     mdadm
     module
