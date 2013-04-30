@@ -54,3 +54,16 @@ def unmonitor(name):
 
     return not __salt__['cmd.retcode'](cmd)
 
+
+def monitor(name):
+    '''
+    monitor service via monit
+
+    CLI Example::
+
+        salt '*' monit.monitor <service name>
+    '''
+    cmd = "monit monitor {0}".format(name)
+
+    return not __salt__['cmd.retcode'](cmd)
+
