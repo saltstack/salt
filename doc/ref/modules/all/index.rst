@@ -33,6 +33,7 @@ Full list of builtin execution modules
     cp
     cron
     daemontools
+    darwin_sysctl
     data
     debconfmod
     debian_service
@@ -79,7 +80,9 @@ Full list of builtin execution modules
     locate
     logrotate
     makeconf
+    match
     mdadm
+    mine
     mongodb
     monit
     moosefs

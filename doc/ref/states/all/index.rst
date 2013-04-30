@@ -47,6 +47,7 @@ Full list of builtin state modules
     postgres_database
     postgres_group
     postgres_user
+    quota
     rabbitmq_user
     rabbitmq_vhost
     rvm
