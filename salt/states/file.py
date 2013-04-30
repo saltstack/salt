@@ -32,6 +32,7 @@ a default file on which to fall back if the desired file does not exist on the
 salt fileserver. Here's an example:
 
 .. code-block:: yaml
+
     /etc/foo.conf
       file.managed:
         - source:

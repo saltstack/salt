@@ -173,6 +173,7 @@ Right:
             source=None,
             source_hash='',
             user=None)
+
 WRONG:
 
 .. code-block:: python
@@ -200,7 +201,7 @@ pep8 (the script) and the actual PEP 8 standard.  It is recommended that this
 particular warning be ignored with the following lines in
 :code:`~/.config/flake8`:
 
-.. code-block::
+.. code-block:: ini
 
     [flake8]
     ignore = E226,E241,E242,E126
