@@ -169,7 +169,7 @@ def create(*args):
                 arguments['new_array'] = arg
             else:
                 arguments['disks_to_array'].append(arg)
-        elif arg.find('=') != -1:
+        elif '=' in arg:
             opt, val = arg.split('=')
             arguments['opt_val'][opt] = val
         elif str(arg) in ['readonly', 'run', 'force']:

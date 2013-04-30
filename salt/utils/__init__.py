@@ -309,7 +309,7 @@ def ip_bracket(addr):
     Convert IP address representation to ZMQ (url) format. ZMQ expects
     brackets around IPv6 literals, since they are used in URLs.
     '''
-    if addr and addr.find(":") > -1 and not addr.startswith('['):
+    if addr and ":" in addr and not addr.startswith('['):
         return "[{0}]".format(addr)
     return addr
 
