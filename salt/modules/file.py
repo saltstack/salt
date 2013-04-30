@@ -1338,24 +1338,27 @@ def check_managed(
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 
-    # Gather the source file from the server
-    sfn, source_sum, comment = get_managed(
-            name,
-            template,
-            source,
-            source_hash,
-            user,
-            group,
-            mode,
-            env,
-            context,
-            defaults,
-            **kwargs)
-    if comment:
-        __clean_tmp(sfn)
-        return False, comment
+    sfn, source_sum, comment = '', None, ''
+
+    if static_contents is None:
+        # Gather the source file from the server
+        sfn, source_sum, comment = get_managed(
+                name,
+                template,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                env,
+                context,
+                defaults,
+                **kwargs)
+        if comment:
+            __clean_tmp(sfn)
+            return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, env, template)
+                              group, mode, env, template, static_contents)
     __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -1374,7 +1377,8 @@ def check_file_meta(
         group,
         mode,
         env,
-        template=None):
+        template=None,
+        static_contents=None):
     '''
     Check for the changes in the file metadata.
 
@@ -1383,6 +1387,8 @@ def check_file_meta(
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
     '''
     changes = {}
+    if not source_sum:
+        source_sum = dict()
     stats = __salt__['file.stats'](
             name,
             source_sum.get('hash_type'), 'md5')
@@ -1394,18 +1400,33 @@ def check_file_meta(
             if not sfn and source:
                 sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
-                with contextlib.nested(salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(name, 'rb')) as (src, name_):
+                with contextlib.nested(
+                        salt.utils.fopen(sfn, 'rb'),
+                        salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
                 if __salt__['config.option']('obfuscate_templates'):
                     changes['diff'] = '<Obfuscated Template>'
                 else:
                     changes['diff'] = (
-                            ''.join(difflib.unified_diff(nlines, slines))
-                            )
+                            ''.join(difflib.unified_diff(nlines, slines)))
             else:
                 changes['sum'] = 'Checksum differs'
+    if not static_contents is None:
+        # Write a tempfile with the static contents
+        tmp = salt.utils.mkstemp(text=True)
+        with salt.utils.fopen(tmp, 'w') as tmp_:
+            tmp_.write(static_contents)
+        # Compare the static contents with the named file
+        with contextlib.nested(
+                salt.utils.fopen(tmp, 'rb'),
+                salt.utils.fopen(name, 'rb')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        if __salt__['config.option']('obfuscate_templates'):
+            changes['diff'] = '<Obfuscated Template>'
+        else:
+            changes['diff'] = (''.join(difflib.unified_diff(nlines, slines)))
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
