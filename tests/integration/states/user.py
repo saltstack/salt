@@ -33,7 +33,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_not_present(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -46,7 +46,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_nondefault(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -59,7 +59,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_gid_from_name_default(self):
         '''
         This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
@@ -83,7 +83,7 @@ class UserTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_gid_from_name(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
