@@ -39,6 +39,8 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import urllib2
+import json
+import yaml
 import logging
 
 # Import generic libcloud functions
@@ -380,8 +382,11 @@ def list_keys(kwargs=None, call=None):
     if not kwargs:
         kwargs = {}
 
+    ret = {}
     data = query(action='/my/keys')
-    return data
+    for pair in data:
+        ret[pair['name']] = pair['key']
+    return {'keys': ret}
 
 
 def query(action=None, command=None, args=None, method='GET', data=None):
@@ -444,7 +449,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         content = result.read()
         result.close()
 
-        return content
+        data = yaml.safe_load(content)
+        return data
     except urllib2.URLError as exc:
         log.error(
             'Joyent Response Status Code: {0} {1}'.format(
