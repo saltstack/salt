@@ -879,7 +879,7 @@ def mod_repo(repo, refresh=False, **kwargs):
         refresh (refresh the apt sources db when the mod is done)
         keyserver (keyserver to get gpg key from)
         keyid (key id to load with the keyserver argument)
-        key_url (URl to a gpg key to add to the apt gpg keyring)
+        key_url (URL to a gpg key to add to the apt gpg keyring)
         consolidate (if true, will attempt to de-dup and consolidate sources)
 
         * Note: Due to the way keys are stored for apt, there is a known issue
