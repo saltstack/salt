@@ -55,6 +55,11 @@ A typical SLS file will often look like this in YAML:
     These demos use some generic service and package names, different
     distributions often use different names for packages and services. For
     instance `apache` should be replaced with `httpd` on a Red Hat system.
+    Salt uses the name of the init script, systemd name, upstart name etc.
+    based on what the underlying service management for the platform. To
+    get a list of the available service names on a platform execute the
+    service.get_all salt function.
+
     Information on how to make states work with multiple distributions
     is later in the tutorial.
 
