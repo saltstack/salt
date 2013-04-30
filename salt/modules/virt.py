@@ -830,7 +830,7 @@ def seed_non_shared_migrate(disks, force=False):
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
         if os.path.isfile(fn_) and not force:
-            # the target exists, check to see if is is compatible
+            # the target exists, check to see if it is compatible
             pre = yaml.safe_load(subprocess.Popen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
