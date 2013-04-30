@@ -263,11 +263,11 @@ def stop(name, call=None):
 
 def start(name, call=None):
     '''
-    Stop a node
+    Start a node
 
     CLI Example::
 
-        salt-cloud -a stop mymachine
+        salt-cloud -a start mymachine
     '''
     return __take_action(name,call,'start_node','Started','start')
 
@@ -364,4 +364,3 @@ def has_method(obj, method_name):
             )
     )
     return False;
-
