@@ -8,7 +8,6 @@ import warnings
 # Import salt libs
 from salt.utils.yamlloader import CustomLoader, load
 from salt.utils.odict import OrderedDict
-from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 
