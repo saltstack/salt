@@ -1326,6 +1326,7 @@ def check_managed(
         context,
         defaults,
         env,
+        contents=None,
         **kwargs):
     '''
     Check to see what changes need to be made for a file
@@ -1337,25 +1338,27 @@ def check_managed(
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 
-    # Gather the source file from the server
-    sfn, source_sum, comment = get_managed(
-            name,
-            template,
-            source,
-            source_hash,
-            user,
-            group,
-            mode,
-            env,
-            context,
-            defaults,
-            **kwargs
-            )
-    if comment:
-        __clean_tmp(sfn)
-        return False, comment
+    sfn, source_sum, comment = '', None, ''
+
+    if contents is None:
+        # Gather the source file from the server
+        sfn, source_sum, comment = get_managed(
+                name,
+                template,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                env,
+                context,
+                defaults,
+                **kwargs)
+        if comment:
+            __clean_tmp(sfn)
+            return False, comment
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, env, template)
+                              group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -1374,7 +1377,8 @@ def check_file_meta(
         group,
         mode,
         env,
-        template=None):
+        template=None,
+        contents=None):
     '''
     Check for the changes in the file metadata.
 
@@ -1383,6 +1387,8 @@ def check_file_meta(
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
     '''
     changes = {}
+    if not source_sum:
+        source_sum = dict()
     stats = __salt__['file.stats'](
             name,
             source_sum.get('hash_type'), 'md5')
@@ -1394,18 +1400,35 @@ def check_file_meta(
             if not sfn and source:
                 sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
-                with contextlib.nested(salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(name, 'rb')) as (src, name_):
+                with contextlib.nested(
+                        salt.utils.fopen(sfn, 'rb'),
+                        salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
                 if __salt__['config.option']('obfuscate_templates'):
                     changes['diff'] = '<Obfuscated Template>'
                 else:
                     changes['diff'] = (
-                            ''.join(difflib.unified_diff(nlines, slines))
-                            )
+                            ''.join(difflib.unified_diff(nlines, slines)))
             else:
                 changes['sum'] = 'Checksum differs'
+    if not contents is None:
+        # Write a tempfile with the static contents
+        tmp = salt.utils.mkstemp(text=True)
+        with salt.utils.fopen(tmp, 'w') as tmp_:
+            tmp_.write(contents)
+        # Compare the static contents with the named file
+        with contextlib.nested(
+                salt.utils.fopen(tmp, 'rb'),
+                salt.utils.fopen(name, 'rb')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        if not ''.join(nlines) == ''.join(slines):
+            if __salt__['config.option']('obfuscate_templates'):
+                changes['diff'] = '<Obfuscated Template>'
+            else:
+                changes['diff'] = (''.join(difflib.unified_diff(nlines,
+                                                                slines)))
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
@@ -1452,17 +1475,18 @@ def get_diff(
 
 
 def manage_file(name,
-        sfn,
-        ret,
-        source,
-        source_sum,
-        user,
-        group,
-        mode,
-        env,
-        backup,
-        template=None,
-        show_diff=True):
+                sfn,
+                ret,
+                source,
+                source_sum,
+                user,
+                group,
+                mode,
+                env,
+                backup,
+                template=None,
+                show_diff=True,
+                contents=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -1476,6 +1500,7 @@ def manage_file(name,
                'changes': {},
                'comment': '',
                'result': True}
+
     # Check changes if the target file exists
     if os.path.isfile(name):
         # Only test the checksums on files with managed contents
@@ -1499,8 +1524,7 @@ def manage_file(name,
                                       ).format(
                                               name,
                                               source_sum['hsum'],
-                                              dl_sum
-                                              )
+                                              dl_sum)
                     ret['result'] = False
                     return ret
 
@@ -1508,8 +1532,9 @@ def manage_file(name,
             if _is_bin(sfn) or _is_bin(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
-                with contextlib.nested(salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(name, 'rb')) as (src, name_):
+                with contextlib.nested(
+                        salt.utils.fopen(sfn, 'rb'),
+                        salt.utils.fopen(name, 'rb')) as (src, name_):
                     slines = src.readlines()
                     nlines = name_.readlines()
                     # Print a diff equivalent to diff -u old new
@@ -1519,8 +1544,7 @@ def manage_file(name,
                         ret['changes']['diff'] = '<show_diff=False>'
                     else:
                         ret['changes']['diff'] = (
-                                ''.join(difflib.unified_diff(nlines, slines))
-                                )
+                                ''.join(difflib.unified_diff(nlines, slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
@@ -1532,6 +1556,42 @@ def manage_file(name,
                 __clean_tmp(sfn)
                 return _error(
                     ret, 'Failed to commit change, permission error')
+
+        if not contents is None:
+            # Write the static contents to a temporary file
+            tmp = salt.utils.mkstemp(text=True)
+            with salt.utils.fopen(tmp, 'w') as tmp_:
+                tmp_.write(contents)
+
+            # Compare contents of files to know if we need to replace
+            with contextlib.nested(
+                    salt.utils.fopen(tmp, 'rb'),
+                    salt.utils.fopen(name, 'rb')) as (src, name_):
+                slines = src.readlines()
+                nlines = name_.readlines()
+                different = not ''.join(slines) == ''.join(nlines)
+
+            if different:
+                if __salt__['config.option']('obfuscate_templates'):
+                    ret['changes']['diff'] = '<Obfuscated Template>'
+                elif not show_diff:
+                    ret['changes']['diff'] = '<show_diff=False>'
+                else:
+                    ret['changes']['diff'] = (
+                            ''.join(difflib.unified_diff(nlines, slines)))
+
+                # Pre requisites are met, the file needs to be replaced, do it
+                try:
+                    salt.utils.copyfile(
+                            tmp,
+                            name,
+                            __salt__['config.backup_mode'](backup),
+                            __opts__['cachedir'])
+                except IOError:
+                    __clean_tmp(tmp)
+                    return _error(
+                        ret, 'Failed to commit change, permission error')
+            __clean_tmp(tmp)
 
         ret, perms = check_perms(name, ret, user, group, mode)
 
@@ -1563,8 +1623,7 @@ def manage_file(name,
                                       ).format(
                                               name,
                                               source_sum['hsum'],
-                                              dl_sum
-                                              )
+                                              dl_sum)
                     ret['result'] = False
                     return ret
 
@@ -1588,20 +1647,41 @@ def manage_file(name,
                 current_umask = os.umask(63)
 
             # Create a new file when test is False and source is None
-            if not __opts__['test']:
-                if __salt__['file.touch'](name):
-                    ret['changes']['new'] = 'file {0} created'.format(name)
-                    ret['comment'] = 'Empty file'
-                else:
-                    return _error(
-                        ret, 'Empty file {0} not created'.format(name)
-                    )
+            if contents is None:
+                if not __opts__['test']:
+                    if __salt__['file.touch'](name):
+                        ret['changes']['new'] = 'file {0} created'.format(name)
+                        ret['comment'] = 'Empty file'
+                    else:
+                        return _error(
+                            ret, 'Empty file {0} not created'.format(name)
+                        )
+            else:
+                if not __opts__['test']:
+                    if __salt__['file.touch'](name):
+                        ret['changes']['diff'] = 'New file'
+                    else:
+                        return _error(
+                            ret, 'File {0} not created'.format(name)
+                        )
 
             if mode:
                 os.umask(current_umask)
 
+        if not contents is None:
+            # Write the static contents to a temporary file
+            tmp = salt.utils.mkstemp(text=True)
+            with salt.utils.fopen(tmp, 'w') as tmp_:
+                tmp_.write(contents)
+            # Copy into place
+            salt.utils.copyfile(
+                    tmp,
+                    name,
+                    __salt__['config.backup_mode'](backup),
+                    __opts__['cachedir'])
+            __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
-        if sfn:
+        elif sfn:
             salt.utils.copyfile(
                     sfn,
                     name,
