@@ -736,6 +736,15 @@ class Map(Cloud):
 
         # Create expected data format if needed
         for profile, mapped in map_.copy().items():
+            if isinstance(mapped, (list, tuple)):
+                entries = []
+                for mapping in mapped:
+                    for name, overrides in mapping.iteritems():
+                        overrides.setdefault('name', name)
+                        entries.append(overrides)
+                map_[profile] = entries
+                continue
+
             if isinstance(mapped, dict):
                 # Convert the dictionary mapping to a list of dictionaries
                 entries = []
