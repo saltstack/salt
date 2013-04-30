@@ -2,10 +2,6 @@
 Control virtual machines via Salt
 '''
 
-# Import python libs
-import os
-import subprocess
-
 # Import Salt libs
 import salt.client
 import salt.output

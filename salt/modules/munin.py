@@ -9,7 +9,6 @@ import stat
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import SaltException
 from salt._compat import string_types
 
 PLUGINDIR = '/etc/munin/plugins/'

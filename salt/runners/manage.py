@@ -3,8 +3,6 @@ General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
 '''
 
-import distutils.version
-
 # Import salt libs
 import salt.key
 import salt.client
