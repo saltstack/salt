@@ -115,11 +115,11 @@
 
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
-SALTSYNDIC=/usr/bin/salt-syndic
+SALTSYNDIC='/usr/bin/salt-syndic'
+SERVICE='salt-syndic'
 test -x $SALTSYNDIC || { echo "$SALTMINION not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
-PYTHON=/usr/bin/python
 
 # Source LSB init functions
 # providing start_daemon, killproc, pidofproc, 
@@ -167,7 +167,7 @@ case "$1" in
 	echo -n "Starting salt-syndic daemon: "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
-	/sbin/startproc $SALTSYNDIC -d
+	/sbin/startproc -f -p /var/run/${SERVICE} ${SALTSYNDIC} -d
 	
 	# Remember status and be verbose
 	rc_status -v
@@ -207,36 +207,6 @@ case "$1" in
 	# Remember status and be quiet
 	rc_status
 	;;
-    force-reload)
-	## Signal the daemon to reload its config. Most daemons
-	## do this on signal 1 (SIGHUP).
-	## If it does not support it, restart the service if it
-	## is running.
-
-	echo -n "Reload service salt-syndic daemon: "
-	## if it supports it:
-	/sbin/killproc -HUP $SALTSYNDIC
-	#touch /var/run/FOO.pid
-	rc_status -v
-
-	## Otherwise:
-	#$0 try-restart
-	#rc_status
-	;;
-    reload)
-	## Like force-reload, but if daemon does not support
-	## signaling, do nothing (!)
-
-	# If it supports signaling:
-	echo -n "Reload service salt-syndic "
-	/sbin/killproc -HUP $SALTSYNDIC
-	#touch /var/run/FOO.pid
-	rc_status -v
-	
-	## Otherwise if it does not support reload:
-	#rc_failed 3
-	#rc_status -v
-	;;
     status)
 	echo -n "Checking for service salt-syndic "
 	## Check status with checkproc(8), if process is running
@@ -257,7 +227,7 @@ case "$1" in
 	rc_status -v
 	;;
     *)
-	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"
+	echo "Usage: $0 {start|stop|status|try-restart|restart}"
 	exit 1
 	;;
 esac
