@@ -388,6 +388,28 @@ def list_keys(kwargs=None, call=None):
     return {'keys': ret}
 
 
+def show_key(kwargs=None, call=None):
+    '''
+    List the keys available
+    '''
+    if call != 'function':
+        log.error(
+            'The list_keys function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    ret = {}
+    data = query(action='/my/keys/{0}'.format(kwargs['keyname']))
+    return {'keys': {data['name']: data['key']}}
+
+
 def query(action=None, command=None, args=None, method='GET', data=None):
     '''
     Make a web call to Joyent
