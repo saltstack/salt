@@ -1423,10 +1423,12 @@ def check_file_meta(
                 salt.utils.fopen(name, 'rb')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
-        if __salt__['config.option']('obfuscate_templates'):
-            changes['diff'] = '<Obfuscated Template>'
-        else:
-            changes['diff'] = (''.join(difflib.unified_diff(nlines, slines)))
+        if not ''.join(nlines) == ''.join(slines):
+            if __salt__['config.option']('obfuscate_templates'):
+                changes['diff'] = '<Obfuscated Template>'
+            else:
+                changes['diff'] = (''.join(difflib.unified_diff(nlines,
+                                                                slines)))
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
@@ -1561,12 +1563,15 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(static_contents)
 
-            # Retrieve contents of file for diff
+            # Compare contents of files to know if we need to replace
             with contextlib.nested(
                     salt.utils.fopen(tmp, 'rb'),
                     salt.utils.fopen(name, 'rb')) as (src, name_):
                 slines = src.readlines()
                 nlines = name_.readlines()
+                different = not ''.join(slines) == ''.join(nlines)
+
+            if different:
                 if __salt__['config.option']('obfuscate_templates'):
                     ret['changes']['diff'] = '<Obfuscated Template>'
                 elif not show_diff:
@@ -1575,17 +1580,18 @@ def manage_file(name,
                     ret['changes']['diff'] = (
                             ''.join(difflib.unified_diff(nlines, slines)))
 
-            # Pre requisites are met, and the file needs to be replaced, do it
-            try:
-                salt.utils.copyfile(
-                        tmp,
-                        name,
-                        __salt__['config.backup_mode'](backup),
-                        __opts__['cachedir'])
-            except IOError:
-                __clean_tmp(tmp)
-                return _error(
-                    ret, 'Failed to commit change, permission error')
+                # Pre requisites are met, the file needs to be replaced, do it
+                try:
+                    salt.utils.copyfile(
+                            tmp,
+                            name,
+                            __salt__['config.backup_mode'](backup),
+                            __opts__['cachedir'])
+                except IOError:
+                    __clean_tmp(tmp)
+                    return _error(
+                        ret, 'Failed to commit change, permission error')
+            __clean_tmp(tmp)
 
         ret, perms = check_perms(name, ret, user, group, mode)
 
@@ -1667,6 +1673,7 @@ def manage_file(name,
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(static_contents)
+            # Copy into place
             salt.utils.copyfile(
                     tmp,
                     name,
