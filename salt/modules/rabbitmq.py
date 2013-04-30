@@ -55,7 +55,7 @@ def list_users(runas=None):
 
 def list_vhosts(runas=None):
     '''
-    Return a list of vhost based of of rabbitmqctl list_vhosts.
+    Return a list of vhost based on rabbitmqctl list_vhosts.
 
     CLI Example::
 
