@@ -70,9 +70,11 @@ def db_list(user=None, password=None, host=None, port=None):
     List all Mongodb databases
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Listing databases")
+        log.info('Listing databases')
         return conn.database_names()
     except pymongo.errors.PyMongoError as err:
         log.error(err)
@@ -96,6 +98,8 @@ def db_remove(name, user=None, password=None, host=None, port=None):
     Remove a Mongodb database
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Removing database {0}'.format(name))
@@ -116,6 +120,8 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
     List users of a Mongodb database
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Listing users')
@@ -158,6 +164,8 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
     Create a Mongodb user
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Creating user {0}'.format(name))
@@ -179,6 +187,8 @@ def user_remove(name, user=None, password=None, host=None, port=None,
     Remove a Mongodb user
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
         log.info('Removing user {0}'.format(name))
