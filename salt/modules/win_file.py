@@ -29,7 +29,7 @@ from file import check_hash, check_managed, check_perms, contains_regex, \
         patch, remove, source_list, sed_contains, touch, append, contains, \
         contains_regex, contains_regex_multiline, contains_glob, patch, \
         uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment, \
-        manage_file
+        manage_file, file_exists, get_diff
 
 
 log = logging.getLogger(__name__)
