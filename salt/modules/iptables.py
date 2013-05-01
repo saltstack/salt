@@ -274,7 +274,7 @@ def _parse_conf(conf_file=None, in_mem=False):
                     ret_args[arg] = parsed_args[arg]
             if parsed_args['comment'] is not None:
                 comment = parsed_args['comment'][0].strip('"')
-                ret[table][chain[0]]['rules_comment'][comment]=ret_args
+                ret[table][chain[0]]['rules_comment'][comment] = ret_args
             ret[table][chain[0]]['rules'].append(ret_args)
     return ret
 
