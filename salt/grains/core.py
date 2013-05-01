@@ -934,7 +934,7 @@ def get_server_id():
 
 def get_master():
     '''
-    Provides the minion with the name of it's master.
+    Provides the minion with the name of its master.
     This is useful in states to target other services running on the master.
     '''
     # Provides:
