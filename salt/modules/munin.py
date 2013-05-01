@@ -42,22 +42,23 @@ def run(plugins):
     
     data = {}
     for plugin in plugins:
-        if plugin in plugins:
-            data[plugin] = {}
-            muninout =  __salt__['cmd.run']('munin-run ' + plugin)
-            for line in muninout.split('\n'):
-                if 'value' in line: # This skips multigraph lines, etc
-                    key, val = line.split(' ')
-                    key = key.split('.')[0]
-                    try:
-                        # We only want numbers
-                        if '.' in val:
-                            val = float(val)
-                        else:
-                            val = int(val)
-                        data[plugin][key] = val
-                    except ValueError:
-                        pass
+        if plugin not in all_plugins:
+            continue
+        data[plugin] = {}
+        muninout =  __salt__['cmd.run']('munin-run ' + plugin)
+        for line in muninout.split('\n'):
+            if 'value' in line: # This skips multigraph lines, etc
+                key, val = line.split(' ')
+                key = key.split('.')[0]
+                try:
+                    # We only want numbers
+                    if '.' in val:
+                        val = float(val)
+                    else:
+                        val = int(val)
+                    data[plugin][key] = val
+                except ValueError:
+                    pass
     return data
 
 def run_all():
