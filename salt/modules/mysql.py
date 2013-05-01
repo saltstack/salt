@@ -367,7 +367,7 @@ def db_create(name):
         log.info('DB \'{0}\' already exists'.format(name))
         return False
 
-    # db doesnt exist, proceed
+    # db doesn't exist, proceed
     dbc = _connect()
     cur = dbc.cursor()
     query = 'CREATE DATABASE `{0}`;'.format(name)
@@ -395,7 +395,7 @@ def db_remove(name):
         log.info('DB \'{0}\' may not be removed'.format(name))
         return False
 
-    # db doesnt exist, proceed
+    # db doesn't exist, proceed
     dbc = _connect()
     cur = dbc.cursor()
     query = 'DROP DATABASE `{0}`;'.format(name)

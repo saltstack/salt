@@ -340,7 +340,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
         salt '*' postgres.db_remove 'dbname'
     '''
 
-    # db doesnt exist, proceed
+    # db doesn't exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
     cmd = _psql_cmd('-c', query, user=user, host=host, port=port,
                     maintenance_db=maintenance_db, password=password)
