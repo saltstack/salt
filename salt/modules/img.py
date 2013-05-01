@@ -38,7 +38,7 @@ def umount_image(mnt):
     '''
     if 'qemu_nbd.clear' in __salt__:
         if 'img.mnt_{0}'.format(mnt) in __context__:
-            __salt__['qemu_nbd.clear'](__context__['img.mnt_{0}'.fomat(mnt)])
+            __salt__['qemu_nbd.clear'](__context__['img.mnt_{0}'.format(mnt)])
             return
     __salt__['mount.umount'](mnt)
 
