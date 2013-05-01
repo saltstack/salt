@@ -52,13 +52,13 @@ def ext_pillar(pillar, key=None, only=[]):
     minion_id = __opts__['id']
     log.info("Querying cobbler at %r for information for %r", url, minion_id)
     try:
-		server = xmlrpclib.Server(url, allow_none=True)
-		if user:
-			server = (server, server.login(user, password))
-		result = server.get_blended_data(None, minion_id)
+        server = xmlrpclib.Server(url, allow_none=True)
+        if user:
+            server = (server, server.login(user, password))
+        result = server.get_blended_data(None, minion_id)
     except Exception:
         log.exception(
-			'Could not connect to cobbler.'
+            'Could not connect to cobbler.'
         )
         return {}
 
