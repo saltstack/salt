@@ -1611,7 +1611,7 @@ def manage_file(name,
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, env)
             if not sfn:
-                return ret.error(
+                return _error(
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
