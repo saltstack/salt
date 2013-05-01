@@ -453,6 +453,31 @@ def import_key(kwargs=None, call=None):
     return {'keys': {data['name']: data['key']}}
 
 
+def delete_key(kwargs=None, call=None):
+    '''
+    List the keys available
+
+    CLI Example:
+
+        salt-cloud -f delete_key joyent keyname=mykey
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_keys function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    data = query(action='keys/{0}'.format(kwargs['keyname']), method='DELETE')
+    return data
+
+
 def query(action=None, command=None, args=None, method='GET', data=None,
           headers=None):
     '''
