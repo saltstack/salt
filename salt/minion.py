@@ -50,7 +50,7 @@ log = logging.getLogger(__name__)
 # 1. Read in the configuration
 # 2. Generate the function mapping dict
 # 3. Authenticate with the master
-# 4. Store the aes key
+# 4. Store the AES key
 # 5. connect to the publisher
 # 6. handle publications
 
@@ -303,7 +303,7 @@ class Minion(object):
 
     def _handle_aes(self, load):
         '''
-        Takes the aes encrypted load, decrypts is and runs the encapsulated
+        Takes the AES encrypted load, decrypts it, and runs the encapsulated
         instructions
         '''
         try:
@@ -632,7 +632,7 @@ class Minion(object):
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
         in, signing in can occur as often as needed to keep up with the
-        revolving master aes key.
+        revolving master AES key.
         '''
         log.debug(
             'Attempting to authenticate with the Salt Master at {0}'.format(
@@ -837,7 +837,7 @@ class Minion(object):
                     except Exception:
                         pass
             except zmq.ZMQError:
-                # This is thrown by the inturupt caused by python handling the
+                # This is thrown by the interrupt caused by python handling the
                 # SIGCHLD. This is a safe error and we just start the poll
                 # again
                 continue
@@ -888,7 +888,7 @@ class Syndic(Minion):
 
     def _handle_aes(self, load):
         '''
-        Takes the aes encrypted load, decrypts is and runs the encapsulated
+        Takes the AES encrypted load, decrypts it, and runs the encapsulated
         instructions
         '''
         # If the AES authentication has changed, re-authenticate
@@ -1030,7 +1030,7 @@ class Syndic(Minion):
                 for jid in jids:
                     self._return_pub(jids[jid], '_syndic_return')
             except zmq.ZMQError:
-                # This is thrown by the inturupt caused by python handling the
+                # This is thrown by the interrupt caused by python handling the
                 # SIGCHLD. This is a safe error and we just start the poll
                 # again
                 continue
@@ -1058,7 +1058,7 @@ class Matcher(object):
         '''
         matcher = 'glob'
         if not data:
-            log.error('Recived bad data when setting the match from the top '
+            log.error('Received bad data when setting the match from the top '
                       'file')
             return False
         for item in data:
