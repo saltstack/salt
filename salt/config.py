@@ -571,7 +571,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Let's make sure `worker_threads` does not drop bellow 3 which has proven
     # to make `salt.modules.publish` not work under the test-suite.
-    if opts['worker_threads'] < 3 and opts['peer']:
+    if opts['worker_threads'] < 3 and opts.get('peer', None):
         log.warning(
             'The \'worker_threads\' setting on {0!r} cannot be lower than 3. '
             'Resetting it to the default value of 3.'.format(
