@@ -1203,7 +1203,7 @@ class AESFuncs(object):
             log.warn(
                 ('Minion id {0} is not who it says it is and is attempting '
                  'to revoke the key for {0}').format(
-                    clear_load['id']
+                    load['id']
                 )
             )
             return False
