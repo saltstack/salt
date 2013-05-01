@@ -55,7 +55,7 @@ def _parser(result):
 
 def cpu():
     '''
-    Tests for the cpu performance of minions.
+    Tests for the CPU performance of minions.
 
     CLI Examples::
 

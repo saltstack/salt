@@ -60,7 +60,7 @@ def _chugid(runas):
     # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
     #
     # apparently because we closed fd's on Popen, though if not closed, output
-    # would also go to it's stderr
+    # would also go to its stderr
 
     if os.getgid() != uinfo.pw_gid:
         try:

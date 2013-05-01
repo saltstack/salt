@@ -189,8 +189,8 @@ class SaltEvent(object):
         if self.cpush is True and self.push.closed is False:
             self.push.setsockopt(zmq.LINGER, 1)
             self.push.close()
-        # If socket's are not unregistered from a poller, nothing which touches
-        # that poller get's garbage collected. The Poller itself, it's
+        # If sockets are not unregistered from a poller, nothing which touches
+        # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         for socket in self.poller.sockets.keys():
             if socket.closed is False:
