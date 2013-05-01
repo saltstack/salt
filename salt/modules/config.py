@@ -124,7 +124,7 @@ def get(key, default=''):
     '''
     .. versionadded: 0.14
 
-    Attempt to retrive the named value from opts, pillar, grains of the master
+    Attempt to retrieve the named value from opts, pillar, grains of the master
     config, if the named value is not available return the passed default.
     The default return is an empty string.
 
@@ -133,7 +133,7 @@ def get(key, default=''):
 
     {'pkg': {'apache': 'httpd'}}
 
-    To retrive the value associated with the apache key in the pkg dict this
+    To retrieve the value associated with the apache key in the pkg dict this
     key can be passed:
 
     pkg:apache
