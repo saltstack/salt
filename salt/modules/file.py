@@ -630,12 +630,6 @@ def _psed(text, before, after, limit, flags):
     '''
     Does the actual work for file.psed, so that single lines can be passed in
     '''
-    cmd = r"sed '{limit}s/{before}/{after}/{flags}'".format(
-            limit='/{0}/ '.format(limit) if limit else '',
-            before=before,
-            after=after,
-            flags=flags)
-
     btext = ''
     atext = text
     if limit:
