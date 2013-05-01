@@ -139,7 +139,7 @@ def list_available(*names):
         salt '*' pkg.list_available <package name>
     '''
     if len(names) == 1:
-        return _get_package_info(names[0])
+        return _get_package_info(names[0]).keys()
 
 
 def version(*names, **kwargs):
