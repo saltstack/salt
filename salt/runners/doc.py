@@ -41,7 +41,7 @@ def execution():
 
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for k,v in ret.items():
+        for k, v in ret.items():
             docs.update(v)
 
     i = itertools.chain.from_iterable([i.items() for i in docs.values()])

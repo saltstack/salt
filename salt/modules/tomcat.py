@@ -84,8 +84,8 @@ def _auth(uri):
         password = __grains__['tomcat-manager.passwd']
     except KeyError:
         try:
-            user = salt.utils.option('tomcat-manager.user' ,'' ,__opts__ , __pillar__)
-            password = salt.utils.option('tomcat-manager.passwd' ,'' ,__opts__ , __pillar__)
+            user = salt.utils.option('tomcat-manager.user', '', __opts__, __pillar__)
+            password = salt.utils.option('tomcat-manager.passwd', '', __opts__, __pillar__)
         except Exception:
             return False
     
@@ -144,7 +144,7 @@ def _wget(cmd, opts={}, url='http://localhost:8080/manager', timeout=180):
     urllib2.install_opener(auth)
     
     try:
-        ret['msg'] = urllib2.urlopen(url,timeout=timeout).read().splitlines()
+        ret['msg'] = urllib2.urlopen(url, timeout=timeout).read().splitlines()
         if not ret['msg'][0].startswith('OK'):
             ret['res'] = False
     except Exception:
@@ -164,7 +164,7 @@ def _simple_cmd(cmd, app, url='http://localhost:8080/manager', timeout=180):
             'path': app,
             'version': ls(url)[app]['version']
         }
-        return '\n'.join(_wget(cmd,opts,url, timeout=timeout)['msg'])
+        return '\n'.join(_wget(cmd, opts, url, timeout=timeout)['msg'])
     except Exception:
         return 'FAIL - No context exists for path {0}'.format(app)
 
@@ -184,7 +184,7 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.leaks
     '''
     
-    return '\n'.join(_wget('findleaks',{'statusLine': 'true'},url, timeout=timeout)['msg'])
+    return '\n'.join(_wget('findleaks', {'statusLine': 'true'}, url, timeout=timeout)['msg'])
 
 
 def status(url='http://localhost:8080/manager', timeout=180):
@@ -202,7 +202,7 @@ def status(url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.status http://localhost:8080/manager
     '''
     
-    return _wget('list',{},url, timeout=timeout)['res']
+    return _wget('list', {}, url, timeout=timeout)['res']
 
 
 def ls(url='http://localhost:8080/manager', timeout=180):
@@ -221,7 +221,7 @@ def ls(url='http://localhost:8080/manager', timeout=180):
     '''
     
     ret = {}
-    data = _wget('list','',url, timeout=timeout)
+    data = _wget('list', '', url, timeout=timeout)
     if data['res'] == False:
         return {}
     data['msg'].pop(0)
@@ -360,7 +360,7 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
         salt '*' tomcat.serverinfo http://localhost:8080/manager
     '''
     
-    data = _wget('serverinfo',{},url, timeout=timeout)
+    data = _wget('serverinfo', {}, url, timeout=timeout)
     if data['res'] == False:
         return {'error': data['msg'][0]}
     

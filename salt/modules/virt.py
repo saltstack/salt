@@ -106,7 +106,7 @@ def _get_target(target, ssh):
     proto = 'qemu'
     if ssh:
         proto += '+ssh'
-    return ' %s://%s/%s' %(proto, target, 'system')
+    return ' %s://%s/%s' % (proto, target, 'system')
 
 
 def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
@@ -460,7 +460,7 @@ def get_disks(vm_):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
                     source.hasAttribute('name'): # For rbd network
-                qemu_target = '%s:%s' %(
+                qemu_target = '%s:%s' % (
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
