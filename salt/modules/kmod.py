@@ -41,7 +41,7 @@ def _rm_mods(pre_mods, post_mods):
     return pre - post
 
 
-def _union_module(a,b):
+def _union_module(a, b):
     '''
     Return union of two list where duplicated items are only once
     '''
