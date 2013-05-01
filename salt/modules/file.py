@@ -310,17 +310,7 @@ def get_hash(path, form='md5', chunk_size=4096):
 
         salt '*' file.get_hash /etc/shadow
     '''
-    try:
-        hash_type = getattr(hashlib, form)
-    except AttributeError:
-        raise ValueError('Invalid hash type: {0}'.format(form))
-    with salt.utils.fopen(path, 'rb') as ifile:
-        hash_obj = hash_type()
-        while True:
-            chunk = ifile.read(chunk_size)
-            if not chunk:
-                return hash_obj.hexdigest()
-            hash_obj.update(chunk)
+    return salt.utils.get_hash(path, form, chunk_size)
 
 
 def check_hash(path, hash):
