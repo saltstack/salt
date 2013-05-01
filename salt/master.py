@@ -157,7 +157,7 @@ class Master(SMaster):
 
     def _clear_old_jobs(self):
         '''
-        The clean old jobs function is the geenral passive maintinance process
+        The clean old jobs function is the general passive maintenance process
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''

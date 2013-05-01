@@ -78,7 +78,7 @@ def returner(ret):
                 val = float(val)
                 metrics.append((metric_base + '.' + _formatHostname(name) + '.' + key, val, timestamp))
             except TypeError:
-                log.info('Error in carbon returner, when trying to convert metric:{0},with val:{1}'.format(key, val))
+                log.info('Error in carbon returner, when trying to convert metric:{0}, with val:{1}'.format(key, val))
 
     def _send_textmetrics(metrics):
         ''' Use text protorocol to send metric over socket '''

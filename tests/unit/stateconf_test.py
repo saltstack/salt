@@ -164,7 +164,7 @@ include:
 extend:
   .utils::some_state:
     cmd.run:
-      - name: echo overriden
+      - name: echo overridden
     ''', sls='test.work')
         self.assertTrue('test.utils::some_state' in result['extend'])
 

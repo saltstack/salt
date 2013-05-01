@@ -236,7 +236,7 @@ Edit the minion config file:
     config file. Without the ``-c`` option, Salt finds its config files in
     `/etc/salt`.
 
-Start the master and minion, accept the minon's key, and verify your local Salt
+Start the master and minion, accept the minion's key, and verify your local Salt
 installation is working::
 
     cd /path/to/your/virtualenv

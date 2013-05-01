@@ -472,7 +472,7 @@ def install(name=None,
             # Allow "version" to work for single package target
             pkg_params = {name: version}
         else:
-            log.warning('"version" parameter will be ignored for muliple '
+            log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
 
     error = _set_repo_options(yumbase, **kwargs)

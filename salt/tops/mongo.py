@@ -77,7 +77,7 @@ def top(**kwargs):
         * `collection`: The mongodb collection to read data from. Defaults to
           ``'tops'``.
         * `id_field`: The field in the collection that represents an individual
-          minon id. Defaults to ``'_id'``.
+          minion id. Defaults to ``'_id'``.
         * `re_pattern`: If your naming convention in the collection is shorter
           than the minion id, you can use this to trim the name.
           `re_pattern` will be used to match the name, and `re_replace` will
