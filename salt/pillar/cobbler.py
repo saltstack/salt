@@ -41,7 +41,7 @@ __opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(pillar, key=None, only=[]):
+def ext_pillar(pillar, key=None, only=()):
     '''
     Read pillar data from Cobbler via its API.
     '''
@@ -63,11 +63,7 @@ def ext_pillar(pillar, key=None, only=[]):
         return {}
 
     if only:
-        _result = {}
-        for i in only:
-            if i in result:
-                _result[i] = result[i]
-        result = _result
+        result = dict((k, result[k]) for k in only if k in result)
 
     if key:
         result = {key: result}
