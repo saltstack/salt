@@ -16,6 +16,9 @@ Module to provide MongoDB functionality to Salt
 # Import python libs
 import logging
 
+# Import salt libs
+from salt._compat import string_types
+
 # Import third party libs
 try:
     import pymongo
@@ -76,17 +79,16 @@ def db_list(user=None, password=None, host=None, port=None):
         return err.message
 
 
-def db_exists(name, user=None, password=None, host=None, port=None,
-              database='admin'):
+def db_exists(name, user=None, password=None, host=None, port=None):
     '''
     Checks if a database exists in Mongodb
     '''
     dbs = db_list(user, password, host, port)
-    for mdb in dbs:
-        if name == mdb:
-            return True
 
-    return False
+    if isinstance(dbs, string_types):
+        return False
+
+    return name in dbs
 
 
 def db_remove(name, user=None, password=None, host=None, port=None):
