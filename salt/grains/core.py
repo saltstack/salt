@@ -931,3 +931,13 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+
+def get_master():
+    '''
+    Provides the minion with the name of it's master.
+    This is useful in states to target other services running on the master.
+    '''
+    # Provides:
+    #   master
+    return {'master': __opts__.get('master', '')}
+
