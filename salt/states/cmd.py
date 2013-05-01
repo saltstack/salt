@@ -23,8 +23,8 @@ syslog if there is no disk space:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test
 
-Note that when executing a command or script, the state (i.e., changed or not) of
-the command is unknown to Salt's state system. Therefore, by default, the
+Note that when executing a command or script, the state (i.e., changed or not)
+of the command is unknown to Salt's state system. Therefore, by default, the
 ``cmd`` state assumes that any command execution results in a changed state.
 
 This means that if a ``cmd`` state is watched by another state then the
@@ -229,15 +229,15 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
 
 
 def wait(name,
-        onlyif=None,
-        unless=None,
-        cwd=None,
-        user=None,
-        group=None,
-        shell=None,
-        stateful=False,
-        umask=None,
-        **kwargs):
+         onlyif=None,
+         unless=None,
+         cwd=None,
+         user=None,
+         group=None,
+         shell=None,
+         stateful=False,
+         umask=None,
+         **kwargs):
     '''
     Run the given command only if the watch statement calls it
 
@@ -280,18 +280,18 @@ def wait(name,
 
 
 def wait_script(name,
-        source=None,
-        template=None,
-        onlyif=None,
-        unless=None,
-        cwd=None,
-        user=None,
-        group=None,
-        shell=None,
-        env=None,
-        stateful=False,
-        umask=None,
-        **kwargs):
+                source=None,
+                template=None,
+                onlyif=None,
+                unless=None,
+                cwd=None,
+                user=None,
+                group=None,
+                shell=None,
+                env=None,
+                stateful=False,
+                umask=None,
+                **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
     statement calls it.
@@ -493,18 +493,18 @@ def run(name,
 
 
 def script(name,
-        source=None,
-        template=None,
-        onlyif=None,
-        unless=None,
-        cwd=None,
-        user=None,
-        group=None,
-        shell=None,
-        env=None,
-        stateful=False,
-        umask=None,
-        **kwargs):
+           source=None,
+           template=None,
+           onlyif=None,
+           unless=None,
+           cwd=None,
+           user=None,
+           group=None,
+           shell=None,
+           env=None,
+           stateful=False,
+           umask=None,
+           **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
     source or the source value can be defined.
@@ -630,21 +630,22 @@ def call(name, func, args=(), kws=None,
          **kwargs):
     '''
     Invoke a pre-defined Python function with arguments specified in the state
-    declaration. This function is mainly used by the :mod:`salt.renderers.pydsl`
-    renderer.
+    declaration. This function is mainly used by the
+    :mod:`salt.renderers.pydsl` renderer.
 
-    The interpretation of `onlyif` and `unless` arguments are identical to those
-    of :func:`salt.states.cmd.run`, and all other arguments(`cwd`, `runas`, ...)
-    allowed by `cmd.run` are allowed here, except that their effects apply only
-    to the commands specified in `onlyif` and `unless` rather than to the function
-    to be invoked.
+    The interpretation of `onlyif` and `unless` arguments are identical to
+    those of :func:`salt.states.cmd.run`, and all other arguments(`cwd`,
+    `runas`, ...) allowed by `cmd.run` are allowed here, except that their
+    effects apply only to the commands specified in `onlyif` and `unless`
+    rather than to the function to be invoked.
 
     In addition the `stateful` argument has no effects here.
 
     The return value of the invoked function will be interpreted as follows.
 
-    If it's a dictionary then it will be passed through to the state system, which
-    expects it to have the usual structure returned by any salt state function.
+    If it's a dictionary then it will be passed through to the state system,
+    which expects it to have the usual structure returned by any salt state
+    function.
 
     Otherwise, the return value(denoted as ``result`` in the code below) is
     expected to be a JSON serializable object, and this dictionary is returned:
@@ -691,7 +692,11 @@ def call(name, func, args=(), kws=None,
             ret['comment'] = result
         return ret
 
-def wait_call(name, func, args=(), kws=None,
+
+def wait_call(name,
+              func,
+              args=(),
+              kws=None,
               onlyif=None,
               unless=None,
               stateful=False,
@@ -700,6 +705,7 @@ def wait_call(name, func, args=(), kws=None,
             'changes': {},
             'result': True,
             'comment': ''}
+
 
 def mod_watch(name, **kwargs):
     '''
