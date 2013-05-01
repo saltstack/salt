@@ -80,7 +80,7 @@ class Batch(object):
         active = []
         ret = {}
         iters = []
-        # Itterate while we still have things to execute
+        # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
             if len(to_run) <= bnum and not active:
@@ -88,7 +88,7 @@ class Batch(object):
                 while to_run:
                     next_.append(to_run.pop())
             else:
-                for ind in range(bnum - len(active)):
+                for i in range(bnum - len(active)):
                     if to_run:
                         next_.append(to_run.pop())
             active += next_
