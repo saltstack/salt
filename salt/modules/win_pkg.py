@@ -374,9 +374,8 @@ def refresh_db():
         cached_repo = __salt__['cp.cache_file'](repocache)
         return True
     # Check if the master's cache file has changed
-    if __salt__['cp.hash_file'](repocache) !=\
-            __salt__['cp.hash_file'](cached_repo):
-                cached_repo = __salt__['cp.cache_file'](repocache)
+    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo):
+        cached_repo = __salt__['cp.cache_file'](repocache)
     return True
 
 
