@@ -10,10 +10,8 @@ data
 
 # Import python libs
 import os
-import time
 import stat
 import os.path
-import hashlib
 import logging
 
 # Import third party libs
