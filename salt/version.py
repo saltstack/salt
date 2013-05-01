@@ -97,8 +97,8 @@ def __get_version(version, version_info):
             )
             return version, version_info
         return parsed_version, parsed_version_info
-    except OSError, err:
-        if err.errno != 2:
+    except OSError as os_err:
+        if os_err.errno != 2:
             # If the errno is not 2(The system cannot find the file
             # specified), raise the exception so it can be catch by the
             # developers
