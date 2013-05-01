@@ -4,7 +4,7 @@ A module to wrap archive calls
 
 # Import salt libs
 from salt.utils import which as _which
-# TODO: Add wrapping to each function to check for existance of the binary
+# TODO: Add wrapping to each function to check for existence of the binary
 # TODO: Check that the passed arguments are correct
 
 

@@ -141,13 +141,13 @@ def zpool_status(name=None):
     return ret
 
 
-def zpool_destory(pool_name):
+def zpool_destroy(pool_name):
     '''
-    Destorys a storage pool
+    Destroys a storage pool
 
     CLI Example::
 
-        salt '*' zfs.zpool_destory myzpool
+        salt '*' zfs.zpool_destroy myzpool
     '''
     ret = {}
     if pool_exists(pool_name):
@@ -182,7 +182,7 @@ def add(pool_name, vdisk):
     ret = {}
     # check for pool
     if not pool_exists(pool_name):
-        ret['Error'] = 'Cant add {0} to {1} pool is not avalable'.format(pool_name, vdisk)
+        ret['Error'] = 'Can\'t add {0} to {1} pool is not available'.format(pool_name, vdisk)
         return ret
 
     # check device is a file
@@ -190,7 +190,7 @@ def add(pool_name, vdisk):
         ret['Error'] = '{0} not on filesystem'.format(vdisk)
         return ret
 
-    # try and add watchout for mismatched replicaion levels
+    # try and add watch out for mismatched replication levels
     cmd = 'zpool add {0} {1}'.format(pool_name, vdisk)
     res = __salt__['cmd.run'](cmd)
     if not 'errors' in res.splitlines():
@@ -231,5 +231,5 @@ def replace(pool_name, old, new):
         if new in line:
             ret['replaced'] = '{0} with {1}'.format(old, new)
             return ret
-    ret['Error'] = 'Does not look like devies where swaped check status'
+    ret['Error'] = 'Does not look like devices where swapped check status'
     return ret

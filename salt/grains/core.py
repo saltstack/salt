@@ -55,7 +55,7 @@ if salt.utils.is_windows():
 
 def _windows_cpudata():
     '''
-    Return some cpu information on Windows minions
+    Return some CPU information on Windows minions
     '''
     # Provides:
     #   num_cpus
@@ -74,7 +74,7 @@ def _windows_cpudata():
 
 def _linux_cpudata():
     '''
-    Return some cpu information for Linux minions
+    Return some CPU information for Linux minions
     '''
     # Provides:
     #   num_cpus
@@ -173,7 +173,7 @@ def _linux_gpu_data():
 
 def _bsd_cpudata(osdata):
     '''
-    Return cpu information for BSD-like systems
+    Return CPU information for BSD-like systems
     '''
     # Provides:
     #   cpuarch
@@ -201,7 +201,7 @@ def _bsd_cpudata(osdata):
             cpu_here = False
             for line in _fp:
                 if line.startswith('CPU: '):
-                    cpu_here = True  # starts cpu descr
+                    cpu_here = True  # starts CPU descr
                     continue
                 if cpu_here:
                     if not line.startswith(' '):
@@ -222,7 +222,7 @@ def _bsd_cpudata(osdata):
 
 def _sunos_cpudata(osdata):
     '''
-    Return the cpu information for Solaris-like systems
+    Return the CPU information for Solaris-like systems
     '''
     # Provides:
     #   cpuarch

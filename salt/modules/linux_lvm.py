@@ -99,7 +99,7 @@ def vgdisplay(vgname=''):
             'Current Logical Volumes': comps[5],
             'Open Logical Volumes': comps[6],
             'Maximum Logical Volume Size': comps[7],
-            'Maximum Phisical Volumes': comps[8],
+            'Maximum Physical Volumes': comps[8],
             'Current Physical Volumes': comps[9],
             'Actual Physical Volumes': comps[10],
             'Volume Group Size (kB)': comps[11],
