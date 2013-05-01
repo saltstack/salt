@@ -73,7 +73,7 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     '''
-    sid, domain, type = win32security.LookupAccountName(None, group)
+    sid, domain, account_type = win32security.LookupAccountName(None, group)
     return win32security.ConvertSidToStringSid(sid)
 
 
@@ -108,7 +108,7 @@ def get_group(path):
         path, win32security.OWNER_SECURITY_INFORMATION
     )
     owner_sid = secdesc.GetSecurityDescriptorOwner()
-    name, domain, type = win32security.LookupAccountSid(None, owner_sid)
+    name, domain, account_type = win32security.LookupAccountSid(None, owner_sid)
     return name
 
 
@@ -121,7 +121,7 @@ def uid_to_user(uid):
         salt '*' file.uid_to_user S-1-5-21-626487655-2533044672-482107328-1010
     '''
     sid = win32security.GetBinarySid(uid)
-    name, domain, type = win32security.LookupAccountSid(None, sid)
+    name, domain, account_type = win32security.LookupAccountSid(None, sid)
     return name
 
 
@@ -133,7 +133,7 @@ def user_to_uid(user):
 
         salt '*' file.user_to_uid myusername
     '''
-    sid, domain, type = win32security.LookupAccountName(None, user)
+    sid, domain, account_type = win32security.LookupAccountName(None, user)
     return win32security.ConvertSidToStringSid(sid)
 
 
@@ -184,7 +184,7 @@ def get_user(path):
         path, win32security.OWNER_SECURITY_INFORMATION
     )
     owner_sid = secdesc.GetSecurityDescriptorOwner()
-    name, domain, type = win32security.LookupAccountSid(None, owner_sid)
+    name, domain, account_type = win32security.LookupAccountSid(None, owner_sid)
     return name
 
 
