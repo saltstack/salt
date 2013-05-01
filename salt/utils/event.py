@@ -345,7 +345,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         Take in the tag from an event and return a list of the reactors to
         process
         '''
-        log.debug('Gathering rections for tag {0}'.format(tag))
+        log.debug('Gathering reactors for tag {0}'.format(tag))
         reactors = []
         if isinstance(self.opts['reactor'], basestring):
             try:
@@ -499,7 +499,7 @@ class StateFire(object):
     def fire_running(self, running):
         '''
         Pass in a state "running" dict, this is the return dict from a state
-        call. The dict will be processesd and fire events.
+        call. The dict will be processed and fire events.
 
         By default yellows and reds fire events on the master and minion, but
         this can be configured.

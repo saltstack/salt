@@ -160,7 +160,7 @@ Install on Windows XP 32bit
         cd ./salt
         python setup.py install
 
-18.  Edit c:\\etc\\salt\\minon
+18.  Edit c:\\etc\\salt\\minion
 
 .. code-block:: bash
 

@@ -68,7 +68,7 @@ def get(bucket=None, path=None, return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
-    return_bin to True in order to retreive an object wholesale. Otherwise,
+    return_bin to True in order to retrieve an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
 
     CLI Example to list buckets::

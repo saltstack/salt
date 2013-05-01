@@ -398,7 +398,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     Deploy a war file
     
     war
-        absolute path to war file (should be accessable by the user running
+        absolute path to war file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_file function
     context
         the context path to deploy

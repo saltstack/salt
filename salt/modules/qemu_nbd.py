@@ -94,7 +94,7 @@ def clear(mnt):
     '''
     Pass in the mnt dict returned from nbd_mount to unmount and disconnect
     the image from nbd. If all of the partitions are unmounted return an
-    empy dict, otherwise return a dict containing the still mounted
+    empty dict, otherwise return a dict containing the still mounted
     partitions
 
     CLI Example::

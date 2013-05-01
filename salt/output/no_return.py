@@ -12,7 +12,7 @@ class NestDisplay(object):
 
     def display(self, ret, indent, prefix, out):
         '''
-        Recursively interate down through data structures to determine output
+        Recursively iterate down through data structures to determine output
         '''
         if isinstance(ret, str):
             lines = ret.split('\n')

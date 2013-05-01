@@ -23,7 +23,7 @@ def __virtual__():
 def doc(module=''):
     '''
     Return the docstrings for all modules. Optionally, specify a module or a
-    function to narrow te selection.
+    function to narrow the selection.
 
     The strings are aggregated into a single document on the master for easy
     reading.

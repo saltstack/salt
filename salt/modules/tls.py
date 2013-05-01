@@ -515,7 +515,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     CN
         common name matching the certificate signing request
     days
-        number of days certficate is valid, default is 365 (1 year)
+        number of days certificate is valid, default is 365 (1 year)
 
     Writes out a Certificate (CERT) If the file already
     exists, the function just returns assuming the CERT already exists.

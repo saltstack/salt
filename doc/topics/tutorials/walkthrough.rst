@@ -111,7 +111,7 @@ Setting up a Salt Minion
     assumes that the minion will be connected to the master, for information on
     how to run a master-less minion please see the masterless quickstart guide:
 
-        :doc:`Masterless Minon Quickstart </topics/tutorials/quickstart>`
+        :doc:`Masterless Minion Quickstart </topics/tutorials/quickstart>`
 
 The Salt Minion only needs to be aware of one piece of information to run, the
 network location of the master. By default the minion will look for the DNS

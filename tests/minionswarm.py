@@ -41,7 +41,7 @@ def parse():
             dest='name',
             default='ms',
             help=('Give the minions an alternative id prefix, this is used '
-                  'when minons from many systems are being aggregated onto '
+                  'when minions from many systems are being aggregated onto '
                   'a single master'))
     parser.add_option('-k',
             '--keep-modules',

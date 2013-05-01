@@ -84,7 +84,7 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_latest_existing_repo(self):
         '''
-        svn.latest againt existing repository
+        svn.latest against existing repository
         '''
         current_rev = '1442865'
         cwd, basename = os.path.split(self.target)
@@ -110,7 +110,7 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_latest_existing_repo_no_rev_change(self):
         '''
-        svn.latest againt existing repository
+        svn.latest against existing repository
         '''
         current_rev = self.new_rev
         cwd, basename = os.path.split(self.target)

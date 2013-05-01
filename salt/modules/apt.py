@@ -406,7 +406,7 @@ def purge(pkg, **kwargs):
         except Exception as e:
             log.exception(e)
 
-    # Remove inital package
+    # Remove initial package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)
     out = __salt__['cmd.run_all'](purge_cmd)
     if out['retcode'] != 0:
