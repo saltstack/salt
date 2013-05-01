@@ -1050,10 +1050,10 @@ def safe_walk(dir_):
         if stat.S_ISLNK(mode):
             real = os.path.realpath(full)
             try:
-                mode = os.stat(real).st_mode
-                if stat.S_ISDIR(mode):
-                    if full.startswith(real):
-                        continue
+                smode = os.stat(real).st_mode
+                if stat.S_ISDIR(smode):
+                    if not full.startswith(real):
+                        mode = smode
             except os.error:
                 pass
 
