@@ -7,7 +7,7 @@ def write_launchd_plist(program):
     '''
     Write a launchd plist for managing salt-master or salt-minion
     '''
-    plist_sample_text="""
+    plist_sample_text = """
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
