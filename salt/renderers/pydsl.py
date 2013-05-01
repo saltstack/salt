@@ -50,7 +50,7 @@ a few objects are defined for you, including the usual(with ``__`` added)
 
 A state :term:`ID declaration` is created with a ``state(id)`` function call.
 Subsequent ``state(id)`` call with the same id returns the same object. This
-singleton access pattern applys to all declaration objects created with the DSL.
+singleton access pattern applies to all declaration objects created with the DSL.
 
 .. code-block:: python
     
