@@ -8,6 +8,7 @@ import os
 import re
 import imp
 import sys
+import stat
 import time
 import shlex
 import shutil
@@ -1030,3 +1031,37 @@ def parse_docstring(docstring):
         deps = dep_list[0].replace(txt, '').strip().split(', ')
         ret['deps'] = deps
         return ret
+
+
+def safe_walk(dir_):
+    '''
+    A clone of the python os.walk function with some checks for recursive
+    symlinks. This functions the same way as the os.walk function but with
+    fewer options.
+    '''
+    dirs = []
+    files = []
+    for fn_ in os.listdir(dir_):
+        full = os.path.join(dir_, fn_)
+        try:
+            mode = os.lstat(full).st_mode
+        except os.error:
+            continue
+        if stat.S_ISLNK(mode):
+            real = os.path.realpath(full)
+            try:
+                mode = os.stat(real).st_mode
+                if stat.S_ISDIR(mode):
+                    if full.startswith(real):
+                        continue
+            except os.error:
+                pass
+
+        if stat.S_ISDIR(mode):
+            dirs.append(full)
+        elif stat.S_ISREG(mode):
+            files.append(full)
+    yield dir_, dirs, files
+    for sdir in dirs:
+        for ret in walk(sdir):
+            yield ret
