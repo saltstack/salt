@@ -342,9 +342,9 @@ def top(topfn, test=None, **kwargs):
         err += __pillar__['_errors']
         return err
     if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
+        __opts__['test'] = True
     else:
-        opts['test'] = None
+        __opts__['test'] = None
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
