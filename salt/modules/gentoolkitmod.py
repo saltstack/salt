@@ -48,7 +48,7 @@ def _pretty_size(size):
     while len(units) and size >= 1000:
         size = size / 1024.0
         units.pop()
-    return '{0}{1}'.format(round(size,1), units[-1])
+    return '{0}{1}'.format(round(size, 1), units[-1])
 
 def _parse_exclude(exclude_file):
     '''
@@ -115,7 +115,7 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
         if size_limit != 0:
             size_limit = cli.parseSize(size_limit)
 
-        clean_size=0
+        clean_size = 0
         engine = search.DistfilesSearch(lambda x: None)
         clean_me, saved, deprecated = engine.findDistfiles(
             destructive=destructive, package_names=package_names,
