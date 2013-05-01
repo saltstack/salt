@@ -298,7 +298,7 @@ def running(name, enable=None, sig=None, **kwargs):
 
 def dead(name, enable=None, sig=None, **kwargs):
     '''
-    Ensure that the named service is dead
+    Ensure that the named service is dead by stopping the service if it is running
 
     name
         The name of the init or rc script used to manage the service
