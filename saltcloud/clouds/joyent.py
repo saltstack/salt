@@ -38,8 +38,10 @@ Using the new format, set up the cloud configuration at
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
+import os
 import urllib2
 import yaml
+import json
 import logging
 
 # Import generic libcloud functions
@@ -382,18 +384,112 @@ def list_keys(kwargs=None, call=None):
         kwargs = {}
 
     ret = {}
-    data = query(action='/my/keys')
+    data = query(action='keys')
     for pair in data:
         ret[pair['name']] = pair['key']
     return {'keys': ret}
 
 
-def query(action=None, command=None, args=None, method='GET', data=None):
+def show_key(kwargs=None, call=None):
+    '''
+    List the keys available
+    '''
+    if call != 'function':
+        log.error(
+            'The list_keys function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    data = query(action='keys/{0}'.format(kwargs['keyname']))
+    return {'keys': {data['name']: data['key']}}
+
+
+def import_key(kwargs=None, call=None):
+    '''
+    List the keys available
+
+    CLI Example:
+
+        salt-cloud -f import_key joyent keyname=mykey keyfile=/tmp/mykey.pub
+    '''
+    if call != 'function':
+        log.error(
+            'The import_key function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    if 'keyfile' not in kwargs:
+        log.error('The location of the SSH keyfile is required.')
+        return False
+
+    if not os.path.isfile(kwargs['keyfile']):
+        log.error('The specified keyfile ({0}) does not exist.'.format(
+            kwargs['keyfile']
+        ))
+        return False
+
+    with salt.utils.fopen(kwargs['keyfile'], 'r') as fp_:
+        kwargs['key'] = fp_.read()
+
+    send_data = {'name': kwargs['keyname'], 'key': kwargs['key']}
+    kwargs['data'] = json.dumps(send_data)
+
+    data = query(action='keys', method='POST', data=kwargs['data'],
+                 headers={'Content-Type': 'application/json'})
+    return {'keys': {data['name']: data['key']}}
+
+
+def delete_key(kwargs=None, call=None):
+    '''
+    List the keys available
+
+    CLI Example:
+
+        salt-cloud -f delete_key joyent keyname=mykey
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_keys function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    data = query(action='keys/{0}'.format(kwargs['keyname']), method='DELETE')
+    return data
+
+
+def query(action=None, command=None, args=None, method='GET', data=None,
+          headers=None):
     '''
     Make a web call to Joyent
     '''
     location = get_location()
-    path = 'http://{0}.api.joyentcloud.com'.format(location)
+    path = 'https://{0}.api.joyentcloud.com/{1}/'.format(
+        location,
+        config.get_config_value(
+            'user', get_configured_provider(), __opts__, search_global=False
+        ),
+    )
     auth_handler = urllib2.HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm='SmartDataCenter',
@@ -423,6 +519,11 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         'Accept': 'application/json',
         'X-Api-Version': '~6.5',
     }
+    if type(headers) is dict:
+        for header in headers.keys():
+            kwargs['headers'][header] = headers[header]
+    import pprint
+    pprint.pprint(kwargs['headers'])
 
     if args:
         path += '?%s'
