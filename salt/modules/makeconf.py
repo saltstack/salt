@@ -240,7 +240,7 @@ def trim_cflags(value):
 
         salt '*' makeconf.trim_cflags '\-pipe'
     '''
-    return trim_cflags('CFLAGS', value)
+    return trim_var('CFLAGS', value)
 
 def cflags_contains(value):
     '''
@@ -310,7 +310,7 @@ def trim_cxxflags(value):
 
         salt '*' makeconf.trim_cxxflags '\-pipe'
     '''
-    return trim_cxxflags('CXXFLAGS', value)
+    return trim_var('CXXFLAGS', value)
 
 def cxxflags_contains(value):
     '''
@@ -420,7 +420,7 @@ def trim_makeopts(value):
 
         salt '*' makeconf.trim_makeopts '\-j3'
     '''
-    return trim_makeopts('MAKEOPTS', value)
+    return trim_var('MAKEOPTS', value)
 
 def makeopts_contains(value):
     '''
@@ -490,7 +490,7 @@ def trim_emerge_default_opts(value):
 
         salt '*' makeconf.trim_emerge_default_opts '\-\-jobs'
     '''
-    return trim_emerge_default_opts('EMERGE_DEFAULT_OPTS', value)
+    return trim_var('EMERGE_DEFAULT_OPTS', value)
 
 def emerge_default_opts_contains(value):
     '''
@@ -560,7 +560,7 @@ def trim_gentoo_mirrors(value):
 
         salt '*' makeconf.trim_gentoo_mirrors 'http://distfiles.gentoo.org'
     '''
-    return trim_gentoo_mirrors('GENTOO_MIRRORS', value)
+    return trim_var('GENTOO_MIRRORS', value)
 
 def gentoo_mirrors_contains(value):
     '''
