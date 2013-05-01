@@ -14,7 +14,7 @@ def get(key, default=''):
     '''
     .. versionadded:: 0.14
 
-    Attempt to retrive the named value from pillar, if the named value is not
+    Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
 
     The value can also represent a value in a nested dict using a ":" delimiter
@@ -22,7 +22,7 @@ def get(key, default=''):
 
     {'pkg': {'apache': 'httpd'}}
 
-    To retrive the value associated with the apache key in the pkg dict this
+    To retrieve the value associated with the apache key in the pkg dict this
     key can be passed:
 
     pkg:apache
