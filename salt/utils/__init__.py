@@ -1063,7 +1063,7 @@ def safe_walk(dir_):
             files.append(full)
     yield dir_, dirs, files
     for sdir in dirs:
-        for ret in walk(sdir):
+        for ret in safe_walk(sdir):
             yield ret
 
 
