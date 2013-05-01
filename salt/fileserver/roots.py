@@ -82,12 +82,10 @@ def file_hash(load, fnd):
     if 'path' not in load or 'env' not in load:
         return ''
     path = fnd['path']
-    if not path:
-        return {}
     ret = {}
-    with salt.utils.fopen(path, 'rb') as fp_:
-        ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
-                fp_.read()).hexdigest()
+    if not path:
+        return ret
+    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
     ret['hash_type'] = __opts__['hash_type']
     return ret
 
