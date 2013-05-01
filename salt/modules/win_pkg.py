@@ -130,6 +130,36 @@ def list_upgrades(refresh=True):
     return {}
 
 
+def list_available(*names):
+    '''
+    Return a list of available versions of the specified package.
+
+    CLI Example::
+
+        salt '*' pkg.list_available <package name>
+        salt '*' pkg.list_available <package name01> <package name02>
+    '''
+    if not names:
+        return ''
+    if len(names) == 1:
+        versions = []
+        pkginfo = _get_package_info(names[0])
+        if not pkginfo:
+            return ''
+        for version in pkginfo.keys():
+            versions.append(version)
+    if len(names) > 1:
+        versions = {}
+        for name in names:
+            pkginfo = _get_package_info(name)
+            versions[name] = []
+            if not pkginfo:
+                continue
+            for version in pkginfo.keys():
+                versions[name].append(version)
+    return versions
+
+
 def version(*names, **kwargs):
     '''
     Returns a version if the package is installed, else returns an empty string
