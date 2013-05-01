@@ -59,7 +59,7 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
         if user and password:
             mdb.authenticate(user, password)
     except pymongo.errors.PyMongoError:
-        log.error('Error connecting to database {0}'.format(database.message))
+        log.error('Error connecting to database {0}'.format(database))
         return False
 
     return conn
