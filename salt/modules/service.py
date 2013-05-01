@@ -123,7 +123,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_al
+        salt '*' service.get_all
     '''
     if not os.path.isdir(GRAINMAP[__grains__['os']]):
         return []
