@@ -598,7 +598,7 @@ class MWorker(multiprocessing.Process):
 
     def _handle_aes(self, load):
         '''
-        Handle a command sent via an aes key
+        Handle a command sent via an AES key
         '''
         try:
             data = self.crypticle.loads(load)
@@ -612,7 +612,7 @@ class MWorker(multiprocessing.Process):
 
     def _update_aes(self):
         '''
-        Check to see if a fresh aes key is available and update the components
+        Check to see if a fresh AES key is available and update the components
         of the worker
         '''
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
@@ -1244,7 +1244,7 @@ class AESFuncs(object):
             if not load.get('ver') == '2' and self.opts['pillar_version'] == 1:
                 # Authorized to return old pillar proto
                 return self.crypticle.dumps(ret)
-            # encrypt with a specific aes key
+            # encrypt with a specific AES key
             pubfn = os.path.join(self.opts['pki_dir'],
                     'minions',
                     load['id'])
@@ -1427,7 +1427,7 @@ class ClearFuncs(object):
 
     def _auth(self, load):
         '''
-        Authenticate the client, use the sent public key to encrypt the aes key
+        Authenticate the client, use the sent public key to encrypt the AES key
         which was generated at start up.
 
         This method fires an event over the master event manager. The event is
@@ -1437,8 +1437,8 @@ class ClearFuncs(object):
         # 0. Check for max open files
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
-        # 3. make an rsa key with the pub key
-        # 4. encrypt the aes key as an encrypted salt.payload
+        # 3. make an RSA key with the pub key
+        # 4. encrypt the AES key as an encrypted salt.payload
         # 5. package the return and return it
 
         salt.utils.verify.check_max_open_files(self.opts)
@@ -1635,7 +1635,7 @@ class ClearFuncs(object):
                 token = self.loadauth.get_tok(clear_load['token'])
             except Exception as exc:
                 log.error(
-                    'Exception occured when generating auth token: {0}'.format(
+                    'Exception occurred when generating auth token: {0}'.format(
                         exc
                     )
                 )
@@ -1728,7 +1728,7 @@ class ClearFuncs(object):
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
             log.error(
-                'Exception occured while authenticating: {0}'.format(exc)
+                'Exception occurred while authenticating: {0}'.format(exc)
             )
             return ''
 
@@ -1763,7 +1763,7 @@ class ClearFuncs(object):
                 )
             )
             return ''
-        # to make sure we dont' step on anyone else's toes
+        # to make sure we don't step on anyone else's toes
         del(good)
 
         # Check for external auth calls
@@ -1773,7 +1773,7 @@ class ClearFuncs(object):
                 token = self.loadauth.get_tok(extra['token'])
             except Exception as exc:
                 log.error(
-                    'Exception occured when generating auth token: {0}'.format(
+                    'Exception occurred when generating auth token: {0}'.format(
                         exc
                     )
                 )
@@ -1820,7 +1820,7 @@ class ClearFuncs(object):
                     return ''
             except Exception as exc:
                 log.error(
-                    'Exception occured while authenticating: {0}'.format(exc)
+                    'Exception occurred while authenticating: {0}'.format(exc)
                 )
                 return ''
             good = self.ckminions.auth_check(

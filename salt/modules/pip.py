@@ -169,7 +169,7 @@ def install(pkgs=None,
     # Switching from using `pip_bin` and `env` to just `bin_env`
     # cause using an env and a pip bin that's not in the env could
     # be problematic.
-    # Still using the `env` variable, for backwards compatiblity sake
+    # Still using the `env` variable, for backwards compatibility's sake
     # but going fwd you should specify either a pip bin or an env with
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:

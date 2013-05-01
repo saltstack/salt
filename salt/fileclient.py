@@ -561,7 +561,7 @@ class RemoteClient(Client):
         '''
         Get a single file from the salt-master
         path must be a salt server location, aka, salt://path/to/file, if
-        dest is ommited, then the downloaded file will be placed in the minion
+        dest is omitted, then the downloaded file will be placed in the minion
         cache
         '''
         log.info('Fetching file \'{0}\''.format(path))

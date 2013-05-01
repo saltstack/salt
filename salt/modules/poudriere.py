@@ -100,7 +100,7 @@ def make_pkgng_aware(jname):
 
 def parse_config(config_file=None):
     '''
-    Returns a dict of poudriere main configuration defintions
+    Returns a dict of poudriere main configuration definitions
 
     CLI Example::
 

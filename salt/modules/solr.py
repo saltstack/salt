@@ -392,8 +392,8 @@ def _find_value(ret_dict, key, path=None):
     Traverses a dictionary of dictionaries/lists to find key
     and return the value stored.
     TODO:// this method doesn't really work very well, and it's not really
-            very useful in it's current state. The purpose for this method is
-            to simplify parsing the json output so you can just pass the key
+            very useful in its current state. The purpose for this method is
+            to simplify parsing the JSON output so you can just pass the key
             you want to find and have it return the value.
     ret : dict<str,obj>
         The dictionary to search through. Typically this will be a dict
