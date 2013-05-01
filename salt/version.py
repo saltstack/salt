@@ -47,11 +47,13 @@ def __get_version(version, version_info):
 
         process = subprocess.Popen(['git', 'describe', '--tags'], **kwargs)
         out, err = process.communicate()
+        out = out.strip()
+        err = err.strip()
 
-        if not out.strip() or err.strip():
+        if not out or err:
             return version, version_info
 
-        match = re.search(GIT_DESCRIBE_REGEX, out.strip())
+        match = re.search(GIT_DESCRIBE_REGEX, out)
         if not match:
             return version, version_info
 
