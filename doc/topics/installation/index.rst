@@ -53,6 +53,7 @@ These guides go into detail how to install salt on a given platform.
     solaris
     ubuntu
     windows
+    suse
 
 
 Dependencies
