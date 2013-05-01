@@ -141,6 +141,8 @@ def list_available(*names):
     if len(names) == 1:
         versions = list()
         pkginfo = _get_package_info(names[0])
+        if not pkginfo:
+            return ''
         for version in pkginfo.keys():
             versions.append(version)
         return versions
