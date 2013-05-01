@@ -126,6 +126,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         else:
             # Determine the proper output method and run it
             salt.output.display_output(ret, out, self.config)
+        if not ret:
+            sys.exit(2)
 
     def _format_ret(self, full_ret):
         '''
