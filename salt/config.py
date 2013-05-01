@@ -141,6 +141,7 @@ DEFAULT_MASTER_OPTS = {
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
+    'peer': {},
     'syndic_master': '',
     'runner_dirs': [],
     'outputter_dirs': [],
