@@ -390,7 +390,6 @@ def info(name):
 
         salt '*' user.info root
     '''
-    ret = {}
     try:
         data = pwd.getpwnam(name)
     except KeyError:
