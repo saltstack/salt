@@ -37,7 +37,7 @@ def ext_pillar(pillar, conf):
         data = yaml.safe_load(__salt__['cmd.run'](cmd))
     except Exception:
         log.critical(
-                'Hiera yaml data failed to parse from conf {0}'.format(conf)
+                'Hiera YAML data failed to parse from conf {0}'.format(conf)
                 )
         return {}
     return data

@@ -3,7 +3,7 @@
     salt.utils.parsers
     ~~~~~~~~~~~~~~~~~~
 
-    This is were all the black magic happens on all of salt's cli tools.
+    This is were all the black magic happens on all of salt's CLI tools.
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
@@ -170,7 +170,7 @@ class OptionParser(optparse.OptionParser):
 
 class MergeConfigMixIn(object):
     '''
-    This mix-in will simply merge the cli passed options, by overriding the
+    This mix-in will simply merge the CLI-passed options, by overriding the
     configuration file loaded settings.
 
     This mix-in should run last.

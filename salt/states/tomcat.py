@@ -48,15 +48,15 @@ def __virtual__():
 # Functions
 def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base', timeout=180):
     '''
-    Enforce that the war will be deployed and started in the context path
-    it will make use of war versions
+    Enforce that the WAR will be deployed and started in the context path
+    it will make use of WAR versions
     
     for more info: http://tomcat.apache.org/tomcat-7.0-doc/config/context.html#Naming
     
     name
         the context path to deploy
     war
-        absolute path to war file (should be accessible by the user running
+        absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_file function
     url : http://localhost:8080/manager
         the url of the server manager webapp

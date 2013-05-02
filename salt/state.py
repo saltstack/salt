@@ -394,7 +394,7 @@ class Compiler(object):
 
     def compile_high_data(self, high):
         '''
-        "Compile" the high data as it is retrieved from the cli or yaml into
+        "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
         '''
         chunks = []
@@ -891,7 +891,7 @@ class State(object):
 
     def compile_high_data(self, high):
         '''
-        "Compile" the high data as it is retrieved from the cli or yaml into
+        "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
         '''
         chunks = []

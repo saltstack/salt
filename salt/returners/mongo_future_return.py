@@ -15,7 +15,7 @@ to the minion config files::
     mongo.port: 27017
 
 This mongo returner is being developed to replace the default mongodb returner
-in the future and should not be considered api stable yet.
+in the future and should not be considered API stable yet.
 
 '''
 
