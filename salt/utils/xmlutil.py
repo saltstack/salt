@@ -25,7 +25,7 @@ def to_dict(xmltree):
             # aggression will not stand, man.
             comps = name.split('}')
             name = comps[1]
-        if not name in xmldict.keys():
+        if name not in xmldict:
             if len(item.getchildren()) > 0:
                 xmldict[name] = to_dict(item)
             else:
