@@ -257,7 +257,7 @@ def list_files(directory):
     '''
     ret = set()
     ret.add(directory)
-    for root, dirs, files in os.walk(directory):
+    for root, dirs, files in safe_walk(directory):
         for name in files:
             ret.add(os.path.join(root, name))
         for name in dirs:
