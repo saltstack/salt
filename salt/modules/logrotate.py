@@ -33,7 +33,6 @@ def _parse_conf(conf_file=default_conf):
     configs came from which includes will be stored in the 'include files' dict
     inside the return dict, for later reference by the user or module.
     '''
-    conf_path = os.path.dirname(conf_file)
     ret = {}
     mode = 'single'
     multi_name = ''

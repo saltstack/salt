@@ -895,12 +895,9 @@ def mod_repo(repo, refresh=False, **kwargs):
     if not apt_support:
         raise ImportError('Error: aptsources.sourceslist module not found')
 
-    is_ppa = False
-
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     if repo.startswith('ppa:'):
-        is_ppa = True
         if __grains__['os'] == 'Ubuntu':
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
