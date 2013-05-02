@@ -148,7 +148,6 @@ def render(input, env='', sls='', argline='', **kws):
             extract_state_confs(data)
 
         except Exception, err:
-            raise
             if isinstance(err, SaltRenderError):
                 raise
             log.exception(
