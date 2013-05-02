@@ -2,50 +2,77 @@
 Debian Installation
 ===================
 
-Currently the latest packages for Debian are published in Martin F. Krafft's
-personal debian.org repository. 
+Currently the latest packages for Debian Stable and Testing (Squeeze
+and Wheezy) are published in our (saltstack.com) debian repository.
+
+Packages for Debian Unstable (Sid) are available in the main debian
+repository.
 
 Configure Apt
 -------------
 
-Setup apt to install Salt from the repository and use Debian's stable (squeeze)
-backports for dependencies:
 
-.. code-block:: bash
+Squeeze (Stable)
+~~~~~~~~~~~~~~~~
 
-    for i in salt-{common,master,minion,syndic,doc} sysvinit-utils; do
-    echo "Package: $i"
-    echo "Pin: release a=squeeze-backports"
-    echo "Pin-Priority: 600"
-    echo
-    done > /etc/apt/preferences.d/local-salt-backport.pref 
+For squeeze, you will need to enable the debian backports repository
+as well as the debian.saltstack.com repository. To do so, add the
+following to ``/etc/apt/sources.list`` or a file in
+``/etc/apt/sources.list.d``::
 
-Add repository
---------------
+  deb http://debian.saltstack.com/debian squeeze-saltstack main
+  deb http://backports.debian.org/debian-backports squeeze-backports main contrib non-free
 
-Add the repository to the list of sources:
 
-.. code-block:: bash
 
-    cat <<_eof > /etc/apt/sources.list.d/local-madduck-backports.list
-        deb http://debian.madduck.net/repo squeeze-backports main
-        deb-src http://debian.madduck.net/repo squeeze-backports main
-    _eof 
+
+The packages have been signed with a key available from http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key
+
+This can be imported with::
+
+  wget -O - http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key|apt-key add -
+
+
+
+Wheezy (Testing)
+~~~~~~~~~~~~~~~~
+
+For wheezy, the following line is needed in either
+``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``::
+
+  deb http://debian.saltstack.com/debian wheezy-saltstack main
+
+
+
+Sid (Unstable)
+~~~~~~~~~~~~~~
+
+You do not need to add anything to your apt sources. Salt is already
+in the main debian archive.
+
+
+
 
 Import the repository key.
+--------------------------
+
+If you are using the debian.saltstack.com repository (ie using squeeze
+or wheezy), you will need to import the key used for signing. This is
+not needed for those using sid.
 
 .. code-block:: bash
 
-    wget -q -O- "http://debian.madduck.net/repo/gpg/archive.key" | apt-key add -
+    wget -q -O- "http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key" | apt-key add -
 
 .. note:: 
  
     You can optionally verify the key integrity with ``sha512sum`` using the 
     public key signature shown here. E.g::
 
-        echo "8b1983fc2d2c55c83e2bbc15d93c3fc090c8e0e92c04ece555a6b6d8ff26de8b4fc2ccbe1bbd16a6357ff86b8b69fd261e90d61350e07a518d50fc9f5f0a1eb3  archive.key" | sha512sum -c 
+        echo "b702969447140d5553e31e9701be13ca11cc0a7ed5fe2b30acb8491567560ee62f834772b5095d735dfcecb2384a5c1a20045f52861c417f50b68dd5ff4660e6  debian-salt-team-joehealy.gpg.key" | sha512sum -c
 
-Update the package database:
+Update the package database
+---------------------------
 
 .. code-block:: bash
 
@@ -74,13 +101,42 @@ may be given at a time:
 .. _Debian-config:
 
 Post-installation tasks
-=======================
+-----------------------
 
 Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 
 
+Notes
+-----
+
+1. These packages will be backported from the packages in debian
+unstable. This means that the packages will be uploaded to unstable
+first and then backported over the next day or so.
+
+2. These packages will be tracking the released versions of salt
+rather than maintaining a stable fixed feature set. If a fixed version
+is what you desire, then either pinning or manual installation may be
+more appropriate for you.
+
+3. The version numbering and backporting process should provide clean
+upgrade paths between debian versions.
+
+4. The packages currently depend on zeromq 2 rather than 3.2. This is
+likely to be a problem for some users. Following the next debian
+stable release (expected shortly), work will commence to depend on and
+build against zeromq 3.2. Depending on other packages, this migration
+may take some time. 
+
+There many situations where these packages (and their predecessors)
+have proven to be stable.
+
+If you have any questions regarding these, please email the mailing
+list or look for joehh on irc.
+
+
+
 Packages from Source
-====================
+--------------------
 
 To build your own salt Debian packages on squeeze use:
 
