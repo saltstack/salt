@@ -1,5 +1,5 @@
 '''
-Mangement of linux logical volumes
+Management of linux logical volumes
 ==================================
 
 A state module to manage lvms
