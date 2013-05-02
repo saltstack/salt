@@ -167,7 +167,7 @@ class LocalClient(object):
             )
 
         # Failed to connect to the master and send the pub
-        if not 'jid' in pub_data:
+        if 'jid' not in pub_data:
             return {}
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, '
@@ -579,7 +579,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
-            if not raw is None:
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -749,7 +749,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
-            if not raw is None:
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -772,7 +772,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 if verbose:
                     if tgt_type in ('glob', 'pcre', 'list'):
-                        if not len(found) >= len(minions):
+                        if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
                                 ret[minion] = {
@@ -820,7 +820,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
-            if not raw is None:
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -861,7 +861,7 @@ class LocalClient(object):
                     continue
                 if verbose:
                     if tgt_type in ('glob', 'pcre', 'list'):
-                        if not len(found) >= len(minions):
+                        if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
                                 yield({
@@ -1045,7 +1045,7 @@ class FunctionWrapper(dict):
         Since the function key is missing, wrap this call to a command to the
         minion of said key if it is available in the self.functions set
         '''
-        if not key in self.functions:
+        if key not in self.functions:
             raise KeyError
         return self.run_key(key)
 
