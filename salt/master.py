@@ -620,7 +620,7 @@ class MWorker(multiprocessing.Process):
             stats = os.stat(dfn)
         except os.error:
             return
-        if oct(stats.st_mode) != '0100400':
+        if stats.st_mode != 0100400:
             # Invalid dfn, return
             return
         if stats.st_mtime > self.k_mtime:
