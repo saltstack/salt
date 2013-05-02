@@ -159,7 +159,7 @@ def verify_files(files, user):
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write('')
         stats = os.stat(fn_)
-        if not uid == stats.st_uid:
+        if uid != stats.st_uid:
             try:
                 os.chown(fn_, uid, -1)
             except OSError:
@@ -253,7 +253,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         # by the user running the master
         if dir_ == pki_dir:
             smode = stat.S_IMODE(mode.st_mode)
-            if not smode == 448 and not smode == 488:
+            if smode != 448 and smode != 488:
                 if os.access(dir_, os.W_OK):
                     os.chmod(dir_, 448)
                 else:

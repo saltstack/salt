@@ -33,7 +33,7 @@ def _place_image(image, vda):
     if not os.path.isdir(vda_dir):
         os.makedirs(vda_dir)
         tdir = copy.deepcopy(vda_dir)
-        while not tdir == '/':
+        while tdir != '/':
             os.chmod(tdir, 493)
             tdir = os.path.dirname(tdir)
     ch_cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' '\
@@ -53,7 +53,7 @@ def _gen_pin_drives(pins):
         if not os.path.isdir(dirname):
             os.makedirs(dirname)
             tdir = copy.deepcopy(dirname)
-            while not tdir == '/':
+            while tdir != '/':
                 os.chmod(tdir, 493)
                 tdir = os.path.dirname(tdir)
 
