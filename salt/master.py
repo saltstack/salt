@@ -119,7 +119,7 @@ class SMaster(object):
                 )
             )
             cumask = os.umask(191)
-            if not user in users:
+            if user not in users:
                 log.error('ACL user {0} is not available'.format(user))
                 continue
             keyfile = os.path.join(
@@ -620,14 +620,14 @@ class MWorker(multiprocessing.Process):
             stats = os.stat(dfn)
         except os.error:
             return
-        if not oct(stats.st_mode) == '0100400':
+        if oct(stats.st_mode) != '0100400':
             # Invalid dfn, return
             return
         if stats.st_mtime > self.k_mtime:
             # new key, refresh crypticle
             with open(dfn) as fp_:
                 aes = fp_.read()
-            if not len(aes) == 76:
+            if len(aes) != 76:
                 return
             self.crypticle = salt.crypt.Crypticle(self.opts, aes)
             self.clear_funcs.crypticle = self.crypticle
@@ -719,7 +719,7 @@ class AESFuncs(object):
         Return the results from an external node classifier if one is
         specified
         '''
-        if not 'id' in load:
+        if 'id' not in load:
             log.error('Received call for external nodes without an id')
             return {}
         ret = {}
@@ -760,7 +760,7 @@ class AESFuncs(object):
             if 'grains' in load['opts']:
                 grains = load['opts']['grains']
         for fun in self.tops:
-            if not fun in self.opts.get('master_tops', {}):
+            if fun not in self.opts.get('master_tops', {}):
                 continue
             try:
                 ret.update(self.tops[fun](opts=opts, grains=grains))
@@ -784,7 +784,7 @@ class AESFuncs(object):
         file_roots = {}
         envs = self._file_envs()
         for env in envs:
-            if not env in file_roots:
+            if env not in file_roots:
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
         return mopts
@@ -913,9 +913,8 @@ class AESFuncs(object):
         '''
         if 'id' not in load:
             return False
-        if not 'events' in load:
-            if 'tag' not in load or 'data' not in load:
-                return False
+        if 'events' not in load and ('tag' not in load or 'data' not in load):
+            return False
         if 'events' in load:
             for event in load['events']:
                 self.event.fire_event(event, event['tag'])
@@ -1233,7 +1232,7 @@ class AESFuncs(object):
         if func == '_return':
             return ret
         if func == '_pillar' and 'id' in load:
-            if not load.get('ver') == '2' and self.opts['pillar_version'] == 1:
+            if load.get('ver') != '2' and self.opts['pillar_version'] == 1:
                 # Authorized to return old pillar proto
                 return self.crypticle.dumps(ret)
             # encrypt with a specific AES key
@@ -1350,7 +1349,7 @@ class ClearFuncs(object):
         fmode = os.stat(filename)
 
         if os.getuid() == 0:
-            if fmode.st_uid == uid or not fmode.st_gid == gid:
+            if fmode.st_uid == uid or fmode.st_gid != gid:
                 return True
             elif self.opts.get('permissive_pki_access', False) \
                     and fmode.st_gid in groups:
@@ -1461,7 +1460,7 @@ class ClearFuncs(object):
             return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
-            if not salt.utils.fopen(pubfn, 'r').read() == load['pub']:
+            if salt.utils.fopen(pubfn, 'r').read() != load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
@@ -1506,7 +1505,7 @@ class ClearFuncs(object):
                 and not self._check_autosign(load['id']):
             # This key is in pending, if it is the same key ret True, else
             # ret False
-            if not salt.utils.fopen(pubfn_pend, 'r').read() == load['pub']:
+            if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
@@ -1534,7 +1533,7 @@ class ClearFuncs(object):
         elif os.path.isfile(pubfn_pend)\
                 and self._check_autosign(load['id']):
             # This key is in pending, if it is the same key auto accept it
-            if not salt.utils.fopen(pubfn_pend, 'r').read() == load['pub']:
+            if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
@@ -1635,10 +1634,10 @@ class ClearFuncs(object):
             if not token:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not token['eauth'] in self.opts['external_auth']:
+            if token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not token['name'] in self.opts['external_auth'][token['eauth']]:
+            if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
 
@@ -1650,12 +1649,12 @@ class ClearFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return ''
 
-        if not 'eauth' in clear_load:
+        if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
             log.warning(msg)
             return ''
-        if not clear_load['eauth'] in self.opts['external_auth']:
+        if clear_load['eauth'] not in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1702,10 +1701,10 @@ class ClearFuncs(object):
         Create and return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
-        if not 'eauth' in clear_load:
+        if 'eauth' not in clear_load:
             log.warning('Authentication failure of type "eauth" occurred.')
             return ''
-        if not clear_load['eauth'] in self.opts['external_auth']:
+        if clear_load['eauth'] not in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             log.warning('Authentication failure of type "eauth" occurred.')
             return ''
@@ -1773,7 +1772,7 @@ class ClearFuncs(object):
             if not token:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not token['eauth'] in self.opts['external_auth']:
+            if token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not ((token['name'] in self.opts['external_auth'][token['eauth']]) | ('*' in self.opts['external_auth'][token['eauth']])):
@@ -1786,13 +1785,13 @@ class ClearFuncs(object):
                     clear_load.get('tgt_type', 'glob'))
             if not good:
                 # Accept find_job so the CLI will function cleanly
-                if not clear_load['fun'] == 'saltutil.find_job':
+                if clear_load['fun'] != 'saltutil.find_job':
                     log.warning(
                         'Authentication failure of type "token" occurred.'
                     )
                     return ''
         elif 'eauth' in extra:
-            if not extra['eauth'] in self.opts['external_auth']:
+            if extra['eauth'] not in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
                 log.warning(
                     'Authentication failure of type "eauth" occurred.'
@@ -1822,7 +1821,7 @@ class ClearFuncs(object):
                     clear_load.get('tgt_type', 'glob'))
             if not good:
                 # Accept find_job so the CLI will function cleanly
-                if not clear_load['fun'] == 'saltutil.find_job':
+                if clear_load['fun'] != 'saltutil.find_job':
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
@@ -1833,25 +1832,25 @@ class ClearFuncs(object):
                 # If someone can sudo, allow them to act as root
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
-                elif not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
-                if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
             elif clear_load['user'] == 'root':
-                if not clear_load.pop('key') == self.key.get(self.opts.get('user', 'root')):
+                if clear_load.pop('key') != self.key.get(self.opts.get('user', 'root')):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
             elif clear_load['user'] == getpass.getuser():
-                if not clear_load.pop('key') == self.key.get(clear_load['user']):
+                if clear_load.pop('key') != self.key.get(clear_load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
@@ -1859,12 +1858,12 @@ class ClearFuncs(object):
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
-                    if not clear_load.pop('key') == self.key[clear_load['user']]:
+                    if clear_load.pop('key') != self.key[clear_load['user']]:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if not clear_load['user'] in self.opts['client_acl']:
+                    if clear_load['user'] not in self.opts['client_acl']:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
@@ -1876,7 +1875,7 @@ class ClearFuncs(object):
                             clear_load.get('tgt_type', 'glob'))
                     if not good:
                         # Accept find_job so the CLI will function cleanly
-                        if not clear_load['fun'] == 'saltutil.find_job':
+                        if clear_load['fun'] != 'saltutil.find_job':
                             log.warning(
                                 'Authentication failure of type "user" '
                                 'occurred.'
@@ -1888,7 +1887,7 @@ class ClearFuncs(object):
                     )
                     return ''
         else:
-            if not clear_load.pop('key') == self.key[getpass.getuser()]:
+            if clear_load.pop('key') != self.key[getpass.getuser()]:
                 log.warning(
                     'Authentication failure of type "other" occurred.'
                 )
