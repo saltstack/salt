@@ -43,10 +43,10 @@ class LoadAuth(object):
         Return the primary name associate with the load, if an empty string
         is returned then the load does not match the function
         '''
-        if not 'eauth' in load:
+        if 'eauth' not in load:
             return ''
         fstr = '{0}.auth'.format(load['eauth'])
-        if not fstr in self.auth:
+        if fstr not in self.auth:
             return ''
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
@@ -61,10 +61,10 @@ class LoadAuth(object):
         Do not call this directly! Use the time_auth method to overcome timing
         attacks
         '''
-        if not 'eauth' in load:
+        if 'eauth' not in load:
             return False
         fstr = '{0}.auth'.format(load['eauth'])
-        if not fstr in self.auth:
+        if fstr not in self.auth:
             return False
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
@@ -131,7 +131,7 @@ class LoadAuth(object):
         with salt.utils.fopen(t_path, 'r') as fp_:
             tdata = self.serial.loads(fp_.read())
         rm_tok = False
-        if not 'expire' in tdata:
+        if 'expire' not in tdata:
             # invalid token, delete it!
             rm_tok = True
         if tdata.get('expire', '0') < time.time():
@@ -164,7 +164,7 @@ class Resolver(object):
             print('External authentication system has not been specified')
             return ret
         fstr = '{0}.auth'.format(eauth)
-        if not fstr in self.auth:
+        if fstr not in self.auth:
             print(('The specified external authentication system "{0}" is '
                    'not available').format(eauth))
             return ret
@@ -196,7 +196,7 @@ class Resolver(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         tdata = sreq.send('clear', load)
-        if not 'token' in tdata:
+        if 'token' not in tdata:
             return tdata
         try:
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
