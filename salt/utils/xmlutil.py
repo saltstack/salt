@@ -34,7 +34,7 @@ def to_dict(xmltree):
             # If a tag appears more than once in the same place, convert it to
             # a list. This may require that the caller watch for such a thing
             # to happen, and behave accordingly.
-            if type(xmldict[name]) is not list:
+            if not isinstance(xmldict[name], list):
                 tempvar = xmldict[name]
                 xmldict[name] = []
                 xmldict[name].append(tempvar)
