@@ -40,7 +40,7 @@ def present(name, value):
         return ret
     if __opts__['test']:
         ret['result'] = None
-        if not name in __grains__:
+        if name not in __grains__:
             ret['comment'] = 'Grain {0} is set to be added'.format(name)
         else:
             ret['comment'] = 'Grain {0} is set to be changed'.format(name)

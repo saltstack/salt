@@ -17,7 +17,7 @@ def _auth():
     '''
     Return the auth object
     '''
-    if not 'auth' in __context__:
+    if 'auth' not in __context__:
         __context__['auth'] = salt.crypt.SAuth(__opts__)
     return __context__['auth']
 
@@ -45,7 +45,7 @@ def update():
     m_data = __salt__['config.option']('mine_functions', {})
     data = {}
     for func in m_data:
-        if not func in __salt__:
+        if func not in __salt__:
             log.error(
                     'Function {0} in mine_functions not available'.format(
                         func
