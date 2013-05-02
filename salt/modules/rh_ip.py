@@ -388,7 +388,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, binding, ['interger'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
             bond.update({binding: bond_def[binding]})
