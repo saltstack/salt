@@ -46,7 +46,7 @@ def present(name, value):
             ret['comment'] = 'Grain {0} is set to be changed'.format(name)
         return ret
     grain = __salt__['grains.setval'](name, value)
-    if not grain == {name: value}:
+    if grain != {name: value}:
         ret['result'] = False
         ret['comment'] = 'Failed to set grain {0}'.format(name)
         return ret

@@ -196,7 +196,7 @@ class Auth(object):
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 m_digest = mkey.public_decrypt(payload['sig'], 5)
-                if not m_digest == digest:
+                if m_digest != digest:
                     return '', ''
         else:
             return '', ''
@@ -224,7 +224,7 @@ class Auth(object):
                 return ''
             try:
                 aes, token = self.decrypt_aes(payload)
-                if not token == self.token:
+                if token != self.token:
                     log.error('The master failed to decrypt the random minion token')
                     return ''
             except Exception:
