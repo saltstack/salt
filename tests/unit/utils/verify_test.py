@@ -33,7 +33,7 @@ class TestVerify(TestCase):
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 
-    def test_zmq_verify_insuficient(self):
+    def test_zmq_verify_insufficient(self):
         import zmq
         zmq.__version__ = '2.1.0'
         self.assertFalse(zmq_version())

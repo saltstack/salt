@@ -183,7 +183,7 @@ class TestEmptyCommandLine(TestProcsBase):
 #            self.call_procs()
 #        self.expected_calls = [call()] * call_count
 #
-#    def test_initialize_and_unintialize_called(self):
+#    def test_initialize_and_uninitialize_called(self):
 #        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
 #        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
 

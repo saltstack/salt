@@ -74,7 +74,7 @@ def procs():
 
 def custom():
     '''
-    Return a custom composite of status data and info for this minon,
+    Return a custom composite of status data and info for this minion,
     based on the minion config file. An example config like might be::
 
         status.cpustats.custom: [ 'cpu', 'ctxt', 'btime', 'processes' ]
@@ -136,7 +136,7 @@ def loadavg():
 
 def cpustats():
     '''
-    Return the CPU stats for this minon
+    Return the CPU stats for this minion
 
     CLI Example::
 

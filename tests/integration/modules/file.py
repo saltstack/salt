@@ -30,7 +30,7 @@ class FileModuleTest(integration.ModuleCase):
         self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
-        os.symlink('/nonexistantpath', self.mybadsymlink)
+        os.symlink('/nonexistentpath', self.mybadsymlink)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
