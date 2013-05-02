@@ -35,9 +35,7 @@ def to_dict(xmltree):
             # a list. This may require that the caller watch for such a thing
             # to happen, and behave accordingly.
             if not isinstance(xmldict[name], list):
-                tempvar = xmldict[name]
-                xmldict[name] = []
-                xmldict[name].append(tempvar)
+                xmldict[name] = [xmldict[name]]
             xmldict[name].append(to_dict(item))
     return xmldict
 
