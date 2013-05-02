@@ -651,29 +651,24 @@ class Minion(object):
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
 
-    def passive_refresh(self):
+    def module_refresh(self):
         '''
-        Check to see if the salt refresh file has been laid down, if it has,
-        refresh the functions and returners.
+        Refresh the functions and returners.
         '''
-        fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
-        if os.path.isfile(fn_):
-            with salt.utils.fopen(fn_, 'r+') as ifile:
-                data = ifile.read()
-                if 'pillar' in data:
-                    self.opts['pillar'] = salt.pillar.get_pillar(
-                        self.opts,
-                        self.opts['grains'],
-                        self.opts['id'],
-                        self.opts['environment'],
-                    ).compile_pillar()
-            try:
-                os.remove(fn_)
-            except OSError:
-                pass
-            self.functions, self.returners = self.__load_modules()
-            self.schedule.functions = self.functions
-            self.schedule.returners = self.returners
+        self.functions, self.returners = self.__load_modules()
+        self.schedule.functions = self.functions
+        self.schedule.returners = self.returners
+
+    def pillar_refresh(self):
+        '''
+        Refresh the pillar
+        '''
+        self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+        ).compile_pillar()
 
     def clean_die(self, signum, frame):
         '''
@@ -825,15 +820,16 @@ class Minion(object):
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
                 time.sleep(0.05)
-                # Clean up the minion processes which have been executed and
-                # have finished
-                # Check if modules and grains need to be refreshed
-                self.passive_refresh()
                 # Check the event system
                 if self.epoller.poll(1):
                     try:
-                        package = self.epull_sock.recv(zmq.NOBLOCK)
-                        self.epub_sock.send(package)
+                        while True:
+                            package = self.epull_sock.recv(zmq.NOBLOCK)
+                            if package.startswith('module_refresh'):
+                                self.module_refresh()
+                            elif package.startswith('pillar_refresh'):
+                                self.pillar_refresh()
+                            self.epub_sock.send(package)
                     except Exception:
                         pass
             except zmq.ZMQError:
