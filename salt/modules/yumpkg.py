@@ -778,7 +778,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
     '''
     repos = list_repos(basedir)
 
-    if not repo in repos.keys():
+    if repo not in repos:
         return 'Error: the {0} repo does not exist in {1}'.format(repo, basedir)
 
     # Find out what file the repo lives in
@@ -863,7 +863,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     repofile = ''
     header = ''
     filerepos = {}
-    if not repo in repos.keys():
+    if repo not in repos:
         # If the repo doesn't exist, create it in a new file
         repofile = '{0}/{1}.repo'.format(basedir, repo)
 
@@ -936,7 +936,7 @@ def _parse_repo_file(filename):
             if not repo:
                 header += line
             else:
-                if not 'comments' in repos[repo].keys():
+                if 'comments' not in repos[repo]:
                     repos[repo]['comments'] = []
                 repos[repo]['comments'].append(line.strip())
             continue

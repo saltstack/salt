@@ -64,7 +64,7 @@ def query(hyper=None, quiet=False):
                 continue
         if not isinstance(info[id_], dict):
             continue
-        if not 'ret' in info[id_]:
+        if 'ret' not in info[id_]:
             continue
         chunk[id_] = info[id_]['ret']
         ret.update(chunk)
@@ -108,7 +108,7 @@ def init(name, cpu, mem, image, hyper=None, seed=True):
                 print('Virtual machine {0} is already deployed'.format(name))
                 return 'fail'
     if hyper:
-        if not hyper in data:
+        if hyper not in data:
             print('Hypervisor {0} was not found'.format(hyper))
             return 'fail'
     else:

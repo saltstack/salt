@@ -269,6 +269,6 @@ def not_loaded():
             if fn_.startswith('_'):
                 continue
             name = fn_.split('.')[0]
-            if not name in prov:
+            if name not in prov:
                 ret.add(name)
     return sorted(ret)

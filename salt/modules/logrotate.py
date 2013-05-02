@@ -45,7 +45,7 @@ def _parse_conf(conf_file=default_conf):
                 continue
 
             comps = line.strip().split()
-            if '{' in line and not '}' in line:
+            if '{' in line and '}' not in line:
                 mode = 'multi'
                 multi_name = comps[0]
                 continue
@@ -62,10 +62,10 @@ def _parse_conf(conf_file=default_conf):
                 key = multi
 
             if comps[0] == 'include':
-                if not 'include files' in ret:
+                if 'include files' not in ret:
                     ret['include files'] = {}
                 for include in os.listdir(comps[1]):
-                    if not include in ret['include files']:
+                    if include not in ret['include files']:
                         ret['include files'][include] = []
                     include_path = '{0}/{1}'.format(comps[1], include)
                     include_conf = _parse_conf(include_path)

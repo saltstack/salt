@@ -431,11 +431,11 @@ def show_top():
     ext = st_.client.ext_nodes()
     for top in [static, ext]:
         for env in top:
-            if not env in ret:
+            if env not in ret:
                 ret[env] = top[env]
             else:
                 for match in top[env]:
-                    if not match in ret[env]:
+                    if match not in ret[env]:
                         ret[env][match] = top[env][match]
                     else:
                         ret[env][match].extend(top[env][match])

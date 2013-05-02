@@ -441,7 +441,7 @@ def remove(pkg, slot=None, **kwargs):
     new_pkgs = list_pkgs()
 
     for pkg in old_pkgs:
-        if not pkg in new_pkgs:
+        if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
 
     return ret_pkgs
@@ -490,7 +490,7 @@ def depclean(pkg=None, slot=None):
     new_pkgs = list_pkgs()
 
     for pkg in old_pkgs:
-        if not pkg in new_pkgs:
+        if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
 
     return ret_pkgs

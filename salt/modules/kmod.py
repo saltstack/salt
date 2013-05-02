@@ -75,7 +75,7 @@ def _set_persistent_module(mod):
     '''
     conf = _get_modules_conf()
     mod_name = _strip_module_name(mod)
-    if not mod_name or mod_name in mod_list(True) or not mod_name in available():
+    if not mod_name or mod_name in mod_list(True) or mod_name not in available():
         return set()
     escape_mod = re.escape(mod)
     ## If module is commented only uncomment it
@@ -93,7 +93,7 @@ def _remove_persistent_module(mod, comment):
     '''
     conf = _get_modules_conf()
     mod_name = _strip_module_name(mod)
-    if not mod_name or not mod_name in mod_list(True):
+    if not mod_name or mod_name not in mod_list(True):
         return set()
     escape_mod = re.escape(mod)
     if comment:

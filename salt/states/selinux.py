@@ -107,7 +107,7 @@ def boolean(name, value, persist=False):
            'comment': '',
            'changes': {}}
     bools = __salt__['selinux.list_sebool']()
-    if not name in bools:
+    if name not in bools:
         ret['comment'] = 'Boolean {0} is not available'.format(name)
         ret['result'] = False
         return ret

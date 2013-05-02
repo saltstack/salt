@@ -59,13 +59,13 @@ def keys(name, basepath='/etc/pki'):
                 'cacert.pem')}
     for key in paths:
         p_key = 'libvirt.{0}.pem'.format(key)
-        if not p_key in pillar:
+        if p_key not in pillar:
             continue
         if not os.path.isdir(os.path.dirname(paths[key])):
             os.makedirs(os.path.dirname(paths[key]))
         if os.path.isfile(paths[key]):
             with open(paths[key], 'r') as fp_:
-                if not fp_.read() == pillar[p_key]:
+                if fp_.read() != pillar[p_key]:
                     ret['changes'][key] = 'update'
         else:
             ret['changes'][key] = 'new'
