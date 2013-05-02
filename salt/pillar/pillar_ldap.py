@@ -1,7 +1,7 @@
 '''
 This pillar module parses a config file (specified in the salt master config),
 and executes a series of LDAP searches based on that config.  Data returned by
-these searches is aggregrated, with data items found later in the LDAP search
+these searches is aggregated, with data items found later in the LDAP search
 order overriding data found earlier on.
 The final result set is merged with the pillar data.
 '''

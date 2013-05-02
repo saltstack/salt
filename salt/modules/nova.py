@@ -410,7 +410,7 @@ def _item_list():
 #aggregate-details   Show details of the specified aggregate.
 #aggregate-list      Print a list of all aggregates.
 #aggregate-remove-host
-#                    Remove the specified host from the specfied aggregate.
+#                    Remove the specified host from the specified aggregate.
 #aggregate-set-metadata
 #                    Update the metadata associated with the aggregate.
 #aggregate-update    Update the aggregate's name and optionally
