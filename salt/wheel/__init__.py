@@ -30,7 +30,7 @@ class Wheel(object):
         '''
         Execute a master control function
         '''
-        if not fun in self.w_funcs:
+        if fun not in self.w_funcs:
             return 'Unknown wheel function'
         f_call = salt.utils.format_call(self.w_funcs[fun], kwargs)
         return self.w_funcs[fun](*f_call.get('args', ()), **f_call.get('kwargs', {}))
