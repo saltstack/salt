@@ -70,7 +70,7 @@ def mount(nbd):
         m_pt = os.path.join(root, os.path.basename(part))
         time.sleep(1)
         mnt = __salt__['mount.mount'](m_pt, part, True)
-        if not mnt is True:
+        if mnt is not True:
             continue
         ret[m_pt] = part
     return ret
@@ -107,7 +107,7 @@ def clear(mnt):
     nbds = set()
     for m_pt, dev in mnt.items():
         mnt_ret = __salt__['mount.umount'](m_pt)
-        if not mnt_ret is True:
+        if mnt_ret is not True:
             ret[m_pt] = dev
         nbds.add(dev[:dev.rindex('p')])
     if ret:

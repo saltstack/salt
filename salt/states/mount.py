@@ -99,7 +99,7 @@ def mounted(
     if persist:
         if __opts__['test']:
             fstab_data = __salt__['mount.fstab'](config)
-            if not name in fstab_data:
+            if name not in fstab_data:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is mounted but needs to '
                                   'be set to be made persistent').format(name)
