@@ -154,7 +154,7 @@ class Pillar(object):
         # Search initial top files for includes
         for env, ctops in tops.items():
             for ctop in ctops:
-                if not 'include' in ctop:
+                if 'include' not in ctop:
                     continue
                 for sls in ctop['include']:
                     include[env].append(sls)
@@ -203,7 +203,7 @@ class Pillar(object):
                     if env == 'include':
                         continue
                     for tgt in targets:
-                        if not tgt in top[env]:
+                        if tgt not in top[env]:
                             top[env][tgt] = ctop[env][tgt]
                             continue
                         matches = []
