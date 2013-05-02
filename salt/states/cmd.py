@@ -172,7 +172,7 @@ def _reinterpreted_state(state):
         for key in ret:
             data.setdefault(key, ret[key])
 
-        # if stdout is the state output in json, don't show it.
+        # if stdout is the state output in JSON, don't show it.
         # otherwise it contains the one line name=value pairs, strip it.
         data['stdout'] = '' if is_json else data.get('stdout', '')[:idx]
         state['changes'] = data
@@ -685,7 +685,7 @@ def call(name, func, args=(), kws=None,
         ret.update(result)
         return ret
     else:
-        # result must be json serializable else we get an error
+        # result must be JSON serializable else we get an error
         ret['changes'] = {'retval': result}
         ret['result'] = True if result is None else bool(result)
         if isinstance(result, basestring):

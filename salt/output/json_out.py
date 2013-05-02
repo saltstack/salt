@@ -28,5 +28,5 @@ def output(data):
         return json.dumps(data, indent=4)
     except TypeError:
         log.debug('An error occurred while outputting JSON', exc_info=True)
-    # Return valid json for unserializable objects
+    # Return valid JSON for unserializable objects
     return json.dumps({})
