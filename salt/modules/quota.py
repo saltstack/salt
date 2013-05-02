@@ -42,7 +42,6 @@ def _parse_quota(mount, opts):
     cmd = 'repquota -vp {0} {1}'.format(opts, mount)
     out = __salt__['cmd.run'](cmd).splitlines()
     mode = 'header'
-    device = ''
 
     if '-u' in opts:
         quotatype = 'Users'
@@ -56,7 +55,7 @@ def _parse_quota(mount, opts):
         comps = line.split()
         if mode == 'header':
             if 'Report for' in line:
-                device = comps[-1:][0]
+                pass
             elif 'Block grace time' in line:
                 blockg, inodeg = line.split(';')
                 blockgc = blockg.split(': ')
