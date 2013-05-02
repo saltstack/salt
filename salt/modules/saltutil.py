@@ -125,7 +125,7 @@ def _sync(form, env=None):
 
 def _listdir_recursively(rootdir):
     file_list = []
-    for root, sub_folders, files in os.walk(rootdir):
+    for root, dirs, files in os.walk(rootdir):
         for file in files:
             relpath = os.path.relpath(root, rootdir).strip('.')
             file_list.append(os.path.join(relpath, file))
@@ -134,8 +134,8 @@ def _listdir_recursively(rootdir):
 
 def _list_emptydirs(rootdir):
     emptydirs = []
-    for root, sub_folders, files in os.walk(rootdir):
-        if not files and not sub_folders:
+    for root, dirs, files in os.walk(rootdir):
+        if not files and not dirs:
             emptydirs.append(root)
     return emptydirs
 
