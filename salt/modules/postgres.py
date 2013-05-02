@@ -812,7 +812,7 @@ def owner_to(dbname,
 
     for fmt, query in queries:
         ret = psql_query(query, user=user, host=host, port=port, maintenance_db=dbname,
-                   password=password, runas=runas);
+                   password=password, runas=runas)
         for row in ret:
             line = fmt % {'owner': ownername, 'n':row['n']}
             sqlfile.write(line+"\n")
