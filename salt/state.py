@@ -372,7 +372,7 @@ class Compiler(object):
                 if chunk['order'] > cap - 1 and chunk['order'] > 0:
                     cap = chunk['order'] + 100
         for chunk in chunks:
-            if not 'order' in chunk:
+            if 'order' not in chunk:
                 chunk['order'] = cap
             else:
                 if not isinstance(chunk['order'], int):
@@ -511,7 +511,7 @@ class State(object):
         mod_init function in the state module.
         '''
         minit = '{0}.mod_init'.format(low['state'])
-        if not low['state'] in self.mod_init:
+        if low['state'] not in self.mod_init:
             if minit in self.states:
                 mret = self.states[minit](low)
                 if not mret:
@@ -588,7 +588,7 @@ class State(object):
                     )
         bad = []
         for val in ['name', 'result', 'changes', 'comment']:
-            if not val in ret:
+            if val not in ret:
                 bad.append(val)
         if bad:
             raise SaltException(
@@ -653,7 +653,7 @@ class State(object):
             # to just require extend the require statement with the contents
             # of watch so that the mod_watch function is not called and the
             # requisite capability is still used
-            if not '{0}.mod_watch'.format(data['state']) in self.states:
+            if '{0}.mod_watch'.format(data['state']) not in self.states:
                 if 'require' in data:
                     data['require'].extend(data.pop('watch'))
                 else:
@@ -822,7 +822,7 @@ class State(object):
                 if chunk['order'] > cap - 1 and chunk['order'] > 0:
                     cap = chunk['order'] + 100
         for chunk in chunks:
-            if not 'order' in chunk:
+            if 'order' not in chunk:
                 chunk['order'] = cap
             else:
                 if not isinstance(chunk['order'], int):
@@ -1061,7 +1061,7 @@ class State(object):
                             continue
                         # Split out the components
                         key = next(iter(arg))
-                        if not key in req_in:
+                        if key not in req_in:
                             continue
                         rkey = key.split('_')[0]
                         items = arg[key]
@@ -1071,9 +1071,9 @@ class State(object):
 
                                 # Not a use requisite_in
                                 found = False
-                                if not name in extend:
+                                if name not in extend:
                                     extend[name] = {}
-                                if not _state in extend[name]:
+                                if _state not in extend[name]:
                                     extend[name][_state] = []
                                 extend[name]['__env__'] = body['__env__']
                                 extend[name]['__sls__'] = body['__sls__']
@@ -1109,9 +1109,9 @@ class State(object):
                                     if not ext_id:
                                         continue
                                     ext_args = state_args(ext_id, _state, high)
-                                    if not ext_id in extend:
+                                    if ext_id not in extend:
                                         extend[ext_id] = {}
-                                    if not _state in extend[ext_id]:
+                                    if _state not in extend[ext_id]:
                                         extend[ext_id][_state] = []
                                     ignore_args = req_in_all.union(ext_args)
                                     for arg in high[id_][state]:
@@ -1135,9 +1135,9 @@ class State(object):
                                     if not ext_id:
                                         continue
                                     loc_args = state_args(id_, state, high)
-                                    if not id_ in extend:
+                                    if id_ not in extend:
                                         extend[id_] = {}
-                                    if not state in extend[id_]:
+                                    if state not in extend[id_]:
                                         extend[id_][state] = []
                                     ignore_args = req_in_all.union(loc_args)
                                     for arg in high[ext_id][_state]:
@@ -1155,9 +1155,9 @@ class State(object):
                                         extend[id_][state].append(arg)
                                     continue
                                 found = False
-                                if not name in extend:
+                                if name not in extend:
                                     extend[name] = {}
-                                if not _state in extend[name]:
+                                if _state not in extend[name]:
                                     extend[name][_state] = []
                                 extend[name]['__env__'] = body['__env__']
                                 extend[name]['__sls__'] = body['__sls__']
@@ -1267,7 +1267,7 @@ class State(object):
         '''
         present = False
         if 'watch' in low:
-            if not '{0}.mod_watch'.format(low['state']) in self.states:
+            if '{0}.mod_watch'.format(low['state']) not in self.states:
                 if 'require' in low:
                     low['require'].extend(low.pop('watch'))
                 else:
@@ -1332,7 +1332,7 @@ class State(object):
             lost = {'require': [], 'watch': []}
             reqs = []
             for requisite in requisites:
-                if not requisite in low:
+                if requisite not in low:
                     continue
                 for req in low[requisite]:
                     req = trim_req(req)
@@ -1367,7 +1367,7 @@ class State(object):
                 if ctag not in running:
                     if ctag in self.active:
                         log.error('Recursive requisite found')
-                        if not ctag in running:
+                        if ctag not in running:
                             running[tag] = {
                                     'changes': {},
                                     'result': False,
@@ -1618,7 +1618,7 @@ class BaseHighState(object):
         # Search initial top files for includes
         for env, ctops in tops.items():
             for ctop in ctops:
-                if not 'include' in ctop:
+                if 'include' not in ctop:
                     continue
                 for sls in ctop['include']:
                     include[env].append(sls)
@@ -1662,7 +1662,7 @@ class BaseHighState(object):
                     if env == 'include':
                         continue
                     for tgt in targets:
-                        if not tgt in top[env]:
+                        if tgt not in top[env]:
                             top[env][tgt] = ctop[env][tgt]
                             continue
                         matches = []
