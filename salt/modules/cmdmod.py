@@ -313,7 +313,6 @@ def _run(cmd,
     if rstrip:
         if out is not None:
             out = out.rstrip()
-        # None lacks a rstrip() method
         if err is not None:
             err = err.rstrip()
 
