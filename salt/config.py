@@ -96,7 +96,7 @@ DEFAULT_MINION_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'acceptance_wait_time': 10,
-    'loop_interval': 60,
+    'loop_interval': 0.05,
     'dns_check': True,
     'verify_env': True,
     'grains': {},
@@ -389,7 +389,7 @@ def get_id():
 
     # Can /etc/hosts help us?
     try:
-        # TODO Add Windows host file support
+        # TODO Add windoes host file support
         with open('/etc/hosts') as f:
             line = f.readline()
             while line:
