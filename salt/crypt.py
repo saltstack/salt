@@ -72,6 +72,7 @@ class MasterKeys(dict):
     authentication by the master.
     '''
     def __init__(self, opts):
+        super(MasterKeys, self).__init__()
         self.opts = opts
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
