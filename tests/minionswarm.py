@@ -146,14 +146,11 @@ class Swarm(object):
         path = os.path.join(dpath, 'minion')
 
         if self.opts['keep']:
-            ignore = set()
             keep = self.opts['keep'].split(',')
             modpath = os.path.join(os.path.dirname(salt.__file__), 'modules')
-            for fn_ in os.listdir(modpath):
-                if fn_.split('.')[0] in keep:
-                    continue
-                ignore.add(fn_.split('.')[0])
-            data['disable_modules'] = list(ignore)
+            fn_prefixes = (fn_.partition('.')[0] for fn_ in os.listdir(modpath))
+            ignore = [fn_prefix for fn_prefix in fn_prefixes if fn_prefix not in keep]
+            data['disable_modules'] = ignore
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
