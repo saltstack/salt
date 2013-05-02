@@ -52,7 +52,7 @@ def sleep(length):
 
 def rand_sleep(max=60):
     '''
-    Sleep for a random number of seconds, used to test long runnign commands
+    Sleep for a random number of seconds, used to test long-running commands
     and minions returning at differing intervals
 
     CLI Example::
