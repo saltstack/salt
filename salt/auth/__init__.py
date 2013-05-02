@@ -1,7 +1,7 @@
 '''
 Salt's pluggable authentication system
 
-This sysetm allows for authentication to be managed in a module pluggable way
+This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
