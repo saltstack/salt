@@ -71,7 +71,6 @@ def update():
             'data': data,
             'id': __opts__['id']
             }
-    serial = salt.payload.Serial(__opts__)
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
     try:
