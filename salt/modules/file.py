@@ -620,12 +620,10 @@ def _psed(text, before, after, limit, flags):
     '''
     Does the actual work for file.psed, so that single lines can be passed in
     '''
-    btext = ''
     atext = text
     if limit:
         limit = re.compile(limit)
         comps = text.split(limit)
-        btext = comps[0]
         atext = ''.join(comps[1:])
 
     count = 1
