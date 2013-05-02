@@ -197,7 +197,7 @@ class Pillar(object):
         Cleanly merge the top files
         '''
         top = collections.defaultdict(dict)
-        for sourceenv, ctops in tops.items():
+        for ctops in tops.values():
             for ctop in ctops:
                 for env, targets in ctop.items():
                     if env == 'include':
