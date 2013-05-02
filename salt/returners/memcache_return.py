@@ -13,7 +13,6 @@ python2-memcache uses 'localhost' and '11211' as syntax on connection.
 
 # Import python libs
 import json
-import logging
 
 # Import third party libs
 try:
@@ -35,9 +34,6 @@ def _get_serv():
     '''
     host=__salt__['config.option']('memcache.host')
     port=__salt__['config.option']('memcache.port')
-    log.debug('memcache configured with host: {0}:{1}'.format(host, port))
-    if not host or not port:
-      log.error('Host or port not defined')
     
     memcacheoptions = (host, port)
    
