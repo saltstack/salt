@@ -25,15 +25,6 @@ following to ``/etc/apt/sources.list`` or a file in
 
 
 
-
-The packages have been signed with a key available from http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key
-
-This can be imported with::
-
-  wget -O - http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key|apt-key add -
-
-
-
 Wheezy (Testing)
 ~~~~~~~~~~~~~~~~
 
