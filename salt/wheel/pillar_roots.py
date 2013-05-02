@@ -94,7 +94,7 @@ def write(data, path, env='base', index=0):
     '''
     if not env in __opts__['pillar_roots']:
         return 'Named environment {0} is not present'.format(env)
-    if not len(__opts__['pillar_roots'][env]) > index:
+    if len(__opts__['pillar_roots'][env]) <= index:
         return 'Specified index {0} in environment {1} is not present'.format(
                 index, env)
     if os.path.isabs(path):
