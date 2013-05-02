@@ -205,7 +205,7 @@ def _clean_dir(root, keep, exclude_pat):
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
-            if not nfn in real_keep:
+            if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
                 if not _check_include_exclude(nfn[len(root) + 1:], None,
@@ -216,7 +216,7 @@ def _clean_dir(root, keep, exclude_pat):
                     os.remove(nfn)
         for name in dirs:
             nfn = os.path.join(roots, name)
-            if not nfn in real_keep:
+            if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
                 if not _check_include_exclude(nfn[len(root) + 1:], None,
@@ -277,20 +277,20 @@ def _check_directory(
         if not set(['user', 'group', 'mode']) >= set(recurse):
             return False, 'Types for "recurse" limited to "user", ' \
                           '"group" and "mode"'
-        if not 'user' in recurse:
+        if 'user' not in recurse:
             user = None
-        if not 'group' in recurse:
+        if 'group' not in recurse:
             group = None
-        if not 'mode' in recurse:
+        if 'mode' not in recurse:
             mode = None
         for root, dirs, files in os.walk(name):
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
                 stats = __salt__['file.stats'](path, 'md5')
-                if not user is None and user != stats.get('user'):
+                if user is not None and user != stats.get('user'):
                     fchange['user'] = user
-                if not group is None and group != stats.get('group'):
+                if group is not None and group != stats.get('group'):
                     fchange['group'] = group
                 if fchange:
                     changes[path] = fchange
@@ -323,14 +323,14 @@ def _check_dir_meta(
     '''
     stats = __salt__['file.stats'](name)
     changes = {}
-    if not user is None and user != stats['user']:
+    if user is not None and user != stats['user']:
         changes['user'] = user
-    if not group is None and group != stats['group']:
+    if group is not None and group != stats['group']:
         changes['group'] = group
     # Normalize the dir mode
     smode = __salt__['config.manage_mode'](stats['mode'])
     mode = __salt__['config.manage_mode'](mode)
-    if not mode is None and mode != smode:
+    if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
 
@@ -342,10 +342,10 @@ def _check_touch(name, atime, mtime):
     if not os.path.exists(name):
         return None, 'File {0} is set to be created'.format(name)
     stats = __salt__['file.stats'](name)
-    if not atime is None:
+    if atime is not None:
         if str(atime) != str(stats['atime']):
             return None, 'Times set to be updated on file {0}'.format(name)
-    if not mtime is None:
+    if mtime is not None:
         if str(mtime) != str(stats['mtime']):
             return None, 'Times set to be updated on file {0}'.format(name)
     return True, 'File {0} exists and has the correct times'.format(name)
@@ -360,7 +360,7 @@ def _symlink_check(name, target, force):
             name, target
         )
     if os.path.islink(name):
-        if not os.readlink(name) == target:
+        if os.readlink(name) != target:
             return None, 'Link {0} target is set to be changed to {1}'.format(
                 name, target
             )
@@ -499,7 +499,7 @@ def symlink(
             )
     if os.path.islink(name):
         # The link exists, verify that it matches the target
-        if not os.readlink(name) == target:
+        if os.readlink(name) != target:
             # The target is wrong, delete the link
             os.remove(name)
         else:
@@ -791,7 +791,7 @@ def managed(name,
         defaults,
         **kwargs
     )
-    if comment and not contents is None:
+    if comment and contents is not None:
         return _error(ret, comment)
     else:
         return __salt__['file.manage_file'](name,
@@ -1203,7 +1203,7 @@ def recurse(name,
         pass_kwargs = {}
         faults = ['mode', 'makedirs', 'replace']
         for key in kwargs:
-            if not key in faults:
+            if key not in faults:
                 pass_kwargs[key] = kwargs[key]
 
         _ret = managed(
@@ -1272,7 +1272,7 @@ def recurse(name,
         relname = os.path.relpath(fn_, srcpath)
 
         # Check for maxdepth of the relative path
-        if not maxdepth is None:
+        if maxdepth is not None:
             # Since paths are all master, just use posix separator
             relpieces = relname.split('/')
             # Handle empty directories (include_empty==true) by removing the
@@ -1290,7 +1290,7 @@ def recurse(name,
         dirname = os.path.dirname(dest)
         keep.add(dest)
 
-        if not dirname in vdir:
+        if dirname not in vdir:
             # verify the directory perms if they are set
             manage_directory(dirname)
             vdir.add(dirname)
