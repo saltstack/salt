@@ -10,7 +10,6 @@ call data structure and is present in many modules, this argument will need
 to be replaced in the sls data with the arguments m_name and m_fun.
 '''
 # Import python libs
-
 import datetime
 
 # Import salt libs
@@ -51,7 +50,7 @@ def run(name, **kwargs):
            'changes': {},
            'comment': '',
            'result': None}
-    if not name in __salt__:
+    if name not in __salt__:
         ret['comment'] = 'Module function {0} is not available'.format(name)
         ret['result'] = False
         return ret
