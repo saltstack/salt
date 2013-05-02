@@ -653,3 +653,52 @@ def remote_set(cwd, name='origin', url=None, user=None):
     cmd = 'git remote add {0} {1}'.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user)
     return remote_get(cwd=cwd, remote=name, user=None)
+
+
+def reset(cwd, opts=None, user=None):
+    '''
+    Reset the repository checkout
+
+    cwd
+        The path to the Git repository
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.reset /path/to/repo master
+    '''
+    _check_git()
+
+    if not opts:
+        opts = ''
+    return _git_run('git reset {0}'.format(opts), cwd=cwd, runas=user)
+
+
+def stash(cwd, opts=None, user=None):
+    '''
+    Stash changes in the repository checkout
+
+    cwd
+        The path to the Git repository
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+
+    CLI Example::
+
+        salt '*' git.stash /path/to/repo master
+    '''
+    _check_git()
+
+    if not opts:
+        opts = ''
+    return _git_run('git stash {0}'.format(opts), cwd=cwd, runas=user)
+
