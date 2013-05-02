@@ -364,9 +364,9 @@ def group_install(name=None,
     pkgs = []
     for group in pkg_groups:
         group_detail = group_info(group)
-        for package in group_detail.get('mandatory packages', {}).keys():
+        for package in group_detail.get('mandatory packages', {}):
             pkgs.append(package)
-        for package in group_detail.get('default packages', {}).keys():
+        for package in group_detail.get('default packages', {}):
             if package not in skip_pkgs:
                 pkgs.append(package)
         for package in include:
@@ -783,7 +783,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in repos.keys():
+    for arepo in repos:
         if arepo == repo:
             repofile = repos[arepo]['file']
 
@@ -808,11 +808,11 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
         if stanza == repo:
             continue
         comments = ''
-        if 'comments' in filerepos[stanza].keys():
+        if 'comments' in filerepos[stanza]:
             comments = '\n'.join(filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
-        for line in filerepos[stanza].keys():
+        for line in filerepos[stanza]:
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
     fileout = open(repofile, 'w')
