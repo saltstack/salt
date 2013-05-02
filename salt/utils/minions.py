@@ -21,7 +21,7 @@ def nodegroup_comp(group, nodegroups, skip=None):
     '''
     if skip is None:
         skip = set([group])
-    if not group in nodegroups:
+    if group not in nodegroups:
         return ''
     gstr = nodegroups[group]
     ret = ''
@@ -92,7 +92,7 @@ class CkMinions(object):
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if not id_ in minions:
+                if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
@@ -145,7 +145,7 @@ class CkMinions(object):
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if not id_ in minions:
+                if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):

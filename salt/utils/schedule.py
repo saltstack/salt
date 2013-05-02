@@ -85,14 +85,14 @@ class Schedule(object):
                 rets.append(data['returner'])
             elif isinstance(data['returner'], list):
                 for returner in data['returner']:
-                    if not returner in rets:
+                    if returner not in rets:
                         rets.append(returner)
             if isinstance(self.schedule_returner, list):
                 for returner in self.schedule_returner:
-                    if not returner in rets:
+                    if returner not in rets:
                         rets.append(returner)
             if isinstance(self.schedule_returner, str):
-                if not self.schedule_returner in rets:
+                if self.schedule_returner not in rets:
                     rets.append(self.schedule_returner)
             for returner in rets:
                 if returner in self.returners:
