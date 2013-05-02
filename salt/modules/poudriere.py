@@ -236,7 +236,7 @@ def bulk_build(jail, pkg_file, keep=False):
     '''
     Run bulk build on poudriere server.
 
-    Return number of pkg builds, failures, and errors, on error dump to cli
+    Return number of pkg builds, failures, and errors, on error dump to CLI
 
     CLI Example::
 

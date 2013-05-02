@@ -395,10 +395,10 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
 
 def deploy_war(war, context, force='no', url='http://localhost:8080/manager', env='base', timeout=180):
     '''
-    Deploy a war file
+    Deploy a WAR file
     
     war
-        absolute path to war file (should be accessible by the user running
+        absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_file function
     context
         the context path to deploy
@@ -407,7 +407,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     url : http://localhost:8080/manager
         the url of the server manager webapp
     env : base
-        the environment for war file in used by salt.modules.cp.get_file
+        the environment for WAR file in used by salt.modules.cp.get_file
         function
     timeout : 180
         timeout for http request
@@ -433,7 +433,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
             cached = __salt__['cp.get_file'](war, tfile, env)
             __salt__['file.set_mode'](cached, '0644')
         except Exception:
-            return 'FAIL - could not cache the war file'
+            return 'FAIL - could not cache the WAR file'
     
     # Prepare options
     opts = {
