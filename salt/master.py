@@ -793,7 +793,7 @@ class AESFuncs(object):
         '''
         Gathers the data from the specified minions' mine
         '''
-        if 'id' not in load or 'tgt' not in load or 'fun' not in load:
+        if any(key not in load for key in ('id', 'tgt', 'fun')):
             return False
         ret = {}
         checker = salt.utils.minions.CkMinions(__opts__)
@@ -836,7 +836,7 @@ class AESFuncs(object):
         Allows minions to send files to the master, files are sent to the
         master file cache
         '''
-        if 'id' not in load or 'path' not in load or 'loc' not in load:
+        if any(key not in load for key in ('id', 'path', 'loc')):
             return False
         if not self.opts['file_recv'] or os.path.isabs(load['path']):
             return False
@@ -869,7 +869,7 @@ class AESFuncs(object):
         '''
         Return the pillar data for the minion
         '''
-        if 'id' not in load or 'grains' not in load or 'env' not in load:
+        if any(key not in load for key in ('id', 'grains', 'env')):
             return False
         pillar = salt.pillar.Pillar(
                 self.opts,
@@ -929,7 +929,7 @@ class AESFuncs(object):
         Handle the return data sent from the minions
         '''
         # If the return data is invalid, just ignore it
-        if 'return' not in load or 'jid' not in load or 'id' not in load:
+        if any(key not in load for key in ('return', 'jid', 'id')):
             return False
         if load['jid'] == 'req':
         # The minion is returning a standalone job, request a jobid
@@ -997,7 +997,7 @@ class AESFuncs(object):
         individual minions.
         '''
         # Verify the load
-        if 'return' not in load or 'jid' not in load or 'id' not in load:
+        if any(key not in load for key in ('return', 'jid', 'id')):
             return None
         # set the write flag
         jid_dir = salt.utils.jid_dir(
@@ -1042,10 +1042,7 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        if 'fun' not in clear_load\
-                or 'arg' not in clear_load\
-                or 'id' not in clear_load\
-                or 'tok' not in clear_load:
+        if any(key not in clear_load for key in ('fun', 'arg', 'id', 'tok')):
             return {}
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
@@ -1101,12 +1098,7 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer'], dict):
             return {}
-        if 'fun' not in clear_load\
-                or 'arg' not in clear_load\
-                or 'tgt' not in clear_load\
-                or 'ret' not in clear_load\
-                or 'tok' not in clear_load\
-                or 'id' not in clear_load:
+        if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
             return {}
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
