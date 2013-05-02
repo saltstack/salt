@@ -1046,7 +1046,7 @@ def set_selinux_context(path, user=None, role=None, type=None, range=None):
 
         salt '*' file.set_selinux_context path <role> <type> <range>
     '''
-    if not user and not role and not type and not range:
+    if not any((user, role, type, range)):
         return False
 
     cmd = 'chcon '
@@ -1396,7 +1396,7 @@ def check_file_meta(
                             ''.join(difflib.unified_diff(nlines, slines)))
             else:
                 changes['sum'] = 'Checksum differs'
-    if not contents is None:
+    if contents is not None:
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(tmp, 'w') as tmp_:
@@ -1407,20 +1407,20 @@ def check_file_meta(
                 salt.utils.fopen(name, 'rb')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
-        if not ''.join(nlines) == ''.join(slines):
+        if ''.join(nlines) != ''.join(slines):
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
             else:
                 changes['diff'] = (''.join(difflib.unified_diff(nlines,
                                                                 slines)))
-    if not user is None and user != stats['user']:
+    if user is not None and user != stats['user']:
         changes['user'] = user
-    if not group is None and group != stats['group']:
+    if group is not None and group != stats['group']:
         changes['group'] = group
     # Normalize the file mode
     smode = __salt__['config.manage_mode'](stats['mode'])
     mode = __salt__['config.manage_mode'](mode)
-    if not mode is None and mode != smode:
+    if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
 
@@ -1541,7 +1541,7 @@ def manage_file(name,
                 return _error(
                     ret, 'Failed to commit change, permission error')
 
-        if not contents is None:
+        if contents is not None:
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
@@ -1553,7 +1553,7 @@ def manage_file(name,
                     salt.utils.fopen(name, 'rb')) as (src, name_):
                 slines = src.readlines()
                 nlines = name_.readlines()
-                different = not ''.join(slines) == ''.join(nlines)
+                different = ''.join(slines) != ''.join(nlines)
 
             if different:
                 if __salt__['config.option']('obfuscate_templates'):
@@ -1652,7 +1652,7 @@ def manage_file(name,
             if mode:
                 os.umask(current_umask)
 
-        if not contents is None:
+        if contents is not None:
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
