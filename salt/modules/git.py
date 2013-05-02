@@ -510,7 +510,7 @@ def rm(cwd, file_name, user=None, opts=None):
 
     if not opts:
         opts = ''
-    cmd = 'git add {0} {1}'.format(file_name, opts)
+    cmd = 'git rm {0} {1}'.format(file_name, opts)
     return _git_run(cmd, cwd=cwd, runas=user)
 
 
