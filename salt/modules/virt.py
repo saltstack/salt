@@ -1070,7 +1070,7 @@ def vm_netstats(vm_=None):
                 'tx_errs'    : 0,
                 'tx_drop'    : 0
                }
-        for mac, attrs in nics.items():
+        for attrs in nics.values():
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)
