@@ -1785,7 +1785,7 @@ class ClearFuncs(object):
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
             if not good:
-                # Accept find_job so the cli will function cleanly
+                # Accept find_job so the CLI will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
                     log.warning(
                         'Authentication failure of type "token" occurred.'
@@ -1821,7 +1821,7 @@ class ClearFuncs(object):
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob'))
             if not good:
-                # Accept find_job so the cli will function cleanly
+                # Accept find_job so the CLI will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
@@ -1875,7 +1875,7 @@ class ClearFuncs(object):
                             clear_load['tgt'],
                             clear_load.get('tgt_type', 'glob'))
                     if not good:
-                        # Accept find_job so the cli will function cleanly
+                        # Accept find_job so the CLI will function cleanly
                         if not clear_load['fun'] == 'saltutil.find_job':
                             log.warning(
                                 'Authentication failure of type "user" '

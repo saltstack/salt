@@ -1,6 +1,6 @@
 '''
-The Salt Key backend api and interface used by the CLI. The Key class can be
-used to manage salt keys directly without interfacing with the cli.
+The Salt Key backend API and interface used by the CLI. The Key class can be
+used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
@@ -16,7 +16,7 @@ import salt.utils.event
 
 class KeyCLI(object):
     '''
-    Manage key cli operations
+    Manage key CLI operations
     '''
     def __init__(self, opts):
         self.opts = opts

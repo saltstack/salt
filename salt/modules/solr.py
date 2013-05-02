@@ -224,7 +224,7 @@ def _format_url(handler, host=None, core_name=None, extra=None):
 def _http_request(url, request_timeout=None):
     '''
     PRIVATE METHOD
-    Uses json.load to fetch the json results from the solr api.
+    Uses json.load to fetch the JSON results from the solr API.
 
     url : str
         a complete url that can be passed to urllib.open
@@ -252,7 +252,7 @@ def _replication_request(command, host=None, core_name=None, params=None):
     '''
     PRIVATE METHOD
     Performs the requested replication command and returns a dictionary with
-    success, errors and data as keys. The data object will contain the json
+    success, errors and data as keys. The data object will contain the JSON
     response.
 
     command : str
@@ -283,7 +283,7 @@ def _get_admin_info(command, host=None, core_name=None):
     Calls the _http_request method and passes the admin command to execute
     and stores the data. This data is fairly static but should be refreshed
     periodically to make sure everything this OK. The data object will contain
-    the json response.
+    the JSON response.
 
     command : str
         The admin command to execute.
@@ -794,7 +794,7 @@ def replication_details(host=None, core_name=None):
 def backup(host=None, core_name=None, append_core_to_path=False):
     '''
     Tell solr make a backup.  This method can be mis-leading since it uses the
-    backup api.  If an error happens during the backup you are not notified.
+    backup API.  If an error happens during the backup you are not notified.
     The status: 'OK' in the response simply means that solr received the
     request successfully.
 

@@ -270,7 +270,7 @@ class SaltRun(parsers.SaltRunOptionParser):
             runner._print_docs()
         else:
             # Run this here so SystemExit isn't raised anywhere else when
-            # someone tries to use the runners via the python api
+            # someone tries to use the runners via the python API
             try:
                 runner.run()
             except SaltClientError as exc:

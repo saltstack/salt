@@ -350,7 +350,7 @@ def check_path_traversal(path, user='root'):
 def check_max_open_files(opts):
     mof_c = opts.get('max_open_files', 100000)
     if sys.platform.startswith('win'):
-        # Check the windows api for more detail on this
+        # Check the Windows API for more detail on this
         # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
         # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
         mof_s = mof_h = win32file._getmaxstdio()

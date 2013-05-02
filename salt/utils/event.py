@@ -359,7 +359,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     )
             except Exception:
                 log.error(
-                    'Failed to parse yaml in reactor map: "{0}"'.format(
+                    'Failed to parse YAML in reactor map: "{0}"'.format(
                         self.opts['reactor']
                         )
                     )

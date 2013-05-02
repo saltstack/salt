@@ -315,7 +315,7 @@ class CkMinions(object):
 
     def wheel_check(self, auth_list, fun):
         '''
-        Check special api permissions
+        Check special API permissions
         '''
         comps = fun.split('.')
         if len(comps) != 2:

@@ -5,7 +5,7 @@ interact with kvm on behalf of the salt-virt interface
 :depends:   - libvirt Python module
 '''
 
-# This is a test interface for the salt-virt system. The api in this file is
+# This is a test interface for the salt-virt system. The API in this file is
 # VERY likely to change.
 
 
@@ -371,7 +371,7 @@ def start(config):
 
         salt '*' hyper.start webserver
     '''
-    # change this to use the libvirt api and add more logging and a verbose
+    # change this to use the libvirt API and add more logging and a verbose
     # return
     cmd = 'virsh create {0}'.format(config)
     return not __salt__['cmd.retcode'](cmd)

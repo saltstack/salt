@@ -147,7 +147,7 @@ class LoadAuth(object):
 
 class Resolver(object):
     '''
-    The class used to resolve options for the command line and for genric
+    The class used to resolve options for the command line and for generic
     interactive interfaces
     '''
     def __init__(self, opts):
@@ -156,7 +156,7 @@ class Resolver(object):
 
     def cli(self, eauth):
         '''
-        Execute the cli options to fill in the extra data needed for the
+        Execute the CLI options to fill in the extra data needed for the
         defined eauth system
         '''
         ret = {}
@@ -187,7 +187,7 @@ class Resolver(object):
 
     def token_cli(self, eauth, load):
         '''
-        Create the token from the cli and request the correct data to
+        Create the token from the CLI and request the correct data to
         authenticate via the passed authentication mechanism
         '''
         load['cmd'] = 'mk_token'

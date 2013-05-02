@@ -461,8 +461,8 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     else:
         try:
             # Logfile logging is UTF-8 on purpose.
-            # Since salt uses yaml and yaml uses either UTF-8 or UTF-16, if a
-            # user is not using plain ascii, he's system should be ready to
+            # Since salt uses YAML and YAML uses either UTF-8 or UTF-16, if a
+            # user is not using plain ASCII, their system should be ready to
             # handle UTF-8.
             handler = getattr(
                 logging.handlers, 'WatchedFileHandler', logging.FileHandler

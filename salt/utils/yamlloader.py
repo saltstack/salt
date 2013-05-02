@@ -30,8 +30,8 @@ warnings.simplefilter('always', category=DuplicateKeyWarning)
 # with code integrated form https://gist.github.com/844388
 class CustomLoader(yaml.SafeLoader):
     '''
-    Create a custom yaml loader that uses the custom constructor. This allows
-    for the yaml loading defaults to be manipulated based on needs within salt
+    Create a custom YAML loader that uses the custom constructor. This allows
+    for the YAML loading defaults to be manipulated based on needs within salt
     to make things like sls file more intuitive.
     '''
     def __init__(self, stream, dictclass=dict):
@@ -54,7 +54,7 @@ class CustomLoader(yaml.SafeLoader):
 
     def construct_mapping(self, node, deep=False):
         '''
-        Build the mapping for yaml
+        Build the mapping for YAML
         '''
         if not isinstance(node, MappingNode):
             raise ConstructorError(None, None,
