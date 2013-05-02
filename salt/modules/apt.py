@@ -41,7 +41,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if not __grains__['os_family'] == 'Debian':
+    if __grains__['os_family'] != 'Debian':
         return False
     if not apt_support:
         err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
@@ -901,7 +901,7 @@ def mod_repo(repo, refresh=False, **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if ppa_format_support and not 'ppa_auth' in kwargs:
+            if ppa_format_support and 'ppa_auth' not in kwargs:
                 cmd = 'apt-add-repository -y {0}'.format(repo)
                 out = __salt__['cmd.run_stdout'](cmd)
                 # explicit refresh when a repo is modified.
@@ -929,18 +929,18 @@ def mod_repo(repo, refresh=False, **kwargs):
                 # These will defer to any user-defined variants
                 kwargs['dist'] = dist
                 ppa_auth = ''
-                if not file in kwargs:
+                if file not in kwargs:
                     filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
                     kwargs['file'] = filename.format(owner_name, ppa_name,
                                                      dist)
                 try:
                     launchpad_ppa_info = _get_ppa_info_from_launchpad(
                         owner_name, ppa_name)
-                    if not 'ppa_auth' in kwargs:
+                    if 'ppa_auth' not in kwargs:
                         kwargs['keyid'] = launchpad_ppa_info[
                             'signing_key_fingerprint']
                     else:
-                        if not 'keyid' in kwargs:
+                        if 'keyid' not in kwargs:
                             error_str = 'Private PPAs require a ' \
                                         'keyid to be specified: {0}/{1}'
                             raise Exception(error_str.format(owner_name,
@@ -955,7 +955,7 @@ def mod_repo(repo, refresh=False, **kwargs):
                                 'manually: {2}'
                     raise Exception(error_str.format(owner_name, ppa_name, e))
 
-                if not 'keyserver' in kwargs:
+                if 'keyserver' not in kwargs:
                     kwargs['keyserver'] = 'keyserver.ubuntu.com'
                 if 'ppa_auth' in kwargs:
                     if not launchpad_ppa_info['private']:
@@ -1171,7 +1171,7 @@ def expand_repo_def(repokwargs):
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
-        if not file in repokwargs:
+        if file not in repokwargs:
             filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
             repokwargs['file'] = filename.format(owner_name, ppa_name,
                                                  dist)

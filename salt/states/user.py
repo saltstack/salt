@@ -50,7 +50,7 @@ def _changes(name,
     otherwise return False.
     '''
 
-    if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
+    if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
         lshad = __salt__['shadow.info'](name)
 
     lusr = __salt__['user.info'](name)
@@ -83,19 +83,19 @@ def _changes(name,
                 change['groups'] = wanted_groups
         else:
             for wanted_group in wanted_groups:
-                if not wanted_group in lusr['groups']:
-                    if not 'groups' in change:
+                if wanted_group not in lusr['groups']:
+                    if 'groups' not in change:
                         change['groups'] = []
                     change['groups'].append(wanted_group)
     if home:
         if lusr['home'] != home:
-            if not home is True:
+            if home is not True:
                 change['home'] = home
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
     if password:
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
             if lshad['pwd'] == '!' or \
                     lshad['pwd'] != '!' and enforce_password:
                 if lshad['pwd'] != password:
@@ -282,14 +282,14 @@ def present(name,
 
         post = __salt__['user.info'](name)
         spost = {}
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
             if lshad['pwd'] != password:
                 spost = __salt__['shadow.info'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
                 ret['changes'][key] = post[key]
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
