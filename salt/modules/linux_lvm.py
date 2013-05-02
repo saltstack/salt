@@ -56,22 +56,28 @@ def pvdisplay(pvname=''):
     '''
     ret = {}
     cmd = 'pvdisplay -c {0}'.format(pvname)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd_ret = __salt__['cmd.run_all'](cmd)
+
+    if cmd_ret['retcode'] != 0:
+        return {}
+
+    out = cmd_ret['stdout'].splitlines()
     for line in out:
-        comps = line.strip().split(':')
-        ret[comps[0]] = {
-            'Physical Volume Device': comps[0],
-            'Volume Group Name': comps[1],
-            'Physical Volume Size (kB)': comps[2],
-            'Internal Physical Volume Number': comps[3],
-            'Physical Volume Status': comps[4],
-            'Physical Volume (not) Allocatable': comps[5],
-            'Current Logical Volumes Here': comps[6],
-            'Physical Extent Size (kB)': comps[7],
-            'Total Physical Extents': comps[8],
-            'Free Physical Extents': comps[9],
-            'Allocated Physical Extents': comps[10],
-            }
+        if 'is a new physical volume' not in line:
+            comps = line.strip().split(':')
+            ret[comps[0]] = {
+                'Physical Volume Device': comps[0],
+                'Volume Group Name': comps[1],
+                'Physical Volume Size (kB)': comps[2],
+                'Internal Physical Volume Number': comps[3],
+                'Physical Volume Status': comps[4],
+                'Physical Volume (not) Allocatable': comps[5],
+                'Current Logical Volumes Here': comps[6],
+                'Physical Extent Size (kB)': comps[7],
+                'Total Physical Extents': comps[8],
+                'Free Physical Extents': comps[9],
+                'Allocated Physical Extents': comps[10],
+                }
     return ret
 
 
@@ -85,10 +91,13 @@ def vgdisplay(vgname=''):
     '''
     ret = {}
     cmd = 'vgdisplay -c {0}'.format(vgname)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd_ret = __salt__['cmd.run_all'](cmd)
+
+    if cmd_ret['retcode'] != 0:
+        return {}
+
+    out = cmd_ret['stdout'].splitlines()
     for line in out:
-        if 'No volume groups found' in line:
-            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Volume Group Name': comps[0],
@@ -122,10 +131,13 @@ def lvdisplay(lvname=''):
     '''
     ret = {}
     cmd = 'lvdisplay -c {0}'.format(lvname)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd_ret = __salt__['cmd.run_all'](cmd)
+
+    if cmd_ret['retcode'] != 0:
+        return {}
+
+    out = cmd_ret['stdout'].splitlines()
     for line in out:
-        if 'No volume groups found' in line:
-            return {}
         comps = line.strip().split(':')
         ret[comps[0]] = {
             'Logical Volume Name': comps[0],
