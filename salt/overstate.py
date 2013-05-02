@@ -101,7 +101,7 @@ class OverState(object):
         Verify that the stage is valid, return the stage, or a list of errors
         '''
         errors = []
-        if not 'match' in stage:
+        if 'match' not in stage:
             errors.append('No "match" argument in stage.')
         if errors:
             return errors
@@ -207,7 +207,7 @@ class OverState(object):
             else:
                 local_cmd = self.local.cmd_iter
             for minion in local_cmd(**cmd_kwargs):
-                if not 'id' in minion and not 'return' in minion and not 'fun' in minion:
+                if all(key not in minion for key in ('id', 'return', 'fun')):
                     continue
                 ret.update({minion['id']: 
                         {
@@ -228,7 +228,7 @@ class OverState(object):
         for comp in self.over:
             name = comp.keys()[0]
             stage = comp[name]
-            if not name in self.over_run:
+            if name not in self.over_run:
                 self.call_stage(name, stage)
 
     def stages_iter(self):
@@ -250,7 +250,7 @@ class OverState(object):
         for comp in self.over:
             name = comp.keys()[0]
             stage = comp[name]
-            if not name in self.over_run:
+            if name not in self.over_run:
                 v_stage = self.verify_stage(name, stage)
                 if isinstance(v_stage, list):
                     yield [comp]

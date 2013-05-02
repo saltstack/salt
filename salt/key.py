@@ -239,7 +239,7 @@ class Key(object):
             return
         keys = self.list_keys()
         for minion in os.listdir(m_cache):
-            if not minion in keys['minions']:
+            if minion not in keys['minions']:
                 shutil.rmtree(os.path.join(m_cache, minion))
 
     def check_master(self):
@@ -267,7 +267,7 @@ class Key(object):
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
                 if fnmatch.fnmatch(key, match):
-                    if not status in ret:
+                    if status not in ret:
                         ret[status] = []
                     ret[status].append(key)
         return ret
