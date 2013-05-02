@@ -334,7 +334,7 @@ def nvlist2(thelist, names=None):
             yield each
 
 
-def statelist(states_dict, sid_excludes=set(['include', 'exclude'])):
+def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
     for sid, states in states_dict.iteritems():
         if sid.startswith('__'):
             continue
