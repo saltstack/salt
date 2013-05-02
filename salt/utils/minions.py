@@ -248,7 +248,7 @@ class CkMinions(object):
         if v_matcher in infinite:
             # We can't be sure what the subset is, only match the identical
             # target
-            if not v_matcher == expr_form:
+            if v_matcher != expr_form:
                 return False
             return v_expr == expr
         v_minions = set(self.check_minions(v_expr, v_matcher))

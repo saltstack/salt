@@ -200,11 +200,11 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
     lst = list_tab(user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if not minute == cron['min'] or \
-                    not hour == cron['hour'] or \
-                    not dom == cron['daymonth'] or \
-                    not month == cron['month'] or \
-                    not dow == cron['dayweek']:
+            if minute != cron['min'] or \
+                    hour != cron['hour'] or \
+                    dom != cron['daymonth'] or \
+                    month != cron['month'] or \
+                    dow != cron['dayweek']:
                 rm_job(user, minute, hour, dom, month, dow, cmd)
                 jret = set_job(user, minute, hour, dom, month, dow, cmd)
                 if jret == 'new':
@@ -263,7 +263,7 @@ def set_env(user, name, value=None):
     lst = list_tab(user)
     for env in lst['env']:
         if name == env['name']:
-            if not value == env['value']:
+            if value != env['value']:
                 rm_env(user, name)
                 jret = set_env(user, name, value)
                 if jret == 'new':

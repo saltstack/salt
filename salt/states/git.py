@@ -99,7 +99,7 @@ def latest(name,
                          'revision is {1})').format(target, current_rev))
 
                 # if remote_name is defined set fetch_opts to remote_name
-                if not remote_name == 'origin':
+                if remote_name != 'origin':
                     fetch_opts = remote_name
                 else:
                     fetch_opts = ''
@@ -189,7 +189,7 @@ def latest(name,
             # make the clone
             opts = '--mirror' if mirror else '--bare' if bare else ''
             # if remote_name is not origin add --origin <name> to opts
-            if not remote_name == 'origin':
+            if remote_name != 'origin':
                 opts += ' --origin {0}'.format(remote_name)
             # do the clone
             __salt__['git.clone'](target,

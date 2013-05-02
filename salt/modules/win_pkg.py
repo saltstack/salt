@@ -317,7 +317,7 @@ def _get_reg_software():
                     prd_uninst_key,
                     "DisplayVersion")
                 if not name in ignore_list:
-                    if not prd_name == 'Not Found':
+                    if prd_name != 'Not Found':
                         reg_software[prd_name] = prd_ver
     return reg_software
 
