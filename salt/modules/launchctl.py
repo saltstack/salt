@@ -73,7 +73,7 @@ def _service_by_name(name):
         # Match on label
         return services[name]
 
-    for key, service in services.items():
+    for service in services.values():
         if service['file_path'].lower() == name:
             # Match on full path
             return service
@@ -104,9 +104,7 @@ def get_all():
     service_labels_from_list = [
         line.split("\t")[2] for line in service_lines
     ]
-    service_labels_from_services = [
-        key for key, value in _available_services().items()
-    ]
+    service_labels_from_services = _available_services().keys()
 
     return sorted(set(service_labels_from_list + service_labels_from_services))
 
