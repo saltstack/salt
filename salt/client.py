@@ -1034,6 +1034,7 @@ class FunctionWrapper(dict):
     minion when the salt functions dict is referenced.
     '''
     def __init__(self, opts, minion):
+        super(FunctionWrapper, self).__init__()
         self.opts = opts
         self.minion = minion
         self.local = LocalClient(self.opts['conf_file'])
