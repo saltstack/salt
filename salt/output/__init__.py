@@ -61,10 +61,10 @@ def get_printout(out, opts=None, **kwargs):
         out = 'nested'
 
     opts.update(kwargs)
-    if not 'color' in opts:
+    if 'color' not in opts:
         opts['color'] = not bool(opts.get('no_color', False))
     outputters = salt.loader.outputters(opts)
-    if not out in outputters:
+    if out not in outputters:
         return outputters['nested']
     return outputters[out]
 
