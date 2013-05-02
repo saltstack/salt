@@ -2459,11 +2459,18 @@ config_salt() {
 #
 preseed_master() {
     # Create the PKI directory
-    [ -d $PKI_DIR/minions ] || mkdir -p $PKI_DIR/minions && chmod 700 $PKI_DIR/minions || return 1
+
+    if [ $(ls $TEMP_KEYS_DIR | wc -l) -lt 1 ]; then
+        echoerror "No minion keys were uploaded. Unable to pre-seed master"
+        return 1
+    fi
+
+    SEED_DEST="$PKI_DIR/master/minions"
+    [ -d $SEED_DEST ] || mkdir -p $SEED_DEST && chmod 700 $SEED_DEST || return 1
 
     for keyfile in $(ls $TEMP_KEYS_DIR); do
         src_keyfile="${TEMP_KEYS_DIR}/${keyfile}"
-        dst_keyfile="${PKI_DIR}/minions/${keyfile}"
+        dst_keyfile="${SEED_DEST}/${keyfile}"
 
         # If it's not a file, skip to the next
         [ ! -f $src_keyfile ] && continue
