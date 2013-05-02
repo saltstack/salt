@@ -104,11 +104,7 @@ def list_aliases():
 
         salt '*' aliases.list_aliases
     '''
-    ret = {}
-    for alias, target, comment in __parse_aliases():
-        if not alias:
-            continue
-        ret[alias] = target
+    ret = dict((alias, target) for alias, target, comment in __parse_aliases() if alias)
     return ret
 
 
