@@ -121,12 +121,12 @@ def set(key, value, setting=None, conf_file=default_conf):
         if key in conf['include files'][include]:
             conf_file = os.path.join(conf['include'], include)
 
-    if type(conf[key]) is dict and not setting:
+    if isinstance(conf[key], dict) and not setting:
         return ('Error: {0} includes a dict, and a specific setting inside the '
                 'dict was not declared'.format(key))
 
     if setting:
-        if type(conf[key]) is str:
+        if isinstance(conf[key], str):
             return ('Error: A setting for a dict was declared, but the '
                     'configuration line given is not a dict')
         # We're going to be rewriting an entire stanza
