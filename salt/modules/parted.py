@@ -49,13 +49,15 @@ def probe(device=''):
 
 def part_list(device, unit=None):
     '''
-    Ask the kernel to update its local partition data
+    partition.part_list device unit
+    
+    Prints partition information of given <device>
 
     CLI Examples::
 
-        salt '*' partition.partlist /dev/sda
-        salt '*' partition.partlist /dev/sda unit=s
-        salt '*' partition.partlist /dev/sda unit=kB
+        salt '*' partition.part_list /dev/sda
+        salt '*' partition.part_list /dev/sda unit=s
+        salt '*' partition.part_list /dev/sda unit=kB
     '''
     if unit:
         cmd = 'parted -m -s {0} unit {1} print'.format(device, unit)
@@ -186,16 +188,16 @@ def set_id(device, minor, system_id):
 
 def mkfs(device, fs_type):
     '''
-    partition.mkfs device minor fs_type
+    partition.mkfs device fs_type
 
-    Makes a file system <fs_type> on partition <minor>, destroying all data
+    Makes a file system <fs_type> on partition <device>, destroying all data
         that resides on that partition. <fs_type> must be one of "ext2",
         "fat32", "fat16", "linux-swap" or "reiserfs" (if libreiserfs is
         installed)
 
     CLI Example::
 
-        salt '*' partition.mkfs 2 fat32
+        salt '*' partition.mkfs /dev/sda2 fat32
     '''
     cmd = 'mkfs.{0} {1}'.format(fs_type, device)
     out = __salt__['cmd.run'](cmd).splitlines()
