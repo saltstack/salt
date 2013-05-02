@@ -119,7 +119,7 @@ def run(name, **kwargs):
     if aspec[1] and aspec[1] in kwargs:
         varargs = kwargs.pop(aspec[1])
 
-        if type(varargs) is not list:
+        if not isinstance(varargs, list):
             msg = "'{0}' must be a list."
             ret['comment'] = msg.format(aspec[1])
             ret['result'] = False
