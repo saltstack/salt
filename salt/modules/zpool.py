@@ -134,10 +134,8 @@ def zpool_create(pool_name, *disks):
 
 
 def zpool_status(name=''):
-    ret = []
     res = __salt__['cmd.run']('zpool status {0}'.format(name))
-    for line in res.splitlines():
-        ret.append(line)
+    ret = res.splitlines()
     return ret
 
 
