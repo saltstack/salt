@@ -23,12 +23,12 @@ class TestUtils(TestCase):
             expected = [
                 (join(tmp, 'root'), ['bar'], []),
                 (join(tmp, 'root/bar'), ['baz'], []),
-                (join(tmp, 'root/bar/baz'), ['root', 'foo', 'fax'], []),
+                (join(tmp, 'root/bar/baz'), ['fax', 'foo', 'root'], []),
                 (join(tmp, 'root/bar/baz/fax'), [], []),
             ]
             paths = []
             for root, dirs, names in salt.utils.safe_walk(join(tmp, "root")):
-                paths.append((root, dirs, names))
+                paths.append((root, sorted(dirs), names))
             if paths != expected:
                 raise AssertionError("\n".join(["got:"]
                     + [repr(p) for p in paths]
