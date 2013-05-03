@@ -29,6 +29,7 @@ except ImportError:
 
             # Methods with direct access to underlying attributes
             def __init__(self, *args, **kwds):
+                super(OrderedDict, self).__init__()
                 if len(args) > 1:
                     raise TypeError(
                         'expected at 1 argument, got %d', len(args)
