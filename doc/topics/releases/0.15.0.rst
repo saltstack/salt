@@ -3,12 +3,9 @@ Salt 0.15.0 Release Notes
 =========================
 
 The many new features of Salt 0.15.0 have arrived! Salt 0.15.0 comes with many
-smaller features and a few larger ones. The new Salt Mine system fills in a
-needed component of tracking data from systems. IPV6 support has been added,
-copy files from the minions up to the master, better template debugging, more
-event firing, major syndic and peer system updates, minion key revocation,
-functions in overstate, updates to pillar error reporting, Cached state data,
-monitoring states
+smaller features and a few larger ones. 
+
+Thease features range from better debugging tools to the new Salt Mine system.
 
 Major Features
 ==============
