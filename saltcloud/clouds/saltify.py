@@ -101,10 +101,12 @@ def create(vm_):
             'password', vm_, __opts__, search_global=False
         ),
         'ssh_keyfile': ssh_keyfile,
-        'script_args': config.get_config_value(
-            'script_args', vm_, __opts__
-        ),
-        'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_)
+        'script_args': config.get_config_value('script_args', vm_, __opts__),
+        'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_),
+        'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+        'display_ssh_output': config.get_config_value(
+            'display_ssh_output', vm_, __opts__, default=True
+        )
     }
 
     # Deploy salt-master files, if necessary
@@ -116,8 +118,15 @@ def create(vm_):
         if master_conf:
             deploy_kwargs['master_conf'] = master_conf
 
-        if 'syndic_master' in master_conf:
+        if master_conf.get('syndic_master', None):
             deploy_kwargs['make_syndic'] = True
+
+    deploy_kwargs['make_minion'] = config.get_config_value(
+        'make_minion', vm_, __opts__, default=True
+    )
+
+    # Store what was used to the deploy the VM
+    ret['deploy_kwargs'] = deploy_kwargs
 
     deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
     if deployed:
