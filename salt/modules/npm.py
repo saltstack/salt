@@ -74,8 +74,8 @@ def install(pkg=None,
 
     while ' -> ' in lines[0]:
         lines = lines[1:]
-        
-    ''' Strip all lines until JSON output starts ''' 
+
+    # Strip all lines until JSON output starts
     for i in lines:
         if i.startswith("{"):
             break
