@@ -99,7 +99,7 @@ def _auth(uri):
     return urllib2.build_opener(basic, digest)
     
 
-def _wget(cmd, opts={}, url='http://localhost:8080/manager', timeout=180):
+def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     '''
     A private function used to issue the command to tomcat via the manager webapp
     
