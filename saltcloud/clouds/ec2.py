@@ -806,11 +806,13 @@ def create(vm_=None, call=None):
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    log.info(
-        'Created Cloud VM {name} with the following values:\n{0}'.format(
-            pprint.pformat(data[0]['instancesSet']['item']), **vm_
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(data[0]['instancesSet']['item'])
         )
     )
+
     ret.update(data[0]['instancesSet']['item'])
 
     # Get ANY defined volumes settings, merging data, in the following order

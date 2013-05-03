@@ -132,8 +132,6 @@ def create(vm_):
     if deployed:
         ret['deployed'] = deployed
         log.info('Salt installed on {0}'.format(vm_['name']))
-        if __opts__.get('show_deploy_args', False) is True:
-            ret['deploy_kwargs'] = deploy_kwargs
         return ret
 
     log.error('Failed to start Salt on host {0}'.format(vm_['name']))

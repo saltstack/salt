@@ -331,10 +331,12 @@ def create(vm_):
                 )
             )
 
-    log.info(
-        'Created Cloud VM {name} with the following values:\n{0}'.format(
-            pprint.pformat(data), **vm_
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(data)
         )
     )
+
     ret.update(data)
     return ret
