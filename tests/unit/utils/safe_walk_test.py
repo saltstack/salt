@@ -15,7 +15,7 @@ class TestUtils(TestCase):
         tmp = mkdtemp()
         try:
             if os.stat(tmp).st_ino == 0:
-                self.skipTest("inodes not supported in {}".format(tmp))
+                self.skipTest("inodes not supported in {0}".format(tmp))
             os.mkdir(join(tmp, "fax"))
             os.makedirs(join(tmp, "foo/bar"))
             os.symlink("../..", join(tmp, "foo/bar/baz"))
@@ -23,7 +23,7 @@ class TestUtils(TestCase):
             expected = [
                 (join(tmp, 'root'), ['bar'], []),
                 (join(tmp, 'root/bar'), ['baz'], []),
-                (join(tmp, 'root/bar/baz'), ['fax', 'foo', 'root'], []),
+                (join(tmp, 'root/bar/baz'), ['root', 'foo', 'fax'], []),
                 (join(tmp, 'root/bar/baz/fax'), [], []),
             ]
             paths = []
