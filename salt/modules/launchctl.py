@@ -123,7 +123,7 @@ def _get_launchctl_data(job_label, runas=None):
     return dict(plistlib.readPlistFromString(launchctl_xml['stdout']))
 
 
-def available(job_label, runas=None):
+def available(job_label):
     '''
     Check that the given service is available.
 
