@@ -28,7 +28,11 @@ import salt.utils.event
 
 # Import salt cloud libs
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudConfigError, SaltCloudException
+from saltcloud.exceptions import (
+    SaltCloudConfigError,
+    SaltCloudException,
+    SaltCloudSystemExit
+)
 
 # Import third party libs
 from jinja2 import Template
@@ -93,6 +97,7 @@ def gen_keys(keysize=2048):
     if keysize < 2048:
         keysize = 2048
     tdir = tempfile.mkdtemp()
+
     salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
@@ -213,7 +218,6 @@ def minion_conf_string(opts, vm_):
             'grains', vm_, opts, default={}, search_global=True
         )
     )
-
     return yaml.safe_dump(minion, default_flow_style=False)
 
 
@@ -334,7 +338,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
                   keep_tmp=False, script_args=None, ssh_timeout=15,
-                  display_ssh_output=True, make_syndic=False):
+                  display_ssh_output=True, make_syndic=False,
+                  preseed_minion_keys=None, make_minion=True):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -398,6 +403,41 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if master_conf:
                 scp_file('/tmp/master', master_conf, kwargs)
 
+            # XXX: We need to make these paths configurable
+            preseed_minion_keys_tempdir = '/tmp/preseed-minion-keys'
+            if preseed_minion_keys is not None:
+                # Create remote temp dir
+                root_cmd(
+                    'mkdir "{0}"'.format(preseed_minion_keys_tempdir),
+                    tty, sudo, **kwargs
+                )
+                root_cmd(
+                    'chmod 700 "{0}"'.format(preseed_minion_keys_tempdir),
+                    tty, sudo, **kwargs
+                )
+                if kwargs['username'] != 'root':
+                    root_cmd(
+                        'chown {0} "{1}"'.format(
+                            kwargs['username'], preseed_minion_keys_tempdir
+                        ),
+                        tty, sudo, **kwargs
+                    )
+
+                # Copy pre-seed minion keys
+                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                    rpath = os.path.join(
+                        preseed_minion_keys_tempdir, minion_id
+                    )
+                    scp_file(rpath, minion_key, kwargs)
+
+                if kwargs['username'] != 'root':
+                    root_cmd(
+                        'chown -R root "{0}"'.format(
+                            preseed_minion_keys_tempdir
+                        ),
+                        tty, sudo, **kwargs
+                    )
+
             # The actual deploy script
             if script:
                 scp_file('/tmp/deploy.sh', script, kwargs)
@@ -423,16 +463,27 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if script:
                 log.debug('Executing /tmp/deploy.sh')
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c /tmp/'  # FIXME: always?
-                    if make_syndic:
+                    deploy_command += ' -c /tmp/'
+                    if make_syndic is True:
                         deploy_command += ' -S'
-                    if make_master:
+                    if make_master is True:
                         deploy_command += ' -M'
+                    if make_minion is False:
+                        deploy_command += ' -N'
+                    if preseed_minion_keys is not None:
+                        deploy_command += ' -k {0}'.format(
+                            preseed_minion_keys_tempdir
+                        )
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
 
-                root_cmd(deploy_command, tty, sudo, **kwargs)
-                log.debug('Executed command {0}'.format(deploy_command))
+                if root_cmd(deploy_command, tty, sudo, **kwargs):
+                    raise SaltCloudSystemExit(
+                        'Executing the command {0!r} failed'.format(
+                            deploy_command
+                        )
+                    )
+                log.debug('Executed command {0!r}'.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
@@ -440,7 +491,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     log.debug('Removed /tmp/deploy.sh')
 
             if keep_tmp:
-                log.debug('Not removing deloyment files from /tmp/')
+                log.debug('Not removing deployment files from /tmp/')
 
             # Remove minion configuration
             if not keep_tmp:
@@ -454,8 +505,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     root_cmd('rm /tmp/minion', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion')
 
-            # Remove master configuration
-            if not keep_tmp:
+                # Remove master configuration
                 if master_pub:
                     root_cmd('rm /tmp/master.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pub')
@@ -465,6 +515,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if master_conf:
                     root_cmd('rm /tmp/master', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master')
+
+                # Remove pre-seed keys directory
+                if preseed_minion_keys is not None:
+                    root_cmd(
+                        'rm -rf {0}'.format(
+                            preseed_minion_keys_tempdir
+                        ), tty, sudo, **kwargs
+                    )
+                    log.debug(
+                        'Removed {0}'.format(preseed_minion_keys_tempdir)
+                    )
 
             if start_action:
                 queuereturn = queue.get()
@@ -507,9 +568,8 @@ def scp_file(dest_path, contents, kwargs):
     Use scp to copy a file to a server
     '''
     tmpfh, tmppath = tempfile.mkstemp()
-    tmpfile = salt.utils.fopen(tmppath, 'w')
-    tmpfile.write(contents)
-    tmpfile.close()
+    with salt.utils.fopen(tmppath, 'w') as tmpfile:
+        tmpfile.write(contents)
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
     cmd = 'scp -oStrictHostKeyChecking=no {0} {1}@{2}:{3}'.format(
         tmppath,
@@ -521,11 +581,12 @@ def scp_file(dest_path, contents, kwargs):
         cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
     elif 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
-    proc = subprocess.Popen(cmd, shell=True,
-                            stderr=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
-    proc.communicate()
-    os.remove(tmppath)
+
+    log.debug('Running command {0!r}'.format(cmd))
+    proc = subprocess.Popen(
+        cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+    )
+    return proc.returncode
 
 
 def root_cmd(command, tty, sudo, **kwargs):
