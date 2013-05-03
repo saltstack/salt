@@ -864,7 +864,7 @@ def del_repo(repo, refresh=False, **kwargs):
     return "Repo {0} doesn't exist in the sources.list(s)".format(repo)
 
 
-def mod_repo(repo, refresh=False, **kwargs):
+def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as the definition is well formed.  For Ubuntu the
@@ -875,7 +875,6 @@ def mod_repo(repo, refresh=False, **kwargs):
 
         comps (a comma separated list of components for the repo, e.g. "main")
         file (a file name to be used)
-        refresh (refresh the apt sources db when the mod is done)
         keyserver (keyserver to get gpg key from)
         keyid (key id to load with the keyserver argument)
         key_url (URL to a gpg key to add to the apt gpg keyring)
