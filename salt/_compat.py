@@ -110,11 +110,10 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 '''
 
 if PY3:
-    from urllib import parse
+    from urllib.parse import urlparse
     from urllib.error import URLError
     import http.server as BaseHTTPServer
     from urllib.error import HTTPError
-    urlparse = parse
     from urllib.parse import quote as url_quote
     from urllib.parse import quote_plus as url_quote_plus
     from urllib.parse import unquote as url_unquote

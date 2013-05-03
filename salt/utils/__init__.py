@@ -989,9 +989,9 @@ def option(value, default='', opts=None, pillar=None):
 
 def valid_url(url, protos):
     '''
-    Return true if the passed url is in the list of accepted protos
+    Return true if the passed URL is in the list of accepted protos
     '''
-    if salt._compat.urlparse.urlparse(url).scheme in protos:
+    if salt._compat.urlparse(url).scheme in protos:
         return True
     return False
 
