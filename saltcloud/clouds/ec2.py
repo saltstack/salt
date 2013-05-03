@@ -709,6 +709,16 @@ def create(vm_=None, call=None):
             attempts -= 1
             continue
 
+        if isinstance(data, list) and not data:
+            log.warn(
+                'There was an error in the query. {0} attempts '
+                'remaining: {1}'.format(
+                    attempts, data['error']
+                )
+            )
+            attempts -= 1
+            continue
+
         break
     else:
         raise SaltCloudSystemExit(
