@@ -78,7 +78,7 @@ def summary(svc_name=' '):
         salt '*' monit.summary <service name>
     '''
     ret = {}
-    cmd = "monit summary"
+    cmd = 'monit summary'
     res = __salt__['cmd.run'](cmd).splitlines()
     for line in res:
         if 'daemon is not running' in line:
@@ -87,7 +87,7 @@ def summary(svc_name=' '):
             continue
         else:
             parts = line.split("'")
-            resource,name,status = parts[0].strip(), parts[1], parts[2].strip()
+            resource, name, status = parts[0].strip(), parts[1], parts[2].strip()
             if resource not in ret:
                 ret[resource] = {}
             ret[resource][name] = status
