@@ -247,7 +247,7 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
-                if self.options.get('show_deploy_args', False) is False:
+                if self.config.get('show_deploy_args', False) is False:
                     # Strip deploy_args from the returned data since we don't
                     # want to see it
                     ret.pop('deploy_kwargs', None)
