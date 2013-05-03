@@ -79,7 +79,7 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base',
        'changes': {},
        'comment': ''}
     basename = war.split('/')[-1]
-    version = basename.replace('.war', '');
+    version = basename.replace('.war', '')
     webapps =  __salt__['tomcat.ls'](url, timeout)
     deploy = False
     undeploy = False
