@@ -1034,12 +1034,14 @@ def parse_docstring(docstring):
         return ret
 
 
-def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=set()):
+def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
     '''
     A clone of the python os.walk function with some checks for recursive
     symlinks. Unlike os.walk this follows symlinks by default.
     '''
     islink, join, isdir = os.path.islink, os.path.join, os.path.isdir
+    if _seen is None:
+        _seen = set()
 
     # We may not have read permission for top, in which case we can't
     # get a list of the files the directory contains.  os.path.walk
