@@ -317,6 +317,10 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             if 'Vendor: Bochs' in output:
                 grains['virtual'] = 'kvm'
+            # Product Name: (oVirt) www.ovirt.org
+            # Red Hat Community virtualization Project based on kvm 
+            elif 'Manufacturer: oVirt' in output:
+                grains['virtual'] = 'kvm'                
             elif 'VirtualBox' in output:
                 grains['virtual'] = 'VirtualBox'
             # Product Name: VMware Virtual Platform
