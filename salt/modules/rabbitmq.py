@@ -211,5 +211,6 @@ def list_user_permissions(name, user=None):
         salt '*' rabbitmq.list_user_permissions 'user'.
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_user_permissions {0}'.format(name))
+        'rabbitmqctl list_user_permissions {0}'.format(name),
+        runas=user)
     return [r.split('\t') for r in res.splitlines()]
