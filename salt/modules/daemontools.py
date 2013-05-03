@@ -26,7 +26,7 @@ def _service_path(name):
 
 
 #-- states.service  compatible args
-def start(name, enable=None, sig=None):
+def start(name):
     '''
     Starts service via daemontools
 
@@ -39,8 +39,8 @@ def start(name, enable=None, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-#-- states.service compatible
-def stop(name, enable=None, sig=None):
+#-- states.service compatible args
+def stop(name):
     '''
     Stops service via daemontools
 
