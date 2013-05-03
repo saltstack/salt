@@ -387,7 +387,7 @@ class Minion(object):
         process.join()
 
     @classmethod
-    def _thread_return(class_, minion_instance, opts, data):
+    def _thread_return(cls, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
@@ -395,7 +395,7 @@ class Minion(object):
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if not minion_instance:
-            minion_instance = class_(opts)
+            minion_instance = cls(opts)
         if opts['multiprocessing']:
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             salt.utils.daemonize_if(opts, **data)
@@ -483,7 +483,7 @@ class Minion(object):
                     )
 
     @classmethod
-    def _thread_multi_return(class_, minion_instance, opts, data):
+    def _thread_multi_return(cls, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
@@ -491,7 +491,7 @@ class Minion(object):
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if not minion_instance:
-            minion_instance = class_(opts)
+            minion_instance = cls(opts)
         ret = {
             'return': {},
             'success': {},
