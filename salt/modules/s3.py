@@ -132,6 +132,7 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None):
 
     return salt.utils.s3.query(method='HEAD',
                                bucket=bucket,
+                               path=path,
                                key=key,
                                keyid=keyid)
 
