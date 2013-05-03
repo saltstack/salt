@@ -305,6 +305,7 @@ def gen_mac(prefix='52:54:'):
             mac += random.choice(src) + random.choice(src) + ':'
     return mac[:-1]
 
+
 def ip_bracket(addr):
     '''
     Convert IP address representation to ZMQ (url) format. ZMQ expects

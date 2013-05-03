@@ -759,10 +759,9 @@ class Minion(object):
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        if self.opts['ipv6']:
-            if hasattr(zmq, 'IPV4ONLY'):
-                # IPv6 sockets work for both IPv6 and IPv4 addresses
-                self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
