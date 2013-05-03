@@ -160,7 +160,6 @@ def installed(name,
 
 
 def removed(name,
-            packages=None,
             requirements=None,
             bin_env=None,
             log=None,
