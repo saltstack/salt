@@ -423,7 +423,7 @@ def create(vm_):
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
+            vm_, pprint.pformat(data.__dict__)
         )
     )
 
@@ -434,7 +434,7 @@ def create(vm_):
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
 
-    ret.update(data)
+    ret.update(data.__dict__)
     return ret
 
 

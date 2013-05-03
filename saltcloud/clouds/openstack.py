@@ -519,9 +519,9 @@ def create(vm_):
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
+            vm_, pprint.pformat(data.__dict__)
         )
     )
 
-    ret.update(data)
+    ret.update(data.__dict__)
     return ret
