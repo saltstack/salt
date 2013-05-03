@@ -5,9 +5,10 @@ correct cloud modules
 # Import python libs
 import os
 import glob
-import multiprocessing
-import logging
 import time
+import logging
+import tempfile
+import multiprocessing
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -437,7 +438,7 @@ class Cloud(object):
 
         return ret
 
-    def create(self, vm_):
+    def create(self, vm_, local_master=True):
         '''
         Create a single VM
         '''
@@ -457,8 +458,9 @@ class Cloud(object):
             return
 
         deploy = config.get_config_value('deploy', vm_, self.opts)
+        make_master = config.get_config_value('make_master', vm_, self.opts)
 
-        if deploy is True and 'make_master' not in vm_ and \
+        if deploy is True and make_master is False and \
                 'master' not in minion_dict:
             raise SaltCloudConfigError(
                 'There\'s no master defined on the {0!r} VM settings'.format(
@@ -466,27 +468,33 @@ class Cloud(object):
                 )
             )
 
-        priv, pub = saltcloud.utils.gen_keys(
-            config.get_config_value('keysize', vm_, self.opts)
-        )
-        vm_['pub_key'] = pub
-        vm_['priv_key'] = priv
-
-        if config.get_config_value('make_master', vm_, self.opts):
-            master_priv, master_pub = saltcloud.utils.gen_keys(
+        if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+            priv, pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', vm_, self.opts)
             )
-            vm_['master_pub'] = master_pub
-            vm_['master_pem'] = master_priv
-
-        vm_['os'] = config.get_config_value('script', vm_, self.opts)
+            vm_['pub_key'] = pub
+            vm_['priv_key'] = priv
 
         key_id = vm_['name']
 
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
 
-        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, key_id)
+        if make_master is True:
+            if 'master_pub' not in vm_ and 'master_pem' not in vm_:
+                master_priv, master_pub = saltcloud.utils.gen_keys(
+                    config.get_config_value('keysize', vm_, self.opts)
+                )
+                vm_['master_pub'] = master_pub
+                vm_['master_pem'] = master_priv
+        elif local_master is True:
+            # Since we're not creating a master, and we're deploying, accept
+            # the key on the local master
+            saltcloud.utils.accept_key(
+                self.opts['pki_dir'], vm_['pub_key'], key_id
+            )
+
+        vm_['os'] = config.get_config_value('script', vm_, self.opts)
 
         try:
             output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
@@ -861,6 +869,7 @@ class Map(Cloud):
             parallel_data = []
         master_name = None
         master_host = None
+        master_finger = None
         try:
             master_name, master_profile = (
                 (name, profile) for name, profile in dmap['create'].items()
@@ -874,7 +883,48 @@ class Map(Cloud):
                     'Cannot proceed with \'make_master\' when salt deployment '
                     'is disabled(ex: --no-deploy).'
                 )
-            out = self.create(master_profile)
+
+            # Generate the master keys
+            priv, pub = saltcloud.utils.gen_keys(
+                config.get_config_value('keysize', master_profile, self.opts)
+            )
+            master_profile['master_pub'] = pub
+            master_profile['master_pem'] = priv
+
+            # Generate the fingerprint of the master pubkey in order to
+            # mitigate man-in-the-middle attacks
+            master_temp_pub = salt.utils.mkstemp()
+            with salt.utils.fopen(master_temp_pub, 'w') as mtp:
+                mtp.write(pub)
+            master_finger = salt.utils.pem_finger(master_temp_pub)
+            os.unlink(master_temp_pub)
+
+            if master_profile.get('make_minion', True) is True:
+                master_profile.setdefault('minion', {})
+                # Set this minion's master as local if the user has not set it
+                master_profile['minion'].setdefault('master', '127.0.0.1')
+                if master_finger is not None:
+                    master_profile['master_finger'] = master_finger
+
+            # Generate the minion keys to pre-seed the master:
+            for name, profile in dmap['create'].iteritems():
+                make_minion = config.get_config_value(
+                    'make_minion', profile, self.opts, default=True
+                )
+                if make_minion is False:
+                    continue
+
+                priv, pub = saltcloud.utils.gen_keys(
+                    config.get_config_value('keysize', profile, self.opts)
+                )
+                profile['pub_key'] = pub
+                profile['priv_key'] = priv
+                # Store the minion's public key in order to be pre-seeded in
+                # the master
+                master_profile.setdefault('preseed_minion_keys', {})
+                master_profile['preseed_minion_keys'].update({name: pub})
+
+            out = self.create(master_profile, local_master=False)
             deploy_kwargs = (
                 self.opts.get('show_deploy_args', False) is True and
                 # Get the needed data
@@ -895,35 +945,36 @@ class Map(Cloud):
             output[master_name] = out
         except StopIteration:
             log.debug('No make_master found in map')
-
-        # Generate the fingerprint of the master pubkey in
-        #     order to mitigate man-in-the-middle attacks
-        master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
-        master_finger = None
-        if os.path.isfile(master_pub) and hasattr(salt.utils, 'pem_finger'):
-            master_finger = salt.utils.pem_finger(master_pub)
+            # Local master?
+            # Generate the fingerprint of the master pubkey in order to
+            # mitigate man-in-the-middle attacks
+            master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
+            if os.path.isfile(master_pub):
+                master_finger = salt.utils.pem_finger(master_pub)
 
         for name, profile in dmap['create'].items():
             if name == master_name:
-                # Already deployed
+                # Already deployed, it's the master's minion
                 continue
 
             if master_finger is not None:
                 profile['master_finger'] = master_finger
 
             if master_host is not None:
-                profile.setdefault(
-                    'minion', {}).setdefault(
-                        'master', master_host)
+                profile.setdefault('minion', {})
+                profile['minion'].setdefault('master', master_host)
 
             if self.opts['parallel']:
                 parallel_data.append({
                     'opts': self.opts,
                     'name': name,
                     'profile': profile,
+                    'local_master': master_name is None
                 })
             else:
-                output[name] = self.create(profile)
+                output[name] = self.create(
+                    profile, local_master=master_name is None
+                )
                 if self.opts.get('show_deploy_args', False) is False:
                     output[name].pop('deploy_kwargs', None)
 
@@ -948,7 +999,10 @@ def create_multiprocessing(parallel_data):
     '''
     parallel_data['opts']['output'] = 'json'
     cloud = Cloud(parallel_data['opts'])
-    output = cloud.create(parallel_data['profile'])
+    output = cloud.create(
+        parallel_data['profile'],
+        local_master=parallel_data['opts']['local_master']
+    )
     if parallel_data['opts'].get('show_deploy_args', False) is False:
         output.pop('deploy_kwargs', None)
     return {parallel_data['name']: output}
