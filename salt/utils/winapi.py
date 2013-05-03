@@ -1,7 +1,6 @@
 import logging
 import pythoncom
 import threading
-import wmi
 
 
 log = logging.getLogger(__name__)
