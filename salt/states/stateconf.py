@@ -8,7 +8,7 @@ functionality, but is used to interact with the stateconf renderer.
 '''
 
 
-def _no_op(name, **kws):
+def _no_op(name, **kwargs):
     '''
     No-op state to support state config via the stateconf renderer.
     '''
