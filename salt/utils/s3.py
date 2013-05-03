@@ -78,8 +78,8 @@ def get_iam_metadata(version='latest', url='http://169.254.169.254',
         meta = json.loads(data)
 
     except (ValueError, TypeError, IndexError):
+        # JSON failed to decode, so just pass no credentials back
         log.error('Failed to read metadata. Giving up on IAM credentials.')
-        pass # JSON failed to decode so just pass no credentials back
 
     else:
         credentials['access_key'] = meta['AccessKeyId']
