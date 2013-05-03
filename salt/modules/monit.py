@@ -72,7 +72,7 @@ def summary(svc_name=' '):
     '''
     Display a summary from monit
 
-    CLI Example:
+    CLI Example::
 
         salt '*' monit.summary
         salt '*' monit.summary <service name>
