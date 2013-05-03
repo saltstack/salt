@@ -8,7 +8,8 @@ def start(name):
     '''
    
     CLI Example::
-    salt '*' monit.start <service name>
+
+        salt '*' monit.start <service name>
     '''
     cmd = "monit start {0}".format(name)
 
