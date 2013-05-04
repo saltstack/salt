@@ -2153,8 +2153,8 @@ class HighState(BaseHighState):
         self.stack.append(self)
 
     @classmethod
-    def pop_active(self):
-        self.stack.pop()
+    def pop_active(cls):
+        cls.stack.pop()
 
     @classmethod
     def get_active(klass):
