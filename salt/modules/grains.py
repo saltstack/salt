@@ -150,7 +150,7 @@ def setval(key, val):
         with open(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
-            except Exception, e:
+            except Exception as e:
                 return 'Unable to read existing grains file: {0}'.format(e)
         if not isinstance(grains, dict):
             grains = {}

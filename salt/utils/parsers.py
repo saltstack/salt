@@ -129,7 +129,7 @@ class OptionParser(optparse.OptionParser):
         for process_option_func in _sorted(process_option_funcs):
             try:
                 process_option_func()
-            except Exception, err:
+            except Exception as err:
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         process_option_func, traceback.format_exc(err)

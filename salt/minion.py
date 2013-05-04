@@ -688,7 +688,7 @@ class Minion(object):
                     getpass.getuser()
                 )
             )
-        except Exception, err:
+        except Exception as err:
             # Only windows is allowed to fail here. See #3189. Log as debug in
             # that case. Else, error.
             log.log(
