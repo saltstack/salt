@@ -16,8 +16,8 @@
 #
 
 Name:           salt
-Version:        0.14.1
-Release:        2
+Version:        0.15.0
+Release:        1
 License:        Apache-2.0
 Summary:        A parallel remote execution system
 Url:            http://saltstack.org/
