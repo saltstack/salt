@@ -123,11 +123,11 @@ class Sls(object):
             raise PyDslError('PyDSL only works with a running high state!')
 
     @classmethod
-    def get_all_decls(self):
+    def get_all_decls(cls):
         return HighState.get_active()._pydsl_all_decls
 
     @classmethod
-    def get_render_stack(self):
+    def get_render_stack(cls):
         return HighState.get_active()._pydsl_render_stack
 
     def set(self, **options):
