@@ -448,7 +448,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         try:
             # Et voilá! Finally our syslog handler instance
             handler = logging.handlers.SysLogHandler(**syslog_opts)
-        except socket.error, err:
+        except socket.error as err:
             logging.getLogger(__name__).error(
                 'Failed to setup the Syslog logging handler: {0}'.format(
                     err

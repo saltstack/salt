@@ -80,7 +80,7 @@ if os.name == 'nt':  # pragma: no cover
         # Fall back to "move away and replace"
         try:
             os.rename(src, dst)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
             old = '{0}-{1:08x}'.format(dst, random.randint(0, sys.maxint))
