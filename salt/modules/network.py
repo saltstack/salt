@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
     if __grains__['os'] in ('Windows',):

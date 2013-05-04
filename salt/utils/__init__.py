@@ -308,7 +308,7 @@ def gen_mac(prefix='52:54:'):
 
 def ip_bracket(addr):
     '''
-    Convert IP address representation to ZMQ (url) format. ZMQ expects
+    Convert IP address representation to ZMQ (URL) format. ZMQ expects
     brackets around IPv6 literals, since they are used in URLs.
     '''
     if addr and ":" in addr and not addr.startswith('['):

@@ -623,13 +623,13 @@ def managed(name,
 
     source
         The source file to download to the minion, this source file can be
-        hosted on either the salt master server, or on an http or ftp server.
+        hosted on either the salt master server, or on an HTTP or FTP server.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None, the file
         will be created as an empty file and the content will not be managed
 
-        If the file is hosted on a http or ftp server then the source_hash
+        If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
     source_hash:
@@ -1257,7 +1257,7 @@ def recurse(name,
     srcpath = source[7:]
     if not srcpath.endswith('/'):
         #we're searching for things that start with this *directory*.
-        # use '/' since #master only runs on posix
+        # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
     for fn_ in __salt__['cp.list_master'](env):
         if not fn_.strip():
@@ -1273,7 +1273,7 @@ def recurse(name,
 
         # Check for maxdepth of the relative path
         if maxdepth is not None:
-            # Since paths are all master, just use posix separator
+            # Since paths are all master, just use POSIX separator
             relpieces = relname.split('/')
             # Handle empty directories (include_empty==true) by removing the
             # the last piece if it is an empty string

@@ -1,5 +1,5 @@
 '''
-Module for managing partitions on posix-like systems.
+Module for managing partitions on POSIX-like systems.
 
 Some functions may not be available, depending on your version of parted.
 
@@ -22,9 +22,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
+    # Disable on these platforms, specific service modules exist:
     disable = [
         'Windows',
         ]

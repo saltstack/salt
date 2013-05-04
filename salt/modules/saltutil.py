@@ -142,7 +142,7 @@ def _list_emptydirs(rootdir):
 
 def update(version=None):
     '''
-    Update the salt minion from the url defined in opts['update_url']
+    Update the salt minion from the URL defined in opts['update_url']
 
 
     This feature requires the minion to be running a bdist_esky build.

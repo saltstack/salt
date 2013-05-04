@@ -14,9 +14,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
+    # Disable on these platforms, specific service modules exist:
     disable = [
         'Windows',
         ]
