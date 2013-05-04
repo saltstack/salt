@@ -19,13 +19,13 @@ log = logging.getLogger(__name__)
 try:
     from aptsources import sourceslist
     apt_support = True
-except ImportError, e:
+except ImportError as e:
     apt_support = False
 
 try:
     import softwareproperties.ppa
     ppa_format_support = True
-except ImportError, e:
+except ImportError as e:
     ppa_format_support = False
 
 # Source format for urllib fallback on PPA handling
@@ -948,7 +948,7 @@ def mod_repo(repo, **kwargs):
                     error_str = 'Launchpad does not know about {0}/{1}: {2}'
                     raise Exception(error_str.format(owner_name, ppa_name,
                                                      exc))
-                except IndexError, e:
+                except IndexError as e:
                     error_str = 'Launchpad knows about {0}/{1} but did not ' \
                                 'return a fingerprint. Please set keyid ' \
                                 'manually: {2}'
