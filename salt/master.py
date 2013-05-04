@@ -762,14 +762,13 @@ class AESFuncs(object):
             try:
                 ret.update(self.tops[fun](opts=opts, grains=grains))
             except Exception as exc:
+                # If anything happens in the top generation, log it and move on
                 log.error(
                     'Top function {0} failed with error {1} for minion '
                     '{2}'.format(
                         fun, exc, load['id']
                     )
                 )
-                # If anything happens in the top generation, log it and move on
-                pass
         return ret
 
     def _master_opts(self, load):
