@@ -115,8 +115,13 @@
 
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
-SALTMASTER='/usr/bin/salt-master'
-SERVICE='salt-master'
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+	SALTMASTER='/usr/bin/salt-master'
+	SERVICE='salt-master'
+fi
+
 test -x $SALTMASTER || { echo "$SALTMASTER not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
