@@ -176,7 +176,7 @@ class TestVerify(TestCase):
                     handler.messages
                 )
                 handler.clear()
-            except IOError, err:
+            except IOError as err:
                 if err.errno == 24:
                     # Too many open files
                     self.skipTest('We\'ve hit the max open files setting')

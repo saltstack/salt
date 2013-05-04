@@ -39,7 +39,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         ret = self.run_state('ssh_known_hosts.present', **kwargs)
         try:
             self.assertSaltTrueReturn(ret)
-        except AssertionError, err:
+        except AssertionError as err:
             try:
                 self.assertInSaltComment(
                     ret, 'Unable to receive remote host key'

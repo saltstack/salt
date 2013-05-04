@@ -36,7 +36,7 @@ class TestLog(TestCase):
             # calculations.
             try:
                 saltlog.SaltLoggingClass('{0}.with_digits'.format(__name__))
-            except Exception, err:
+            except Exception as err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
                 )
@@ -55,7 +55,7 @@ class TestLog(TestCase):
             # calculations.
             try:
                 saltlog.SaltLoggingClass('{0}.without_digits'.format(__name__))
-            except Exception, err:
+            except Exception as err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
                 )
