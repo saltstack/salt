@@ -214,7 +214,7 @@ def managed(name, **kwargs):
         return ret
     try:
         __salt__['pkg.mod_repo'](**repokwargs)
-    except Exception, e:
+    except Exception as e:
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
@@ -235,7 +235,7 @@ def managed(name, **kwargs):
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0}'.format(name)
-    except Exception, e:
+    except Exception as e:
         ret['result'] = False
         ret['comment'] = 'Failed to confirm config of repo {0}: {1}'.format(
             name, str(e))
