@@ -59,9 +59,9 @@ def war_deployed(name, war, url='http://localhost:8080/manager', __env__='base',
         absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_file function
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request to the tomcat manager
+        timeout for HTTP request to the tomcat manager
     
     Example::
 
@@ -143,9 +143,9 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     this state can be required in the tomcat.war_deployed state to make sure tomcat is running and that the manager is running as well and ready for deployment
     
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request to the tomcat manager
+        timeout for HTTP request to the tomcat manager
     
     Example::
     
