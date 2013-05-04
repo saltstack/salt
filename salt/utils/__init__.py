@@ -960,7 +960,6 @@ def rm_rf(path):
         Usage : `shutil.rmtree(path, onerror=onerror)`
         """
         if is_windows() and not os.access(path, os.W_OK):
-            import stat
             # Is the error an access error ?
             os.chmod(path, stat.S_IWUSR)
             func(path)
