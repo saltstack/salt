@@ -773,7 +773,7 @@ class ShellCase(TestCase):
             finally:
                 try:
                     process.terminate()
-                except OSError, err:
+                except OSError as err:
                     # process already terminated
                     pass
 
@@ -785,7 +785,7 @@ class ShellCase(TestCase):
         finally:
             try:
                 process.terminate()
-            except OSError, err:
+            except OSError as err:
                 # process already terminated
                 pass
 
