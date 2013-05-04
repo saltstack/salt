@@ -142,7 +142,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
         salt '*' pkg.install pkgs='["<package name>", "<package name>"]'
 
-    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, http, ftp, local filesystem)::
+    CLI Example, Install more than one package from a alternate source (e.g. salt file-server, HTTP, FTP, local filesystem)::
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
     '''

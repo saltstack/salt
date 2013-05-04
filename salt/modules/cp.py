@@ -202,7 +202,7 @@ def get_url(path, dest, env='base'):
 
 def get_file_str(path, env='base'):
     '''
-    Return the contents of a file from a url
+    Return the contents of a file from a URL
 
     CLI Example::
 

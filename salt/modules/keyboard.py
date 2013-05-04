@@ -1,5 +1,5 @@
 '''
-Module for managing keyboards on posix-like systems.
+Module for managing keyboards on POSIX-like systems.
 '''
 
 # Import python libs
@@ -10,9 +10,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-    # Disable on these platorms
+    # Disable on these platforms
     disable = ('Windows',)
     if __grains__['os'] in disable:
         return False

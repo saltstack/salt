@@ -57,7 +57,7 @@ class SaltEvent(object):
 
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
-        Return the string uri for the location of the pull and pub sockets to
+        Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
         id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()

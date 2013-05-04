@@ -257,7 +257,7 @@ def _gen_xml(name,
              desc,
              opts):
     '''
-    Generate the xml used for the libvirt configuration
+    Generate the XML used for the libvirt configuration
     '''
     # Don't generate the libvirt config if it already exists
     vda = os.path.join(vmdir, 'vda')
@@ -494,7 +494,7 @@ def get_disks(name):
 
 def get_conf(name):
     '''
-    Returns the xml for a given vm
+    Returns the XML for a given vm
 
     CLI Example::
 

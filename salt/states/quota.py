@@ -1,5 +1,5 @@
 '''
-Management of Posix Quotas
+Management of POSIX Quotas
 ==========================
 
 The quota can be managed for the system:
