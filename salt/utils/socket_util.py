@@ -326,7 +326,7 @@ class IPv4Address(object):
             )
         try:
             self.dotted_quad = [int(a) for a in a]
-        except ValueError, e:
+        except ValueError as e:
             raise ValueError(
                 'IPv4 addresses must be in dotted-quad form. {0}'.format(e)
             )
