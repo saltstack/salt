@@ -75,7 +75,7 @@ available_version = latest_version
 
 def update_package_site(new_url):
     '''
-    Updates remote package repo url, PACKAGESITE var to be exact.
+    Updates remote package repo URL, PACKAGESITE var to be exact.
 
     Must be using http://, ftp://, or https// protos
 

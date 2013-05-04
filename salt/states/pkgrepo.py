@@ -97,7 +97,7 @@ def managed(name, **kwargs):
     ppa_auth
         For Ubuntu PPAs there can be private PPAs that require authentication
         to access. For these PPAs the username/password can be passed as an
-        http-basic style username/password combination.
+        HTTP Basic style username/password combination.
 
           EXAMPLE: ppa_auth: username:password
 
@@ -136,12 +136,12 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web url to retrieve the GPG key from.
+       A web URL to retrieve the GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
        the sources.list file, cleanup the now unused files, consolidate
-       components (e.g. main) for the same uri, type, and architecture
+       components (e.g. main) for the same URI, type, and architecture
        to a single line, and finally remove comments from the sources.list
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
@@ -262,7 +262,7 @@ def absent(name, **kwargs):
         to access. For these PPAs the username/password can be specified.  This
         is required for matching if the name format uses the "ppa:" specifier
         and is private (requires username/password to access, which is encoded
-        in the uri)
+        in the URI)
 
           EXAMPLE: ppa_auth: username:password
     '''
