@@ -65,7 +65,7 @@ def _chugid(runas):
     if os.getgid() != uinfo.pw_gid:
         try:
             os.setgid(uinfo.pw_gid)
-        except OSError, err:
+        except OSError as err:
             raise CommandExecutionError(
                 'Failed to change from gid {0} to {1}. Error: {2}'.format(
                     os.getgid(), uinfo.pw_gid, err
@@ -76,7 +76,7 @@ def _chugid(runas):
     if sorted(os.getgroups()) != sorted(supgroups):
         try:
             os.setgroups(supgroups)
-        except OSError, err:
+        except OSError as err:
             raise CommandExecutionError(
                 'Failed to set supplemental groups to {0}. Error: {1}'.format(
                     supgroups, err
@@ -86,7 +86,7 @@ def _chugid(runas):
     if os.getuid() != uinfo.pw_uid:
         try:
             os.setuid(uinfo.pw_uid)
-        except OSError, err:
+        except OSError as err:
             raise CommandExecutionError(
                 'Failed to change from uid {0} to {1}. Error: {2}'.format(
                     os.getuid(), uinfo.pw_uid, err
