@@ -829,7 +829,7 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         repo (name by which the yum refers to the repo)
         name (a human-readable name for the repo)
-        baseurl or mirrorlist (the url for yum to reference)
+        baseurl or mirrorlist (the URL for yum to reference)
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a

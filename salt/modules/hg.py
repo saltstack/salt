@@ -168,7 +168,7 @@ def clone(cwd, repository, opts=None, user=None):
         The path to the Mercurial repository
 
     repository
-        The hg uri of the repository
+        The hg URI of the repository
 
     opts : None
         Any additional options to add to the command line

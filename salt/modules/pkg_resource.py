@@ -276,7 +276,7 @@ def parse_targets(name=None, pkgs=None, sources=None):
         srcinfo = []
         for pkg_name, pkg_src in sources.iteritems():
             if __salt__['config.valid_fileproto'](pkg_src):
-                # Cache package from remote source (salt master, http, ftp)
+                # Cache package from remote source (salt master, HTTP, FTP)
                 srcinfo.append((pkg_name,
                                 pkg_src,
                                __salt__['cp.cache_file'](pkg_src),

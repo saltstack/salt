@@ -94,7 +94,7 @@ def _libvirt_creds():
 
 def _get_migrate_command():
     '''
-    Returns the command shared by the differnt migration types
+    Returns the command shared by the different migration types
     '''
     if __salt__['config.option']('virt.tunnel'):
         return ('virsh migrate --p2p --tunnelled --live --persistent '
@@ -111,7 +111,7 @@ def _get_target(target, ssh):
 
 def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
     '''
-    Generate the xml string to define a libvirt vm
+    Generate the XML string to define a libvirt vm
     '''
     mem = mem * 1024
     data = '''
@@ -620,7 +620,7 @@ def full_info():
 
 def get_xml(vm_):
     '''
-    Returns the xml for a given vm
+    Returns the XML for a given vm
 
     CLI Example::
 
@@ -734,11 +734,11 @@ def ctrl_alt_del(vm_):
 
 def create_xml_str(xml):
     '''
-    Start a domain based on the xml passed to the function
+    Start a domain based on the XML passed to the function
 
     CLI Example::
 
-        salt '*' virt.create_xml_str <xml in string format>
+        salt '*' virt.create_xml_str <XML in string format>
     '''
     conn = __get_conn()
     return conn.createXML(xml, 0) is not None
@@ -750,7 +750,7 @@ def create_xml_path(path):
 
     CLI Example::
 
-        salt '*' virt.create_xml_path <path to xml file on the node>
+        salt '*' virt.create_xml_path <path to XML file on the node>
     '''
     if not os.path.isfile(path):
         return False
@@ -759,11 +759,11 @@ def create_xml_path(path):
 
 def define_xml_str(xml):
     '''
-    Define a domain based on the xml passed to the function
+    Define a domain based on the XML passed to the function
 
     CLI Example::
 
-        salt '*' virt.define_xml_str <xml in string format>
+        salt '*' virt.define_xml_str <XML in string format>
     '''
     conn = __get_conn()
     return conn.defineXML(xml) is not None

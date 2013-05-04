@@ -20,7 +20,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 import salt.grains.extra
 
-# Only available on posix systems, nonfatal on windows
+# Only available on POSIX systems, nonfatal on windows
 try:
     import pwd
     import grp
@@ -574,7 +574,7 @@ def script(
         **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
-    The script can be located on the salt master file server or on an http/ftp
+    The script can be located on the salt master file server or on an HTTP/FTP
     server.
 
     The script will be executed directly, so it can be written in any available
@@ -625,7 +625,7 @@ def script_retcode(
         **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
-    The script can be located on the salt master file server or on an http/ftp
+    The script can be located on the salt master file server or on an HTTP/FTP
     server.
 
     The script will be executed directly, so it can be written in any available

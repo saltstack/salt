@@ -106,12 +106,12 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     cmd
         the command to execute
     url
-        the url of the server manager webapp
+        the URL of the server manager webapp
         example: http://localhost:8080/manager
     opts
         a dict of arguments
     timeout
-        timeout for http request
+        timeout for HTTP request
     
     return value is a dict in the from of::
 
@@ -126,21 +126,21 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
         'msg': []
     }
     
-    # preapare authentication
+    # prepare authentication
     auth = _auth(url)
     if auth == False:
         ret['res'] = False
         ret['msg'] = 'missing username and password settings (grain/pillar)'
         return ret
     
-    # preapare url
+    # prepare URL
     if url[-1] != '/':
         url += '/'
     url += 'text/{0}'.format(cmd)
     if opts:
         url += '?{0}'.format(urllib.urlencode(opts))
     
-    # Make the http request
+    # Make the HTTP request
     urllib2.install_opener(auth)
     
     try:
@@ -149,7 +149,7 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
             ret['res'] = False
     except Exception:
         ret['res'] = False
-        ret['msg'] = 'Failed to create http request'
+        ret['msg'] = 'Failed to create HTTP request'
     
     return ret
 
@@ -175,9 +175,9 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
     Find memory leaks in tomcat
     
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -192,9 +192,9 @@ def status(url='http://localhost:8080/manager', timeout=180):
     Used to test if the tomcat manager is up
     
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -210,9 +210,9 @@ def ls(url='http://localhost:8080/manager', timeout=180):
     list all the deployed webapps
     
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -247,9 +247,9 @@ def stop(app, url='http://localhost:8080/manager', timeout=180):
     app
         the webapp context path
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -267,9 +267,9 @@ def start(app, url='http://localhost:8080/manager', timeout=180):
     app
         the webapp context path
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -287,9 +287,9 @@ def reload(app, url='http://localhost:8080/manager', timeout=180):
     app
         the webapp context path
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -307,9 +307,9 @@ def sessions(app, url='http://localhost:8080/manager', timeout=180):
     app
         the webapp context path
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -327,9 +327,9 @@ def status_webapp(app, url='http://localhost:8080/manager', timeout=180):
     app
         the webapp context path
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -350,9 +350,9 @@ def serverinfo(url='http://localhost:8080/manager', timeout=180):
     return detailes about the server
     
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -380,9 +380,9 @@ def undeploy(app, url='http://localhost:8080/manager', timeout=180):
     app
         the webapp context path
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         
@@ -405,12 +405,12 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     force : False
         set True to deploy the webapp even one is deployed in the context
     url : http://localhost:8080/manager
-        the url of the server manager webapp
+        the URL of the server manager webapp
     env : base
         the environment for WAR file in used by salt.modules.cp.get_file
         function
     timeout : 180
-        timeout for http request
+        timeout for HTTP request
     
     CLI Examples::
         

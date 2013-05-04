@@ -131,7 +131,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
         The path to the Git repository
 
     repository
-        The git uri of the repository
+        The git URI of the repository
 
     opts : None
         Any additional options to add to the command line
@@ -601,10 +601,10 @@ def remotes(cwd, user=None):
 
 def remote_get(cwd, remote='origin', user=None):
     '''
-    get fetch und push url for a specified remote name
+    get the fetch and push URL for a specified remote name
 
     remote : origin
-        the remote name used to define the fetch and push url
+        the remote name used to define the fetch and push URL
 
     user : None
         Run git as a user other than what the minion runs as
@@ -631,13 +631,13 @@ def remote_get(cwd, remote='origin', user=None):
 
 def remote_set(cwd, name='origin', url=None, user=None):
     '''
-    sets a remote with name and url like git remote add <remote_name> <remote_url>
+    sets a remote with name and URL like git remote add <remote_name> <remote_url>
 
     remote_name : origin
         defines the remote name
 
     remote_url : None
-        defines the remote url shut not be null!
+        defines the remote URL; should not be None!
 
     user : None
         Run git as a user other than what the minion runs as

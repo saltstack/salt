@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
     if not salt.utils.which('showmount'):
         return False
