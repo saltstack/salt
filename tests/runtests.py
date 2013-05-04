@@ -95,7 +95,7 @@ def run_integration_tests(opts):
                 resource.RLIMIT_NOFILE,
                 (REQUIRED_OPEN_FILES, hmax_open_files)
             )
-        except Exception, err:
+        except Exception as err:
             print('ERROR: Failed to raise the max open files setting -> {0}'.format(err))
             print('Please issue the following command on your console:')
             print('  ulimit -n {0}'.format(REQUIRED_OPEN_FILES))
