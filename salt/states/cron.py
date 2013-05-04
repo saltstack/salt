@@ -261,12 +261,12 @@ def file(name,
 
     name
         The source file to be used as the crontab. This source file can be
-        hosted on either the salt master server, or on an http or ftp server.
+        hosted on either the salt master server, or on an HTTP or FTP server.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs.
 
-        If the file is hosted on a http or ftp server then the source_hash
+        If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
     source_hash

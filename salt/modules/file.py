@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
     # win_file takes care of windows
     if salt.utils.is_windows():

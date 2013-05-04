@@ -15,7 +15,7 @@ import salt.utils
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
 
     # Disable on Windows, a specific file module exists:

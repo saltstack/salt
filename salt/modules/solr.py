@@ -6,7 +6,7 @@ Author: Jed Glazner
 Version: 0.2.1
 Modified: 12/09/2011
 
-This module uses http requests to talk to the apache solr request handlers
+This module uses HTTP requests to talk to the apache solr request handlers
 to gather information and report errors. Because of this the minion doesn't
 necessarily need to reside on the actual slave.  However if you want to
 use the signal function the minion must reside on the physical solr host.
@@ -29,9 +29,9 @@ solr.cores
     A list of core names eg ['core1','core2'].
     An empty list indicates non-multicore setup.
 solr.baseurl
-    The root level url to access solr via http
+    The root level URL to access solr via HTTP
 solr.request_timeout
-    The number of seconds before timing out an http/https/ftp request. If
+    The number of seconds before timing out an HTTP/HTTPS/FTP request. If
     nothing is specified then the python global timeout setting is used.
 solr.type
     Possible values are 'master' or 'slave'
@@ -44,7 +44,7 @@ solr.num_backups
 solr.init_script
     The full path to your init script with start/stop options
 solr.dih.options
-    A list of options to pass to the dih.
+    A list of options to pass to the DIH.
 
 Required Options for DIH
 ------------------------
@@ -185,7 +185,7 @@ def _update_return_dict(ret, success, data, errors=None, warnings=None):
 def _format_url(handler, host=None, core_name=None, extra=None):
     '''
     PRIVATE METHOD
-    Formats the url based on parameters, and if cores are used or not
+    Formats the URL based on parameters, and if cores are used or not
 
     handler : str
         The request handler to hit.
@@ -198,7 +198,7 @@ def _format_url(handler, host=None, core_name=None, extra=None):
         A list of name value pairs in string format. eg ['name=value']
 
     Return: str
-        Fully formatted url (http://<host>:<port>/solr/<handler>?wt=json&<extra>)
+        Fully formatted URL (http://<host>:<port>/solr/<handler>?wt=json&<extra>)
     '''
     extra = [] if extra is None else extra
     if _get_none_or_value(host) is None or host == 'None':
@@ -227,7 +227,7 @@ def _http_request(url, request_timeout=None):
     Uses json.load to fetch the JSON results from the solr API.
 
     url : str
-        a complete url that can be passed to urllib.open
+        a complete URL that can be passed to urllib.open
     request_timeout : int (None)
         The number of seconds before the timeout should fail. Leave blank/None
         to use the default. __opts__['solr.request_timeout']
@@ -517,7 +517,7 @@ def optimize(host=None, core_name=None):
     If you are running a single solr instance, or if you are going to run
     this on a slave be aware than search performance will be horrible
     while this command is being run. Additionally it can take a LONG time
-    to run and your http request may timeout. If that happens adjust your
+    to run and your HTTP request may timeout. If that happens adjust your
     timeout settings.
 
     host : str (None)

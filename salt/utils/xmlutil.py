@@ -20,7 +20,7 @@ def to_dict(xmltree):
     for item in xmltree:
         name = item.tag
         if '}' in name:
-            # If this xml tree has an xmlns attribute, then etree will add it
+            # If this XML tree has an xmlns attribute, then etree will add it
             # to the beginning of the tag, like: "{http://path}tag". This
             # aggression will not stand, man.
             comps = name.split('}')
