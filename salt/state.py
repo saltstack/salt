@@ -2153,13 +2153,13 @@ class HighState(BaseHighState):
         self.stack.append(self)
 
     @classmethod
-    def pop_active(self):
+    def pop_active(cls):
         self.stack.pop()
 
     @classmethod
-    def get_active(klass):
+    def get_active(cls):
         try:
-            return klass.stack[-1]
+            return cls.stack[-1]
         except IndexError:
             return None
 
