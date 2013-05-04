@@ -115,8 +115,12 @@
 
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
-SALTMINION='/usr/bin/salt-minion'
-SERVICE='salt-minion'
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+	SALTMINION='/usr/bin/salt-minion'
+	SERVICE='salt-minion'
+fi
 test -x $SALTMINION || { echo "$SALTMINION not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }

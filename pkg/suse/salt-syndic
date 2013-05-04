@@ -115,8 +115,12 @@
 
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
-SALTSYNDIC='/usr/bin/salt-syndic'
-SERVICE='salt-syndic'
+if [ -f /etc/default/salt ]; then
+    . /etc/default/salt
+else
+	SALTSYNDIC='/usr/bin/salt-syndic'
+	SERVICE='salt-syndic'
+fi
 test -x $SALTSYNDIC || { echo "$SALTMINION not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
