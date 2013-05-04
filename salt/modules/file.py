@@ -616,6 +616,14 @@ def psed(path, before, after, limit='', backup='.bak', flags='gMS',
     ofile.close()
 
 
+RE_FLAG_TABLE = {'I': re.I,
+                 'L': re.L,
+                 'M': re.M,
+                 'S': re.S,
+                 'U': re.U,
+                 'X': re.X}
+
+
 def _psed(text, before, after, limit, flags):
     '''
     Does the actual work for file.psed, so that single lines can be passed in
@@ -632,14 +640,8 @@ def _psed(text, before, after, limit, flags):
         flags = flags.replace('g', '')
 
     aflags = 0
-    flag_table = {'I': 2,
-                  'L': 4,
-                  'M': 8,
-                  'S': 16,
-                  'U': 32,
-                  'X': 64}
     for flag in flags:
-        aflags += flag_table[flag]
+        aflags |= RE_FLAG_TABLE[flag]
 
     before = re.compile(before, flags=aflags)
     text = re.sub(before, after, atext, count=count)
