@@ -105,38 +105,39 @@ def eclean_dist(destructive=False, package_names=False, size_limit=0,
     CLI Example::
         salt '*' gentoolkit.eclean_dist destructive=True
     '''
-    try:
+    if exclude_file is None:
         exclude = None
-        if exclude_file is not None:
+    else:
+        try:
             exclude = _parse_exclude(exclude_file)
+        except excludemod.ParseExcludeFileException as e:
+            ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
+            return ret
 
-        if time_limit != 0:
-            time_limit = cli.parseTime(time_limit)
-        if size_limit != 0:
-            size_limit = cli.parseSize(size_limit)
+    if time_limit != 0:
+        time_limit = cli.parseTime(time_limit)
+    if size_limit != 0:
+        size_limit = cli.parseSize(size_limit)
 
-        clean_size = 0
-        engine = search.DistfilesSearch(lambda x: None)
-        clean_me, saved, deprecated = engine.findDistfiles(
-            destructive=destructive, package_names=package_names,
-            size_limit=size_limit, time_limit=time_limit,
-            fetch_restricted=fetch_restricted, exclude=exclude)
+    clean_size = 0
+    engine = search.DistfilesSearch(lambda x: None)
+    clean_me, saved, deprecated = engine.findDistfiles(
+        destructive=destructive, package_names=package_names,
+        size_limit=size_limit, time_limit=time_limit,
+        fetch_restricted=fetch_restricted, exclude=exclude)
 
-        cleaned = dict()
-        def _eclean_progress_controller(size, key, *args):
-            cleaned[key] = _pretty_size(size)
-            return True
+    cleaned = dict()
+    def _eclean_progress_controller(size, key, *args):
+        cleaned[key] = _pretty_size(size)
+        return True
 
-        if clean_me:
-            cleaner = clean.CleanUp(_eclean_progress_controller)
-            clean_size = cleaner.clean_dist(clean_me)
+    if clean_me:
+        cleaner = clean.CleanUp(_eclean_progress_controller)
+        clean_size = cleaner.clean_dist(clean_me)
 
-        ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
-               'total_cleaned': _pretty_size(clean_size)}
-    except excludemod.ParseExcludeFileException as e:
-        ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
-    finally:
-        return ret
+    ret = {'cleaned': cleaned, 'saved': saved, 'deprecated': deprecated,
+           'total_cleaned': _pretty_size(clean_size)}
+    return ret
 
 def eclean_pkg(destructive=False, package_names=False, time_limit=0,
                exclude_file='/etc/eclean/packages.exclude'):
@@ -169,37 +170,38 @@ def eclean_pkg(destructive=False, package_names=False, time_limit=0,
     CLI Example::
         salt '*' gentoolkit.eclean_pkg destructive=True
     '''
-    try:
+    if exclude_file is None:
         exclude = None
-        if exclude_file is not None:
+    else:
+        try:
             exclude = _parse_exclude(exclude_file)
+        except excludemod.ParseExcludeFileException as e:
+            ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
+            return ret
 
-        if time_limit != 0:
-            time_limit = cli.parseTime(time_limit)
+    if time_limit != 0:
+        time_limit = cli.parseTime(time_limit)
 
-        clean_size = 0
-        # findPackages requires one arg, but does nothing with it.
-        # So we will just pass None in for the required arg
-        clean_me = search.findPackages(None, destructive=destructive,
-                                       package_names=package_names,
-                                       time_limit=time_limit, exclude=exclude,
-                                       pkgdir=search.pkgdir)
+    clean_size = 0
+    # findPackages requires one arg, but does nothing with it.
+    # So we will just pass None in for the required arg
+    clean_me = search.findPackages(None, destructive=destructive,
+                                   package_names=package_names,
+                                   time_limit=time_limit, exclude=exclude,
+                                   pkgdir=search.pkgdir)
 
-        cleaned = dict()
-        def _eclean_progress_controller(size, key, *args):
-            cleaned[key] = _pretty_size(size)
-            return True
+    cleaned = dict()
+    def _eclean_progress_controller(size, key, *args):
+        cleaned[key] = _pretty_size(size)
+        return True
 
-        if clean_me:
-            cleaner = clean.CleanUp(_eclean_progress_controller)
-            clean_size = cleaner.clean_pkgs(clean_me, search.pkgdir)
+    if clean_me:
+        cleaner = clean.CleanUp(_eclean_progress_controller)
+        clean_size = cleaner.clean_pkgs(clean_me, search.pkgdir)
 
-        ret = {'cleaned': cleaned,
-               'total_cleaned': _pretty_size(clean_size)}
-    except excludemod.ParseExcludeFileException as e:
-        ret = {e: 'Invalid exclusion file: {0}'.format(exclude_file)}
-    finally:
-        return ret
+    ret = {'cleaned': cleaned,
+           'total_cleaned': _pretty_size(clean_size)}
+    return ret
 
 def _glsa_list_process_output(output):
     '''
