@@ -59,7 +59,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
         try:
             os.makedirs(ographite)
-        except OSError, err:
+        except OSError as err:
             if err.errno == 13:
                 # Permission denied
                 self.skipTest(
