@@ -53,7 +53,7 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
-        except SaltTemplateRenderError, exc:
+        except SaltTemplateRenderError as exc:
             return dict(result=False, data=str(exc))
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -96,7 +96,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                         undefined=jinja2.StrictUndefined,**env_args)
     try:
         output = jinja_env.from_string(tmplstr).render(**context)
-    except jinja2.exceptions.TemplateSyntaxError, exc:
+    except jinja2.exceptions.TemplateSyntaxError as exc:
         raise SaltTemplateRenderError(str(exc))
 
     # Workaround a bug in Jinja that removes the final newline

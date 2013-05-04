@@ -1051,7 +1051,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         # Note that listdir and error are globals in this module due
         # to earlier import-*.
         names = os.listdir(top)
-    except os.error, err:
+    except os.error as err:
         if onerror is not None:
             onerror(err)
         return
