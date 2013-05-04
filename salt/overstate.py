@@ -96,7 +96,7 @@ class OverState(object):
             if name in stage:
                 return stage
 
-    def verify_stage(self, name, stage):
+    def verify_stage(self, stage):
         '''
         Verify that the stage is valid, return the stage, or a list of errors
         '''
@@ -185,7 +185,7 @@ class OverState(object):
                         rname = comp.keys()[0]
                         if req == rname:
                             rstage = comp[rname]
-                            v_stage = self.verify_stage(rname, rstage)
+                            v_stage = self.verify_stage(rstage)
                             if isinstance(v_stage, list):
                                 yield {rname: v_stage}
                             else:
@@ -251,7 +251,7 @@ class OverState(object):
             name = comp.keys()[0]
             stage = comp[name]
             if name not in self.over_run:
-                v_stage = self.verify_stage(name, stage)
+                v_stage = self.verify_stage(stage)
                 if isinstance(v_stage, list):
                     yield [comp]
                     yield v_stage
