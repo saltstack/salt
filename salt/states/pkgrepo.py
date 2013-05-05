@@ -223,7 +223,7 @@ def managed(name, **kwargs):
         return ret
     try:
         repodict = __salt__['pkg.get_repo'](repokwargs['repo'], 
-                                            repokwargs.get('ppa_auth', None))
+                                            ppa_auth=repokwargs.get('ppa_auth', None))
         if repo:
             for kwarg in sanitizedkwargs:
                 if repodict.get(kwarg) != repo.get(kwarg):
@@ -275,7 +275,7 @@ def absent(name, **kwargs):
         kwargs['name'] = kwargs.pop('ppa')
 
     try:
-        repo = __salt__['pkg.get_repo'](name, kwargs.get('ppa_auth', None))
+        repo = __salt__['pkg.get_repo'](name, ppa_auth=kwargs.get('ppa_auth', None))
     except:
         pass
     if not repo:
