@@ -236,12 +236,16 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
     '''
     lst = list_tab(user)
     ret = 'absent'
-    rm_ = None
-    for ind in range(len(lst['crons'])):
-        if cmd == lst['crons'][ind]['cmd']:
-            rm_ = ind
-    if rm_ is not None:
-        lst['crons'].pop(rm_)
+    orig_crons = lst['crons']
+    target = {'min': minute,
+              'hour': hour,
+              'daymonth': dom,
+              'month': month,
+              'dayweek': dow,
+              'cmd': cmd}
+    filtered_crons = [cron for cron in orig_crons if cron != target]
+    if len(filtered_crons) < len(orig_crons):
+        lst['crons'] = filtered_crons
         ret = 'removed'
     comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
