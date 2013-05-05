@@ -108,7 +108,7 @@ def latest(name,
                 remote = __salt__['git.remote_get'](target,
                                                     remote=remote_name,
                                                     user=runas)
-                if remote == None or not remote[0] == name:
+                if remote is None or remote[0] != name:
                     __salt__['git.remote_set'](target,
                                                remote_name=remote_name,
                                                remote_url=name,
