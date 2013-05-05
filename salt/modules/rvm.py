@@ -269,7 +269,7 @@ def gemset_empty(ruby, gemset, runas=None):
 
         salt '*' rvm.gemset_empty 2.0.0 foobar
     '''
-    return _rvm_do(ruby, 'rvm --force gemset empty', gemset, runas=runas)
+    return _rvm_do(ruby, 'rvm --force gemset empty {gemset}'.format(gemset=gemset), runas=runas)
 
 
 def gemset_copy(source, destination, runas=None):
