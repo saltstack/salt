@@ -5,7 +5,7 @@ Salt 0.15.0 Release Notes
 The many new features of Salt 0.15.0 have arrived! Salt 0.15.0 comes with many
 smaller features and a few larger ones. 
 
-Thease features range from better debugging tools to the new Salt Mine system.
+These features range from better debugging tools to the new Salt Mine system.
 
 Major Features
 ==============
@@ -14,9 +14,9 @@ The Salt Mine
 -------------
 
 First there was the peer system, allowing for commands to be executed from a
-minion to other minions to gather data live, next there was the external job
+minion to other minions to gather data live. Then there was the external job
 cache for storing and accessing long term data. Now the middle ground is being
-filled in with the salt mine. The Salt Mine is a system used to execute
+filled in with the Salt Mine. The Salt Mine is a system used to execute
 functions on a regular basis on minions and then store only the most recent
 data from the functions on the master, then the data is looked up via targets.
 
@@ -28,7 +28,7 @@ IPV6 Support
 
 0.13.0 saw the addition of initial IPV6 support but errors were encountered and
 it needed to be stripped out. This time the code covers more cases and must be
-explicitly enabled. But the support is much more extensive then before.
+explicitly enabled. But the support is much more extensive than before.
 
 Copy Files From Minions to the Master
 -------------------------------------
@@ -43,7 +43,7 @@ cachedir for each minon.
 Better Template Debugging
 -------------------------
 
-Template errors have long been a burden when writing states and pillar, 0.15.0
+Template errors have long been a burden when writing states and pillar. 0.15.0
 will now send the compiled template data to the debug log, this makes tracking
 down the intermittent stage templates much easier. So running state.sls or
 state.highstate with `-l debug` will now print out the rendered templates in
@@ -77,7 +77,7 @@ The Peer System has been updated to run using the client libraries instead
 of firing directly over the publish bus. This makes the peer system much more
 consistent and reliable.
 
-Minion Key Revokation
+Minion Key Revocation
 ---------------------
 
 In the past when a minion was decommissioned the key needed to be manually
