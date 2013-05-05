@@ -5,7 +5,7 @@ Salt 0.14.0 Release Notes
 Salt 0.14.0 is here! This release was held up primarily by PyCon, Scale and
 illness, but has arrived! 0.14.0 comes with many new features and is breaking
 ground for Salt in the area of cloud management with the introduction of Salt
-providing basic cloud controller functionallity.
+providing basic cloud controller functionality.
 
 Major Features
 ==============
@@ -17,7 +17,7 @@ This is the first primitive inroad to using Salt as a cloud controller is
 available in 0.14.0. Be advised that this is alpha, only tested in a few very
 small environments.
 
-The cloud controler is built using kvm and libvirt for the hypervisors.
+The cloud controller is built using kvm and libvirt for the hypervisors.
 Hypervisors are autodetected as minions and only need to have libvirt running
 and kvm installed to function. The features of the Salt cloud controller are
 as follows:
@@ -50,7 +50,7 @@ New get Functions
 
 An easier way to manage data has been introduced. The pillar, grains and config
 execution modules have been extended with the new ``get`` function. This
-funtion works much in the same way as the get method in a python dict, but with
+function works much in the same way as the get method in a python dict, but with
 an enhancement, nested dict components can be extracted using a `:` delimiter.
 
 If a structure like this is in pillar:
@@ -76,5 +76,5 @@ can be set allowing the template to fall back if the value is not available:
     {{ salt['pillar.get']('foo:bar:baz', 'qux') }}
 
 This makes handling nested structures much easier, and defaults can be cleanly
-set. This new funcion is being used extensively in the new formulae repository
+set. This new function is being used extensively in the new formulae repository
 of salt sls formulas.

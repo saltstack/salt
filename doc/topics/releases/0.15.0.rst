@@ -5,7 +5,7 @@ Salt 0.15.0 Release Notes
 The many new features of Salt 0.15.0 have arrived! Salt 0.15.0 comes with many
 smaller features and a few larger ones. 
 
-Thease features range from better debugging tools to the new Salt Mine system.
+These features range from better debugging tools to the new Salt Mine system.
 
 Major Features
 ==============
@@ -77,7 +77,7 @@ The Peer System has been updated to run using the client libraries instead
 of firing directly over the publish bus. This makes the peer system much more
 consistent and reliable.
 
-Minion Key Revokation
+Minion Key Revocation
 ---------------------
 
 In the past when a minion was decommissioned the key needed to be manually
