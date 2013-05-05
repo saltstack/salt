@@ -21,7 +21,7 @@ def status(name, max=None, min=None):
            'data': {}} # Data field for monitoring state
 
     data = __salt__['disk.usage']()
-    if not name in data:
+    if name not in data:
         ret['result'] = False
         ret['comment'] += 'Named disk mount not present '
         return ret

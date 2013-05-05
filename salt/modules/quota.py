@@ -202,7 +202,7 @@ def get_mode(device):
     out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         comps = line.strip().split()
-        if not comps[3] in ret:
+        if comps[3] not in ret:
             ret[comps[3]] = {
                 'device': comps[4].replace('(', '').replace(')', ''),
             }
