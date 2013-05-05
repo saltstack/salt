@@ -744,7 +744,7 @@ class Minion(object):
         self.epub_sock.bind(epub_uri)
         self.epull_sock.bind(epull_uri)
         # Restrict access to the sockets
-        if not self.opts.get('ipc_mode', '') == 'tcp':
+        if self.opts.get('ipc_mode', '') != 'tcp':
             os.chmod(
                 epub_sock_path,
                 448

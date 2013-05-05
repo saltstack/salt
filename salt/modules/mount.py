@@ -90,7 +90,7 @@ def fstab(config='/etc/fstab'):
                 # Blank line
                 continue
             comps = line.split()
-            if not len(comps) == 6:
+            if len(comps) != 6:
                 # Invalid entry
                 continue
             ret[comps[1]] = {'device': comps[0],
@@ -126,7 +126,7 @@ def rm_fstab(name, config='/etc/fstab'):
                     lines.append(line)
                     continue
                 comps = line.split()
-                if not len(comps) == 6:
+                if len(comps) != 6:
                     # Invalid entry
                     lines.append(line)
                     continue
@@ -186,7 +186,7 @@ def set_fstab(
                     lines.append(line)
                     continue
                 comps = line.split()
-                if not len(comps) == 6:
+                if len(comps) != 6:
                     # Invalid entry
                     lines.append(line)
                     continue

@@ -21,7 +21,7 @@ def _render_tab(lst):
     for pre in lst['pre']:
         ret.append('{0}\n'.format(pre))
     if len(ret):
-        if not ret[-1] == TAG:
+        if ret[-1] != TAG:
             ret.append(TAG)
     else:
         ret.append(TAG)

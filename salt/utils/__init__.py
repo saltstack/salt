@@ -271,7 +271,7 @@ def jid_to_time(jid):
     Convert a salt job id into the time when the job was invoked
     '''
     jid = str(jid)
-    if not len(jid) == 20:
+    if len(jid) != 20:
         return ''
     year = jid[:4]
     month = jid[4:6]
@@ -433,7 +433,7 @@ def is_jid(jid):
     '''
     if not isinstance(jid, basestring):
         return False
-    if not len(jid) == 20:
+    if len(jid) != 20:
         return False
     try:
         int(jid)

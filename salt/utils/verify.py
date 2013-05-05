@@ -208,7 +208,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         # If starting the process as root, chown the new dirs
         if os.getuid() == 0:
             fmode = os.stat(dir_)
-            if not fmode.st_uid == uid or not fmode.st_gid == gid:
+            if fmode.st_uid != uid or fmode.st_gid != gid:
                 if permissive and fmode.st_gid in groups:
                     # Allow the directory to be owned by any group root
                     # belongs to if we say it's ok to be permissive
@@ -227,7 +227,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         fmode = os.stat(path)
                     except (IOError, OSError):
                         pass
-                    if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                    if fmode.st_uid != uid or fmode.st_gid != gid:
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
@@ -236,7 +236,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
-                    if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                    if fmode.st_uid != uid or fmode.st_gid != gid:
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:

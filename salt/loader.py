@@ -823,7 +823,7 @@ class Loader(object):
         grains = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if not key[key.index('.') + 1:] == 'core':
+            if key[key.index('.') + 1:] != 'core':
                 continue
             ret = fun()
             if not isinstance(ret, dict):
