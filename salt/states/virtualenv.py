@@ -24,6 +24,7 @@ def managed(name,
             prompt='',
             __env__='base',
             runas=None,
+            no_chown=False,
             cwd=None,
             index_url=None,
             extra_index_url=None):
@@ -130,6 +131,7 @@ def managed(name,
             requirements=requirements, bin_env=name, runas=runas, cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
+            no_chown=no_chown,
             __env__=__env__
         )
         ret['result'] &= _ret['retcode'] == 0
