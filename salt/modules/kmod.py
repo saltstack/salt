@@ -169,12 +169,12 @@ def mod_list(only_persist=False):
     '''
     mods = set()
     if only_persist:
-        file = open(_get_modules_conf(), 'r')
-        for line in file.readlines():
-            line = line.strip()
-            mod_name = _strip_module_name(line)
-            if not line.startswith('#') and mod_name:
-                mods.add(mod_name)
+        with open(_get_modules_conf(), 'r') as modules_file:
+            for line in modules_file:
+                line = line.strip()
+                mod_name = _strip_module_name(line)
+                if not line.startswith('#') and mod_name:
+                    mods.add(mod_name)
     else:
         for mod in lsmod():
             mods.add(mod['module'])
