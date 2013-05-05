@@ -24,7 +24,7 @@ def __virtual__():
     '''
     mdadm provides raid functions for Linux
     '''
-    if not __grains__['kernel'] == 'Linux':
+    if __grains__['kernel'] != 'Linux':
         return False
     if not salt.utils.which('mdadm'):
         return False
