@@ -44,7 +44,7 @@ The new config option on the master called ``minion_data_cache`` instructs the
 Salt master to maintain a cache of the minion's grains and pillar data in the
 cachedir. This option is turned off by default to avoid hitting the disk more,
 but when enabled the cache is used to make grain matching from the salt command
-more powerful, since the minions that will match can be pre determined.
+more powerful, since the minions that will match can be predetermined.
 
 Backup Files
 ------------
