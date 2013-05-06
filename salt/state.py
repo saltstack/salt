@@ -74,9 +74,9 @@ def state_args(id_, state, high):
     Return a set of the arguments passed to the named state
     '''
     args = set()
-    if not id_ in high:
+    if id_ not in high:
         return args
-    if not state in high[id_]:
+    if state not in high[id_]:
         return args
     for item in high[id_][state]:
         if not isinstance(item, dict):
