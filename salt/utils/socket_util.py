@@ -312,6 +312,22 @@ def ip4_addrs():
     return sorted(ret)
 
 
+def hex2ip(hex_ip):
+    '''
+    Convert a hex string to an ip, if a failure occurs the original hex is
+    returned
+    '''
+    try:
+        hip = int(hex_ip, 16)
+    except ValueError:
+        return hex_ip
+    return '{0}.{1}.{2}.{3}'.format(
+            hip >> 24 & 255,
+            hip >> 16 & 255,
+            hip >> 8 & 255,
+            hip & 255)
+
+
 class IPv4Address(object):
     '''
     A very minimal subset of the IPv4Address object in the ip_address module.
