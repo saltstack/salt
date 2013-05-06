@@ -42,6 +42,8 @@ def __virtual__():
                'Arch',
                'Arch ARM',
                'ALT',
+               'SUSE  Enterprise Server',
+               'openSUSE',
                'OEL',
               ]
     if __grains__['os'] in disable:
