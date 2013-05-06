@@ -322,9 +322,11 @@ class Loader(object):
     also be used to only load specific functions from a directory, or to
     call modules in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts=dict(), tag='module',
+    def __init__(self, module_dirs, opts=None, tag='module',
                  loaded_base_name=None, mod_type_check=None):
         self.module_dirs = module_dirs
+        if opts is None:
+            opts = {}
         if '_' in tag:
             raise LoaderError('Cannot tag loader with an "_"')
         self.tag = tag
@@ -351,10 +353,12 @@ class Loader(object):
             mod_opts[key] = val
         return mod_opts
 
-    def call(self, fun, arg=list()):
+    def call(self, fun, arg=None):
         '''
         Call a function in the load path.
         '''
+        if arg is None:
+            arg = []
         name = fun[:fun.rindex('.')]
         try:
             fn_, path, desc = imp.find_module(name, self.module_dirs)
