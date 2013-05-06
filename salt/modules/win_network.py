@@ -183,7 +183,7 @@ def _interfaces_ipconfig(out):
             continue
         # TODO what does Windows call Infiniband and 10/40gige adapters
         if line.startswith('Ethernet'):
-            iface = ifaces[re.search('adapter (\S.+):$').group(1)]
+            iface = ifaces[re.search(r'adapter (\S.+):$').group(1)]
             iface['up'] = True
             addr = None
             continue

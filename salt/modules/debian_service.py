@@ -39,7 +39,7 @@ def get_enabled():
     ret = set()
     lines = glob.glob('{0}*'.format(prefix))
     for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
+        ret.add(re.split(prefix + r'\d+', line)[1])
     return sorted(ret)
 
 

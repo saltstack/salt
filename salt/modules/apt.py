@@ -218,7 +218,7 @@ def refresh_db():
         ident = ' '.join(cols[1:])
         if 'Get' in cols[0]:
             # Strip filesize from end of line
-            ident = re.sub(' \[.+B\]$', '', ident)
+            ident = re.sub(r' \[.+B\]$', '', ident)
             ret[ident] = True
         elif cols[0] == 'Ign':
             ret[ident] = False
@@ -517,7 +517,7 @@ def list_pkgs(versions_as_list=False):
         cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
         out = __salt__['cmd.run_stdout'](cmd)
 
-        virtpkg_re = re.compile('Package: (\S+)\nProvides: ([\\S, ]+)')
+        virtpkg_re = re.compile('Package: (\\S+)\nProvides: ([\\S, ]+)')
         virtpkgs = set()
         for realpkg, provides in virtpkg_re.findall(out):
             # grep-available returns info on all virtual packages. Ignore any
@@ -555,7 +555,7 @@ def _get_upgradable():
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
     rexp = re.compile('(?m)^Conf '
                       '([^ ]+) '          # Package name
-                      '\(([^ ]+)')        # Version
+                      r'\(([^ ]+)')        # Version
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 

@@ -116,7 +116,7 @@ def list(runas=None):
     rubies = []
 
     for line in _rvm('list', '', runas=runas).splitlines():
-        match = re.match('^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
+        match = re.match(r'^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
         if match:
             rubies.append([
                 match.group(2), match.group(3), match.group(1) == '*'

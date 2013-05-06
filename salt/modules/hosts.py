@@ -17,7 +17,7 @@ def __get_hosts_filename():
     '''
     # TODO: Investigate using  "%SystemRoot%\system32" for this
     if salt.utils.is_windows():
-        return 'C:\Windows\System32\drivers\etc\hosts'
+        return 'C:\\Windows\\System32\\drivers\\etc\\hosts'
 
     return __salt__['config.option']('hosts.file')
 

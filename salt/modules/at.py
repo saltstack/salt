@@ -79,7 +79,7 @@ def atq(tag=None):
 
         # Jobs created with at.at() will use the following
         # comment to denote a tagged job.
-        job_kw_regex = re.compile('^### SALT: (\w+)')
+        job_kw_regex = re.compile(r'^### SALT: (\w+)')
 
         # Redhat/CentOS
         if __grains__['os_family'] == 'RedHat':

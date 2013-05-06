@@ -104,8 +104,8 @@ def libvirt_creds():
 
         salt '*' butterkvm.libvirt_creds
     '''
-    g_cmd = 'grep ^\s*group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep ^\s*user /etc/libvirt/qemu.conf'
+    g_cmd = 'grep ^\\s*group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
         group = subprocess.Popen(g_cmd,
             shell=True,
