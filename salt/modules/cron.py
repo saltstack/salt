@@ -189,7 +189,7 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
 
     CLI Example::
 
-        salt '*' cron.set_job root \* \* \* \* 1 /usr/local/weekly
+        salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
     # Scrub the types
     minute = str(minute)
@@ -232,7 +232,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
 
     CLI Example::
 
-        salt '*' cron.rm_job root \* \* \* \* 1 /usr/local/weekly
+        salt '*' cron.rm_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
     lst = list_tab(user)
     ret = 'absent'

@@ -60,7 +60,7 @@ def fullversion():
     out = __salt__['cmd.run'](cmd).splitlines()
     # Example
     #  -D APR_HAS_MMAP
-    define_re = re.compile('^\s+-D\s+')
+    define_re = re.compile(r'^\s+-D\s+')
     for line in out:
         if ': ' in line:
             comps = line.split(': ')

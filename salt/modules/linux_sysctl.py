@@ -74,7 +74,7 @@ def assign(name, value):
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
-    regex = re.compile('^{0}\s+=\s+{1}$'.format(name, value))
+    regex = re.compile(r'^{0}\s+=\s+{1}$'.format(name, value))
 
     if not regex.match(out):
         if data['retcode'] != 0 and data['stderr']:
@@ -134,11 +134,11 @@ def persist(name, value, config='/etc/sysctl.conf'):
         # allow our users to put a space or tab between multi-value sysctls
         # and have salt not try to set it every single time.
         if isinstance(comps[1], string_types) and ' ' in comps[1]:
-            comps[1] = re.sub('\s+', '\t', comps[1])
+            comps[1] = re.sub(r'\s+', '\t', comps[1])
 
         # Do the same thing for the value 'just in case'
         if isinstance(value, string_types) and ' ' in value:
-            value = re.sub('\s+', '\t', value)
+            value = re.sub(r'\s+', '\t', value)
 
         if len(comps) < 2:
             nlines.append(line)

@@ -30,17 +30,17 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match('^Name\s*:\s*(\S+)', line)
+                    match = re.match(r'^Name\s*:\s*(\S+)', line)
                     if match:
                         name = match.group(1)
                         continue
                 if not version:
-                    match = re.match('^Version\s*:\s*(\S+)', line)
+                    match = re.match(r'^Version\s*:\s*(\S+)', line)
                     if match:
                         version = match.group(1)
                         continue
                 if not rel:
-                    match = re.match('^Release\s*:\s*(\S+)', line)
+                    match = re.match(r'^Release\s*:\s*(\S+)', line)
                     if match:
                         rel = match.group(1)
                         continue
@@ -55,12 +55,12 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match('^Name\s*:\s*(\S+)', line)
+                    match = re.match(r'^Name\s*:\s*(\S+)', line)
                     if match:
                         name = match.group(1)
                         continue
                 if not version:
-                    match = re.match('^Version\s*:\s*(\S+)', line)
+                    match = re.match(r'^Version\s*:\s*(\S+)', line)
                     if match:
                         version = match.group(1)
                         continue
@@ -73,12 +73,12 @@ def _parse_pkg_meta(path):
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
                 if not name:
-                    match = re.match('^\s*Package\s*:\s*(\S+)', line)
+                    match = re.match(r'^\s*Package\s*:\s*(\S+)', line)
                     if match:
                         name = match.group(1)
                         continue
                 if not version:
-                    match = re.match('^\s*Version\s*:\s*(\S+)', line)
+                    match = re.match(r'^\s*Version\s*:\s*(\S+)', line)
                     if match:
                         version = match.group(1)
                         continue

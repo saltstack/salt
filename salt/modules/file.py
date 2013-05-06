@@ -424,9 +424,9 @@ def find(path, **kwargs):
 
     CLI Examples::
 
-        salt '*' file.find / type=f name=\*.bak size=+10m
+        salt '*' file.find / type=f name=\\*.bak size=+10m
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
-        salt '*' file.find /var/log name=\*.[0-9] mtime=+30d size=+10m delete
+        salt '*' file.find /var/log name=\\*.[0-9] mtime=+30d size=+10m delete
     '''
     try:
         finder = salt.utils.find.Finder(kwargs)
@@ -443,7 +443,7 @@ def _sed_esc(string, escape_all=False):
     Escape single quotes and forward slashes
     '''
     special_chars = "^.[$()|*+?{"
-    string = string.replace("'", "'\"'\"'").replace("/", "\/")
+    string = string.replace("'", "'\"'\"'").replace("/", "\\/")
     if escape_all is True:
         for char in special_chars:
             string = string.replace(char, "\\" + char)
@@ -573,10 +573,10 @@ def psed(path, before, after, limit='', backup='.bak', flags='gMS',
         Flags to modify the search. Valid values are :
             ``g``: Replace all occurrences of the pattern, not just the first.
             ``I``: Ignore case.
-            ``L``: Make \w, \W, \b, \B, \s and \S dependent on the locale.
+            ``L``: Make \\w, \\W, \b, \\B, \\s and \\S dependent on the locale.
             ``M``: Treat multiple lines as a single line.
             ``S``: Make `.` match all characters, including newlines.
-            ``U``: Make \w, \W, \b, \B, \d, \D, \s and \S dependent on Unicode.
+            ``U``: Make \\w, \\W, \\b, \\B, \\d, \\D, \\s and \\S dependent on Unicode.
             ``X``: Verbose (whitespace is ignored).
     multi: ``False``
         If True, treat the entire file as a single line
@@ -1434,7 +1434,7 @@ def get_diff(
 
     CLI Example::
 
-        salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
+        salt '*' file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
     ret = ''
 
