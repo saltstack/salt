@@ -834,8 +834,8 @@ def seed_non_shared_migrate(disks, force=False):
             pre = yaml.safe_load(subprocess.Popen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
-            if not pre['file format'] == data['file format']\
-                    and not pre['virtual size'] == data['virtual size']:
+            if pre['file format'] != data['file format']\
+                    and pre['virtual size'] != data['virtual size']:
                 return False
         if not os.path.isdir(os.path.dirname(fn_)):
             os.makedirs(os.path.dirname(fn_))

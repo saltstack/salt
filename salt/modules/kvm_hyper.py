@@ -233,7 +233,7 @@ def _get_image(image, vda):
         if not os.path.isabs(image) or not image.startswith('file://'):
             # The image is on a network resource
             env = 'base'
-            if not image.rindex(':') == 4:
+            if image.rindex(':') != 4:
                 env = image.split(':')[-1]
                 image = image[:image.rindex(':')]
             __salt__['cp.get_url'](image, vda, env)

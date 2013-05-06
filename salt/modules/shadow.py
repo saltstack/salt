@@ -135,7 +135,7 @@ def set_password(name, password, use_usermod=False):
         with salt.utils.fopen(s_file, 'rb') as fp_:
             for line in fp_:
                 comps = line.strip().split(':')
-                if not comps[0] == name:
+                if comps[0] != name:
                     lines.append(line)
                     continue
                 comps[1] = password

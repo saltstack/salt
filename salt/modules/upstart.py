@@ -122,7 +122,7 @@ def _runlevel():
 
 
 def _is_symlink(name):
-    return not os.path.abspath(name) == os.path.realpath(name)
+    return os.path.abspath(name) != os.path.realpath(name)
 
 
 def _service_is_upstart(name):
