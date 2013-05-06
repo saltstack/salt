@@ -265,10 +265,9 @@ class StateDeclaration(object):
         for m in self._mods:
             if m._name == name:
                 return m
-        else:
-            m = StateModule(name, self._id)
-            self._mods.append(m)
-            return m
+        m = StateModule(name, self._id)
+        self._mods.append(m)
+        return m
 
     __getitem__ = __getattr__
 
