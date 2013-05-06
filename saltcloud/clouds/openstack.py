@@ -323,9 +323,7 @@ def create(vm_):
                 group_list.append(vg)
             else:
                 raise SaltCloudNotFound(
-                    'No such security group: \'{0}\''.format(
-                        group
-                    )
+                    'No such security group: \'{0}\''.format(vg)
                 )
 
         kwargs['ex_security_groups'] = [
