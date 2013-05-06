@@ -85,7 +85,18 @@ def output(data):
                                                     colors['ENDC'])
                     hstrs.append(msg)
                     continue
-
+                elif __opts__.get('state_output', 'full').lower() == 'mixed':
+                    # Print terse unless it failed
+                    if ret['result'] is not False:
+                        msg = (' {0}Name: {1} - Function: {2}.{3} - '
+                               'Result: {4}{5}').format(tcolor,
+                                                        comps[2],
+                                                        comps[0],
+                                                        comps[-1],
+                                                        str(ret['result']),
+                                                        colors['ENDC'])
+                        hstrs.append(msg)
+                        continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                               .format(tcolor, comps[0], colors)))
                 hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
