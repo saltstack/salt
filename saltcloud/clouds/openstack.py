@@ -412,6 +412,8 @@ def create(vm_):
 
         if running and public:
             data.public_ips = public
+            if private:
+                data.private_ips = private    
             not_ready = False
 
         if not_ready is False:
