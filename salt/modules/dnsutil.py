@@ -58,10 +58,11 @@ def parse_zone(zonefile=None, zone=None):
         salt ns1 dnsutil.parse_zone /var/lib/named/example.com.zone
     '''
     if zonefile:
-        zone = ''
-        with salt.utils.fopen(zonefile, 'r') as fp_:
-            for line in fp_:
-                zone += line
+        try:
+            with salt.utils.fopen(zonefile, 'r') as fp_:
+                zone = fp_.read()
+            except:
+                pass
 
     if not zone:
         return 'Error: Zone data was not found'
@@ -71,13 +72,13 @@ def parse_zone(zonefile=None, zone=None):
     for line in zone.splitlines():
         comps = line.split(';')
         line = comps[0].strip()
-        if not line.strip():
+        if not line:
             continue
         comps = line.split()
         if line.startswith('$'):
             zonedict[comps[0].replace('$', '')] = comps[1]
             continue
-        if '(' in line and not ')' in line:
+        if '(' in line and ')' not in line:
             mode = 'multi'
             multi = ''
         if mode == 'multi':
@@ -109,18 +110,13 @@ def parse_zone(zonefile=None, zone=None):
         if not comps[0].endswith('.'):
             comps[0] = '{0}.{1}'.format(comps[0], zonedict['ORIGIN'])
         if comps[2] == 'NS':
-            if not 'NS' in zonedict.keys():
-                zonedict['NS'] = []
-            zonedict['NS'].append(comps[3])
+            zonedict.setdefault('NS', []).append(comps[3])
         elif comps[2] == 'MX':
             if not 'MX' in zonedict.keys():
-                zonedict['MX'] = []
-            zonedict['MX'].append({'priority': comps[3],
-                                   'host': comps[4]})
+                zonedict.setdefault('MX', []).append({'priority': comps[3],
+                                                      'host': comps[4]})
         else:
-            if not comps[2] in zonedict.keys():
-                zonedict[comps[2]] = {}
-            zonedict[comps[2]][comps[0]] = comps[3]
+            zonedict.setdefault(comps[2], {})[comps[0]] = comps[3]
     return zonedict
 
 
