@@ -7,17 +7,15 @@ import salt.utils
 
 # Import python libs
 import logging
-import re
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Generic, should work on any platform
+    Generic, should work on any platform (including Windows). Functionality
+    which requires dependencies outside of Python do not belong in this module.
     '''
-    if not salt.utils.which('dig'):
-        return False
     return 'dnsutil'
 
 
@@ -149,21 +147,29 @@ def _to_seconds(time):
     return time
 
 
-def check_IP(x):
+def _has_dig():
     '''
-    Check that string x is a valid IP
+    The dig-specific functions have been moved into their own module, but
+    because they are also DNS utilities, a compatibility layer exists. This
+    function helps add that layer.
+    '''
+    if not salt.utils.which('dig'):
+        return False
+    return True
+
+
+def check_ip(ip_addr):
+    '''
+    Check that string ip_addr is a valid IP
 
     CLI Example::
 
-        salt ns1 dnsutil.check_IP 127.0.0.1
+        salt ns1 dig.check_ip 127.0.0.1
     '''
-    # This is probably validating. Tacked on the CIDR bit myself.
-    ip_regex = (
-        r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}'
-        r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-        r'(/([0-9]|[12][0-9]|3[0-2]))?$'
-    )
-    return bool(re.match(ip_regex, x))
+    if _has_dig():
+        return __salt__['dig.check_ip'](ip_addr)
+
+    return 'This function requires dig, which is not currently available'
 
 
 def A(host, nameserver=None):
@@ -174,27 +180,12 @@ def A(host, nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.A www.google.com
-
+        salt ns1 dig.A www.google.com
     '''
-    dig = ['dig', '+short', str(host), 'A']
+    if _has_dig():
+        return __salt__['dig.A'](host, nameserver)
 
-    if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
-
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
-    # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
-        log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
-        )
-        return []
-
-    # make sure all entries are IPs
-    return [x for x in cmd['stdout'].split('\n') if check_IP(x)]
+    return 'This function requires dig, which is not currently available'
 
 
 def NS(domain, resolve=True, nameserver=None):
@@ -205,33 +196,13 @@ def NS(domain, resolve=True, nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.NS google.com
+        salt ns1 dig.NS google.com
 
     '''
-    dig = ['dig', '+short', str(domain), 'NS']
+    if _has_dig():
+        return __salt__['dig.NS'](domain, resolve, nameserver)
 
-    if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
-
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
-    # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
-        log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
-        )
-        return []
-
-    if resolve:
-        ret = []
-        for ns in cmd['stdout'].split('\n'):
-            for a in A(ns, nameserver):
-                ret.append(a)
-        return ret
-
-    return cmd['stdout'].split('\n')
+    return 'This function requires dig, which is not currently available'
 
 
 def SPF(domain, record='SPF', nameserver=None):
@@ -244,53 +215,19 @@ def SPF(domain, record='SPF', nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.SPF google.com
-
+        salt ns1 dig.SPF google.com
     '''
-    def _process(x):
-        '''
-        Parse out valid IP bits of an spf record.
-        '''
-        m = re.match(r'(\+|~)?ip4:([0-9./]+)', x)
-        if m:
-            if check_IP(m.group(2)):
-                return m.group(2)
-        return None
+    if _has_dig():
+        return __salt__['dig.SPF'](domain, record, nameserver)
 
-    dig = ['dig', '+short', str(domain), record]
-
-    if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
-
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
-    # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
-        log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
-        )
-        return []
-
-    stdout = cmd['stdout']
-    if stdout == '' and record == 'SPF':
-        # empty string is successful query, but nothing to return. So, try TXT
-        # record.
-        return SPF(domain, 'TXT', nameserver)
-
-    stdout = re.sub('"', '', stdout).split()
-    if len(stdout) == 0 or stdout[0] != 'v=spf1':
-        return []
-
-    return [x for x in map(_process, stdout) if x is not None]
+    return 'This function requires dig, which is not currently available'
 
 
 def MX(domain, resolve=False, nameserver=None):
     '''
     Return a list of lists for the MX of 'domain'. Example:
 
-    >>> dnsutil.MX('saltstack.org')
+    >>> dig.MX('saltstack.org')
     [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
 
     If the 'resolve' argument is True, resolve IPs for the servers.
@@ -302,30 +239,9 @@ def MX(domain, resolve=False, nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.MX google.com
-
+        salt ns1 dig.MX google.com
     '''
-    dig = ['dig', '+short', str(domain), 'MX']
+    if _has_dig():
+        return __salt__['dig.MX'](domain, resolve, nameserver)
 
-    if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
-
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
-    # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
-        log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
-        )
-        return []
-
-    stdout = [x.split() for x in cmd['stdout'].split('\n')]
-
-    if resolve:
-        return [
-            (lambda x: [x[0], A(x[1], nameserver)[0]])(x) for x in stdout
-        ]
-
-    return stdout
+    return 'This function requires dig, which is not currently available'
