@@ -382,8 +382,7 @@ class Compiler(object):
                         chunk['order'] = cap
                 elif isinstance(chunk['order'], int) and chunk['order'] < 0:
                     chunk['order'] = cap + 1000000 + chunk['order']
-        chunks.sort(key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k))
-        chunks.sort(key=lambda k: k['order'])
+        chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
     def compile_high_data(self, high):
