@@ -368,7 +368,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         for ropt in react_map:
             if not isinstance(ropt, dict):
                 continue
-            if not len(ropt) == 1:
+            if len(ropt) != 1:
                 continue
             key = ropt.keys()[0]
             val = ropt[key]
