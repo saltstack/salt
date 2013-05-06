@@ -144,7 +144,7 @@ def latest_version(*names, **kwargs):
         if fromrepo else ''
     for name in names:
         cmd = 'apt-cache -q policy {0}{1} | grep Candidate'.format(name, repo)
-        out = __salt__['cmd.run_all'](cmd)
+        out = __salt__['cmd.run_all'](cmd, **kwargs)
         if out['retcode'] != 0:
             msg = 'Error:  ' + out['stderr']
             log.error(msg)
@@ -342,7 +342,7 @@ def install(name=None,
               )
 
     old = list_pkgs()
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, **kwargs)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -372,7 +372,7 @@ def remove(pkg, **kwargs):
             log.exception(e)
 
     cmd = 'apt-get -q -y remove {0}'.format(pkg)
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, **kwargs)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -408,7 +408,7 @@ def purge(pkg, **kwargs):
 
     # Remove initial package
     purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)
-    out = __salt__['cmd.run_all'](purge_cmd)
+    out = __salt__['cmd.run_all'](purge_cmd, **kwargs)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -448,7 +448,7 @@ def upgrade(refresh=True, **kwargs):
     old_pkgs = list_pkgs()
     cmd = ('apt-get -q -y -o DPkg::Options::=--force-confold '
            '-o DPkg::Options::=--force-confdef dist-upgrade')
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, **kwargs)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -902,7 +902,7 @@ def mod_repo(repo, **kwargs):
             # secure PPAs should be the same as urllib method
             if ppa_format_support and 'ppa_auth' not in kwargs:
                 cmd = 'apt-add-repository -y {0}'.format(repo)
-                out = __salt__['cmd.run_stdout'](cmd)
+                out = __salt__['cmd.run_stdout'](cmd, **kwargs)
                 # explicit refresh when a repo is modified.
                 refresh_db()
                 return {repo: out}
@@ -1007,13 +1007,14 @@ def mod_repo(repo, **kwargs):
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
         cmd = 'apt-key export {0}'.format(keyid)
-        output = __salt__['cmd.run_stdout'](cmd)
+        output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
         if ks:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid))
+                out = __salt__['cmd.run_stdout'](cmd.format(ks, keyid),
+                                                 **kwargs)
                 if not (out.find('imported') or out.find('not changed')):
                     error_str = 'Error: key retrieval failed: {0}'
                     raise Exception(
@@ -1028,7 +1029,7 @@ def mod_repo(repo, **kwargs):
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url)
         cmd = 'apt-key add {0}'.format(fn_)
-        out = __salt__['cmd.run_stdout'](cmd)
+        out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
             error_str = 'Error: key retrieval failed: {0}'
             raise Exception(error_str.format(cmd.format(key_url)))

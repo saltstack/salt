@@ -372,7 +372,8 @@ def run(cmd,
         template=None,
         rstrip=True,
         umask=None,
-        quiet=False):
+        quiet=False,
+        **kwargs):
     '''
     Execute the passed command and return the output as a string
 
@@ -410,7 +411,8 @@ def run_stdout(cmd,
                template=None,
                rstrip=True,
                umask=None,
-               quiet=False):
+               quiet=False,
+               **kwargs):
     '''
     Execute a command, and only return the standard out
 
@@ -447,7 +449,8 @@ def run_stderr(cmd,
                template=None,
                rstrip=True,
                umask=None,
-               quiet=False):
+               quiet=False,
+               **kwargs):
     '''
     Execute a command and only return the standard error
 
@@ -484,7 +487,8 @@ def run_all(cmd,
             template=None,
             rstrip=True,
             umask=None,
-            quiet=False):
+            quiet=False,
+            **kwargs):
     '''
     Execute the passed command and return a dict of return data
 
