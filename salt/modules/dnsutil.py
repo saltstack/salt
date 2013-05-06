@@ -56,8 +56,8 @@ def parse_zone(zonefile=None, zone=None):
         try:
             with salt.utils.fopen(zonefile, 'r') as fp_:
                 zone = fp_.read()
-            except:
-                pass
+        except:
+            pass
 
     if not zone:
         return 'Error: Zone data was not found'
