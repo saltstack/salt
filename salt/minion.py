@@ -289,7 +289,7 @@ class Minion(object):
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.crypticle.dumps(load))
-        except:
+        except Exception:
             pass
 
     def _handle_payload(self, payload):

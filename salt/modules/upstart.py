@@ -61,7 +61,7 @@ def _find_utmp():
     for utmp in ('/var/run/utmp', '/run/utmp'):
         try:
             result[os.stat(utmp).st_mtime] = utmp
-        except:
+        except Exception:
             pass
     return result[sorted(result.keys()).pop()]
 
@@ -79,7 +79,7 @@ def _default_runlevel():
             for line in fp_:
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
-    except:
+    except Exception:
         return '2'
 
     # Look for an optional "legacy" override in /etc/inittab
@@ -88,7 +88,7 @@ def _default_runlevel():
             for line in fp_:
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
-    except:
+    except Exception:
         pass
 
     # The default runlevel can also be set via the kernel command-line.
@@ -102,7 +102,7 @@ def _default_runlevel():
                     if arg in valid_strings:
                         runlevel = arg
                         break
-    except:
+    except Exception:
         pass
 
     return runlevel

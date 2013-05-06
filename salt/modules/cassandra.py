@@ -175,6 +175,6 @@ def column_family_definition(keyspace=None, column_family=None):
 
     try:
         return vars(sys.get_keyspace_column_families(keyspace)[column_family])
-    except:
+    except Exception:
         log.debug('Invalid Keyspace/CF combination')
         return None

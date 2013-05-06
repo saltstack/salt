@@ -492,7 +492,7 @@ class StateFire(object):
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
-        except:
+        except Exception:
             pass
         return True
 
@@ -522,6 +522,6 @@ class StateFire(object):
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
             sreq.send('aes', self.auth.crypticle.dumps(load))
-        except:
+        except Exception:
             pass
         return True
