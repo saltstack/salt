@@ -15,12 +15,21 @@ Databases can be set as either absent or present.
       mysql_database.present
 '''
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
     Only load if the mysql module is available in __salt__
     '''
-    return 'mysql_database' if 'mysql.db_exists' in __salt__ else False
+    if 'mysql.db_exists' in __salt__:
+        return 'mysql_database'
+    else:
+        log.warn("The mysql_database state module will not work unless"
+                 " the MySQLdb python module is installed. You can install"
+                 " MySQLdb by running: 'pip install mysql-python'")
+        return False
 
 
 def present(name):
