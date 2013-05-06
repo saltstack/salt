@@ -24,27 +24,22 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     Parse /etc/hosts file. 
     '''
     if not hosts:
-        hosts = ''
         try:
             with salt.utils.fopen(hostsfile, 'r') as fp_:
-                for line in fp_:
-                    hosts += line
+                hosts = fp_.read()
         except:
             return 'Error: hosts data was not found'
 
     hostsdict = {}
-    mode = 'single'
     for line in hosts.splitlines():
         if not line:
             continue
         if line.startswith('#'):
             continue
         comps = line.split()
-        line = comps[0].strip()
-        if not comps[0] in hostsdict:
-            hostsdict[comps[0]] = []
-        for host in comps[1:]:
-            hostsdict[comps[0]].append(host)
+        ip = comps[0]
+        aliases = comps[1:]
+        hostsdict.setdefault(ip, []).extend(aliases)
 
     return hostsdict
 
