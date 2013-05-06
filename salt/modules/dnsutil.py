@@ -27,7 +27,7 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
         try:
             with salt.utils.fopen(hostsfile, 'r') as fp_:
                 hosts = fp_.read()
-        except:
+        except Exception:
             return 'Error: hosts data was not found'
 
     hostsdict = {}
@@ -56,7 +56,7 @@ def parse_zone(zonefile=None, zone=None):
         try:
             with salt.utils.fopen(zonefile, 'r') as fp_:
                 zone = fp_.read()
-        except:
+        except Exception:
             pass
 
     if not zone:
@@ -132,7 +132,7 @@ def _to_seconds(time):
     else:
         try:
             time = int(time)
-        except:
+        except Exception:
             time = 604800
     if time < 604800:
         time = 604800

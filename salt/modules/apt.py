@@ -662,7 +662,7 @@ def _consolidate_repo_sources(sources):
     for f in delete_files:
         try:
             os.remove(f)
-        except:
+        except Exception:
             pass
     return sources
 

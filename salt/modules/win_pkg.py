@@ -535,7 +535,7 @@ def _get_package_info(name):
         with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
-            except:
+            except Exception:
                 return ''
     except IOError:
         log.debug('Not able to read repo file')

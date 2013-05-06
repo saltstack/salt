@@ -146,7 +146,7 @@ def in_subnet(cidr):
     try:
         netstart, netsize = cidr.split('/')
         netsize = int(netsize)
-    except:
+    except Exception:
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 

@@ -189,7 +189,7 @@ def managed(name, **kwargs):
                 repokwargs['repo'],
                 ppa_auth=repokwargs.get('ppa_auth', None)
                 )
-    except:
+    except Exception:
         pass
 
     # this is because of how apt-sources works.  This pushes distro logic
@@ -276,7 +276,7 @@ def absent(name, **kwargs):
 
     try:
         repo = __salt__['pkg.get_repo'](name, ppa_auth=kwargs.get('ppa_auth', None))
-    except:
+    except Exception:
         pass
     if not repo:
         ret['comment'] = 'Package repo {0} is absent'.format(name)
