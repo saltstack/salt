@@ -792,7 +792,7 @@ class AESFuncs(object):
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return False
         ret = {}
-        checker = salt.utils.minions.CkMinions(__opts__)
+        checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
                 load['tgt'],
                 load.get('expr_form', 'glob')
@@ -808,7 +808,7 @@ class AESFuncs(object):
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
-            except os.error:
+            except Exception:
                 continue
         return ret
 
