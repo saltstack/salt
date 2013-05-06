@@ -96,4 +96,5 @@ def get(tgt, fun, expr_form='glob'):
             'expr_form': expr_form,
             }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
-    return sreq.send('aes', auth.crypticle.dumps(load))
+    ret = sreq.send('aes', auth.crypticle.dumps(load))
+    return auth.crypticle.loads(ret)
