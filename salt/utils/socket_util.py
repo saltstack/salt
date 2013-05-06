@@ -218,7 +218,7 @@ def _interfaces_ifconfig(out):
     pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
-    pmask = re.compile('.*?(?:Mask:|netmask )(?:(0x[0-9a-fA-F]{8})|([\d\.]+))')
+    pmask = re.compile('.*?(?:Mask:|netmask )(?:([0-9a-fA-F]{8})|([\d\.]+))')
     pmask6 = re.compile('.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pupdown = re.compile('UP')
     pbcast = re.compile('.*?(?:Bcast:|broadcast )([\d\.]+)')
