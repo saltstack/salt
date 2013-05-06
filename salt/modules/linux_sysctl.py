@@ -74,7 +74,7 @@ def assign(name, value):
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
-    regex = re.compile(r'^{0}\s+=\s+{1}$'.format(name, value))
+    regex = re.compile('^{0}\s+=\s+{1}$'.format(re.escape(name), re.escape(value)))
 
     if not regex.match(out):
         if data['retcode'] != 0 and data['stderr']:
