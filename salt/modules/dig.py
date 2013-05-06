@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Generic, should work on any platform
+    DNS functions which are based on dig
     '''
     if not salt.utils.which('dig'):
         return False
@@ -29,8 +29,7 @@ def A(host, nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.A www.google.com
-
+        salt ns1 dig.A www.google.com
     '''
     dig = ['dig', '+short', str(host), 'A']
 
@@ -60,8 +59,7 @@ def NS(domain, resolve=True, nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.NS google.com
-
+        salt ns1 dig.NS google.com
     '''
     dig = ['dig', '+short', str(domain), 'NS']
 
@@ -99,8 +97,7 @@ def SPF(domain, record='SPF', nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.SPF google.com
-
+        salt ns1 dig.SPF google.com
     '''
     def _process(x):
         '''
@@ -145,7 +142,7 @@ def MX(domain, resolve=False, nameserver=None):
     '''
     Return a list of lists for the MX of 'domain'. Example:
 
-    >>> dnsutil.MX('saltstack.org')
+    >>> dig.MX('saltstack.org')
     [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
 
     If the 'resolve' argument is True, resolve IPs for the servers.
@@ -157,8 +154,7 @@ def MX(domain, resolve=False, nameserver=None):
 
     CLI Example::
 
-        salt ns1 dnsutil.MX google.com
-
+        salt ns1 dig.MX google.com
     '''
     dig = ['dig', '+short', str(domain), 'MX']
 

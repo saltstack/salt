@@ -14,10 +14,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Generic, should work on any platform
+    Generic, should work on any platform (including Windows). Functionality
+    which requires dependencies outside of Python do not belong in this module.
     '''
-    if not salt.utils.which('dig'):
-        return False
     return 'dnsutil'
 
 
@@ -149,18 +148,101 @@ def _to_seconds(time):
     return time
 
 
-def check_IP(x):
+def _has_dig():
     '''
-    Check that string x is a valid IP
+    The dig-specific functions have been moved into their own module, but
+    because they are also DNS utilities, a compatibility layer exists. This
+    function helps add that layer.
+    '''
+    if not salt.utils.which('dig'):
+        return False
+    return True
+
+
+def check_ip(ip_addr):
+    '''
+    Check that string ip_addr is a valid IP
 
     CLI Example::
 
-        salt ns1 dnsutil.check_IP 127.0.0.1
+        salt ns1 dig.check_ip 127.0.0.1
     '''
-    # This is probably validating. Tacked on the CIDR bit myself.
-    ip_regex = (
-        r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}'
-        r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-        r'(/([0-9]|[12][0-9]|3[0-2]))?$'
-    )
-    return bool(re.match(ip_regex, x))
+    if _has_dig():
+        return __salt__['dig.check_ip'](ip_addr)
+
+    return 'This function requires dig, which is not currently available'
+
+
+def A(host, nameserver=None):
+    '''
+    Return the A record for 'host'.
+
+    Always returns a list.
+
+    CLI Example::
+
+        salt ns1 dig.A www.google.com
+    '''
+    if _has_dig():
+        return __salt__['dig.A'](host, nameserver)
+
+    return 'This function requires dig, which is not currently available'
+
+
+def NS(domain, resolve=True, nameserver=None):
+    '''
+    Return a list of IPs of the nameservers for 'domain'
+
+    If 'resolve' is False, don't resolve names.
+
+    CLI Example::
+
+        salt ns1 dig.NS google.com
+
+    '''
+    if _has_dig():
+        return __salt__['dig.NS'](domain, resolve, nameserver)
+
+    return 'This function requires dig, which is not currently available'
+
+
+def SPF(domain, record='SPF', nameserver=None):
+    '''
+    Return the allowed IPv4 ranges in the SPF record for 'domain'.
+
+    If record is 'SPF' and the SPF record is empty, the TXT record will be
+    searched automatically. If you know the domain uses TXT and not SPF,
+    specifying that will save a lookup.
+
+    CLI Example::
+
+        salt ns1 dig.SPF google.com
+    '''
+    if _has_dig():
+        return __salt__['dig.SPF'](domain, record, nameserver)
+
+    return 'This function requires dig, which is not currently available'
+
+
+def MX(domain, resolve=False, nameserver=None):
+    '''
+    Return a list of lists for the MX of 'domain'. Example:
+
+    >>> dig.MX('saltstack.org')
+    [ [10, 'mx01.1and1.com.'], [10, 'mx00.1and1.com.'] ]
+
+    If the 'resolve' argument is True, resolve IPs for the servers.
+
+    It's limited to one IP, because although in practice it's very rarely a
+    round robin, it is an acceptable configuration and pulling just one IP lets
+    the data be similar to the non-resolved version. If you think an MX has
+    multiple IPs, don't use the resolver here, resolve them in a separate step.
+
+    CLI Example::
+
+        salt ns1 dig.MX google.com
+    '''
+    if _has_dig():
+        return __salt__['dig.MX'](domain, resolve, nameserver)
+
+    return 'This function requires dig, which is not currently available'
