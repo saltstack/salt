@@ -21,11 +21,41 @@ def __virtual__():
     return 'dnsutil'
 
 
+def parse_hosts(hostsfile='/etc/hosts', hosts=None):
+    '''
+    Parse /etc/hosts file. 
+    '''
+    if not hosts:
+        hosts = ''
+        try:
+            with salt.utils.fopen(hostsfile, 'r') as fp_:
+                for line in fp_:
+                    hosts += line
+        except:
+            return 'Error: hosts data was not found'
+
+    hostsdict = {}
+    mode = 'single'
+    for line in hosts.splitlines():
+        if not line:
+            continue
+        if line.startswith('#'):
+            continue
+        comps = line.split()
+        line = comps[0].strip()
+        if not comps[0] in hostsdict:
+            hostsdict[comps[0]] = []
+        for host in comps[1:]:
+            hostsdict[comps[0]].append(host)
+
+    return hostsdict
+
+
 def parse_zone(zonefile=None, zone=None):
     '''
     Parses a zone file. Can be passed raw zone data on the API level.
 
-    Example::
+    CLI Example::
 
         salt ns1 dnsutil.parse_zone /var/lib/named/example.com.zone
     '''
