@@ -18,7 +18,24 @@ def __virtual__():
     '''
     if not salt.utils.which('dig'):
         return False
-    return 'dnsutil'
+    return 'dig'
+
+
+def check_ip(x):
+    '''
+    Check that string x is a valid IP
+
+    CLI Example::
+
+        salt ns1 dig.check_ip 127.0.0.1
+    '''
+    # This is probably validating. Tacked on the CIDR bit myself.
+    ip_regex = (
+        r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}'
+        r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
+        r'(/([0-9]|[12][0-9]|3[0-2]))?$'
+    )
+    return bool(re.match(ip_regex, x))
 
 
 def A(host, nameserver=None):
@@ -48,7 +65,7 @@ def A(host, nameserver=None):
         return []
 
     # make sure all entries are IPs
-    return [x for x in cmd['stdout'].split('\n') if check_IP(x)]
+    return [x for x in cmd['stdout'].split('\n') if check_ip(x)]
 
 
 def NS(domain, resolve=True, nameserver=None):
@@ -105,7 +122,7 @@ def SPF(domain, record='SPF', nameserver=None):
         '''
         m = re.match(r'(\+|~)?ip4:([0-9./]+)', x)
         if m:
-            if check_IP(m.group(2)):
+            if check_ip(m.group(2)):
                 return m.group(2)
         return None
 
