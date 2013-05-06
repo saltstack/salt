@@ -717,6 +717,8 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         opts.update(config.minion_config(self.get_config_file_path('minion')))
         # Override the user from the master config file
         opts['user'] = user
+        # Override the name of the PID file.
+        opts['pidfile'] = '/var/run/salt-syndic.pid'
 
         if 'syndic_master' not in opts:
             self.error(
