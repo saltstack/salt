@@ -15,7 +15,7 @@ import salt.log
 
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
-from salt.version import __version__  # pylint: disable-msg=W402
+from salt.version import __version__
 from salt.utils import migrations
 
 try:
