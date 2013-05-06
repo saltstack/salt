@@ -303,12 +303,11 @@ def ip4_addrs():
     '''
     Return a list of ip addrs
     '''
-    ret = set()
     ifaces = interfaces()
-    for face in ifaces:
-        for inet in ifaces[face].get('inet', []):
-            if 'address' in inet:
-                ret.add(inet['address'])
+    ret = set(inet['address']
+              for face in ifaces.values()
+              for inet in face.get('inet', [])
+              if 'address' in inet)
     return sorted(ret)
 
 
