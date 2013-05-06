@@ -131,11 +131,12 @@ def _to_seconds(time):
     As per RFC1035 (page 45), max time is 1 week, so anything longer (or
     unreadable) will be set to one week (604800 seconds).
     '''
-    if 'H' in time.upper():
-        time = int(time.upper().replace('H', '')) * 3600
-    elif 'D' in time.upper():
-        time = int(time.upper().replace('D', '')) * 86400
-    elif 'W' in time.upper():
+    time = time.upper()
+    if 'H' in time:
+        time = int(time.replace('H', '')) * 3600
+    elif 'D' in time:
+        time = int(time.replace('D', '')) * 86400
+    elif 'W' in time:
         time = 604800
     else:
         try:
