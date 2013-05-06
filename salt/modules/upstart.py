@@ -95,8 +95,7 @@ def _default_runlevel():
     # Kinky.
     try:
         valid_strings = set(
-                ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single')
-                )
+                ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
         with salt.utils.fopen('/proc/cmdline') as fp_:
             for line in fp_:
                 for arg in line.strip().split():
@@ -353,7 +352,7 @@ def _upstart_disable(name):
     '''
     Disable an Upstart service.
     '''
-    override = '/etc/init/{0}.conf.override'.format(name)
+    override = '/etc/init/{0}.override'.format(name)
     with file(override, 'w') as ofile:
         ofile.write('manual')
     return _upstart_is_disabled(name)
