@@ -652,7 +652,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except:
+        except Exception:
             _raise_error_network('networking', valid)
 
     if opts['networking'] in valid:
@@ -667,7 +667,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except:
+        except Exception:
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
