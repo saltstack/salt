@@ -412,7 +412,7 @@ def netdev():
     return ret
 
 
-def w():  # pylint: disable-msg=C0103
+def w():  # pylint: disable=C0103
     '''
     Return a list of logged in users for this minion, using the w command
 

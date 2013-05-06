@@ -267,7 +267,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -340,7 +340,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -880,7 +880,7 @@ def get_interface(iface):
     return _read_file(path)
 
 
-def up(iface, iface_type, opts):  # pylint: disable-msg=C0103
+def up(iface, iface_type, opts):  # pylint: disable=C0103
     '''
     Start up a network interface
 

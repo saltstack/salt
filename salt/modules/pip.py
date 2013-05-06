@@ -16,7 +16,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 # pip can be installed on a virtualenv anywhere on the filesystem, there's no
 # definite way to tell if pip is installed on not.
 
-logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 VALID_PROTOS = ['http', 'https', 'ftp']

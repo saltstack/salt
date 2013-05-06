@@ -8,7 +8,7 @@ Setup of Python virtualenv sandboxes.
 import logging
 import os
 
-logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 def managed(name,
@@ -149,4 +149,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed  # pylint: disable-msg=C0103
+manage = managed  # pylint: disable=C0103
