@@ -106,7 +106,7 @@ Pillar Error Reporting
 ----------------------
 
 Previously if errors surfaced in pillar, then the pillar would consist of only
-and empty dict. Now all data that was successfully rendered stays in pillar and
+an empty dict. Now all data that was successfully rendered stays in pillar and
 the render error is also made available. If errors are found in the pillar,
 states will refuse to run.
 
