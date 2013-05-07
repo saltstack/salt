@@ -89,6 +89,7 @@ def install(pkgs=None,
             no_download=False,
             install_options=None,
             runas=None,
+            no_chown=False,
             cwd=None,
             __env__='base'):
     '''
@@ -167,6 +168,9 @@ def install(pkgs=None,
         path, be sure to use absolute path.
     runas
         User to run pip as
+    no_chown
+        When runas is given, do not attempt to copy and chown
+        a requirements file
     cwd
         Current working directory to run pip from
 
@@ -221,7 +225,7 @@ def install(pkgs=None,
                 }
             requirements = cached_requirements
 
-        if runas:
+        if runas and not no_chown:
             # Need to make a temporary copy since the runas user will, most
             # likely, not have the right permissions to read the file
             treq = salt.utils.mkstemp()
