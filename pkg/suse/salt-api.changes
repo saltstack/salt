@@ -1,0 +1,54 @@
+-------------------------------------------------------------------
+Tue Apr 23 19:20:42 UTC 2013 - aboe76@gmail.com
+
+- updated init file:
+  removed probe/reload/force-reload they are not supported
+
+-------------------------------------------------------------------
+Tue Apr 23 18:10:38 UTC 2013 - aboe76@gmail.com
+
+- Update to salt-api 0.8.1
+- Cherrypy module fixes:
+* Fixes helpful error messages when loading the module if
+  dependencies are missing or incorrect.
+* Fixes the /login view to return a 401 instead of a 500 when
+  authentication fails.
+* This release also includes a new plain-WSGI (no deps) REST module. This
+  module requires an external webserver and careful deployment -- be sure
+  to read the docs in full before using it.
+
+-------------------------------------------------------------------
+Mon Apr 15 18:48:31 UTC 2013 - aboe76@gmail.com
+
+- Updated recommends cherrypy instead of requirement
+  cherrypy only needed as wsgi server if user wants
+
+-------------------------------------------------------------------
+Sun Apr 14 14:52:34 UTC 2013 - aboe76@gmail.com
+
+- Updated salt-api init file
+
+-------------------------------------------------------------------
+Tue Apr  9 18:56:15 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.8.0
+- New authentication login
+- salt-api can now run on WSGI application
+- added service file for > opensuse 12.1
+- added init file for the rest
+
+-------------------------------------------------------------------
+Wed Jan 30 21:00:43 UTC 2013 - aboe76@gmail.com
+
+- Updated spec file with Suse Copyright
+
+-------------------------------------------------------------------
+Sat Jan 26 09:19:19 UTC 2013 - aboe76@gmail.com
+
+- updated spec file depencies fixed include python-cherrypy for salt-ui
+
+-------------------------------------------------------------------
+Tue Jan 22 20:28:52 UTC 2013 - aboe76@gmail.com
+
+- initial upload 0.7.5
+
