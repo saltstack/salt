@@ -791,7 +791,7 @@ def managed(name,
         defaults,
         **kwargs
     )
-    if comment and contents is not None:
+    if comment and contents is None:
         return _error(ret, comment)
     else:
         return __salt__['file.manage_file'](name,

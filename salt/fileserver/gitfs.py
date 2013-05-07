@@ -27,8 +27,8 @@ except ImportError:
 import salt.utils
 import salt.fileserver
 
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -175,7 +175,10 @@ def find_file(path, short='base', **kwargs):
     if short == 'base':
         short = 'master'
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', short, path)
-    hashes_glob = os.path.join(__opts__['cachedir'], 'gitfs/hash', short, '{0}.hash.*'.format(path))
+    hashes_glob = os.path.join(__opts__['cachedir'],
+                                        'gitfs/hash',
+                                        short,
+                                        '{0}.hash.*'.format(path))
     blobshadest = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',

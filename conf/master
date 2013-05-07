@@ -303,6 +303,8 @@
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
 # environments.
+# Note:  file:// repos will be treated as a remote, so refs you want used must
+# exist in that repo as *local* refs.
 
 
 #####         Pillar settings        #####
