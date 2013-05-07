@@ -353,9 +353,9 @@ class MultiMinion(object):
             # get commands from each master
             for minion in minions.values():
                 if module_refresh:
-                    minion['minion'].refresh_modules()
+                    minion['minion'].module_refresh()
                 if pillar_refresh:
-                    minion['minion'].refresh_pillar()
+                    minion['minion'].pillar_refresh()
                 minion['generator'].next()
         
 
@@ -807,6 +807,7 @@ class Minion(object):
             self.opts['id'],
             self.opts['environment'],
         ).compile_pillar()
+        self.module_refresh()
 
     def clean_die(self, signum, frame):
         '''
