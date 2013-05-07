@@ -1,11 +1,10 @@
 '''
 The default file server backend based on the environments in the file_roots
-configuraiton option
+configuration option
 '''
 
 # Import python libs
 import os
-import hashlib
 
 # Import salt libs
 import salt.fileserver
