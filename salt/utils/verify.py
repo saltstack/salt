@@ -348,6 +348,9 @@ def check_path_traversal(path, user='root'):
 
 
 def check_max_open_files(opts):
+    '''
+    Check the number of max allowed open files and adjust if needed
+    '''
     mof_c = opts.get('max_open_files', 100000)
     if sys.platform.startswith('win'):
         # Check the Windows API for more detail on this
@@ -406,3 +409,23 @@ def check_max_open_files(opts):
 
     msg += 'Please consider raising this value.'
     log.log(level=level, msg=msg)
+
+
+def clean_path(root, path, subdir=False):
+    '''
+    Accepts the root the path needs to be under and verifies that the path is
+    under said root. Pass in subdir=True if the path can result in a
+    subdirectory of the root instead of having to reside directly in the root
+    '''
+    if not os.path.isabs(root):
+        return ''
+    if not os.path.isabs(path):
+        path = os.path.join(root, path)
+    path = os.path.normpath(path)
+    if subdir:
+        if path.startswith(root):
+            return path
+    else:
+        if os.path.samefile(os.path.dirname(path), root):
+            return path
+    return ''
