@@ -118,7 +118,7 @@ def status(name, sig=None):
     match = re.search(r'\(pid (\d+)\)', ret)
     try:
         pid = match.group(1)
-    except:
+    except Exception:
         pid = ''
     return pid
 
