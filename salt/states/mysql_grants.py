@@ -14,9 +14,9 @@ with the grant itself.
 The ``database`` parameter needs to specify a 'priv_level' in the same
 specification as defined in the MySQL documentation:
 
-* \*
-* \*.\*
-* db_name.\*
+* \\*
+* \\*.\\*
+* db_name.\\*
 * db_name.tbl_name
 * etc...
 

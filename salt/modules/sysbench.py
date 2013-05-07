@@ -86,7 +86,7 @@ def threads():
 
     CLI Example::
 
-        salt \* sysbench.threads
+        salt '*' sysbench.threads
     '''
 
     # Test data
@@ -115,7 +115,7 @@ def mutex():
 
     CLI Examples::
 
-        salt \* sysbench.mutex
+        salt '*' sysbench.mutex
     '''
 
     # Test options and the values they take
@@ -152,7 +152,7 @@ def memory():
 
     CLI Examples::
 
-        salt \* sysbench.memory
+        salt '*' sysbench.memory
     '''
 
     # test defaults
@@ -199,7 +199,7 @@ def fileio():
 
     CLI Examples::
 
-        salt \* sysbench.fileio
+        salt '*' sysbench.fileio
     '''
 
     # Test data

@@ -36,7 +36,7 @@ work correctly with some experimentation.
 .. code-block:: yaml
 
   ext_pillar:
-    - mongo: {collection: vm, id_field: name, re_pattern: \.example\.com, fields: [customer_id, software, apache_vhosts]}
+    - mongo: {collection: vm, id_field: name, re_pattern: \\.example\\.com, fields: [customer_id, software, apache_vhosts]}
 
 In the example above, we've decided to use the ``vm`` collection in the
 database to store the data. Minion ids are stored in the ``name`` field on

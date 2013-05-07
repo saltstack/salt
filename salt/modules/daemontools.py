@@ -115,7 +115,7 @@ def status(name, sig=None):
     '''
     cmd = 'svstat {0}'.format(_service_path(name))
     ret = __salt__['cmd.run_stdout'](cmd)
-    match = re.search('\(pid (\d+)\)', ret)
+    match = re.search(r'\(pid (\d+)\)', ret)
     try:
         pid = match.group(1)
     except:
