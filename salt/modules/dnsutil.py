@@ -48,6 +48,32 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     return hostsdict
 
 
+def hosts_append(hostsfile='/etc/hosts', ip_addr=None, entries=None):
+    '''
+    Append a single line to the /etc/hosts file.
+
+    CLI Example::
+
+        salt '*' dnsutil.hosts_append /etc/hosts 127.0.0.1 ad1.yuk.co,ad2.yuk.co
+    '''
+    host_list = entries.split(',')
+    hosts = parse_hosts(hostsfile=hostsfile)
+    if ip_addr in hosts:
+        for host in host_list:
+            if host in hosts[ip_addr]:
+                host_list.remove(host)
+
+    if not host_list:
+        return 'No additional hosts were added to {0}'.format(hostsfile)
+
+    append_line = '\n{0} {1}'.format(ip_addr, ' '.join(host_list))
+    with salt.utils.fopen(hostsfile, 'a') as fp_:
+        fp_.write(append_line)
+
+    return 'The following line was added to {0}:{1}'.format(hostsfile,
+                                                            append_line)
+
+
 def parse_zone(zonefile=None, zone=None):
     '''
     Parses a zone file. Can be passed raw zone data on the API level.
