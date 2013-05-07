@@ -236,7 +236,7 @@ class Auth(object):
             aes, token = self.decrypt_aes(payload, False)
             return aes
 
-    def sign_in(self):
+    def sign_in(self, timeout=60, safe=True):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -251,15 +251,23 @@ class Auth(object):
                     self.opts['ipv6']
                     )
         except SaltClientError:
-            return 'retry'
+            if safe:
+                return 'retry'
+            else:
+                raise SaltClientError
         sreq = salt.payload.SREQ(
                 self.opts['master_uri'],
                 self.opts.get('id', '')
                 )
         try:
-            payload = sreq.send_auto(self.minion_sign_in_payload())
+            payload = sreq.send_auto(
+                    self.minion_sign_in_payload(),
+                    timeout=timeout)
         except SaltReqTimeoutError:
-            return 'retry'
+            if safe:
+                return 'retry'
+            else:
+                raise SaltClientError
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
