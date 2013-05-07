@@ -159,7 +159,9 @@ def list_ports():
     return res
 
 
-def create_jail(name, arch, version="9.0-RELEASE"):
+def create_jail(name,
+                arch,
+                version="9.0-RELEASE"):  # pylint: disable=W0621
     '''
     Creates a new poudriere jail if one does not exist
 
