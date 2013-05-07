@@ -48,6 +48,62 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     return hostsdict
 
 
+def hosts_append(hostsfile='/etc/hosts', ip_addr=None, entries=None):
+    '''
+    Append a single line to the /etc/hosts file.
+
+    CLI Example::
+
+        salt '*' dnsutil.hosts_append /etc/hosts 127.0.0.1 ad1.yuk.co,ad2.yuk.co
+    '''
+    host_list = entries.split(',')
+    hosts = parse_hosts(hostsfile=hostsfile)
+    if ip_addr in hosts:
+        for host in host_list:
+            if host in hosts[ip_addr]:
+                host_list.remove(host)
+
+    if not host_list:
+        return 'No additional hosts were added to {0}'.format(hostsfile)
+
+    append_line = '\n{0} {1}'.format(ip_addr, ' '.join(host_list))
+    with salt.utils.fopen(hostsfile, 'a') as fp_:
+        fp_.write(append_line)
+
+    return 'The following line was added to {0}:{1}'.format(hostsfile,
+                                                            append_line)
+
+def hosts_remove(hostsfile='/etc/hosts', entries=None):
+    '''
+    Remove a host from the /etc/hosts file. If doing so will leave a line
+    containing only an IP address, then the line will be deleted. This function
+    will leave comments and blank lines intact.
+
+    CLI Examples::
+
+        salt '*' dnsutil.hosts_delete /etc/hosts ad1.yuk.co
+        salt '*' dnsutil.hosts_delete /etc/hosts ad2.yuk.co,ad1.yuk.co
+    '''
+    with salt.utils.fopen(hostsfile, 'r') as fp_:
+        hosts = fp_.read()
+
+    host_list = entries.split(',')
+    out_file = salt.utils.fopen(hostsfile, 'w')
+    for line in hosts.splitlines():
+        if not line or line.strip().startswith('#'):
+            out_file.write('{0}\n'.format(line))
+            continue
+        comps = line.split()
+        for host in host_list:
+            if host in comps[1:]:
+                comps.remove(host)
+        if len(comps) > 1:
+            out_file.write(' '.join(comps))
+            out_file.write('\n')
+
+    out_file.close()
+
+
 def parse_zone(zonefile=None, zone=None):
     '''
     Parses a zone file. Can be passed raw zone data on the API level.
