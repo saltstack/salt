@@ -2,9 +2,6 @@
 virt.query outputter
 '''
 
-# Import Salt libs
-import salt.utils
-
 def output(data):
     '''
     Display output for the salt-run virt.query function
