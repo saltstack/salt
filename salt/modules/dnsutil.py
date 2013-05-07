@@ -22,6 +22,10 @@ def __virtual__():
 def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     '''
     Parse /etc/hosts file. 
+
+    CLI Example::
+
+        salt '*' dnsutil.parse_hosts
     '''
     if not hosts:
         try:
