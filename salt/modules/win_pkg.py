@@ -9,7 +9,7 @@ A module to manage software on Windows
 
 # Import third party libs
 try:
-    import pythoncom
+    import pythoncom  # pylint: disable=W0611
     import win32com.client
     import win32api
     import win32con

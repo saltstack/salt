@@ -17,7 +17,7 @@ from salt.exceptions import SaltInvocationError
 import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
-    import ldap
+    import ldap  # pylint: disable=W0611
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
