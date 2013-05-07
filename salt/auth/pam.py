@@ -112,7 +112,10 @@ def authenticate(username, password, service='login'):
                  Defaults to 'login'
     '''
     @CONV_FUNC
-    def my_conv(n_messages, messages, p_response, app_data):
+    def my_conv(n_messages,
+                messages,
+                p_response,
+                app_data):  # pylint: disable=W0613
         '''
         Simple conversation function that responds to any
         prompt where the echo is off with the supplied password
