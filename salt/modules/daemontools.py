@@ -105,7 +105,8 @@ def full_restart(name):
 
 
 #-- states.service compatible
-def status(name, sig=None):
+def status(name,
+           sig=None):  # pylint: disable=W0613
     '''
     Return the status for a service via daemontools, return pid if running
 

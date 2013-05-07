@@ -173,7 +173,8 @@ def restart(name):
     return not __salt__['cmd.retcode'](startcmd)
 
 
-def status(name, sig=None):
+def status(name,
+           sig=None):  # pylint: disable=W0613
     '''
     Return the status for a service, returns the PID or an empty string if the
     service is running or not, pass a signature to use to find the service via

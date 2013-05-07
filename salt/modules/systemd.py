@@ -240,7 +240,8 @@ def force_reload(name):
 
 # The unused sig argument is required to maintain consistency in the state
 # system
-def status(name, sig=None):
+def status(name,
+           sig=None):  # pylint: disable=W0613
     '''
     Return the status for a service via systemd, returns a bool
     whether the service is running.

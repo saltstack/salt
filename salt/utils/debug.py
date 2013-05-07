@@ -24,7 +24,8 @@ def _makepretty(printout, stack):
     printout.write('=========================================\n')
 
 
-def _handle_sigusr1(sig, stack):
+def _handle_sigusr1(sig,  # pylint: disable=W0613
+                    stack):
     '''
     Signal handler for SIGUSR1, only available on Unix-like systems
     '''
