@@ -180,7 +180,10 @@ class Minion(parsers.MinionOptionParser):
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
         self.set_pidfile()
-        self.minion = salt.minion.Minion(self.config)
+        if isinstance(self.config.get('masters'), list):
+            self.minion = salt.minion.MultiMinion(self.config)
+        else:
+            self.minion = salt.minion.Minion(self.config)
 
     def start(self):
         '''
