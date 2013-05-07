@@ -44,12 +44,12 @@ def address():
     devname = path[0].split('/')
     syspath = '/sys/class/bluetooth/{0}/address'.format(devname[-1])
     sysfile = salt.utils.fopen(syspath, 'r')
-    address = sysfile.read().strip()
+    bluetooth_address = sysfile.read().strip()
     sysfile.close()
     return {
                 'path': path[0],
                 'devname': devname[-1],
-                'address': address,
+                'address': bluetooth_address,
            }
 
 
@@ -75,7 +75,8 @@ def scan():
     return ret
 
 
-def pair(address, key):
+def pair(address,  # pylint: disable=W0621
+         key):
     '''
     Pair the bluetooth adapter with a device
 
@@ -94,7 +95,7 @@ def pair(address, key):
     return out
 
 
-def unpair(address):
+def unpair(address):  # pylint: disable=W0621
     '''
     Unpair the bluetooth adapter from a device
 

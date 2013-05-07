@@ -18,7 +18,7 @@ booleans can be set.
 '''
 
 
-def _refine_mode(mode):
+def _refine_mode(mode):  # pylint: disable=W0621
     '''
     Return a mode value that is completely predictable
     '''
@@ -67,7 +67,7 @@ def mode(name):
     if tmode == 'unknown':
         ret['comment'] = '{0} is not an accepted mode'.format(name)
         return ret
-    mode = __salt__['selinux.getenforce']()
+    mode = __salt__['selinux.getenforce']()  # pylint: disable=W0621
     if mode == tmode:
         ret['result'] = True
         ret['comment'] = 'SELinux is already in {0} mode'.format(tmode)

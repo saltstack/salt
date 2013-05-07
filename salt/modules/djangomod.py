@@ -24,7 +24,7 @@ def _get_django_admin(bin_env):
 
 
 def command(settings_module,
-            command,
+            command,  # pylint: disable=W0621
             bin_env=None,
             pythonpath=None,
             *args, **kwargs):

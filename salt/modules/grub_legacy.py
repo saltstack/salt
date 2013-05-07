@@ -14,8 +14,8 @@ def __virtual__():
     '''
     Only load the module if grub is installed
     '''
-    conf = _detect_conf()
-    if os.path.exists(conf):
+    conf_filepath = _detect_conf()
+    if os.path.exists(conf_filepath):
         return 'grub'
     return False
 

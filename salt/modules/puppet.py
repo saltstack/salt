@@ -34,7 +34,7 @@ def _check_facter():
 
 def _format_fact(output):
     try:
-        fact, value = output.split(' => ', 1)
+        fact, value = output.split(' => ', 1)  # pylint: disable=W0621
         value = value.strip()
     except ValueError:
         fact = None
@@ -186,7 +186,7 @@ def facts():
     for line in output.splitlines():
         if not line:
             continue
-        fact, value = _format_fact(line)
+        fact, value = _format_fact(line)  # pylint: disable=W0621
         if not fact:
             continue
         ret[fact] = value
