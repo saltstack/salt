@@ -35,8 +35,8 @@ def _get_serv():
     '''
     Return a memcache server object
     '''
-    host=__salt__['config.option']('memcache.host')
-    port=__salt__['config.option']('memcache.port')
+    host = __salt__['config.option']('memcache.host')
+    port = __salt__['config.option']('memcache.port')
     log.debug('memcache server: {0}:{1}'.format(host, port))
     if not host or not port:
         log.error('Host or port not defined in salt config')
