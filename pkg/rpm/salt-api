@@ -27,7 +27,7 @@
 if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
-    SALTAPI=/usr/bin/salt-api
+    SALTAPI=/usr/bin/salt-api -d
     PYTHON=/usr/bin/python
 fi
 
@@ -47,7 +47,7 @@ fi
 
 SERVICE=salt-api
 PROCESS=salt-api
-CONFIG_ARGS=" "
+CONFIG_ARGS="-d"
 
 RETVAL=0
 
