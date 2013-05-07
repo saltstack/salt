@@ -70,9 +70,9 @@ def _get_all_unit_files():
     Get all unit files and their state. Unit files ending in .service
     are normalized so that they can be referenced without a type suffix.
     '''
-    rexp = re.compile('(?m)^(?P<name>.+)\.(?P<type>' +
+    rexp = re.compile(r'(?m)^(?P<name>.+)\.(?P<type>' +
                       '|'.join(VALID_UNIT_TYPES) +
-                      ')\s+(?P<state>.+)$')
+                      r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
         'systemctl --full list-unit-files | col -b'

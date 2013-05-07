@@ -248,7 +248,7 @@ class InameOption(Option):
 class RegexOption(Option):
     '''Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
-    The option name is 'regex', e.g. {'regex' : '.*\.txt'}.
+    The option name is 'regex', e.g. {'regex' : '.*\\.txt'}.
     '''
     def __init__(self, key, value):
         try:
@@ -263,7 +263,7 @@ class RegexOption(Option):
 class IregexOption(Option):
     '''Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
-    The option name is 'iregex', e.g. {'iregex' : '.*\.txt'}.
+    The option name is 'iregex', e.g. {'iregex' : '.*\\.txt'}.
     '''
     def __init__(self, key, value):
         try:

@@ -32,7 +32,7 @@ Configuring the Mongo Tops Subsystem
       collection: tops
       id_field: _id
       re_replace: ""
-      re_pattern: \.example\.com
+      re_pattern: \\.example\\.com
       states_field: states
       environment_field: environment
 

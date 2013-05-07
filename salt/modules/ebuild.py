@@ -108,11 +108,11 @@ def _get_upgradable():
     cmd = 'emerge --pretend --update --newuse --deep --with-bdeps=y world'
     out = __salt__['cmd.run_stdout'](cmd)
 
-    rexp = re.compile('(?m)^\[.+\] '
-                      '([^ ]+/[^ ]+)'    # Package string
+    rexp = re.compile(r'(?m)^\[.+\] '
+                      r'([^ ]+/[^ ]+)'    # Package string
                       '-'
-                      '([0-9]+[^ ]+)'          # Version
-                      '.*$')
+                      r'([0-9]+[^ ]+)'          # Version
+                      r'.*$')
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 

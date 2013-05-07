@@ -256,7 +256,7 @@ def free_slave():
 
     CLI Example::
 
-        salt \* mysql.free_slave
+        salt '*' mysql.free_slave
     '''
     slave_db = _connect()
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
@@ -717,7 +717,7 @@ def grant_exists(grant,
 
     CLI Example::
 
-        salt \* mysql.grant_exists 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
+        salt '*' mysql.grant_exists 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     # TODO: This function is a bit tricky, since it requires the ordering to
     #       be exactly the same. Perhaps should be replaced/reworked with a

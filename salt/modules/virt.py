@@ -75,8 +75,8 @@ def _libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
     '''
-    g_cmd = 'grep ^\s*group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep ^\s*user /etc/libvirt/qemu.conf'
+    g_cmd = 'grep ^\\s*group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
         group = subprocess.Popen(g_cmd,
             shell=True,
@@ -484,11 +484,11 @@ def get_disks(vm_):
                     if line.startswith('ID'):  # Do not parse table headers
                         line = line.replace('VM SIZE', 'VMSIZE')
                         line = line.replace('VM CLOCK', 'TIME VMCLOCK')
-                        columns = re.split('\s+', line)
+                        columns = re.split(r'\s+', line)
                         columns = [c.lower() for c in columns]
                         output.append('snapshots:')
                         continue
-                    fields = re.split('\s+', line)
+                    fields = re.split(r'\s+', line)
                     for i, field in enumerate(fields):
                         sep = ' '
                         if i == 0:

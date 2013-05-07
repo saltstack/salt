@@ -600,7 +600,7 @@ def os_data():
                         #     DISTRIB_RELEASE='10.10'
                         #     DISTRIB_CODENAME='squeeze'
                         #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
-                        regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                        regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?')
                         match = regex.match(line.rstrip('\n'))
                         if match:
                             # Adds: lsb_distrib_{id,release,codename,description}
@@ -618,7 +618,7 @@ def os_data():
                         # HOME_URL="http://archlinuxarm.org/"
                         # SUPPORT_URL="https://archlinuxarm.org/forum"
                         # BUG_REPORT_URL="https://github.com/archlinuxarm/PKGBUILDs/issues"
-                        regex = re.compile('^([\w]+)=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                        regex = re.compile('^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?')
                         match = regex.match(line.rstrip('\n'))
                         if match:
                             name, value = match.groups()
@@ -672,7 +672,7 @@ def os_data():
                 else:
                     try:
                         release_re = '(Solaris|OpenIndiana(?: Development)?)' \
-                                     '\s+(\d+ \d+\/\d+|oi_\S+)?'
+                                     r'\s+(\d+ \d+\/\d+|oi_\S+)?'
                         osname, osrelease = re.search(release_re,
                                                       rel_data).groups()
                     except AttributeError:
@@ -857,7 +857,7 @@ def _dmidecode_data(regex_dict):
                 # Examples:
                 #    Product Name: 64639SU
                 #    Version: 7LETC1WW (2.21 )
-                regex = re.compile('\s+{0}\s+(.*)$'.format(item))
+                regex = re.compile(r'\s+{0}\s+(.*)$'.format(item))
                 grain = regex_dict[section][item]
                 # Skip to the next iteration if this grain
                 # has been found in the dmidecode output.
