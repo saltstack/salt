@@ -12,11 +12,12 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has two output modes, `full` and `terse`. The
-    default is set to full, which will display many lines of detailed
-    information for each executed chunk. If the `state_output` option is
-    set to `terse` then the output is greatly simplified and shown in only one
-    line
+    The highstate outputter has three output modes, `full`, `terse`, and
+    `mixed`. The default is set to full, which will display many lines of
+    detailed information for each executed chunk. If the `state_output` option
+    is set to `terse` then the output is greatly simplified and shown in only
+    one line.  If `mixed` is used, then terse output will be used unless a
+    state failed, in which case full output will be used.
 '''
 
 # Import python libs
@@ -85,7 +86,18 @@ def output(data):
                                                     colors['ENDC'])
                     hstrs.append(msg)
                     continue
-
+                elif __opts__.get('state_output', 'full').lower() == 'mixed':
+                    # Print terse unless it failed
+                    if ret['result'] is not False:
+                        msg = (' {0}Name: {1} - Function: {2}.{3} - '
+                               'Result: {4}{5}').format(tcolor,
+                                                        comps[2],
+                                                        comps[0],
+                                                        comps[-1],
+                                                        str(ret['result']),
+                                                        colors['ENDC'])
+                        hstrs.append(msg)
+                        continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                               .format(tcolor, comps[0], colors)))
                 hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
