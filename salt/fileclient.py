@@ -19,7 +19,6 @@ from salt.exceptions import MinionError, SaltReqTimeoutError
 import salt.client
 import salt.crypt
 import salt.loader
-import salt.utils
 import salt.payload
 import salt.utils
 import salt.utils.templates
