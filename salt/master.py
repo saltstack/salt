@@ -40,7 +40,6 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.key
-import salt.utils
 import salt.fileserver
 import salt.utils.atomicfile
 import salt.utils.event
