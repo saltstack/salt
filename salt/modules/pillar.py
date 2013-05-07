@@ -60,6 +60,7 @@ def data(key=None):
         ret = ret.get(key, {})
 
     return ret
+
 # Allow pillar.items to also be used to return pillar data
 items = data
 
