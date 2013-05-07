@@ -8,6 +8,7 @@ import logging
 import getpass
 import multiprocessing
 import fnmatch
+import copy
 import os
 import hashlib
 import re
@@ -242,7 +243,7 @@ class MultiMinion(object):
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
-            minions.append(Minion(opts))
+            minions.append(Minion(s_opts))
         return minions
 
     def minions(self):
@@ -250,7 +251,7 @@ class MultiMinion(object):
         Return a list of minion generators bound to the tune_in method
         '''
         ret = {}
-        minions = self.gen_minions()
+        minions = self._gen_minions()
         for minion in minions:
             ret[minion.opts['master']] = {
                     'minion': minion,
@@ -265,6 +266,7 @@ class MultiMinion(object):
         # Prepare the minion event system
         #
         # Start with the publish socket
+        self.context = zmq.Context()
         id_hash = hashlib.md5(self.opts['id']).hexdigest()
         epub_sock_path = os.path.join(
             self.opts['sock_dir'],
@@ -320,6 +322,8 @@ class MultiMinion(object):
 
         # Prepare the minion generators
         minions = self.minions()
+        loop_interval = int(self.opts['loop_interval'])
+        self.schedule = minions[minions.keys()[0]]['minion'].schedule
 
         while True:
             try:
@@ -347,7 +351,7 @@ class MultiMinion(object):
                 except Exception:
                     pass
             # get commands from each master
-            for minion in minions:
+            for minion in minions.values():
                 if module_refresh:
                     minion['minion'].refresh_modules()
                 if pillar_refresh:
