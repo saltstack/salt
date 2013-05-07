@@ -1,6 +1,17 @@
 '''
-The default file server backend based on the environments in the file_roots
-configuraiton option
+The backend for the s3 service.
+
+Example configuration options in master file:
+
+s3_key_id: XXXXXXXXXXXXXXX
+s3_server_access_key: XXXXXXXXXXXXXXX
+s3_buckets:
+  env:
+    - bucket1
+    - bucket2    
+    
+
+:depends: git-python Python module
 '''
 
 # Import python libs
