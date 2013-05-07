@@ -80,7 +80,7 @@ def _parse_quota(mount, opts):
     return ret
 
 
-def set(device, **kwargs):
+def set(device, **kwargs):  # pylint: disable=W0622
     '''
     Calls out to setquota, for a specific user or group
 

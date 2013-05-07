@@ -66,7 +66,7 @@ def term(name):
 
 
 #-- states.service compatible
-def reload(name):
+def reload(name):  # pylint: disable=W0622
     '''
     Wrapper for term()
 

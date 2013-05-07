@@ -117,7 +117,7 @@ def update_system(version='', ruby=None, runas=None):
                 format(version=version), ruby, runas=runas)
 
 
-def list(prefix='', ruby=None, runas=None):
+def list(prefix='', ruby=None, runas=None):  # pylint: disable=W0622
     '''
     List locally installed gems.
 

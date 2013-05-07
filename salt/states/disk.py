@@ -9,7 +9,7 @@ __monitor__ = [
         ]
 
 
-def status(name, max=None, min=None):
+def status(name, max=None, min=None):  # pylint: disable=W0622
     '''
     Return the current disk usage stats for the named device
     '''

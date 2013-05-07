@@ -245,7 +245,7 @@ def absent(name,
     return ret
 
 
-def file(name,
+def file(name,  # pylint: disable=W0622
          source_hash='',
          user='root',
          template=None,

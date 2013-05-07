@@ -106,7 +106,7 @@ def status(name, sig=None):
     return __salt__['status.pid'](sig if sig else name)
 
 
-def reload(name):
+def reload(name):  # pylint: disable=W0622
     '''
     Restart the specified service
 

@@ -102,7 +102,7 @@ def reinstall_ruby(ruby, runas=None):
     return _rvm('reinstall', ruby, runas=runas)
 
 
-def list(runas=None):
+def list(runas=None):  # pylint: disable=W0622
     '''
     List all rvm installed rubies.
 

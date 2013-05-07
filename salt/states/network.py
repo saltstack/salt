@@ -139,7 +139,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 import difflib
 
 
-def managed(name, type, enabled=True, **kwargs):
+def managed(name, type, enabled=True, **kwargs):  # pylint: disable=W0622
     '''
     Ensure that the named interface is configured properly.
 

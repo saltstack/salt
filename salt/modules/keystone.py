@@ -72,7 +72,7 @@ def auth():
     return client.Client(**kwargs)
 
 
-def ec2_credentials_get(id=None,       # pylint: disable-msg=C0103
+def ec2_credentials_get(id=None,  # pylint: disable=W0622
                         name=None,
                         access=None):  # pylint: disable-msg=C0103
     '''
@@ -105,7 +105,7 @@ def ec2_credentials_get(id=None,       # pylint: disable-msg=C0103
     return ret
 
 
-def ec2_credentials_list(id=None, name=None):  # pylint: disable-msg=C0103
+def ec2_credentials_list(id=None, name=None):  # pylint: disable=W0622
     '''
     Return a list of ec2_credentials for a specific user (keystone ec2-credentials-list)
 
@@ -168,7 +168,7 @@ def endpoint_list():
     return ret
 
 
-def role_get(id=None, name=None):  # pylint: disable-msg=C0103
+def role_get(id=None, name=None):  # pylint: disable=W0622
     '''
     Return a specific roles (keystone role-get)
 
@@ -213,7 +213,7 @@ def role_list():
     return ret
 
 
-def service_get(id=None, name=None):  # pylint: disable-msg=C0103
+def service_get(id=None, name=None):  # pylint: disable=W0622
     '''
     Return a specific services (keystone service-get)
 
@@ -228,7 +228,7 @@ def service_get(id=None, name=None):  # pylint: disable-msg=C0103
     if name:
         for service in kstone.services.list():
             if service.name == name:
-                id = service.id  # pylint: disable-msg=C0103
+                id = service.id
                 continue
     if not id:
         return {'Error': 'Unable to resolve service id'}
@@ -262,7 +262,7 @@ def service_list():
     return ret
 
 
-def tenant_get(id=None, name=None):  # pylint: disable-msg=C0103
+def tenant_get(id=None, name=None):  # pylint: disable=W0622
     '''
     Return a specific tenants (keystone tenant-get)
 
@@ -350,7 +350,7 @@ def user_list():
     return ret
 
 
-def user_get(id=None, name=None):  # pylint: disable-msg=C0103
+def user_get(id=None, name=None):  # pylint: disable=W0622
     '''
     Return a specific users (keystone user-get)
 
@@ -399,7 +399,7 @@ def user_create(name, password, email, tenant_id=None, enabled=True):
     return user_get(item.id)
 
 
-def user_delete(id=None, name=None):  # pylint: disable-msg=C0103
+def user_delete(id=None, name=None):  # pylint: disable=W0622
     '''
     Delete a user (keystone user-delete)
 
@@ -424,7 +424,7 @@ def user_delete(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def user_update(id=None,        # pylint: disable-msg=C0103
+def user_update(id=None,  # pylint: disable=W0622
                 name=None,
                 email=None,
                 enabled=None):  # pylint: disable-msg=C0103
@@ -446,7 +446,7 @@ def user_update(id=None,        # pylint: disable-msg=C0103
     return ret
 
 
-def user_password_update(id=None,         # pylint: disable-msg=C0103
+def user_password_update(id=None,  # pylint: disable=W0622
                          name=None,
                          password=None):  # pylint: disable-msg=C0103
     '''

@@ -280,7 +280,7 @@ def start(app, url='http://localhost:8080/manager', timeout=180):
     return _simple_cmd('start', app, url, timeout=timeout)
 
 
-def reload(app, url='http://localhost:8080/manager', timeout=180):
+def reload(app, url='http://localhost:8080/manager', timeout=180):  # pylint: disable=W0622
     '''
     Reload the webapp
     

@@ -96,7 +96,7 @@ def grain(tgt):
         return False
 
 
-def list(tgt):
+def list(tgt):  # pylint: disable=W0622
     '''
     Return True if the minion matches the given list target
 

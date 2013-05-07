@@ -97,7 +97,11 @@ Options(for this renderer):
 )
 
 
-def render(input, env='', sls='', argline='', **kws):
+def render(input,  # pylint: disable=W0622
+           env='',
+           sls='',
+           argline='',
+           **kws):
     gen_start_state = False
     no_goal_state = False
     implicit_require = False

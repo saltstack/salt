@@ -733,8 +733,15 @@ def search(pkg_name, exact=False, glob=False, regex=False, pcre=False,
     return __salt__['cmd.run'](cmd)
 
 
-def fetch(pkg_name, all=False, quiet=False, reponame=None, glob=True,
-            regex=False, pcre=False, local=False, depends=False):
+def fetch(pkg_name,
+          all=False,  # pylint: disable=W0622
+          quiet=False,
+          reponame=None,
+          glob=True,
+          regex=False,
+          pcre=False,
+          local=False,
+          depends=False):
     '''
     Fetches remote packages
 

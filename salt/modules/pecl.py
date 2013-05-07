@@ -66,7 +66,7 @@ def update(pecls):
     return _pecl('install -U {0}'.format(pecls))
 
 
-def list():
+def list():  # pylint: disable=W0622
     '''
     List installed pecl extensions.
 

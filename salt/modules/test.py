@@ -50,7 +50,7 @@ def sleep(length):
     return True
 
 
-def rand_sleep(max=60):
+def rand_sleep(max=60):  # pylint: disable=W0622
     '''
     Sleep for a random number of seconds, used to test long-running commands
     and minions returning at differing intervals
