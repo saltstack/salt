@@ -134,8 +134,7 @@ def list_pkgs(versions_as_list=False):
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
-        pkgver = version
+        name, pkgver, rel = line.split('_|-')
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)

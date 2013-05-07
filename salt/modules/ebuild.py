@@ -121,8 +121,8 @@ def _get_upgradable():
     ret = {}
     for line in upgrades:
         name = _get(line, 'name')
-        version = _get(line, 'version')
-        ret[name] = version
+        version_num = _get(line, 'version')
+        ret[name] = version_num
 
     return ret
 

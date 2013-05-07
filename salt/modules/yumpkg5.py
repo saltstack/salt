@@ -183,7 +183,7 @@ def list_pkgs(versions_as_list=False):
           '%{ARCH}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version, rel, arch = line.split('_|-')
+            name, pkgver, rel, arch = line.split('_|-')
         # Handle unpack errors (should never happen with the queryformat we are
         # using, but can't hurt to be careful).
         except ValueError:
@@ -191,7 +191,6 @@ def list_pkgs(versions_as_list=False):
         # Support 32-bit packages on x86_64 systems
         if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
             name += '.i686'
-        pkgver = version
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
