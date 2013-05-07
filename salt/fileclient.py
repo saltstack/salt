@@ -68,7 +68,7 @@ class Client(object):
 
         filelist = set()
 
-        for root, dirs, files in os.walk(destdir, followlinks=True):
+        for root, dirs, files in os.walk(destdir, followlinks=True):  # pylint: disable=W0612
             for name in files:
                 path = os.path.join(root, name)
                 filelist.add(path)
@@ -438,7 +438,7 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            for root, dirs, files in os.walk(path, followlinks=True):
+            for root, dirs, files in os.walk(path, followlinks=True):  # pylint: disable=W0612
                 for fname in files:
                     ret.append(
                         os.path.relpath(
@@ -469,7 +469,7 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            for root, dirs, files in os.walk(path, followlinks=True):
+            for root, dirs, files in os.walk(path, followlinks=True):  # pylint: disable=W0612
                 ret.append(os.path.relpath(root, path))
         return ret
 

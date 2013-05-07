@@ -125,7 +125,7 @@ def _sync(form, env=None):
 
 def _listdir_recursively(rootdir):
     file_list = []
-    for root, dirs, files in os.walk(rootdir):
+    for root, dirs, files in os.walk(rootdir):  # pylint: disable=W0612
         for file in files:
             relpath = os.path.relpath(root, rootdir).strip('.')
             file_list.append(os.path.join(relpath, file))
