@@ -1430,9 +1430,13 @@ class ClearFuncs(object):
         salt.utils.verify.check_max_open_files(self.opts)
 
         log.info('Authentication request from {id}'.format(**load))
+        pubroot = os.path.join(self.opts['pki_dir'], 'minions')
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['id'])
+        if not os.path.dirname(pubfn) == pubroot:
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
         pubfn_pend = os.path.join(self.opts['pki_dir'],
                 'minions_pre',
                 load['id'])
