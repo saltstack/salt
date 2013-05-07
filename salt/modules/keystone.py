@@ -535,9 +535,9 @@ def _item_list():
     #keystone module. This list should be updated as functions are added.
     #
     #ec2-credentials-create
-    #                    Create EC2-compatibile credentials for user per tenant
+    #                    Create EC2-compatible credentials for user per tenant
     #ec2-credentials-delete
-    #                    Delete EC2-compatibile credentials
+    #                    Delete EC2-compatible credentials
     #endpoint-create     Create a new endpoint associated with a service
     #endpoint-delete     Delete a service endpoint
     #role-create         Create new role
