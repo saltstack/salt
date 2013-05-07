@@ -221,6 +221,140 @@ class MasterMinion(object):
         self.functions['sys.reload_modules'] = self.gen_modules
 
 
+class MultiMinion(object):
+    '''
+    Create a multi minion interface, this creates as many minions as are
+    defined in the master option and binds each minion object to a respective
+    master.
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+
+    def _gen_minions(self):
+        '''
+        Set up and tune in the minion options
+        '''
+        if not isinstance(self.opts['master'], list):
+            log.error(
+                'Attempting to start a multimaster system with one master')
+            return False
+        minions = []
+        for master in set(self.opts['master']):
+            s_opts = copy.copy(self.opts)
+            s_opts['master'] = master
+            minions.append(Minion(opts))
+        return minions
+
+    def minions(self):
+        '''
+        Return a list of minion generators bound to the tune_in method
+        '''
+        ret = {}
+        minions = self.gen_minions()
+        for minion in minions:
+            ret[minion.opts['master']] = {
+                    'minion': minion,
+                    'generator': minion.tune_in_no_block()}
+        return ret
+
+    # Multi Master Tune In
+    def tune_in(self):
+        '''
+        Bind to the masters
+        '''
+        # Prepare the minion event system
+        #
+        # Start with the publish socket
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
+        epub_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pub.ipc'.format(id_hash)
+        )
+        epull_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pull.ipc'.format(id_hash)
+        )
+        self.epub_sock = self.context.socket(zmq.PUB)
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pub_port']
+            )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pull_port']
+            )
+        else:
+            epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            salt.utils.check_ipc_path_max_len(epub_uri)
+            epull_uri = 'ipc://{0}'.format(epull_sock_path)
+            salt.utils.check_ipc_path_max_len(epull_uri)
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
+        # Create the pull socket
+        self.epull_sock = self.context.socket(zmq.PULL)
+        # Bind the event sockets
+        self.epub_sock.bind(epub_uri)
+        self.epull_sock.bind(epull_uri)
+        # Restrict access to the sockets
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            os.chmod(
+                epub_sock_path,
+                448
+            )
+            os.chmod(
+                epull_sock_path,
+                448
+            )
+
+        self.epoller = zmq.Poller()
+        module_refresh = False
+        pillar_refresh = False
+
+        # Prepare the minion generators
+        minions = self.minions()
+
+        while True:
+            try:
+                self.schedule.eval()
+                # Check if scheduler requires lower loop interval than
+                # the loop_interval setting
+                if self.schedule.loop_interval < loop_interval:
+                    loop_interval = self.schedule.loop_interval
+                    log.debug(
+                        'Overriding loop_interval because of scheduled jobs.'
+                    )
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occurred in scheduled job'.format(exc)
+                )
+            if self.epoller.poll(1):
+                try:
+                    while True:
+                        package = self.epull_sock.recv(zmq.NOBLOCK)
+                        if package.startswith('module_refresh'):
+                            module_refresh = True
+                        elif package.startswith('pillar_refresh'):
+                            pillar_refresh = True
+                        self.epub_sock.send(package)
+                except Exception:
+                    pass
+            # get commands from each master
+            for minion in minions:
+                if module_refresh:
+                    minion['minion'].refresh_modules()
+                if pillar_refresh:
+                    minion['minion'].refresh_pillar()
+                minion['generator'].next()
+        
+
 class Minion(object):
     '''
     This class instantiates a minion, runs connections for a minion,
@@ -677,6 +811,7 @@ class Minion(object):
         '''
         exit(0)
 
+    # Main Minion Tune In
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
@@ -818,7 +953,6 @@ class Minion(object):
                 if self.socket in socks and socks[self.socket] == zmq.POLLIN:
                     payload = self.serial.loads(self.socket.recv())
                     self._handle_payload(payload)
-                time.sleep(0.05)
                 # Check the event system
                 if self.epoller.poll(1):
                     try:
@@ -842,7 +976,71 @@ class Minion(object):
                     exc_info=True
                 )
 
+    def tune_in_no_block(self):
+        '''
+        Executes the tune_in sequence but omits extra logging and the
+        management of the event bus assuming that these are handled outside
+        the tune_in sequence
+        '''
+        self.context = zmq.Context()
+        self.poller = zmq.Poller()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            self.socket.setsockopt(
+                zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
+            )
+        if hasattr(zmq, 'TCP_KEEPALIVE'):
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+            )
+            self.socket.setsockopt(
+                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+            )
+        self.socket.connect(self.master_pub)
+        self.poller.register(self.socket, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master(
+            'Minion {0} started at {1}'.format(
+            self.opts['id'],
+            time.asctime()
+            ),
+            'minion_start'
+        )
+        loop_interval = int(self.opts['loop_interval'])
+        while True:
+            try:
+                socks = dict(self.poller.poll(
+                    loop_interval * 1000)
+                )
+                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                    payload = self.serial.loads(self.socket.recv())
+                    self._handle_payload(payload)
+                # Check the event system
+            except zmq.ZMQError:
+                # If a zeromq error happens recover
+                yield True
+            except Exception:
+                log.critical(
+                    'An exception occurred while polling the minion',
+                    exc_info=True
+                )
+            yield True
+
     def destroy(self):
+        '''
+        Tear down the minion
+        '''
         if hasattr(self, 'poller'):
             for socket in self.poller.sockets.keys():
                 if socket.closed is False:
@@ -936,6 +1134,7 @@ class Syndic(Minion):
                        data['jid'],
                        data['to'])
 
+    # Syndic Tune In
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
