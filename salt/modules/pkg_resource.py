@@ -24,7 +24,7 @@ def _parse_pkg_meta(path):
     '''
     def parse_rpm(path):
         name = ''
-        version = ''
+        version = ''  # pylint: disable=W0621
         rel = ''
         result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
         if result['retcode'] == 0:
@@ -50,7 +50,7 @@ def _parse_pkg_meta(path):
 
     def parse_pacman(path):
         name = ''
-        version = ''
+        version = ''  # pylint: disable=W0621
         result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
@@ -68,7 +68,7 @@ def _parse_pkg_meta(path):
 
     def parse_deb(path):
         name = ''
-        version = ''
+        version = ''  # pylint: disable=W0621
         result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
@@ -344,7 +344,7 @@ def version(*names, **kwargs):
     return ret
 
 
-def add_pkg(pkgs, name, version):
+def add_pkg(pkgs, name, version):  # pylint: disable=W0621
     '''
     Add a package to a dict of installed packages.
 

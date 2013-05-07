@@ -293,7 +293,7 @@ def install(name=None,
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
-        version = kwargs.get('version')
+        version = kwargs.get('version')  # pylint: disable=W0621
         if version:
             pkg_params = {name: version}
         elif slot is not None:

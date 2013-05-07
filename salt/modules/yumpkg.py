@@ -466,7 +466,7 @@ def install(name=None,
     setattr(yumbase.conf, 'assumeyes', True)
     setattr(yumbase.conf, 'gpgcheck', not skip_verify)
 
-    version = kwargs.get('version')
+    version = kwargs.get('version')  # pylint: disable=W0621
     if version:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target

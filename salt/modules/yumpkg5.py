@@ -315,7 +315,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
+    version = kwargs.get('version')  # pylint: disable=W0621
     if version:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target

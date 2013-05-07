@@ -35,7 +35,7 @@ def __virtual__():
     Only work on systems which default to systemd
     '''
     # Enable on these platforms only.
-    enable = [
+    enable = [  # pylint: disable=W0621
         'RedHat',
         'CentOS',
         'Scientific',
