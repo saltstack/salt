@@ -1400,7 +1400,7 @@ def check_file_meta(
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(tmp, 'w') as tmp_:
-            tmp_.write(contents)
+            tmp_.write(str(contents))
         # Compare the static contents with the named file
         with contextlib.nested(
                 salt.utils.fopen(tmp, 'rb'),
@@ -1545,7 +1545,7 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(contents)
+                tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
             with contextlib.nested(
@@ -1656,7 +1656,7 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(contents)
+                tmp_.write(str(contents))
             # Copy into place
             salt.utils.copyfile(
                     tmp,
