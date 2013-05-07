@@ -24,13 +24,13 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import check_hash, check_managed, check_perms, \
-        directory_exists, get_managed, mkdir, makedirs, makedirs_perms, \
-        patch, remove, source_list, sed_contains, touch, append, contains, \
-        contains_regex, contains_regex_multiline, contains_glob, patch, \
-        uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment, \
-        manage_file, file_exists, get_diff, get_managed, check_perms, \
-        check_managed, check_file_meta, contains_regex
+from salt.modules.file import (check_hash, check_managed, check_perms, # pylint: disable=W0611
+        directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
+        patch, remove, source_list, sed_contains, touch, append, contains,
+        contains_regex, contains_regex_multiline, contains_glob, patch,
+        uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
+        manage_file, file_exists, get_diff, get_managed, check_perms,
+        check_managed, check_file_meta, contains_regex)
 
 
 log = logging.getLogger(__name__)
