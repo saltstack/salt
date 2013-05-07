@@ -24,7 +24,7 @@ def fire_master(data, tag):
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     try:
         sreq.send('aes', auth.crypticle.dumps(load))
-    except:
+    except Exception:
         pass
     return True
 

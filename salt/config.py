@@ -558,7 +558,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except:
+            except Exception:
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: {0}'.format(
                         regex
