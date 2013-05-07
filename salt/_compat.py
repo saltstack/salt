@@ -118,7 +118,7 @@ if PY3:
     from urllib.parse import quote_plus as url_quote_plus  # pylint: disable=E0611
     from urllib.parse import unquote as url_unquote  # pylint: disable=E0611
     from urllib.parse import urlencode as url_encode  # pylint: disable=E0611
-    from urllib.request import urlopen as url_open
+    from urllib.request import urlopen as url_open  # pylint: disable=E0611
     url_unquote_text = url_unquote
     url_unquote_native = url_unquote
 else:
