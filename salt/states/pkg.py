@@ -302,7 +302,10 @@ def installed(
 
     sources
         A list of packages to install, along with the source URI or local path
-        from which to install each package.
+        from which to install each package. In the example below, ``foo``,
+        ``bar``, ``baz``, etc. refer to the name of the package, as it would
+        appear in the output of the ``pkg.version`` or ``pkg.list_pkgs`` salt
+        CLI commands.
 
     Usage::
 
