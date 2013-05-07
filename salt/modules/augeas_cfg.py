@@ -36,7 +36,7 @@ def _recurmatch(path, aug):
         yield (clean_path, aug.get(path))
 
         for i in aug.match(clean_path + '/*'):
-            i = i.replace('!', '\!')  # escape some dirs
+            i = i.replace('!', '\\!')  # escape some dirs
             for _match in _recurmatch(i, aug):
                 yield _match
 

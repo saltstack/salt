@@ -139,7 +139,7 @@ def list(prefix='', ruby=None, runas=None):
     if isinstance(stdout, str):
         lines = stdout.splitlines()
     for line in lines:
-        match = re.match('^([^ ]+) \((.+)\)', line)
+        match = re.match(r'^([^ ]+) \((.+)\)', line)
         if match:
             gem = match.group(1)
             versions = match.group(2).split(', ')

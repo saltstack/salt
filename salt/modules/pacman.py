@@ -95,7 +95,7 @@ def list_upgrades():
     '''
     upgrades = {}
     lines = __salt__['cmd.run'](
-        'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
+        'pacman -Sypu --print-format "%n %v" | egrep -v ' r'"^\s|^:"'
     ).splitlines()
     for line in lines:
         comps = line.split(' ')

@@ -35,7 +35,7 @@ def zmq_version():
     ver = zmq.__version__
     # The last matched group can be None if the version
     # is something like 3.1 and that will work properly
-    match = re.match('^(\d+)\.(\d+)(?:\.(\d+))?', ver)
+    match = re.match(r'^(\d+)\.(\d+)(?:\.(\d+))?', ver)
 
     # Fallthrough and hope for the best
     if not match:

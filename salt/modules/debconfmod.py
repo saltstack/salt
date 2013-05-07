@@ -33,9 +33,9 @@ def _unpack_lines(out):
     Unpack the debconf lines
     '''
     rexp = ('(?ms)'
-            '^(?P<package>[^#]\S+)[\t ]+'
-            '(?P<question>\S+)[\t ]+'
-            '(?P<type>\S+)[\t ]+'
+            '^(?P<package>[^#]\\S+)[\t ]+'
+            '(?P<question>\\S+)[\t ]+'
+            '(?P<type>\\S+)[\t ]+'
             '(?P<value>[^\n]*)$')
     lines = re.findall(rexp, out)
     return lines
