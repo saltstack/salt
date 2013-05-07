@@ -243,7 +243,7 @@ class MultiMinion(object):
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
-            minions.append(Minion(s_opts))
+            minions.append(Minion(s_opts, 5, False))
         return minions
 
     def minions(self):
@@ -364,7 +364,7 @@ class Minion(object):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, timeout=60, safe=True):
         '''
         Pass in the options dict
         '''
@@ -373,7 +373,7 @@ class Minion(object):
         opts['grains'] = salt.loader.grains(opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
-        self.authenticate()
+        self.authenticate(timeout, safe)
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
@@ -765,7 +765,7 @@ class Minion(object):
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
                                           port=self.publish_port)
 
-    def authenticate(self):
+    def authenticate(self, timeout=60, safe=True):
         '''
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -779,7 +779,7 @@ class Minion(object):
         )
         auth = salt.crypt.Auth(self.opts)
         while True:
-            creds = auth.sign_in()
+            creds = auth.sign_in(timeout, safe)
             if creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
