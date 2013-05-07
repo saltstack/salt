@@ -243,7 +243,10 @@ class MultiMinion(object):
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
-            minions.append(Minion(s_opts, 5, False))
+            try:
+                minions.append(Minion(s_opts, 5, False))
+            except SaltClientError:
+                minions.append(s_opts)
         return minions
 
     def minions(self):
@@ -253,9 +256,12 @@ class MultiMinion(object):
         ret = {}
         minions = self._gen_minions()
         for minion in minions:
-            ret[minion.opts['master']] = {
-                    'minion': minion,
-                    'generator': minion.tune_in_no_block()}
+            if isinstance(minion, dict):
+                ret[minion['master']] = minion
+            else:
+                ret[minion.opts['master']] = {
+                        'minion': minion,
+                        'generator': minion.tune_in_no_block()}
         return ret
 
     # Multi Master Tune In
@@ -323,22 +329,29 @@ class MultiMinion(object):
         # Prepare the minion generators
         minions = self.minions()
         loop_interval = int(self.opts['loop_interval'])
-        self.schedule = minions[minions.keys()[0]]['minion'].schedule
+        last = time.time()
+        auth_wait = self.opts['acceptance_wait_time']
+        max_wait = auth_wait * 6
+        for minion in minions.values():
+            if isinstance(minion, dict):
+                continue
+            self.schedule = minion.schedule
 
         while True:
-            try:
-                self.schedule.eval()
-                # Check if scheduler requires lower loop interval than
-                # the loop_interval setting
-                if self.schedule.loop_interval < loop_interval:
-                    loop_interval = self.schedule.loop_interval
-                    log.debug(
-                        'Overriding loop_interval because of scheduled jobs.'
+            if hasattr(self, 'schedule'):
+                try:
+                    self.schedule.eval()
+                    # Check if scheduler requires lower loop interval than
+                    # the loop_interval setting
+                    if self.schedule.loop_interval < loop_interval:
+                        loop_interval = self.schedule.loop_interval
+                        log.debug(
+                            'Overriding loop_interval because of scheduled jobs.'
+                        )
+                except Exception as exc:
+                    log.error(
+                        'Exception {0} occurred in scheduled job'.format(exc)
                     )
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in scheduled job'.format(exc)
-                )
             if self.epoller.poll(1):
                 try:
                     while True:
@@ -351,7 +364,21 @@ class MultiMinion(object):
                 except Exception:
                     pass
             # get commands from each master
-            for minion in minions.values():
+            for master, minion in minions.items():
+                if 'generator' not in minion:
+                    if time.time() - auth_wait > last:
+                        last = time.time()
+                        if auth_wait < max_wait:
+                            auth_wait += auth_wait
+                        try:
+                            t_minion = Minion(minion, 1, False)
+                            minions[master]['minion'] = t_minion
+                            minions[master]['generator'] = t_minion.tune_in_no_block()
+                            auth_wait = self.opts['acceptance_wait_time']
+                        except SaltClientError:
+                            continue
+                    else:
+                        continue
                 if module_refresh:
                     minion['minion'].module_refresh()
                 if pillar_refresh:
