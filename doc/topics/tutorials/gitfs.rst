@@ -71,13 +71,20 @@ Assuming that the ``gitfs_remotes`` option specifies three remotes:
     gitfs_remotes:
       - git://github.com/example/first.git
       - git://github.com/example/second.git
-      - git://github.com/example/third.git
+      - file:///root/third
 
 .. note::
 
     This example is purposefully contrived to illustrate the behavior of the
     gitfs backend. This example should not be read as a recommended way to lay
     out files and git repos.
+
+.. note::
+
+    The file:// prefix denotes a git repository in a local directory.  However,
+    it will still use the given file:// URL as a remote, rather than copying
+    the git repo to the salt cache.  This means that any refs you want
+    accessible must exist as *local* refs in the specified repo.
 
 Assume that each repository contains some files:
 
@@ -91,10 +98,10 @@ second.git:
     edit/dev_vimrc
     haproxy/init.sls
 
-third.git:
+third:
     haproxy/haproxy.conf
     edit/dev_vimrc
-    
+
 The repositories will be searched for files by the master in the order in which
 they are defined in the configuration, Therefore the remote
 `git://github.com/example/first.git` will be searched first, if the requested
