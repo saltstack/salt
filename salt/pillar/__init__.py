@@ -84,10 +84,9 @@ class Pillar(object):
         '''
         if not isinstance(ext, dict):
             return {}
-        valid = ['libvirt']
-        for key in ext:
-            if key not in valid:
-                return {}
+        valid = set(('libvirt',))
+        if any(key not in valid for key in ext):
+            return {}
         return ext
 
     def __gen_opts(self, opts_in, grains, id_, env=None, ext=None):
