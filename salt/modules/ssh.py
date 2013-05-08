@@ -531,7 +531,8 @@ def check_known_host(user, hostname, key=None, fingerprint=None,
     if key:
         return 'exists' if key == known_host['key'] else 'update'
     elif fingerprint:
-        return 'exists' if fingerprint == known_host['fingerprint'] else 'update'
+        return ('exists' if fingerprint == known_host['fingerprint']
+                else 'update')
     else:
         return 'exists'
 
@@ -576,8 +577,8 @@ def set_known_host(user, hostname,
 
     CLI Example::
 
-        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' enc='ssh-rsa'\
-                 config='.ssh/known_hosts'
+        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
+                 enc='ssh-rsa' config='.ssh/known_hosts'
     '''
     update_required = False
     stored_host = get_known_host(user, hostname, config)
