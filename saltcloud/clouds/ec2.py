@@ -619,6 +619,16 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    key_filename = config.get_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
@@ -740,10 +750,10 @@ def create(vm_=None, call=None):
 
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(
-                    host=ip_address, username=user, ssh_timeout=60,
-                    key_filename=config.get_config_value(
-                        'private_key', vm_, __opts__)):
+            if saltcloud.utils.wait_for_passwd(host=ip_address,
+                                               username=user,
+                                               ssh_timeout=60,
+                                               key_filename=key_filename):
                 username = user
                 break
         else:
@@ -755,9 +765,7 @@ def create(vm_=None, call=None):
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
-            'key_filename': config.get_config_value(
-                'private_key', vm_, __opts__, search_global=False
-            ),
+            'key_filename': key_filename,
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
