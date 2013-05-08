@@ -469,7 +469,7 @@ class Cloud(object):
             )
 
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating SSH keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
             priv, pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', vm_, self.opts)
             )
@@ -484,7 +484,7 @@ class Cloud(object):
         if make_master is True:
             if 'master_pub' not in vm_ and 'master_pem' not in vm_:
                 log.debug(
-                    'Generating the master SSH keys for {0[name]!r}'.format(
+                    'Generating the master keys for {0[name]!r}'.format(
                         vm_
                     )
                 )
@@ -893,7 +893,7 @@ class Map(Cloud):
 
             # Generate the master keys
             log.debug(
-                'Generating SSH keys for {0[name]!r}'.format(master_profile)
+                'Generating master keys for {0[name]!r}'.format(master_profile)
             )
             priv, pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', master_profile, self.opts)
@@ -925,7 +925,7 @@ class Map(Cloud):
                     continue
 
                 log.debug(
-                    'Generating SSH keys for {0[name]!r}'.format(profile)
+                    'Generating minion keys for {0[name]!r}'.format(profile)
                 )
                 priv, pub = saltcloud.utils.gen_keys(
                     config.get_config_value('keysize', profile, self.opts)
