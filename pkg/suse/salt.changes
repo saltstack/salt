@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed May  8 21:44:49 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.15.1
+- bugfix release.
+- fixes suse service check
+
+-------------------------------------------------------------------
 Sat May  4 08:16:27 UTC 2013 - aboe76@gmail.com
 
 - Updated to salt 0.15.0
