@@ -57,17 +57,16 @@ def key_regen():
                 os.remove(path)
             except os.error:
                 pass
-    msg = ('The minion and master keys have been deleted, restart the Salt\n '
-           'Master within the next 60 seconds!!!\n Then wait for the '
-           'minions to reconnect, once the minions reconnect the new keys \n'
-           'will appear in pending and will need to be re-accepted by '
-           'running:\n '
-           'salt-key-A\n'
-           '\n'
-           'Be advised that minion not currently connected to the master\n'
+    msg = ('The minion and master keys have been deleted.  Restart the Salt\n'
+           'Master within the next 60 seconds!!!\n\n'
+           'Wait for the minions to reconnect.  Once the minions reconnect\n'
+           'the new keys will appear in pending and will need to be re-\n'
+           'accepted by running:\n'
+           '    salt-key -A\n\n'
+           'Be advised that minions not currently connected to the master\n'
            'will not be able to reconnect and may require manual\n'
            'regeneration via a local call to\n'
-           'salt-call saltutil.regen_keys')
+           '    salt-call saltutil.regen_keys')
     print(msg)
 
 
