@@ -207,6 +207,7 @@ def managed(name, **kwargs):
                 if sanitizedkwargs[kwarg] != repo[kwarg]:
                     notset = True
         if notset is False:
+            ret['result'] = True
             ret['comment'] = 'Package repo {0} already configured'.format(name)
             return ret
     if __opts__['test']:
