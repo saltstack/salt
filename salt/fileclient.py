@@ -501,7 +501,7 @@ class LocalClient(Client):
         ret['hash_type'] = self.opts['hash_type']
         return ret
 
-    def list_env(self, path, env='base'):
+    def list_env(self, env='base'):
         '''
         Return a list of the files in the file server's specified environment
         '''
@@ -716,7 +716,7 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
-    def list_env(self, path, env='base'):
+    def list_env(self, env='base'):
         '''
         Return a list of the files in the file server's specified environment
         '''
