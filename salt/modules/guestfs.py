@@ -25,6 +25,10 @@ def __virtual__():
 def mount(location, access='rw'):
     '''
     Mount an image
+
+    CLI Example::
+
+        salt 'guest.mount' /srv/images/fedora.qcow
     '''
     root = os.path.join(
             tempfile.gettempdir(),
