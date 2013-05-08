@@ -17,9 +17,9 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = [
+    disable = set((
         'Windows',
-        ]
+        ))
     if __grains__['os'] in disable:
         return False
     return 'dnsmasq'
