@@ -603,22 +603,43 @@ def scp_file(dest_path, contents, kwargs):
     tmpfh, tmppath = tempfile.mkstemp()
     with salt.utils.fopen(tmppath, 'w') as tmpfile:
         tmpfile.write(contents)
+
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
-    cmd = 'scp -oStrictHostKeyChecking=no {0} {1}@{2}:{3}'.format(
-        tmppath,
-        kwargs['username'],
-        kwargs['hostname'],
-        dest_path
-    )
+
+    ssh_args = [
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ]
     if 'key_filename' in kwargs:
-        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
-    elif 'password' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(kwargs['key_filename'])
+        ])
+
+    cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
+        ' '.join(ssh_args), tmppath, kwargs, dest_path
+    )
+    log.debug('SCP command: {0!r}'.format(cmd))
+
+    if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
-    log.debug('Running command {0!r}'.format(cmd))
     proc = subprocess.Popen(
         cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
+    stdout, stderr = proc.communicate()
+    stdout, stderr = stdout.strip(), stderr.strip()
+    if stdout:
+        log.debug('SCP STDOUT: {0!r}'.format(stdout))
+    if stderr:
+        log.debug('SCP STDERR: {0!r}'.format(stderr))
     return proc.returncode
 
 
@@ -665,14 +686,22 @@ def root_cmd(command, tty, sudo, **kwargs):
 
     log.debug('Executing command: {0}'.format(command))
 
-    if 'display_ssh_output' in kwargs and kwargs['display_ssh_output']:
-        return subprocess.call(cmd, shell=True)
+    display_ssh_output = kwargs.get('display_ssh_output', True)
+
+    if display_ssh_output is True:
+        proc = subprocess.Popen(cmd, shell=True)
     else:
-        proc = subprocess.Popen(cmd, shell=True,
-                                stderr=subprocess.PIPE,
-                                stdout=subprocess.PIPE)
-        proc.communicate()
-        return proc.returncode
+        proc = subprocess.Popen(
+            cmd, shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+    stdout, stderr = proc.communicate()
+    if display_ssh_output is not True and stdout:
+        log.debug('SSH Command STDOUT: {0}'.format(stdout))
+    if display_ssh_output is not True and stdout:
+        log.debug('SSH Command STDERR: {0}'.format(stderr))
+    return proc.returncode
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
