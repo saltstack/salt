@@ -47,7 +47,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    gen = RSA.gen_key(keysize, 1, callback=lambda x, y, z: None)
+    gen = RSA.gen_key(keysize, 65537, callback=lambda x, y, z: None)
     cumask = os.umask(191)
     gen.save_key(priv, None)
     os.umask(cumask)
