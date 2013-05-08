@@ -19,15 +19,15 @@ import salt.utils
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
 
-# Known not to work
-BAD = set(('Windows',))
-
 
 def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if __grains__['os'] in BAD or not salt.utils.which('at'):
+    disable = set((
+        'Windows',
+        ))
+    if __grains__['os'] in disable or not salt.utils.which('at'):
         return False
     return 'at'
 
