@@ -119,7 +119,6 @@ if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
 	SALTMASTER='/usr/bin/salt-master'
-	SERVICE='salt-master'
 fi
 
 test -x $SALTMASTER || { echo "$SALTMASTER not installed"; 
@@ -172,7 +171,7 @@ case "$1" in
 	echo -n "Starting salt-master daemon: "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
-	/sbin/startproc -f -p /var/run/${SERVICE} ${SALTMASTER} -d
+	/sbin/startproc ${SALTMASTER} -d
 	
 	# Remember status and be verbose
 	rc_status -v
