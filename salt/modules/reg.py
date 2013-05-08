@@ -37,7 +37,7 @@ class Registry(object):
             "HKEY_USERS":         _winreg.HKEY_USERS,
             "HKEY_CURRENT_USER":  _winreg.HKEY_CURRENT_USER,
             "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
-        }
+            }
     def __getattr__(self, k):
         try:
             return self.hkeys[k]
@@ -53,12 +53,12 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             return 'reg'
-        # TODO: This needs to be reworked after the module dependency
+            # TODO: This needs to be reworked after the module dependency
         # docstring was changed to :depends
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 
-def read_key(hkey, path, key):
+def read_key(hkey,path, key):
     '''
     Read registry key value
 
@@ -69,12 +69,16 @@ def read_key(hkey, path, key):
 
     registry = Registry()
     hkey2 = getattr(registry, hkey)
-    fullpath = '\\\\'.join([path, key])
+    # handle = _winreg.OpenKey(hkey2, path)
+    # value, type = _winreg.QueryValueEx(handle, key)
+    # return value
     try:
-        handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_READ)
+        handle = _winreg.OpenKey(hkey2, path)
         return _winreg.QueryValueEx(handle, key)[0]
     except Exception:
         return False
+
+
 
 
 def set_key(hkey, path, key, value):
@@ -87,16 +91,17 @@ def set_key(hkey, path, key, value):
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
-    fullpath = '\\\\'.join([path, key])
+    # fullpath = '\\\\'.join([path, key])
 
     try:
-        handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
-        _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
+        # handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
+        handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
+        _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
         _winreg.CloseKey(handle)
         return True
     except Exception:
-        handle = _winreg.CreateKey(hkey2, fullpath)
-        _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
+        handle = _winreg.CreateKey(hkey2, path)
+        _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
         _winreg.CloseKey(handle)
     return True
 
@@ -111,16 +116,16 @@ def create_key(hkey, path, key, value=None):
     '''
     registry = Registry()
     hkey2 = getattr(registry, hkey)
-    fullpath = '\\\\'.join([path, key])
+    # fullpath = '\\\\'.join([path, key])
 
     try:
-        handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
+        handle = _winreg.OpenKey(hkey2, path, 0, _winreg.KEY_ALL_ACCESS)
         _winreg.CloseKey(handle)
         return True
     except Exception:
-        handle = _winreg.CreateKey(hkey2, fullpath)
+        handle = _winreg.CreateKey(hkey2, path)
         if value:
-            _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
+            _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
         _winreg.CloseKey(handle)
     return True
 
@@ -146,3 +151,5 @@ def delete_key(hkey, path, key):
     except Exception:
         _winreg.CloseKey(handle)
     return True
+
+
