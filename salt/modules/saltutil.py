@@ -12,6 +12,7 @@ import shutil
 import signal
 import logging
 import fnmatch
+import time
 import sys
 
 # Import salt libs
@@ -437,6 +438,21 @@ def kill_job(jid):
         salt '*' saltutil.kill_job <job id>
     '''
     return signal_job(jid, signal.SIGKILL)
+
+
+def regen_keys(master=''):
+    '''
+    Used to regenerate the minion keys. 
+    '''
+    for fn_ in os.listdir(__opts__['cachedir']):
+        path = os.path.join(__opts__['cachedir'], fn_)
+        try:
+            os.remove(path)
+        except os.error:
+            pass
+    time.sleep(60)
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = salt.crypt.SAuth(__opts__)
 
 
 def revoke_auth():
