@@ -14,7 +14,7 @@ on Debian-based systems by means of the python-netaddr package.
 
 This module has been tested to work with HP Cloud and Rackspace. See the
 documentation for specific options for either of these providers. Some
-examples, using the old could configuration syntax, are provided below:
+examples, using the old cloud configuration syntax, are provided below:
 
 .. code-block:: yaml
 
