@@ -1351,7 +1351,8 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     after
         A pattern that should exist in the file after the edit.
     limit
-        A pattern that should exist in the file both before and after the edit.
+        An optional second pattern that can limit the scope of the before
+        pattern.
     backup : '.bak'
         The extension for the backed-up version of the file before the edit.
     options : ``-r -e``
