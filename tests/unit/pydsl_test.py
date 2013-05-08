@@ -360,7 +360,7 @@ hello blue 3
 '''.lstrip()
 
             with open(output, 'r') as f:
-                self.assertEqual(f.read(), expected)
+                self.assertEqual(sorted(f.read()), sorted(expected))
 
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
