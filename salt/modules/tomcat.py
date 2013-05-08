@@ -429,11 +429,10 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     tfile = war
     if war[0] != '/':
         tfile = os.path.join( tempfile.gettempdir(), 'salt.'+os.path.basename(war) )
-        try:
-            cached = __salt__['cp.get_file'](war, tfile, env)
-            __salt__['file.set_mode'](cached, '0644')
-        except Exception:
+        cached = __salt__['cp.get_file'](war, tfile, env)
+        if not cached:
             return 'FAIL - could not cache the WAR file'
+        __salt__['file.set_mode'](cached, '0644')
     
     # Prepare options
     opts = {
@@ -446,10 +445,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     
     # Deploy
     deployed = _wget('deploy', opts, url, timeout=timeout)
-    if deployed['res'] == False:
-        res = deployed['msg']
-    else:
-        res = '\n'.join(deployed['msg'])
+    res = '\n'.join(deployed['msg'])
     
     # Cleanup
     if war[0] != '/':
