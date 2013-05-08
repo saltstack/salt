@@ -70,6 +70,12 @@ def install(pkg=None,
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
 
+    try:
+        return json.loads(result['stdout'])
+    except ValueError:
+        # Not JSON! Try to coax the json out of it!
+        pass
+
     lines = result['stdout'].splitlines()
 
     while ' -> ' in lines[0]:
@@ -82,7 +88,11 @@ def install(pkg=None,
         else:
             lines = lines[1:]        
 
-    return json.loads(''.join(lines))
+    try:
+        return json.loads(''.join(lines))
+    except ValueError:
+        # Still no JSON!! Return the stdout as a string
+        return result['stdout']
 
 def uninstall(pkg,
               dir=None,
