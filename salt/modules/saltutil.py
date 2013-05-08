@@ -440,7 +440,7 @@ def kill_job(jid):
     return signal_job(jid, signal.SIGKILL)
 
 
-def regen_keys(master=''):
+def regen_keys():
     '''
     Used to regenerate the minion keys. 
     '''
