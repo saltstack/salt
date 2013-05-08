@@ -762,9 +762,19 @@ def create(vm_=None, call=None):
             failures = 6
             log.debug('Reseting failed query attempts')
 
+        log.debug(
+            'Returned query data: {0}'.format(data)
+        )
+
         if 'ipAddress' in data[0]['instancesSet']['item']:
             # We have our IP, break out of the loop
             break
+
+        if waiting_for_ip >= 24:
+            # 2 Minutes!? Bail out!
+            raise SaltCloudSystemExit(
+                'Could not get the VM IP for 2 minutes. Exiting.'
+            )
         waiting_for_ip += 1
 
     if ssh_interface(vm_) == 'private_ips':
