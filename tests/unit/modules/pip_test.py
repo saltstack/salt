@@ -3,6 +3,7 @@ try:
     has_mock = True
 except ImportError:
     has_mock = False
+    patch = lambda x: lambda y: None
 
 from saltunittest import TestCase, skipIf
 from salt.modules import pip
