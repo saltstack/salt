@@ -4,7 +4,7 @@ Support for reboot, shutdown, etc
 
 import salt.utils
 
-UNSUPPORTED = ('Windows')
+UNSUPPORTED = set(('Windows',))
 
 def __virtual__():
     '''
