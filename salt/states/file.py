@@ -1346,6 +1346,22 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     edit.  In general the ``limit`` pattern should be as specific as possible
     and ``before`` and ``after`` should contain the minimal text to be changed.
 
+    before
+        A pattern that should exist in the file before the edit.
+    after
+        A pattern that should exist in the file after the edit.
+    limit
+        A pattern that should exist in the file both before and after the edit.
+    backup : '.bak'
+        The extension for the backed-up version of the file before the edit.
+    options : ``-r -e``
+        Any options to pass to the ``sed`` command. ``-r`` uses extended
+        regular expression syntax and ``-e`` denotes that what follows is an
+        expression that sed will execute.
+    flags : ``g``
+        Any flags to append to the sed expression. ``g`` specifies the edit
+        should be made globally (and not stop after the first replacement).
+
     Usage::
 
         # Disable the epel repo by default
