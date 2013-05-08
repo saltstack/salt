@@ -735,11 +735,37 @@ def create(vm_=None, call=None):
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    while 'ipAddress' not in data[0]['instancesSet']['item']:
+    failures = 6
+    while True:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
         time.sleep(5)
-        waiting_for_ip += 1
         data = query(params, requesturl=requesturl)
+        if not data or isinstance(data, dict):
+            if failures < 1:
+                raise SaltCloudSystemExit(
+                    'There were too many errors while querying EC2'
+                )
+            if not data:
+                log.error(
+                    'There was an error while querying EC2. Empty response'
+                )
+            else:
+                log.error(
+                    'There was an error while querying EC2. '
+                    'Returned Error: {0}'.format(data['error'])
+                )
+            failures -= 1
+            continue
+
+        if failures < 6:
+            # Reset failed attempts
+            failures = 6
+            log.debug('Reseting failed query attempts')
+
+        if 'ipAddress' in data[0]['instancesSet']['item']:
+            # We have our IP, break out of the loop
+            break
+        waiting_for_ip += 1
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = data[0]['instancesSet']['item']['privateIpAddress']
