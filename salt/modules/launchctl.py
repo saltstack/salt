@@ -39,7 +39,7 @@ def _available_services():
     '''
     available_services = dict()
     for launch_dir in _launchd_paths():
-        for root, dirs, files in os.walk(launch_dir):
+        for root, dirs, files in os.walk(launch_dir):  # pylint: disable=W0612
             for filename in files:
                 file_path = os.path.join(root, filename)
 
@@ -77,7 +77,7 @@ def _service_by_name(name):
         if service['file_path'].lower() == name:
             # Match on full path
             return service
-        basename, ext = os.path.splitext(service['filename'])
+        basename, ext = os.path.splitext(service['filename'])  # pylint: disable=W0612
         if basename.lower() == name:
             # Match on basename
             return service

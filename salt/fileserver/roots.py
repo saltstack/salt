@@ -99,7 +99,7 @@ def file_list(load):
         return ret
 
     for path in __opts__['file_roots'][load['env']]:
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in os.walk(path):  # pylint: disable=W0612
             for fname in files:
                 rel_fn = os.path.relpath(
                             os.path.join(root, fname),
@@ -134,6 +134,6 @@ def dir_list(load):
     if load['env'] not in __opts__['file_roots']:
         return ret
     for path in __opts__['file_roots'][load['env']]:
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in os.walk(path):  # pylint: disable=W0612
             ret.append(os.path.relpath(root, path))
     return ret
