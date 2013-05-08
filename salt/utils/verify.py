@@ -429,3 +429,10 @@ def clean_path(root, path, subdir=False):
         if os.path.dirname(path) == os.path.normpath(root):
             return path
     return ''
+
+
+def valid_id(id_):
+    '''
+    Returns if the passed id is valid
+    '''
+    return bool(clean_path('/etc/pki/salt/master', id_))
