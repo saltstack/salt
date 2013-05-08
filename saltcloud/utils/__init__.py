@@ -226,7 +226,7 @@ def minion_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the minion
     configuration file
     '''
-    return salt_config_to_yaml(master_conf(opts, vm_))
+    return salt_config_to_yaml(minion_conf(opts, vm_))
 
 
 def master_conf(opts, vm_):
