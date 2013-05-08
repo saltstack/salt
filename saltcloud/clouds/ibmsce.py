@@ -57,7 +57,7 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -118,10 +118,17 @@ def create(vm_):
     Create a single VM from a data dict
     '''
     deploy = config.get_config_value('deploy', vm_, __opts__)
-    ssh_key_file = config.get_config_value(
+    key_filename = config.get_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
-    if deploy is True and ssh_key_file is None and \
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_key_file {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
+    if deploy is True and key_filename is None and \
             salt.utils.which('sshpass') is None:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
@@ -200,7 +207,7 @@ def create(vm_):
             'username': 'idcuser',
             'provider': 'ibmsce',
             'password': data.extra['password'],
-            'key_filename': ssh_key_file,
+            'key_filename': key_filename,
             'script': deploy_script.script,
             'name': vm_['name'],
             'sudo': True,
