@@ -57,7 +57,7 @@ def install(pkg=None,
     if not _valid_version():
         return '"{0}" is not available.'.format('npm.install')
 
-    cmd = 'npm install --silent --json'
+    cmd = 'npm install'
 
     if dir is None:
         cmd += ' --global'
@@ -71,18 +71,7 @@ def install(pkg=None,
         raise CommandExecutionError(result['stderr'])
 
     lines = result['stdout'].splitlines()
-
-    while ' -> ' in lines[0]:
-        lines = lines[1:]
-
-    # Strip all lines until JSON output starts
-    for i in lines:
-        if i.startswith("{"):
-            break
-        else:
-            lines = lines[1:]        
-
-    return json.loads(''.join(lines))
+    return str(lines)
 
 def uninstall(pkg,
               dir=None,
