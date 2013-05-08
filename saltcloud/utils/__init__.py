@@ -221,12 +221,12 @@ def minion_conf(opts, vm_):
     return minion
 
 
-def minion_conf_string(opts):
+def minion_conf_string(opts, vm_):
     '''
     Return a string to be passed into the deployment script for the minion
     configuration file
     '''
-    return yaml.safe_dump(opts, default_flow_style=False)
+    return salt_config_to_yaml(master_conf(opts, vm_))
 
 
 def master_conf(opts, vm_):
@@ -253,12 +253,19 @@ def master_conf(opts, vm_):
     return master
 
 
-def master_conf_string(master):
+def master_conf_string(opts, vm_):
     '''
     Return a string to be passed into the deployment script for the master
     configuration file
     '''
-    return yaml.safe_dump(master, default_flow_style=False)
+    return salt_config_to_yaml(master_conf(opts, vm_))
+
+
+def salt_config_to_yaml(config):
+    '''
+    Return a salt configuration dictionary, master or minion, as a yaml dump
+    '''
+    return yaml.safe_dump(config, default_flow_style=False)
 
 
 def wait_for_ssh(host, port=22, timeout=900):
