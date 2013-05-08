@@ -20,7 +20,7 @@ import salt.utils
 BSD = ('OpenBSD', 'FreeBSD')
 
 # Known not to work
-BAD = ('Windows',)
+BAD = set(('Windows',))
 
 
 def __virtual__():
