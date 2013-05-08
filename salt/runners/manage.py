@@ -42,10 +42,13 @@ def key_regen():
     and keys will be placed in pending.
 
     After the master is restarted and minion keys are in the pending directory
-    execute a salt-key -A command to accept the regenerated minion keys
+    execute a salt-key -A command to accept the regenerated minion keys.
+
+    Only Execute this runner after upgrading minions and master to 0.15.1 or
+    higher!
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
-    minions = client.cmd_async('*', 'saltutil.regen_keys')
+    minions = client.cmd('*', 'saltutil.regen_keys')
 
     for root, dirs, files in os.walk(__opts__['pki_dir']):
         for fn_ in files:
@@ -59,7 +62,12 @@ def key_regen():
            'minions to reconnect, once the minions reconnect the new keys \n'
            'will appear in pending and will need to be re-accepted by '
            'running:\n '
-           'salt-key-A')
+           'salt-key-A\n'
+           '\n'
+           'Be advised that minion not currently connected to the master\n'
+           'will not be able to reconnect and may require manual\n'
+           'regeneration via a local call to\n'
+           'salt-call saltutil.regen_keys')
     print(msg)
 
 
