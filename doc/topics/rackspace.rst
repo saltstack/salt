@@ -59,7 +59,7 @@ that Salt Cloud has been built to support.
       tenant: 123456
       apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-      provider: rackspace
+      provider: openstack
 
 
 
