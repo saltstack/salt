@@ -627,29 +627,38 @@ def root_cmd(command, tty, sudo, **kwargs):
     Wrapper for commands to be run as root
     '''
     if sudo:
-        command = 'sudo ' + command
+        command = 'sudo {0}'.format(command)
         log.debug('Using sudo to run command {0}'.format(command))
 
-    ssh_args = ' -oStrictHostKeyChecking=no'
-    ssh_args += ' -oUserKnownHostsFile=/dev/null'
+    ssh_args = []
 
     if tty:
-        ssh_args += ' -t'
+        # Use double `-t` on the `ssh` command, it's necessary when `sudo` has
+        # `requiretty` enforced.
+        ssh_args.extend(['-t', '-t'])
+
+    ssh_args.extend([
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ])
 
     if 'key_filename' in kwargs:
         # There should never be both a password and an ssh key passed in, so
-        # tell SSH to skip password authentication
-        ssh_args += ' -oPasswordAuthentication=no'
-        # Also, specify the location of the key file
-        ssh_args += ' -i {0}'.format(kwargs['key_filename'])
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(kwargs['key_filename'])
+        ])
 
-    cmd = 'ssh {0} {1}@{2} "{3}"'.format(
-        ssh_args,
-        kwargs['username'],
-        kwargs['hostname'],
-        command
+    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2!r}'.format(
+        ' '.join(ssh_args), kwargs, command
     )
-    log.debug(cmd)
+    log.debug('SSH command: {0!r}'.format(cmd))
 
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
