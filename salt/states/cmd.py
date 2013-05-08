@@ -214,14 +214,22 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
                     'result': False}
 
     if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+        if __salt__['cmd.retcode'](onlyif,
+                                   cwd=cwd,
+                                   runas=user,
+                                   shell=shell,
+                                   **cmd_kwargs) != 0:
             ret['comment'] = 'onlyif exec failed'
             ret['result'] = True
             return {'comment': 'onlyif exec failed',
                     'result': True}
 
     if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+        if __salt__['cmd.retcode'](unless,
+                                   cwd=cwd,
+                                   runas=user,
+                                   shell=shell,
+                                   **cmd_kwargs) == 0:
             return {'comment': 'unless executed successfully',
                     'result': True}
     # No reason to stop, return True
