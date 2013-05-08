@@ -68,6 +68,10 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
 def db_list(user=None, password=None, host=None, port=None):
     '''
     List all Mongodb databases
+
+    CLI Example::
+
+        salt '*' mongodb.db_list <user> <password> <host> <port>
     '''
     conn = _connect(user, password, host, port)
     if not conn:
@@ -84,6 +88,10 @@ def db_list(user=None, password=None, host=None, port=None):
 def db_exists(name, user=None, password=None, host=None, port=None):
     '''
     Checks if a database exists in Mongodb
+
+    CLI Example::
+
+        salt '*' mongodb.db_exists <name> <user> <password> <host> <port>
     '''
     dbs = db_list(user, password, host, port)
 
@@ -96,6 +104,10 @@ def db_exists(name, user=None, password=None, host=None, port=None):
 def db_remove(name, user=None, password=None, host=None, port=None):
     '''
     Remove a Mongodb database
+
+    CLI Example::
+
+        salt '*' mongodb.db_remove <name> <user> <password> <host> <port>
     '''
     conn = _connect(user, password, host, port)
     if not conn:
@@ -118,6 +130,10 @@ def db_remove(name, user=None, password=None, host=None, port=None):
 def user_list(user=None, password=None, host=None, port=None, database='admin'):
     '''
     List users of a Mongodb database
+
+    CLI Example::
+
+        salt '*' mongodb.user_list <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
     if not conn:
@@ -149,6 +165,10 @@ def user_exists(name, user=None, password=None, host=None, port=None,
                 database='admin'):
     '''
     Checks if a user exists in Mongodb
+
+    CLI Example::
+
+        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
     users = user_list(user, password, host, port, database)
     for user in users:
@@ -162,6 +182,10 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
                 database='admin'):
     '''
     Create a Mongodb user
+
+    CLI Example::
+
+        salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
     if not conn:
@@ -185,6 +209,10 @@ def user_remove(name, user=None, password=None, host=None, port=None,
                 database='admin'):
     '''
     Remove a Mongodb user
+
+    CLI Example::
+
+        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
     if not conn:
