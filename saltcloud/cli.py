@@ -231,11 +231,19 @@ class SaltCloud(parsers.SaltCloudParser):
                 )
 
             kwargs = {}
-            for arg in self.args:
+            args = self.args[:]
+            for arg in args:
                 if '=' in arg:
                     key, value = arg.split('=')
                     kwargs[key] = value
+                    args.remove(arg)
 
+            if args:
+                self.error(
+                    'Any arguments passed to --function need to be passed '
+                    'as kwargs. Ex: image=ami-54cf5c3d. Remaining '
+                    'arguments: {0}'.format(args)
+                )
             try:
                 ret = mapper.do_function(
                     self.function_provider, self.function_name, kwargs

@@ -669,6 +669,11 @@ class Cloud(object):
         Perform a function against a cloud provider
         '''
         fun = '{0}.{1}'.format(prov, func)
+        log.debug(
+            'Trying to execute {0!r} with the following kwargs: {1}'.format(
+                fun, kwargs
+            )
+        )
         if kwargs:
             ret = self.clouds[fun](call='function', kwargs=kwargs)
         else:
