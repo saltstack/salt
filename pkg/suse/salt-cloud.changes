@@ -1,0 +1,66 @@
+-------------------------------------------------------------------
+Tue May  7 18:17:11 UTC 2013 - aboe76@gmail.com
+
+- Updated buildrequirements, python-botocore is only needed
+  when ec2 driver won't do and you need protectionschemes from aws
+
+-------------------------------------------------------------------
+Mon Apr 15 18:47:06 UTC 2013 - aboe76@gmail.com
+
+- Updated python-botocore as recommend instead of Requirement
+  botocore is only needed when ec2 driver won't do
+
+-------------------------------------------------------------------
+Thu Apr 11 20:53:08 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt-cloud 0.8.8:
+- Added Parallels Support (X-Mission cloud provider)
+- Added Digital Ocean Support (cloud provider)
+- Updated Configuration Format
+- Posible to make Provider Aliases
+- Extending Profiles
+- Extending Providers
+
+Skipped 0.8.7 version because of packaging issues with
+downloading bootstrap script during install.
+This is packaged withing 0.8.8
+
+-------------------------------------------------------------------
+Fri Mar  8 17:05:05 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt-cloud 0.8.6:
+- Salt Cloud now depends upon libcloud version 0.12.1
+- Salt Cloud now takes advantage of the Salt outputter system
+- new driver has been introduced for Amazon EC2
+
+-------------------------------------------------------------------
+Fri Feb 15 19:31:54 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt-cloud 0.8.5
+- changelog:
+  - salt bootstrap-salt-minion script renamed to salt-bootstrap
+  - The ability to manage tags on AWS instances has now been added to Salt Cloud.
+  - AWS instances can now be renamed
+  - enabling and disabling of the termination protection on a specific instance in AWS is possible.
+  - The ability to remove Old SSH Keys can no be set in the configuration file.
+ - new requirement python-botocore
+
+-------------------------------------------------------------------
+Wed Jan 30 21:02:12 UTC 2013 - aboe76@gmail.com
+
+- Updated spec file to include Suse Copyright
+
+-------------------------------------------------------------------
+Mon Jan 28 16:00:51 UTC 2013 - toddrme2178@gmail.com
+
+- Cleanup spec file
+
+-------------------------------------------------------------------
+Sat Jan 26 09:22:37 UTC 2013 - aboe76@gmail.com
+
+- updated spec file to packaging guidelines
+
+-------------------------------------------------------------------
+Sat Jan 26 09:09:14 UTC 2013 - aboe76@gmail.com
+
+- initial upload 0.8.4
