@@ -426,6 +426,6 @@ def clean_path(root, path, subdir=False):
         if path.startswith(root):
             return path
     else:
-        if os.path.samefile(os.path.dirname(path), root):
+        if os.path.dirname(path) == os.path.normpath(root):
             return path
     return ''
