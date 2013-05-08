@@ -3,6 +3,10 @@ General management functions for salt, tools like seeing what hosts are up
 and what hosts are down
 '''
 
+# Import python libs
+import os
+import shutil
+
 # Import salt libs
 import salt.key
 import salt.client
@@ -25,6 +29,38 @@ def status(output=True):
     if output:
         salt.output.display_output(ret, '', __opts__)
     return ret
+
+
+def key_regen():
+    '''
+    This routine is used to regenerate all keys in an environment. This is
+    invasive! ALL KEYS IN THE SALT ENVIRONMENT WILL BE REGENERATED!!
+
+    The key_regen routine sends a command out to minions to revoke the master
+    key and remove all minion keys, it then removes all keys from the master
+    and prompts the user to restart the master. The minions will all reconnect
+    and keys will be placed in pending.
+
+    After the master is restarted and minion keys are in the pending directory
+    execute a salt-key -A command to accept the regenerated minion keys
+    '''
+    client = salt.client.LocalClient(__opts__['conf_file'])
+    minions = client.cmd_async('*', 'saltutil.regen_keys')
+
+    for root, dirs, files in os.walk(__opts__['pki_dir']):
+        for fn_ in files:
+            path = os.path.join(root, fn_)
+            try:
+                os.remove(path)
+            except os.error:
+                pass
+    msg = ('The minion and master keys have been deleted, restart the Salt\n '
+           'Master within the next 60 seconds!!!\n Then wait for the '
+           'minions to reconnect, once the minions reconnect the new keys \n'
+           'will appear in pending and will need to be re-accepted by '
+           'running:\n '
+           'salt-key-A')
+    print(msg)
 
 
 def down():
