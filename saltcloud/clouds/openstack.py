@@ -97,6 +97,7 @@ Using the new syntax:
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
+import os
 import time
 import logging
 import socket
@@ -114,7 +115,11 @@ import salt.utils
 # Import saltcloud libs
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudConfigError,
+    SaltCloudNotFound,
+    SaltCloudSystemExit
+)
 
 # Import netaddr IP matching
 try:
@@ -262,10 +267,17 @@ def create(vm_):
     Create a single VM from a data dict
     '''
     deploy = config.get_config_value('deploy', vm_, __opts__)
-    ssh_key_file = config.get_config_value(
+    key_filename = config.get_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
-    if deploy is True and ssh_key_file is None and \
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_key_file {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
+    if deploy is True and key_filename is None and \
             salt.utils.which('sshpass') is None:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
@@ -466,10 +478,10 @@ def create(vm_):
 
     log.debug('Using {0} as SSH username'.format(ssh_username))
 
-    if ssh_key_file is not None:
-        deploy_kwargs['key_filename'] = ssh_key_file
+    if key_filename is not None:
+        deploy_kwargs['key_filename'] = key_filename
         log.debug(
-            'Using {0} as SSH key file'.format(ssh_key_file)
+            'Using {0} as SSH key file'.format(key_filename)
         )
     elif 'password' in data.extra:
         deploy_kwargs['password'] = data.extra['password']
