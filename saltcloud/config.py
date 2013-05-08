@@ -10,6 +10,9 @@ import logging
 import salt.config
 import salt.utils
 
+# Import salt cloud libs
+import saltcloud.exceptions
+
 
 CLOUD_CONFIG_DEFAULTS = {
     'verify_env': True,
@@ -195,6 +198,11 @@ def apply_vm_profiles_config(overrides, defaults=None):
     for key, val in opts.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
+        if not isinstance(val, dict):
+            raise saltcloud.exceptions.SaltCloudConfigError(
+                'The VM profiles configuration found in {0[conf_file]!r} is '
+                'not in the proper format'.format(opts)
+            )
         val['profile'] = key
         vms[key] = val
 
