@@ -175,11 +175,11 @@ def get_option(option, opts, vm_):
         return opts[option]
 
 
-def minion_conf_string(opts, vm_):
+def minion_conf(opts, vm_):
     '''
-    Return a string to be passed into the deployment script for the minion
-    configuration file
+    Return a minion's configuration for the provided options and VM
     '''
+
     # Let's get a copy of the salt minion default options
     minion = salt.config.DEFAULT_MINION_OPTS.copy()
     # Some default options are Null, let's set a reasonable default
@@ -218,15 +218,21 @@ def minion_conf_string(opts, vm_):
             'grains', vm_, opts, default={}, search_global=True
         )
     )
-    return yaml.safe_dump(minion, default_flow_style=False)
+    return minion
 
 
-def master_conf_string(opts, vm_):
+def minion_conf_string(opts):
     '''
-    Return a string to be passed into the deployment script for the master
+    Return a string to be passed into the deployment script for the minion
     configuration file
     '''
+    return yaml.safe_dump(opts, default_flow_style=False)
 
+
+def master_conf(opts, vm_):
+    '''
+    Return a master's configuration for the provided options and VM
+    '''
     # Let's get a copy of the salt master default options
     master = salt.config.DEFAULT_MASTER_OPTS.copy()
     # Some default options are Null, let's set a reasonable default
@@ -244,6 +250,14 @@ def master_conf_string(opts, vm_):
             'master', vm_, opts, default={}, search_global=True
         )
     )
+    return master
+
+
+def master_conf_string(master):
+    '''
+    Return a string to be passed into the deployment script for the master
+    configuration file
+    '''
     return yaml.safe_dump(master, default_flow_style=False)
 
 
