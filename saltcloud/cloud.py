@@ -16,6 +16,7 @@ import saltcloud.loader
 import saltcloud.config as config
 from saltcloud.exceptions import (
     SaltCloudNotFound,
+    SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError
 )
@@ -938,7 +939,12 @@ class Map(Cloud):
                 master_profile['preseed_minion_keys'].update({name: pub})
 
             out = self.create(master_profile, local_master=False)
-            log.debug('Master creation details: {0}'.format(out))
+            if not isinstance(out, dict):
+                log.debug(
+                    'Master creation details is not a dictionary: {0}'.format(
+                        out
+                    )
+                )
 
             deploy_kwargs = (
                 self.opts.get('show_deploy_args', False) is True and
@@ -987,11 +993,22 @@ class Map(Cloud):
                     'local_master': master_name is None
                 })
             else:
-                output[name] = self.create(
-                    profile, local_master=master_name is None
-                )
-                if self.opts.get('show_deploy_args', False) is False:
-                    output[name].pop('deploy_kwargs', None)
+                try:
+                    output[name] = self.create(
+                        profile, local_master=master_name is None
+                    )
+                    if self.opts.get('show_deploy_args', False) is False:
+                        output[name].pop('deploy_kwargs', None)
+                except SaltCloudException as exc:
+                    log.error(
+                        'Failed to deploy {0!r}. Error: {1}'.format(
+                            name, exc
+                        ),
+                        # Show the traceback if the debug logging level is
+                        # enabled
+                        exc_info=log.isEnabledFor(logging.DEBUG)
+                    )
+                    output[name] = {'Error': str(exc)}
 
         for name in dmap.get('destroy', ()):
             output[name] = self.destroy(name)
@@ -1014,10 +1031,22 @@ def create_multiprocessing(parallel_data):
     '''
     parallel_data['opts']['output'] = 'json'
     cloud = Cloud(parallel_data['opts'])
-    output = cloud.create(
-        parallel_data['profile'],
-        local_master=parallel_data['opts']['local_master']
-    )
+    try:
+        output = cloud.create(
+            parallel_data['profile'],
+            local_master=parallel_data['opts']['local_master']
+        )
+    except SaltCloudException as exc:
+        log.error(
+            'Failed to deploy {0[name]!r}. Error: {1}'.format(
+                parallel_data, exc
+            ),
+            # Show the traceback if the debug logging level is
+            # enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
+        return {parallel_data['name']: {'Error': str(exc)}}
+
     if parallel_data['opts'].get('show_deploy_args', False) is False:
         output.pop('deploy_kwargs', None)
     return {parallel_data['name']: output}
