@@ -444,8 +444,8 @@ def regen_keys():
     '''
     Used to regenerate the minion keys. 
     '''
-    for fn_ in os.listdir(__opts__['cachedir']):
-        path = os.path.join(__opts__['cachedir'], fn_)
+    for fn_ in os.listdir(__opts__['pki_dir']):
+        path = os.path.join(__opts__['pki_dir'], fn_)
         try:
             os.remove(path)
         except os.error:
