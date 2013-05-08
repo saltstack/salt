@@ -31,6 +31,7 @@ Using the new format, set up the cloud configuration at
 '''
 
 # Import python libs
+import os
 import time
 import json
 import pprint
@@ -41,7 +42,11 @@ import logging
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudConfigError,
+    SaltCloudNotFound,
+    SaltCloudSystemExit
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -234,6 +239,16 @@ def create(vm_):
     if ssh_key_name:
         kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
 
+    key_filename = config.get_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False, default=None
+    )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
     try:
         ret = create_node(kwargs)
     except Exception as exc:
@@ -263,9 +278,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': data['ip_address'],
             'username': 'root',
-            'key_filename': config.get_config_value(
-                'ssh_key_file', vm_, __opts__, search_global=False
-            ),
+            'key_filename': key_filename,
             'script': deploy_script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
