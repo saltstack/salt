@@ -11,6 +11,7 @@ documentation.
 '''
 
 # Import python libs
+import os
 import logging
 
 # Import salt libs
@@ -19,7 +20,7 @@ import salt.utils
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -66,10 +67,17 @@ def create(vm_):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
-    ssh_keyfile = config.get_config_value(
+    key_filename = config.get_config_value(
         'ssh_keyfile', vm_, __opts__, search_global=False, default=None
     )
-    if ssh_keyfile is None and salt.utils.which('sshpass') is None:
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_keyfile {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
+    if key_filename is None and salt.utils.which('sshpass') is None:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and \'sshpass\' binary is not present on the '
@@ -100,7 +108,7 @@ def create(vm_):
         'password': config.get_config_value(
             'password', vm_, __opts__, search_global=False
         ),
-        'ssh_keyfile': ssh_keyfile,
+        'ssh_keyfile': key_filename,
         'script_args': config.get_config_value('script_args', vm_, __opts__),
         'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_),
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
