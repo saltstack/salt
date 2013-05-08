@@ -78,6 +78,18 @@ class Pillar(object):
         self.rend = salt.loader.render(self.opts, self.functions)
         self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
 
+    def __valid_ext(self, ext):
+        '''
+        Check to see if the on demand external pillar is allowed
+        '''
+        if not isinstance(ext, dict):
+            return {}
+        valid = ['libvirt']
+        for key in ext:
+            if key not in valid:
+                return {}
+        return ext
+
     def __gen_opts(self, opts_in, grains, id_, env=None, ext=None):
         '''
         The options need to be altered to conform to the file client
@@ -95,7 +107,7 @@ class Pillar(object):
             opts['state_top'] = os.path.join('salt://', opts['state_top'][1:])
         else:
             opts['state_top'] = os.path.join('salt://', opts['state_top'])
-        if ext:
+        if self.__valid_ext(ext):
             if 'ext_pillar'  in opts:
                 opts['ext_pillar'].append(ext)
             else:
