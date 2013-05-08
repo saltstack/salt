@@ -469,6 +469,7 @@ class Cloud(object):
             )
 
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+            log.debug('Generating SSH keys for {0[name]!r}'.format(vm_))
             priv, pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', vm_, self.opts)
             )
@@ -482,6 +483,11 @@ class Cloud(object):
 
         if make_master is True:
             if 'master_pub' not in vm_ and 'master_pem' not in vm_:
+                log.debug(
+                    'Generating the master SSH keys for {0[name]!r}'.format(
+                        vm_
+                    )
+                )
                 master_priv, master_pub = saltcloud.utils.gen_keys(
                     config.get_config_value('keysize', vm_, self.opts)
                 )
@@ -736,7 +742,8 @@ class Map(Cloud):
             log.error(
                 'Rendering map {0} failed, render error:\n{1}'.format(
                     self.opts['map'], exc
-                )
+                ),
+                exc_info=log.isEnabledFor(logging.DEBUG)
             )
             return {}
 
@@ -875,7 +882,7 @@ class Map(Cloud):
                 (name, profile) for name, profile in dmap['create'].items()
                 if profile.get('make_master', False) is True
             ).next()
-            log.debug('Creating new master {0}'.format(master_name))
+            log.debug('Creating new master {0!r}'.format(master_name))
             if config.get_config_value('deploy',
                                        master_profile,
                                        self.opts) is False:
@@ -885,6 +892,9 @@ class Map(Cloud):
                 )
 
             # Generate the master keys
+            log.debug(
+                'Generating SSH keys for {0[name]!r}'.format(master_profile)
+            )
             priv, pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', master_profile, self.opts)
             )
@@ -914,6 +924,9 @@ class Map(Cloud):
                 if make_minion is False:
                     continue
 
+                log.debug(
+                    'Generating SSH keys for {0[name]!r}'.format(profile)
+                )
                 priv, pub = saltcloud.utils.gen_keys(
                     config.get_config_value('keysize', profile, self.opts)
                 )
@@ -925,6 +938,8 @@ class Map(Cloud):
                 master_profile['preseed_minion_keys'].update({name: pub})
 
             out = self.create(master_profile, local_master=False)
+            log.debug('Master creation details: {0}'.format(out))
+
             deploy_kwargs = (
                 self.opts.get('show_deploy_args', False) is True and
                 # Get the needed data
