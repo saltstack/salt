@@ -295,6 +295,12 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'username': username,
                       'timeout': ssh_timeout}
             if key_filename:
+                if not os.path.isfile(key_filename):
+                    raise SaltCloudConfigError(
+                        'The defined key_filename {0!r} does not exist'.format(
+                            key_filename
+                        )
+                    )
                 kwargs['key_filename'] = key_filename
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
@@ -343,6 +349,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
     if wait_for_ssh(host=host, port=port, timeout=timeout):
