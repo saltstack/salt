@@ -5,13 +5,13 @@
 %define __python %{_bindir}/python%{?pybasever}
 %endif
 
-%global include_tests 1
+%global include_tests 0
 
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.15.0
+Version: 0.15.1
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -309,6 +309,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed May 8 2013 Clint Savage <herlo1@gmail.com> - 0.15.1-1
+- Update to patch release 0.15.1
+
 * Sat May 4 2013 Clint Savage <herlo1@gmail.com> - 0.15.0-1
 - Update to upstream feature release 0.15.0
 
