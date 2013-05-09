@@ -284,9 +284,12 @@ def wait_for_ssh(host, port=22, timeout=900):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
-            sock.shutdown(2)
+            # Stop any remaining reads/writes on the socket
+            sock.shutdown(socket.SHUT_RDWR)
+            # Close it!
+            sock.close()
             return True
-        except Exception as exc:
+        except socket.error as exc:
             log.debug('Caught exception in wait_for_ssh: {0}'.format(exc))
             time.sleep(1)
             if time.time() - start > timeout:
@@ -619,6 +622,11 @@ def scp_file(dest_path, contents, kwargs):
         ssh_args.extend([
             # tell SSH to skip password authentication
             '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
             '-i {0}'.format(kwargs['key_filename'])
         ])
@@ -672,6 +680,11 @@ def root_cmd(command, tty, sudo, **kwargs):
         ssh_args.extend([
             # tell SSH to skip password authentication
             '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
             '-i {0}'.format(kwargs['key_filename'])
         ])
