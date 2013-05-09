@@ -13,7 +13,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on these platforms
-    disable = ('Windows',)
+    disable = set(('Windows',))
     if __grains__['os'] in disable:
         return False
     return 'keyboard'
