@@ -408,9 +408,15 @@ def create(vm_):
                 not_ready = False
                 break
 
+        if running and private:
+            data.private_ips = private
+            if ssh_interface(vm_) == 'private_ips':
+                not_ready = False
+
         if running and public:
             data.public_ips = public
-            not_ready = False
+            if ssh_interface(vm_) != 'private_ips':
+                not_ready = False
 
         if not_ready is False:
             break
