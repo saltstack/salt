@@ -491,7 +491,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
 
     CLI Example::
 
-        salt '*' ssh.recv_known_host <user> <hostname> enc=<enc> port=<port>
+        salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
     chunks = ['ssh-keyscan', ]
     if port:
