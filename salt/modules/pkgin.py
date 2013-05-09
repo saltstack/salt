@@ -226,9 +226,9 @@ def install(name=None, refresh=False, fromrepo=None,
         cmd = 'pkg_add'
     elif pkg_type == 'repository':
         if _check_pkgin():
-            args.extend(('-y', 'in'))  # Assume yes when asked
             if refresh:
-                args.prepend('-f')  # update repo db
+                args.append('-f')  # update repo db
+            args.extend(('-y', 'in'))  # Assume yes when asked
 
     args.extend(pkg_params)
 
