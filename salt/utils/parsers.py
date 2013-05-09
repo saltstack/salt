@@ -46,7 +46,10 @@ class MixInMeta(type):
 
 class OptionParserMeta(MixInMeta):
     def __new__(cls, name, bases, attrs):
-        instance = super(OptionParserMeta, cls).__new__(cls, name, bases, attrs)
+        instance = super(OptionParserMeta, cls).__new__(cls,
+                                                        name,
+                                                        bases,
+                                                        attrs)
         if not hasattr(instance, '_mixin_setup_funcs'):
             instance._mixin_setup_funcs = []
         if not hasattr(instance, '_mixin_process_funcs'):
@@ -72,7 +75,9 @@ class OptionParserMeta(MixInMeta):
                 if getattr(func, '_mixin_prio_', None) is not None:
                     # Function already has the attribute set, don't override it
                     continue
-                func.__func__._mixin_prio_ = getattr(base, '_mixin_prio_', 1000)
+                func.__func__._mixin_prio_ = getattr(base,
+                                                     '_mixin_prio_',
+                                                     1000)
 
         return instance
 
@@ -470,9 +475,9 @@ class TargetOptionsMixIn(object):
         if len(group_options_selected) > 1:
             self.error(
                 "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join([
-                    option.get_opt_string() for option in group_options_selected
-                ]))
+                "one of them".format('/'.join(
+                    [option.get_opt_string()
+                     for option in group_options_selected]))
             )
         self.config['selected_target_option'] = self.selected_target_option
 
@@ -485,12 +490,12 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             '-C', '--compound',
             default=False,
             action='store_true',
-            help=('The compound target option allows for multiple target types '
-                  'to be evaluated, allowing for greater granularity in target '
-                  'matching. The compound target is space delimited, targets '
-                  'other than globs are preceded with an identifier matching '
-                  'the specific targets argument type: salt \'G@os:RedHat and '
-                  'webser* or E@database.*\'')
+            help=('The compound target option allows for multiple target '
+                  'types to be evaluated, allowing for greater granularity in '
+                  'target matching. The compound target is space delimited, '
+                  'targets other than globs are preceded with an identifier '
+                  'matching the specific targets argument type: salt '
+                  '\'G@os:RedHat and webser* or E@database.*\'')
         )
         group.add_option(
             '-X', '--exsel',
@@ -1009,7 +1014,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Answer Yes to all questions presented, defaults to False'
         )
 
-        key_options_group = optparse.OptionGroup(self, "Key Generation Options")
+        key_options_group = optparse.OptionGroup(self,
+                                                 "Key Generation Options")
         self.add_option_group(key_options_group)
         key_options_group.add_option(
             '--gen-keys',
@@ -1157,7 +1163,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.config.setdefault('module_dirs', []).extend(
                     os.path.abspath(x) for x in module_dir.split(','))
                 continue
-            self.config.setdefault('module_dirs', []).append(os.path.abspath(module_dir))
+            self.config.setdefault('module_dirs',
+                                   []).append(os.path.abspath(module_dir))
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
