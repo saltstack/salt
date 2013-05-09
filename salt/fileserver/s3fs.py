@@ -1,4 +1,6 @@
 '''
+EXPERIMENTAL, subject to change
+----------------------------------
 The backend for the s3 service.
 
 Example configuration options in master file:
@@ -17,7 +19,6 @@ s3_buckets:
 # Import python libs
 import os
 import hashlib
-import re
 import logging
 
 # Import salt libs
@@ -25,7 +26,6 @@ import salt.fileserver
 import salt.utils
 import salt.utils.s3 as s3
 import salt.modules
-import salt.modules.data as dax 
 
 
 log = logging.getLogger(__name__)
