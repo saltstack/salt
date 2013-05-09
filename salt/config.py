@@ -349,7 +349,8 @@ def prepend_root_dir(opts, path_options):
 
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
-                  defaults=None):
+                  defaults=None,
+                  **kwargs):
     '''
     Reads in the minion configuration file and sets up special options
     '''
@@ -422,7 +423,7 @@ def get_id():
     return 'localhost', False
 
 
-def apply_minion_config(overrides=None, defaults=None):
+def apply_minion_config(overrides=None, defaults=None, **kwargs):
     '''
     Returns minion configurations dict.
     '''
