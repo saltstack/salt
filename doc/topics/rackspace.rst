@@ -75,11 +75,12 @@ Rackspace currently has three compute regions which may be used:
     LON -> London
 
 Note: if you are using LON with a UK account, using the old cloud providers 
-syntax, you must use the following identity_url:
+syntax, you must use the following identity_url and compute_region:
 
 .. code-block:: yaml
 
     OPENSTACK.identity_url: 'https://lon.identity.api.rackspacecloud.com/v2.0/tokens'
+    OPENSTACK.compute_region: LON
 
 
 And using the new cloud providers syntax:
@@ -88,6 +89,7 @@ And using the new cloud providers syntax:
 
     my-openstack-config:
       identity_url: 'https://lon.identity.api.rackspacecloud.com/v2.0/tokens'
+      compute_region: LON
 
 
 Authentication
