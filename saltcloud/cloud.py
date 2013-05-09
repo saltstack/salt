@@ -1039,7 +1039,7 @@ def create_multiprocessing(parallel_data):
     try:
         output = cloud.create(
             parallel_data['profile'],
-            local_master=parallel_data['opts']['local_master']
+            local_master=parallel_data['local_master']
         )
     except SaltCloudException as exc:
         log.error(
