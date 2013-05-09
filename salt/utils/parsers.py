@@ -592,7 +592,7 @@ class OutputOptionsMixIn(object):
             )
 
         outputters = loader.outputters(
-            config.minion_config(None, check_dns=False)
+            config.minion_config(None)
         )
 
         group.add_option(
@@ -1150,10 +1150,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(
-            self.get_config_file_path(),
-            check_dns=not self.options.local
-        )
+        return config.minion_config(self.get_config_file_path())
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
