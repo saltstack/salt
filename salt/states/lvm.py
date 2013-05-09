@@ -1,8 +1,8 @@
 '''
-Management of linux logical volumes
-==================================
+Management of Linux logical volumes
+===================================
 
-A state module to manage lvms
+A state module to manage LVMs
 
 .. code-block:: yaml
 
