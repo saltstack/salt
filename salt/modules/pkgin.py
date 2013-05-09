@@ -12,26 +12,29 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-
-def __virtual__():
-    '''
-    Set the virtual pkg module if the os is supported by pkgin
-    '''
-    if __grains__['os'] in ['NetBSD', 'SunOS', 'DragonFly', 'Minix']:
-        return 'pkg'
-    else:
-        False
-
-
 def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system
     '''
     return os.path.isfile(salt.utils.which('pkgin'))
 
+
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is supported by pkgin
+    '''
+    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin']
+
+    if __grains__['os'] in supported and _check_pkgin():
+        return 'pkg'
+    else:
+        False
+
+
 def _splitpkg(name):
     if name[0].isalnum() and name != 'No': # avoid < > = and 'No result'
         return name.rsplit('-', 1)
+
 
 def search(pkg_name):
     '''
