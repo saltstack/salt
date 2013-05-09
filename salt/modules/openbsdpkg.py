@@ -97,8 +97,8 @@ def latest_version(*names, **kwargs):
     for name in names:
         cmd = 'pkg_info -q -I {0}'.format(name)
         try:
-            version = _splitpkg(__salt__['cmd.run'](cmd))[1]
-            ret[name] = version
+            version_num = _splitpkg(__salt__['cmd.run'](cmd))[1]
+            ret[name] = version_num
         except TypeError:
             ret[name] = ''
 

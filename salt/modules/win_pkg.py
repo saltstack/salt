@@ -70,7 +70,7 @@ def latest_version(*names, **kwargs):
     pkgs = list_pkgs()
     for name in names:
         candidate = '0'
-        version = '0'
+        version_num = '0'
         pkginfo = _get_package_info(name)
         if not pkginfo:
             # pkg not available in repo, skip
@@ -80,9 +80,9 @@ def latest_version(*names, **kwargs):
             name = pkginfo[candidate]['full_name']
             ret[name] = ''
             if name in pkgs:
-                version = pkgs[name]
+                version_num = pkgs[name]
             if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                    str(version)) > 0:
+                                                    str(version_num)) > 0:
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
@@ -91,9 +91,9 @@ def latest_version(*names, **kwargs):
         name = pkginfo[candidate]['full_name']
         ret[name] = ''
         if name in pkgs:
-            version = pkgs[name]
+            version_num = pkgs[name]
         if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                str(version)) > 0:
+                                                str(version_num)) > 0:
             ret[name] = candidate
     return ret
 
@@ -167,7 +167,7 @@ def version(*names, **kwargs):
     if len(names) == 1:
         versions = _get_package_info(names[0])
         if versions:
-            for version, val in versions.iteritems():
+            for val in versions.itervalues():
                 if 'full_name' in val and len(val.get('full_name', '')) > 0:
                     win_names.append(val.get('full_name', ''))
         nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
@@ -182,7 +182,7 @@ def version(*names, **kwargs):
             ret[name] = ''
             versions = _get_package_info(name)
             if versions:
-                for version, val in versions.iteritems():
+                for val in versions.itervalues():
                     if 'full_name' in val and len(val.get('full_name', '')) > 0:
                         reverse_dict[val.get('full_name', '')] = name
                         win_names.append(val.get('full_name', ''))

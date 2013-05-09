@@ -56,12 +56,12 @@ def latest_version(*names, **kwargs):
           '{0}'.format(' '.join(names))
     for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         try:
-            name, version = line.split()
+            name, version_num = line.split()
             # Only add to return dict if package is in the list of packages
             # passed, otherwise dependencies will make their way into the
             # return data.
             if name in names:
-                ret[name] = version
+                ret[name] = version_num
         except (ValueError, IndexError):
             pass
 
@@ -137,12 +137,12 @@ def list_pkgs(versions_as_list=False):
         if not line:
             continue
         try:
-            name, version = line.split()[0:2]
+            name, version_num = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
                       'line: "{0}"'.format(line))
         else:
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     if not versions_as_list:

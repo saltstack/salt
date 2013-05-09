@@ -127,7 +127,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 nlines.append(line)
                 continue
             else:
-                key, rest = line.split('=', 1)
+                rest = line.partition('=')[2]
                 if rest.startswith('"'):
                     _, rest_v, rest = rest.split('"', 2)
                 elif rest.startswith('\''):
