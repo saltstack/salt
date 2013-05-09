@@ -39,18 +39,20 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import os
-import urllib2
-import yaml
 import json
+import yaml
+import pprint
+import urllib2
 import logging
 
 # Import generic libcloud functions
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
+from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -82,16 +84,17 @@ def __virtual__():
 
     conn = get_conn(get_location())
 
-    get_size = namespaced_function(get_size, globals(),(conn,))
-    get_image = namespaced_function(get_image, globals(),(conn,))
-    avail_images = namespaced_function(avail_images, globals(),(conn,))
-    avail_sizes = namespaced_function(avail_sizes, globals(),(conn,))
-    script = namespaced_function(script, globals(),(conn,))
-    destroy = namespaced_function(destroy, globals(),(conn,))
-    list_nodes = namespaced_function(list_nodes, globals(),(conn,))
-    list_nodes_full = namespaced_function(list_nodes_full, globals(),(conn,))
-    list_nodes_select = namespaced_function(list_nodes_select, globals(),(conn,))
-
+    get_size = namespaced_function(get_size, globals(), (conn,))
+    get_image = namespaced_function(get_image, globals(), (conn,))
+    avail_images = namespaced_function(avail_images, globals(), (conn,))
+    avail_sizes = namespaced_function(avail_sizes, globals(), (conn,))
+    script = namespaced_function(script, globals(), (conn,))
+    destroy = namespaced_function(destroy, globals(), (conn,))
+    list_nodes = namespaced_function(list_nodes, globals(), (conn,))
+    list_nodes_full = namespaced_function(list_nodes_full, globals(), (conn,))
+    list_nodes_select = namespaced_function(
+        list_nodes_select, globals(), (conn,)
+    )
 
     log.debug('Loading Joyent cloud module')
     return 'joyent'
@@ -135,7 +138,7 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    
+
     deploy = config.get_config_value('deploy', vm_, __opts__)
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -151,7 +154,11 @@ def create(vm_):
     vm_['location'] = get_location()
     conn = get_conn(get_location())
 
-    log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],vm_['location']))
+    log.info(
+        'Creating Cloud VM {0} in {1}'.format(
+            vm_['name'], vm_['location']
+        )
+    )
 
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
@@ -178,7 +185,7 @@ def create(vm_):
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
-        host = data.public_ips[0] 
+        host = data.public_ips[0]
         if ssh_interface(vm_) == 'private_ips':
             host = data.private_ips[0]
 
@@ -197,33 +204,39 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+            'display_ssh_output': config.get_config_value(
+                'display_ssh_output', vm_, __opts__, default=True
+            ),
             'script_args': config.get_config_value(
                 'script_args', vm_, __opts__
-            )
+            ),
+            'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_)
         }
-
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
-            __opts__,
-            vm_
-        )
 
         # Deploy salt-master files, if necessary
         if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
-            if master_conf:
-                deploy_kwargs['master_conf'] = master_conf
+            master_conf = saltcloud.utils.master_conf(__opts__, vm_)
+            deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
+                master_conf
+            )
 
-            if 'syndic_master' in master_conf:
+            if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
+
+        deploy_kwargs['make_minion'] = config.get_config_value(
+            'make_minion', vm_, __opts__, default=True
+        )
+
+        # Store what was used to the deploy the VM
+        ret['deploy_kwargs'] = deploy_kwargs
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
-            if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error(
                 'Failed to start Salt on Cloud VM {0}'.format(
@@ -231,15 +244,14 @@ def create(vm_):
                 )
             )
 
-    log.info(
-        'Created Cloud VM {0} with the following values:'.format(
-            vm_['name']
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(data.__dict__)
         )
     )
-    for key, val in data.__dict__.items():
-        ret[key] = val
-        log.info('  {0}: {1}'.format(key, val))
 
+    ret.update(data.__dict__)
     return ret
 
 
@@ -251,7 +263,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    return __take_action(name, call, 'reboot_node','Rebooting','reboot')
+    return __take_action(name, call, 'reboot_node', 'Rebooting', 'reboot')
 
 
 def stop(name, call=None):
@@ -262,7 +274,7 @@ def stop(name, call=None):
 
         salt-cloud -a stop mymachine
     '''
-    return __take_action(name,call,'ex_stop_node','Stopped','stop')
+    return __take_action(name, call, 'ex_stop_node', 'Stopped', 'stop')
 
 
 def start(name, call=None):
@@ -273,10 +285,10 @@ def start(name, call=None):
 
         salt-cloud -a start mymachine
     '''
-    return __take_action(name,call,'start_node','Started','start')
+    return __take_action(name, call, 'start_node', 'Started', 'start')
 
-    
-def __take_action(name, call=None, action = None, atext= None, btext=None):
+
+def __take_action(name, call=None, action=None, atext=None, btext=None):
     data = {}
 
     if call != 'action':
@@ -297,20 +309,21 @@ def __take_action(name, call=None, action = None, atext= None, btext=None):
     try:
         data = getattr(conn, action)(node=node)
         log.debug(data)
-        log.info('{0} node {1}'.format(atext,name))
+        log.info('{0} node {1}'.format(atext, name))
     except Exception as exc:
         if 'InvalidState' in str(exc):
-	    data = "False"
+            data = 'False'
         else:
             log.error(
                 'Failed to {0} node {1}: {2}'.format(
-                    btext,name, exc
+                    btext, name, exc
                 ),
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
 
     return data
+
 
 def ssh_interface(vm_):
     '''
@@ -321,7 +334,6 @@ def ssh_interface(vm_):
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
-
 
 
 def get_location(vm_=None):
@@ -342,6 +354,7 @@ def get_location(vm_=None):
         )
     )
 
+
 def avail_locations():
     '''
     List all available locations
@@ -351,23 +364,25 @@ def avail_locations():
     for key in JOYENT_LOCATIONS:
         ret[key] = {
             'name': key,
-            'region' : JOYENT_LOCATIONS[key]
+            'region': JOYENT_LOCATIONS[key]
         }
 
     return ret
 
-def has_method(obj, method_name):
-    ret = dir( obj )
 
+def has_method(obj, method_name):
+    '''
+    Find if the provided object has a specific method
+    '''
     if method_name in dir(obj):
-        return True;
+        return True
 
     log.error(
-            "Method '{0}' not yet supported!".format(
-                method_name
-            )
+        'Method {0!r} not yet supported!'.format(
+            method_name
+        )
     )
-    return False;
+    return False
 
 
 def list_keys(kwargs=None, call=None):

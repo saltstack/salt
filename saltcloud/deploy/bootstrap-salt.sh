@@ -279,7 +279,7 @@ if [ "${CALLER}x" = "${0}x" ]; then
     CALLER="PIPED THROUGH"
 fi
 echoinfo "${CALLER} ${0} -- Version ${ScriptVersion}"
-#echowarn "Running the unstable version of ${ScriptName}"
+echowarn "Running the unstable version of ${ScriptName}"
 
 
 #---  FUNCTION  ----------------------------------------------------------------
@@ -1194,10 +1194,6 @@ install_debian_deps() {
 }
 
 install_debian_6_deps() {
-    check_pip_allowed
-    echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
-    echowarn "This is required for long term stable minion connections to the master."
-
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
@@ -1206,30 +1202,25 @@ install_debian_6_deps() {
             /etc/apt/sources.list.d/backports.list
     fi
 
-    if [ ! -f /etc/apt/preferences.d/local-salt-backport.pref ]; then
-        # Add madduck's repo since squeeze packages have been deprecated
-        for fname in salt-common salt-master salt-minion salt-syndic salt-doc; do
-            echo "Package: $fname"
-            echo "Pin: release a=squeeze-backports"
-            echo "Pin-Priority: 600"
-            echo
-        done > /etc/apt/preferences.d/local-salt-backport.pref
+    # Saltstack's Debian repository
+    if [ "x$(grep -R 'squeeze-saltstack' /etc/apt)" = "x" ]; then
+        echo "deb http://debian.saltstack.com/debian squeeze-saltstack main" >> \
+            /etc/apt/sources.list.d/saltstack.list
 
-        cat <<_eof > /etc/apt/sources.list.d/local-madduck-backports.list
-deb http://debian.madduck.net/repo squeeze-backports main
-deb-src http://debian.madduck.net/repo squeeze-backports main
-_eof
-
-        wget -q http://debian.madduck.net/repo/gpg/archive.key -O - | apt-key add - || return 1
+        wget -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
     fi
 
-    if [ ! -f /etc/apt/sources.list.d/debian-experimental.list ]; then
-        cat <<_eof > /etc/apt/sources.list.d/debian-experimental.list
+    if [ $PIP_ALLOWED -eq $BS_TRUE ]; then
+        echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
+        echowarn "This is required for long term stable minion connections to the master."
+
+        if [ ! -f /etc/apt/sources.list.d/debian-experimental.list ]; then
+           cat <<_eof > /etc/apt/sources.list.d/debian-experimental.list
 deb http://ftp.debian.org/debian experimental main
 deb-src http://ftp.debian.org/debian experimental main
 _eof
 
-        cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-experimental.pref
+           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-experimental.pref
 Package: libzmq3
 Pin: release a=experimental
 Pin-Priority: 800
@@ -1238,26 +1229,38 @@ Package: libzmq3-dev
 Pin: release a=experimental
 Pin-Priority: 800
 _eof
-    fi
+       fi
 
-    apt-get update
-    __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
-    __apt_get_noinput build-essential python-dev python-pip || return 1
+       apt-get update
+
+       __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
+       __apt_get_noinput build-essential python-dev python-pip || return 1
+    else
+        apt-get update
+    fi
     return 0
 }
 
 install_debian_7_deps() {
-    check_pip_allowed
-    echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
-    echowarn "This is required for long term stable minion connections to the master."
+    # Saltstack's Debian repository
+    if [ "x$(grep -R 'wheezy-saltstack' /etc/apt)" = "x" ]; then
+        echo "deb http://debian.saltstack.com/debian wheezy-saltstack main" >> \
+            /etc/apt/sources.list.d/saltstack.list
 
-    if [ ! -f /etc/apt/sources.list.d/debian-experimental.list ]; then
-        cat <<_eof > /etc/apt/sources.list.d/debian-experimental.list
+        wget -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
+    fi
+
+    if [ $PIP_ALLOWED -eq $BS_TRUE ]; then
+        echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
+        echowarn "This is required for long term stable minion connections to the master."
+
+        if [ ! -f /etc/apt/sources.list.d/debian-experimental.list ]; then
+           cat <<_eof > /etc/apt/sources.list.d/debian-experimental.list
 deb http://ftp.debian.org/debian experimental main
 deb-src http://ftp.debian.org/debian experimental main
 _eof
 
-        cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-experimental.pref
+           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-experimental.pref
 Package: libzmq3
 Pin: release a=experimental
 Pin-Priority: 800
@@ -1266,19 +1269,19 @@ Package: libzmq3-dev
 Pin: release a=experimental
 Pin-Priority: 800
 _eof
-    fi
+       fi
 
-    apt-get update
-    __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
-    __apt_get_noinput build-essential python-dev python-pip || return 1
+       apt-get update
+
+       __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
+       __apt_get_noinput build-essential python-dev python-pip || return 1
+    else
+        apt-get update
+    fi
     return 0
 }
 
 install_debian_git_deps() {
-    check_pip_allowed
-    echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
-    echowarn "This is required for long term stable minion connections to the master."
-
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
@@ -1286,6 +1289,14 @@ install_debian_git_deps() {
     __apt_get_noinput lsb-release python python-pkg-resources python-crypto \
         python-jinja2 python-m2crypto python-yaml msgpack-python python-pip \
         git || return 1
+
+    if [ $PIP_ALLOWED -eq $BS_TRUE ]; then
+        echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
+        echowarn "This is required for long term stable minion connections to the master."
+
+        __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
+        __apt_get_noinput build-essential python-dev python-pip || return 1
+    fi
 
     __git_clone_and_checkout || return 1
 
@@ -1311,7 +1322,6 @@ install_debian_7_git_deps() {
 }
 
 __install_debian_stable() {
-    check_pip_allowed
     packages=""
     if [ $INSTALL_MINION -eq $BS_TRUE ]; then
         packages="${packages} salt-minion"
@@ -1324,9 +1334,13 @@ __install_debian_stable() {
     fi
     __apt_get_noinput ${packages} || return 1
 
-    # Building pyzmq from source to build it against libzmq3.
-    # Should override current installation
-    pip install -U pyzmq || return 1
+    if [ $PIP_ALLOWED -eq $BS_TRUE ]; then
+        # Building pyzmq from source to build it against libzmq3.
+        # Should override current installation
+        # Using easy_install instead of pip because at least on Debian 6,
+        # there's no default virtualenv active.
+        easy_install -U pyzmq || return 1
+    fi
 
     return 0
 }
@@ -1338,12 +1352,15 @@ install_debian_6_stable() {
 }
 
 install_debian_git() {
-    python setup.py install --install-layout=deb || return 1
+    if [ $PIP_ALLOWED -eq $BS_TRUE ]; then
+        # Building pyzmq from source to build it against libzmq3.
+        # Should override current installation
+        # Using easy_install instead of pip because at least on Debian 6,
+        # there's no default virtualenv active.
+        easy_install -U pyzmq || return 1
+    fi
 
-    # Building pyzmq from source to build it against libzmq3.
-    # Should override current installation
-    pip install -U pyzmq || return 1
-    return 0
+    python setup.py install --install-layout=deb || return 1
 }
 
 install_debian_6_git() {
@@ -2459,14 +2476,21 @@ config_salt() {
 #
 preseed_master() {
     # Create the PKI directory
-    [ -d $PKI_DIR/minions ] || mkdir -p $PKI_DIR/minions && chmod 700 $PKI_DIR/minions || return 1
+
+    if [ $(ls $TEMP_KEYS_DIR | wc -l) -lt 1 ]; then
+        echoerror "No minion keys were uploaded. Unable to pre-seed master"
+        return 1
+    fi
+
+    SEED_DEST="$PKI_DIR/master/minions"
+    [ -d $SEED_DEST ] || mkdir -p $SEED_DEST && chmod 700 $SEED_DEST || return 1
 
     for keyfile in $(ls $TEMP_KEYS_DIR); do
         src_keyfile="${TEMP_KEYS_DIR}/${keyfile}"
-        dst_keyfile="${PKI_DIR}/minions/${keyfile}"
+        dst_keyfile="${SEED_DEST}/${keyfile}"
 
         # If it's not a file, skip to the next
-        [ ! -f $keyfile_path ] && continue
+        [ ! -f $src_keyfile ] && continue
 
         movefile "$src_keyfile" "$dst_keyfile" || return 1
         chmod 664 $dst_keyfile || return 1

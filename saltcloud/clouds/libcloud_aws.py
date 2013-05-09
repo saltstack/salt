@@ -45,17 +45,17 @@ Using the new format, set up the cloud configuration at
 
 # Import python libs
 import os
-import sys
 import stat
 import time
 import uuid
+import pprint
 import logging
 
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
@@ -110,7 +110,7 @@ def __virtual__():
                 )
             )
 
-    global avail_images, avail_sizes, script, destroy, list_nodes
+    global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
     global get_size
 
@@ -285,6 +285,16 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    key_filename = config.get_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     conn = get_conn(location=location)
@@ -354,10 +364,10 @@ def create(vm_):
     username = 'ec2-user'
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(
-                    host=ip_address, username=user, ssh_timeout=60,
-                    key_filename=config.get_config_value(
-                        'private_key', vm_, __opts__, search_global=False)):
+            if saltcloud.utils.wait_for_passwd(host=ip_address,
+                                               username=user,
+                                               ssh_timeout=60,
+                                               key_filename=key_filename):
                 username = user
                 break
         else:
@@ -369,9 +379,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
-            'key_filename': config.get_config_value(
-                'private_key', vm_, __opts__, search_global=False
-            ),
+            'key_filename': key_filename,
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script.script,
@@ -385,48 +393,57 @@ def create(vm_):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+            'display_ssh_output': config.get_config_value(
+                'display_ssh_output', vm_, __opts__, default=True
+            ),
             'script_args': config.get_config_value(
                 'script_args', vm_, __opts__
-            )
+            ),
+            'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_)
         }
-
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
-            __opts__, vm_
-        )
 
         # Deploy salt-master files, if necessary
         if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
-            if master_conf:
-                deploy_kwargs['master_conf'] = master_conf
+            master_conf = saltcloud.utils.master_conf(__opts__, vm_)
+            deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
+                master_conf
+            )
 
-            if 'syndic_master' in master_conf:
+            if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
+
+        deploy_kwargs['make_minion'] = config.get_config_value(
+            'make_minion', vm_, __opts__, default=True
+        )
+
+        # Store what was used to the deploy the VM
+        ret['deploy_kwargs'] = deploy_kwargs
 
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
-            if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    log.info(
-        'Created Cloud VM {name} with the following values:'.format(**vm_)
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(data.__dict__)
+        )
     )
-    for key, val in data.__dict__.items():
-        ret[key] = val
-        log.debug('  {0}: {1}'.format(key, val))
+
     volumes = config.get_config_value(
-        'map_volumes', vm_, __opts__, search_global=False
+        'volumes', vm_, __opts__, search_global=True
     )
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
 
+    ret.update(data.__dict__)
     return ret
 
 
@@ -655,14 +672,13 @@ def destroy(name):
     try:
         result = libcloudfuncs_destroy(newname, conn)
         ret.update({'Destroyed': result})
-    except Exception as e:
-        if not e.message.startswith('OperationNotPermitted'):
-            raise e
+    except Exception as exc:
+        if not exc.message.startswith('OperationNotPermitted'):
+            raise exc
 
         log.info(
             'Failed: termination protection is enabled on {0}'.format(
                 name
             )
         )
-
     return ret

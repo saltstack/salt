@@ -28,7 +28,11 @@ import salt.utils.event
 
 # Import salt cloud libs
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudConfigError, SaltCloudException
+from saltcloud.exceptions import (
+    SaltCloudConfigError,
+    SaltCloudException,
+    SaltCloudSystemExit
+)
 
 # Import third party libs
 from jinja2 import Template
@@ -93,6 +97,7 @@ def gen_keys(keysize=2048):
     if keysize < 2048:
         keysize = 2048
     tdir = tempfile.mkdtemp()
+
     salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
@@ -170,11 +175,11 @@ def get_option(option, opts, vm_):
         return opts[option]
 
 
-def minion_conf_string(opts, vm_):
+def minion_conf(opts, vm_):
     '''
-    Return a string to be passed into the deployment script for the minion
-    configuration file
+    Return a minion's configuration for the provided options and VM
     '''
+
     # Let's get a copy of the salt minion default options
     minion = salt.config.DEFAULT_MINION_OPTS.copy()
     # Some default options are Null, let's set a reasonable default
@@ -188,41 +193,46 @@ def minion_conf_string(opts, vm_):
     master_finger = config.get_config_value('master_finger', vm_, opts)
     if master_finger is not None:
         minion['master_finger'] = master_finger
-    minion.update(opts.get('minion', {}))
     minion.update(
+        # Get ANY defined minion settings, merging data, in the following order
+        # 1. VM config
+        # 2. Profile config
+        # 3. Global configuration
         config.get_config_value(
-            'minion', vm_, opts, default={}, search_global=False
+            'minion', vm_, opts, default={}, search_global=True
         )
     )
+
     make_master = config.get_config_value('make_master', vm_, opts)
     if 'master' not in minion and make_master is not True:
         raise SaltCloudConfigError(
             'A master setting was not defined in the minion\'s configuration.'
         )
-    minion.update(opts.get('map_minion', {}))
-    minion.update(
+
+    # Get ANY defined grains settings, merging data, in the following order
+    # 1. VM config
+    # 2. Profile config
+    # 3. Global configuration
+    minion.setdefault('grains', {}).update(
         config.get_config_value(
-            'map_minion', vm_, opts, default={}, search_global=False
+            'grains', vm_, opts, default={}, search_global=True
         )
     )
-    optsgrains = opts.get('map_grains', {})
-    if optsgrains:
-        minion.setdefault('grains', {}).update(optsgrains)
-
-    vmgrains = config.get_config_value(
-        'map_minion', vm_, opts, default={}, search_global=False
-    )
-    if vmgrains:
-        minion.setdefault('grains', {}).update(vmgrains)
-    return yaml.safe_dump(minion, default_flow_style=False)
+    return minion
 
 
-def master_conf_string(opts, vm_):
+def minion_conf_string(opts, vm_):
     '''
-    Return a string to be passed into the deployment script for the master
+    Return a string to be passed into the deployment script for the minion
     configuration file
     '''
+    return salt_config_to_yaml(minion_conf(opts, vm_))
 
+
+def master_conf(opts, vm_):
+    '''
+    Return a master's configuration for the provided options and VM
+    '''
     # Let's get a copy of the salt master default options
     master = salt.config.DEFAULT_MASTER_OPTS.copy()
     # Some default options are Null, let's set a reasonable default
@@ -231,21 +241,31 @@ def master_conf_string(opts, vm_):
         log_level_logfile='info'
     )
 
-    master.update(opts.get('master', {}))
+    # Get ANY defined master setting, merging data, in the following order
+    # 1. VM config
+    # 2. Profile config
+    # 3. Global configuration
     master.update(
         config.get_config_value(
-            'master', vm_, opts, default={}, search_global=False
+            'master', vm_, opts, default={}, search_global=True
         )
     )
+    return master
 
-    master.update(opts.get('map_master', {}))
-    master.update(
-        config.get_config_value(
-            'map_master', vm_, opts, default={}, search_global=False
-        )
-    )
 
-    return yaml.safe_dump(master, default_flow_style=False)
+def master_conf_string(opts, vm_):
+    '''
+    Return a string to be passed into the deployment script for the master
+    configuration file
+    '''
+    return salt_config_to_yaml(master_conf(opts, vm_))
+
+
+def salt_config_to_yaml(config):
+    '''
+    Return a salt configuration dictionary, master or minion, as a yaml dump
+    '''
+    return yaml.safe_dump(config, default_flow_style=False)
 
 
 def wait_for_ssh(host, port=22, timeout=900):
@@ -264,10 +284,13 @@ def wait_for_ssh(host, port=22, timeout=900):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
-            sock.shutdown(2)
+            # Stop any remaining reads/writes on the socket
+            sock.shutdown(socket.SHUT_RDWR)
+            # Close it!
+            sock.close()
             return True
-        except Exception as e:
-            log.debug('Caught exception in wait_for_ssh: {0}'.format(e))
+        except socket.error as exc:
+            log.debug('Caught exception in wait_for_ssh: {0}'.format(exc))
             time.sleep(1)
             if time.time() - start > timeout:
                 log.error('SSH connection timed out: {0}'.format(timeout))
@@ -296,6 +319,12 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'username': username,
                       'timeout': ssh_timeout}
             if key_filename:
+                if not os.path.isfile(key_filename):
+                    raise SaltCloudConfigError(
+                        'The defined key_filename {0!r} does not exist'.format(
+                            key_filename
+                        )
+                    )
                 kwargs['key_filename'] = key_filename
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
@@ -339,10 +368,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
                   keep_tmp=False, script_args=None, ssh_timeout=15,
-                  display_ssh_output=True, make_syndic=False):
+                  display_ssh_output=True, make_syndic=False,
+                  preseed_minion_keys=None, make_minion=True):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
     if wait_for_ssh(host=host, port=port, timeout=timeout):
@@ -403,6 +439,41 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if master_conf:
                 scp_file('/tmp/master', master_conf, kwargs)
 
+            # XXX: We need to make these paths configurable
+            preseed_minion_keys_tempdir = '/tmp/preseed-minion-keys'
+            if preseed_minion_keys is not None:
+                # Create remote temp dir
+                root_cmd(
+                    'mkdir "{0}"'.format(preseed_minion_keys_tempdir),
+                    tty, sudo, **kwargs
+                )
+                root_cmd(
+                    'chmod 700 "{0}"'.format(preseed_minion_keys_tempdir),
+                    tty, sudo, **kwargs
+                )
+                if kwargs['username'] != 'root':
+                    root_cmd(
+                        'chown {0} "{1}"'.format(
+                            kwargs['username'], preseed_minion_keys_tempdir
+                        ),
+                        tty, sudo, **kwargs
+                    )
+
+                # Copy pre-seed minion keys
+                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                    rpath = os.path.join(
+                        preseed_minion_keys_tempdir, minion_id
+                    )
+                    scp_file(rpath, minion_key, kwargs)
+
+                if kwargs['username'] != 'root':
+                    root_cmd(
+                        'chown -R root "{0}"'.format(
+                            preseed_minion_keys_tempdir
+                        ),
+                        tty, sudo, **kwargs
+                    )
+
             # The actual deploy script
             if script:
                 scp_file('/tmp/deploy.sh', script, kwargs)
@@ -428,16 +499,27 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if script:
                 log.debug('Executing /tmp/deploy.sh')
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c /tmp/'  # FIXME: always?
-                    if make_syndic:
+                    deploy_command += ' -c /tmp/'
+                    if make_syndic is True:
                         deploy_command += ' -S'
-                    if make_master:
+                    if make_master is True:
                         deploy_command += ' -M'
+                    if make_minion is False:
+                        deploy_command += ' -N'
+                    if preseed_minion_keys is not None:
+                        deploy_command += ' -k {0}'.format(
+                            preseed_minion_keys_tempdir
+                        )
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
 
-                root_cmd(deploy_command, tty, sudo, **kwargs)
-                log.debug('Executed command {0}'.format(deploy_command))
+                if root_cmd(deploy_command, tty, sudo, **kwargs):
+                    raise SaltCloudSystemExit(
+                        'Executing the command {0!r} failed'.format(
+                            deploy_command
+                        )
+                    )
+                log.debug('Executed command {0!r}'.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
@@ -445,7 +527,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     log.debug('Removed /tmp/deploy.sh')
 
             if keep_tmp:
-                log.debug('Not removing deloyment files from /tmp/')
+                log.debug('Not removing deployment files from /tmp/')
 
             # Remove minion configuration
             if not keep_tmp:
@@ -459,8 +541,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     root_cmd('rm /tmp/minion', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/minion')
 
-            # Remove master configuration
-            if not keep_tmp:
+                # Remove master configuration
                 if master_pub:
                     root_cmd('rm /tmp/master.pub', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master.pub')
@@ -470,6 +551,17 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if master_conf:
                     root_cmd('rm /tmp/master', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/master')
+
+                # Remove pre-seed keys directory
+                if preseed_minion_keys is not None:
+                    root_cmd(
+                        'rm -rf {0}'.format(
+                            preseed_minion_keys_tempdir
+                        ), tty, sudo, **kwargs
+                    )
+                    log.debug(
+                        'Removed {0}'.format(preseed_minion_keys_tempdir)
+                    )
 
             if start_action:
                 queuereturn = queue.get()
@@ -512,25 +604,51 @@ def scp_file(dest_path, contents, kwargs):
     Use scp to copy a file to a server
     '''
     tmpfh, tmppath = tempfile.mkstemp()
-    tmpfile = salt.utils.fopen(tmppath, 'w')
-    tmpfile.write(contents)
-    tmpfile.close()
+    with salt.utils.fopen(tmppath, 'w') as tmpfile:
+        tmpfile.write(contents)
+
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
-    cmd = 'scp -oStrictHostKeyChecking=no {0} {1}@{2}:{3}'.format(
-        tmppath,
-        kwargs['username'],
-        kwargs['hostname'],
-        dest_path
-    )
+
+    ssh_args = [
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ]
     if 'key_filename' in kwargs:
-        cmd = cmd.replace('=no', '=no -i {0}'.format(kwargs['key_filename']))
-    elif 'password' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(kwargs['key_filename'])
+        ])
+
+    cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
+        ' '.join(ssh_args), tmppath, kwargs, dest_path
+    )
+    log.debug('SCP command: {0!r}'.format(cmd))
+
+    if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
-    proc = subprocess.Popen(cmd, shell=True,
-                            stderr=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
-    proc.communicate()
-    os.remove(tmppath)
+
+    proc = subprocess.Popen(
+        cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+    )
+    stdout, stderr = proc.communicate()
+    stdout, stderr = stdout.strip(), stderr.strip()
+    if stdout:
+        log.debug('SCP STDOUT: {0!r}'.format(stdout))
+    if stderr:
+        log.debug('SCP STDERR: {0!r}'.format(stderr))
+    return proc.returncode
 
 
 def root_cmd(command, tty, sudo, **kwargs):
@@ -538,43 +656,65 @@ def root_cmd(command, tty, sudo, **kwargs):
     Wrapper for commands to be run as root
     '''
     if sudo:
-        command = 'sudo ' + command
+        command = 'sudo {0}'.format(command)
         log.debug('Using sudo to run command {0}'.format(command))
 
-    ssh_args = ' -oStrictHostKeyChecking=no'
-    ssh_args += ' -oUserKnownHostsFile=/dev/null'
+    ssh_args = []
 
     if tty:
-        ssh_args += ' -t'
+        # Use double `-t` on the `ssh` command, it's necessary when `sudo` has
+        # `requiretty` enforced.
+        ssh_args.extend(['-t', '-t'])
+
+    ssh_args.extend([
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ])
 
     if 'key_filename' in kwargs:
         # There should never be both a password and an ssh key passed in, so
-        # tell SSH to skip password authentication
-        ssh_args += ' -oPasswordAuthentication=no'
-        # Also, specify the location of the key file
-        ssh_args += ' -i {0}'.format(kwargs['key_filename'])
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(kwargs['key_filename'])
+        ])
 
-    cmd = 'ssh {0} {1}@{2} "{3}"'.format(
-        ssh_args,
-        kwargs['username'],
-        kwargs['hostname'],
-        command
+    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2!r}'.format(
+        ' '.join(ssh_args), kwargs, command
     )
-    log.debug(cmd)
+    log.debug('SSH command: {0!r}'.format(cmd))
 
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
     log.debug('Executing command: {0}'.format(command))
 
-    if 'display_ssh_output' in kwargs and kwargs['display_ssh_output']:
-        return subprocess.call(cmd, shell=True)
+    display_ssh_output = kwargs.get('display_ssh_output', True)
+
+    if display_ssh_output is True:
+        proc = subprocess.Popen(cmd, shell=True)
     else:
-        proc = subprocess.Popen(cmd, shell=True,
-                                stderr=subprocess.PIPE,
-                                stdout=subprocess.PIPE)
-        proc.communicate()
-        return proc.returncode
+        proc = subprocess.Popen(
+            cmd, shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+    stdout, stderr = proc.communicate()
+    if display_ssh_output is not True and stdout:
+        log.debug('SSH Command STDOUT: {0}'.format(stdout))
+    if display_ssh_output is not True and stdout:
+        log.debug('SSH Command STDERR: {0}'.format(stderr))
+    return proc.returncode
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):

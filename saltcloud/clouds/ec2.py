@@ -67,6 +67,7 @@ import sys
 import stat
 import time
 import uuid
+import pprint
 import logging
 import yaml
 
@@ -82,7 +83,7 @@ import xml.etree.ElementTree as ET
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.libcloudfuncs import *
+from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
@@ -618,6 +619,16 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    key_filename = config.get_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
     location = get_location(vm_)
     log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     usernames = ssh_username(vm_)
@@ -641,12 +652,12 @@ def create(vm_=None, call=None):
         if not isinstance(ex_securitygroup, list):
             params['SecurityGroup.1'] = ex_securitygroup
         else:
-            for (counter, sg) in enumerate(ex_securitygroup):
-                params['SecurityGroup.{0}'.format(counter)] = sg
+            for (counter, sg_) in enumerate(ex_securitygroup):
+                params['SecurityGroup.{0}'.format(counter)] = sg_
 
-    az = get_availability_zone(vm_)
-    if az is not None:
-        params['Placement.AvailabilityZone'] = az
+    az_ = get_availability_zone(vm_)
+    if az_ is not None:
+        params['Placement.AvailabilityZone'] = az_
 
     delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
@@ -708,17 +719,63 @@ def create(vm_=None, call=None):
             attempts -= 1
             continue
 
+        if isinstance(data, list) and not data:
+            log.warn(
+                'There was an error in the query. {0} attempts '
+                'remaining: {1}'.format(
+                    attempts, data['error']
+                )
+            )
+            attempts -= 1
+            continue
+
         break
     else:
         raise SaltCloudSystemExit(
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    while 'ipAddress' not in data[0]['instancesSet']['item']:
+    failures = 6
+    while True:
         log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
         time.sleep(5)
-        waiting_for_ip += 1
         data = query(params, requesturl=requesturl)
+        if not data or isinstance(data, dict):
+            if failures < 1:
+                raise SaltCloudSystemExit(
+                    'There were too many errors while querying EC2'
+                )
+            if not data:
+                log.error(
+                    'There was an error while querying EC2. Empty response'
+                )
+            else:
+                log.error(
+                    'There was an error while querying EC2. '
+                    'Returned Error: {0}'.format(data['error'])
+                )
+            failures -= 1
+            continue
+
+        if failures < 6:
+            # Reset failed attempts
+            failures = 6
+            log.debug('Reseting failed query attempts')
+
+        log.debug(
+            'Returned query data: {0}'.format(data)
+        )
+
+        if 'ipAddress' in data[0]['instancesSet']['item']:
+            # We have our IP, break out of the loop
+            break
+
+        if waiting_for_ip >= 24:
+            # 2 Minutes!? Bail out!
+            raise SaltCloudSystemExit(
+                'Could not get the VM IP for 2 minutes. Exiting.'
+            )
+        waiting_for_ip += 1
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = data[0]['instancesSet']['item']['privateIpAddress']
@@ -729,10 +786,10 @@ def create(vm_=None, call=None):
 
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(
-                    host=ip_address, username=user, ssh_timeout=60,
-                    key_filename=config.get_config_value(
-                        'private_key', vm_, __opts__)):
+            if saltcloud.utils.wait_for_passwd(host=ip_address,
+                                               username=user,
+                                               ssh_timeout=60,
+                                               key_filename=key_filename):
                 username = user
                 break
         else:
@@ -744,9 +801,7 @@ def create(vm_=None, call=None):
         deploy_kwargs = {
             'host': ip_address,
             'username': username,
-            'key_filename': config.get_config_value(
-                'private_key', vm_, __opts__, search_global=False
-            ),
+            'key_filename': key_filename,
             'deploy_command': 'sh /tmp/deploy.sh',
             'tty': True,
             'script': deploy_script,
@@ -760,46 +815,58 @@ def create(vm_=None, call=None):
             'minion_pem': vm_['priv_key'],
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
+            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+            'display_ssh_output': config.get_config_value(
+                'display_ssh_output', vm_, __opts__, default=True
+            ),
+            'minion_conf': saltcloud.utils.minion_conf_string(
+                __opts__, vm_
+            ),
+            'script_args': config.get_config_value(
+                'script_args', vm_, __opts__
+            )
         }
-
-        deploy_kwargs['display_ssh_output'] = config.get_config_value(
-            'display_ssh_output', vm_, __opts__, default=True
-        )
-
-        deploy_kwargs['minion_conf'] = saltcloud.utils.minion_conf_string(
-            __opts__, vm_
-        )
-
-        deploy_kwargs['script_args'] = config.get_config_value(
-            'script_args', vm_, __opts__
-        )
 
         # Deploy salt-master files, if necessary
         if config.get_config_value('make_master', vm_, __opts__) is True:
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf_string(__opts__, vm_)
-            if master_conf:
-                deploy_kwargs['master_conf'] = master_conf
+            master_conf = saltcloud.utils.master_conf(__opts__, vm_)
+            deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
+                master_conf
+            )
 
-            if 'syndic_master' in master_conf:
+            if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
 
+        deploy_kwargs['make_minion'] = config.get_config_value(
+            'make_minion', vm_, __opts__, default=True
+        )
+
+        ret['deploy_kwargs'] = deploy_kwargs
         deployed = saltcloud.utils.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {name}'.format(**vm_))
-            if __opts__.get('show_deploy_args', False) is True:
-                ret['deploy_kwargs'] = deploy_kwargs
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    log.info(
-        'Created Cloud VM {name} with the following values:'.format(**vm_)
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(data[0]['instancesSet']['item'])
+        )
     )
+
     ret.update(data[0]['instancesSet']['item'])
 
-    volumes = vm_.get('map_volumes')
+    # Get ANY defined volumes settings, merging data, in the following order
+    # 1. VM config
+    # 2. Profile config
+    # 3. Global configuration
+    volumes = config.get_config_value(
+        'volumes', vm_, __opts__, search_global=True
+    )
     if volumes:
         log.info('Create and attach volumes to node {0}'.format(vm_['name']))
         created = create_attach_volumes(
@@ -811,8 +878,8 @@ def create(vm_=None, call=None):
             },
             call='action'
         )
-
         ret['Attached Volumes'] = created
+
     return ret
 
 

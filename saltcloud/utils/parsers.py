@@ -18,6 +18,7 @@ import salt.utils.parsers as parsers
 # Import salt cloud libs
 import saltcloud.config as config
 import saltcloud.version as version
+import saltcloud.exceptions as exceptions
 
 
 class CloudConfigMixIn(object):
@@ -129,7 +130,11 @@ class CloudConfigMixIn(object):
         return {}
 
     def process_cloud_config(self):
-        self.cloud_config = config.cloud_config(self.options.cloud_config)
+        try:
+
+            self.cloud_config = config.cloud_config(self.options.cloud_config)
+        except exceptions.SaltCloudConfigError as exc:
+            self.error(exc)
 
         # Store a temporary config dict with just the cloud settings so the
         # logging level can be retrieved in LogLevelMixIn.process_log_level()
@@ -158,23 +163,32 @@ class CloudConfigMixIn(object):
             )
 
     def process_master_config(self):
-        self.master_config = salt.config.master_config(
-            self.options.master_config
-        )
+        try:
+            self.master_config = salt.config.master_config(
+                self.options.master_config
+            )
+        except exceptions.SaltCloudConfigError as exc:
+            self.error(exc)
     # Force process_master_config to run AFTER process_cloud_config
     process_master_config._mixin_prio_ = -999
 
     def process_vm_config(self):
-        self.profiles_config = config.vm_profiles_config(
-            self.options.vm_config
-        )
+        try:
+            self.profiles_config = config.vm_profiles_config(
+                self.options.vm_config
+            )
+        except exceptions.SaltCloudConfigError as exc:
+            self.error(exc)
     # Force process_vm_config to run AFTER process_master_config
     process_vm_config._mixin_prio_ = -998
 
     def process_providers_config(self):
-        self.providers_config = config.cloud_providers_config(
-            self.options.providers_config
-        )
+        try:
+            self.providers_config = config.cloud_providers_config(
+                self.options.providers_config
+            )
+        except exceptions.SaltCloudConfigError as exc:
+            self.error(exc)
     # Force process_providers_config to run AFTER process_vm_config
     process_providers_config._mixin_prio_ = -997
 

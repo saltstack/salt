@@ -23,6 +23,7 @@ import salt.utils
 from salt.utils.verify import verify_env, verify_files
 
 # Import saltcloud libs
+import saltcloud.cloud
 import saltcloud.config
 import saltcloud.output
 from saltcloud.utils import parsers
@@ -106,7 +107,6 @@ class SaltCloud(parsers.SaltCloudParser):
 
         # Late imports so logging works as expected
         log.info('salt-cloud starting')
-        import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.config)
 
         ret = {}
@@ -144,8 +144,8 @@ class SaltCloud(parsers.SaltCloudParser):
                     mapper.location_list(self.options.list_locations)
                 )
             except (SaltCloudException, Exception) as exc:
-                    msg = 'There was an error listing locations: {0}'
-                    self.handle_exception(msg, exc)
+                msg = 'There was an error listing locations: {0}'
+                self.handle_exception(msg, exc)
 
         elif self.options.list_images is not None:
             try:
@@ -231,11 +231,19 @@ class SaltCloud(parsers.SaltCloudParser):
                 )
 
             kwargs = {}
-            for arg in self.args:
+            args = self.args[:]
+            for arg in args:
                 if '=' in arg:
                     key, value = arg.split('=')
                     kwargs[key] = value
+                    args.remove(arg)
 
+            if args:
+                self.error(
+                    'Any arguments passed to --function need to be passed '
+                    'as kwargs. Ex: image=ami-54cf5c3d. Remaining '
+                    'arguments: {0}'.format(args)
+                )
             try:
                 ret = mapper.do_function(
                     self.function_provider, self.function_name, kwargs
@@ -247,6 +255,10 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.profile and self.config.get('names', False):
             try:
                 ret = mapper.run_profile()
+                if self.config.get('show_deploy_args', False) is False:
+                    # Strip deploy_args from the returned data since we don't
+                    # want to see it
+                    ret.pop('deploy_kwargs', None)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a profile error: {0}'
                 self.handle_exception(msg, exc)

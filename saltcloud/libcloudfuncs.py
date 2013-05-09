@@ -7,6 +7,8 @@ cloud virtual machines
 import os
 import logging
 
+
+# pylint: disable-msg=W0611
 # Import libcloud
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -15,6 +17,8 @@ from libcloud.compute.deployment import (
     ScriptDeployment,
     SSHKeyDeployment
 )
+# pylint: enable-msg=W0611
+
 
 # Import salt libs
 import salt.utils.event
@@ -91,7 +95,7 @@ def avail_locations(conn=None):
     relevant data
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     locations = conn.list_locations()
     ret = {}
@@ -110,7 +114,7 @@ def avail_images(conn=None):
     relevant data
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     images = conn.list_images()
     ret = {}
@@ -129,7 +133,7 @@ def avail_sizes(conn=None):
     relevant data
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     sizes = conn.list_sizes()
     ret = {}
@@ -207,7 +211,7 @@ def destroy(name, conn=None):
     Delete a single VM
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     node = get_node(conn, name)
     if node is None:
@@ -235,7 +239,7 @@ def reboot(name, conn=None):
     Reboot a single VM
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     node = get_node(conn, name)
     if node is None:
@@ -261,7 +265,7 @@ def list_nodes(conn=None):
     Return a list of the VMs that are on the provider
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     nodes = conn.list_nodes()
     ret = {}
@@ -282,7 +286,7 @@ def list_nodes_full(conn=None):
     Return a list of the VMs that are on the provider, with all fields
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     nodes = conn.list_nodes()
     ret = {}
@@ -299,7 +303,7 @@ def list_nodes_select(conn=None):
     Return a list of the VMs that are on the provider, with select fields
     '''
     if not conn:
-        conn = get_conn()
+        conn = get_conn()   # pylint: disable-msg=E0602
 
     nodes = conn.list_nodes()
     ret = {}
@@ -314,16 +318,17 @@ def list_nodes_select(conn=None):
         ret[node.name] = pairs
     return ret
 
-def conn_has_method(conn, method_name):
-    ret = dir( conn )
 
+def conn_has_method(conn, method_name):
+    '''
+    Find if the provided connection object has a specific method
+    '''
     if method_name in dir(conn):
-        return True;
+        return True
 
     log.error(
-            "Method '{0}' not yet supported!".format(
-                method_name
-            )
+        'Method {0!r} not yet supported!'.format(
+            method_name
+        )
     )
-    return False;
-
+    return False
