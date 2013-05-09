@@ -513,7 +513,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
 
-                if root_cmd(deploy_command, tty, sudo, **kwargs):
+                if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
                             deploy_command
