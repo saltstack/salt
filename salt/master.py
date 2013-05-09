@@ -1341,9 +1341,8 @@ class ClearFuncs(object):
         '''
         Check if the specified filename has correct permissions
         '''
-        if 'os' in os.environ:
-            if os.environ['os'].startswith('Windows'):
-                return True
+        if salt.utils.is_windows():
+            return True
 
         # After we've ascertained we're not on windows
         import grp
