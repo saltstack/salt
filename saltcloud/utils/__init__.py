@@ -398,7 +398,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
                       'port': port,
                       'username': username,
                       'timeout': ssh_timeout,
-                      'stream_ssh_output': stream_ssh_output,
                       'display_ssh_output': display_ssh_output}
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
@@ -640,16 +639,33 @@ def scp_file(dest_path, contents, kwargs):
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
-    proc = subprocess.Popen(
-        cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-    )
-    stdout, stderr = proc.communicate()
-    stdout, stderr = stdout.strip(), stderr.strip()
-    if stdout:
-        log.debug('SCP STDOUT: {0!r}'.format(stdout))
-    if stderr:
-        log.debug('SCP STDERR: {0!r}'.format(stderr))
-    return proc.returncode
+    try:
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stream_stds=kwargs.get('display_ssh_output', True),
+        )
+        log.debug(
+            'Uploading file(PID {0}): {1!r}'.format(
+                proc.pid, dest_path
+            )
+        )
+        while proc.poll() is None:
+            time.sleep(0.25)
+
+        proc.communicate()
+        return proc.returncode
+    except Exception as err:
+        log.error(
+            'Failed to upload file {0!r}: {1}\n'.format(
+                dest_path, err
+            ),
+            exc_info=True
+        )
+    # Signal an error
+    return 1
 
 
 def root_cmd(command, tty, sudo, **kwargs):
@@ -723,6 +739,8 @@ def root_cmd(command, tty, sudo, **kwargs):
             ),
             exc_info=True
         )
+    # Signal an error
+    return 1
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
