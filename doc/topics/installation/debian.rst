@@ -2,18 +2,16 @@
 Debian Installation
 ===================
 
-Currently the latest packages for Debian Stable and Testing (Squeeze
-and Wheezy) are published in our (saltstack.com) debian repository.
-
-Packages for Debian Unstable (Sid) are available in the main debian
-repository.
+Currently the latest packages for Debian Old Stable, Stable and
+Unstable (Squeeze, Wheezy and Sid) are published in our
+(saltstack.com) debian repository.
 
 Configure Apt
 -------------
 
 
-Squeeze (Stable)
-~~~~~~~~~~~~~~~~
+Squeeze (Old Stable)
+~~~~~~~~~~~~~~~~~~~~
 
 For squeeze, you will need to enable the debian backports repository
 as well as the debian.saltstack.com repository. To do so, add the
@@ -25,31 +23,27 @@ following to ``/etc/apt/sources.list`` or a file in
 
 
 
-Wheezy (Testing)
-~~~~~~~~~~~~~~~~
+Wheezy (Stable)
+~~~~~~~~~~~~~~~
 
 For wheezy, the following line is needed in either
 ``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``::
 
   deb http://debian.saltstack.com/debian wheezy-saltstack main
 
-
-
 Sid (Unstable)
 ~~~~~~~~~~~~~~
 
-You do not need to add anything to your apt sources. Salt is already
-in the main debian archive.
+For sid, the following line is needed in either
+``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``::
 
-
+  deb http://debian.saltstack.com/debian unstable main
 
 
 Import the repository key.
 --------------------------
 
-If you are using the debian.saltstack.com repository (ie using squeeze
-or wheezy), you will need to import the key used for signing. This is
-not needed for those using sid.
+You will need to import the key used for signing.
 
 .. code-block:: bash
 
@@ -100,9 +94,9 @@ Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 Notes
 -----
 
-1. These packages will be backported from the packages in debian
-unstable. This means that the packages will be uploaded to unstable
-first and then backported over the next day or so.
+1. These packages will be backported from the packages intended to be
+uploaded into debian unstable. This means that the packages will be
+built for unstable first and then backported over the next day or so.
 
 2. These packages will be tracking the released versions of salt
 rather than maintaining a stable fixed feature set. If a fixed version
@@ -113,10 +107,9 @@ more appropriate for you.
 upgrade paths between debian versions.
 
 4. The packages currently depend on zeromq 2 rather than 3.2. This is
-likely to be a problem for some users. Following the next debian
-stable release (expected shortly), work will commence to depend on and
-build against zeromq 3.2. Depending on other packages, this migration
-may take some time. 
+likely to be a problem for some users. Work has commenced to depend on
+and build against zeromq 3.2. This is expected to be resolved in the
+next few weeks.
 
 There many situations where these packages (and their predecessors)
 have proven to be stable.
