@@ -469,7 +469,7 @@ class Cloud(object):
                 )
             )
 
-        if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+        if deploy is True and 'pub_key' not in vm_ and 'priv_key' not in vm_:
             log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
             priv, pub = saltcloud.utils.gen_keys(
                 config.get_config_value('keysize', vm_, self.opts)
@@ -494,7 +494,7 @@ class Cloud(object):
                 )
                 vm_['master_pub'] = master_pub
                 vm_['master_pem'] = master_priv
-        elif local_master is True:
+        elif local_master is True and deploy is True:
             # Since we're not creating a master, and we're deploying, accept
             # the key on the local master
             saltcloud.utils.accept_key(
