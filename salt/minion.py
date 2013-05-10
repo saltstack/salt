@@ -159,8 +159,25 @@ class SMinion(object):
         opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         if self.opts.get('file_client', 'remote') == 'remote':
-            self.opts.update(resolve_dns(opts))
-        self.gen_modules()
+            if isinstance(self.opts['master'], list):
+                masters = self.opts['master']
+                self.opts['_auth_timeout'] = 3
+                self.opts['_safe_auth'] = False
+                for master in masters:
+                    self.opts['master'] = master
+                    self.opts.update(resolve_dns(opts))
+                    try:
+                        self.gen_modules()
+                        break
+                    except SaltClientError:
+                        log.warning(('Attempted to authenticate with master '
+                                     '{0} and failed'.format(master)))
+                        continue
+            else:
+                self.opts.update(resolve_dns(opts))
+                self.gen_modules()
+        else:
+            self.gen_modules()
 
     def gen_modules(self):
         '''
