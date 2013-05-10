@@ -4,6 +4,7 @@ Support for reboot, shutdown, etc
 
 import salt.utils
 
+
 def __virtual__():
     '''
     Only supported on POSIX-like systems

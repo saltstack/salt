@@ -29,7 +29,7 @@ def __virtual__():
     Only work on systems which default to systemd
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = [
+    disable = set((
                'RedHat',
                'CentOS',
                'Amazon',
@@ -45,7 +45,7 @@ def __virtual__():
                'SUSE  Enterprise Server',
                'openSUSE',
                'OEL',
-              ]
+              ))
     if __grains__['os'] in disable:
         return False
     # Disable on all non-Linux OSes as well
