@@ -59,10 +59,10 @@ DEFAULT_MINION_OPTS = {
     'file_client': 'remote',
     'file_roots': {
         'base': ['/srv/salt'],
-        },
+    },
     'pillar_roots': {
         'base': ['/srv/pillar'],
-        },
+    },
     'hash_type': 'md5',
     'external_nodes': '',
     'disable_modules': [],
@@ -130,13 +130,13 @@ DEFAULT_MASTER_OPTS = {
     'cachedir': '/var/cache/salt/master',
     'file_roots': {
         'base': ['/srv/salt'],
-        },
+    },
     'master_roots': {
         'base': ['/srv/salt-master'],
-        },
+    },
     'pillar_roots': {
         'base': ['/srv/pillar'],
-        },
+    },
     'gitfs_remotes': [],
     'ext_pillar': [],
     'pillar_version': 2,
@@ -348,9 +348,9 @@ def prepend_root_dir(opts, path_options):
 
 
 def minion_config(path,
-                  check_dns=True,
                   env_var='SALT_MINION_CONFIG',
-                  defaults=None):
+                  defaults=None,
+                  **kwargs):
     '''
     Reads in the minion configuration file and sets up special options
     '''
@@ -365,7 +365,7 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    return apply_minion_config(overrides, check_dns, defaults)
+    return apply_minion_config(overrides, defaults)
 
 
 def get_id():
@@ -379,9 +379,8 @@ def get_id():
     - localhost may be better than killing the minion
     '''
 
-    log.debug('Guessing ID. The id can be explicitly in set {0}'.format(
-            '/etc/salt/minion')
-            )
+    log.debug('Guessing ID. The id can be explicitly in set {0}'
+              .format('/etc/salt/minion'))
     fqdn = socket.getfqdn()
     if 'localhost' != fqdn:
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
@@ -398,8 +397,8 @@ def get_id():
                 if ip.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
-                            log.info(('Found minion id in hosts file: {0}'
-                                ).format(name))
+                            log.info('Found minion id in hosts file: {0}'
+                                     .format(name))
                             return name, False
                 line = f.readline()
     except Exception:
@@ -424,7 +423,7 @@ def get_id():
     return 'localhost', False
 
 
-def apply_minion_config(overrides=None, check_dns=True, defaults=None):
+def apply_minion_config(overrides=None, defaults=None, **kwargs):
     '''
     Returns minion configurations dict.
     '''
@@ -476,8 +475,8 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
                 {
                     'function': 'mine.update',
                     'minutes': opts['mine_interval']
-                    }
-                })
+                }
+        })
     return opts
 
 
