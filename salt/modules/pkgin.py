@@ -32,13 +32,14 @@ def __virtual__():
 
 
 def _splitpkg(name):
+    # name is in the format foobar-1.0nb1, already space-splitted
     if name[0].isalnum() and name != 'No': # avoid < > = and 'No result'
         return name.rsplit('-', 1)
 
 
 def search(pkg_name):
     '''
-    Use `pkgin search`
+    Searches for an exact match using pkgin ^package$
 
     CLI Example::
 
@@ -89,6 +90,7 @@ def latest_version(*names, **kwargs):
 
     if len(names) == 1 and pkglist :
         return pkglist[names[0]]
+
     return pkglist
 
 
@@ -119,7 +121,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     if _check_pkgin():
-        __salt__['cmd.run']('{0} up'.format('pkgin'))
+        __salt__['cmd.run']('pkgin up')
 
     return {}
 
@@ -136,9 +138,9 @@ def list_pkgs(versions_as_list=False):
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     if _check_pkgin():
-        pkg_command = '{0} ls'.format('pkgin')
+        pkg_command = 'pkgin ls'
     else:
-        pkg_command = '{0}'.format('pkg_info')
+        pkg_command = 'pkg_info'
 
     ret = {}
 
