@@ -1,29 +1,27 @@
 '''
 The backend for the s3 based file server system.
 
-S3 credentials can be either set in the master file using:
+:configuration: S3 credentials can be either set in the master file using:
 
-s3_key_id: XXXXXXXXXXXXXXX
-s3_server_access_key: XXXXXXXXXXXXXXX
+        s3.keyid: GKTADJGHEIQSXMKKRBJ08H
+        s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
+    If on EC2 these credentials can be automatically loaded from the
+    instance metadata
 
-If on EC2 these credentials can be automatically loaded from the
-instance metadata
+    Example configuration options in master file:
 
-Example configuration options in master file:
-
-s3.buckets:
-  env:
-    - bucket1
-    - bucket2
+    s3.buckets:
+      env:
+        - bucket1
+        - bucket2
 '''
 
 # Import python libs
 import os
 import hashlib
-import logging
 import time
-import json
+import pickle
 
 # Import salt libs
 import salt.fileserver
@@ -31,151 +29,107 @@ import salt.utils
 import salt.utils.s3 as s3
 import salt.modules
 
-log = logging.getLogger(__name__)
-
 _s3_cache_expire = 300 # cache for 5 minutes
 
 def envs():
     '''
-    Return the file server environments
+    Return the file server environments listed for the buckets
     '''
     _init()
     return _get_buckets().keys()
 
 def update():
     '''
-    Check if the cache_file is up to date
+    Update the buckets cache file
     '''
     _init()
 
 def find_file(path, env='base', **kwargs):
     '''
-    Looks through the buckets to find the first matching file and formats it
+    Looks through the buckets cache file for a match. If it's found the file
+    will be retrieved from S3 only if it's cached version is missing or the md5
+    hash doesn't match
     '''
-    log.error('******************************** find_file');
-    log.error('path: {0}'.format(path))
-    log.error('env: {0}'.format(env))
-
-    env_path = _get_env_path(env, path)
-    log.error('env_path: {0}'.format(env_path))
-
     fnd = {'bucket': None,
             'path' : None}
 
-    # grab the buckets files from S3 or the cache
+    env_path = _get_env_path(env, path)
+
     resultset = _init()
     if not resultset or env not in resultset:
         return fnd
 
-    # grab the files for this env
     ret = _find_files(resultset[env])
 
-    # look for the env_filename in the buckets files
     for bucket_name, files in ret.iteritems():
         if env_path in files:
             fnd['bucket'] = bucket_name
             fnd['path'] = env_path
 
-    # grab the file from S3 if it doesn't exist in the cache
-    if fnd['path'] and fnd['bucket']:
-        if _is_cached_file_current(resultset, env, fnd['bucket'], fnd['path']):
-            log.error('******************************** find_file CACHED')
+    if not fnd['path'] or not fnd['bucket']:
             return fnd
+
+    if _is_cached_file_current(resultset, env, fnd['bucket'], fnd['path']):
+        return fnd
     
-        log.error('******************************** find_file RELOAD')
-
-        # not in cache or is old/mismatched, reload!
-        key, keyid = _get_s3_key()
-
-        s3.query(
-                key = key,
-                keyid = keyid,
-                bucket = fnd['bucket'],
-                path = fnd['path'],
-                local_file = _get_cached_file_name(fnd['bucket'], fnd['path']))
-
-    log.error(json.dumps(fnd))
+    key, keyid = _get_s3_key()
+    s3.query(
+            key = key,
+            keyid = keyid,
+            bucket = fnd['bucket'],
+            path = fnd['path'],
+            local_file = _get_cached_file_name(fnd['bucket'], fnd['path']))
     return fnd
-
-def serve_file(load, fnd):
-    '''
-    Serve the file chunks out to the minion
-    '''
-    log.error('******************************** serve_file');
-    log.error('load: {0}'.format(json.dumps(load)))
-    log.error('fnd: {0}'.format(json.dumps(fnd)))
-
-    ret = {}
-    #s3_key_id =  __opts__['s3_key_id'] if __opts__['s3_key_id'] else None
-    #s3_server_access_key = __opts__['s3_server_access_key'] if __opts__['s3_server_access_key'] else None
-
-    env = load["env"] # FIXME - IMPLEMENT ENV
-    bucket = fnd["bucket"]
-    path = fnd["path"]
-
-    abspath = os.path.join(_get_cache_dir(), bucket, fnd['path'])
-    absdirectory = os.path.dirname(abspath)
-
-    log.error(json.dumps(fnd))
-    log.error(env)
-    log.error(abspath)
-    log.error(absdirectory)
-
-    return ret
-
-    #if not os.path.exists(absdirectory):
-        #os.makedirs(absdirectory)
-
-    #if os.path.isfile(abspath):
-        #with salt.utils.fopen(abspath, 'rb') as fp_:
-            #diskmd5 = hashlib.md5(fp_.read()).hexdigest()
-
-            #if diskmd5 == fnd["md5"]:
-                #ret['dest'] = bucket+"//"+path
-                #ret['data'] = fp_.read()
-    #else:
-        #with salt.utils.fopen(abspath, 'w') as fp_:
-            #fetchedFile = s3.query(s3_server_access_key,s3_key_id,bucket=bucket,path=path,return_bin=True)
-            #fp_.write(fetchedFile)
-
-
-    #gzip = load.get('gzip', None)
-    #with salt.utils.fopen(abspath, 'rb') as fp_:
-        #fp_.seek(load['loc'])
-        #data = fp_.read(__opts__['file_buffer_size'])
-        #if gzip and data:
-            #data = salt.utils.gzip_util.compress(data, gzip)
-            #ret['gzip'] = gzip
-        #ret['data'] = data
-        #ret['dest'] = bucket+"//"+path
-        #return ret
 
 def file_hash(load, fnd):
     '''
-    Provides Salt with
+    Return a file hash, the hash type is always md5
     '''
-    log.error('******************************** find_hash')
-    log.error('load: {0}'.format(json.dumps(load)))
-    log.error('fnd: {0}'.format(json.dumps(fnd)))
+    if 'path' not in load or 'env' not in load:
+        return ''
 
-    #ret = {}
-    #resultset = get_result_set()
-    #env = load["env"]
-    #bucket = fnd["bucket"]
-    #path = fnd["path"]
+    if 'path' not in fnd or 'bucket' not in fnd:
+        return ''
 
-    #fileData = filter(lambda key: key.has_key("Key"),  resultset[env][bucket])
-    #item =  filter(lambda key: key["Key"] == path , fileData)[0]
-    #ret['hsum'] = item["ETag"]
-    #ret['hash_type'] = "md5"
-    #return ret
+    ret = {}
+    cache_file = _get_cached_file_name(fnd['bucket'], fnd['path'])
+
+    ret['hsum'] = salt.utils.get_hash(cache_file)
+    ret['hash_type'] = 'md5' # always md5 due to ETags in S3
+    return ret
+
+def serve_file(load, fnd):
+    '''
+    Return a chunk from a file based on the data received
+    '''
+    ret = {'data': '',
+           'dest': ''}
+    if 'path' not in load or 'loc' not in load or 'env' not in load:
+        return ret
+
+    if 'path' not in fnd or 'bucket' not in fnd:
+        return ret
+
+    env_len = len(load['env']) + 1 # strip off the env from the path
+    ret['dest'] = fnd['path'][env_len:]
+
+    gzip = load.get('gzip', None)
+
+    cache_file = _get_cached_file_name(fnd['bucket'], fnd['path'])
+
+    with salt.utils.fopen(cache_file, 'rb') as fp_:
+        fp_.seek(load['loc'])
+        data = fp_.read(__opts__['file_buffer_size'])
+        if gzip and data:
+            data = salt.utils.gzip_util.compress(data, gzip)
+            ret['gzip'] = gzip
+        ret['data'] = data
+    return ret
 
 def file_list(load):
     '''
-    Return a list of all files on the file server in a specified
-    environment
+    Return a list of all files on the file server in a specified environment
     '''
-    log.error('******************************** file_list')
     ret = []
     env = load['env']
 
@@ -187,7 +141,6 @@ def file_list(load):
     for files in _find_files(resultset[env]).values():
         ret += files
 
-    log.error(json.dumps(ret))
     return ret
 
 def _get_s3_key():
@@ -201,35 +154,33 @@ def _get_s3_key():
 
 def _init():
     '''
-    Connects to S3 and downloads metadata about each file in all
-    buckets specified within and environment and saves them to disk
+    Connect to S3 and download the metadata for each file in all buckets
+    specified and cache the data to disk
     '''
-    cache_file = _get_buckets_cache_name()
+    cache_file = _get_buckets_cache_filename()
 
-    # check for cache file
+    # check mtime of the buckets files cache 
     if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > time.time() - _s3_cache_expire:
-        # cache hit
         return _read_buckets_cache_file()
     else:
-        # cache miss
+        # bucket files cache expired
         return _refresh_buckets_cache_file()
 
 def _get_cache_dir():
     '''
-    Return the path to the cache dir
+    Return the path to the s3cache dir
     '''
     return os.path.join(__opts__['cachedir'], 's3cache')
 
 def _get_env_path(env, path):
     '''
-    Returns the path of the file including the
-    environment dirname
+    Return the path of the file including the environment
     '''
     return os.path.join(env, path)
 
 def _get_cached_file_name(bucket_name, path):
     '''
-    Returns the cached files named
+    Return the cached file name for a bucket path file
     '''
     file_path = os.path.join(_get_cache_dir(), bucket_name, path)
 
@@ -240,9 +191,9 @@ def _get_cached_file_name(bucket_name, path):
 
     return file_path
 
-def _get_buckets_cache_name():
+def _get_buckets_cache_filename():
     '''
-    Return the filename and path of the cache file
+    Return the filename and path of the buckets cache file
     '''
     cache_dir = _get_cache_dir()
 
@@ -255,10 +206,11 @@ def _get_buckets_cache_name():
 
 def _refresh_buckets_cache_file():
     '''
-    Retrieves the contents of the buckets and caches them to a file
+    Retrieve the content of all buckets and cache the metadata to the buckets
+    cache file
     '''
     key, keyid = _get_s3_key()
-    cache_file = _get_buckets_cache_name()
+    cache_file = _get_buckets_cache_filename()
 
     resultset = {}
 
@@ -281,21 +233,23 @@ def _refresh_buckets_cache_file():
         os.remove(cache_file)
 
     with salt.utils.fopen(cache_file, 'w') as fp_:
-        fp_.write(str(resultset))
+        pickle.dump(resultset, fp_)
 
     return resultset
 
 def _read_buckets_cache_file():
     '''
-    Returns the contents of the buckets contained in the cache file
+    Return the contents of the buckets cache file
     '''
-    with salt.utils.fopen(_get_buckets_cache_name(), 'rb') as fp_:
-        data = fp_.read()
-        return eval(data)
+    with salt.utils.fopen(_get_buckets_cache_filename(), 'rb') as fp_:
+        data = pickle.load(fp_)
+
+    return data
 
 def _is_cached_file_current(resultset, env, bucket_name, path):
     '''
-    Check the cache for the named filename
+    Check the cache for the named bucket file and check it's md5 hash against
+    the file S3 metadata ETag
     '''
     filename = _get_cached_file_name(bucket_name, path)
 
@@ -308,7 +262,6 @@ def _is_cached_file_current(resultset, env, bucket_name, path):
 
     # read cache file and generate its md5 hash
     m = hashlib.md5()
-
     with salt.utils.fopen(filename, 'rb') as fp_:
         m.update(fp_.read())
 
@@ -316,7 +269,7 @@ def _is_cached_file_current(resultset, env, bucket_name, path):
 
 def _find_files(resultset):
     '''
-    Looks for the files in the S3 bucket cache
+    Looks for all the files in the S3 bucket cache metadata
     '''
     ret = {}
 
@@ -332,7 +285,7 @@ def _find_files(resultset):
 
 def _find_file_meta(resultset, env, bucket_name, path):
     '''
-    Looks for a files metadata in the S3 bucket cache
+    Looks for a file's metadata in the S3 bucket cache file
     '''
     env_meta = resultset[env] if env in resultset else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
