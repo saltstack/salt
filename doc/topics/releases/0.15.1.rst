@@ -1,0 +1,31 @@
+=========================
+Salt 0.15.1 Release Notes
+=========================
+
+The 0.15.1 release has been posed, this release includes fixes to a number of
+bugs in 0.15.1 and a three security patches.
+
+Security Updates
+================
+
+A number of security issues have been resolved via the 0.15.1 release.
+
+Path Injection in Minion IDs
+============================
+
+A minion could spoof authentication by injecting path changes in the id, this
+allowed a minion to authenticate itself without validation.
+
+RSA Key Generation Fault
+========================
+
+RSA Key generation was not in compliance with with current standards, all RSA
+keys are recommended to be regenerated. A tool was included in 0.15.1 to assist
+in mass key regeneration, the manage.regen_keys runner.
+
+Command Injection Via ext_pillar
+================================
+
+Shell commands could be executed on the master when requesting a pillar.
+Ext pillar options have been restricted to only allow safe external pillars to
+be called when prompted by the minion.
