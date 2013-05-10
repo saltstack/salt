@@ -358,7 +358,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             provider
                         )
                     )
-            elif len(providers.get(extends)) > 1:
+            elif providers.get(extends) and len(providers.get(extends)) > 1:
                 log.error(
                     'The {0!r} cloud provider entry in {1!r} is trying to '
                     'extend from {2!r} which has multiple entries and no '
