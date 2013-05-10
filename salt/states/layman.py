@@ -1,6 +1,6 @@
 '''
 Management of Gentoo Overlays using layman
-=========================================
+==========================================
 
 A state module to manage Gentoo package overlays via layman
 

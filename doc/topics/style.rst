@@ -199,7 +199,7 @@ about the double indent for hanging indents.  This is a `known conflict
 <https://github.com/jcrocholl/pep8/issues/167#issuecomment-15936564>`_ between
 pep8 (the script) and the actual PEP 8 standard.  It is recommended that this
 particular warning be ignored with the following lines in
-:code:`~/.config/flake8`:
+``~/.config/flake8``:
 
 .. code-block:: ini
 
