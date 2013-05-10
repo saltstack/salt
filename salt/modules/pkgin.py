@@ -28,7 +28,7 @@ def __virtual__():
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
     else:
-        False
+        return False
 
 
 def _splitpkg(name):
