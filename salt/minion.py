@@ -130,10 +130,13 @@ def detect_kwargs(func, args, data=None):
         if isinstance(arg, string_types):
             if '=' in arg:
                 comps = arg.split('=')
-                if has_kwargs:
+                if ' ' in comps[0]:
+                    # Invalid kwarg
+                    pass
+                elif has_kwargs:
                     kwargs[comps[0]] = '='.join(comps[1:])
                     continue
-                if comps[0] in kwarg_spec:
+                elif comps[0] in kwarg_spec:
                     kwargs[comps[0]] = '='.join(comps[1:])
                     continue
         _args.append(arg)
