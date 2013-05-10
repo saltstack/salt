@@ -25,9 +25,9 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = set((
-        'Windows',
-        ))
+    # set() need to used like this because the module defines a set function
+    # which shadows the set() built-in.
+    disable = __builtins__['set'](('Windows',))
     if __grains__['os'] in disable:
         return False
     return 'partition'
@@ -50,7 +50,7 @@ def probe(device=''):
 def part_list(device, unit=None):
     '''
     partition.part_list device unit
-    
+
     Prints partition information of given <device>
 
     CLI Examples::
