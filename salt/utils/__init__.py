@@ -190,7 +190,7 @@ def daemonize():
     #os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
-def daemonize_if(opts, **kwargs):
+def daemonize_if(opts):
     '''
     Daemonize a module function process if multiprocessing is True and the
     process is not being called by salt-call
