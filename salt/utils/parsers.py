@@ -1127,7 +1127,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default='',
             dest='master',
             help=('Specify the master to use. The minion must be '
-                  'authenticated with the master. If this option is omited '
+                  'authenticated with the master. If this option is omitted, '
                   'the master options from the minion config will be used. '
                   'If multi masters are set up the first listed master that '
                   'responds will be used.')
