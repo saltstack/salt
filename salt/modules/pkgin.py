@@ -12,11 +12,12 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+@salt.utils.memoize
 def _check_pkgin():
     '''
-    Looks to see if pkgin is present on the system
+    Looks to see if pkgin is present on the system, return full path
     '''
-    return os.path.isfile(salt.utils.which('pkgin'))
+    return salt.utils.which('pkgin')
 
 
 def __virtual__():
@@ -47,9 +48,10 @@ def search(pkg_name):
     '''
 
     pkglist = {}
+    pkgin = _check_pkgin()
 
-    if _check_pkgin():
-        for p in  __salt__['cmd.run']('pkgin se ^{0}$'.format(pkg_name)
+    if pkgin:
+        for p in  __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
                                      ).splitlines():
             if p:
                 s = _splitpkg(p.split()[0])
@@ -74,10 +76,11 @@ def latest_version(*names, **kwargs):
     '''
 
     pkglist = {}
+    pkgin = _check_pkgin()
 
     for name in names:
-        if _check_pkgin():
-            for line in __salt__['cmd.run']('pkgin se ^{0}$'.format(name)
+        if pkgin:
+            for line in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, name)
                                            ).splitlines():
                 p = line.split() # pkgname-version status
                 if p:
@@ -120,8 +123,11 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    if _check_pkgin():
-        __salt__['cmd.run']('pkgin up')
+
+    pkgin = _check_pkgin()
+
+    if pkgin:
+        __salt__['cmd.run']('{0} up'.format(pkgin))
 
     return {}
 
@@ -137,8 +143,10 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    if _check_pkgin():
-        pkg_command = 'pkgin ls'
+
+    pkgin = _check_pkgin()
+    if pkgin:
+        pkg_command = '{0} ls'.format(pkgin)
     else:
         pkg_command = 'pkg_info'
 
@@ -213,8 +221,9 @@ def install(name=None, refresh=False, fromrepo=None,
 
     env = []
     args = []
-    if _check_pkgin():
-        cmd = 'pkgin'
+    pkgin = _check_pkgin()
+    if pkgin:
+        cmd = pkgin
         if fromrepo:
             log.info('Setting PKG_REPOS={0}'.format(fromrepo))
             env.append(('PKG_REPOS', fromrepo))
@@ -227,7 +236,7 @@ def install(name=None, refresh=False, fromrepo=None,
     if pkg_type == 'file':
         cmd = 'pkg_add'
     elif pkg_type == 'repository':
-        if _check_pkgin():
+        if pkgin:
             if refresh:
                 args.append('-f')  # update repo db
             args.extend(('-y', 'in'))  # Assume yes when asked
@@ -256,12 +265,13 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
 
-    if not _check_pkgin():
+    pkgin = _check_pkgin()
+    if not pkgin:
         # There is not easy way to upgrade packages with old package system
         return {}
 
     old = list_pkgs()
-    __salt__['cmd.retcode']('pkgin -y fug')
+    __salt__['cmd.retcode']('{0} -y fug'.format(pkgin))
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -308,8 +318,9 @@ def remove(name=None, pkgs=None, **kwargs):
 
     for_remove = ' '.join(args)
 
-    if _check_pkgin():
-        cmd = 'pkgin -y remove {0}'.format(for_remove)
+    pkgin = _check_pkgin()
+    if pkgin:
+        cmd = '{0} -y remove {1}'.format(pkgin, for_remove)
     else:
         cmd = 'pkg_remove {0}'.format(for_remove)
 
