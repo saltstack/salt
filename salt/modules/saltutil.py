@@ -443,6 +443,10 @@ def kill_job(jid):
 def regen_keys():
     '''
     Used to regenerate the minion keys. 
+
+    CLI Example::
+
+        salt '*' saltutil.regen_keys
     '''
     for fn_ in os.listdir(__opts__['pki_dir']):
         path = os.path.join(__opts__['pki_dir'], fn_)
