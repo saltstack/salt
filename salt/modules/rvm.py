@@ -316,7 +316,7 @@ def gemset_list_all(runas=None):
     return gemsets
 
 
-def do(ruby, command, runas=None):  # pylint: disable-msg=C0103
+def do(ruby, command, runas=None):  # pylint: disable=C0103
     '''
     Execute a command in an RVM controlled environment.
 

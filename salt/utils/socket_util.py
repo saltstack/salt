@@ -15,7 +15,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 def sanitize_host(host):
     '''
@@ -93,7 +93,7 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
-def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable-msg=C0103
+def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
 
@@ -102,7 +102,7 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable-msg=C0103
     return _cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
@@ -132,9 +132,9 @@ def _interfaces_ip(out):
         '''
         brd = None
         if '/' in value:  # we have a CIDR in this address
-            ip, cidr = value.split('/')  # pylint: disable-msg=C0103
+            ip, cidr = value.split('/')  # pylint: disable=C0103
         else:
-            ip = value  # pylint: disable-msg=C0103
+            ip = value  # pylint: disable=C0103
             cidr = 32
 
         if type == 'inet':

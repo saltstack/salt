@@ -80,7 +80,7 @@ def down():
     return ret
 
 
-def up():  # pylint: disable-msg=C0103
+def up():  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
     '''

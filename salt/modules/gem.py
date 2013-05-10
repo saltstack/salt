@@ -22,12 +22,12 @@ def _gem(command, ruby=None, runas=None):
         return False
 
 
-def install(gems,           # pylint: disable-msg=C0103
+def install(gems,           # pylint: disable=C0103
             ruby=None,
             runas=None,
             version=None,
             rdoc=False,
-            ri=False):      # pylint: disable-msg=C0103
+            ri=False):      # pylint: disable=C0103
     '''
     Installs one or several gems.
 

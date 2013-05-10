@@ -11,7 +11,7 @@ except ImportError:
     HAS_SQLITE3 = False
 
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 def __virtual__():
     if not HAS_SQLITE3:
         return False

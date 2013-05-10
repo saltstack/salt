@@ -78,7 +78,7 @@ if sys.version_info < (2, 7):
         def emit(self, record):
             pass
 
-        def createLock(self):  # pylint: disable-msg=C0103
+        def createLock(self):  # pylint: disable=C0103
             self.lock = None
 
     logging.NullHandler = NullHandler
@@ -199,7 +199,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS):
             pass
         return instance
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
                    extra=None):
         # Let's try to make every logging message unicode
@@ -240,7 +240,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
         logging.getLogger().addHandler(LOGGING_NULL_HANDLER)
 
 
-def getLogger(name):  # pylint: disable-msg=C0103
+def getLogger(name):  # pylint: disable=C0103
     '''
     This function is just a helper, an alias to:
         logging.getLogger(name)

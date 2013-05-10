@@ -151,4 +151,4 @@ def run(name, **kwargs):
     ret['result'] = True
     return ret
 
-mod_watch = run  # pylint: disable-msg=C0103
+mod_watch = run  # pylint: disable=C0103
