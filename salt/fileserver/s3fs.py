@@ -22,12 +22,16 @@ import os
 import hashlib
 import time
 import pickle
+import urllib
+import logging
 
 # Import salt libs
 import salt.fileserver
 import salt.utils
 import salt.utils.s3 as s3
 import salt.modules
+
+log = logging.getLogger(__name__)
 
 _s3_cache_expire = 300 # cache for 5 minutes
 
@@ -71,13 +75,13 @@ def find_file(path, env='base', **kwargs):
 
     if _is_cached_file_current(resultset, env, fnd['bucket'], fnd['path']):
         return fnd
-    
+
     key, keyid = _get_s3_key()
     s3.query(
             key = key,
             keyid = keyid,
             bucket = fnd['bucket'],
-            path = fnd['path'],
+            path = urllib.quote(fnd['path']),
             local_file = _get_cached_file_name(fnd['bucket'], fnd['path']))
     return fnd
 
@@ -94,8 +98,9 @@ def file_hash(load, fnd):
     ret = {}
     cache_file = _get_cached_file_name(fnd['bucket'], fnd['path'])
 
-    ret['hsum'] = salt.utils.get_hash(cache_file)
-    ret['hash_type'] = 'md5' # always md5 due to ETags in S3
+    if os.path.isfile(cache_file):
+        ret['hsum'] = salt.utils.get_hash(cache_file)
+        ret['hash_type'] = 'md5' # always md5 due to ETags in S3
     return ret
 
 def serve_file(load, fnd):
