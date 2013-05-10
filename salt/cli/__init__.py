@@ -240,6 +240,8 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         if self.options.local:
             self.config['file_client'] = 'local'
+        if self.options.master:
+            self.config['master'] = self.options.master
 
         # Setup file logging!
         self.setup_logfile_logger()
