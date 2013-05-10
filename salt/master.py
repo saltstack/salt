@@ -15,7 +15,10 @@ import stat
 import logging
 import hashlib
 import datetime
-import pwd
+try:
+    import pwd
+except ImportError:  # This is in case windows minion is importing
+    pass
 import getpass
 import resource
 import subprocess
@@ -1336,13 +1339,12 @@ class ClearFuncs(object):
 
     def _check_permissions(self, filename):
         '''
-        check if the specified filename has correct permissions
+        Check if the specified filename has correct permissions
         '''
-        if 'os' in os.environ:
-            if os.environ['os'].startswith('Windows'):
-                return True
+        if salt.utils.is_windows():
+            return True
 
-        import pwd  # after confirming not running Windows
+        # After we've ascertained we're not on windows
         import grp
         try:
             user = self.opts['user']
@@ -1381,7 +1383,7 @@ class ClearFuncs(object):
 
             # check if writable by group or other
             if not (stat.S_IWGRP & fmode.st_mode or
-              stat.S_IWOTH & fmode.st_mode):
+                    stat.S_IWOTH & fmode.st_mode):
                 return True
 
         return False
