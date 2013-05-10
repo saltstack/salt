@@ -492,7 +492,7 @@ def freeze(bin_env=None,
         )
 
     # We use dot(.) instead of source because it's apparently the better and/or
-    # more supported way to source files on the various "major" linux shells.
+    # more supported way to source files on the various "major" Linux shells.
     cmd = '. {0}; {1} freeze'.format(activate, pip_bin)
 
     result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
