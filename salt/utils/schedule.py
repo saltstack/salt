@@ -68,7 +68,7 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
-        salt.utils.daemonize_if(self.opts, **ret)
+        salt.utils.daemonize_if(self.opts)
         if 'args' in data:
             if 'kwargs' in data:
                 ret['return'] = self.functions[func](

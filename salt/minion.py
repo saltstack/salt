@@ -563,7 +563,7 @@ class Minion(object):
             minion_instance = cls(opts)
         if opts['multiprocessing']:
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-            salt.utils.daemonize_if(opts, **data)
+            salt.utils.daemonize_if(opts)
             sdata = {'pid': os.getpid()}
             sdata.update(data)
             with salt.utils.fopen(fn_, 'w+') as fp_:
