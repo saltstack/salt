@@ -70,6 +70,8 @@ def _changes(name,
         lusr['groups'].remove(
             __salt__['file.gid_to_group'](gid or lusr['gid'])
         )
+    if name in lusr['groups'] and name not in wanted_groups:
+        lusr['groups'].remove(name)
     # remove default group from wanted_groups, as this requirement is
     # already met
     if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
