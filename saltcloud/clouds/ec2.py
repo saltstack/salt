@@ -174,7 +174,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         'ec2',
-        ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+        ('id', 'key', 'keyname', 'private_key')
     )
 
 
@@ -592,6 +592,19 @@ def get_availability_zone(vm_):
 
     return avz
 
+def get_subnetid(vm_):
+    subnetid = config.get_config_value(
+        'subnetid', vm_, __opts__, search_global=False
+    )
+    if subnetid is None:
+        return None
+    return subnetid
+    subnets = describe_subnets()
+
+    if subnetid not in subnets.keys():
+        raise SaltCloudException(
+            'The specified subnet'
+        )
 
 def list_availability_zones():
     '''
@@ -658,6 +671,10 @@ def create(vm_=None, call=None):
     az_ = get_availability_zone(vm_)
     if az_ is not None:
         params['Placement.AvailabilityZone'] = az_
+
+    subnetid_ = get_subnetid(vm_)
+    if subnetid_ is not None:
+        params['SubnetId'] = subnetid_
 
     delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
