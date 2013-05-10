@@ -416,7 +416,10 @@ class SAuth(Auth):
         revolving master aes key.
         '''
         while True:
-            creds = self.sign_in()
+            creds = self.sign_in(
+                    self.opts.get('_auth_timeout', 60),
+                    self.opts.get('_safe_auth', True)
+                    )
             if creds == 'retry':
                 if self.opts.get('caller'):
                     msg = ('Minion failed to authenticate with the master, '
