@@ -1117,6 +1117,16 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'all modules if none are specified.')
         )
         self.add_option(
+            '--master',
+            default='',
+            dest='master',
+            help=('Specify the master to use. The minion must be '
+                  'authenticated with the master. If this option is omited '
+                  'the master options from the minion config will be used. '
+                  'If multi masters are set up the first listed master that '
+                  'responds will be used.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
