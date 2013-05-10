@@ -16,6 +16,12 @@ Path Injection in Minion IDs
 A minion could spoof authentication by injecting path changes in the id, this
 allowed a minion to authenticate itself without validation.
 
+Patch
+~~~~~
+
+https://github.com/saltstack/salt/commit/5427b9438e452a5a8910d9128c6aafb45d8fd5d3
+https://github.com/saltstack/salt/commit/7560908ee62351769c3cd43b03d74c1ca772cc52
+
 RSA Key Generation Fault
 ------------------------
 
@@ -23,9 +29,19 @@ RSA Key generation was not in compliance with with current standards, all RSA
 keys are recommended to be regenerated. A tool was included in 0.15.1 to assist
 in mass key regeneration, the manage.regen_keys runner.
 
+Patch
+~~~~~
+
+https://github.com/saltstack/salt/commit/5dd304276ba5745ec21fc1e6686a0b28da29e6fc
+
 Command Injection Via ext_pillar
 --------------------------------
 
 Shell commands could be executed on the master when requesting a pillar.
 Ext pillar options have been restricted to only allow safe external pillars to
 be called when prompted by the minion.
+
+Patch
+~~~~~
+
+https://github.com/saltstack/salt/commit/43d8c16bd26159d827d1a945c83ac28159ec5865
