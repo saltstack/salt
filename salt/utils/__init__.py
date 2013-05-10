@@ -243,7 +243,7 @@ def which(exe=None):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
-        log.info(
+        log.debug(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
                 exe, search_path
