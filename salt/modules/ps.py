@@ -175,7 +175,7 @@ def physical_memory_buffers():
     return psutil.phymem_buffers()
 
 
-def disk_partitions(all=False):
+def disk_partitions(all=False):  # pylint: disable=W0622
     '''
     Return a list of disk partitions and their device, mount point, and
     filesystem type.
@@ -206,7 +206,7 @@ def disk_usage(path):
     return dict(psutil.disk_usage(path)._asdict())
 
 
-def disk_partition_usage(all=False):
+def disk_partition_usage(all=False):  # pylint: disable=W0622
     '''
     Return a list of disk partitions plus the mount point, filesystem and usage
     statistics.

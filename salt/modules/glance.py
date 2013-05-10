@@ -76,7 +76,7 @@ def image_create(**kwargs):
     return {newimage['name']: newimage}
 
 
-def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
+def image_delete(id=None, name=None):  # pylint: disable=W0622
     '''
     Delete an image (glance image-delete)
 
@@ -101,7 +101,7 @@ def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def image_show(id=None, name=None):  # pylint: disable-msg=C0103
+def image_show(id=None, name=None):  # pylint: disable=W0622
     '''
     Return details about a specific image (glance image-show)
 
@@ -139,7 +139,7 @@ def image_show(id=None, name=None):  # pylint: disable-msg=C0103
     return ret
 
 
-def image_list(id=None):  # pylint: disable-msg=C0103
+def image_list(id=None):  # pylint: disable=W0622
     '''
     Return a list of available images (glance image-list)
 

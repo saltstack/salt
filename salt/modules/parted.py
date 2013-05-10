@@ -325,7 +325,7 @@ def rm(device, minor):  # pylint: disable-msg=C0103
     return out
 
 
-def set(device, minor, flag, state):
+def set(device, minor, flag, state):  # pylint: disable=W0622
     '''
     partition.set device  minor flag state
 

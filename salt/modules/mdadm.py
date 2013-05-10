@@ -25,7 +25,7 @@ def __virtual__():
     return 'raid'
 
 
-def list():
+def list():  # pylint: disable=W0622
     '''
     List the RAID devices.
 

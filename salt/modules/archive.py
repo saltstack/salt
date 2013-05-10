@@ -77,7 +77,7 @@ def gunzip(gzipfile, template=None):
     return out
 
 
-def zip(zipfile, template=None, *sources):
+def zip(zipfile, template=None, *sources):  # pylint: disable=W0622
     '''
     Uses the zip command to create zip files
 

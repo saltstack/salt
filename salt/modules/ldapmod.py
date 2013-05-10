@@ -86,8 +86,8 @@ def _connect(**kwargs):
     return _LDAPConnection(**connargs).ldap
 
 
-def search(filter,      # pylint: disable-msg=C0103
-           dn=None,     # pylint: disable-msg=C0103
+def search(filter,  # pylint: disable=W0622
+           dn=None,  # pylint: disable=C0103
            scope=None,
            attrs=None,
            **kwargs):

@@ -78,7 +78,7 @@ def flavor_list():
 
 
 def flavor_create(name,      # pylint: disable-msg=C0103
-                  id=0,      # pylint: disable-msg=C0103
+                  id=0,  # pylint: disable=W0622
                   ram=0,
                   disk=0,
                   vcpus=1):
@@ -107,7 +107,7 @@ def flavor_create(name,      # pylint: disable-msg=C0103
             'vcpus': vcpus}
 
 
-def flavor_delete(id):  # pylint: disable-msg=C0103
+def flavor_delete(id):  # pylint: disable=W0622
     '''
     Delete a flavor from nova by id (nova flavor-delete)
 
@@ -205,7 +205,7 @@ def image_list(name=None):
     return ret
 
 
-def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
+def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable=W0622
     '''
     Sets a key=value pair in the metadata for an image (nova image-meta set)
 
@@ -225,7 +225,7 @@ def image_meta_set(id=None, name=None, **kwargs):  # pylint: disable-msg=C0103
     return {id: kwargs}
 
 
-def image_meta_delete(id=None,     # pylint: disable-msg=C0103
+def image_meta_delete(id=None,  # pylint: disable=W0622
                       name=None,
                       keys=None):
     '''
@@ -248,7 +248,7 @@ def image_meta_delete(id=None,     # pylint: disable-msg=C0103
     return {id: 'Deleted: {0}'.format(pairs)}
 
 
-def list():
+def list():  # pylint: disable=W0622
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.

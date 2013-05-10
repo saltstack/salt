@@ -313,7 +313,7 @@ def get_hash(path, form='md5', chunk_size=4096):
     return salt.utils.get_hash(path, form, chunk_size)
 
 
-def check_hash(path, hash):
+def check_hash(path, hash):  # pylint: disable=W0622
     '''
     Check if a file matches the given hash string
 
@@ -1038,7 +1038,11 @@ def get_selinux_context(path):
     return out.split(' ')[4]
 
 
-def set_selinux_context(path, user=None, role=None, type=None, range=None):
+def set_selinux_context(path,
+                        user=None,
+                        role=None,
+                        type=None,  # pylint: disable=W0622
+                        range=None):  # pylint: disable=W0622
     '''
     Set a specific SELinux label on a given path
 

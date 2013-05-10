@@ -30,7 +30,7 @@ def _valid_version():
 
 
 def install(pkg=None,
-            dir=None,
+            dir=None,  # pylint: disable=W0622
             runas=None):
     '''
     Install an NPM package.
@@ -95,7 +95,7 @@ def install(pkg=None,
         return result['stdout']
 
 def uninstall(pkg,
-              dir=None,
+              dir=None,  # pylint: disable=W0622
               runas=None):
     '''
     Uninstall an NPM package.
@@ -132,8 +132,8 @@ def uninstall(pkg,
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
 
-def list(pkg=None,
-         dir=None):
+def list(pkg=None,  # pylint: disable=W0622
+         dir=None):  # pylint: disable=W0622
     '''
     List installed NPM packages.
 

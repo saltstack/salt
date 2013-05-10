@@ -27,7 +27,7 @@ if PY3:
     class_types = type,
     text_type = str
     binary_type = bytes
-    long = int
+    long = int  # pylint: disable=W0622
 else:
     string_types = basestring,
     integer_types = (int, long)
@@ -37,7 +37,7 @@ else:
     long = long
 
 if PY3:
-    def callable(obj):
+    def callable(obj):  # pylint: disable=W0622
         return any('__call__' in klass.__dict__ for klass in type(obj).__mro__)
 else:
     callable = callable
@@ -138,7 +138,7 @@ else:
         return native_(url_unquote_text(v, encoding, errors))
 
 if PY3:
-    zip = zip
+    zip = zip  # pylint: disable=W0622
 else:
     from future_builtins import zip
 

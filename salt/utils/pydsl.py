@@ -161,11 +161,11 @@ class Sls(object):
                     raise PyDslError('\n'.join(errors))
                 HIGHSTATE.clean_duplicate_extends(highstate)
 
-            id = '_slsmod_{0}'.format(sls)
-            if id not in highstate:
+            sls_id = '_slsmod_{0}'.format(sls)
+            if sls_id not in highstate:
                 slsmods.append(None)
             else:
-                for arg in highstate[id]['stateconf']:
+                for arg in highstate[sls_id]['stateconf']:
                     if isinstance(arg, dict) and iter(arg).next() == 'slsmod':
                         slsmods.append(arg['slsmod'])
                         break
@@ -180,16 +180,16 @@ class Sls(object):
                 'Cannot extend() after the ordered option was turned on!'
             )
         for f in state_funcs:
-            id = f.mod._state_id
-            self.extends.append(self.get_all_decls().pop(id))
+            state_id = f.mod._state_id
+            self.extends.append(self.get_all_decls().pop(state_id))
             i = len(self.decls)
             for decl in reversed(self.decls):
                 i -= 1
-                if decl._id == id:
+                if decl._id == state_id:
                     del self.decls[i]
                     break
 
-    def state(self, id=None):
+    def state(self, id=None):  # pylint: disable=W0622
         if not id:
             id = '.{0}'.format(_uuid())
             # adds a leading dot to make use of stateconf's namespace feature.
@@ -257,7 +257,7 @@ class Sls(object):
 
 class StateDeclaration(object):
 
-    def __init__(self, id):
+    def __init__(self, id):  # pylint: disable=W0622
         self._id = id
         self._mods = []
 

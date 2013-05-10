@@ -25,7 +25,7 @@ def __virtual__():
     '''
     # XXX: Why are these imports in __virtual__?
     import sys
-    from salt._compat import callable
+    from salt._compat import callable  # pylint: disable=W0622
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):

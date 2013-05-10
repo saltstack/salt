@@ -509,7 +509,7 @@ def freeze(bin_env=None,
     return result['stdout'].splitlines()
 
 
-def list(prefix='',
+def list(prefix='',  # pylint: disable=W0622
          bin_env=None,
          runas=None,
          cwd=None):

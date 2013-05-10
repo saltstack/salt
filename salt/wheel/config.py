@@ -22,7 +22,7 @@ def values():
     return data
 
 
-def apply(key, value):
+def apply(key, value):  # pylint: disable=W0622
     '''
     Set a single key
 

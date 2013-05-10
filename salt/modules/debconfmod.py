@@ -59,11 +59,11 @@ def get_selections(fetchempty=True):
     lines = _unpack_lines(out)
 
     for line in lines:
-        package, question, type, value = line
+        package, question, type_, value = line
         if fetchempty or value:
             (selections
                 .setdefault(package, [])
-                .append([question, type, value]))
+                .append([question, type_, value]))
 
     return selections
 
@@ -95,7 +95,7 @@ def _set_file(path):
     __salt__['cmd.run_stdout'](cmd)
 
 
-def set(package, question, type, value, *extra):
+def set(package, question, type, value, *extra):  # pylint: disable=W0622
     '''
     Set answers to debconf questions for a package.
 

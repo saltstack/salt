@@ -6,7 +6,7 @@ A state module to manage installed NPM packages.
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 def installed(name,
-              dir=None,
+              dir=None,  # pylint: disable=W0622
               runas=None,
               force_reinstall=False,
               **kwargs):
@@ -70,7 +70,7 @@ def installed(name,
     return ret
 
 def removed(name,
-            dir=None,
+            dir=None,  # pylint: disable=W0622
             runas=None,
             **kwargs):
     '''

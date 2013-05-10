@@ -108,7 +108,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload(name):  # pylint: disable=W0622
     '''
     Reload the named service
 

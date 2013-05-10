@@ -385,7 +385,10 @@ def disabled(name, **kwargs):
     return _disable(name, None, **kwargs)
 
 
-def mod_watch(name, sig=None, reload=False, full_restart=False):
+def mod_watch(name,
+              sig=None,
+              reload=False,  # pylint: disable=W0622
+              full_restart=False):
     '''
     The service watcher, called to invoke the watch command.
 

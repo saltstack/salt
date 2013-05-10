@@ -92,7 +92,7 @@ def show_conf(conf_file=default_conf):
     return _parse_conf(conf_file)
 
 
-def set(key, value, setting=None, conf_file=default_conf):
+def set(key, value, setting=None, conf_file=default_conf):  # pylint: disable=W0622
     '''
     Set a new value for a specific configuration line
 

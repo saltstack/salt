@@ -1724,7 +1724,7 @@ def append(name,
 
 def patch(name,
           source=None,
-          hash=None,
+          hash=None,  # pylint: disable=W0622
           options='',
           dry_run_first=True,
           env='base'):

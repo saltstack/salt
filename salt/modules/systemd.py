@@ -212,7 +212,7 @@ def restart(name):
     return not __salt__['cmd.retcode'](_systemctl_cmd('restart', name))
 
 
-def reload(name):
+def reload(name):  # pylint: disable=W0622
     '''
     Reload the specified service with systemd
 

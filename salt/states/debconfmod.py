@@ -76,7 +76,7 @@ def set_file(name, source):
 
     return ret
 
-def set(name, data):
+def set(name, data):  # pylint: disable=W0622
     '''
     Set debconf selections
 

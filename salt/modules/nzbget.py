@@ -82,7 +82,7 @@ def stop(user=None):
     return out
 
 
-def list(user=None):
+def list(user=None):  # pylint: disable=W0622
     '''
     Return list of active downloads using nzbget -L.
     Default user is root.
