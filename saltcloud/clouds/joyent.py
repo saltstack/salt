@@ -328,7 +328,7 @@ def start(name, call=None):
     return ret[0] in valid_response_codes
 
 
-def take_action(name=None, call=None, command=None, data=None, method='GET', content_type=''):
+def take_action(name=None, call=None, command=None, data=None, method='GET', content_type='', location=DEFAULT_LOCATION):
     caller = inspect.stack()[1][3]
 
     if call != 'action':
@@ -342,7 +342,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET', con
     ret = []
     try:
 
-        ret = query2(command=command, data=data, method=method)
+        ret = query2(command=command, data=data, method=method, location=location)
         log.info('Success {0} for node {1}'.format(caller, name))
     except Exception as exc:
         if 'InvalidState' in str(exc):
@@ -355,7 +355,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET', con
             )
             ret = [100, {}]
 
-    return ret[0] in valid_response_codes
+    return ret
 
 
 def ssh_interface(vm_):
@@ -392,6 +392,7 @@ def avail_locations():
     '''
     List all available locations
     '''
+    ret = {}
     for key in JOYENT_LOCATIONS:
         ret[key] = {
             'name': key,
