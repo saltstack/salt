@@ -160,7 +160,7 @@ def get_hwclock():
     elif 'Debian' in __grains__['os_family']:
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
         out = __salt__['cmd.run'](cmd).split('=')
-        if out[1] == 'yes':
+        if len(out) > 1 and out[1] == 'yes':
             return 'UTC'
         else:
             return 'localtime'
