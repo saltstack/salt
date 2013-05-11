@@ -978,6 +978,16 @@ class Map(Cloud):
             if os.path.isfile(master_pub):
                 master_finger = salt.utils.pem_finger(master_pub)
 
+        opts = self.opts.copy()
+        if self.opts['parallel']:
+            # Force display_ssh_output to be False since the console will
+            # need to be reset afterwards
+            log.info(
+                'Since parallel deployment is in use, ssh console output '
+                'is disabled. All ssh output will be logged though'
+            )
+            opts['display_ssh_output'] = False
+
         for name, profile in dmap['create'].items():
             if name == master_name:
                 # Already deployed, it's the master's minion
@@ -992,28 +1002,29 @@ class Map(Cloud):
 
             if self.opts['parallel']:
                 parallel_data.append({
-                    'opts': self.opts,
+                    'opts': opts,
                     'name': name,
                     'profile': profile,
                     'local_master': master_name is None
                 })
-            else:
-                try:
-                    output[name] = self.create(
-                        profile, local_master=master_name is None
-                    )
-                    if self.opts.get('show_deploy_args', False) is False:
-                        output[name].pop('deploy_kwargs', None)
-                except SaltCloudException as exc:
-                    log.error(
-                        'Failed to deploy {0!r}. Error: {1}'.format(
-                            name, exc
-                        ),
-                        # Show the traceback if the debug logging level is
-                        # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
-                    )
-                    output[name] = {'Error': str(exc)}
+                continue
+
+            # Not deploying in parallel
+            try:
+                output[name] = self.create(
+                    profile, local_master=master_name is None
+                )
+                if self.opts.get('show_deploy_args', False) is False:
+                    output[name].pop('deploy_kwargs', None)
+            except SaltCloudException as exc:
+                log.error(
+                    'Failed to deploy {0!r}. Error: {1}'.format(
+                        name, exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info=log.isEnabledFor(logging.DEBUG)
+                )
+                output[name] = {'Error': str(exc)}
 
         for name in dmap.get('destroy', ()):
             output[name] = self.destroy(name)
@@ -1054,4 +1065,5 @@ def create_multiprocessing(parallel_data):
 
     if parallel_data['opts'].get('show_deploy_args', False) is False:
         output.pop('deploy_kwargs', None)
+
     return {parallel_data['name']: output}

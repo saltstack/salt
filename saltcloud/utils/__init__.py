@@ -28,6 +28,7 @@ import salt.utils.event
 
 # Import salt cloud libs
 import saltcloud.config as config
+from saltcloud.utils.nb_popen import NonBlockingPopen
 from saltcloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -368,8 +369,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
                   keep_tmp=False, script_args=None, ssh_timeout=15,
-                  display_ssh_output=True, make_syndic=False,
-                  preseed_minion_keys=None, make_minion=True):
+                  make_syndic=False, make_minion=True,
+                  display_ssh_output=True, preseed_minion_keys=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
@@ -497,7 +498,6 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # Run the deploy script
             if script:
-                log.debug('Executing /tmp/deploy.sh')
                 if 'bootstrap-salt' in script:
                     deploy_command += ' -c /tmp/'
                     if make_syndic is True:
@@ -513,7 +513,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
 
-                if root_cmd(deploy_command, tty, sudo, **kwargs):
+                if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
                             deploy_command
@@ -639,16 +639,33 @@ def scp_file(dest_path, contents, kwargs):
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
-    proc = subprocess.Popen(
-        cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-    )
-    stdout, stderr = proc.communicate()
-    stdout, stderr = stdout.strip(), stderr.strip()
-    if stdout:
-        log.debug('SCP STDOUT: {0!r}'.format(stdout))
-    if stderr:
-        log.debug('SCP STDERR: {0!r}'.format(stderr))
-    return proc.returncode
+    try:
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stream_stds=kwargs.get('display_ssh_output', True),
+        )
+        log.debug(
+            'Uploading file(PID {0}): {1!r}'.format(
+                proc.pid, dest_path
+            )
+        )
+        while proc.poll() is None:
+            time.sleep(0.25)
+
+        proc.communicate()
+        return proc.returncode
+    except Exception as err:
+        log.error(
+            'Failed to upload file {0!r}: {1}\n'.format(
+                dest_path, err
+            ),
+            exc_info=True
+        )
+    # Signal an error
+    return 1
 
 
 def root_cmd(command, tty, sudo, **kwargs):
@@ -697,24 +714,33 @@ def root_cmd(command, tty, sudo, **kwargs):
     if 'password' in kwargs:
         cmd = 'sshpass -p {0} {1}'.format(kwargs['password'], cmd)
 
-    log.debug('Executing command: {0}'.format(command))
-
-    display_ssh_output = kwargs.get('display_ssh_output', True)
-
-    if display_ssh_output is True:
-        proc = subprocess.Popen(cmd, shell=True)
-    else:
-        proc = subprocess.Popen(
-            cmd, shell=True,
+    try:
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
             stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE
+            stdout=subprocess.PIPE,
+            stream_stds=kwargs.get('display_ssh_output', True),
         )
-    stdout, stderr = proc.communicate()
-    if display_ssh_output is not True and stdout:
-        log.debug('SSH Command STDOUT: {0}'.format(stdout))
-    if display_ssh_output is not True and stdout:
-        log.debug('SSH Command STDERR: {0}'.format(stderr))
-    return proc.returncode
+        log.debug(
+            'Executing command(PID {0}): {1!r}'.format(
+                proc.pid, command
+            )
+        )
+        while proc.poll() is None:
+            time.sleep(0.25)
+
+        proc.communicate()
+        return proc.returncode
+    except Exception as err:
+        log.error(
+            'Failed to execute command {0!r}: {1}\n'.format(
+                command, err
+            ),
+            exc_info=True
+        )
+    # Signal an error
+    return 1
 
 
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):

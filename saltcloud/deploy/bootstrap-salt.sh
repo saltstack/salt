@@ -1214,26 +1214,26 @@ install_debian_6_deps() {
         echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
         echowarn "This is required for long term stable minion connections to the master."
 
-        if [ ! -f /etc/apt/sources.list.d/debian-experimental.list ]; then
-           cat <<_eof > /etc/apt/sources.list.d/debian-experimental.list
-deb http://ftp.debian.org/debian experimental main
-deb-src http://ftp.debian.org/debian experimental main
+        if [ ! -f /etc/apt/sources.list.d/debian-unstable.list ]; then
+           cat <<_eof > /etc/apt/sources.list.d/debian-unstable.list
+deb http://ftp.debian.org/debian unstable main
+deb-src http://ftp.debian.org/debian unstable main
 _eof
 
-           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-experimental.pref
+           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-unstable.pref
 Package: libzmq3
-Pin: release a=experimental
+Pin: release a=unstable
 Pin-Priority: 800
 
 Package: libzmq3-dev
-Pin: release a=experimental
+Pin: release a=unstable
 Pin-Priority: 800
 _eof
        fi
 
        apt-get update
 
-       __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
+       __apt_get_noinput -t unstable libzmq3 libzmq3-dev || return 1
        __apt_get_noinput build-essential python-dev python-pip || return 1
     else
         apt-get update
@@ -1254,26 +1254,26 @@ install_debian_7_deps() {
         echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
         echowarn "This is required for long term stable minion connections to the master."
 
-        if [ ! -f /etc/apt/sources.list.d/debian-experimental.list ]; then
-           cat <<_eof > /etc/apt/sources.list.d/debian-experimental.list
-deb http://ftp.debian.org/debian experimental main
-deb-src http://ftp.debian.org/debian experimental main
+        if [ ! -f /etc/apt/sources.list.d/debian-unstable.list ]; then
+           cat <<_eof > /etc/apt/sources.list.d/debian-unstable.list
+deb http://ftp.debian.org/debian unstable main
+deb-src http://ftp.debian.org/debian unstable main
 _eof
 
-           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-experimental.pref
+           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-unstable.pref
 Package: libzmq3
-Pin: release a=experimental
+Pin: release a=unstable
 Pin-Priority: 800
 
 Package: libzmq3-dev
-Pin: release a=experimental
+Pin: release a=unstable
 Pin-Priority: 800
 _eof
        fi
 
        apt-get update
 
-       __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
+       __apt_get_noinput -t unstable libzmq3 libzmq3-dev || return 1
        __apt_get_noinput build-essential python-dev python-pip || return 1
     else
         apt-get update
@@ -1294,7 +1294,7 @@ install_debian_git_deps() {
         echowarn "PyZMQ will be installed from PyPi in order to compile it against ZMQ3"
         echowarn "This is required for long term stable minion connections to the master."
 
-        __apt_get_noinput -t experimental libzmq3 libzmq3-dev || return 1
+        __apt_get_noinput -t unstable libzmq3 libzmq3-dev || return 1
         __apt_get_noinput build-essential python-dev python-pip || return 1
     fi
 
@@ -1316,7 +1316,7 @@ install_debian_6_git_deps() {
 }
 
 install_debian_7_git_deps() {
-    install_debian_7_deps || return 1    # Add experimental repository for ZMQ3
+    install_debian_7_deps || return 1    # Add unstable repository for ZMQ3
     install_debian_git_deps || return 1  # Grab the actual deps
     return 0
 }

@@ -772,9 +772,16 @@ def create(vm_=None, call=None):
 
         if waiting_for_ip >= 24:
             # 2 Minutes!? Bail out!
-            raise SaltCloudSystemExit(
-                'Could not get the VM IP for 2 minutes. Exiting.'
-            )
+            try:
+                # It might be already up, let's destroy it!
+                destroy(vm_['name'])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(
+                    'Could not get the VM IP for 2 minutes. Exiting.'
+                )
+
         waiting_for_ip += 1
 
     if ssh_interface(vm_) == 'private_ips':
