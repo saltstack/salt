@@ -11,6 +11,13 @@ The postgres_group module is used to create and manage Postgres groups.
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the postgres module is present
+    '''
+    return 'postgres_group' if 'postgres.user_exists' in __salt__ else False
+
+
 def present(name,
             createdb=False,
             createuser=False,
