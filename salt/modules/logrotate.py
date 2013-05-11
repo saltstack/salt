@@ -13,14 +13,18 @@ log = logging.getLogger(__name__)
 default_conf = '/etc/logrotate.conf'
 
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
+
+
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
     # Disable on these platforms
-    # set() need to used like this because the module defines a set function
-    # which shadows the set() built-in.
-    disable = __builtins__['set'](('Windows',))
+    disable = set(('Windows',))
     if __grains__['os'] in disable:
         return False
     return 'logrotate'
@@ -94,7 +98,7 @@ def show_conf(conf_file=default_conf):
     return _parse_conf(conf_file)
 
 
-def set(key, value, setting=None, conf_file=default_conf):
+def set_(key, value, setting=None, conf_file=default_conf):
     '''
     Set a new value for a specific configuration line
 
@@ -124,8 +128,10 @@ def set(key, value, setting=None, conf_file=default_conf):
             conf_file = os.path.join(conf['include'], include)
 
     if isinstance(conf[key], dict) and not setting:
-        return ('Error: {0} includes a dict, and a specific setting inside the '
-                'dict was not declared'.format(key))
+        return (
+            'Error: {0} includes a dict, and a specific setting inside the '
+            'dict was not declared'.format(key)
+        )
 
     if setting:
         if isinstance(conf[key], str):
@@ -172,4 +178,3 @@ def _dict_to_stanza(key, stanza):
             stanza[skey] = ''
         ret += '    {0} {1}\n'.format(skey, stanza[skey])
     return '{0} {{\n{1}}}'.format(key, ret)
-

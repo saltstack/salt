@@ -20,14 +20,18 @@ import logging
 log = logging.getLogger(__name__)
 
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
+
+
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
     # Disable on these platforms, specific service modules exist:
-    # set() need to used like this because the module defines a set function
-    # which shadows the set() built-in.
-    disable = __builtins__['set'](('Windows',))
+    disable = set(('Windows',))
     if __grains__['os'] in disable:
         return False
     return 'partition'
@@ -105,7 +109,9 @@ def align_check(device, part_type, partition):
 
         salt '*' partition.align_check /dev/sda minimal 1
     '''
-    cmd = 'parted -m -s {0} align-check {1} {2}'.format(device, part_type, partition)
+    cmd = 'parted -m -s {0} align-check {1} {2}'.format(
+        device, part_type, partition
+    )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -233,7 +239,9 @@ def mkpart(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
     '''
-    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+        device, part_type, fs_type, start, end
+    )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -252,7 +260,9 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
     '''
-    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+        device, part_type, fs_type, start, end
+    )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -305,7 +315,9 @@ def resize(device, minor, start, end):
         salt '*' partition.resize /dev/sda 3 200 850
     '''
     out = __salt__['cmd.run'](
-        'parted -m -s -- {0} resize {1} {2} {3}'.format(device, minor, start, end)
+        'parted -m -s -- {0} resize {1} {2} {3}'.format(
+            device, minor, start, end
+        )
     )
     return out.splitlines()
 
@@ -325,7 +337,7 @@ def rm(device, minor):  # pylint: disable-msg=C0103
     return out
 
 
-def set(device, minor, flag, state):
+def set_(device, minor, flag, state):
     '''
     partition.set device  minor flag state
 
@@ -355,4 +367,3 @@ def toggle(device, partition, flag):
     cmd = 'parted -m -s {0} toggle {1} {2} {3}'.format(device, partition, flag)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-
