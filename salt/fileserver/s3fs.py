@@ -66,7 +66,7 @@ def find_file(path, env='base', **kwargs):
     # look for the path including the env, but only return the path if found
     env_path = _get_env_path(env, path)
     for bucket_name, files in ret.iteritems():
-        if env_path in files:
+        if env_path in files and not salt.fileserver.is_file_ignored(__opts__, env_path):
             fnd['bucket'] = bucket_name
             fnd['path'] = path
 
@@ -98,6 +98,8 @@ def file_hash(load, fnd):
         return ''
 
     ret = {}
+    if not fnd['path']:
+        return ret
 
     # get the env/path file from the cache
     env_path = _get_env_path(load['env'], fnd['path'])
@@ -154,9 +156,11 @@ def file_list(load):
     env_len = len(load['env']) + 1
 
     # map and filter the files without the env
-    for files in _find_files(resultset[env]).values():
-        env_files = map(lambda dir: dir[env_len:], files)
-        ret += filter(lambda dir: dir, env_files)
+    for buckets in _find_files(resultset[env]).values():
+        for env_path in buckets:
+            if not salt.fileserver.is_file_ignored(__opts__, env_path):
+                if env_path[env_len:]:
+                    ret.append(env_path[env_len:])
 
     return ret
 
