@@ -201,7 +201,7 @@ def create(vm_):
     # get ip addresses from query of the node, this can take up to 10 seconds on a small node.
     if 'ips' in data:
         if isinstance(data['ips'], list) and len(data['ips']) <= 0:
-            log.info("New joyent asynchronous machine creation api detected ... please wait for IP addresses to be assigned.")
+            log.info("New joyent asynchronous machine creation api detected ... \n          please wait for IP addresses to be assigned.")
             for i in range(NODE_CREATE_TIMEOUT):
                 rc,data = query2(command='my/machines/{0}'.format(vm_id), method='GET', location=vm_['location'])
                 if rc in valid_response_codes and  isinstance(data['ips'], list) and len(data['ips']) > 0:
