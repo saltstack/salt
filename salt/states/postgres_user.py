@@ -17,6 +17,7 @@ def __virtual__():
     '''
     return 'postgres_user' if 'postgres.user_exists' in __salt__ else False
 
+
 def present(name,
             createdb=False,
             createuser=False,
