@@ -8,14 +8,18 @@ import logging
 log = logging.getLogger(__name__)
 
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
+
+
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
     # Disable on these platforms, specific service modules exist:
-    # set() need to used like this because the module defines a set function
-    # which shadows the set() built-in.
-    disable = __builtins__['set'](('Windows',))
+    disable = set(('Windows',))
     if __grains__['os'] in disable:
         return False
     return 'quota'
@@ -80,7 +84,7 @@ def _parse_quota(mount, opts):
     return ret
 
 
-def set(device, **kwargs):
+def set_(device, **kwargs):
     '''
     Calls out to setquota, for a specific user or group
 
@@ -127,7 +131,8 @@ def set(device, **kwargs):
                                         current['file-soft-limit'],
                                         current['file-hard-limit'],
                                         device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+
+    __salt__['cmd.run'](cmd).splitlines()
 
     return {ret: current}
 
@@ -208,4 +213,3 @@ def get_mode(device):
             }
         ret[comps[3]][comps[0]] = comps[6]
     return ret
-
