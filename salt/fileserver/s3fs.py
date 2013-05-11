@@ -33,7 +33,7 @@ import salt.modules
 
 log = logging.getLogger(__name__)
 
-_s3_cache_expire = 300 # cache for 5 minutes
+_s3_cache_expire = 30 # cache for 30 seconds
 
 def envs():
     '''
@@ -57,32 +57,34 @@ def find_file(path, env='base', **kwargs):
     fnd = {'bucket': None,
             'path' : None}
 
-    env_path = _get_env_path(env, path)
-
     resultset = _init()
     if not resultset or env not in resultset:
         return fnd
 
     ret = _find_files(resultset[env])
 
+    # look for the path including the env, but only return the path if found
+    env_path = _get_env_path(env, path)
     for bucket_name, files in ret.iteritems():
         if env_path in files:
             fnd['bucket'] = bucket_name
-            fnd['path'] = env_path
+            fnd['path'] = path
 
     if not fnd['path'] or not fnd['bucket']:
-            return fnd
-
-    if _is_cached_file_current(resultset, env, fnd['bucket'], fnd['path']):
         return fnd
 
+    # check the cache using the env/path
+    if _is_cached_file_current(resultset, env, fnd['bucket'], env_path):
+        return fnd
+
+    # grab from S3 using the env/path, url encode to cover weird chars
     key, keyid = _get_s3_key()
     s3.query(
             key = key,
             keyid = keyid,
             bucket = fnd['bucket'],
-            path = urllib.quote(fnd['path']),
-            local_file = _get_cached_file_name(fnd['bucket'], fnd['path']))
+            path = urllib.quote(env_path),
+            local_file = _get_cached_file_name(fnd['bucket'], env_path))
     return fnd
 
 def file_hash(load, fnd):
@@ -96,11 +98,15 @@ def file_hash(load, fnd):
         return ''
 
     ret = {}
-    cache_file = _get_cached_file_name(fnd['bucket'], fnd['path'])
+
+    # get the env/path file from the cache
+    env_path = _get_env_path(load['env'], fnd['path'])
+    cache_file = _get_cached_file_name(fnd['bucket'], env_path)
 
     if os.path.isfile(cache_file):
         ret['hsum'] = salt.utils.get_hash(cache_file)
         ret['hash_type'] = 'md5' # always md5 due to ETags in S3
+
     return ret
 
 def serve_file(load, fnd):
@@ -115,12 +121,13 @@ def serve_file(load, fnd):
     if 'path' not in fnd or 'bucket' not in fnd:
         return ret
 
-    env_len = len(load['env']) + 1 # strip off the env from the path
-    ret['dest'] = fnd['path'][env_len:]
+    ret['dest'] = fnd['path']
 
     gzip = load.get('gzip', None)
 
-    cache_file = _get_cached_file_name(fnd['bucket'], fnd['path'])
+    # get the env/path file from the cache
+    env_path = _get_env_path(load['env'], fnd['path'])
+    cache_file = _get_cached_file_name(fnd['bucket'], env_path)
 
     with salt.utils.fopen(cache_file, 'rb') as fp_:
         fp_.seek(load['loc'])
@@ -143,8 +150,51 @@ def file_list(load):
     if not resultset or env not in resultset:
         return ret
 
+    # used to trim the env of the dirs in the map
+    env_len = len(load['env']) + 1
+
+    # map and filter the files without the env
     for files in _find_files(resultset[env]).values():
-        ret += files
+        env_files = map(lambda dir: dir[env_len:], files)
+        ret += filter(lambda dir: dir, env_files)
+
+    return ret
+
+def file_list_emptydirs(load):
+    '''
+    Return a list of all empty directories on the master
+    '''
+    ret = []
+    env = load['env']
+
+    log.error('***** file_list_emptydirs')
+
+    resultset = _init()
+
+    if not resultset or env not in resultset:
+        return ret
+
+    return ret
+
+def dir_list(load):
+    '''
+    Return a list of all directories on the master
+    '''
+    ret = []
+    env = load['env']
+
+    resultset = _init()
+
+    if not resultset or env not in resultset:
+        return ret
+
+    # used to trim the env of the dirs in the map
+    env_len = len(load['env']) + 1
+
+    # map and filter the dirs without the env
+    for dirs in _find_files(resultset[env], dirs_only = True).values():
+        filtered_dirs = map(lambda dir: dir[env_len:-1], dirs)
+        ret += filter(lambda dir: dir, filtered_dirs)
 
     return ret
 
@@ -272,7 +322,7 @@ def _is_cached_file_current(resultset, env, bucket_name, path):
 
     return m.hexdigest() == file_md5
 
-def _find_files(resultset):
+def _find_files(resultset, dirs_only = False):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
@@ -284,7 +334,7 @@ def _find_files(resultset):
     for bucket, data in resultset.iteritems():
         fileData = filter(lambda key: key.has_key('Key'), data)
         filePaths = map(lambda key: key['Key'], fileData)
-        ret[bucket] += filter(lambda key: key.endswith('/') == False, filePaths)
+        ret[bucket] += filter(lambda key: key.endswith('/') == dirs_only, filePaths)
 
     return ret
 
