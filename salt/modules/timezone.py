@@ -158,12 +158,18 @@ def get_hwclock():
         cmd = 'tail -n 1 /etc/adjtime'
         return __salt__['cmd.run'](cmd)
     elif 'Debian' in __grains__['os_family']:
+        #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
         out = __salt__['cmd.run'](cmd).split('=')
-        if len(out) > 1 and out[1] == 'yes':
-            return 'UTC'
+        if len(out) > 1:
+            if out[1] == 'yes':
+                return 'UTC'
+            else:
+                return 'localtime'
         else:
-            return 'localtime'
+            #Since Wheezy
+            cmd = 'tail -n 1 /etc/adjtime'
+            return __salt__['cmd.run'](cmd)
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'grep "^clock=" /etc/conf.d/hwclock | grep -vE "^#"'
         out = __salt__['cmd.run'](cmd).split('=')
