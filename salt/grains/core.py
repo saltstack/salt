@@ -171,6 +171,35 @@ def _linux_gpu_data():
     return grains
 
 
+def _netbsd_gpu_data(osdata):
+    '''
+    num_gpus: int
+    gpus:
+      - vendor: nvidia|amd|ati|...
+        model: string
+    '''
+    # dominant gpu vendors to search for (MUST be lowercase for matching below)
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware']
+
+    gpus = []
+    try:
+        pcictl_out = __salt__['cmd.run']('pcictl pci0 list')
+
+        for line in pcictl_out.splitlines():
+            for vendor in known_vendors:
+                m = re.match("[0-9:]+ ({0}) (.+) \(VGA .+\)"
+                            .format(vendor), line, re.IGNORECASE)
+                if m:
+                    gpus.append({'vendor': m.group(1), 'model': m.group(2)})
+    except OSError:
+        pass
+
+    grains = {}
+    grains['num_gpus'] = len(gpus)
+    grains['gpus'] = gpus
+    return grains
+
+
 def _bsd_cpudata(osdata):
     '''
     Return CPU information for BSD-like systems
@@ -190,11 +219,20 @@ def _bsd_cpudata(osdata):
             'cpuarch': '{0} -n hw.machine'.format(sysctl),
             'cpu_model': '{0} -n hw.model'.format(sysctl),
         })
+
     if arch and osdata['kernel'] == 'OpenBSD':
         cmds['cpuarch'] = '{0} -s'.format(arch)
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
     grains['cpu_flags'] = []
+
+    if osdata['kernel'] == 'NetBSD':
+        for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
+            m = re.match('cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
+            if m:
+                flag = m.group(1).split(',')
+                grains['cpu_flags'].extend(flag)
+
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
         # TODO: at least it needs to be tested for BSD other then FreeBSD
         with salt.utils.fopen('/var/run/dmesg.boot', 'r') as _fp:
@@ -256,10 +294,12 @@ def _memdata(osdata):
                         continue
                     if comps[0].strip() == 'MemTotal':
                         grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD'):
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
+            if (osdata['kernel'] == 'NetBSD' and mem.startswith('-')):
+                mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
     elif osdata['kernel'] == 'SunOS':
         prtconf = '/usr/sbin/prtconf 2>/dev/null'
@@ -360,6 +400,7 @@ def _virtual(osdata):
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
+    sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
@@ -400,7 +441,6 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in salt.utils.fopen('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
-        sysctl = salt.utils.which('sysctl')
         kenv = salt.utils.which('kenv')
         if kenv:
             product = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv))
@@ -423,6 +463,22 @@ def _virtual(osdata):
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
+    elif osdata['kernel'] == 'NetBSD':
+        if sysctl:
+            model = __salt__['cmd.run']('{0} -n machdep.cpu_brand'
+                                        .format(sysctl))
+            xendomu = __salt__['cmd.run']('{0} -n machdep.xen.suspend'
+                                        .format(sysctl))
+            vmware = __salt__['cmd.run']('{0} -n machdep.dmi.system-vendor'
+                                        .format(sysctl))
+
+            if 'QEMU Virtual CPU' in model:
+                grains['virtual'] = 'kvm'
+            if not 'invalid' in xendomu:
+                grains['virtual'] = 'Xen PV DomU'
+            if 'VMware' in vmware:
+                grains['virtual'] = 'VMware'
+
     return grains
 
 
@@ -692,9 +748,11 @@ def os_data():
         grains.update(_bsd_cpudata(grains))
     else:
         grains['os'] = grains['kernel']
-    if grains['kernel'] in ('FreeBSD', 'OpenBSD'):
+    if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
+        if grains['kernel'] == 'NetBSD':
+            grains.update(_netbsd_gpu_data(grains))
     if not grains['os']:
         grains['os'] = 'Unknown {0}'.format(grains['kernel'])
         grains['os_family'] = 'Unknown'
@@ -945,3 +1003,4 @@ def get_master():
     #   master
     return {'master': __opts__.get('master', '')}
 
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
