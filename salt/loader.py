@@ -492,7 +492,15 @@ class Loader(object):
                         # the callable object is an exception, don't load it
                         continue
 
-                funcs['{0}.{1}'.format(module_name, attr)] = func
+                # Let's get the function name.
+                # If the module has the __func_alias__ attribute, it must be a
+                # dictionary mapping in the form of(key -> value):
+                #   <real-func-name> -> <desired-func-name>
+                #
+                # It default's of course to the found callable attribute name
+                # if no alias is defined.
+                funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+                funcs['{0}.{1}'.format(module_name, funcname)] = func
                 self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
@@ -752,8 +760,6 @@ class Loader(object):
                     )
                 )
             for attr in getattr(mod, '__load__', dir(mod)):
-                # functions are namespaced with their module name
-                attr_name = '{0}.{1}'.format(module_name, attr)
 
                 if attr.startswith('_'):
                     # skip private attributes
@@ -770,8 +776,24 @@ class Loader(object):
                             continue
                     # now that callable passes all the checks, add it to the
                     # library of available functions of this type
-                    funcs[attr_name] = func
-                    log.trace('Added {0} to {1}'.format(attr_name, self.tag))
+
+                    # Let's get the function name.
+                    # If the module has the __func_alias__ attribute, it must
+                    # be a dictionary mapping in the form of(key -> value):
+                    #   <real-func-name> -> <desired-func-name>
+                    #
+                    # It default's of course to the found callable attribute
+                    # name if no alias is defined.
+                    funcname = getattr(mod, '__func_alias__', {}).get(
+                        attr, attr
+                    )
+
+                    # functions are namespaced with their module name
+                    module_func_name = '{0}.{1}'.format(module_name, funcname)
+                    funcs[module_func_name] = func
+                    log.trace(
+                        'Added {0} to {1}'.format(module_func_name, self.tag)
+                    )
                     self._apply_outputter(func, mod)
 
         # now that all the functions have been collected, iterate back over
