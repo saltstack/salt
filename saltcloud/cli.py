@@ -295,6 +295,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 msg = 'There was a query error: {0}'
                 self.handle_exception(msg, exc)
 
+        else:
+            self.error('Nothing was done. Using the proper arguments?')
         # display output using salt's outputter system
         self.exit(0, '\n{0}'.format(self.display_output(ret)))
 
