@@ -474,7 +474,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)
+        cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
