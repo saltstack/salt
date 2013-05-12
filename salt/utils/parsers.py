@@ -19,7 +19,12 @@ import traceback
 from functools import partial
 
 # Import salt libs
-from salt import config, loader, log, version
+import salt.log as log
+import salt.config as config
+import salt.loader as loader
+import salt.utils as utils
+import salt.version as version
+import salt.exceptions as exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -725,17 +730,25 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Override the name of the PID file.
         opts['pidfile'] = '/var/run/salt-syndic.pid'
 
-        if 'syndic_master' not in opts:
+        if not opts.get('syndic_master', None):
             self.error(
                 'The syndic_master needs to be configured in the salt master '
                 'config, EXITING!'
             )
 
-        from salt import utils
         # Some of the opts need to be changed to match the needed opts
         # in the minion class.
-        opts['master'] = opts['syndic_master']
-        opts['master_ip'] = utils.dns_check(opts['master'], ipv6=opts['ipv6'])
+        opts['master'] = opts.get('syndic_master', opts['master'])
+        try:
+            opts['master_ip'] = utils.dns_check(
+                opts['master'],
+                ipv6=opts['ipv6']
+            )
+        except exceptions.SaltSystemExit as exc:
+            self.exit(
+                status=exc.code,
+                msg='{0}: {1}\n'.format(self.get_prog_name(), exc.message)
+            )
 
         opts['master_uri'] = 'tcp://{0}:{1}'.format(
             opts['master_ip'], str(opts['master_port'])
