@@ -184,8 +184,8 @@ def status(name, sig=None):
         salt '*' service.status <service name> [service signature]
     '''
     cmd = 'sc query "{0}"'.format(name)
-    status = __salt__['cmd.run'](cmd).splitlines()
-    for line in status:
+    status_lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in status_lines:
         if 'RUNNING' in line:
             return getsid(name)
         elif 'PENDING' in line:

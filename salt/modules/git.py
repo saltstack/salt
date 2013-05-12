@@ -405,7 +405,10 @@ def init(cwd, opts=None, user=None):
     return _git_run(cmd, runas=user)
 
 
-def submodule(cwd, init=True, opts=None, user=None):
+def submodule(cwd,
+              init=True,  # pylint: disable=W0621
+              opts=None,
+              user=None):
     '''
     Initialize git submodules
 
@@ -450,13 +453,13 @@ def status(cwd, user=None):
     '''
     cmd = 'git status -z --porcelain'
     stdout = _git_run(cmd, cwd=cwd, runas=user)
-    status = []
+    status_by_file = []
     for line in stdout.split("\0"):
         state = line[:2]
         filename = line[3:]
         if filename != '' and state != '':
-            status.append((state, filename))
-    return status
+            status_by_file.append((state, filename))
+    return status_by_file
 
 
 def add(cwd, file_name, user=None, opts=None):

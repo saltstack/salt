@@ -267,7 +267,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
     return out
 
 
-def name(device, partition, name):
+def name(device, partition, name):  # pylint: disable=W0621
     '''
     partition.name device partition name
 

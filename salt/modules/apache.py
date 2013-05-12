@@ -174,7 +174,7 @@ def vhosts():
     return ret
 
 
-def signal(signal=None):
+def signal(signal=None):  # pylint: disable=W0621
     '''
     Signals httpd to start, restart, or stop.
 

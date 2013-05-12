@@ -124,15 +124,15 @@ def subnets():
         salt '*' network.subnets
     '''
     ifaces = interfaces()
-    subnets = []
+    host_subnets = []
 
     for ipv4_info in ifaces.values():
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
             network = _calculate_subnet(ipv4['address'], ipv4['netmask'])
-            subnets.append(network)
-    return subnets
+            host_subnets.append(network)
+    return host_subnets
 
 
 def in_subnet(cidr):

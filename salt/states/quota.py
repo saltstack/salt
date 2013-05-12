@@ -20,7 +20,7 @@ def __virtual__():
     return 'quota' if 'quota.report' in __salt__ else False
 
 
-def mode(name, mode, quotatype):
+def mode(name, mode, quotatype):  # pylint: disable=W0621
     '''
     Set the quota for the system
 

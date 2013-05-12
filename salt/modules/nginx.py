@@ -50,7 +50,7 @@ def configtest():
 
     
 
-def signal(signal=None):
+def signal(signal=None):  # pylint: disable=W0621
     '''
     Signals nginx to start, reload, reopen or stop.
 
