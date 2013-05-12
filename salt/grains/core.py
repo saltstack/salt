@@ -228,7 +228,9 @@ def _sunos_cpudata(osdata):
     #   cpuarch
     #   num_cpus
     #   cpu_model
+    #   cpu_flags
     grains = {}
+    grains['cpu_flags'] = [] 
 
     grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
@@ -238,6 +240,13 @@ def _sunos_cpudata(osdata):
         match = re.match('(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
         if match:
             grains['cpu_model'] = match.group(2)
+    isainfo = 'isainfo -n -v'
+    for line in __salt__['cmd.run'](isainfo).splitlines():
+        match = re.match('^\s+(.+)', line)
+        if match:
+            cpu_flags = match.group(1).split()
+            grains['cpu_flags'].extend(cpu_flags)
+
     return grains
 
 
