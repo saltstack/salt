@@ -266,13 +266,25 @@ def _sunos_cpudata(osdata):
     #   cpuarch
     #   num_cpus
     #   cpu_model
+    #   cpu_flags
     grains = {}
+    grains['cpu_flags'] = [] 
 
     grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
-    kstat_info = 'kstat -p cpu_info:*:*:implementation'
-    grains['cpu_model'] = __salt__['cmd.run'](kstat_info).split()[1].strip()
+    kstat_info = 'kstat -p cpu_info:0:*:brand'
+    for line in __salt__['cmd.run'](kstat_info).splitlines():
+        match = re.match('(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
+        if match:
+            grains['cpu_model'] = match.group(2)
+    isainfo = 'isainfo -n -v'
+    for line in __salt__['cmd.run'](isainfo).splitlines():
+        match = re.match('^\s+(.+)', line)
+        if match:
+            cpu_flags = match.group(1).split()
+            grains['cpu_flags'].extend(cpu_flags)
+
     return grains
 
 
@@ -723,8 +735,7 @@ def os_data():
                 rel_data = fp_.read()
                 if 'SmartOS' in rel_data:
                     grains['os'] = 'SmartOS'
-                    # FIXME: need detection of osrelease for SmartOS
-                    grains['osrelease'] = ''
+                    grains['osrelease'] = __salt__['cmd.run']('uname -v')
                 else:
                     try:
                         release_re = '(Solaris|OpenIndiana(?: Development)?)' \
