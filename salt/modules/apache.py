@@ -212,12 +212,18 @@ def signal(signal=None):
 def useradd(pwfile, user, password, opts=''):
     '''
     Add an HTTP user using the htpasswd command. If the htpasswd file does not
-    exist, it will be created.
+    exist, it will be created. Valid options that can be passed are:
+
+        n  Don't update file; display results on stdout.
+        m  Force MD5 encryption of the password (default).
+        d  Force CRYPT encryption of the password.
+        p  Do not encrypt the password (plaintext).
+        s  Force SHA encryption of the password.
 
     CLI Examples::
 
         salt '*' apache.useradd /etc/httpd/htpasswd larry badpassword
-        salt '*' apache.useradd /etc/httpd/htpasswd larry badpass opts=s
+        salt '*' apache.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
     if not os.path.exists(pwfile):
         opts += 'c'
