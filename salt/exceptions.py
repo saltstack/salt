@@ -95,3 +95,7 @@ class SaltSystemExit(SystemExit):
     This exception is raised when an unsolvable problem is found. There's
     nothing else to do, salt should just exit.
     '''
+    def __init__(self, code=0, msg=None):
+        SystemExit.__init__(self, code)
+        if msg:
+            self.message = msg
