@@ -353,7 +353,7 @@ def dns_check(addr, safe=False, ipv6=False):
                     break
             if not addr:
                 error = True
-    except socket.gaierror:
+    except socket.error:
         error = True
 
     if error:
