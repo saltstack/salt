@@ -226,3 +226,19 @@ def useradd(pwfile, user, password, opts=''):
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
+
+def userdel(pwfile, user):
+    '''
+    Delete an HTTP user from the specified htpasswd file.
+
+    CLI Examples::
+
+        salt '*' apache.userdel /etc/httpd/htpasswd larry
+    '''
+    if not os.path.exists(pwfile):
+        return 'Error: The specified htpasswd file does not exist'
+
+    cmd = 'htpasswd -D {0} {1}'.format(pwfile, user)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
