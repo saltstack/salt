@@ -3,6 +3,7 @@ Support for Apache
 '''
 
 # Import python libs
+import os
 import re
 
 # Import salt libs
@@ -206,3 +207,22 @@ def signal(signal=None):
     else:
         ret = 'Command: "{0}" completed successfully!'.format(cmd)
     return ret
+
+
+def useradd(pwfile, user, password, opts=''):
+    '''
+    Add an HTTP user using the htpasswd command. If the htpasswd file does not
+    exist, it will be created.
+
+    CLI Examples::
+
+        salt '*' apache.useradd /etc/httpd/htpasswd larry badpassword
+        salt '*' apache.useradd /etc/httpd/htpasswd larry badpass opts=s
+    '''
+    if not os.path.exists(pwfile):
+        opts += 'c'
+
+    cmd = 'htpasswd -b{0} {1} {2} {3}'.format(opts, pwfile, user, password)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
