@@ -158,6 +158,11 @@ def get_size(vm_):
 def create(vm_):
     '''
     Create a single VM from a data dict
+
+
+        CLI Example:
+
+        salt-cloud -p profile_name vm_name
     '''
 
     deploy = config.get_config_value('deploy', vm_, __opts__)
@@ -312,6 +317,11 @@ def destroy(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: array of booleans , true if successful;ly stopped and true if successfully removed
+
+        CLI Example:
+
+        salt-cloud -d vm_name
+
     """
     node = get_node(name)
     ret = query2(command='my/machines/{0}'.format(node.id), location=node.location, method='DELETE')
@@ -324,6 +334,11 @@ def reboot(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: true if successful
+
+
+    CLI Example:
+
+        salt-cloud -a reboot vm_name
     """
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST', command='/my/machines/%s' %  node.id, location=node.location,
@@ -337,6 +352,11 @@ def stop(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: true if successful
+
+
+    CLI Example:
+
+        salt-cloud -a stop vm_name
     """
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST', command='/my/machines/%s' %  node.id, location=node.location,
@@ -350,6 +370,11 @@ def start(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: true if successful
+
+
+    CLI Example:
+
+        salt-cloud -a start vm_name
     """
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST', command='/my/machines/%s' % node.id, location=node.location,
@@ -555,6 +580,11 @@ def reformat_node(item=None, full=False):
 def list_nodes(full=False):
     """
     list of nodes, keeping only a brief listing
+
+
+    CLI Example:
+
+        salt-cloud -Q
     """
     ret = {}
     if POLL_ALL_LOCATIONS:
@@ -579,6 +609,11 @@ def list_nodes(full=False):
 def list_nodes_full():
     """
     list of nodes, maintaining all content provided from joyent listings
+
+
+    CLI Example:
+
+        salt-cloud -F
     """
     return list_nodes(full=True)
 
@@ -586,6 +621,11 @@ def list_nodes_full():
 def avail_images():
     """
     get list of available images
+
+    CLI Example:
+
+        salt-cloud --list-images
+
     """
     rc, items = query2(command='/my/datasets')
     if rc not in valid_response_codes:
@@ -596,6 +636,10 @@ def avail_images():
 def avail_sizes():
     """
     get list of available packages
+
+    CLI Example:
+
+        salt-cloud --list-sizes
     """
     rc, items = query2(command='/my/packages')
     if rc not in valid_response_codes:
