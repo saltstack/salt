@@ -723,8 +723,7 @@ def os_data():
                 rel_data = fp_.read()
                 if 'SmartOS' in rel_data:
                     grains['os'] = 'SmartOS'
-                    # FIXME: need detection of osrelease for SmartOS
-                    grains['osrelease'] = ''
+                    grains['osrelease'] = __salt__['cmd.run']('uname -v')
                 else:
                     try:
                         release_re = '(Solaris|OpenIndiana(?: Development)?)' \
