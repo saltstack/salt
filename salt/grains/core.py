@@ -233,8 +233,11 @@ def _sunos_cpudata(osdata):
     grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
-    kstat_info = 'kstat -p cpu_info:*:*:implementation'
-    grains['cpu_model'] = __salt__['cmd.run'](kstat_info).split()[1].strip()
+    kstat_info = 'kstat -p cpu_info:0:*:brand'
+    for line in __salt__['cmd.run'](kstat_info).splitlines():
+        match = re.match('(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
+        if match:
+            grains['cpu_model'] = match.group(2)
     return grains
 
 
