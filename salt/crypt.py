@@ -88,11 +88,10 @@ class MasterKeys(dict):
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            gen_keys(
-                    self.opts['pki_dir'],
-                    'master',
-                    4096,
-                    self.opts.get('user'))
+            gen_keys(self.opts['pki_dir'],
+                     'master',
+                     4096,
+                     self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
 
@@ -143,11 +142,10 @@ class Auth(object):
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            gen_keys(
-                    self.opts['pki_dir'],
-                    'minion',
-                    4096,
-                    self.opts.get('user'))
+            gen_keys(self.opts['pki_dir'],
+                     'minion',
+                     4096,
+                     self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
 
@@ -166,7 +164,9 @@ class Auth(object):
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
         try:
-            pub = RSA.load_pub_key(os.path.join(self.opts['pki_dir'], self.mpub))
+            pub = RSA.load_pub_key(
+                os.path.join(self.opts['pki_dir'], self.mpub)
+            )
             payload['load']['token'] = pub.public_encrypt(self.token, 4)
         except Exception:
             pass
@@ -225,10 +225,14 @@ class Auth(object):
             try:
                 aes, token = self.decrypt_aes(payload)
                 if token != self.token:
-                    log.error('The master failed to decrypt the random minion token')
+                    log.error(
+                        'The master failed to decrypt the random minion token'
+                    )
                     return ''
             except Exception:
-                log.error('The master failed to decrypt the random minion token')
+                log.error(
+                    'The master failed to decrypt the random minion token'
+                )
                 return ''
             return aes
         else:
@@ -246,28 +250,29 @@ class Auth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         try:
             self.opts['master_ip'] = salt.utils.dns_check(
-                    self.opts['master'],
-                    True,
-                    self.opts['ipv6']
-                    )
+                self.opts['master'],
+                True,
+                self.opts['ipv6']
+            )
         except SaltClientError:
             if safe:
                 return 'retry'
-            else:
-                raise SaltClientError
+            raise SaltClientError
+
         sreq = salt.payload.SREQ(
-                self.opts['master_uri'],
-                self.opts.get('id', '')
-                )
+            self.opts['master_uri'],
+            self.opts.get('id', '')
+        )
         try:
             payload = sreq.send_auto(
-                    self.minion_sign_in_payload(),
-                    timeout=timeout)
+                self.minion_sign_in_payload(),
+                timeout=timeout
+            )
         except SaltReqTimeoutError:
             if safe:
                 return 'retry'
-            else:
-                raise SaltClientError
+            raise SaltClientError
+
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
@@ -302,17 +307,17 @@ class Auth(object):
             sys.exit(42)
         if self.opts.get('master_finger', False):
             if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
-                log.critical((
+                log.critical(
                     'The specified fingerprint in the master configuration '
                     'file:\n{0}\nDoes not match the authenticating master\'s '
                     'key:\n{1}\nVerify that the configured fingerprint '
                     'matches the fingerprint of the correct master and that '
                     'this minion is not subject to a man in the middle attack'
-                    ).format(
+                    .format(
                         self.opts['master_finger'],
                         salt.utils.pem_finger(m_pub_fn)
-                        )
                     )
+                )
                 sys.exit(42)
         auth['publish_port'] = payload['publish_port']
         return auth
@@ -417,14 +422,13 @@ class SAuth(Auth):
         '''
         while True:
             creds = self.sign_in(
-                    self.opts.get('_auth_timeout', 60),
-                    self.opts.get('_safe_auth', True)
-                    )
+                self.opts.get('_auth_timeout', 60),
+                self.opts.get('_safe_auth', True)
+            )
             if creds == 'retry':
                 if self.opts.get('caller'):
-                    msg = ('Minion failed to authenticate with the master, '
-                           'has the minion key been accepted?')
-                    print(msg)
+                    print('Minion failed to authenticate with the master, '
+                          'has the minion key been accepted?')
                     sys.exit(2)
                 continue
             break
