@@ -31,7 +31,8 @@ def active():
                                    'Function': job['fun'],
                                    'Arguments': list(job['arg']),
                                    'Target': job['tgt'],
-                                   'Target-type': job['tgt_type']}
+                                   'Target-type': job['tgt_type'],
+                                   'User': load.get('user', 'root')}
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:
@@ -142,6 +143,7 @@ def print_job(job_id):
                                     'Arguments': list(load['arg']),
                                     'Target': load['tgt'],
                                     'Target-type': load['tgt_type'],
+                                    'User': load.get('user', 'root'),
                                     'Result': hosts_return}
                         salt.output.display_output(ret, 'yaml', __opts__)
     return ret
