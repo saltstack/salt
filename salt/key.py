@@ -104,6 +104,13 @@ class KeyCLI(object):
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
                 self.key.delete_key(match)
+        else:
+            print('Deleting the following keys:')
+            salt.output.display_output(
+                    matches,
+                    'key',
+                    self.opts)
+            self.key.delete_key(match)
 
     def delete_all(self):
         '''
