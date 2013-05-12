@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Sun May 12 20:18:57 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec, for systemd unit files
+  according to how systemd files needs to be packaged
+- fixed rpmlint about reload missing with init files
+
+-------------------------------------------------------------------
 Tue Apr 23 19:20:42 UTC 2013 - aboe76@gmail.com
 
 - updated init file:

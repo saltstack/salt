@@ -42,7 +42,8 @@ Requires:       salt
 Requires:       salt-master
 Recommends:     python-CherryPy
 %if 0%{?suse_version} >= 1210
-BuildRequires:  systemd
+BuildRequires:	systemd
+%{?systemd_requires}
 %endif
 Requires(pre): %fillup_prereq
 Requires(pre): %insserv_prereq
@@ -58,31 +59,41 @@ python setup.py build
 
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
+#
+##missing directories
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_localstatedir}/log/salt
-%if 0%{?suse_version} >= 1210
-mkdir -p %{buildroot}/lib/systemd/system
-%endif
 mkdir -p %{buildroot}/%{_sbindir}
+#
+##init scripts
 %if 0%{?sles_version} == 11
-install -m0755 %{SOURCE1} %{buildroot}%{_sysconfdir}/init.d/salt-api
+install -Dpm 0755 %{SOURCE1} %{buildroot}%{_sysconfdir}/init.d/salt-api
 %else
-install -m0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-api
+install -Dpm 0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-api
 %endif
 ln -sf /etc/init.d/salt-api %{buildroot}%{_sbindir}/rcsalt-api
 
-%if 0%{?suse_version} >= 1210
-install -m 644  %{SOURCE2} %{buildroot}/lib/systemd/system/salt-api.service
+%if 0%{?_unitdir:1}
+install -Dpm 644  %{SOURCE2} %{buildroot}%_unitdir/salt-api.service
 %endif
 
 %preun
 %stop_on_removal
+%if 0%{?_unitdir:1}
+%service_del_preun salt-api.service
+%endif
 
 %post
 %fillup_and_insserv
+%if 0%{?_unitdir:1}
+%service_add_post salt-api.service
+%endif
 
 %postun
 %restart_on_update
+%if 0%{?_unitdir:1}
+%service_del_postun salt-api.service
+%endif
 %insserv_cleanup
 
 
@@ -90,13 +101,14 @@ install -m 644  %{SOURCE2} %{buildroot}/lib/systemd/system/salt-api.service
 %defattr(-,root,root)
 %{_sysconfdir}/init.d/salt-api
 %{_sbindir}/rcsalt-api
+%if 0%{?_unitdir:1}
+%_unitdir
+%endif
 %doc %{_mandir}/man1/salt-api.1.*
 %doc %{_mandir}/man7/salt-api.7.*
 %{_bindir}/salt-api
 %doc LICENSE
 %{python_sitelib}/*
-%if 0%{?suse_version} >= 1210
-/lib/systemd/system/salt-api.service
-%endif
+
 
 %changelog
