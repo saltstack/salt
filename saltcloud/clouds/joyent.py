@@ -56,7 +56,7 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 # Import saltcloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.utils import namespaced_function
+from saltcloud.utils import namespaced_function, is_public_ip
 from saltcloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
@@ -84,9 +84,12 @@ POLL_ALL_LOCATIONS=True
 
 valid_response_codes = [httplib.OK, httplib.ACCEPTED, httplib.CREATED, httplib.NO_CONTENT]
 
-# handy class to make a dictionary into a simple object
 class DictObject(dict):
+    '''
+    handy class to make a dictionary into a simple object
+    '''
     def __init__(self, data):
+
         self.update(data)
         for k, v in data.items():
             setattr(self, k, v)
@@ -157,7 +160,6 @@ def create(vm_):
     Create a single VM from a data dict
     '''
 
-    #pprint(inspect.stack())
     deploy = config.get_config_value('deploy', vm_, __opts__)
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -201,7 +203,7 @@ def create(vm_):
     # get ip addresses from query of the node, this can take up to 10 seconds on a small node.
     if 'ips' in data:
         if isinstance(data['ips'], list) and len(data['ips']) <= 0:
-            log.info("New joyent asynchronous machine creation api detected ... \n          please wait for IP addresses to be assigned.")
+            log.info("New joyent asynchronous machine creation api detected ... \n           -- please wait for IP addresses to be assigned...")
             for i in range(NODE_CREATE_TIMEOUT):
                 rc,data = query2(command='my/machines/{0}'.format(vm_id), method='GET', location=vm_['location'])
                 if rc in valid_response_codes and  isinstance(data['ips'], list) and len(data['ips']) > 0:
@@ -282,6 +284,9 @@ def create(vm_):
 
 
 def create_node(**kwargs):
+    '''
+    convenience function to make the rest api call for node creation.
+    '''
     name = kwargs['name']
     size = kwargs['size']
     image = kwargs['image']
@@ -302,12 +307,24 @@ def create_node(**kwargs):
 
 
 def destroy(name, call=None):
+    """
+    destroy a machine by name
+    :param name: name given to the machine
+    :param call: call value in this case is 'action'
+    :return: array of booleans , true if successful;ly stopped and true if successfully removed
+    """
     node = get_node(name)
     ret = query2(command='my/machines/{0}'.format(node.id), location=node.location, method='DELETE')
     return ret[0] in valid_response_codes
 
 
 def reboot(name, call=None):
+    """
+    reboot a machine by name
+    :param name: name given to the machine
+    :param call: call value in this case is 'action'
+    :return: true if successful
+    """
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST', command='/my/machines/%s' %  node.id, location=node.location,
                       data={'action': 'reboot'})
@@ -315,6 +332,12 @@ def reboot(name, call=None):
 
 
 def stop(name, call=None):
+    """
+    stop a machine by name
+    :param name: name given to the machine
+    :param call: call value in this case is 'action'
+    :return: true if successful
+    """
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST', command='/my/machines/%s' %  node.id, location=node.location,
                       data={'action': 'stop'})
@@ -322,13 +345,30 @@ def stop(name, call=None):
 
 
 def start(name, call=None):
+    """
+    start a machine by name
+    :param name: name given to the machine
+    :param call: call value in this case is 'action'
+    :return: true if successful
+    """
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST', command='/my/machines/%s' % node.id, location=node.location,
                       data={'action': 'start'})
     return ret[0] in valid_response_codes
 
 
-def take_action(name=None, call=None, command=None, data=None, method='GET', content_type='', location=DEFAULT_LOCATION):
+def take_action(name=None, call=None, command=None, data=None, method='GET', location=DEFAULT_LOCATION):
+
+    """
+    take action call used by start,stop, reboot
+    :param name: name given to the machine
+    :param call: call value in this case is 'action'
+    :command: api path
+    :data: any data to be passed to the api, must be in json format
+    :method: GET,POST,or DELETE
+    :location: datacenter to execute the command on
+    :return: true if successful
+    """
     caller = inspect.stack()[1][3]
 
     if call != 'action':
@@ -428,6 +468,12 @@ def has_method(obj, method_name):
 
 
 def key_list(key='name', items=[]):
+    """
+    convert list to dictionary using the key as the identifier
+    :param key: identifier - must exist in the arrays elements own dictionary
+    :param items: array to iterate over
+    :return: dictionary
+    """
     ret = {}
     if items and isinstance(items, list):
         for item in items:
@@ -440,6 +486,11 @@ def key_list(key='name', items=[]):
 
 
 def get_node(name):
+    """
+    gets the node from the full node list by name
+    :param name: name of the vm
+    :return: node object
+    """
     nodes = list_nodes()
     if name in nodes.keys():
         return nodes[name]
@@ -447,6 +498,11 @@ def get_node(name):
 
 
 def joyent_node_state(id_):
+    """
+    convert joyent returned state to state common to other datacenter return  values for consistency
+    :param id_: joyent state value
+    :return: libcloudfuncs state value
+    """
     states = {'running': 0,
               'stopped': 2,
               'stopping': 2,
@@ -461,15 +517,22 @@ def joyent_node_state(id_):
 
 
 def reformat_node(item=None, full=False):
+    """
+    reformat the returned data from joyent, determine public/private ips and strip out fields if necessary to provide
+    either full or brief content
+    :param item: node dictionary
+    :param full: full or brief output
+    :return: DictObject
+    """
     desired_keys = ['id', 'name', 'state', 'public_ips', 'private_ips', 'size', 'image', 'location']
     item['private_ips'] = []
     item['public_ips'] = []
     if 'ips' in item:
         for ip in item['ips']:
-            if is_private_subnet(ip):
-                item['private_ips'].append(ip)
-            else:
+            if is_public_ip(ip):
                 item['public_ips'].append(ip)
+            else:
+                item['private_ips'].append(ip)
 
     # add any undefined desired keys
     for key in desired_keys:
@@ -490,6 +553,9 @@ def reformat_node(item=None, full=False):
 
 
 def list_nodes(full=False):
+    """
+    list of nodes, keeping only a brief listing
+    """
     ret = {}
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS.keys():
@@ -511,10 +577,16 @@ def list_nodes(full=False):
 
 
 def list_nodes_full():
+    """
+    list of nodes, maintaining all content provided from joyent listings
+    """
     return list_nodes(full=True)
 
 
 def avail_images():
+    """
+    get list of available images
+    """
     rc, items = query2(command='/my/datasets')
     if rc not in valid_response_codes:
         return {}
@@ -522,6 +594,9 @@ def avail_images():
 
 
 def avail_sizes():
+    """
+    get list of available packages
+    """
     rc, items = query2(command='/my/packages')
     if rc not in valid_response_codes:
         return {}
@@ -722,6 +797,11 @@ def query(action=None, command=None, args=None, method='GET', data=None,
 
 
 def get_location_path(location=DEFAULT_LOCATION):
+    """
+    create url from location variable
+    :param location: joyent datacenter location
+    :return: url
+    """
     return 'https://{0}{1}'.format(location, JOYENT_API_HOST_SUFFIX)
 
 
