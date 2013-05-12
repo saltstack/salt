@@ -204,6 +204,9 @@ case "$1" in
 	# Remember status and be quiet
 	rc_status
 	;;
+    reload)
+        echo "can't reload configuration, you have to restart it"
+    ;;    
     status)
 	echo -n "Checking for service salt-api "
 	## Check status with checkproc(8), if process is running
@@ -224,7 +227,7 @@ case "$1" in
 	rc_status -v
 	;;
     *)
-	echo "Usage: $0 {start|stop|status|try-restart|restart}"
+	echo "Usage: $0 {start|stop|status|try-restart|restart|reload}"
 	exit 1
 	;;
 esac
