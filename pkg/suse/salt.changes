@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Sun May 12 20:18:24 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec, for systemd unit files
+  according to how systemd files needs to be packaged
+- added logrotate on salt log files
+- fixed rpmlint complain about reload function in init files
+
+-------------------------------------------------------------------
 Wed May  8 21:44:49 UTC 2013 - aboe76@gmail.com
 
 - Updated to salt 0.15.1
