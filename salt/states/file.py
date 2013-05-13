@@ -272,9 +272,6 @@ def _check_directory(name,
     Check what changes need to be made on a directory
     '''
     changes = {}
-    keep = []
-    if clean:
-        keep = _gen_keep_files(name, require)
     if recurse:
         if not set(['user', 'group', 'mode']) >= set(recurse):
             return False, 'Types for "recurse" limited to "user", ' \
@@ -289,10 +286,6 @@ def _check_directory(name,
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
-                if path not in keep:
-                    fchange['removed'] = 'Removed due to clean'
-                    changes[path] = fchange
-                    continue
                 stats = __salt__['file.stats'](path, 'md5')
                 if user is not None and user != stats.get('user'):
                     fchange['user'] = user
@@ -302,13 +295,25 @@ def _check_directory(name,
                     changes[path] = fchange
             for name_ in dirs:
                 path = os.path.join(root, name_)
-                if path not in keep:
-                    fchange['removed'] = 'Removed due to clean'
-                    changes[path] = fchange
-                    continue
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
+    if clean:
+        keep = _gen_keep_files(name, require)
+        for root, dirs, files in os.walk(name):
+            for fname in files:
+                fchange = {}
+                path = os.path.join(root, fname)
+                if path not in keep:
+                    fchange['removed'] = 'Removed due to clean'
+                    changes[path] = fchange
+            for name_ in dirs:
+                fchange = {}
+                path = os.path.join(root, name_)
+                if path not in keep:
+                    fchange['removed'] = 'Removed due to clean'
+                    changes[path] = fchange
+
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
     if changes:
