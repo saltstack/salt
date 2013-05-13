@@ -261,18 +261,20 @@ def _get_recurse_dest(prefix, fn_, source, env):
     return os.path.join(prefix, os.path.relpath(fn_, cachedir))
 
 
-def _check_directory(
-        name,
-        user,
-        group,
-        recurse,
-        mode,
-        clean,
-        require):
+def _check_directory(name,
+                     user,
+                     group,
+                     recurse,
+                     mode,
+                     clean,
+                     require):
     '''
     Check what changes need to be made on a directory
     '''
     changes = {}
+    keep = []
+    if clean:
+        keep = _gen_keep_files(name, require)
     if recurse:
         if not set(['user', 'group', 'mode']) >= set(recurse):
             return False, 'Types for "recurse" limited to "user", ' \
@@ -287,6 +289,10 @@ def _check_directory(
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
+                if path not in keep:
+                    fchange['removed'] = 'Removed due to clean'
+                    changes[path] = fchange
+                    continue
                 stats = __salt__['file.stats'](path, 'md5')
                 if user is not None and user != stats.get('user'):
                     fchange['user'] = user
@@ -296,6 +302,10 @@ def _check_directory(
                     changes[path] = fchange
             for name_ in dirs:
                 path = os.path.join(root, name_)
+                if path not in keep:
+                    fchange['removed'] = 'Removed due to clean'
+                    changes[path] = fchange
+                    continue
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
