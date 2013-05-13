@@ -8,6 +8,7 @@ i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 '''
 
 # Import python libs
+import copy
 import logging
 import re
 
@@ -190,6 +191,15 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     pkgs = _vartree().dbapi.cpv_all()
     for cpv in pkgs:
@@ -197,6 +207,7 @@ def list_pkgs(versions_as_list=False):
                                          _cpv_to_name(cpv),
                                          _cpv_to_version(cpv))
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = ret
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -327,9 +338,8 @@ def install(name=None,
         targets = pkg_params
     cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(targets))
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr', '')
-    if stderr:
-        log.error(stderr)
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -359,24 +369,12 @@ def update(pkg, slot=None, refresh=False):
     else:
         full_atom = pkg
 
-    ret_pkgs = {}
-    old_pkgs = list_pkgs()
+    old = list_pkgs()
     cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(full_atom)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
-
-    for pkg in new_pkgs:
-        if pkg in old_pkgs:
-            if old_pkgs[pkg] == new_pkgs[pkg]:
-                continue
-            else:
-                ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                                 'new': new_pkgs[pkg]}
-        else:
-            ret_pkgs[pkg] = {'old': '',
-                             'new': new_pkgs[pkg]}
-
-    return ret_pkgs
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def upgrade(refresh=True):
@@ -395,81 +393,107 @@ def upgrade(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    ret_pkgs = {}
-    old_pkgs = list_pkgs()
+    old = list_pkgs()
     cmd = 'emerge --update --newuse --deep --with-bdeps=y --quiet world'
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
-
-    for pkg in new_pkgs:
-        if pkg in old_pkgs:
-            if old_pkgs[pkg] == new_pkgs[pkg]:
-                continue
-            else:
-                ret_pkgs[pkg] = {'old': old_pkgs[pkg],
-                                 'new': new_pkgs[pkg]}
-        else:
-            ret_pkgs[pkg] = {'old': '',
-                             'new': new_pkgs[pkg]}
-
-    return ret_pkgs
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(pkg, slot=None, **kwargs):
+def remove(name=None, slot=None, pkgs=None, **kwargs):
     '''
-    Remove a single package via emerge --unmerge
+    Remove packages via emerge --unmerge.
+
+    name
+        The name of the package to be deleted.
 
     slot
-        Restrict the remove to a specific slot.
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
 
-    Return a list containing the names of the removed packages:
+
+    Multiple Package Options:
+
+    pkgs
+        Uninstall multiple packages. ``slot`` argument is ignored if this
+        argument is present. Must be passed as a python list.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package name> slot=4.4
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    ret_pkgs = []
-    old_pkgs = list_pkgs()
+    old = list_pkgs()
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
-    if slot is not None:
-        full_atom = '{0}:{1}'.format(pkg, slot)
+    if name and not pkgs and slot is not None and len(pkg_params) == 1:
+        targets = ['{0}:{1}'.format(name, slot)]
     else:
-        full_atom = pkg
+        targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn {0}'.format(full_atom)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
+    if not targets:
+        return {}
+    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn ' \
+          '{0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
-    for pkg in old_pkgs:
-        if pkg not in new_pkgs:
-            ret_pkgs.append(pkg)
 
-    return ret_pkgs
-
-
-def purge(pkg, **kwargs):
+def purge(name=None, slot=None, pkgs=None, **kwargs):
     '''
     Portage does not have a purge, this function calls remove followed
     by depclean to emulate a purge process
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+    slot
+        Restrict the remove to a specific slot. Ignored if name is None.
+
+
+    Multiple Package Options:
+
+    pkgs
+        Uninstall multiple packages. ``slot`` argument is ignored if this
+        argument is present. Must be passed as a python list.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
-
+        salt '*' pkg.purge <package name> slot=4.4
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(pkg) + depclean()
+    ret = remove(name=name, slot=slot, pkgs=pkgs)
+    ret.update(depclean(name=name, slot=slot, pkgs=pkgs))
+    return ret
 
 
-def depclean(pkg=None, slot=None):
+def depclean(name=None, slot=None, pkgs=None):
     '''
     Portage has a function to remove unused dependencies. If a package
     is provided, it will only removed the package if no other package
     depends on it.
 
+    name
+        The name of the package to be cleaned.
+
     slot
-        Restrict the remove to a specific slot. Ignored if pkg is None
+        Restrict the remove to a specific slot. Ignored if ``name`` is None.
+
+    pkgs
+        Clean multiple packages. ``slot`` argument is ignored if this
+        argument is present. Must be passed as a python list.
 
     Return a list containing the removed packages:
 
@@ -477,23 +501,19 @@ def depclean(pkg=None, slot=None):
 
         salt '*' pkg.depclean <package name>
     '''
-    ret_pkgs = []
-    old_pkgs = list_pkgs()
+    old = list_pkgs()
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
-    if pkg is not None and slot is not None:
-        full_atom = '{0}:{1}'.format(pkg, slot)
+    if name and not pkgs and slot is not None and len(pkg_params) == 1:
+        targets = ['{0}:{1}'.format(name, slot)]
     else:
-        full_atom = pkg
+        targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --depclean --quiet {0}'.format(full_atom)
-    __salt__['cmd.retcode'](cmd)
-    new_pkgs = list_pkgs()
-
-    for pkg in old_pkgs:
-        if pkg not in new_pkgs:
-            ret_pkgs.append(pkg)
-
-    return ret_pkgs
+    cmd = 'emerge --depclean --quiet {0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def perform_cmp(pkg1='', pkg2=''):
