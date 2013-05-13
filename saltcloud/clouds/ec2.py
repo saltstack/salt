@@ -783,7 +783,7 @@ def create(vm_=None, call=None):
             'Returned query data: {0}'.format(data)
         )
 
-        if 'ipAddress' in data[0]['instancesSet']['item']:
+        if 'ipAddress' in data[0]['instancesSet']['item'] or 'privateIpAddress' in data[0]['instancesSet']['item']:
             # We have our IP, break out of the loop
             break
 
