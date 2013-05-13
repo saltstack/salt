@@ -67,6 +67,8 @@ hypervisor and is bridged to an active network device.
     To use more advanced networking in Salt Virt read the `Salt Virt
     Networking` document:
 
+    `Salt Virt Networking <topics/virt/nic>`
+
 Libvirt State
 -------------
 
@@ -84,8 +86,26 @@ date:
     libvirt_keys:
       libvirt.keys
 
+Getting Virtual Machine Images Ready
+====================================
+
+Salt Virt, requires that virtual machine images be provided as these are not
+generated on the fly. Generating these virtual machine images differs greatly
+based on the underlying platform.
+
+Virtual machine images can be manually created using KVM and running through
+the installer, but this process is not recommended since it is very manual and
+prone to errors.
+
+Virtual Machine generation applications are avilable for many platforms:
+
+vm-builder:
+  http://wiki.debian.org/VMBuilder
+
 Using Salt Virt
 ===============
 
-With hypervisors funcitoning Salt can start to query and deploy virtual
-machines.
+With hypervisors set up and virtual machine images ready, Salt can start
+issuing cloud commands.
+
+Start by deploying 
