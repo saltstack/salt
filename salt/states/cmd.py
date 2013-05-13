@@ -218,10 +218,15 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
                     'result': False}
 
     if onlyif:
+        if 'runas' in cmd_kwargs:
+            user = cmd_kwargs['runas']
+            cmd_kwargs.pop('runas')
+        if 'cwd' in cmd_kwargs:
+            cwd = cmd_kwargs['cwd']
+            cmd_kwargs.pop('cwd')
         if __salt__['cmd.retcode'](onlyif,
                                    cwd=cwd,
                                    runas=user,
-                                   shell=shell,
                                    **cmd_kwargs) != 0:
             ret['comment'] = 'onlyif exec failed'
             ret['result'] = True
@@ -229,10 +234,15 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
                     'result': True}
 
     if unless:
+        if 'runas' in cmd_kwargs:
+            user = cmd_kwargs['runas']
+            cmd_kwargs.pop('runas')
+        if 'cwd' in cmd_kwargs:
+            cwd = cmd_kwargs['cwd']
+            cmd_kwargs.pop('cwd')
         if __salt__['cmd.retcode'](unless,
                                    cwd=cwd,
                                    runas=user,
-                                   shell=shell,
                                    **cmd_kwargs) == 0:
             return {'comment': 'unless executed successfully',
                     'result': True}
