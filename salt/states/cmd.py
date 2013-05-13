@@ -219,11 +219,9 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
 
     if onlyif:
         if 'runas' in cmd_kwargs:
-            user = cmd_kwargs['runas']
-            cmd_kwargs.pop('runas')
+            user = cmd_kwargs.pop('runas')
         if 'cwd' in cmd_kwargs:
-            cwd = cmd_kwargs['cwd']
-            cmd_kwargs.pop('cwd')
+            cwd = cmd_kwargs.pop('cwd')
         if __salt__['cmd.retcode'](onlyif,
                                    cwd=cwd,
                                    runas=user,
@@ -235,11 +233,9 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
 
     if unless:
         if 'runas' in cmd_kwargs:
-            user = cmd_kwargs['runas']
-            cmd_kwargs.pop('runas')
+            user = cmd_kwargs.pop('runas')
         if 'cwd' in cmd_kwargs:
-            cwd = cmd_kwargs['cwd']
-            cmd_kwargs.pop('cwd')
+            cwd = cmd_kwargs.pop('cwd')
         if __salt__['cmd.retcode'](unless,
                                    cwd=cwd,
                                    runas=user,
