@@ -27,19 +27,6 @@ __outputter__ = {
 log = logging.getLogger(__name__)
 
 
-def __resolve_struct(value, kwval_as):
-    '''
-    Take a string representing a structure and safely serialize it with the
-    specified medium
-    '''
-    if kwval_as == 'yaml':
-        return  _yaml_load(value, _YamlCustomLoader)
-    elif kwval_as == 'json':
-        return json.loads(value)
-    elif kwval_as is None or kwval_as == 'verbatim':
-        return value
-
-
 def _filter_running(running):
     '''
     Filter out the result: True + no changes data
@@ -212,9 +199,7 @@ def highstate(test=None, **kwargs):
     if 'env' in kwargs:
         opts['environment'] = kwargs['env']
 
-    pillar = __resolve_struct(
-            kwargs.get('pillar', ''),
-            kwargs.get('kwval_as', 'yaml'))
+    pillar = kwargs.get('pillar')
 
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
@@ -270,9 +255,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     else:
         opts['test'] = None
 
-    pillar = __resolve_struct(
-            kwargs.get('pillar', ''),
-            kwargs.get('kwval_as', 'yaml'))
+    pillar = kwargs.get('pillar')
 
     serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
