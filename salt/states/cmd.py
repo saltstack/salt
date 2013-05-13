@@ -207,8 +207,6 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
     '''
     ret = {}
 
-    print 123, cmd_kwargs
-
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
