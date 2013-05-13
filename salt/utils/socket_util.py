@@ -276,6 +276,11 @@ def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
     '''
+    if salt.utils.is_windows():
+        from salt.modules.win_network import interfaces as win_interfaces
+        ifaces = win_interfaces()
+        return ifaces
+
     ifaces = dict()
     if salt.utils.which('ip'):
         cmd1 = subprocess.Popen(
