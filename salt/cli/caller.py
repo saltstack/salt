@@ -171,4 +171,5 @@ class Caller(object):
                 out,
                 ret.get('out', 'nested'),
                 self.opts)
-        sys.exit(ret['retcode'])
+        if self.opts.get('retcode_passthrough', False):
+            sys.exit(ret['retcode'])
