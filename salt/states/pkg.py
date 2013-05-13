@@ -342,7 +342,7 @@ def installed(
             else:
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])
-            comment = 'The following package(s) are set to be ' \
+            comment = 'The following packages are set to be ' \
                       'installed/updated: {0}.'.format(summary)
         return {'name': name,
                 'changes': {},
@@ -395,7 +395,7 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in modified])
-        comment.append('The following package(s) were installed/updated: '
+        comment.append('The following packages were installed/updated: '
                        '{0}.'.format(summary))
 
     if not_modified:
@@ -404,7 +404,7 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in not_modified])
-        comment.append('The following package(s) were already installed: '
+        comment.append('The following packages were already installed: '
                        '{0}.'.format(summary))
 
     if failed:
@@ -413,7 +413,7 @@ def installed(
         else:
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in failed])
-        comment.insert(0, 'The following package(s) failed to '
+        comment.insert(0, 'The following packages failed to '
                           'install/update: {0}.'.format(summary))
         return {'name': name,
                 'changes': changes,
@@ -617,70 +617,95 @@ def latest(
                 'comment': comment}
 
 
-def removed(name, **kwargs):
+def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     '''
-    Verify that the package is removed, this will remove the package via
-    the remove function in the salt pkg module for the platform.
+    Common function for package removal
+    '''
+    if action not in ('remove', 'purge'):
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'Invalid action "{0}". '
+                           'This is probably a bug.'.format(action)}
 
-    name
-        The name of the package to be removed
-    '''
-    changes = {}
-    if not __salt__['pkg.version'](name):
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = __salt__['pkg.list_pkgs'](versions_as_list=True)
+    targets = sorted([x for x in pkg_params if x in old])
+
+    if not targets:
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package {0} is not installed'.format(name)}
-    else:
-        if __opts__['test']:
-            return {'name': name,
-                    'changes': {},
-                    'result': None,
-                    'comment': 'Package {0} is set to be installed'.format(
-                        name)}
-        changes['removed'] = __salt__['pkg.remove'](name, **kwargs)
-    if not changes:
-        return {'name': name,
-                'changes': changes,
-                'result': False,
-                'comment': 'Package {0} failed to remove'.format(name)}
-    return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package {0} removed'.format(name)}
+                'comment': 'None of the targeted packages are installed'}
 
-
-def purged(name, **kwargs):
-    '''
-    Verify that the package is purged, this will call the purge function in the
-    salt pkg module for the platform.
-
-    name
-        The name of the package to be purged
-    '''
-    changes = {}
-    if not __salt__['pkg.version'](name):
+    if __opts__['test']:
         return {'name': name,
                 'changes': {},
-                'result': True,
-                'comment': 'Package {0} is not installed'.format(name)}
-    else:
-        if __opts__['test']:
-            return {'name': name,
-                    'changes': {},
-                    'result': None,
-                    'comment': 'Package {0} is set to be purged'.format(name)}
-        changes['removed'] = __salt__['pkg.purge'](name, **kwargs)
+                'result': None,
+                'comment': 'The following packages will be {0}d: '
+                           '{1}.'.format(action, ', '.join(targets))}
 
-    if not changes:
+    changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, **kwargs)
+    new = __salt__['pkg.list_pkgs'](versions_as_list=True)
+    failed = [x for x in pkg_params if x in new]
+
+    if failed:
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package {0} failed to purge'.format(name)}
+                'comment': 'The following packages failed to {0}: '
+                           '{1}.'.format(action, ', '.join(failed))}
+
+    comments = []
+    not_installed = sorted([x for x in pkg_params if x not in targets])
+    if not_installed:
+        comments.append('The following packages were not installed: '
+                        '{0}.'.format(', '.join(not_installed)))
+        comments.append('The following packages were {0}d: '
+                        '{1}.'.format(action, ', '.join(targets)))
+    else:
+        comments.append('All targeted packages were {0}d.'.format(action))
+
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Package {0} purged'.format(name)}
+            'comment': ' '.join(comments)}
+
+
+def removed(name, pkgs=None, **kwargs):
+    '''
+    Verify that a package is not installed, calling ``pkg.remove`` if necessary
+    to remove the package.
+
+    name
+        The name of the package to be removed.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to remove. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+    '''
+    return _uninstall(action='remove', name=name, pkgs=pkgs, **kwargs)
+
+
+def purged(name, pkgs=None, **kwargs):
+    '''
+    Verify that a package is not installed, calling ``pkg.purge`` if necessary
+    to purge the package.
+
+    name
+        The name of the package to be purged.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to purge. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+    '''
+    return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
 def mod_init(low):
