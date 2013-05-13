@@ -244,13 +244,13 @@ def which(exe=None):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
-        log.debug(
+        log.trace(
             '{0!r} could not be found in the following search '
             'path: {1!r}'.format(
                 exe, search_path
             )
         )
-    log.debug('No executable was passed to be searched by which')
+    log.trace('No executable was passed to be searched by which')
     return None
 
 
