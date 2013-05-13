@@ -3,6 +3,7 @@ Package support for FreeBSD
 '''
 
 # Import python libs
+import copy
 import logging
 import os
 
@@ -41,11 +42,10 @@ def search(pkg_name):
         salt '*' pkg.search 'mysql-server'
     '''
     if _check_pkgng():
-        res = __salt__['cmd.run']('{0} search {1}'.format(_cmd('pkg'),
-                                                          pkg_name
-                                                          ))
+        res = __salt__['cmd.run_all']('{0} search {1}'.format(_cmd('pkg'),
+                                                              pkg_name))
         res = [x for x in res.splitlines()]
-        return {"Results": res}
+        return {'Results': res}
 
 
 def latest_version(*names, **kwargs):
@@ -135,7 +135,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     if _check_pkgng():
-        __salt__['cmd.run']('{0} update'.format(_cmd('pkg')))
+        __salt__['cmd.run_all']('{0} update'.format(_cmd('pkg')))
     return {}
 
 
@@ -150,6 +150,15 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     if _check_pkgng():
         pkg_command = '{0} info'.format(_cmd('pkg'))
     else:
@@ -162,13 +171,18 @@ def list_pkgs(versions_as_list=False):
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = ret
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
-def install(name=None, refresh=False, fromrepo=None,
-            pkgs=None, sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package
 
@@ -251,8 +265,8 @@ def install(name=None, refresh=False, fromrepo=None,
 
     old = list_pkgs()
     __salt__['cmd.run_all']('{0} {1}'.format(cmd, ' '.join(args)), env=env)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-
     rehash()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -276,76 +290,79 @@ def upgrade():
         return {}
 
     old = list_pkgs()
-    __salt__['cmd.retcode']('{0} upgrade -y'.format(_cmd('pkg')))
+    __salt__['cmd.run_all']('{0} upgrade -y'.format(_cmd('pkg')))
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package.
+    Remove packages.
 
-    name : None
+    name
         The name of the package to be deleted.
 
-    pkgs : None
-        A list of packages to delete. Must be passed as a python list.
 
-        CLI Example::
+    Multiple Package Options:
 
-            salt '*' pkg.remove pkgs='["foo","bar"]'
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
 
-    Returns a list containing the removed packages.
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                  pkgs)
-    if not pkg_params:
-        return {}
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
 
     old = list_pkgs()
-    args = []
-
-    for param in pkg_params:
-        ver = old.get(param, [])
-        if not ver:
-            continue
-        if isinstance(ver, list):
-            args.extend(['{0}-{1}'.format(param, v) for v in ver])
-        else:
-            args.append('{0}-{1}'.format(param, ver))
-
-    if not args:
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
         return {}
 
-    for_remove = ' '.join(args)
-
+    for_remove = ' '.join(targets)
     if _check_pkgng():
         cmd = '{0} remove -y {1}'.format(_cmd('pkg'), for_remove)
     else:
         cmd = '{0} {1}'.format(_cmd('pkg_remove'), for_remove)
 
     __salt__['cmd.run_all'](cmd)
-
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkg_delete
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name)
+    return remove(name=name, pkgs=pkgs)
 
 
 def rehash():
@@ -360,7 +377,7 @@ def rehash():
     '''
     shell = __salt__['cmd.run']('echo $SHELL').split('/')
     if shell[len(shell) - 1] in ['csh', 'tcsh']:
-        __salt__['cmd.run']('rehash')
+        __salt__['cmd.run_all']('rehash')
 
 
 def perform_cmp(pkg1='', pkg2=''):
