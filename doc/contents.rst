@@ -23,6 +23,7 @@ Full Table of Contents
     topics/projects/index
     topics/event/index
     topics/mine/*
+    topics/virt/*
     topics/tests/*
     topics/reactor/*
     topics/style
