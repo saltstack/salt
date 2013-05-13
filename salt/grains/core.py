@@ -834,11 +834,7 @@ def ip4():
     Return a list of ipv4 addrs
     '''
     ips = []
-    if salt.utils.is_windows():
-        # TODO: Add windows ip addrs here
-        pass
-    else:
-        ips = salt.utils.socket_util.ip4_addrs()
+    ips = salt.utils.socket_util.ip4_addrs()
     return {'ipv4': ips}
 
 
