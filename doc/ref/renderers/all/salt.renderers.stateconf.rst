@@ -8,11 +8,11 @@ salt.renderers.stateconf
 :maturity: new
 :platform: all
 
-This module provides a custom renderer that process a salt file with a
-specified templating engine(e.g., Jinja) and a chosen data renderer(e.g., YAML),
-extract arguments for any ``stateconf.set`` state and provide the extracted
-arguments (including salt specific args, such as 'require', etc) as template
-context. The goal is to make writing reusable/configurable/ parameterized
+This module provides a custom renderer that processes a salt file with a
+specified templating engine (e.g., Jinja) and a chosen data renderer (e.g., YAML),
+extracts arguments for any ``stateconf.set`` state, and provides the extracted
+arguments (including Salt-specific args, such as ``require``, etc) as template
+context. The goal is to make writing reusable/configurable/parameterized
 salt files easier and cleaner.
 
 To use this renderer, either set it as the default renderer via the
