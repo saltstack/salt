@@ -32,6 +32,7 @@ from salt.modules.file import (check_hash, check_managed, check_perms, # pylint:
         manage_file, file_exists, get_diff, get_managed, check_perms,
         check_managed, check_file_meta, contains_regex)
 
+from salt.utils import namespaced_function
 
 log = logging.getLogger(__name__)
 
