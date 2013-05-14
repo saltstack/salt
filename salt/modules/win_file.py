@@ -13,6 +13,7 @@ import os
 import stat
 import os.path
 import logging
+import tempfile # do no remove. Used in import of salt.modules.file.__clean_tmp
 
 # Import third party libs
 try:
