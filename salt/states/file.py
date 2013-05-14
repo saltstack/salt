@@ -538,7 +538,7 @@ def symlink(
     if not os.path.exists(name):
         # The link is not present, make it
         os.symlink(target, name)
-        ret['comment'] = 'Created new symlink {0}'.format(name)
+        ret['comment'] = 'Created new symlink {0} -> {1}'.format(name, target)
         ret['changes']['new'] = name
         return ret
 
