@@ -8,7 +8,7 @@ Setup of Python virtualenv sandboxes.
 import logging
 import os
 
-logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
+log = logging.getLogger(__name__)
 
 
 def managed(name,
@@ -63,11 +63,15 @@ def managed(name,
         cached_requirements = __salt__['cp.is_cached'](requirements, __env__)
         if not cached_requirements:
             # It's not cached, let's cache it.
-            cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
+            cached_requirements = __salt__['cp.cache_file'](
+                requirements, __env__
+            )
         # Check if the master version has changed.
         if __salt__['cp.hash_file'](requirements, __env__) != \
                 __salt__['cp.hash_file'](cached_requirements, __env__):
-            cached_requirements = __salt__['cp.cache_file'](requirements, __env__)
+            cached_requirements = __salt__['cp.cache_file'](
+                requirements, __env__
+            )
         if not cached_requirements:
             ret.update({
                 'result': False,
@@ -100,21 +104,23 @@ def managed(name,
         return ret
 
     if not venv_exists or (venv_exists and clear):
-        _ret = __salt__['virtualenv.create'](name,
-                venv_bin=venv_bin,
-                no_site_packages=no_site_packages,
-                system_site_packages=system_site_packages,
-                distribute=distribute,
-                clear=clear,
-                python=python,
-                extra_search_dir=extra_search_dir,
-                never_download=never_download,
-                prompt=prompt,
-                runas=runas)
+        _ret = __salt__['virtualenv.create'](
+            name,
+            venv_bin=venv_bin,
+            no_site_packages=no_site_packages,
+            system_site_packages=system_site_packages,
+            distribute=distribute,
+            clear=clear,
+            python=python,
+            extra_search_dir=extra_search_dir,
+            never_download=never_download,
+            prompt=prompt,
+            runas=runas
+        )
 
         ret['result'] = _ret['retcode'] == 0
         ret['changes']['new'] = __salt__['cmd.run_stderr'](
-                '{0} -V'.format(venv_py)).strip('\n')
+            '{0} -V'.format(venv_py)).strip('\n')
 
         if clear:
             ret['comment'] = "Cleared existing virtualenv"
