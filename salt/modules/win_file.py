@@ -42,9 +42,10 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
-            global check_perms, get_managed
+            global check_perms, get_managed, makedirs_perms
             check_perms = namespaced_function(check_perms, globals())
             get_managed = namespaced_function(get_managed, globals())
+            makedirs_perms = namespaced_function(makedirs_perms, globals())
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
