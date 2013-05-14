@@ -676,7 +676,7 @@ def create(vm_=None, call=None):
     if subnetid_ is not None:
         params['SubnetId'] = subnetid_
 
-    ex_securitygroupid = securitygroupid(vim_)
+    ex_securitygroupid = securitygroupid(vm_)
     if ex_securitygroupid:
         if not isinstance(ex_securitygroupid, list):
             params['SecurityGroupId.1'] = ex_securitygroupid
