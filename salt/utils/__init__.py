@@ -21,6 +21,7 @@ import datetime
 import platform
 import tempfile
 import subprocess
+import types
 import zmq
 from calendar import month_abbr as months
 import salt._compat
