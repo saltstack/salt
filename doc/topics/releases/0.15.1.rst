@@ -31,7 +31,9 @@ locations.
 Specific commits:
 
 https://github.com/saltstack/salt/commit/5427b9438e452a5a8910d9128c6aafb45d8fd5d3
+
 https://github.com/saltstack/salt/commit/7560908ee62351769c3cd43b03d74c1ca772cc52
+
 https://github.com/saltstack/salt/commit/e200b8a7ff53780124e08d2bdefde7587e52bfca
 
 RSA Key Generation Fault
