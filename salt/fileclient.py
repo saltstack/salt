@@ -411,6 +411,9 @@ class LocalClient(Client):
                'rel': ''}
         if env not in self.opts['file_roots']:
             return fnd
+        if path.startswith('|'):
+            # The path arguments are escaped
+            path = path[1:]
         for root in self.opts['file_roots'][env]:
             full = os.path.join(root, path)
             if os.path.isfile(full):
