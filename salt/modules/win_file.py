@@ -307,13 +307,3 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
-
-
-def __clean_tmp(sfn):
-    '''  
-    Clean out a template temp file
-    '''
-    if sfn.startswith(tempfile.gettempdir()):
-        # Only clean up files that exist
-        if os.path.exists(sfn):
-            os.remove(sfn)
