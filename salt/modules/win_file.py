@@ -44,11 +44,13 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
+            global source_list
             check_perms = namespaced_function(check_perms, globals())
             get_managed = namespaced_function(get_managed, globals())
             makedirs_perms = namespaced_function(makedirs_perms, globals())
             manage_file = namespaced_function(manage_file, globals())
             __clean_tmp = namespaced_function(__clean_tmp, globals())
+            source_list = namespaced_function(source_list, globals())
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
