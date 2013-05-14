@@ -95,7 +95,7 @@ def hyper_info(hyper=None):
     return data
 
 
-def init(name, cpu, mem, image, hyper=None, seed=True):
+def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
     '''
     Initialize a new vm
     '''
@@ -120,7 +120,14 @@ def init(name, cpu, mem, image, hyper=None, seed=True):
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.init',
-            [name, cpu, mem, image, 'seed={0}'.format(seed)],
+            [
+                name,
+                cpu,
+                mem,
+                image,
+                'seed={0}'.format(seed),
+                'nic={0}'.format(nic)
+            ],
             timeout=600)
 
     for info in cmd_ret:
