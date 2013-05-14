@@ -157,11 +157,12 @@ class Client(object):
                     if fn_.strip() and fn_.startswith(path)])
 
         if include_empty:
-            # Break up the path into a list containing the bottom-level directory
-            # (the one being recursively copied) and the directories preceding it
+            # Break up the path into a list containing the bottom-level
+            # directory (the one being recursively copied) and the directories
+            # preceding it
             #separated = string.rsplit(path, '/', 1)
             #if len(separated) != 2:
-            #    # No slashes in path. (This means all files in env will be copied)
+            #    # No slashes in path. (So all files in env will be copied)
             #    prefix = ''
             #else:
             #    prefix = separated[0]
