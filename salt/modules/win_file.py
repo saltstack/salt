@@ -24,6 +24,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
 from salt.modules.file import (check_hash, check_managed, check_perms, # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
         patch, remove, source_list, sed_contains, touch, append, contains,
@@ -42,6 +43,8 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
+            global check_perms
+            check_perms = namespaced_function(check_perms, globals())
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
