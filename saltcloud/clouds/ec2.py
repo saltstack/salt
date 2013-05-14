@@ -599,12 +599,7 @@ def get_subnetid(vm_):
     if subnetid is None:
         return None
     return subnetid
-    subnets = describe_subnets()
 
-    if subnetid not in subnets.keys():
-        raise SaltCloudException(
-            'The specified subnet'
-        )
 
 def list_availability_zones():
     '''
