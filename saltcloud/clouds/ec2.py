@@ -601,6 +601,11 @@ def get_subnetid(vm_):
     return subnetid
 
 
+def securitygroupid(vm_):
+    return config.get_config_value(
+        'securitygroupid', vm_, __opts__, search_global=False
+    )
+
 def list_availability_zones():
     '''
     List all availability zones in the current region
@@ -670,6 +675,14 @@ def create(vm_=None, call=None):
     subnetid_ = get_subnetid(vm_)
     if subnetid_ is not None:
         params['SubnetId'] = subnetid_
+
+    ex_securitygroupid = securitygroupid(vim_)
+    if ex_securitygroupid:
+        if not isinstance(ex_securitygroupid, list):
+            params['SecurityGroupId.1'] = ex_securitygroupid
+        else:
+            for (counter, sg_) in enumerate(ex_securitygroupid):
+                params['SecurityGroupId.{0}'.format(counter)] = sg_
 
     delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
