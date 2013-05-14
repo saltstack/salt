@@ -13,6 +13,7 @@ import os
 import stat
 import os.path
 import logging
+import tempfile
 
 # Import third party libs
 try:
@@ -30,7 +31,7 @@ from salt.modules.file import (check_hash, check_managed, check_perms, # pylint:
         contains_regex, contains_regex_multiline, contains_glob, patch,
         uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
         manage_file, file_exists, get_diff, get_managed, check_perms,
-        check_managed, check_file_meta, contains_regex, __clean_tmp)
+        check_managed, check_file_meta, contains_regex)
 
 from salt.utils import namespaced_function
 
@@ -49,8 +50,8 @@ def __virtual__():
             get_managed = namespaced_function(get_managed, globals())
             makedirs_perms = namespaced_function(makedirs_perms, globals())
             manage_file = namespaced_function(manage_file, globals())
-            __clean_tmp = namespaced_function(__clean_tmp, globals())
             source_list = namespaced_function(source_list, globals())
+            mkdir = namespaced_function(mkdir, globals())
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
@@ -301,3 +302,13 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def __clean_tmp(sfn):
+    '''  
+    Clean out a template temp file
+    '''
+    if sfn.startswith(tempfile.gettempdir()):
+        # Only clean up files that exist
+        if os.path.exists(sfn):
+            os.remove(sfn)
