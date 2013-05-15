@@ -224,7 +224,7 @@ def list_pkgs(*args, **kwargs):
     __context__['pkg.list_pkgs'] = ret
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
-    return pkgs
+    return ret
 
 
 def _search_software(target):
