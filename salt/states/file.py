@@ -1702,7 +1702,7 @@ def append(name,
     for chunk in text:
 
         if __salt__['file.contains_regex_multiline'](
-                name, salt.utils.build_whitepace_splited_regex(chunk)):
+                name, salt.utils.build_whitespace_split_regex(chunk)):
             continue
 
         try:

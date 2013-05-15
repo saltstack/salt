@@ -13,7 +13,7 @@ import re
 
 # Import salt libs
 from saltunittest import TestCase, TestLoader, TextTestRunner
-from salt.utils import build_whitepace_splited_regex
+from salt.utils import build_whitespace_split_regex
 
 
 DOUBLE_TXT = """\
@@ -84,19 +84,19 @@ fi
 class TestRuntimeWhitespaceRegex(TestCase):
 
     def test_single_quotes(self):
-        regex = build_whitepace_splited_regex(SINGLE_TXT)
+        regex = build_whitespace_split_regex(SINGLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
     def test_double_quotes(self):
-        regex = build_whitepace_splited_regex(DOUBLE_TXT)
+        regex = build_whitespace_split_regex(DOUBLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
     def test_single_and_double_quotes(self):
-        regex = build_whitepace_splited_regex(SINGLE_DOUBLE_TXT)
+        regex = build_whitespace_split_regex(SINGLE_DOUBLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
     def test_issue_2227(self):
-        regex = build_whitepace_splited_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
+        regex = build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
 
