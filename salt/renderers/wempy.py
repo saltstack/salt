@@ -12,7 +12,7 @@ def render(template_file, env='', sls='', argline='', context=None, **kws):
 
     :rtype: string
     '''
-    tmp_data = salt.utils.templates.wempy(template_file, to_str=True,
+    tmp_data = salt.utils.templates.WEMPY(template_file, to_str=True,
             salt=__salt__,
             grains=__grains__,
             opts=__opts__,
