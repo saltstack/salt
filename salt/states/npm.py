@@ -104,13 +104,15 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    call = __salt__["npm.uninstall"](pkg=name,
-                                     dir=dir,
-                                     runas=runas)
-
-    ret["result"] = True
-    ret["changes"][name] = "Removed"
-    ret["comment"] = "Package was successfully removed."
+    if __salt__["npm.uninstall"](pkg=name,
+                                 dir=dir,
+                                 runas=runas):
+        ret["result"] = True
+        ret["changes"][name] = 'Removed'
+        ret["comment"] = 'Package was successfully removed.'
+    else:
+        ret["result"] = False
+        ret["comment"] = 'Error removing package.'
 
     return ret
 
