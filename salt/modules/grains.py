@@ -161,6 +161,8 @@ def setval(key, val):
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     with open(fn_, 'w+') as fp_:
         fp_.write('')
+    # Sync the grains
+    __salt__['saltutil.sync_grains']()
     # Return the grain we just set to confirm everything was OK
     return {key: val}
 
