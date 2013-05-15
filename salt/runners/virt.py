@@ -46,13 +46,15 @@ def _find_vm(name, data, quiet=False):
             return ret
     return {}
 
+
 def query(hyper=None, quiet=False):
     '''
     Query the virtual machines
     '''
     ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
-    for info in client.cmd_iter('virtual:physical', 'virt.full_info', expr_form='grain'):
+    for info in client.cmd_iter('virtual:physical',
+                                'virt.full_info', expr_form='grain'):
         if not info:
             continue
         if not isinstance(info, dict):
@@ -113,7 +115,7 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
             return 'fail'
     else:
         hyper = _determine_hyper(data)
-    
+
     client = salt.client.LocalClient(__opts__['conf_file'])
 
     print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
@@ -307,4 +309,6 @@ def migrate(name, target=''):
         print('Target hypervisor {0} not found'.format(origin_data))
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
-    print client.cmd_async(origin_hyper, 'virt.migrate_non_shared', [name, target])
+    print client.cmd_async(origin_hyper,
+                           'virt.migrate_non_shared',
+                           [name, target])
