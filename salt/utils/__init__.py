@@ -22,6 +22,7 @@ import platform
 import tempfile
 import subprocess
 import types
+import warnings
 import zmq
 from calendar import month_abbr as months
 import salt._compat
@@ -572,7 +573,7 @@ def pem_finger(path, sum_type='md5'):
     return finger.rstrip(':')
 
 
-def build_whitepace_splited_regex(text):
+def build_whitespace_split_regex(text):
     '''
     Create a regular expression at runtime which should match ignoring the
     addition or deletion of white space or line breaks, unless between commas
@@ -581,7 +582,7 @@ def build_whitepace_splited_regex(text):
 
     >>> import re
     >>> from salt.utils import *
-    >>> regex = build_whitepace_splited_regex(
+    >>> regex = build_whitespace_split_regex(
     ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
     ... )
 
@@ -614,6 +615,13 @@ def build_whitepace_splited_regex(text):
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
     return r'(?m)^{0}$'.format(regex)
+
+
+def build_whitepace_splited_regex(text):
+    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
+                  " please use build_whitespace_split_regex instead.",
+                  DeprecationWarning)
+    build_whitespace_split_regex(text)
 
 
 def format_call(fun, data):
