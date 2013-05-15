@@ -14,7 +14,9 @@ Control the kernel sysctl system
 
 def present(name, value, config='/etc/sysctl.conf'):
     '''
-    Ensure that the named sysctl value is set
+    Ensure that the named sysctl value is set in memory and persisted to the
+    named configuration file. The default sysctl configuration file is
+    /etc/sysctl.conf
 
     name
         The name of the sysctl value to edit
