@@ -243,6 +243,7 @@ freezer_includes = [
     'difflib',
     'distutils',
     'distutils.version',
+    'numbers',
     'json',
 ]
 
