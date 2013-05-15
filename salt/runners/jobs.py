@@ -39,8 +39,7 @@ def active():
         jid_dir = salt.utils.jid_dir(
                 jid,
                 __opts__['cachedir'],
-                __opts__['hash_type']
-                )
+                __opts__['hash_type'])
         if not os.path.isdir(jid_dir):
             continue
         for minion in os.listdir(jid_dir):
