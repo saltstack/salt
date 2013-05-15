@@ -908,8 +908,7 @@ def check_state_result(running):
         if isinstance(rets, dict) and 'result' in rets:
             if rets['result'] is False:
                 return False
-            else:
-                return True
+            return True
 
         for ret in rets:
             if not isinstance(ret, dict):
