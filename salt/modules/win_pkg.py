@@ -223,8 +223,8 @@ def list_pkgs(*args, **kwargs):
 
     __salt__['pkg_resource.sort_pkglist'](pkgs)
     if not versions_as_list:
-        __salt__['pkg_resource.stringify'](pkgs)
-    return pkgs
+        __salt__['pkg_resource.stringify'](ret)
+    return ret
 
 
 def _search_software(target):
