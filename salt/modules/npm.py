@@ -10,6 +10,8 @@ import salt.utils
 
 from salt.exceptions import CommandExecutionError
 
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -121,7 +123,8 @@ def uninstall(pkg,
 
     '''
     if not _valid_version():
-        return '"{0}" is not available.'.format('npm.uninstall')
+        log.error('"{0}" is not available.'.format('npm.uninstall'))
+        return False
 
     cmd = 'npm uninstall'
 
@@ -133,7 +136,9 @@ def uninstall(pkg,
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+        log.error(results['stderr'])
+        return False
+    return True
 
 
 def list(pkg=None,
