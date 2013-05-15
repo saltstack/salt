@@ -132,7 +132,7 @@ def set_(device, **kwargs):
                                         current['file-hard-limit'],
                                         device)
 
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd)
 
     return {ret: current}
 
