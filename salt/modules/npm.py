@@ -10,6 +10,9 @@ import salt.utils
 
 from salt.exceptions import CommandExecutionError
 
+log = logging.getLogger(__name__)
+
+
 def __virtual__():
     '''
     Only work when npm is installed.
@@ -17,6 +20,7 @@ def __virtual__():
     if salt.utils.which('npm'):
         return 'npm'
     return False
+
 
 def _valid_version():
     '''
@@ -86,13 +90,14 @@ def install(pkg=None,
         if i.startswith("{"):
             break
         else:
-            lines = lines[1:]        
+            lines = lines[1:]
 
     try:
         return json.loads(''.join(lines))
     except ValueError:
         # Still no JSON!! Return the stdout as a string
         return result['stdout']
+
 
 def uninstall(pkg,
               dir=None,
@@ -118,7 +123,8 @@ def uninstall(pkg,
 
     '''
     if not _valid_version():
-        return '"{0}" is not available.'.format('npm.uninstall')
+        log.error('"{0}" is not available.'.format('npm.uninstall'))
+        return False
 
     cmd = 'npm uninstall'
 
@@ -130,7 +136,10 @@ def uninstall(pkg,
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+        log.error(results['stderr'])
+        return False
+    return True
+
 
 def list(pkg=None,
          dir=None):
