@@ -5,6 +5,7 @@ A state module to manage installed NPM packages.
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
+
 def installed(name,
               dir=None,
               runas=None,
@@ -69,6 +70,7 @@ def installed(name,
 
     return ret
 
+
 def removed(name,
             dir=None,
             runas=None,
@@ -102,16 +104,16 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    call = __salt__["npm.uninstall"](
-        pkg=name,
-        dir=dir,
-        runas=runas)
+    call = __salt__["npm.uninstall"](pkg=name,
+                                     dir=dir,
+                                     runas=runas)
 
     ret["result"] = True
     ret["changes"][name] = "Removed"
     ret["comment"] = "Package was successfully removed."
 
     return ret
+
 
 def bootstrap(
             name,
@@ -143,11 +145,10 @@ def bootstrap(
 
     if call:
         ret['result'] = True
-        ret['changes'] = name,'Bootstrapped'
+        ret['changes'] = name, 'Bootstrapped'
         ret['comment'] = 'Directory was successfully bootstrapped'
     else:
         ret['result'] = False
         ret['comment'] = 'Could not bootstrap directory'
 
     return ret
-
