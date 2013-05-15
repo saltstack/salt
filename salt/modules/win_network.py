@@ -177,13 +177,14 @@ def _interfaces_ipconfig(out):
     '''
     ifaces = dict()
     iface = None
+    adapter_iface_regex = re.compile(r'adapter (\S.+):$')
 
     for line in out.splitlines():
         if not line:
             continue
         # TODO what does Windows call Infiniband and 10/40gige adapters
         if line.startswith('Ethernet'):
-            iface = ifaces[re.search(r'adapter (\S.+):$').group(1)]
+            iface = ifaces[adapter_iface_regex.search(line).group(1)]
             iface['up'] = True
             addr = None
             continue
