@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Sean Channel <pentabular@gmail.com>
 Build-Depends: debhelper (>= 7.0.50),
                cython,
+               dctrl-tools,
                python | python-all | python-dev | python-all-dev,
                python-crypto,
                python-jinja2,
