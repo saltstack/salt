@@ -122,7 +122,7 @@ def add(name,
     if system:
         cmd += '-r '
     cmd += name
-    ret = __salt__['cmd.retcode'](cmd)
+    ret = __salt__['cmd.run_all'](cmd)['retcode']
     if ret != 0:
         return False
     else:
