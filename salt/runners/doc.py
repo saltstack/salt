@@ -15,6 +15,7 @@ import salt.wheel
 def __virtual__():
     return 'doc'
 
+
 def runner():
     '''
     Return all inline documetation for runner modules
@@ -24,6 +25,7 @@ def runner():
     salt.output.display_output(ret, '', __opts__)
     return ret
 
+
 def wheel():
     '''
     Return all inline documentation for wheel modules
@@ -32,6 +34,7 @@ def wheel():
     ret = client.get_docs()
     salt.output.display_output(ret, '', __opts__)
     return ret
+
 
 def execution():
     '''
@@ -49,6 +52,7 @@ def execution():
 
     salt.output.display_output(ret, '', __opts__)
     return ret
+
 
 # Still need to modify some of the backend for auth checks to make this work
 def __list_functions(user=None):
