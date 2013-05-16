@@ -244,7 +244,7 @@ class Master(SMaster):
         mof_c = self.opts['max_open_files']
         if mof_c > mof_h:
             # The configured value is higher than what's allowed
-            log.warning(
+            log.info(
                 'The value for the \'max_open_files\' setting, {0}, is higher '
                 'than what the user running salt is allowed to raise to, {1}. '
                 'Defaulting to {1}.'.format(mof_c, mof_h)
@@ -253,11 +253,11 @@ class Master(SMaster):
 
         if mof_s < mof_c:
             # There's room to raise the value. Raise it!
-            log.warning('Raising max open files value to {0}'.format(mof_c))
+            log.info('Raising max open files value to {0}'.format(mof_c))
             resource.setrlimit(resource.RLIMIT_NOFILE, (mof_c, mof_h))
             try:
                 mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
-                log.warning(
+                log.info(
                     'New values for max open files soft/hard values: '
                     '{0}/{1}'.format(mof_s, mof_h)
                 )
