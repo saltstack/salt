@@ -342,7 +342,7 @@ def render(template, env='', sls='', tmplpath=None, rendered_sls=None, **kws):
         **kws)
 
     dsl_sls.get_render_stack().append(dsl_sls)
-    exec template.read() in mod.__dict__
+    exec template.read() in mod.__dict__  # pylint: disable=W0122
     highstate = dsl_sls.to_highstate(mod)
     dsl_sls.get_render_stack().pop()
     return highstate
