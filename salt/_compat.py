@@ -111,15 +111,15 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 '''
 
 if PY3:
-    from urllib.parse import urlparse
-    from urllib.error import URLError
+    from urllib.parse import urlparse  # pylint: disable=E0611
+    from urllib.error import URLError  # pylint: disable=E0611
     import http.server as BaseHTTPServer
-    from urllib.error import HTTPError
-    from urllib.parse import quote as url_quote
-    from urllib.parse import quote_plus as url_quote_plus
-    from urllib.parse import unquote as url_unquote
-    from urllib.parse import urlencode as url_encode
-    from urllib.request import urlopen as url_open
+    from urllib.error import HTTPError  # pylint: disable=E0611
+    from urllib.parse import quote as url_quote  # pylint: disable=E0611
+    from urllib.parse import quote_plus as url_quote_plus  # pylint: disable=E0611
+    from urllib.parse import unquote as url_unquote  # pylint: disable=E0611
+    from urllib.parse import urlencode as url_encode  # pylint: disable=E0611
+    from urllib.request import urlopen as url_open  # pylint: disable=E0611
     url_unquote_text = url_unquote
     url_unquote_native = url_unquote
 else:
