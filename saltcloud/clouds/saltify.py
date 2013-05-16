@@ -110,6 +110,7 @@ def create(vm_):
         ),
         'ssh_keyfile': key_filename,
         'script_args': config.get_config_value('script_args', vm_, __opts__),
+        'script_env': config.get_config_value('script_env', vm_, __opts__),
         'minion_conf': saltcloud.utils.minion_conf_string(__opts__, vm_),
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': config.get_config_value(
