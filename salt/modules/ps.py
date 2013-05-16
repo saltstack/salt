@@ -100,9 +100,7 @@ def cpu_percent(interval=0.1, per_cpu=False):
         salt '*' ps.cpu_percent
     '''
     if per_cpu:
-        result = []
-        for cpu_percent in psutil.cpu_percent(interval, True):
-            result.append(cpu_percent)
+        result = list(psutil.cpu_percent(interval, True))
     else:
         result = psutil.cpu_percent(interval)
     return result
@@ -122,9 +120,7 @@ def cpu_times(per_cpu=False):
         salt '*' ps.cpu_times
     '''
     if per_cpu:
-        result = []
-        for cpu_times in psutil.cpu_times(True):
-            result.append(dict(cpu_times._asdict()))
+        result = [dict(cpu_times._asdict()) for cpu_times in psutil.cpu_times(True)]
     else:
         result = dict(psutil.cpu_times(per_cpu)._asdict())
     return result
@@ -188,9 +184,7 @@ def disk_partitions(all=False):
 
         salt '*' ps.disk_partitions
     '''
-    result = []
-    for partition in psutil.disk_partitions(all):
-        result.append(dict(partition._asdict()))
+    result = [dict(partition._asdict()) for partition in psutil.disk_partitions(all)]
     return result
 
 
