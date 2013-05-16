@@ -62,6 +62,7 @@ def assign(name, value):
 
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
+    value = str(value)
     sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
