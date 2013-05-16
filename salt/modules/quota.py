@@ -5,6 +5,9 @@ Module for managing quotas on POSIX-like systems.
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -18,9 +21,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    # Disable on these platforms, specific service modules exist:
-    disable = set(('Windows',))
-    if __grains__['os'] in disable:
+    if salt.utils.is_windows():
         return False
     return 'quota'
 

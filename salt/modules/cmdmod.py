@@ -187,11 +187,6 @@ def _run(cmd,
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
 
-    # TODO: Figure out the proper way to do this in windows
-    disable_runas = [
-        'Windows',
-    ]
-
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template)
 
@@ -210,7 +205,8 @@ def _run(cmd,
                   'string - yaml represented dict'.format(env))
         env = {}
 
-    if runas and __grains__['os'] in disable_runas:
+    if runas and salt.utils.is_windows():
+        # TODO: Figure out the proper way to do this in windows
         msg = 'Sorry, {0} does not support runas functionality'
         raise CommandExecutionError(msg.format(__grains__['os']))
 
