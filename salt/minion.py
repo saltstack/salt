@@ -1485,9 +1485,9 @@ class Matcher(object):
         Matches based on range cluster
         '''
         if HAS_RANGE:
-            range = seco.range.Range(self.opts['range_server'])
+            range_ = seco.range.Range(self.opts['range_server'])
             try:
-                return self.opts['grains']['fqdn'] in range.expand(tgt)
+                return self.opts['grains']['fqdn'] in range_.expand(tgt)
             except seco.range.RangeException as e:
                 log.debug('Range exception in compound match: {0}'.format(e))
                 return False
