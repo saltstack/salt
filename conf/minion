@@ -380,7 +380,7 @@
 # Enabling TCP Keepalives prevents this from happening.
 #
 # Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
-# or leave to the OS defaults (-1), on linux, typically disabled. Default True, enabled.
+# or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
 #
 # How long before the first keepalive should be sent in seconds. Default 300
