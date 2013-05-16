@@ -13,7 +13,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 try:
-    import pythoncom
+    import pythoncom  # pylint: disable=W0611
     import wmi
     import salt.utils.winapi
     has_required_packages = True
