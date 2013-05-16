@@ -6,9 +6,10 @@ Support for YUM
 '''
 
 # Import python libs
-import yaml
+import copy
 import os
 import logging
+import yaml
 
 # Import salt libs
 import salt.utils
