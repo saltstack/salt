@@ -1822,6 +1822,13 @@ class BaseHighState(object):
                     else:
                         env_key = env
 
+                    if inc_sls.startswith('.'):
+                        p_comps = sls.split('.')
+                        if len(p_comps) > 1:
+                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
+                        else:
+                            inc_sls = inc_sls[1:]
+
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment
                         if env_key in matches and fnmatch.filter(self.avail[env_key], inc_sls):
