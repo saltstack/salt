@@ -395,7 +395,7 @@ def push(path):
     path = os.path.realpath(path)
     if not os.path.isfile(path):
         return False
-    auth = auth()
+    auth = _auth()
 
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
