@@ -24,10 +24,7 @@ def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    disable = set((
-        'Windows',
-        ))
-    if __grains__['os'] in disable or not salt.utils.which('at'):
+    if salt.utils.is_windows() or not salt.utils.which('at'):
         return False
     return 'at'
 

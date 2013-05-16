@@ -7,6 +7,7 @@ import re
 import logging
 
 # Import salt libs
+import salt.utils
 import salt.utils.socket_util
 
 
@@ -18,7 +19,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] in ('Windows',):
+    if salt.utils.is_windows():
         return False
 
     return 'network'
