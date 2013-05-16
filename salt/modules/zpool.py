@@ -20,7 +20,7 @@ def __virtual__():
 
 def list_installed():
     '''
-    returns a list of installed packages
+    Returns a list of installed packages
     '''
     installed = []
     pkgs = __salt__['cmd.run']('pkg info')
@@ -30,7 +30,9 @@ def list_installed():
 
 
 def pool_exists(pool_name):
-    '''Check if a zfs storage pool is active'''
+    '''
+    Check if a zfs storage pool is active
+    '''
     current_pools = zpool_list()
     for pool in current_pools['pools']:
         if pool_name in pool:
@@ -39,7 +41,9 @@ def pool_exists(pool_name):
 
 
 def zpool_list():
-    '''list zpool's size and usage'''
+    '''
+    List zpool's size and usage
+    '''
 
     res = __salt__['cmd.run']('zpool list')
     pool_list = [l for l in res.splitlines()]
@@ -47,7 +51,9 @@ def zpool_list():
 
 
 def _check_mkfile():
-    '''Checks if mkfile is installed if not install'''
+    '''
+    Checks if mkfile is installed if not install
+    '''
     if 'mkfile' not in list_installed():
         # install mkfile
         __salt__['cmd.run']('make -C /usr/ports/sysutils/mkfile install \
@@ -57,7 +63,7 @@ def _check_mkfile():
 
 def create_file_vdevice(size, *names):
     '''
-    creates file based ``virtual devices`` for a zpool
+    Creates file based ``virtual devices`` for a zpool
 
     ``*names`` is a list of full paths for mkfile to create
 
@@ -75,7 +81,7 @@ def create_file_vdevice(size, *names):
     for name in names:
         # check if file is present if not add it
         if os.path.isfile(name):
-            ret[name] = "File: {0} already present".format(name)
+            ret[name] = 'File: {0} already present'.format(name)
         else:
             dlist.append(name)
 
@@ -86,7 +92,7 @@ def create_file_vdevice(size, *names):
     # Makesure the files are there
     for name in names:
         if not os.path.isfile(name):
-            ret[name] = "Not installed but weird it should be"
+            ret[name] = 'Not installed but weird it should be'
     ret['status'] = True
     ret[cmd] = cmd
     return ret
@@ -105,35 +111,42 @@ def zpool_create(pool_name, *disks):
 
     # Check if the pool_name is already being used
     if pool_exists(pool_name):
-        ret['Error'] = "Storage Pool `{0}` already exists meow".format(pool_name)
+        ret['Error'] = 'Storage Pool `{0}` already exists meow'.format(pool_name)
         return ret
 
     # make sure files are present on filesystem
     for disk in disks:
         if not os.path.isfile(disk):
             # File is not there error and return
-            ret[disk] = "{0} not present on filesystem".format(disk)
+            ret[disk] = '{0} not present on filesystem'.format(disk)
             return ret
         else:
             dlist.append(disk)
 
     devs = ' '.join(dlist)
-    cmd = "zpool create {0} {1}".format(pool_name, devs)
+    cmd = 'zpool create {0} {1}'.format(pool_name, devs)
 
     # Create storage pool
     __salt__['cmd.run'](cmd)
 
     # Check and see if the pools is available
     if pool_exists(pool_name):
-        ret[pool_name] = "created"
+        ret[pool_name] = 'created'
         return ret
     else:
-        ret['Error'] = "Unable to create storage pool {0}".format(pool_name)
+        ret['Error'] = 'Unable to create storage pool {0}'.format(pool_name)
 
     return ret
 
 
 def zpool_status(name=''):
+    '''
+    Return the status of the named zpool
+
+    CLI Example::
+
+        salt '*' zpool.zpool_status
+    '''
     res = __salt__['cmd.run']('zpool status {0}'.format(name))
     ret = res.splitlines()
     return ret
@@ -155,12 +168,14 @@ def zpool_destroy(pool_name):
             ret[pool_name] = "Deleted"
             return ret
     else:
-        ret['Error'] = "Storage pool {0} does not exists".format(pool_name)
+        ret['Error'] = 'Storage pool {0} does not exists'.format(pool_name)
 
 
 def zpool_detach(zpool, device):
     '''
     Detach a device from a storage pool
+
+    THIS FUNCTION IS NOT YET IMPLEMENTED
 
     CLI Example::
 
@@ -180,7 +195,9 @@ def add(pool_name, vdisk):
     ret = {}
     # check for pool
     if not pool_exists(pool_name):
-        ret['Error'] = 'Can\'t add {0} to {1} pool is not available'.format(pool_name, vdisk)
+        ret['Error'] = 'Can\'t add {0} to {1} pool is not available'.format(
+                pool_name,
+                vdisk)
         return ret
 
     # check device is a file
@@ -220,7 +237,7 @@ def replace(pool_name, old, new):
         return ret
 
     # Replace disks
-    cmd = "zpool replace {0} {1} {2}".format(pool_name, old, new)
+    cmd = 'zpool replace {0} {1} {2}'.format(pool_name, old, new)
     __salt__['cmd.run'](cmd)
 
     # check for new disk in pool
