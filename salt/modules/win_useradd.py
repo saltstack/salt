@@ -5,6 +5,7 @@ NOTE: This currently only works with local user accounts, not domain accounts
 '''
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 
@@ -12,7 +13,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
-    return 'user' if __grains__['kernel'] == 'Windows' else False
+    return 'user' if salt.utils.is_windows() else False
 
 
 def add(name,
