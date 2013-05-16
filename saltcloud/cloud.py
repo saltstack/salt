@@ -851,7 +851,7 @@ class Map(Cloud):
                     continue
 
                 # FIXME: what about other providers?
-                if prov not in ('aws', 'ec2'):
+                if prov in ('aws', 'ec2'):
                     if pmap['aws'][name]['state'] != 'TERMINATED' or \
                             pmap['ec2'][name]['state'] != 'TERMINATED':
                         log.info(
