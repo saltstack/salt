@@ -4,10 +4,12 @@ Homebrew for Mac OS X
 
 # Import python libs
 import copy
+import logging
 
 # Import salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -17,6 +19,32 @@ def __virtual__():
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
         return 'pkg'
     return False
+
+
+def _list_taps():
+    '''
+    List currently
+    '''
+    cmd = 'brew tap'
+    taps = __salt__['cmd.run'](cmd).splitlines()
+
+    return taps
+
+
+def _tap(tap, runas=None):
+    '''
+    Add unofficial Github repos to the list of formulas that brew tracks,
+    updates, and installs from.
+    '''
+    if tap in _list_taps():
+        return True
+
+    cmd = 'brew tap {0}'.format(tap)
+    if __salt__['cmd.retcode'](cmd, runas=runas):
+        log.error("Failed to tap '%s'" % tap)
+        return False
+
+    return True
 
 
 def list_pkgs(versions_as_list=False):
@@ -129,7 +157,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def install(name=None, pkgs=None, **kwargs):
+def install(name=None, pkgs=None, taps=None, **kwargs):
     '''
     Install the passed package(s) with ``brew install``
 
@@ -140,6 +168,13 @@ def install(name=None, pkgs=None, **kwargs):
         CLI Example::
             salt '*' pkg.install <package name>
 
+    taps
+        Unofficial Github repos to use when updating and installing formulas.
+
+        CLI Example::
+            salt '*' pkg.install <package name> tap='<tap>'
+            salt '*' pkg.install zlib taps='homebrew/dupes'
+            salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]'
 
     Multiple Package Installation Options:
 
@@ -170,6 +205,20 @@ def install(name=None, pkgs=None, **kwargs):
     old = list_pkgs()
     homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
     user = __salt__['file.get_user'](homebrew_binary)
+
+    # Ensure we've tapped the repo if necessary
+    if taps:
+        if not isinstance(taps, list):
+            # Feels like there is a better way to allow for tap being
+            # specified as both a string and a list
+            taps = [taps]
+
+        for tap in taps:
+            if user != __opts__['user']:
+                _tap(tap, runas=user)
+            else:
+                _tap(tap)
+
     cmd = 'brew install {0}'.format(formulas)
     if user != __opts__['user']:
         __salt__['cmd.run'](cmd, runas=user)
