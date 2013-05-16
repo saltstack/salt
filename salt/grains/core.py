@@ -178,7 +178,6 @@ def _netbsd_gpu_data(osdata):
       - vendor: nvidia|amd|ati|...
         model: string
     '''
-    # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware']
 
     gpus = []
