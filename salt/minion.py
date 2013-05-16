@@ -856,7 +856,7 @@ class Minion(object):
         ).compile_pillar()
         self.module_refresh()
 
-    def clean_die(self, signum, frame):
+    def clean_die(self, signum, frame):  # pylint: disable=W0613
         '''
         Python does not handle the SIGTERM cleanly, if it is signaled exit
         the minion process cleanly

@@ -319,7 +319,7 @@ class Master(SMaster):
         reqserv.start_event_publisher()
         reqserv.start_reactor()
 
-        def sigterm_clean(signum, frame):
+        def sigterm_clean(signum, frame):  # pylint: disable=W0613
             '''
             Cleaner method for stopping multiprocessing processes when a
             SIGTERM is encountered.  This is required when running a salt
