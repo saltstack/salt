@@ -2,13 +2,15 @@
 Manage and query NPM packages.
 '''
 
+# Import python libs
 import json
+import logging
 import distutils.version
 
 # Import salt libs
 import salt.utils
-
 from salt.exceptions import CommandExecutionError
+
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ def install(pkg=None,
 
     '''
     if not _valid_version():
-        return '"{0}" is not available.'.format('npm.install')
+        return '{0!r} is not available.'.format('npm.install')
 
     cmd = 'npm install --silent --json'
 
@@ -87,7 +89,7 @@ def install(pkg=None,
 
     # Strip all lines until JSON output starts
     for i in lines:
-        if i.startswith("{"):
+        if i.startswith('{'):
             break
         else:
             lines = lines[1:]
@@ -123,7 +125,7 @@ def uninstall(pkg,
 
     '''
     if not _valid_version():
-        log.error('"{0}" is not available.'.format('npm.uninstall'))
+        log.error('{0!r} is not available.'.format('npm.uninstall'))
         return False
 
     cmd = 'npm uninstall'
@@ -136,7 +138,7 @@ def uninstall(pkg,
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
     if result['retcode'] != 0:
-        log.error(results['stderr'])
+        log.error(result['stderr'])
         return False
     return True
 
@@ -162,7 +164,7 @@ def list(pkg=None,
 
     '''
     if not _valid_version():
-        return '"{0}" is not available.'.format('npm.list')
+        return '{0!r} is not available.'.format('npm.list')
 
     cmd = 'npm list --json'
 
