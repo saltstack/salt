@@ -145,8 +145,8 @@ class SREQ(object):
         '''
         payload = {'enc': enc}
         payload['load'] = load
-        package = self.serial.dumps(payload)
-        self.socket.send(package)
+        pkg = self.serial.dumps(payload)
+        self.socket.send(pkg)
         self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
         while True:
