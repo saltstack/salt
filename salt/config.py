@@ -260,7 +260,8 @@ def load_config(path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            import salt.utils  # TODO: Need to re-import, need to find out why
+            # TODO: Need to re-import, need to find out why
+            import salt.utils  # pylint: disable=W0404,W0621
             log.debug('Writing {0} based on {1}'.format(path, template))
             with salt.utils.fopen(path, 'w') as out:
                 with salt.utils.fopen(template, 'r') as ifile:

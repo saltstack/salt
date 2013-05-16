@@ -86,7 +86,7 @@ class Master(parsers.MasterOptionParser):
         migrations.migrate_paths(self.config)
 
         # Late import so logging works correctly
-        import salt.master
+        import salt.master  # pylint: disable=W0621
         self.master = salt.master.Master(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
@@ -173,7 +173,7 @@ class Minion(parsers.MinionOptionParser):
         )
         migrations.migrate_paths(self.config)
         # Late import so logging works correctly
-        import salt.minion
+        import salt.minion  # pylint: disable=W0621
         # If the minion key has not been accepted, then Salt enters a loop
         # waiting for it, if we daemonize later then the minion could halt
         # the boot process waiting for a key to be accepted on the master.
@@ -258,7 +258,7 @@ class Syndic(parsers.SyndicOptionParser):
         )
 
         # Late import so logging works correctly
-        import salt.minion
+        import salt.minion  # pylint: disable=W0621
         self.daemonize_if_required()
         self.syndic = salt.minion.Syndic(self.config)
         self.set_pidfile()
