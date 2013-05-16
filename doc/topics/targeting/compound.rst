@@ -42,5 +42,10 @@ That same example expressed in a :term:`top file` looks like the following::
         - match: compound
         - webserver
 
+Note that you cannot have a leading ``not`` in a command.  Instead you must do
+something like the following::
+
+    salt -C '* and not G@kernel:Darwin' test.ping
+
 .. _`glob`: http://docs.python.org/library/fnmatch.html
 .. _`regular expression`: http://docs.python.org/library/re.html#module-re
