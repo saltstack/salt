@@ -121,9 +121,9 @@ class LocalClient(object):
         return user
 
     def _convert_range_to_list(self, tgt):
-        range = seco.range.Range(self.opts['range_server'])
+        range_ = seco.range.Range(self.opts['range_server'])
         try:
-            return range.expand(tgt)
+            return range_.expand(tgt)
         except seco.range.RangeException as err:
             print("Range server exception: {0}".format(err))
             return []
