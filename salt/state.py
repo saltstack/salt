@@ -1825,13 +1825,10 @@ class BaseHighState(object):
 
                     if inc_sls.startswith('.'):
                         p_comps = sls.split('.')
-                        if len(p_comps) > 1:
-                            if state_data.get('source', '').endswith('/init.sls'):
-                                inc_sls = sls + inc_sls
-                            else:
-                                inc_sls = '.'.join(p_comps[:-1]) + inc_sls
+                        if state_data.get('source', '').endswith('/init.sls'):
+                            inc_sls = sls + inc_sls
                         else:
-                            inc_sls = inc_sls[1:]
+                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment
