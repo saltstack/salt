@@ -34,7 +34,7 @@ def _find_vm(name, data, quiet=False):
     '''
     for hv_ in data:
         # Check if data is a dict, and not '"virt.full_info" is not available.'
-        if not isinstance(data[hv_, dict]):
+        if not isinstance(data[hv_], dict):
             continue
         if name in data[hv_].get('vm_info', {}):
             ret = {hv_: {name: data[hv_]['vm_info'][name]}}
