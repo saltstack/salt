@@ -213,6 +213,7 @@ class Auth(object):
 
     def verify_master(self, payload):
         '''
+        Verify that the master is the same one that was previously accepted
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
