@@ -1761,7 +1761,6 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
         salt '*' file.makedirs_perms /opt/code
     '''
     path = os.path
-    mkdir = os.mkdir
     head, tail = path.split(name)
     if not tail:
         head, tail = path.split(head)
@@ -1774,7 +1773,7 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
                 raise
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
-    mkdir(name)
+    os.mkdir(name)
     check_perms(
             name,
             None,
