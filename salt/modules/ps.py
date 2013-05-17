@@ -120,7 +120,7 @@ def cpu_times(per_cpu=False):
         salt '*' ps.cpu_times
     '''
     if per_cpu:
-        result = [dict(cpu_times._asdict()) for cpu_times in psutil.cpu_times(True)]
+        result = [dict(times._asdict()) for times in psutil.cpu_times(True)]
     else:
         result = dict(psutil.cpu_times(per_cpu)._asdict())
     return result
