@@ -128,7 +128,7 @@ def set_file(path, **kwargs):
 
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
-    path = __salt__['cp.cache_file'](path, kwargs.get('__env__'))
+    path = __salt__['cp.cache_file'](path, kwargs.get('__env__', 'base'))
     if path:
         _set_file(path)
         return True
