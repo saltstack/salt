@@ -122,8 +122,8 @@ def _get_upgradable():
     ret = {}
     for line in upgrades:
         name = _get(line, 'name')
-        version = _get(line, 'version')
-        ret[name] = version
+        version_num = _get(line, 'version')
+        ret[name] = version_num
 
     return ret
 
@@ -304,9 +304,9 @@ def install(name=None,
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
-        version = kwargs.get('version')
-        if version:
-            pkg_params = {name: version}
+        version_num = kwargs.get('version')
+        if version_num:
+            pkg_params = {name: version_num}
         elif slot is not None:
             pkg_params = {name: ':{0}'.format(slot)}
 
@@ -319,14 +319,14 @@ def install(name=None,
 
     if pkg_type == 'repository':
         targets = list()
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
-            elif version.startswith(':'):
+            elif version_num.startswith(':'):
                 # Really this 'version' is a slot
-                targets.append('{0}{1}'.format(param, version))
+                targets.append('{0}{1}'.format(param, version_num))
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''

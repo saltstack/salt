@@ -182,7 +182,7 @@ def list_pkgs(versions_as_list=False):
           '%{ARCH}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version, rel, arch = line.split('_|-')
+            name, pkgver, rel, arch = line.split('_|-')
         # Handle unpack errors (should never happen with the queryformat we are
         # using, but can't hurt to be careful).
         except ValueError:
@@ -190,7 +190,6 @@ def list_pkgs(versions_as_list=False):
         # Support 32-bit packages on x86_64 systems
         if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
             name += '.i686'
-        pkgver = version
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
@@ -315,11 +314,11 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
-    if version:
+    version_num = kwargs.get('version')
+    if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
-            pkg_params = {name: version}
+            pkg_params = {name: version_num}
         else:
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
@@ -330,8 +329,8 @@ def install(name=None,
     downgrade = []
     if pkg_type == 'repository':
         targets = []
-        for pkgname, version in pkg_params.iteritems():
-            if version is None:
+        for pkgname, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(pkgname)
             else:
                 cver = old.get(pkgname, '')
@@ -342,8 +341,8 @@ def install(name=None,
                     arch = '.i686'
                 else:
                     arch = ''
-                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version, arch)
-                if not cver or __salt__['pkg.compare'](pkg1=version,
+                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
+                if not cver or __salt__['pkg.compare'](pkg1=version_num,
                                                        oper='>=',
                                                        pkg2=cver):
                     targets.append(pkgstr)
