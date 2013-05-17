@@ -313,7 +313,9 @@ def rebase(cwd, rev='master', opts=None, user=None):
 
     if not opts:
         opts = ''
-    return _git_run('git rebase {0}'.format(opts), cwd=cwd, runas=user)
+    return _git_run('git rebase {0} {1}'.format(opts, rev),
+                    cwd=cwd,
+                    runas=user)
 
 
 def checkout(cwd, rev, force=False, opts=None, user=None):
