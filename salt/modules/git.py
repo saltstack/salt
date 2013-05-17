@@ -450,13 +450,13 @@ def status(cwd, user=None):
     '''
     cmd = 'git status -z --porcelain'
     stdout = _git_run(cmd, cwd=cwd, runas=user)
-    status = []
+    state_by_file = []
     for line in stdout.split("\0"):
         state = line[:2]
         filename = line[3:]
         if filename != '' and state != '':
-            status.append((state, filename))
-    return status
+            state_by_file.append((state, filename))
+    return state_by_file
 
 
 def add(cwd, file_name, user=None, opts=None):
