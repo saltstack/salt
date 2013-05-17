@@ -44,12 +44,12 @@ def address():
     devname = path[0].split('/')
     syspath = '/sys/class/bluetooth/{0}/address'.format(devname[-1])
     sysfile = salt.utils.fopen(syspath, 'r')
-    address = sysfile.read().strip()
+    addr = sysfile.read().strip()
     sysfile.close()
     return {
                 'path': path[0],
                 'devname': devname[-1],
-                'address': address,
+                'address': addr,
            }
 
 
