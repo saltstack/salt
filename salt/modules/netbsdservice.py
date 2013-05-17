@@ -163,7 +163,7 @@ def _rcconf_status(name, status):
     '''
     rcconf = '/etc/rc.conf'
     rxname = '^{0}=.*'.format(name)
-    newstatus = '{0}={1}'.format(name,status)
+    newstatus = '{0}={1}'.format(name, status)
     ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
     if ret == 0: # service found in rc.conf, modify its status
         # NetBSD sed does not support -i flag, call sed by hand
