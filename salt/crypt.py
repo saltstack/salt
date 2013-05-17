@@ -7,6 +7,7 @@ authenticating peers
 # Import python libs
 import os
 import sys
+import time
 import hmac
 import hashlib
 import logging
@@ -415,6 +416,7 @@ class SAuth(Auth):
                            'has the minion key been accepted?')
                     print(msg)
                     sys.exit(2)
+                time.sleep(self.opts['acceptance_wait_time'])
                 continue
             break
         return Crypticle(self.opts, creds['aes'])
