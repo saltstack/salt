@@ -321,8 +321,7 @@ def _check_directory(name,
         for fn_ in changes:
             key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
             comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
-        comment = ''.join(comments)
-        return None, comment
+        return None, ''.join(comments)
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
