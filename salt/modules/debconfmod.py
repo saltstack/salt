@@ -120,7 +120,7 @@ def set(package, question, type, value, *extra):
     return True
 
 
-def set_file(path):
+def set_file(path, **kwargs):
     '''
     Set answers to debconf questions from a file.
 
@@ -128,7 +128,7 @@ def set_file(path):
 
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
-    path = __salt__['cp.cache_file'](path)
+    path = __salt__['cp.cache_file'](path, kwargs.get('__env__'))
     if path:
         _set_file(path)
         return True
