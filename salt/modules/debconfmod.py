@@ -59,11 +59,11 @@ def get_selections(fetchempty=True):
     lines = _unpack_lines(out)
 
     for line in lines:
-        package, question, type, value = line
+        package, question, type_, value = line
         if fetchempty or value:
             (selections
                 .setdefault(package, [])
-                .append([question, type, value]))
+                .append([question, type_, value]))
 
     return selections
 
