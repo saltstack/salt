@@ -100,7 +100,7 @@ def persist(name, value):
 
     with salt.utils.fopen(config, 'r') as ifile:
         for line in ifile:
-            m = re.match('{0}(\??=)'.format(name), line)
+            m = re.match(r'{0}(\??=)'.format(name), line)
             if not m:
                 nlines.append(line)
                 continue
