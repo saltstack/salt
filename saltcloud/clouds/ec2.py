@@ -593,6 +593,9 @@ def get_availability_zone(vm_):
     return avz
 
 def get_subnetid(vm_):
+    '''
+    Returns the SubnetId to use
+    '''
     subnetid = config.get_config_value(
         'subnetid', vm_, __opts__, search_global=False
     )
@@ -602,6 +605,9 @@ def get_subnetid(vm_):
 
 
 def securitygroupid(vm_):
+    '''
+    Returns the SecurityGroupId
+    '''
     return config.get_config_value(
         'securitygroupid', vm_, __opts__, search_global=False
     )
