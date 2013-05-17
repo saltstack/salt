@@ -306,8 +306,12 @@ def rebase(cwd, rev='master', opts=None, user=None):
     CLI Example::
 
         salt '*' git.rebase /path/to/repo master
+        salt '*' git.rebase /path/to/repo 'origin master'
 
-    That is the same as: git rebase master
+    That is the same as:
+
+        git rebase master
+        git rebase origin master
     '''
     _check_git()
 
