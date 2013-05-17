@@ -317,13 +317,11 @@ def _check_directory(name,
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
     if changes:
-        comment = 'The following files will be changed:\n'
-        acomment = ''
+        comments = ['The following files will be changed:\n']
         for fn_ in changes:
             key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
-            acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
-        if acomment:
-            comment += acomment
+            comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
+        comment = ''.join(comments)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
