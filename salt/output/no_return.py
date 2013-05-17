@@ -6,7 +6,7 @@ import salt.utils
 
 class NestDisplay(object):
     '''
-    Create genreator for netsted output
+    Create generator for nested output
     '''
     def __init__(self):
         self.colors = salt.utils.get_colors(__opts__.get('color'))
