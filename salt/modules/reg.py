@@ -58,7 +58,7 @@ def __virtual__():
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 
-def read_key(hkey,path, key):
+def read_key(hkey, path, key):
     '''
     Read registry key value
 
