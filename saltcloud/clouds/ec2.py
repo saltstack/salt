@@ -831,6 +831,9 @@ def create(vm_=None, call=None):
             ),
             'script_args': config.get_config_value(
                 'script_args', vm_, __opts__
+            ),
+            'script_env': config.get_config_value(
+                'script_env', vm_, __opts__
             )
         }
 

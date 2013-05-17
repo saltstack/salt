@@ -368,8 +368,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
                   conf_file=None, start_action=None, make_master=False,
                   master_pub=None, master_pem=None, master_conf=None,
                   minion_pub=None, minion_pem=None, minion_conf=None,
-                  keep_tmp=False, script_args=None, ssh_timeout=15,
-                  make_syndic=False, make_minion=True,
+                  keep_tmp=False, script_args=None, script_env=None,
+                  ssh_timeout=15, make_syndic=False, make_minion=True,
                   display_ssh_output=True, preseed_minion_keys=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -512,6 +512,22 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         )
                 if script_args:
                     deploy_command += ' {0}'.format(script_args)
+
+                if script_env:
+                    if not isinstance(script_env, dict):
+                        raise SaltCloudSystemExit(
+                            'The \'script_env\' configuration setting NEEDS '
+                            'to be a dictionary not a {0}'.format(
+                                type(script_env)
+                            )
+                        )
+                    environ = []
+                    for key, value in script_env.iteritems():
+                        environ.append('{0}=\'{1}\''.format(key, value))
+
+                    deploy_command = '{0} {1}'.format(
+                        ' '.join(environ), deploy_command
+                    )
 
                 if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
