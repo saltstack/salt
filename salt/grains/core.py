@@ -432,6 +432,8 @@ def _virtual(osdata):
             zone = __salt__['cmd.run']('{0}'.format(zonename))
             if zone != "global":
                 grains['virtual'] = 'zone'
+                if osdata['os'] == 'SmartOS':
+                    grains.update(_smartos_zone_data(grains))
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
@@ -936,6 +938,35 @@ def _hw_data(osdata):
                 grains[key] = value
     return grains
 
+def _smartos_zone_data(osdata):
+    '''
+    Return useful information from a SmartOS zone
+    '''
+    # Provides:
+    #   pkgsrcversion
+    #   imageversion
+    grains = {}
+
+    pkgsrcversion = re.compile('^release:\\s(.+)')
+    imageversion = re.compile('Image:\\s(.+)')
+    if os.path.isfile('/etc/pkgsrc_version'):
+        with salt.utils.fopen('/etc/pkgsrc_version', 'r') as fp_:
+            for line in fp_:
+                match = pkgsrcversion.match(line)
+                if match:
+                    grains['pkgsrcversion'] = match.group(1)
+    if os.path.isfile('/etc/product'):
+        with salt.utils.fopen('/etc/product', 'r') as fp_:
+            for line in fp_:
+                match = imageversion.match(line)
+                if match:
+                    grains['imageversion'] = match.group(1)
+    if 'pkgsrcversion' not in grains:
+        grains['pkgsrcversion'] = 'Unknown'
+    if 'imageversion' not in grains:
+        grains['imageversion'] = 'Unknown'
+    
+    return grains
 
 def get_server_id():
     '''
