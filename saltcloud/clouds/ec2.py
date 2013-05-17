@@ -174,7 +174,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         'ec2',
-        ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+        ('id', 'key', 'keyname', 'private_key')
     )
 
 
@@ -242,7 +242,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
         params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = '2010-08-31'
+        params['Version'] = '2013-02-01'
         keys = sorted(params.keys())
         values = map(params.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
@@ -592,6 +592,25 @@ def get_availability_zone(vm_):
 
     return avz
 
+def get_subnetid(vm_):
+    '''
+    Returns the SubnetId to use
+    '''
+    subnetid = config.get_config_value(
+        'subnetid', vm_, __opts__, search_global=False
+    )
+    if subnetid is None:
+        return None
+    return subnetid
+
+
+def securitygroupid(vm_):
+    '''
+    Returns the SecurityGroupId
+    '''
+    return config.get_config_value(
+        'securitygroupid', vm_, __opts__, search_global=False
+    )
 
 def list_availability_zones():
     '''
@@ -658,6 +677,18 @@ def create(vm_=None, call=None):
     az_ = get_availability_zone(vm_)
     if az_ is not None:
         params['Placement.AvailabilityZone'] = az_
+
+    subnetid_ = get_subnetid(vm_)
+    if subnetid_ is not None:
+        params['SubnetId'] = subnetid_
+
+    ex_securitygroupid = securitygroupid(vm_)
+    if ex_securitygroupid:
+        if not isinstance(ex_securitygroupid, list):
+            params['SecurityGroupId.1'] = ex_securitygroupid
+        else:
+            for (counter, sg_) in enumerate(ex_securitygroupid):
+                params['SecurityGroupId.{0}'.format(counter)] = sg_
 
     delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
@@ -766,7 +797,7 @@ def create(vm_=None, call=None):
             'Returned query data: {0}'.format(data)
         )
 
-        if 'ipAddress' in data[0]['instancesSet']['item']:
+        if 'ipAddress' in data[0]['instancesSet']['item'] or 'privateIpAddress' in data[0]['instancesSet']['item']:
             # We have our IP, break out of the loop
             break
 
