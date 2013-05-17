@@ -16,7 +16,7 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # Work only on RHEL/Fedora based distros with python 2.6 or greater
+    # Work only on RHEL/Fedora based distros with python 2.5 and below
     try:
         os_grain = __grains__['os']
         os_family = __grains__['os_family']
