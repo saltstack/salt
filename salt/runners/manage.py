@@ -5,7 +5,6 @@ and what hosts are down
 
 # Import python libs
 import os
-import shutil
 
 # Import salt libs
 import salt.key
