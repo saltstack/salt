@@ -813,7 +813,10 @@ def hostname():
     #   domain
     grains = {}
     grains['localhost'] = socket.gethostname()
-    grains['fqdn'] = socket.getfqdn()
+    if (re.search("\.", socket.getfqdn())):
+        grains['fqdn'] = socket.getfqdn()
+    else :
+        grains['fqdn'] = grains['localhost']
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
 
