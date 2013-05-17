@@ -4,7 +4,6 @@ Package support for pkgin based systems, inspired from freebsdpkg.py
 
 # Import python libs
 import logging
-import os
 
 # Import salt libs
 import salt.utils
