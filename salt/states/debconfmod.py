@@ -41,7 +41,7 @@ def __virtual__():
 
     return 'debconf'
 
-def set_file(name, source):
+def set_file(name, source, **kwargs):
     '''
     Set debconf selections from a file
 
@@ -68,7 +68,7 @@ def set_file(name, source):
         ret['comment'] = 'Debconf selections would have been set.'
         return ret
 
-    if __salt__['debconf.set_file'](source):
+    if __salt__['debconf.set_file'](source, **kwargs):
         ret['comment'] = 'Debconf selections were set.'
     else:
         ret['result'] = False
