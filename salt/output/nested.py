@@ -9,6 +9,7 @@ import salt.utils
 
 class NestDisplay(object):
     '''
+    Manage the nested display contents
     '''
     def __init__(self):
         self.colors = salt.utils.get_colors(__opts__.get('color'))
