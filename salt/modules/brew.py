@@ -71,10 +71,10 @@ def list_pkgs(versions_as_list=False):
     cmd = 'brew list --versions'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version = line.split(' ')[0:2]
+            name, version_num = line.split(' ')[0:2]
         except ValueError:
             continue
-        __salt__['pkg_resource.add_pkg'](ret, name, version)
+        __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = ret

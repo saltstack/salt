@@ -92,8 +92,8 @@ def list_pkgs(versions_as_list=False):
         if index % 2 == 0:
             name = lines[index].split()[0].strip()
         if index % 2 == 1:
-            version = lines[index].split()[1].strip()
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            version_num = lines[index].split()[1].strip()
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = ret

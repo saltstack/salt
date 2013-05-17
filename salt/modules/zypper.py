@@ -133,8 +133,7 @@ def list_pkgs(versions_as_list=False):
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
-        pkgver = version
+        name, pkgver, rel = line.split('_|-')
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
@@ -238,11 +237,11 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
-    if version:
+    version_num = kwargs.get('version')
+    if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
-            pkg_params = {name: version}
+            pkg_params = {name: version_num}
         else:
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
@@ -250,11 +249,11 @@ def install(name=None,
     if pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -265,7 +264,7 @@ def install(name=None,
                     log.debug(targets)
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version, name)
+                          '"{1}"'.format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:

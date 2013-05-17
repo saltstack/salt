@@ -319,11 +319,11 @@ def install(name=None,
             # comma-separated list
             pkg_params = {name: kwargs.get('version')}
         targets = []
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
             else:
-                targets.append('"{0}={1}"'.format(param, version))
+                targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
         cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
@@ -478,13 +478,13 @@ def list_pkgs(versions_as_list=False):
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version = [cols[x] for x in (0, 2, 3, 4)]
+            linetype, status, name, version_num = [cols[x] for x in (0, 2, 3, 4)]
         except ValueError:
             continue
         name = _pkgname_without_arch(name)
         if len(cols) and ('install' in linetype or 'hold' in linetype) and \
                 'installed' in status:
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
     if __salt__['cmd.has_exec']('grep-available'):
@@ -533,8 +533,8 @@ def _get_upgradable():
     ret = {}
     for line in upgrades:
         name = _get(line, 'name')
-        version = _get(line, 'version')
-        ret[name] = version
+        version_num = _get(line, 'version')
+        ret[name] = version_num
 
     return ret
 
