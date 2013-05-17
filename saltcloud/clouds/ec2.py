@@ -242,7 +242,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params['SignatureVersion'] = '2'
         params['SignatureMethod'] = 'HmacSHA256'
         params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = '2010-08-31'
+        params['Version'] = '2013-02-01'
         keys = sorted(params.keys())
         values = map(params.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
