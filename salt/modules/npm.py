@@ -84,15 +84,9 @@ def install(pkg=None,
 
     lines = result['stdout'].splitlines()
 
-    while ' -> ' in lines[0]:
-        lines = lines[1:]
-
     # Strip all lines until JSON output starts
-    for i in lines:
-        if i.startswith('{'):
-            break
-        else:
-            lines = lines[1:]
+    while not lines[0].startswith("{") and not lines[0].startswith("["):
+        lines = lines[1:]
 
     try:
         return json.loads(''.join(lines))
