@@ -90,14 +90,14 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def _get_svc(rcd, status):
+def _get_svc(rcd, service_status):
     '''
     Returns a unique service status
     '''
     ena = None
     for rcvar in __salt__['cmd.run']('{0} rcvar'.format(rcd)
                                     ).splitlines():
-        if rcvar.startswith('$') and '={0}'.format(status) in rcvar:
+        if rcvar.startswith('$') and '={0}'.format(service_status) in rcvar:
             ena = 'yes'
         elif rcvar.startswith('#'):
             svc = rcvar.split(' ', 1)[1]
@@ -109,7 +109,7 @@ def _get_svc(rcd, status):
     return None
 
 
-def _get_svc_list(status):
+def _get_svc_list(service_status):
     '''
     Returns all service statuses
     '''
@@ -117,7 +117,7 @@ def _get_svc_list(status):
     ret = set()
     lines = glob.glob('{0}*'.format(prefix))
     for line in lines:
-        svc = _get_svc(line, status)
+        svc = _get_svc(line, service_status)
         if svc is not None:
             ret.add(svc)
 
@@ -156,14 +156,14 @@ def get_all():
     '''
     return _get_svc_list('')
 
-def _rcconf_status(name, status):
+def _rcconf_status(name, service_status):
     '''
     Modifies /etc/rc.conf so a service is started or not at boot time and
     can be started via /etc/rc.d/<service>
     '''
     rcconf = '/etc/rc.conf'
     rxname = '^{0}=.*'.format(name)
-    newstatus = '{0}={1}'.format(name, status)
+    newstatus = '{0}={1}'.format(name, service_status)
     ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
     if ret == 0: # service found in rc.conf, modify its status
         # NetBSD sed does not support -i flag, call sed by hand
