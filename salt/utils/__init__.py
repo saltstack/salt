@@ -1085,10 +1085,10 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         return
 
     if followlinks:
-        stat = os.stat(top)
+        status = os.stat(top)
         # st_ino is always 0 on some filesystems (FAT, NTFS); ignore them
-        if stat.st_ino != 0:
-            node = (stat.st_dev, stat.st_ino)
+        if status.st_ino != 0:
+            node = (status.st_dev, status.st_ino)
             if node in _seen:
                 return
             _seen.add(node)
