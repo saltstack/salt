@@ -790,7 +790,7 @@ def managed(name,
     )
 
     # Gather the source file from the server
-    sfn, source_sum, comment = __salt__['file.get_managed'](
+    sfn, source_sum, comment_ = __salt__['file.get_managed'](
         name,
         template,
         source,
@@ -803,8 +803,8 @@ def managed(name,
         defaults,
         **kwargs
     )
-    if comment and contents is None:
-        return _error(ret, comment)
+    if comment_ and contents is None:
+        return _error(ret, comment_)
     else:
         return __salt__['file.manage_file'](name,
                                             sfn,
