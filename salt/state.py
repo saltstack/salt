@@ -825,14 +825,7 @@ class State(object):
                         chunk['order'] = cap
                 elif isinstance(chunk['order'], int) and chunk['order'] < 0:
                     chunk['order'] = cap + 1000000 + chunk['order']
-        chunks = sorted(
-                chunks,
-                key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
-                )
-        chunks = sorted(
-                chunks,
-                key=lambda k: k['order']
-                )
+        chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
         return chunks
 
     def format_call(self, data):
