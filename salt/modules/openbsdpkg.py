@@ -6,9 +6,6 @@ Package support for OpenBSD
 import re
 import logging
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
