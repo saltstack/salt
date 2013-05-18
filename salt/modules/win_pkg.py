@@ -497,11 +497,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     '''
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
-    if not targets:
-        return {}
-
-    for target in targets:
+    for target in pkg_params:
         pkginfo = _get_package_info(target)
         if not version:
             version = _get_latest_pkg_version(pkginfo)
