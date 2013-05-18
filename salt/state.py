@@ -2076,7 +2076,11 @@ class BaseHighState(object):
         if not high:
             return ret
         with open(cfn, 'w+') as fp_:
-            self.serial.dump(high, fp_)
+            try:
+                self.serial.dump(high, fp_)
+            except TypeError:
+                # Can't serialize pydsl
+                pass
         return self.state.call_high(high)
 
     def compile_highstate(self):
