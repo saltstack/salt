@@ -340,16 +340,16 @@ class IPv4Address(object):
 
     def __init__(self, address_str):
         self.address_str = address_str
-        a = self.address_str.split('.')
-        if len(a) != 4:
+        octets = self.address_str.split('.')
+        if len(octets) != 4:
             raise ValueError(
                 'IPv4 addresses must be in dotted-quad form.'
             )
         try:
-            self.dotted_quad = [int(a) for a in a]
-        except ValueError as e:
+            self.dotted_quad = [int(octet) for octet in octets]
+        except ValueError as err:
             raise ValueError(
-                'IPv4 addresses must be in dotted-quad form. {0}'.format(e)
+                'IPv4 addresses must be in dotted-quad form. {0}'.format(err)
             )
 
     def __str__(self):
