@@ -181,7 +181,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     options
         Options to pass to brew. Only applies to inital install. Due to how brew
         works, modifying chosen options requires a full uninstall followed by a
-        fresh install.
+        fresh install. Note that if "pkgs" is used, all options will be passed
+        to all packages. Unreconized options for a package will be silently
+        ignored by brew.
 
         CLI Example::
 
