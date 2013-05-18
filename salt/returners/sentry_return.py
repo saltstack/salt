@@ -70,15 +70,15 @@ def returner(ret):
     try:
         if 'success' not in ret:
             logger.debug('no success data, report')
-            connect_sentry(ret['return'], ret)
+            connect_sentry(ret['return'])
         else:
             if not ret['success']:
                 logger.debug('not a success, report')
-                connect_sentry(ret['return'], ret)
+                connect_sentry(ret['return'])
             else:
                 for state in ret['return']:
                     if not ret['return'][state]['result'] and \
                        ret['return'][state]['comment'] != requisite_error:
-                        connect_sentry(state, ret['return'][state])
+                        connect_sentry(state)
     except Exception as err:
         logger.error("Can't run connect_sentry: %s", err, exc_info=True)
