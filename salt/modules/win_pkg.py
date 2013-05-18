@@ -480,9 +480,29 @@ def remove(name, version=None, **kwargs):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    pkginfo = _get_package_info(name)
-    if not version:
-        version = _get_latest_pkg_version(pkginfo)
+    for target in pkg_params:
+        pkginfo = _get_package_info(target)
+        if not version:
+            version = _get_latest_pkg_version(pkginfo)
+
+        if pkginfo[version]['uninstaller'].startswith('salt:'):
+            cached_pkg = \
+                __salt__['cp.is_cached'](pkginfo[version]['uninstaller'])
+            if not cached_pkg:
+                # It's not cached. Cache it, mate.
+                cached_pkg = \
+                    __salt__['cp.cache_file'](pkginfo[version]['uninstaller'])
+        else:
+            cached_pkg = pkginfo[version]['uninstaller']
+        cached_pkg = cached_pkg.replace('/', '\\')
+        if not os.path.exists(os.path.expandvars(cached_pkg)) \
+                and '(x86)' in cached_pkg:
+            cached_pkg = cached_pkg.replace('(x86)', '')
+        cmd = '"' + str(os.path.expandvars(
+            cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
+        if pkginfo[version].get('msiexec'):
+            cmd = 'msiexec /x ' + cmd
+        __salt__['cmd.run_all'](cmd)
 
     if pkginfo[version]['uninstaller'].startswith('salt:'):
         cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['uninstaller'])
