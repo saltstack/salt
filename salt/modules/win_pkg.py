@@ -571,7 +571,7 @@ def _get_package_info(name):
     repocache = __opts__['win_repo_cachefile']
     cached_repo = __salt__['cp.is_cached'](repocache)
     if not cached_repo:
-        __salt__['pkg.refresh_db']
+        __salt__['pkg.refresh_db']()
     try:
         with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:
