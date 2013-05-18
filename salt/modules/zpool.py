@@ -105,7 +105,7 @@ def zpool_create(pool_name, *disks):
 
     # Check if the pool_name is already being used
     if pool_exists(pool_name):
-        ret['Error'] = "Storage Pool `{0}` already exists meow".format(pool_name)
+        ret['Error'] = 'Storage Pool `{0}` already exists'.format(pool_name)
         return ret
 
     # make sure files are present on filesystem
