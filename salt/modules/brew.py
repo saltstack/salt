@@ -166,12 +166,14 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         ignored if "pkgs" is passed.
 
         CLI Example::
+
             salt '*' pkg.install <package name>
 
     taps
         Unofficial Github repos to use when updating and installing formulas.
 
         CLI Example::
+
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install zlib taps='homebrew/dupes'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]'
@@ -182,6 +184,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         fresh install.
 
         CLI Example::
+
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
 
@@ -191,6 +194,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         A list of formulas to install. Must be passed as a python list.
 
         CLI Example::
+
             salt '*' pkg.install pkgs='["foo","bar"]'
 
 
