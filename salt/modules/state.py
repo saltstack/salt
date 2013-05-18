@@ -27,20 +27,11 @@ __outputter__ = {
 log = logging.getLogger(__name__)
 
 
-def _filter_running(running):
+def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = {}
-    for tag in running:
-        if running[tag]['result']:
-            # It is true
-            if running[tag]['changes']:
-                # It is blue
-                ret[tag] = running[tag]
-                continue
-        else:
-            ret[tag] = running[tag]
+    ret = dict((tag, value) for tag, value in runnings.iteritems() if not value['result'] or value['changes'])
     return ret
 
 
