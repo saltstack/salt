@@ -110,8 +110,8 @@ def latest(name,
                                                     user=runas)
                 if remote is None or remote[0] != name:
                     __salt__['git.remote_set'](target,
-                                               remote_name=remote_name,
-                                               remote_url=name,
+                                               name=remote_name,
+                                               url=name,
                                                user=runas)
                     ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
 
