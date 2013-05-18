@@ -1006,6 +1006,20 @@ def _hw_data(osdata):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
                 grains[key] = value
+    elif osdata['kernel'] == 'NetBSD':
+        sysctl = salt.utils.which('sysctl')
+        nbsd_hwdata = {
+            'biosversion': 'machdep.dmi.board-version',
+            'manufacturer': 'machdep.dmi.system-vendor',
+            'serialnumber': 'machdep.dmi.system-serial',
+            'productname': 'machdep.dmi.system-product',
+            'biosreleasedate': 'machdep.dmi.bios-date',
+        }
+        for key, oid in nbsd_hwdata.items():
+            result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
+            if result['retcode'] == 0:
+                grains[key] = result['stdout']
+
     return grains
 
 def _smartos_zone_data(osdata):
