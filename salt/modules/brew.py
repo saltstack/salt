@@ -157,7 +157,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def install(name=None, pkgs=None, taps=None, **kwargs):
+def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     '''
     Install the passed package(s) with ``brew install``
 
@@ -175,6 +175,15 @@ def install(name=None, pkgs=None, taps=None, **kwargs):
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install zlib taps='homebrew/dupes'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]'
+
+    options
+        Options to pass to brew. Only applies to inital install. Due to how brew
+        works, modifying chosen options requires a full uninstall followed by a
+        fresh install.
+
+        CLI Example::
+            salt '*' pkg.install <package name> tap='<tap>'
+            salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
 
     Multiple Package Installation Options:
 
@@ -219,7 +228,11 @@ def install(name=None, pkgs=None, taps=None, **kwargs):
             else:
                 _tap(tap)
 
-    cmd = 'brew install {0}'.format(formulas)
+    if options:
+        cmd = 'brew install {0} {1}'.format(formulas, ' '.join(options))
+    else:
+        cmd = 'brew install {0}'.format(formulas)
+
     if user != __opts__['user']:
         __salt__['cmd.run'](cmd, runas=user)
     else:
