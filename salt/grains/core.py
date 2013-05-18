@@ -186,7 +186,7 @@ def _netbsd_gpu_data(osdata):
 
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
-                m = re.match("[0-9:]+ ({0}) (.+) \(VGA .+\)"
+                m = re.match(r"[0-9:]+ ({0}) (.+) \(VGA .+\)"
                             .format(vendor), line, re.IGNORECASE)
                 if m:
                     gpus.append({'vendor': m.group(1), 'model': m.group(2)})
@@ -227,7 +227,7 @@ def _bsd_cpudata(osdata):
 
     if osdata['kernel'] == 'NetBSD':
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
-            m = re.match('cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
+            m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
             if m:
                 flag = m.group(1).split(',')
                 grains['cpu_flags'].extend(flag)
@@ -274,12 +274,12 @@ def _sunos_cpudata(osdata):
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
     for line in __salt__['cmd.run'](kstat_info).splitlines():
-        match = re.match('(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
+        match = re.match(r'(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
         if match:
             grains['cpu_model'] = match.group(2)
     isainfo = 'isainfo -n -v'
     for line in __salt__['cmd.run'](isainfo).splitlines():
-        match = re.match('^\s+(.+)', line)
+        match = re.match(r'^\s+(.+)', line)
         if match:
             cpu_flags = match.group(1).split()
             grains['cpu_flags'].extend(cpu_flags)
