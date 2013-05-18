@@ -68,16 +68,16 @@ def _get_process_info(proc):
 
 def _get_process_owner(process):
     owner = {}
-    domain, error_code, user = process.GetOwner()
-    if not error_code:
+    try:
+        domain, error_code, user = process.GetOwner()
         owner['user'] = user.encode('utf-8')
         owner['user_domain'] = domain.encode('utf-8')
-    elif process.ProcessId in [0, 4] and error_code == 2:
-        # Access Denied for System Idle Process and System
-        owner['user'] = 'SYSTEM'
-        owner['user_domain'] = 'NT AUTHORITY'
-    else:
+        if process.ProcessId in [0, 4] and error_code == 2:
+            # Access Denied for System Idle Process and System
+            owner['user'] = 'SYSTEM'
+            owner['user_domain'] = 'NT AUTHORITY'
+    except Exception as exc:
         log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
-                    .format(process.ProcessId, error_code))
+                    .format(process.ProcessId, exc))
 
     return owner
