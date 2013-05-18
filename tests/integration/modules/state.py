@@ -340,8 +340,7 @@ fi
         Test the basics of the pydsl
         '''
         ret = self.run_function('state.sls', mods='pydsl-1')
-        import pprint
-        pprint.pprint(ret)
+        self.assertSaltTrueReturn(ret)
 
 
 if __name__ == '__main__':
