@@ -259,15 +259,15 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
             with open(cfn, 'r') as fp_:
-                high = serial.load(fp_)
-                return st_.state.call_high(high)
+                high_ = serial.load(fp_)
+                return st_.state.call_high(high_)
 
     if isinstance(mods, string_types):
         mods = mods.split(',')
 
     st_.push_active()
     try:
-        high, errors = st_.render_highstate({env: mods})
+        high_, errors = st_.render_highstate({env: mods})
 
         if errors:
             __context__['retcode'] = 1
@@ -276,11 +276,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         if exclude:
             if isinstance(exclude, str):
                 exclude = exclude.split(',')
-            if '__exclude__' in high:
-                high['__exclude__'].extend(exclude)
+            if '__exclude__' in high_:
+                high_['__exclude__'].extend(exclude)
             else:
-                high['__exclude__'] = exclude
-        ret = st_.state.call_high(high)
+                high_['__exclude__'] = exclude
+        ret = st_.state.call_high(high_)
     finally:
         st_.pop_active()
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
@@ -294,7 +294,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         log.error(msg.format(cache_file))
     _set_retcode(ret)
     with open(cfn, 'w+') as fp_:
-        serial.dump(high, fp_)
+        serial.dump(high_, fp_)
     return ret
 
 
@@ -383,12 +383,12 @@ def show_sls(mods, env='base', test=None, **kwargs):
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
-    high, errors = st_.render_highstate({env: mods})
-    errors += st_.state.verify_high(high)
+    high_, errors = st_.render_highstate({env: mods})
+    errors += st_.state.verify_high(high_)
     if errors:
         __context__['retcode'] = 1
         return errors
-    return high
+    return high_
 
 
 def show_top():
