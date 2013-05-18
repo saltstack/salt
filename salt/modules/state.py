@@ -294,7 +294,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         log.error(msg.format(cache_file))
     _set_retcode(ret)
     with open(cfn, 'w+') as fp_:
-        serial.dump(high_, fp_)
+        try:
+            serial.dump(high_, fp_)
+        except TypeError:
+            # Can't serialize pydsl
+            pass
     return ret
 
 
