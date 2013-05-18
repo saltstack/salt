@@ -403,16 +403,16 @@ def show_top():
     ret = {}
     static = st_.get_top()
     ext = st_.client.ext_nodes()
-    for top in [static, ext]:
-        for env in top:
+    for top_ in [static, ext]:
+        for env in top_:
             if env not in ret:
-                ret[env] = top[env]
+                ret[env] = top_[env]
             else:
-                for match in top[env]:
+                for match in top_[env]:
                     if match not in ret[env]:
-                        ret[env][match] = top[env][match]
+                        ret[env][match] = top_[env][match]
                     else:
-                        ret[env][match].extend(top[env][match])
+                        ret[env][match].extend(top_[env][match])
     return ret
 
 # Just commenting out, someday I will get this working
