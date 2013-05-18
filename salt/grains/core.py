@@ -897,15 +897,15 @@ def _dmidecode_data(regex_dict):
     Parse the output of dmidecode in a generic fashion that can
     be used for the multiple system types which have dmidecode.
     '''
-    # NOTE: This function might gain support for smbios instead
-    #       of dmidecode when salt gets working Solaris support
     ret = {}
 
-    # No use running if dmidecode isn't in the path
-    if not salt.utils.which('dmidecode'):
+    # No use running if dmidecode/smbios isn't in the path
+    if salt.utils.which('dmidecode'):
+        out = __salt__['cmd.run']('dmidecode')
+    elif salt.utils.which('smbios'):
+        out = __salt__['cmd.run']('smbios')
+    else :
         return ret
-
-    out = __salt__['cmd.run']('dmidecode')
 
     for section in regex_dict:
         section_found = False
@@ -969,6 +969,19 @@ def _hw_data(osdata):
             },
         }
         grains.update(_dmidecode_data(linux_dmi_regex))
+    elif osdata['kernel'] == 'SunOS':
+        sunos_dmi_regex = {
+            '(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
+                '[Vv]ersion [Ss]tring:': 'biosversion',
+                '[Rr]elease [Dd]ate:': 'biosreleasedate',
+            },
+            '(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
+                'Manufacturer:': 'manufacturer',
+                'Product(?: Name)?:': 'productname',
+                'Serial Number:': 'serialnumber',
+            },
+        }   
+        grains.update(_dmidecode_data(sunos_dmi_regex))
     # On FreeBSD /bin/kenv (already in base system) can be used instead of dmidecode
     elif osdata['kernel'] == 'FreeBSD':
         kenv = salt.utils.which('kenv')
