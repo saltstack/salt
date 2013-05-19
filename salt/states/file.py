@@ -1114,10 +1114,10 @@ def recurse(name,
         list and preserve in the destination.
         Example::
 
-          - exclude: APPDATA*               :: glob matches APPDATA.01,
-                                               APPDATA.02,.. for exclusion
-          - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
-                                               or TEMPDATA for exclusion
+          - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
+                                                   APPDATA.02,.. for exclusion
+          - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
+                                                   or TEMPDATA for exclusion
 
     maxdepth
         When copying, only copy paths which are depth maxdepth from the source
