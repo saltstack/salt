@@ -87,7 +87,8 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
-    SaltCloudConfigError
+    SaltCloudConfigError,
+    SaltCloudExecutionTimeout
 )
 
 
@@ -732,8 +733,6 @@ def create(vm_=None, call=None):
     )
     log.info('Created node {0}'.format(vm_['name']))
 
-    waiting_for_ip = 0
-
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
@@ -768,54 +767,39 @@ def create(vm_=None, call=None):
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    failures = 6
-    while True:
-        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
-        time.sleep(5)
-        data = query(params, requesturl=requesturl)
+    def __query_ip_address(params, url):
+        data = query(params, requesturl=url)
         if not data or isinstance(data, dict):
-            if failures < 1:
-                raise SaltCloudSystemExit(
-                    'There were too many errors while querying EC2'
-                )
             if not data:
                 log.error(
                     'There was an error while querying EC2. Empty response'
                 )
-            else:
-                log.error(
-                    'There was an error while querying EC2. '
-                    'Returned Error: {0}'.format(data['error'])
-                )
-            failures -= 1
-            continue
+            return
+            log.error(
+                'There was an error while querying EC2. '
+                'Returned Error: {0}'.format(data['error'])
+            )
 
-        if failures < 6:
-            # Reset failed attempts
-            failures = 6
-            log.debug('Reseting failed query attempts')
+        log.debug('Returned query data: {0}'.format(data))
 
-        log.debug(
-            'Returned query data: {0}'.format(data)
+        if 'ipAddress' in data[0]['instancesSet']['item']:
+            return data
+        if 'privateIpAddress' in data[0]['instancesSet']['item']:
+            return data
+
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_ip_address,
+            update_args=(params, requesturl),
         )
-
-        if 'ipAddress' in data[0]['instancesSet']['item'] or 'privateIpAddress' in data[0]['instancesSet']['item']:
-            # We have our IP, break out of the loop
-            break
-
-        if waiting_for_ip >= 24:
-            # 2 Minutes!? Bail out!
-            try:
-                # It might be already up, let's destroy it!
-                destroy(vm_['name'])
-            except SaltCloudSystemExit:
-                pass
-            finally:
-                raise SaltCloudSystemExit(
-                    'Could not get the VM IP for 2 minutes. Exiting.'
-                )
-
-        waiting_for_ip += 1
+    except SaltCloudExecutionTimeout as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = data[0]['instancesSet']['item']['privateIpAddress']
