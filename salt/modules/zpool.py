@@ -48,7 +48,8 @@ def status(name=''):
 
         salt '*' zpool.status
     ''' 
-    res = __salt__['cmd.run']('zpool status {0}'.format(name))
+    zpool = _check_zpool()
+    res = __salt__['cmd.run']('{0} status {1}'.format(zpool, name))
     ret = res.splitlines()
     return ret
 
@@ -61,8 +62,8 @@ def zpool_list():
 
         salt '*' zpool.zpool_list 
     '''
-
-    res = __salt__['cmd.run']('zpool list')
+    zpool = _check_zpool()
+    res = __salt__['cmd.run']('{0} list'.format(zpool))
     pool_list = [l for l in res.splitlines()]
     return {'pools': pool_list}
 
@@ -92,7 +93,8 @@ def destroy(pool_name):
     '''
     ret = {}
     if exists(pool_name):
-        cmd = 'zpool destroy {0}'.format(pool_name)
+        zpool = _check_zpool()
+        cmd = '{0} destroy {1}'.format(zpool, pool_name)
         __salt__['cmd.run'](cmd)
         if not exists(pool_name):
             ret[pool_name] = "Deleted"
@@ -127,7 +129,8 @@ def create(pool_name, *vdevs):
             dlist.append(vdev)
 
     devs = ' '.join(dlist)
-    cmd = 'zpool create {0} {1}'.format(pool_name, devs)
+    zpool = _check_zpool()
+    cmd = '{0} create {1} {2}'.format(zpool, pool_name, devs)
 
     # Create storage pool
     __salt__['cmd.run'](cmd)
@@ -164,7 +167,8 @@ def add(pool_name, vdev):
         return ret
 
     # try and add watch out for mismatched replication levels
-    cmd = 'zpool add {0} {1}'.format(pool_name, vdev)
+    zpool = _check_zpool()
+    cmd = '{0} add {1} {2}'.format(zpool, pool_name, vdev)
     res = __salt__['cmd.run'](cmd)
     if not 'errors' in res.splitlines():
         ret['Added'] = '{0} to {1}'.format(vdev, pool_name)
@@ -195,7 +199,8 @@ def replace(pool_name, old, new):
         return ret
 
     # Replace vdevs 
-    cmd = 'zpool replace {0} {1} {2}'.format(pool_name, old, new)
+    zpool = _check_zpool()
+    cmd = '{0} replace {1} {2} {3}'.format(zpool, pool_name, old, new)
     __salt__['cmd.run'](cmd)
 
     # check for new vdev in pool
@@ -233,7 +238,8 @@ def create_file_vdev(size, *vdevs):
             dlist.append(vdev)
 
     devs = ' '.join(dlist)
-    cmd = 'mkfile {0} {1}'.format(size, devs)
+    mkfile = _check_mkfile()
+    cmd = '{0} {1} {2}'.format(mkfile, size, devs)
     __salt__['cmd.run'](cmd)
 
     # Makesure the files are there
