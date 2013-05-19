@@ -46,7 +46,12 @@ import salt.utils
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudNotFound,
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -282,14 +287,26 @@ def create(vm_):
     if not wait_until(name, 'STARTED'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
-    data = show_instance(vm_['name'], call='action')
-
-    waiting_for_ip = 0
-    while 'public-ip' not in data['network']:
-        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
-        time.sleep(5)
-        waiting_for_ip += 1
+    def __query_node_data(vm_name):
         data = show_instance(vm_['name'], call='action')
+        if 'public-ip' not in data['network']:
+            # Trigger another iteration
+            return
+        return data
+
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_node_data,
+            update_args=(vm_['name'],),
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
