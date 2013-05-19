@@ -769,16 +769,19 @@ def create(vm_=None, call=None):
 
     def __query_ip_address(params, url):
         data = query(params, requesturl=url)
-        if not data or isinstance(data, dict):
-            if not data:
-                log.error(
-                    'There was an error while querying EC2. Empty response'
-                )
-            return
+        if not data:
             log.error(
-                'There was an error while querying EC2. '
-                'Returned Error: {0}'.format(data['error'])
+                'There was an error while querying EC2. Empty response'
             )
+            # Trigger a failure in the wait for IP function
+            return False
+
+        if isinstance(data, dict) and 'error' in data:
+            log.warn(
+                'There was an error in the query. {0}'.format(data['error'])
+            )
+            # Trigger a failure in the wait for IP function
+            return False
 
         log.debug('Returned query data: {0}'.format(data))
 
@@ -792,7 +795,7 @@ def create(vm_=None, call=None):
             __query_ip_address,
             update_args=(params, requesturl),
         )
-    except SaltCloudExecutionTimeout as exc:
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
             # It might be already up, let's destroy it!
             destroy(vm_['name'])
