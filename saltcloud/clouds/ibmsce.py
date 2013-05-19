@@ -113,6 +113,17 @@ def get_conn():
     )
 
 
+def ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    return config.get_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
+    )
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -170,28 +181,36 @@ def create(vm_):
         )
         return False
 
-    not_ready = True
-    nr_count = 0
-    while not_ready:
-        log.debug(
-            'Looking for IP addresses for IBM SCE host {0} ({1} {2})'.format(
-                vm_['name'],
-                time.strftime('%Y-%m-%d'),
-                time.strftime('%H:%M:%S'),
-            )
-        )
+    def __query_node_data(vm_name, data):
         nodelist = list_nodes()
-        private = nodelist[vm_['name']]['private_ips']
-        if private:
-            data.private_ips = private
-        public = nodelist[vm_['name']]['public_ips']
-        if public:
-            data.public_ips = public
-            not_ready = False
-        nr_count += 1
-        if nr_count > 100:
-            not_ready = False
-        time.sleep(15)
+        public_ips = nodelist[vm_name]['public_ips']
+        private_ips = nodelist[vm_name]['private_ips']
+
+        if private_ips:
+            data.private_ips = private_ips
+        if public_ips:
+            data.public_ips = public_ips
+
+        if ssh_interface(vm_) == 'private_ips' and private_ips:
+            return data
+
+        if ssh_interface(vm_) == 'public_ips' and public_ips:
+            return data
+
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_node_data,
+            update_args=(vm_['name'], data),
+            interval=15
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
