@@ -648,6 +648,9 @@ class Cloud(object):
             for name in names:
                 if name in names_:
                     fun = '{0}.{1}'.format(prov, self.opts['action'])
+                    if fun not in self.clouds:
+                        # The cloud provider does not provide the action
+                        continue
                     if kwargs:
                         ret[name] = self.clouds[fun](
                             name, kwargs, call='action'
