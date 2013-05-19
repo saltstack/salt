@@ -34,7 +34,8 @@ def __virtual__():
                                 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return (
-        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD')
+        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD',
+                                           'NetBSD')
         else False
     )
 
@@ -120,7 +121,8 @@ def add(name,
     if not unique:
         cmd += '-o '
     if system:
-        cmd += '-r '
+        if not __grains__['kernel'] == 'NetBSD':
+            cmd += '-r '
     cmd += name
     ret = __salt__['cmd.run_all'](cmd)['retcode']
     if ret != 0:
