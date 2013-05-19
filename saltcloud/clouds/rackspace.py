@@ -187,15 +187,7 @@ def create(vm_):
         )
         return False
 
-    not_ready = True
-    sleep_time = 15
-    nr_count = 100
-    failures = 0
-    while not_ready:
-        if failures > 5:
-            raise SaltCloudSystemExit(
-                'Failed to get information too many times.'
-            )
+    def __query_node_data(vm_, data):
         try:
             nodelist = list_nodes()
             log.debug(
@@ -214,58 +206,64 @@ def create(vm_):
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
-            failures += 1
-            continue
+            # Trigger a failure in the wait for IP function
+            return False
 
-        log.debug(
-            'Waiting for VM to become ready. Giving up in {0} seconds. '
-            'State(current/desired): {1}/{2}'.format(
-                nr_count * sleep_time,
-                nodelist[vm_['name']]['state'],
-                node_state(NodeState.RUNNING)
-            )
-        )
-
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
         running = nodelist[vm_['name']]['state'] == node_state(
             NodeState.RUNNING
         )
+        if not running:
+            # Still not running, trigger another iteration
+            return
 
-        if running and private and not public:
+        private = nodelist[vm_['name']]['private_ips']
+        public = nodelist[vm_['name']]['public_ips']
+
+        if private and not public:
             log.warn(
-                'Private IPs returned, but not public... checking for '
+                'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if saltcloud.utils.is_public_ip(private_ip):
-                    log.warn('{0} is a public ip'.format(private_ip))
+                    log.warn('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
-                    not_ready = False
                 else:
-                    log.warn('{0} is a private ip'.format(private_ip))
+                    log.warn('{0} is a private IP'.format(private_ip))
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
+
             if ssh_interface(vm_) == 'private_ips' and data.private_ips:
-                not_ready = False
-                break
+                return data
 
-        if running and public:
+        if private:
+            data.private_ips = private
+            if ssh_interface(vm_) == 'private_ips':
+                return data
+
+        if public:
             data.public_ips = public
-            not_ready = False
+            if ssh_interface(vm_) != 'private_ips':
+                return data
 
-        if not_ready is False:
-            break
-
-        nr_count -= 1
-        if nr_count == 0:
-            log.warn('Timed out waiting for a public ip, continuing anyway')
-            break
-        time.sleep(sleep_time)
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_node_data,
+            update_args=(vm_, data),
+            max_timeout=25 * 60,
+            interval=10
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     log.debug('VM is now running')
-
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
     else:
