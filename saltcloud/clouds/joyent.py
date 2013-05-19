@@ -55,7 +55,6 @@ import logging
 import base64
 import pprint
 import inspect
-import time
 import yaml
 
 # Import generic libcloud functions
@@ -81,16 +80,10 @@ JOYENT_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
-
-# this variable is used to support asynchronous node creation, new joyent api
-# does not return ip addresses in the create machine call, it must be polled
-# until successful creation of the node,
-NODE_CREATE_TIMEOUT=60
-
 # joyent no longer reports on all datacenters, so setting this value to true
-# causes the list_nodes function # to get information on machines from all
+# causes the list_nodes function to get information on machines from all
 # datacenters
-POLL_ALL_LOCATIONS=True
+POLL_ALL_LOCATIONS = True
 
 valid_response_codes = [
     httplib.OK,
@@ -98,6 +91,7 @@ valid_response_codes = [
     httplib.CREATED,
     httplib.NO_CONTENT
 ]
+
 
 class DictObject(dict):
     '''
@@ -186,15 +180,17 @@ def create(vm_):
     key_filename = config.get_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy is True and key_filename is None and salt.utils.which('sshpass') is None:
+    if deploy is True and key_filename is None and \
+            salt.utils.which('sshpass') is None:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'private_key\' setting '
             'is not set and \'sshpass\' binary is not present on the '
             'system for the password.'
         )
 
-    log.info('Creating Cloud VM {0} in {1}'.format(vm_['name'],
-                                                   vm_['location']))
+    log.info(
+        'Creating Cloud VM {0} in {1}'.format(vm_['name'], vm_['location'])
+    )
 
     ## added . for fqdn hostnames
     saltcloud.utils.check_name(vm_['name'], 'a-zA-Z0-9-.')
@@ -221,20 +217,38 @@ def create(vm_):
 
     ret = {}
 
-    vm_id = data['id']
-    # with the new api, the ip addresses are not returned in the create machine
-    # call, as a result we must poll until we get ip addresses from query of the
-    # node, this can take up to 10 seconds on a small node.
+    def __query_node_data(vm_id, vm_location):
+        rc, data = query2(
+            command='my/machines/{0}'.format(vm_id),
+            method='GET',
+            location=vm_location
+        )
+        if rc not in valid_response_codes:
+            # Trigger a wait for IP error
+            return False
+        if isinstance(data['ips'], list) and len(data['ips']) > 0:
+            return data
+
     if 'ips' in data:
         if isinstance(data['ips'], list) and len(data['ips']) <= 0:
-            log.info('New joyent asynchronous machine creation api detected...'
-                     '\n\t\t-- please wait for IP addresses to be assigned...')
-            for i in range(NODE_CREATE_TIMEOUT):
-                rc,data = query2(command='my/machines/{0}'.format(vm_id),
-                                 method='GET', location=vm_['location'])
-                if rc in valid_response_codes and  isinstance(data['ips'], list) and len(data['ips']) > 0:
-                    break
-                time.sleep(1)
+            log.info(
+                'New joyent asynchronous machine creation api detected...'
+                '\n\t\t-- please wait for IP addresses to be assigned...'
+            )
+        try:
+            data = saltcloud.utils.wait_for_ip(
+                __query_node_data,
+                update_args=(data['id'], vm_['location']),
+                interval=1
+            )
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # It might be already up, let's destroy it!
+                destroy(vm_['name'])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(exc.message)
 
     data = reformat_node(data)
 
@@ -339,7 +353,8 @@ def destroy(name, call=None):
     destroy a machine by name
     :param name: name given to the machine
     :param call: call value in this case is 'action'
-    :return: array of booleans , true if successful;ly stopped and true if successfully removed
+    :return: array of booleans , true if successful;ly stopped and true if
+             successfully removed
 
         CLI Example:
 
@@ -497,8 +512,10 @@ def avail_locations():
     # corrected, currently only the european dc (new api) returns the correct
     # values
     # ret = {}
-    # rc, datacenters =  query2(command='my/datacenters',  location=DEFAULT_LOCATION, method='GET')
-    # if rc in valid_response_codes and isinstance(datacenters,dict):
+    # rc, datacenters = query2(
+    #     command='my/datacenters', location=DEFAULT_LOCATION, method='GET'
+    # )
+    # if rc in valid_response_codes and isinstance(datacenters, dict):
     #     for key in datacenters:
     #     ret[key] = {
     #         'name': key,
@@ -554,7 +571,9 @@ def get_node(name):
 
 def joyent_node_state(id_):
     '''
-    convert joyent returned state to state common to other datacenter return  values for consistency
+    Convert joyent returned state to state common to other datacenter return
+    values for consistency
+
     :param id_: joyent state value
     :return: libcloudfuncs state value
     '''
@@ -563,8 +582,8 @@ def joyent_node_state(id_):
               'stopping': 2,
               'provisioning': 3,
               'deleted': 2,
-              'unknown': 4
-    }
+              'unknown': 4}
+
     if id_ not in states.keys():
         id_ = 'unknown'
 
@@ -573,13 +592,17 @@ def joyent_node_state(id_):
 
 def reformat_node(item=None, full=False):
     '''
-    reformat the returned data from joyent, determine public/private ips and strip out fields if necessary to provide
-    either full or brief content
+    Reformat the returned data from joyent, determine public/private IPs and
+    strip out fields if necessary to provide either full or brief content.
+
     :param item: node dictionary
     :param full: full or brief output
     :return: DictObject
     '''
-    desired_keys = ['id', 'name', 'state', 'public_ips', 'private_ips', 'size', 'image', 'location']
+    desired_keys = [
+        'id', 'name', 'state', 'public_ips', 'private_ips', 'size', 'image',
+        'location'
+    ]
     item['private_ips'] = []
     item['public_ips'] = []
     if 'ips' in item:
@@ -600,7 +623,6 @@ def reformat_node(item=None, full=False):
             if not key in desired_keys:
                 del item[key]
 
-
     if 'state' in item.keys():
         item['state'] = joyent_node_state(item['state'])
 
@@ -619,18 +641,18 @@ def list_nodes(full=False):
     ret = {}
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS.keys():
-            result = query2(command='my/machines',  location=location,
+            result = query2(command='my/machines', location=location,
                             method='GET')
-            nodes=result[1]
+            nodes = result[1]
             for node in nodes:
                 if 'name' in node:
                     node['location'] = location
                     ret[node['name']] = reformat_node(item=node, full=full)
 
     else:
-        result = query2(command='my/machines',  location=DEFAULT_LOCATION,
+        result = query2(command='my/machines', location=DEFAULT_LOCATION,
                         method='GET')
-        nodes=result[1]
+        nodes = result[1]
         for node in nodes:
             if 'name' in node:
                 node['location'] = DEFAULT_LOCATION
@@ -785,7 +807,6 @@ def delete_key(kwargs=None, call=None):
 
     data = query(action='keys/{0}'.format(kwargs['keyname']), method='DELETE')
     return data
-
 
 
 def query(action=None, command=None, args=None, method='GET', data=None,
@@ -963,4 +984,3 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
         )
         log.error(exc)
         return [0, {'error': exc}]
-
