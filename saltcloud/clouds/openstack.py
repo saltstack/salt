@@ -247,8 +247,7 @@ def ignore_ip_addr(vm_, ip):
     cidr = vm_.get('ip_ignore', __opts__.get('OPENSTACK.ignore_cidr', ''))
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
         return True
-    else:
-        return False
+    return False
 
 
 def ssh_interface(vm_):
