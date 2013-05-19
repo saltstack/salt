@@ -7,9 +7,25 @@ import re
 import salt.utils
 
 
-def _has_tool(ostool):
+def __virtual__():
     '''
-    Internal, returns tools path or None
+    Confirm this module is supportted by the OS and the system has
+    required tools
+    '''
+    supported_os = {
+        'Linux': 'brctl',
+        'NetBSD': 'brconfig'
+    }
+    cur_os = __grains__['kernel']
+    for _os in supported_os:
+        if cur_os == _os and salt.utils.which(supported_os[cur_os]):
+            return 'bridge'
+    return False
+
+
+def _tool_path(ostool):
+    '''
+    Internal, returns tools path
     '''
     return salt.utils.which(ostool)
 
@@ -18,9 +34,7 @@ def _linux_brshow(br=None):
     '''
     Internal, returns bridges and enslaved interfaces (GNU/Linux - brctl)
     '''
-    brctl = _has_tool('brctl')
-    if not brctl:
-        return None
+    brctl = _tool_path('brctl')
 
     if br:
         cmd = '{0} show {1}'.format(brctl, br)
@@ -64,9 +78,7 @@ def _linux_bradd(br):
     '''
     Internal, creates the bridge
     '''
-    brctl = _has_tool('brctl')
-    if not br or not brctl:
-        return False
+    brctl = _tool_path('brctl')
     return __salt__['cmd.run']('{0} addbr {1}'.format(brctl, br))
 
 
@@ -74,9 +86,7 @@ def _linux_brdel(br):
     '''
     Internal, deletes the bridge
     '''
-    brctl = _has_tool('brctl')
-    if not br or not brctl:
-        return False
+    brctl = _tool_path('brctl')
     return __salt__['cmd.run']('{0} delbr {1}'.format(brctl, br))
 
 
@@ -84,9 +94,7 @@ def _linux_addif(br, iface):
     '''
     Internal, adds an interface to a bridge
     '''
-    brctl = _has_tool('brctl')
-    if not br or not brctl:
-        return False
+    brctl = _tool_path('brctl')
     return __salt__['cmd.run']('{0} addif {1} {2}'.format(brctl, br, iface))
 
 
@@ -94,9 +102,7 @@ def _linux_delif(br, iface):
     '''
     Internal, removes an interface from a bridge
     '''
-    brctl = _has_tool('brctl')
-    if not br or not brctl:
-        return False
+    brctl = _tool_path('brctl')
     return __salt__['cmd.run']('{0} delif {1} {2}'.format(brctl, br, iface))
 
 
@@ -104,9 +110,7 @@ def _linux_stp(br, state):
     '''
     Internal, sets STP state
     '''
-    brctl = _has_tool('brctl')
-    if not br or not brctl:
-        return False
+    brctl = _tool_path('brctl')
     return __salt__['cmd.run']('{0} stp {1} {2}'.format(brctl, br, state))
 
 
@@ -114,9 +118,7 @@ def _netbsd_brshow(br=None):
     '''
     Internal, returns bridges and enslaved interfaces (NetBSD - brconfig)
     '''
-    brconfig = _has_tool('brconfig')
-    if not brconfig:
-        return False
+    brconfig = _tool_path('brconfig')
 
     if br:
         cmd = '{0} {1}'.format(brconfig, br)
@@ -153,9 +155,9 @@ def _netbsd_bradd(br):
     '''
     Internal, creates the bridge
     '''
-    brconfig = _has_tool('brconfig')
-    ifconfig = _has_tool('ifconfig')
-    if not br or not brconfig or not ifconfig:
+    brconfig = _tool_path('brconfig')
+    ifconfig = _tool_path('ifconfig')
+    if not br or not ifconfig:
         return False
     if __salt__['cmd.retcode']('{0} {1} create'.format(ifconfig, br)) != 0:
         return False
@@ -168,7 +170,7 @@ def _netbsd_brdel(br):
     '''
     Internal, deletes the bridge
     '''
-    ifconfig = _has_tool('ifconfig')
+    ifconfig = _tool_path('ifconfig')
     if not br or not ifconfig:
         return False
     return __salt__['cmd.run']('{0} {1} destroy'.format(ifconfig, br))
@@ -178,9 +180,7 @@ def _netbsd_addif(br, iface):
     '''
     Internal, adds an interface to a bridge
     '''
-    brconfig = _has_tool('brconfig')
-    if not br or not brconfig:
-        return False
+    brconfig = _tool_path('brconfig')
     return __salt__['cmd.run']('{0} {1} add {2}'.format(brconfig, br, iface))
 
 
@@ -188,9 +188,7 @@ def _netbsd_delif(br, iface):
     '''
     Internal, removes an interface from a bridge
     '''
-    brconfig = _has_tool('brconfig')
-    if not br or not brconfig:
-        return False
+    brconfig = _tool_path('brconfig')
     return __salt__['cmd.run']('{0} {1} delete {2}'.format(brconfig, br, iface))
 
 
@@ -199,8 +197,8 @@ def _netbsd_stp(br, state, iface):
     Internal, sets STP state. On NetBSD, an interface to activate the STP on
     is needed.
     '''
-    brconfig = _has_tool('brconfig')
-    if not br or not brconfig or not iface:
+    brconfig = _tool_path('brconfig')
+    if not br or not iface:
         return False
     return __salt__['cmd.run']('{0} {1} {2} {3}'.
                                 format(brconfig, br, state, iface))
