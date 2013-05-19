@@ -42,7 +42,6 @@ Using the new format, set up the cloud configuration at
 import logging
 import socket
 import pprint
-import time
 
 # Import libcloud
 from libcloud.compute.base import NodeState
@@ -54,10 +53,14 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 import salt.utils
 
 # Import saltcloud libs
+import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
-from saltcloud.exceptions import SaltCloudSystemExit
-
+from saltcloud.exceptions import (
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout
+)
 
 # Get logging started
 log = logging.getLogger(__name__)

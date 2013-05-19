@@ -98,7 +98,6 @@ Using the new syntax:
 
 # Import python libs
 import os
-import time
 import logging
 import socket
 import pprint
@@ -113,12 +112,15 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 import salt.utils
 
 # Import saltcloud libs
+import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
-    SaltCloudSystemExit
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout
 )
 
 # Import netaddr IP matching
