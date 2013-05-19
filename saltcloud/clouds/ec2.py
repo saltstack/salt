@@ -592,6 +592,7 @@ def get_availability_zone(vm_):
 
     return avz
 
+
 def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
@@ -611,6 +612,7 @@ def securitygroupid(vm_):
     return config.get_config_value(
         'securitygroupid', vm_, __opts__, search_global=False
     )
+
 
 def list_availability_zones():
     '''
@@ -831,7 +833,7 @@ def create(vm_=None, call=None):
                 username = user
                 break
         else:
-            return {vm_['name']: 'Failed to authenticate'}
+            return {vm_['name']: {'Errors': ['Failed to authenticate']}}
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:

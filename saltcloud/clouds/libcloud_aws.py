@@ -371,7 +371,7 @@ def create(vm_):
                 username = user
                 break
         else:
-            return {vm_['name']: 'Failed to authenticate'}
+            return {vm_['name']: {'Errors': ['Failed to authenticate']}}
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
