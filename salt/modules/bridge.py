@@ -9,7 +9,7 @@ import salt.utils
 
 def __virtual__():
     '''
-    Confirm this module is supportted by the OS and the system has
+    Confirm this module is supported by the OS and the system has
     required tools
     '''
     supported_os = {
@@ -194,8 +194,8 @@ def _netbsd_delif(br, iface):
 
 def _netbsd_stp(br, state, iface):
     '''
-    Internal, sets STP state. On NetBSD, an interface to activate the STP on
-    is needed.
+    Internal, sets STP state. On NetBSD, it is required to specify the
+    STP physical interface
     '''
     brconfig = _tool_path('brconfig')
     if not br or not iface:
@@ -205,12 +205,18 @@ def _netbsd_stp(br, state, iface):
 
 
 def _os_dispatch(func, *args, **kwargs):
+    '''
+    Internal, dispatches functions by operating system
+    '''
     _os_func = getattr(sys.modules[__name__],'_{0}_{1}'.
                             format(__grains__['kernel'].lower(),func))
     if callable(_os_func):
         return _os_func(*args, **kwargs)
 
-        
+
+# End of internal functions
+
+
 def show(br=None):
     '''
     Returns bridges interfaces along with enslaved physical interfaces. If
@@ -308,7 +314,7 @@ def delete(br=None):
 
 def addif(br=None, iface=None):
     '''
-    Add an interface to a bridge
+    Adds an interface to a bridge
 
     CLI Example::
 
