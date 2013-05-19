@@ -298,7 +298,8 @@ class SaltCloud(parsers.SaltCloudParser):
         else:
             self.error('Nothing was done. Using the proper arguments?')
         # display output using salt's outputter system
-        self.exit(0, '\n{0}'.format(self.display_output(ret)))
+        print(self.display_output(ret))
+        self.exit(0)
 
     def print_confirm(self, msg):
         if self.options.assume_yes:
