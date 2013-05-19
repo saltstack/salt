@@ -33,7 +33,8 @@ from saltcloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudSystemExit,
-    SaltCloudExecutionTimeout
+    SaltCloudExecutionTimeout,
+    SaltCloudExecutionFailure
 )
 
 # Import third party libs
@@ -876,7 +877,8 @@ def wait_for_ip(update_callback,
                 update_args=None,
                 update_kwargs=None,
                 timeout=5 * 60,
-                interval=5):
+                interval=5,
+                max_failures=10):
     '''
     Helper function that waits for an IP address for a specific maximum amount
     of time.
@@ -890,6 +892,9 @@ def wait_for_ip(update_callback,
                     address.
     :param interval: The looping interval, ie, the amount of time to sleep
                      before the next iteration.
+    :param max_failures: If update_callback returns ``False`` it's considered
+                         query failure. This value is the amount of failures
+                         accepted before giving up.
     :returns: The update_callback returned data
     :raises: SaltCloudExecutionTimeout
 
@@ -908,7 +913,18 @@ def wait_for_ip(update_callback,
             )
         )
         data = update_callback(*update_args, **update_kwargs)
-        if data is not None:
+        if data is False:
+            log.debug(
+                'update_callback has returned False which is considered a '
+                'failure. Remaining Failures: {0}'.format(max_failures)
+            )
+            max_failures -= 1
+            if max_failures <= 0:
+                raise SaltCloudExecutionFailure(
+                    'Too much failures occurred while waiting for '
+                    'the IP address'
+                )
+        elif data is not None:
             return data
 
         if timeout < 0:
