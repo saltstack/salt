@@ -7,7 +7,7 @@ A state module to manage Gentoo configuration via eselect
 .. code-block:: yaml
 
     profile:
-        eselect.setted:
+        eselect.set:
             target: hardened/linux/amd64
 '''
 
@@ -17,7 +17,7 @@ def __virtual__():
     '''
     return 'eselect' if 'eselect.exec_action' in __salt__ else False
 
-def setted(name, target):
+def set(name, target):
     '''
     Verify that the given module is set to the given target
 
