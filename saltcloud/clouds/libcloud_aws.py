@@ -56,7 +56,12 @@ import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function
 from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
-from saltcloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudException,
+    SaltCloudSystemExit,
+    SaltCloudExecutionTimeout,
+    SaltCloudExecutionFailure
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -333,27 +338,35 @@ def create(vm_):
         return False
 
     log.info('Created node {0}'.format(vm_['name']))
-    waiting_for_ip = 0
-    failures = 0
-    while True:
-        time.sleep(0.5)
-        waiting_for_ip += 1
-        data = get_node(conn, vm_['name'])
+
+    def __get_node_data(conn, vm_name):
+        data = get_node(conn, vm_name)
+
         if data is None:
-            failures += 1
-            if failures > 10:
-                log.error('Failed to get node data after 10 attempts')
-                return {vm_['name']: False}
-            log.info(
-                'Failed to get node data. Attempts: {0}'.format(
-                    failures
-                )
-            )
-            continue
-        failures = 0
-        if data.public_ips:
-            break
-        log.warn('Salt node waiting_for_ip {0}'.format(waiting_for_ip))
+            # Trigger a failure in the waiting function
+            return False
+
+        if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+            return data
+
+        if ssh_interface(vm_) == 'public_ips' and data.public_ips:
+            return data
+
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __get_node_data,
+            update_args=(conn, vm_['name']),
+            interval=0.5
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
+
     if ssh_interface(vm_) == 'private_ips':
         log.info('Salt node data. Private_ip: {0}'.format(data.private_ips[0]))
         ip_address = data.private_ips[0]
