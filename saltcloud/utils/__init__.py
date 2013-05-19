@@ -178,7 +178,7 @@ def get_option(option, opts, vm_):
         return opts[option]
 
 
-def minion_conf(opts, vm_):
+def minion_config(opts, vm_):
     '''
     Return a minion's configuration for the provided options and VM
     '''
@@ -229,10 +229,10 @@ def minion_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the minion
     configuration file
     '''
-    return salt_config_to_yaml(minion_conf(opts, vm_))
+    return salt_config_to_yaml(minion_config(opts, vm_))
 
 
-def master_conf(opts, vm_):
+def master_config(opts, vm_):
     '''
     Return a master's configuration for the provided options and VM
     '''
@@ -261,14 +261,14 @@ def master_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the master
     configuration file
     '''
-    return salt_config_to_yaml(master_conf(opts, vm_))
+    return salt_config_to_yaml(master_config(opts, vm_))
 
 
-def salt_config_to_yaml(config):
+def salt_config_to_yaml(configuration):
     '''
     Return a salt configuration dictionary, master or minion, as a yaml dump
     '''
-    return yaml.safe_dump(config, default_flow_style=False)
+    return yaml.safe_dump(configuration, default_flow_style=False)
 
 
 def wait_for_ssh(host, port=22, timeout=900):
