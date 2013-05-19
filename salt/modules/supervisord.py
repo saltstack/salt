@@ -104,7 +104,7 @@ def update(user=None):
 
 def status(name=None, user=None):
     '''
-    List programms and its state
+    List programs and its state
 
     CLI Example::
         salt '*' supervisord.status
