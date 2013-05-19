@@ -25,6 +25,7 @@ class SaltCloudSystemExit(SaltCloudException):
     This exception is raised when the execution should be stopped.
     '''
     def __init__(self, message, exit_code=1):
+        SaltCloudException.__init__(self)
         self.message = message
         self.exit_code = exit_code
 
