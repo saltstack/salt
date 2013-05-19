@@ -46,7 +46,6 @@ Using the new format, set up the cloud configuration at
 # Import python libs
 import os
 import stat
-import time
 import uuid
 import pprint
 import logging
