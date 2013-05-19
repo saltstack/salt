@@ -70,6 +70,10 @@ def zpool_list():
 def exists(pool_name):
     '''
     Check if a ZFS storage pool is active
+
+    CLI Example::
+    
+        salt '*' zpool.exists myzpool
     '''
     current_pools = zpool_list()
     for pool in current_pools['pools']:
@@ -103,7 +107,7 @@ def create(pool_name, *vdevs):
 
     CLI Example::
 
-        salt '*' zpool.create myzpool /vdev1 /vdev2
+        salt '*' zpool.create myzpool /path/to/vdev1 [/path/to/vdev2] [...]
     '''
     ret = {}
     dlist = []
@@ -144,7 +148,7 @@ def add(pool_name, vdev):
 
     CLI Example::
 
-        salt '*' zpool.add myzpool /vdev
+        salt '*' zpool.add myzpool /path/to/vdev
     '''
     ret = {}
     # check for pool
@@ -174,7 +178,7 @@ def replace(pool_name, old, new):
 
     CLI Example::
 
-        salt '*' zpool.replace myzpool /vdev1 /vdev2
+        salt '*' zpool.replace myzpool /path/to/vdev1 /path/to/vdev2
     '''
     ret = {}
     # Make sure pools there
@@ -212,13 +216,13 @@ def create_file_vdev(size, *vdevs):
 
     CLI Example::
 
-        salt '*' zpool.create_file_vdev 7g /vdev1 /vdev2
+        salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...] 
 
         Depending on file size this may take a while to return
     '''
     ret = {}
-    # Insure mkfile is installed
-    _check_mkfile()
+    if not _check_mkfile():
+        return False
     dlist = []
     # Get file names to create
     for vdev in vdevs:
