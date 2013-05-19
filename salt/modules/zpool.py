@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Provides zpool only on supported OS
     '''
-    supported = ['Solaris', 'SmartOS', 'FreeBSD']
+    supported = set(('Solaris', 'SmartOS', 'FreeBSD'))
     if __grains__['os'] in supported and _check_zpool():
         # Don't let this work on Solaris 9 since ZFS is not available on it.
         if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == '5.9':
