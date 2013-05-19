@@ -35,7 +35,13 @@ class SaltCloudConfigError(SaltCloudException):
     '''
 
 
-class SaltCloudNotFound(SaltException):
+class SaltCloudNotFound(SaltCloudException):
     '''
     Raised when some cloud provider function cannot find what's being searched.
+    '''
+
+
+class SaltCloudExecutionTimeout(SaltCloudException):
+    '''
+    Raised when too much time has passed while querying/waiting for data.
     '''

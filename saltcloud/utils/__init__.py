@@ -32,7 +32,8 @@ from saltcloud.utils.nb_popen import NonBlockingPopen
 from saltcloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
-    SaltCloudSystemExit
+    SaltCloudSystemExit,
+    SaltCloudExecutionTimeout
 )
 
 # Import third party libs
@@ -869,3 +870,53 @@ def remove_sshkey(host, known_hosts=None):
 
     cmd = 'ssh-keygen -R {0}'.format(host)
     subprocess.call(cmd, shell=True)
+
+
+def wait_for_ip(update_callback,
+                update_args=None,
+                update_kwargs=None,
+                timeout=5 * 60,
+                interval=5):
+    '''
+    Helper function that waits for an IP address for a specific maximum amount
+    of time.
+
+    :param update_callback: callback function which queries the cloud provider
+                            for the VM ip address. It must return None if the
+                            required data, IP included, is not available yet.
+    :param update_args: Arguments to pass to update_callback
+    :param update_kwargs: Keyword arguments to pass to update_callback
+    :param timeout: The maximum amount of time(in seconds) to wait for the IP
+                    address.
+    :param interval: The looping interval, ie, the amount of time to sleep
+                     before the next iteration.
+    :returns: The update_callback returned data
+    :raises: SaltCloudExecutionTimeout
+
+    '''
+    if update_args is None:
+        update_args = ()
+    if update_kwargs is None:
+        update_kwargs = {}
+
+    duration = timeout
+    while True:
+        log.debug(
+            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
+                timeout // 60,
+                timeout % 60
+            )
+        )
+        data = update_callback(*update_args, **update_kwargs)
+        if data is not None:
+            return data
+
+        if timeout < 0:
+            raise SaltCloudExecutionTimeout(
+                'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
+                    duration // 60,
+                    duration % 60
+                )
+            )
+        time.sleep(interval)
+        timeout -= interval
