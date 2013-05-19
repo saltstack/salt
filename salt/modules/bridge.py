@@ -220,6 +220,7 @@ def show(br=None):
     bridge values are returned.
 
     CLI Example::
+
         salt '*' bridge.show
         salt '*' bridge.show br0
     '''
@@ -231,6 +232,7 @@ def list():
     Returns the machine's bridges list
 
     CLI Example::
+
         salt '*' bridge.list
     '''
     brs = _os_dispatch('brshow')
@@ -248,6 +250,7 @@ def interfaces(br=None):
     Returns interfaces attached to a bridge
 
     CLI Example::
+
         salt '*' bridge.interfaces br0
     '''
     if not br:
@@ -263,6 +266,7 @@ def find_interfaces(*args):
     Returns the bridge to which the interfaces are bond to
 
     CLI Example::
+
         salt '*' bridge.find_interfaces eth0 [eth1...]
     '''
     brs = _os_dispatch('brshow')
@@ -287,6 +291,7 @@ def add(br=None):
     Creates a bridge
 
     CLI Example::
+
         salt '*' bridge.add br0
     '''
     return _os_dispatch('bradd', br)
@@ -297,6 +302,7 @@ def delete(br=None):
     Deletes a bridge
 
     CLI Example::
+
         salt '*' bridge.delete br0
     '''
     return _os_dispatch('brdel', br)
@@ -307,6 +313,7 @@ def addif(br=None, iface=None):
     Add an interface to a bridge
 
     CLI Example::
+
         salt '*' bridge.addif br0 eth0
     '''
     return _os_dispatch('addif', br, iface)
@@ -317,6 +324,7 @@ def delif(br=None, iface=None):
     Removes an interface from a bridge
 
     CLI Example::
+
         salt '*' bridge.delif br0 eth0
     '''
     return _os_dispatch('delif', br, iface)
@@ -327,6 +335,7 @@ def stp(br=None, state='disable', iface=None):
     Sets Spanning Tree Protocol state for a bridge
 
     CLI Example::
+
         salt '*' bridge.stp br0 enable
         salt '*' bridge.stp br0 disable
 
@@ -334,6 +343,7 @@ def stp(br=None, state='disable', iface=None):
     which to enable the STP.
 
     CLI Example::
+
         salt '*' bridge.stp bridge0 enable fxp0
         salt '*' bridge.stp bridge0 disable fxp0
     '''
