@@ -166,6 +166,9 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS):
                 handler.acquire()
 
                 formatter = handler.formatter
+                if not formatter:
+                    continue
+
                 fmt = formatter._fmt.replace('%', '%%')
 
                 match = MODNAME_PATTERN.search(fmt)
