@@ -382,8 +382,6 @@ def show_sls(mods, env='base', test=None, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = None
-    log.critical('BAR')
-    log.critical(opts)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
