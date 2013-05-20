@@ -19,7 +19,7 @@ This is necessary and can not be replaced by a require clause in the pkg.
 
     base:
       pkgrepo.managed:
-        - human_name: Logstash PPA
+        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
