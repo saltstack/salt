@@ -201,10 +201,12 @@ def managed(name, **kwargs):
     if repo:
         notset = False
         for kwarg in sanitizedkwargs:
+            if kwarg == 'repo':
+                continue
             if kwarg not in repo.keys():
                 notset = True
             else:
-                if sanitizedkwargs[kwarg] != repo[kwarg]:
+                if str(sanitizedkwargs[kwarg]) != str(repo[kwarg]):
                     notset = True
         if notset is False:
             ret['result'] = True
