@@ -64,7 +64,11 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 import saltcloud.utils
 import saltcloud.config as config
 from saltcloud.utils import namespaced_function, is_public_ip
-from saltcloud.exceptions import SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -85,7 +89,7 @@ DEFAULT_LOCATION = 'us-east-1'
 # datacenters
 POLL_ALL_LOCATIONS = True
 
-valid_response_codes = [
+VALID_RESPONSE_CODES = [
     httplib.OK,
     httplib.ACCEPTED,
     httplib.CREATED,
@@ -98,10 +102,9 @@ class DictObject(dict):
     handy class to make a dictionary into a simple object
     '''
     def __init__(self, data):
-
         self.update(data)
-        for k, v in data.items():
-            setattr(self, k, v)
+        for key, value in data.items():
+            setattr(self, key, value)
 
 
 # Only load in this module is the JOYENT configurations are in place
@@ -218,12 +221,12 @@ def create(vm_):
     ret = {}
 
     def __query_node_data(vm_id, vm_location):
-        rc, data = query2(
+        rcode, data = query2(
             command='my/machines/{0}'.format(vm_id),
             method='GET',
             location=vm_location
         )
-        if rc not in valid_response_codes:
+        if rcode not in VALID_RESPONSE_CODES:
             # Trigger a wait for IP error
             return False
         if isinstance(data['ips'], list) and len(data['ips']) > 0:
@@ -338,7 +341,7 @@ def create_node(**kwargs):
     try:
         ret = query2(command='/my/machines', data=data, method='POST',
                      location=location)
-        if ret[0] in valid_response_codes:
+        if ret[0] in VALID_RESPONSE_CODES:
             return ret[1]
     except Exception as exc:
         log.error(
@@ -364,7 +367,7 @@ def destroy(name, call=None):
     node = get_node(name)
     ret = query2(command='my/machines/{0}'.format(node.id),
                  location=node.location, method='DELETE')
-    return ret[0] in valid_response_codes
+    return ret[0] in VALID_RESPONSE_CODES
 
 
 def reboot(name, call=None):
@@ -383,7 +386,7 @@ def reboot(name, call=None):
     ret = take_action(name=name, call=call, method='POST',
                       command='/my/machines/{0}'.format(node.id),
                       location=node.location, data={'action': 'reboot'})
-    return ret[0] in valid_response_codes
+    return ret[0] in VALID_RESPONSE_CODES
 
 
 def stop(name, call=None):
@@ -402,7 +405,7 @@ def stop(name, call=None):
     ret = take_action(name=name, call=call, method='POST',
                       command='/my/machines/{0}'.format(node.id),
                       location=node.location, data={'action': 'stop'})
-    return ret[0] in valid_response_codes
+    return ret[0] in VALID_RESPONSE_CODES
 
 
 def start(name, call=None):
@@ -421,7 +424,7 @@ def start(name, call=None):
     ret = take_action(name=name, call=call, method='POST',
                       command='/my/machines/%s' % node.id,
                       location=node.location, data={'action': 'start'})
-    return ret[0] in valid_response_codes
+    return ret[0] in VALID_RESPONSE_CODES
 
 
 def take_action(name=None, call=None, command=None, data=None, method='GET',
@@ -512,10 +515,10 @@ def avail_locations():
     # corrected, currently only the european dc (new api) returns the correct
     # values
     # ret = {}
-    # rc, datacenters = query2(
+    # rcode, datacenters = query2(
     #     command='my/datacenters', location=DEFAULT_LOCATION, method='GET'
     # )
-    # if rc in valid_response_codes and isinstance(datacenters, dict):
+    # if rcode in VALID_RESPONSE_CODES and isinstance(datacenters, dict):
     #     for key in datacenters:
     #     ret[key] = {
     #         'name': key,
@@ -539,13 +542,16 @@ def has_method(obj, method_name):
     return False
 
 
-def key_list(key='name', items=[]):
+def key_list(key='name', items=None):
     '''
     convert list to dictionary using the key as the identifier
     :param key: identifier - must exist in the arrays elements own dictionary
     :param items: array to iterate over
     :return: dictionary
     '''
+    if items is None:
+        items = []
+
     ret = {}
     if items and isinstance(items, list):
         for item in items:
@@ -681,8 +687,8 @@ def avail_images():
         salt-cloud --list-images
 
     '''
-    rc, items = query2(command='/my/datasets')
-    if rc not in valid_response_codes:
+    rcode, items = query2(command='/my/datasets')
+    if rcode not in VALID_RESPONSE_CODES:
         return {}
     return key_list(items=items)
 
@@ -695,8 +701,8 @@ def avail_sizes():
 
         salt-cloud --list-sizes
     '''
-    rc, items = query2(command='/my/packages')
-    if rc not in valid_response_codes:
+    rcode, items = query2(command='/my/packages')
+    if rcode not in VALID_RESPONSE_CODES:
         return {}
     return key_list(items=items)
 
@@ -854,7 +860,11 @@ def query(action=None, command=None, args=None, method='GET', data=None,
         for header in headers.keys():
             kwargs['headers'][header] = headers[header]
 
-    pprint(kwargs['headers'])
+    log.debug(
+        'Request headers: {0}'.format(
+            pprint.pformat(kwargs['headers'])
+        )
+    )
 
     if args:
         path += '?%s'
@@ -930,7 +940,7 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
 
     log.debug("PATH: {2}\nCredentials: {0}/{1}".format(user, password, path))
 
-    authKey = base64.b64encode('{0}:{1}'.format(user, password))
+    auth_key = base64.b64encode('{0}:{1}'.format(user, password))
 
     log.debug("Data: {0}".format(data))
 
@@ -938,15 +948,15 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Api-Version': JOYENT_API_VERSION,
-        'Authorization': 'Basic ' + authKey}
+        'Authorization': 'Basic {0}'.format(auth_key)}
 
-    if type(args) is not dict:
+    if not isinstance(args, dict):
         args = {}
+
     request = None
     if args:
-        path += '?%s'
         params = urllib.urlencode(args)
-        path = path % params
+        path = '{0}?{1}'.format(path, params)
 
     request = urllib2.Request(path)
     request.get_method = lambda: method
