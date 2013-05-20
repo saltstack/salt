@@ -36,6 +36,7 @@ def latest(name,
            target=None,
            runas=None,
            force=None,
+           force_checkout=False,
            submodules=False,
            mirror=False,
            bare=False,
@@ -57,6 +58,9 @@ def latest(name,
         Name of the user performing repository management operations
     force
         Force git to clone into pre-existing directories (deletes contents)
+    force_checkout
+        Force a checkout even if there might be overwritten changes
+        (Default: False)
     submodules
         Update submodules on clone or branch change (Default: False)
     mirror
@@ -139,7 +143,10 @@ def latest(name,
                                               user=runas,
                                               identity=identity)
 
-                    __salt__['git.checkout'](target, rev, user=runas)
+                    __salt__['git.checkout'](target,
+                                             rev,
+                                             force=force_checkout,
+                                             user=runas)
 
                 # check if we are on a branch to merge changes
                 cmd = "git symbolic-ref -q HEAD > /dev/null"
