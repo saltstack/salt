@@ -252,9 +252,9 @@ def grains(opts):
         opts['grains'] = {}
 
     load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
-    grains = load.gen_grains()
-    grains.update(opts['grains'])
-    return grains
+    grains_info = load.gen_grains()
+    grains_info.update(opts['grains'])
+    return grains_info
 
 
 def call(fun, **kwargs):
@@ -846,7 +846,7 @@ class Loader(object):
         members. Then verify that the returns are python dict's and return
         a dict containing all of the returned values.
         '''
-        grains = {}
+        grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
             if key[key.index('.') + 1:] != 'core':
@@ -854,7 +854,7 @@ class Loader(object):
             ret = fun()
             if not isinstance(ret, dict):
                 continue
-            grains.update(ret)
+            grains_data.update(ret)
         for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
@@ -871,5 +871,5 @@ class Loader(object):
                 continue
             if not isinstance(ret, dict):
                 continue
-            grains.update(ret)
-        return grains
+            grains_data.update(ret)
+        return grains_data
