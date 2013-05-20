@@ -259,7 +259,8 @@ class LocalClient(object):
         for minion. ret in group.items():
             if len(f_tgt) >= sub:
                 break
-            f_tgt.append(minion)
+            if fun in ret:
+                f_tgt.append(minion)
         func = self.cmd
         if cli:
             func = self.cmd_cli
