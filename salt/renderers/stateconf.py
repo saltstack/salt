@@ -144,14 +144,15 @@ def render(input, env='', sls='', argline='', **kws):
 
             rename_state_ids(data, sls)
 
-            # We must extract no matter what so extending a stateconf sls file works!
+            # We must extract no matter what so extending a stateconf sls file
+            # works!
             extract_state_confs(data)
         except SaltRenderError:
             raise
         except Exception as err:
             log.exception(
-                'Error found while pre-processing the salt file, '
-                '{0}.\n'.format(sls)
+                'Error found while pre-processing the salt file '
+                '{0}:\n{1}'.format(sls, err)
             )
             from salt.state import State
             state = State(__opts__)
