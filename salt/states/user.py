@@ -49,7 +49,7 @@ def _changes(name,
     otherwise return False.
     '''
 
-    if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+    if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
         lshad = __salt__['shadow.info'](name)
 
     lusr = __salt__['user.info'](name)
@@ -96,7 +96,7 @@ def _changes(name,
         if lusr['shell'] != shell:
             change['shell'] = shell
     if password:
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             if lshad['pwd'] == '!' or \
                     lshad['pwd'] != '!' and enforce_password:
                 if lshad['pwd'] != password:
@@ -263,7 +263,7 @@ def present(name,
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
+        if not __grains__['os'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
@@ -282,14 +282,14 @@ def present(name,
 
         post = __salt__['user.info'](name)
         spost = {}
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             if lshad['pwd'] != password:
                 spost = __salt__['shadow.info'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
                 ret['changes'][key] = post[key]
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
