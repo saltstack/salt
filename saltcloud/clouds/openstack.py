@@ -190,9 +190,6 @@ def get_conn():
         ),
         'ex_tenant_name': config.get_config_value(
             'tenant', vm_, __opts__, search_global=False
-        ),
-        'ex_force_service_name': config.get_config_value(
-            'compute_name', vm_, __opts__, search_global=False
         )
     }
 
@@ -336,7 +333,7 @@ def create(vm_):
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
-                    'No such security group: \'{0}\''.format(vg)
+                    'No such security group: \'{0}\''.format(vgm)
                 )
 
         kwargs['ex_security_groups'] = [
