@@ -820,7 +820,9 @@ def create(vm_=None, call=None):
                 username = user
                 break
         else:
-            return {vm_['name']: {'Errors': ['Failed to authenticate']}}
+            raise SaltCloudSystemExit(
+                'Failed to authenticate against remote ssh'
+            )
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
