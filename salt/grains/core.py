@@ -875,8 +875,8 @@ def saltpath():
     '''
     # Provides:
     #   saltpath
-    path = os.path.abspath(os.path.join(__file__, os.path.pardir))
-    return {'saltpath': os.path.dirname(path)}
+    salt_path = os.path.abspath(os.path.join(__file__, os.path.pardir))
+    return {'saltpath': os.path.dirname(salt_path)}
 
 
 def saltversion():
