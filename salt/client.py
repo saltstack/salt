@@ -718,6 +718,34 @@ class LocalClient(object):
                 return ret
             time.sleep(0.02)
 
+    def get_cache_returns(self, jid):
+        '''
+        Execute a single pass to gather the contents of the job cache
+        '''
+        ret = {}
+        jid_dir = salt.utils.jid_dir(jid,
+                                     self.opts['cachedir'],
+                                     self.opts['hash_type'])
+        for fn_ in os.listdir(jid_dir):
+            if fn_.startswith('.'):
+                continue
+            if fn_ not in ret:
+                retp = os.path.join(jid_dir, fn_, 'return.p')
+                outp = os.path.join(jid_dir, fn_, 'out.p')
+                if not os.path.isfile(retp):
+                    continue
+                while fn_ not in ret:
+                    try:
+                        ret_data = self.serial.load(
+                            salt.utils.fopen(retp, 'r'))
+                        ret[fn_] = {'ret': ret_data}
+                        if os.path.isfile(outp):
+                            ret[fn_]['out'] = self.serial.load(
+                                salt.utils.fopen(outp, 'r'))
+                    except Exception:
+                        pass
+        return ret
+
     def get_cli_static_event_returns(
             self,
             jid,
