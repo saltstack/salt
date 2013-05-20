@@ -40,6 +40,7 @@ def latest(name,
            mirror=False,
            bare=False,
            remote_name='origin',
+           always_fetch=False,
            identity=None,
            **kwargs):
     '''
@@ -68,6 +69,10 @@ def latest(name,
         defines a different remote name.
         For the first clone the given name is set to the default remote,
         else it is just a additional remote. (Default: 'origin')
+    always_fetch
+        If a tag or branch name is used as the rev a fetch will not occur
+        until the tag or branch name changes. Setting this to true will force
+        a fetch to occur. Only applies when rev is set. (Default: False)
     identity
         A path to a private key to use over SSH
     '''
@@ -128,7 +133,7 @@ def latest(name,
                                                       cwd=target,
                                                       runas=runas)
                     # there is a issues #3938 addressing this
-                    if 0 != retcode:
+                    if 0 != retcode or always_fetch:
                         __salt__['git.fetch'](target,
                                               opts=fetch_opts,
                                               user=runas,
