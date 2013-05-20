@@ -35,7 +35,7 @@
 
       <exec_method type="method"
                    name="start"
-                   exec="/opt/local/bin/salt-syndic"
+                   exec="/opt/local/bin/salt-syndic -c %{config_dir}"
                    timeout_seconds="60"/>
 
       <exec_method type="method"
@@ -50,6 +50,7 @@
 
       <property_group name="application" type="application">
         <propval name="config_file" type="astring" value="/opt/local/etc/salt/master"/>
+        <propval name="config_dir" type="astring" value="/opt/local/etc/salt"/>
       </property_group>
 
       <stability value="Unstable"/>
