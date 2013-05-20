@@ -422,7 +422,7 @@ def create(vm_):
         data = saltcloud.utils.wait_for_ip(
             __query_node_data,
             update_args=(vm_, data),
-            max_timeout=10 * 60,
+            timeout=10 * 60,
             interval=10
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
