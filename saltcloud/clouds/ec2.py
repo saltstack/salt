@@ -88,7 +88,8 @@ from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError,
-    SaltCloudExecutionTimeout
+    SaltCloudExecutionTimeout,
+    SaltCloudExecutionFailure
 )
 
 
@@ -466,11 +467,10 @@ def script(vm_):
     Return the script deployment object
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
-    script = saltcloud.utils.os_script(
+    return saltcloud.utils.os_script(
         config.get_config_value('script', vm_, __opts__),
         vm_, __opts__, minion
     )
-    return script
 
 
 def keyname(vm_):
@@ -693,19 +693,19 @@ def create(vm_=None, call=None):
             for (counter, sg_) in enumerate(ex_securitygroupid):
                 params['SecurityGroupId.{0}'.format(counter)] = sg_
 
-    delvol_on_destroy = config.get_config_value(
+    set_delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
     )
 
-    if delvol_on_destroy is not None:
-        if not isinstance(delvol_on_destroy, bool):
+    if set_delvol_on_destroy is not None:
+        if not isinstance(set_delvol_on_destroy, bool):
             raise SaltCloudConfigError(
                 '\'delvol_on_destroy\' should be a boolean value.'
             )
 
         params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
         params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-            delvol_on_destroy
+            set_delvol_on_destroy
         ).lower()
 
     try:
