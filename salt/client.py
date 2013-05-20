@@ -238,6 +238,40 @@ class LocalClient(object):
         except KeyError:
             return 0
 
+    def cmd_subset(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            sub=3,
+            cli=False,
+            **kwargs):
+        '''
+        Execute a command on a randome subset of the targetted systems, pass
+        in the subset via the sub option to signify the number of systems to
+        execute on.
+        '''
+        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
+        f_tgt = []
+        for minion. ret in group.items():
+            if len(f_tgt) >= sub:
+                break
+            f_tgt.append(minion)
+        func = self.cmd
+        if cli:
+            func = self.cmd_cli
+        return func(
+                f_tgt,
+                fun,
+                arg,
+                expr_form='list',
+                ret=ret,
+                kwarg=kwarg,
+                **kwargs)
+
     def cmd_batch(
             self,
             tgt,
