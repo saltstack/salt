@@ -708,7 +708,7 @@ def match_index_versions(host=None, core_name=None):
             if 'ERROR' in slave:
                 error = slave['ERROR']
                 success = False
-                err = "{0}: {1} - {2}".format(name, error, master_url)
+                err = "{0}: {1} - {2}".format(core, error, master_url)
                 resp['errors'].append(err)
                 #if there was an error return the entire response so the
                 #alterer can get what it wants
