@@ -1278,6 +1278,11 @@ class State(object):
                             if chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
+                        elif req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs[r_state].append(chunk)
                     if not found:
                         return 'unmet'
         fun_stats = set()
@@ -1331,6 +1336,11 @@ class State(object):
                             if chunk['state'] == req_key:
                                 reqs.append(chunk)
                                 found = True
+                        elif req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs.append(chunk)
                     if not found:
                         lost[requisite].append(req)
             if lost['require'] or lost['watch']:
