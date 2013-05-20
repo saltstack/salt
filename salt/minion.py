@@ -352,19 +352,19 @@ class MultiMinion(object):
         last = time.time()
         auth_wait = self.opts['acceptance_wait_time']
         max_wait = auth_wait * 6
-        for minion in minions.values():
-            if isinstance(minion, dict):
-                continue
-            self.schedule = minion.schedule
 
         while True:
-            if hasattr(self, 'schedule'):
+            for minion in minions.values():
+                if isinstance(minion, dict):
+                    continue
+                if not hasattr(minion, 'schedule'):
+                    continue
                 try:
-                    self.schedule.eval()
+                    minion.schedule.eval()
                     # Check if scheduler requires lower loop interval than
                     # the loop_interval setting
-                    if self.schedule.loop_interval < loop_interval:
-                        loop_interval = self.schedule.loop_interval
+                    if minion.schedule.loop_interval < loop_interval:
+                        loop_interval = minion.schedule.loop_interval
                         log.debug(
                             'Overriding loop_interval because of scheduled jobs.'
                         )
@@ -372,6 +372,7 @@ class MultiMinion(object):
                     log.error(
                         'Exception {0} occurred in scheduled job'.format(exc)
                     )
+                break
             if self.epoller.poll(1):
                 try:
                     while True:
@@ -391,6 +392,8 @@ class MultiMinion(object):
                         if auth_wait < max_wait:
                             auth_wait += auth_wait
                         try:
+                            if not isinstance(minion, dict):
+                                minions[master] = {'minion': minion}
                             t_minion = Minion(minion, 1, False)
                             minions[master]['minion'] = t_minion
                             minions[master]['generator'] = t_minion.tune_in_no_block()
