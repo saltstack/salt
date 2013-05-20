@@ -630,7 +630,7 @@ def is_replication_enabled(host=None, core_name=None):
             #check for errors on the slave
             if 'ERROR' in slave:
                 success = False
-                err = "{0}: {1} - {2}".format(name, slave['ERROR'], master_url)
+                err = "{0}: {1} - {2}".format(core, slave['ERROR'], master_url)
                 resp['errors'].append(err)
                 #if there is an error return everything
                 data = slave if core is None else {core: {'data': slave}}
