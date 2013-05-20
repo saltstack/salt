@@ -938,7 +938,8 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug("PATH: {2}\nCredentials: {0}/{1}".format(user, password, path))
+    #log.debug("PATH: {2}\nCredentials: {0}/{1}".format(user, password, path))
+    log.debug('User: {0!r} on PATH: {1}'.format(user, path))
 
     auth_key = base64.b64encode('{0}:{1}'.format(user, password))
 
