@@ -288,7 +288,7 @@ def create(vm_):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
     def __query_node_data(vm_name):
-        data = show_instance(vm_['name'], call='action')
+        data = show_instance(vm_name, call='action')
         if 'public-ip' not in data['network']:
             # Trigger another iteration
             return
@@ -461,11 +461,10 @@ def script(vm_):
     Return the script deployment object
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
-    script = saltcloud.utils.os_script(
+    return saltcloud.utils.os_script(
         config.get_config_value('script', vm_, __opts__),
         vm_, __opts__, minion
     )
-    return script
 
 
 def show_image(kwargs, call=None):
@@ -511,13 +510,13 @@ def wait_until(name, state, timeout=300):
     '''
     Wait until a specific state has been reached on  a node
     '''
-    start = time.time()
+    start_time = time.time()
     node = show_instance(name, call='action')
     while True:
         if node['state'] == state:
             return True
         time.sleep(1)
-        if time.time() - start > timeout:
+        if time.time() - start_time > timeout:
             return False
         node = show_instance(name, call='action')
 
