@@ -4,6 +4,7 @@ Salt module to manage unix mounts and the fstab file
 
 # Import python libs
 import os
+import re
 import logging
 
 # Import salt libs
@@ -53,6 +54,13 @@ def _active_mounts(ret):
                              'opts': comps[3].split(',')}
     return ret
 
+def _active_mounts_freebsd(ret):
+    for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        ret[comps[1]] = {'device': comps[0],
+                         'fstype': comps[2],
+                         'opts': comps[3].split(',')}
+    return ret
 
 def active():
     '''
@@ -63,10 +71,13 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    try:
-        _active_mountinfo(ret)
-    except CommandExecutionError:
-        _active_mounts(ret)
+    if __grains__['os'] in ('FreeBSD'):
+        _active_mounts_freebsd(ret)
+    else:
+        try:
+            _active_mountinfo(ret)
+        except CommandExecutionError:
+            _active_mounts(ret)
     return ret
 
 
