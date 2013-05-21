@@ -2,7 +2,7 @@
 '''
 The setup script for salt
 '''
-#test
+
 # For Python 2.5.  A no-op on 2.6 and above.
 from __future__ import with_statement
 
