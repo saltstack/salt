@@ -32,7 +32,9 @@ from saltcloud.utils.nb_popen import NonBlockingPopen
 from saltcloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
-    SaltCloudSystemExit
+    SaltCloudSystemExit,
+    SaltCloudExecutionTimeout,
+    SaltCloudExecutionFailure
 )
 
 # Import third party libs
@@ -176,7 +178,7 @@ def get_option(option, opts, vm_):
         return opts[option]
 
 
-def minion_conf(opts, vm_):
+def minion_config(opts, vm_):
     '''
     Return a minion's configuration for the provided options and VM
     '''
@@ -227,10 +229,10 @@ def minion_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the minion
     configuration file
     '''
-    return salt_config_to_yaml(minion_conf(opts, vm_))
+    return salt_config_to_yaml(minion_config(opts, vm_))
 
 
-def master_conf(opts, vm_):
+def master_config(opts, vm_):
     '''
     Return a master's configuration for the provided options and VM
     '''
@@ -259,14 +261,14 @@ def master_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the master
     configuration file
     '''
-    return salt_config_to_yaml(master_conf(opts, vm_))
+    return salt_config_to_yaml(master_config(opts, vm_))
 
 
-def salt_config_to_yaml(config):
+def salt_config_to_yaml(configuration):
     '''
     Return a salt configuration dictionary, master or minion, as a yaml dump
     '''
-    return yaml.safe_dump(config, default_flow_style=False)
+    return yaml.safe_dump(configuration, default_flow_style=False)
 
 
 def wait_for_ssh(host, port=22, timeout=900):
@@ -869,3 +871,68 @@ def remove_sshkey(host, known_hosts=None):
 
     cmd = 'ssh-keygen -R {0}'.format(host)
     subprocess.call(cmd, shell=True)
+
+
+def wait_for_ip(update_callback,
+                update_args=None,
+                update_kwargs=None,
+                timeout=5 * 60,
+                interval=5,
+                max_failures=10):
+    '''
+    Helper function that waits for an IP address for a specific maximum amount
+    of time.
+
+    :param update_callback: callback function which queries the cloud provider
+                            for the VM ip address. It must return None if the
+                            required data, IP included, is not available yet.
+    :param update_args: Arguments to pass to update_callback
+    :param update_kwargs: Keyword arguments to pass to update_callback
+    :param timeout: The maximum amount of time(in seconds) to wait for the IP
+                    address.
+    :param interval: The looping interval, ie, the amount of time to sleep
+                     before the next iteration.
+    :param max_failures: If update_callback returns ``False`` it's considered
+                         query failure. This value is the amount of failures
+                         accepted before giving up.
+    :returns: The update_callback returned data
+    :raises: SaltCloudExecutionTimeout
+
+    '''
+    if update_args is None:
+        update_args = ()
+    if update_kwargs is None:
+        update_kwargs = {}
+
+    duration = timeout
+    while True:
+        log.debug(
+            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
+                timeout // 60,
+                timeout % 60
+            )
+        )
+        data = update_callback(*update_args, **update_kwargs)
+        if data is False:
+            log.debug(
+                'update_callback has returned False which is considered a '
+                'failure. Remaining Failures: {0}'.format(max_failures)
+            )
+            max_failures -= 1
+            if max_failures <= 0:
+                raise SaltCloudExecutionFailure(
+                    'Too much failures occurred while waiting for '
+                    'the IP address'
+                )
+        elif data is not None:
+            return data
+
+        if timeout < 0:
+            raise SaltCloudExecutionTimeout(
+                'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
+                    duration // 60,
+                    duration % 60
+                )
+            )
+        time.sleep(interval)
+        timeout -= interval

@@ -87,7 +87,9 @@ from saltcloud.libcloudfuncs import *   # pylint: disable-msg=W0614,W0401
 from saltcloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
-    SaltCloudConfigError
+    SaltCloudConfigError,
+    SaltCloudExecutionTimeout,
+    SaltCloudExecutionFailure
 )
 
 
@@ -465,11 +467,10 @@ def script(vm_):
     Return the script deployment object
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
-    script = saltcloud.utils.os_script(
+    return saltcloud.utils.os_script(
         config.get_config_value('script', vm_, __opts__),
         vm_, __opts__, minion
     )
-    return script
 
 
 def keyname(vm_):
@@ -503,11 +504,18 @@ def ssh_username(vm_):
 
     # get rid of None's or empty names
     usernames = filter(lambda x: x, usernames)
+    # Keep a copy of the usernames the user might have provided
+    initial = usernames[:]
 
     # Add common usernames to the list to be tested
     for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
         if name not in usernames:
             usernames.append(name)
+    # Add the user provided usernames to the end of the list since enough time
+    # might need to pass before the remote service is available for logins and
+    # the proper username might have passed it's iteration.
+    # This has detected in a CentOS 5.7 EC2 image
+    usernames.extend(initial)
     return usernames
 
 
@@ -592,6 +600,7 @@ def get_availability_zone(vm_):
 
     return avz
 
+
 def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
@@ -611,6 +620,7 @@ def securitygroupid(vm_):
     return config.get_config_value(
         'securitygroupid', vm_, __opts__, search_global=False
     )
+
 
 def list_availability_zones():
     '''
@@ -690,19 +700,19 @@ def create(vm_=None, call=None):
             for (counter, sg_) in enumerate(ex_securitygroupid):
                 params['SecurityGroupId.{0}'.format(counter)] = sg_
 
-    delvol_on_destroy = config.get_config_value(
+    set_delvol_on_destroy = config.get_config_value(
         'delvol_on_destroy', vm_, __opts__, search_global=False
     )
 
-    if delvol_on_destroy is not None:
-        if not isinstance(delvol_on_destroy, bool):
+    if set_delvol_on_destroy is not None:
+        if not isinstance(set_delvol_on_destroy, bool):
             raise SaltCloudConfigError(
                 '\'delvol_on_destroy\' should be a boolean value.'
             )
 
         params['BlockDeviceMapping.1.DeviceName'] = '/dev/sda1'
         params['BlockDeviceMapping.1.Ebs.DeleteOnTermination'] = str(
-            delvol_on_destroy
+            set_delvol_on_destroy
         ).lower()
 
     try:
@@ -729,8 +739,6 @@ def create(vm_=None, call=None):
         instance_id=instance_id, call='action', location=location
     )
     log.info('Created node {0}'.format(vm_['name']))
-
-    waiting_for_ip = 0
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
@@ -766,54 +774,42 @@ def create(vm_=None, call=None):
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    failures = 6
-    while True:
-        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
-        time.sleep(5)
-        data = query(params, requesturl=requesturl)
-        if not data or isinstance(data, dict):
-            if failures < 1:
-                raise SaltCloudSystemExit(
-                    'There were too many errors while querying EC2'
-                )
-            if not data:
-                log.error(
-                    'There was an error while querying EC2. Empty response'
-                )
-            else:
-                log.error(
-                    'There was an error while querying EC2. '
-                    'Returned Error: {0}'.format(data['error'])
-                )
-            failures -= 1
-            continue
+    def __query_ip_address(params, url):
+        data = query(params, requesturl=url)
+        if not data:
+            log.error(
+                'There was an error while querying EC2. Empty response'
+            )
+            # Trigger a failure in the wait for IP function
+            return False
 
-        if failures < 6:
-            # Reset failed attempts
-            failures = 6
-            log.debug('Reseting failed query attempts')
+        if isinstance(data, dict) and 'error' in data:
+            log.warn(
+                'There was an error in the query. {0}'.format(data['error'])
+            )
+            # Trigger a failure in the wait for IP function
+            return False
 
-        log.debug(
-            'Returned query data: {0}'.format(data)
+        log.debug('Returned query data: {0}'.format(data))
+
+        if 'ipAddress' in data[0]['instancesSet']['item']:
+            return data
+        if 'privateIpAddress' in data[0]['instancesSet']['item']:
+            return data
+
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_ip_address,
+            update_args=(params, requesturl),
         )
-
-        if 'ipAddress' in data[0]['instancesSet']['item'] or 'privateIpAddress' in data[0]['instancesSet']['item']:
-            # We have our IP, break out of the loop
-            break
-
-        if waiting_for_ip >= 24:
-            # 2 Minutes!? Bail out!
-            try:
-                # It might be already up, let's destroy it!
-                destroy(vm_['name'])
-            except SaltCloudSystemExit:
-                pass
-            finally:
-                raise SaltCloudSystemExit(
-                    'Could not get the VM IP for 2 minutes. Exiting.'
-                )
-
-        waiting_for_ip += 1
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = data[0]['instancesSet']['item']['privateIpAddress']
@@ -831,7 +827,9 @@ def create(vm_=None, call=None):
                 username = user
                 break
         else:
-            return {vm_['name']: 'Failed to authenticate'}
+            raise SaltCloudSystemExit(
+                'Failed to authenticate against remote ssh'
+            )
 
     ret = {}
     if config.get_config_value('deploy', vm_, __opts__) is True:
@@ -873,7 +871,7 @@ def create(vm_=None, call=None):
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf(__opts__, vm_)
+            master_conf = saltcloud.utils.master_config(__opts__, vm_)
             deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
                 master_conf
             )

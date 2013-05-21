@@ -25,6 +25,7 @@ class SaltCloudSystemExit(SaltCloudException):
     This exception is raised when the execution should be stopped.
     '''
     def __init__(self, message, exit_code=1):
+        SaltCloudException.__init__(self)
         self.message = message
         self.exit_code = exit_code
 
@@ -35,7 +36,19 @@ class SaltCloudConfigError(SaltCloudException):
     '''
 
 
-class SaltCloudNotFound(SaltException):
+class SaltCloudNotFound(SaltCloudException):
     '''
     Raised when some cloud provider function cannot find what's being searched.
+    '''
+
+
+class SaltCloudExecutionTimeout(SaltCloudException):
+    '''
+    Raised when too much time has passed while querying/waiting for data.
+    '''
+
+
+class SaltCloudExecutionFailure(SaltCloudException):
+    '''
+    Raised when too much failures have ocurred while querying/waiting for data.
     '''

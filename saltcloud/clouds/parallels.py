@@ -46,7 +46,12 @@ import salt.utils
 # Import salt cloud libs
 import saltcloud.utils
 import saltcloud.config as config
-from saltcloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
+from saltcloud.exceptions import (
+    SaltCloudNotFound,
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -282,14 +287,26 @@ def create(vm_):
     if not wait_until(name, 'STARTED'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
-    data = show_instance(vm_['name'], call='action')
+    def __query_node_data(vm_name):
+        data = show_instance(vm_name, call='action')
+        if 'public-ip' not in data['network']:
+            # Trigger another iteration
+            return
+        return data
 
-    waiting_for_ip = 0
-    while 'public-ip' not in data['network']:
-        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
-        time.sleep(5)
-        waiting_for_ip += 1
-        data = show_instance(vm_['name'], call='action')
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_node_data,
+            update_args=(vm_['name'],),
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
@@ -327,7 +344,7 @@ def create(vm_):
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf(__opts__, vm_)
+            master_conf = saltcloud.utils.master_config(__opts__, vm_)
             deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
                 master_conf
             )
@@ -444,11 +461,10 @@ def script(vm_):
     Return the script deployment object
     '''
     minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
-    script = saltcloud.utils.os_script(
+    return saltcloud.utils.os_script(
         config.get_config_value('script', vm_, __opts__),
         vm_, __opts__, minion
     )
-    return script
 
 
 def show_image(kwargs, call=None):
@@ -494,13 +510,13 @@ def wait_until(name, state, timeout=300):
     '''
     Wait until a specific state has been reached on  a node
     '''
-    start = time.time()
+    start_time = time.time()
     node = show_instance(name, call='action')
     while True:
         if node['state'] == state:
             return True
         time.sleep(1)
-        if time.time() - start > timeout:
+        if time.time() - start_time > timeout:
             return False
         node = show_instance(name, call='action')
 

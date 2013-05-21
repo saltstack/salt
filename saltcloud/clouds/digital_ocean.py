@@ -45,7 +45,9 @@ import saltcloud.config as config
 from saltcloud.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
-    SaltCloudSystemExit
+    SaltCloudSystemExit,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout
 )
 
 # Get logging started
@@ -264,14 +266,27 @@ def create(vm_):
         )
         return False
 
-    waiting_for_ip = 0
-    while True:
-        log.debug('Salt node waiting for IP {0}'.format(waiting_for_ip))
-        time.sleep(5)
-        waiting_for_ip += 1
-        data = _get_node(vm_['name'])
-        if data.get('ip_address', None):
-            break
+    def __query_node_data(vm_name):
+        data = _get_node(vm_name)
+        if not data:
+            # Trigger an error in the wait_for_ip function
+            return False
+        if data.get('ip_address', None) is not None:
+            return data
+
+    try:
+        data = saltcloud.utils.wait_for_ip(
+            __query_node_data,
+            update_args=(vm_['name'],),
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(exc.message)
 
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
@@ -304,7 +319,7 @@ def create(vm_):
             deploy_kwargs['make_master'] = True
             deploy_kwargs['master_pub'] = vm_['master_pub']
             deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = saltcloud.utils.master_conf(__opts__, vm_)
+            master_conf = saltcloud.utils.master_config(__opts__, vm_)
             deploy_kwargs['master_conf'] = saltcloud.utils.salt_config_to_yaml(
                 master_conf
             )
