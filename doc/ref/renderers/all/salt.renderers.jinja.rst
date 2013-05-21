@@ -67,10 +67,10 @@ template, using the ``defaults`` and ``context`` mappings of the
         - source: salt://motd
         - template: jinja
         - defaults:
-          message: 'Foo'
+            message: 'Foo'
         {% if grains['os'] == 'FreeBSD' %}
         - context:
-          message: 'Bar'
+            message: 'Bar'
         {% endif %}
 
 The template will receive a variable ``message``, which would be accessed in the
