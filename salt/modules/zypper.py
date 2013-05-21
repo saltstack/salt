@@ -71,10 +71,33 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
+
     ret = {}
-    updates = list_upgrades()
     for name in names:
-        ret[name] = updates.get(name, '')
+        ret[name] = ''
+
+    cmd = 'zypper info -t package {0}'.format(' '.join(names))
+    output = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    output = re.split('Information for package \S+:\n', output)
+    for package in output:
+        pkginfo = {}
+        for line in package.splitlines():
+            try:
+                key, val = line.split(':', 1)
+                key = key.lower()
+                val = val.strip()
+            except ValueError:
+                continue
+            else:
+                pkginfo[key] = val
+
+        # Ignore if the needed keys weren't found in this iteration
+        if not set(('name', 'version', 'status')) <= set(pkginfo.keys()):
+            continue
+
+        status = pkginfo['status'].lower()
+        if 'not installed' in status or 'out-of-date' in status:
+            ret[pkginfo['name']] = pkginfo['version']
 
     # Return a string if only one package name passed
     if len(names) == 1:
