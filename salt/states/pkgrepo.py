@@ -8,7 +8,7 @@ Package repositories can be managed with the pkgrepo state:
 
     base:
       pkgrepo.managed:
-        - human_name: CentOS-$releasever - Base
+        - humanname: CentOS-$releasever - Base
         - mirrorlist: http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
         - comments:
             - #http://mirror.centos.org/centos/$releasever/os/$basearch/
@@ -18,7 +18,7 @@ Package repositories can be managed with the pkgrepo state:
 .. code-block::yaml
     base:
       pkgrepo.managed:
-        - human_name: Logstash PPA
+        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -201,10 +201,12 @@ def managed(name, **kwargs):
     if repo:
         notset = False
         for kwarg in sanitizedkwargs:
+            if kwarg == 'repo':
+                continue
             if kwarg not in repo.keys():
                 notset = True
             else:
-                if sanitizedkwargs[kwarg] != repo[kwarg]:
+                if str(sanitizedkwargs[kwarg]) != str(repo[kwarg]):
                     notset = True
         if notset is False:
             ret['result'] = True
