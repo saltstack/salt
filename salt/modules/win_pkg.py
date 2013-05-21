@@ -197,7 +197,7 @@ def list_pkgs(versions_as_list=False):
             salt '*' pkg.list_pkgs
             salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true('versions_as_list')
+    versions_as_list = salt.utils.is_true(versions_as_list)
         
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
