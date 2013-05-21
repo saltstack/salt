@@ -55,13 +55,28 @@ def version():
     return ret[-1]
 
 
-def avail():
+def update_installed():
+    '''
+    Gather info on unknown images (locally installed)
+
+    CLI Example::
+
+        salt '*' imgadm.update_installed()
+    '''
+    imgadm = _check_imgadm()
+    if imgadm:
+        cmd = '{0} update'.format(imgadm)
+        __salt__['cmd.run'](cmd)
+    return {}
+
+
+def avail(search=None):
     '''
     Return a list of available images 
 
     CLI Example::
         
-        salt '*' imgadm.avail
+        salt '*' imgadm.avail [percona]
     '''
     ret = {}
     imgadm = _check_imgadm()
@@ -71,7 +86,12 @@ def avail():
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret 
-    ret = res['stdout'].splitlines()
+    if search:
+        for line in res['stdout'].splitlines():
+            if search in line:
+                ret = line
+    else:
+        ret = res['stdout'].splitlines()
     return ret
  
 
