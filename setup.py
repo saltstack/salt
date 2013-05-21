@@ -267,10 +267,12 @@ if sys.platform.startswith('win'):
     ])
     setup_kwargs['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
-    freezer_includes.extend([
-        'yum',
-        'spwd',
-    ])
+    freezer_includes.append('spwd')
+    try:
+        import yum
+        freezer_includes.append('yum')
+    except ImportError:
+        pass
 
 if HAS_ESKY:
     # if the user has the esky / bbfreeze libraries installed, add the
