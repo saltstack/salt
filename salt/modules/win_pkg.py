@@ -186,7 +186,7 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(*args, **kwargs):
+def list_pkgs(versions_as_list=False):
     '''
         List the packages currently installed in a dict::
 
@@ -195,10 +195,10 @@ def list_pkgs(*args, **kwargs):
         CLI Example::
 
             salt '*' pkg.list_pkgs
+            salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = \
-        salt.utils.is_true(kwargs.get('versions_as_list'))
-
+    versions_as_list = salt.utils.is_true('versions_as_list')
+        
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
             return __context__['pkg.list_pkgs']
@@ -209,16 +209,10 @@ def list_pkgs(*args, **kwargs):
 
     ret = {}
     with salt.utils.winapi.Com():
-        if len(args) == 0:
-            for key, val in _get_reg_software().iteritems():
-                __salt__['pkg_resource.add_pkg'](ret, key, val)
-            for key, val in _get_msi_software().iteritems():
-                __salt__['pkg_resource.add_pkg'](ret, key, val)
-        else:
-            # get package version for each package in *args
-            for arg in args:
-                for key, val in _search_software(arg).iteritems():
-                    __salt__['pkg_resource.add_pkg'](ret, key, val)
+        for key, val in _get_reg_software().iteritems():
+            __salt__['pkg_resource.add_pkg'](ret, key, val)
+        for key, val in _get_msi_software().iteritems():
+            __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
