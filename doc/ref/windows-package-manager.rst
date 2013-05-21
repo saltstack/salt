@@ -71,7 +71,7 @@ Then update the repository cache file on your minions, exactly how it's done for
 
 .. code-block:: bash
 
-    $ salt \* pkg.refresh_db
+    $ salt '*' pkg.refresh_db
 
 
 Install Windows Software
@@ -93,7 +93,7 @@ As you can see, there are three versions of Firefox available for installation.
 
     $ salt \* pkg.install firefox
 
-The above line will install the latest version of firefox.
+The above line will install the latest version of Firefox.
 
 .. code-block:: bash
 
@@ -119,7 +119,7 @@ Git Hosted Repo
 ===============
 
 Windows software package definitions can also be hosted in one or more git
-repositories. The default repo is one hosted on Github.com by SaltStack, which
+repositories. The default repo is one hosted on Github.com by SaltStack,Inc., which
 includes package definitions for open source software. This repo points to the
 HTTP or ftp locations of the installer files. Anyone is welcome to send a pull
 request to this repo to add new package definitions. Browse the repo
@@ -131,7 +131,7 @@ modifying or extending the ``win_gitrepos`` configuration option list in the
 master config.
 
 Checkout each git repo in ``win_gitrepos``, compile your package repository
-cache, and then refresh each minion's package cache:
+cache and then refresh each minion's package cache:
 
 .. code-block:: bash
 
