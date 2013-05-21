@@ -38,7 +38,9 @@ def wrap_tmpl_func(render_str):
                     context=None, tmplpath=None, **kws):
         if context is None:
             context = {}
-        context.update(kws)
+        # We want explicit context to overwrite the **kws
+        kws.update(context)
+        context = kws
         assert 'opts' in context
         assert 'env' in context
 
