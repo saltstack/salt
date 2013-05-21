@@ -441,12 +441,7 @@ def list_groups(name):
         # it does not exist
         pass
 
-    # If we already grabbed the group list, it's overkill to grab it again
-    if 'user.getgrall' in __context__:
-        groups = __context__['user.getgrall']
-    else:
-        groups = grp.getgrall()
-        __context__['user.getgrall'] = groups
+    groups = grp.getgrall()
 
     # Now, all other groups the user belongs to
     for group in groups:
