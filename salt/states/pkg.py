@@ -40,6 +40,18 @@ import re
 # Import salt libs
 import salt.utils
 
+if salt.utils.is_windows():
+    from salt.utils import namespaced_function
+    from salt.modules.win_pkg import _get_package_info
+    from salt.modules.win_pkg import _get_latest_pkg_version
+    from salt.modules.win_pkg import _reverse_cmp_pkg_versions
+    global _get_package_info
+    _get_package_info = namespaced_function(_get_package_info, globals())
+    _get_latest_pkg_version = namespaced_function(_get_latest_pkg_version, globals())
+    _reverse_cmp_pkg_versions = namespaced_function(_reverse_cmp_pkg_versions, globals())
+    import msgpack
+    from distutils.version import LooseVersion
+
 log = logging.getLogger(__name__)
 
 
@@ -89,6 +101,11 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
                                                     else 'sources')}
 
     else:
+        if salt.utils.is_windows():
+            pkginfo = _get_package_info(name)
+            if version is None:
+                version = _get_latest_pkg_version(pkginfo)
+            name = pkginfo[version]['full_name']
         desired = {name: version}
 
         cver = cur_pkgs.get(name, [])
