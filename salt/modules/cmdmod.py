@@ -162,7 +162,6 @@ def _run(cmd,
          shell=DEFAULT_SHELL,
          env=(),
          rstrip=True,
-         retcode=False,
          template=None,
          umask=None):
     '''
@@ -294,12 +293,6 @@ def _run(cmd,
         # stdin/stdout/stderr
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
-
-    # Setting stdout to None seems to cause the Process to fail.
-    # See bug #2640 for more info
-    #if retcode:
-        #kwargs['stdout'] = None
-        #kwargs['stderr'] = None
 
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
@@ -556,7 +549,6 @@ def retcode(cmd,
             cwd=cwd,
             shell=shell,
             env=env,
-            retcode=True,
             template=template,
             umask=umask,
             quiet=quiet)['retcode']
@@ -607,7 +599,6 @@ def script(
             quiet=kwargs.get('quiet', False),
             runas=runas,
             shell=shell,
-            retcode=kwargs.get('retcode', False),
             umask=umask
             )
     os.remove(path)
@@ -646,7 +637,6 @@ def script_retcode(
             shell,
             env,
             template,
-            retcode=True,
             umask=umask,
             **kwargs)['retcode']
 
