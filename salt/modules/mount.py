@@ -302,9 +302,10 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
         if 'remount' not in opts:
             opts.append('remount')
         lopts = ','.join(opts)
-        cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
+        args = '-o {0}'.format(lopts)
         if fstype:
-            cmd += ' -t {0}'.format(fstype)
+            args += ' -t {0}'.format(fstype)
+        cmd = 'mount {0} {1} {2} '.format(args, device, name)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
             return out['stderr']
