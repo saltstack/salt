@@ -204,32 +204,31 @@ def _is_true(val):
 def _run_check(cmd_kwargs, onlyif, unless, group):
     '''
     Execute the onlyif and unless logic. 
-    Return dict result when the onlyif failed ( onlyif != 0)
-    Return dict result when the unless succeeded (unless == 0)
+    Return a result dict if:
+    * group is not available
+    * onlyif failed (onlyif != 0)
+    * unless succeeded (unless == 0)
+    else return True
     '''
-    ret = {}
-
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
                 os.setegid(egid)
         except KeyError:
-            ret['comment'] = 'The group {0} is not available'.format(group)
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            ret['comment'] = 'onlyif exec failed'
-            ret['result'] = True
-            return {'comment': 'onlyif exec failed',
+            return {'comment': 'onlyif execution failed',
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless executed successfully',
+            return {'comment': 'unless execution succeeded',
                     'result': True}
+
     # No reason to stop, return True
     return True
 
