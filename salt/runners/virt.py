@@ -132,7 +132,7 @@ def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
             ],
             timeout=600)
 
-    cmd_ret.next()
+    next(cmd_ret)
     print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
 
     return 'good'
