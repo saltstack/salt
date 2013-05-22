@@ -22,7 +22,7 @@ def sync():
 
         salt '*' eix.sync
     '''
-    cmd = 'eix-sync -q'
+    cmd = 'eix-sync -q -C "--ask" -C "n"'
     return __salt__['cmd.retcode'](cmd) == 0
 
 
