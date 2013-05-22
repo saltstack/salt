@@ -14,21 +14,18 @@ import sys
 import contextlib
 
 import salt.utils
-
+import salt.modules.cmdmod
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
 # XenAPI.
-#
-# FIXME:
-# Debian wheezy made it more difficult by removing /usr/lib/xen-default which
-# was a link to the used version, and does not publish those modules in
-# /usr/lib/pyshared, thus that nasty loop. Choose higher version by default
-for xenversion in ['4.2', '4.1', '4.0']: # known to work on Debian xend XenAPI
+debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
+if os.path.isfile(debian_xen_version):
+    xenversion =  salt.modules.cmdmod._run_quiet(debian_xen_version)
     xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
     if os.path.isdir(xapipath):
         sys.path.append(xapipath)
-        break
+
 
 try:
     import xen.xm.XenAPI as XenAPI
