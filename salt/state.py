@@ -1989,7 +1989,6 @@ class BaseHighState(object):
         self.clean_duplicate_extends(highstate)
         return highstate, all_errors
 
-
     def clean_duplicate_extends(self, highstate):
         if '__extend__' in highstate:
             highext = []
@@ -1999,25 +1998,27 @@ class BaseHighState(object):
                         highext.append(item)
             highstate['__extend__'] = [{t[0]: t[1]} for t in highext]
 
-
     def merge_included_states(self, highstate, state, errors):
         # The extend members can not be treated as globally unique:
         if '__extend__' in state:
-            highstate.setdefault('__extend__', []).extend(state.pop('__extend__'))
+            highstate.setdefault('__extend__',
+                                 []).extend(state.pop('__extend__'))
         if '__exclude__' in state:
-            highstate.setdefault('__exclude__', []).extend(state.pop('__exclude__'))
+            highstate.setdefault('__exclude__',
+                                 []).extend(state.pop('__exclude__'))
         for id_ in state:
             if id_ in highstate:
                 if highstate[id_] != state[id_]:
-                    errors.append(('Detected conflicting IDs, SLS'
-                    ' IDs need to be globally unique.\n    The'
-                    ' conflicting ID is "{0}" and is found in SLS'
-                    ' "{1}:{2}" and SLS "{3}:{4}"').format(
-                            id_,
-                            highstate[id_]['__env__'],
-                            highstate[id_]['__sls__'],
-                            state[id_]['__env__'],
-                            state[id_]['__sls__'])
+                    errors.append((
+                            'Detected conflicting IDs, SLS'
+                            ' IDs need to be globally unique.\n    The'
+                            ' conflicting ID is "{0}" and is found in SLS'
+                            ' "{1}:{2}" and SLS "{3}:{4}"').format(
+                                    id_,
+                                    highstate[id_]['__env__'],
+                                    highstate[id_]['__sls__'],
+                                    state[id_]['__env__'],
+                                    state[id_]['__sls__'])
                     )
         try:
             highstate.update(state)
@@ -2026,9 +2027,6 @@ class BaseHighState(object):
                 'Error when rendering state with contents: {0}'.format(state)
             )
 
-
-
-
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate'):
         '''
         Run the sequence to execute the salt highstate for this minion
@@ -2036,17 +2034,16 @@ class BaseHighState(object):
         #Check that top file exists
         tag_name = 'no_|-states_|-states_|-None'
         ret = {tag_name: {
-                   'result': False,
-                   'comment': 'No states found for this minion',
-                   'name': 'No States',
-                   'changes': {},
-                   '__run_num__': 0,
-                   }
-              }
+                'result': False,
+                'comment': 'No states found for this minion',
+                'name': 'No States',
+                'changes': {},
+                '__run_num__': 0,
+        }}
         cfn = os.path.join(
                 self.opts['cachedir'],
                 '{0}.cache.p'.format(cache_name)
-                )
+        )
 
         if cache:
             if os.path.isfile(cfn):
