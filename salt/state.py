@@ -1988,7 +1988,7 @@ class BaseHighState(object):
                 if not statefiles:
                     # No matching sls file was found!  Output an error
                     all_errors.append(
-                            'No matching sls found for {0} in env {1}'
+                            'No matching sls found for \'{0}\' in env \'{1}\''
                             .format(sls_match, env)
                     )
                 for sls in fnmatch.filter(self.avail[env], sls_match):
