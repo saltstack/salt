@@ -59,7 +59,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
 
     # Note: This example is for /etc/salt/cloud
 
-    profiles:
+    providers:
       my-aws-southeast-public-ips:
         # Set up the location of the salt master
         #
