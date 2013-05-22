@@ -35,10 +35,20 @@ def __get_version(version, version_info):
     import subprocess
 
     try:
+        cwd = os.path.abspath(os.path.dirname(__file__))
+    except NameError:
+        # We're most likely being frozen and __file__ triggered this NameError
+        # Let's work around that
+        import inspect
+        cwd = os.path.abspath(
+            os.path.dirname(inspect.getsourcefile(__get_version))
+        )
+
+    try:
         kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=os.path.abspath(os.path.dirname(__file__))
+            cwd=cwd
         )
 
         if not sys.platform.startswith('win'):
