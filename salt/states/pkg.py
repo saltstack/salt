@@ -647,7 +647,19 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = __salt__['pkg.list_pkgs'](versions_as_list=True)
-    targets = sorted([x for x in pkg_params if x in old])
+    if not salt.utils.is_windows():
+        targets = sorted([x for x in pkg_params if x in old])
+    else:
+        targets = []
+        for item in pkg_params:
+            pkginfo = _get_package_info(item)
+            if kwargs.get('version') is not None:
+                version_num = kwargs['version']
+            else:
+                version_num = _get_latest_pkg_version(pkginfo)
+            if pkginfo[version_num]['full_name'] in old:
+                targets.append(pkginfo[version_num]['full_name'])
+    targets = sorted(targets)
 
     if not targets:
         return {'name': name,
