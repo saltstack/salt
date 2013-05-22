@@ -284,13 +284,13 @@ def getent():
     #return users
     for user in users:
         stuff = {}
-        info = __salt__['user.info'](user)
-        uid = __salt__['file.user_to_uid'](info['name'])
+        user_info = __salt__['user.info'](user)
+        uid = __salt__['file.user_to_uid'](user_info['name'])
 
         stuff['gid'] = ''
-        stuff['groups'] = info['groups']
-        stuff['home'] = info['home']
-        stuff['name'] = info['name']
+        stuff['groups'] = user_info['groups']
+        stuff['home'] = user_info['home']
+        stuff['name'] = user_info['name']
         stuff['passwd'] = ''
         stuff['shell'] = ''
         stuff['uid'] = uid

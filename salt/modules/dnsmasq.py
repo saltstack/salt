@@ -46,9 +46,9 @@ def fullversion():
     cmd = 'dnsmasq -v'
     out = __salt__['cmd.run'](cmd).splitlines()
     comps = out[0].split()
-    version = comps[2]
+    version_num = comps[2]
     comps = out[1].split()
-    return {'version': version,
+    return {'version': version_num,
             'compile options': comps[3:]}
 
 

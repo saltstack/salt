@@ -35,3 +35,15 @@ class PipTestCase(TestCase):
             pip.install(requirements="salt://requirements.txt")
             expected_cmd = 'pip install --requirement "my_cached_reqs" '
             mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)
+    @patch('os.path')
+    def test_fix_activate_env(self, mock_path):
+        mock_path.is_file.return_value = True
+        mock_path.isdir.return_value = True
+        def join(*args):
+            return '/'.join(args)
+        mock_path.join = join
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install('mock', bin_env='/test_env', activate=True)
+            expected_cmd = '. /test_env/bin/activate && /test_env/bin/pip install mock '
+            mock.assert_called_once_with(expected_cmd, runas=None, cwd=None)

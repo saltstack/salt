@@ -317,14 +317,11 @@ def _check_directory(name,
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
     if changes:
-        comment = 'The following files will be changed:\n'
-        acomment = ''
+        comments = ['The following files will be changed:\n']
         for fn_ in changes:
             key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
-            acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
-        if acomment:
-            comment += acomment
-        return None, comment
+            comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
+        return None, ''.join(comments)
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
@@ -793,7 +790,7 @@ def managed(name,
     )
 
     # Gather the source file from the server
-    sfn, source_sum, comment = __salt__['file.get_managed'](
+    sfn, source_sum, comment_ = __salt__['file.get_managed'](
         name,
         template,
         source,
@@ -806,8 +803,8 @@ def managed(name,
         defaults,
         **kwargs
     )
-    if comment and contents is None:
-        return _error(ret, comment)
+    if comment_ and contents is None:
+        return _error(ret, comment_)
     else:
         return __salt__['file.manage_file'](name,
                                             sfn,
@@ -1117,10 +1114,10 @@ def recurse(name,
         list and preserve in the destination.
         Example::
 
-          - exclude: APPDATA*               :: glob matches APPDATA.01,
-                                               APPDATA.02,.. for exclusion
-          - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
-                                               or TEMPDATA for exclusion
+          - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
+                                                   APPDATA.02,.. for exclusion
+          - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
+                                                   or TEMPDATA for exclusion
 
     maxdepth
         When copying, only copy paths which are depth maxdepth from the source
@@ -1856,11 +1853,11 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
-    exists = os.path.exists(name)
-    if not exists and ret['result']:
+    extant = os.path.exists(name)
+    if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
-    elif exists and ret['result']:
+    elif extant and ret['result']:
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )

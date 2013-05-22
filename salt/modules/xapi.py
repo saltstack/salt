@@ -11,7 +11,7 @@ compatibility in mind.
 
 import os
 import sys
-from contextlib import contextmanager
+import contextlib
 
 import salt.utils
 
@@ -43,7 +43,7 @@ def __virtual__():
     return 'virt'
 
 
-@contextmanager
+@contextlib.contextmanager
 def _get_xapi_session():
     '''
     Get a session to XenAPI. By default, use the local UNIX socket.

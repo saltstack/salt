@@ -787,6 +787,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Run the salt command but don\'t wait for a reply')
         )
         self.add_option(
+            '--subset',
+            default=0,
+            dest='subset',
+            type=int,
+            help=('Execute the routine on a random subset of the targetted '
+                  'minions. The minions will be verified that they have the '
+                  'named function before executing')
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',

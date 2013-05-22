@@ -32,7 +32,7 @@ def active():
                                    'Arguments': list(job['arg']),
                                    'Target': job['tgt'],
                                    'Target-type': job['tgt_type'],
-                                   'User': load.get('user', 'root')}
+                                   'User': job.get('user', 'root')}
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:

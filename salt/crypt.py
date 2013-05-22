@@ -7,6 +7,7 @@ authenticating peers
 # Import python libs
 import os
 import sys
+import time
 import hmac
 import hashlib
 import logging
@@ -212,6 +213,7 @@ class Auth(object):
 
     def verify_master(self, payload):
         '''
+        Verify that the master is the same one that was previously accepted
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
@@ -430,6 +432,7 @@ class SAuth(Auth):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
                     sys.exit(2)
+                time.sleep(self.opts['acceptance_wait_time'])
                 continue
             break
         return Crypticle(self.opts, creds['aes'])

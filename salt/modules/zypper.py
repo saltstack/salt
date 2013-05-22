@@ -71,10 +71,33 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
+
     ret = {}
-    updates = list_upgrades()
     for name in names:
-        ret[name] = updates.get(name, '')
+        ret[name] = ''
+
+    cmd = 'zypper info -t package {0}'.format(' '.join(names))
+    output = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    output = re.split('Information for package \S+:\n', output)
+    for package in output:
+        pkginfo = {}
+        for line in package.splitlines():
+            try:
+                key, val = line.split(':', 1)
+                key = key.lower()
+                val = val.strip()
+            except ValueError:
+                continue
+            else:
+                pkginfo[key] = val
+
+        # Ignore if the needed keys weren't found in this iteration
+        if not set(('name', 'version', 'status')) <= set(pkginfo.keys()):
+            continue
+
+        status = pkginfo['status'].lower()
+        if 'not installed' in status or 'out-of-date' in status:
+            ret[pkginfo['name']] = pkginfo['version']
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -133,14 +156,13 @@ def list_pkgs(versions_as_list=False):
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
-        pkgver = version
+        name, pkgver, rel = line.split('_|-')
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = ret
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -238,11 +260,11 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
-    if version:
+    version_num = kwargs.get('version')
+    if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
-            pkg_params = {name: version}
+            pkg_params = {name: version_num}
         else:
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
@@ -250,11 +272,11 @@ def install(name=None,
     if pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -265,7 +287,7 @@ def install(name=None,
                     log.debug(targets)
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version, name)
+                          '"{1}"'.format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:

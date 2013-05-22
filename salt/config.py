@@ -302,7 +302,7 @@ def include_config(include, orig_path, verbose):
     if isinstance(include, str):
         include = [include]
 
-    include_config = {}
+    configuration = {}
     for path in include:
         # Allow for includes like ~/foo
         path = os.path.expanduser(path)
@@ -321,14 +321,14 @@ def include_config(include, orig_path, verbose):
         for fn_ in sorted(glob.glob(path)):
             try:
                 log.debug('Including configuration from {0}'.format(fn_))
-                include_config.update(_read_conf_file(fn_))
+                configuration.update(_read_conf_file(fn_))
             except Exception as err:
                 log.warn(
                     'Error parsing configuration file: {0} - {1}'.format(
                         fn_, err
                     )
                 )
-    return include_config
+    return configuration
 
 
 def prepend_root_dir(opts, path_options):

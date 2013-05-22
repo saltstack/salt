@@ -1196,6 +1196,9 @@ class AESFuncs(object):
             else:
                 id_ = minion.keys()[0]
                 ret[id_] = minion[id_].get('ret', None)
+        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
+            if not key in ret:
+                ret[key] = val
         return ret
 
     def revoke_auth(self, load):

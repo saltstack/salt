@@ -63,6 +63,16 @@ def _get_cached_requirements(requirements):
     return cached_requirements
 
 
+def _get_env_activate(bin_env):
+    if not bin_env:
+        raise CommandNotFoundError('Could not find a `activate` binary')
+
+    if os.path.isdir(bin_env):
+        activate_bin = os.path.join(bin_env, 'bin', 'activate')
+        if os.path.isfile(activate_bin):
+            return activate_bin
+    raise CommandNotFoundError('Could not find a `activate` binary')
+
 def install(pkgs=None,
             requirements=None,
             env=None,
@@ -91,6 +101,7 @@ def install(pkgs=None,
             runas=None,
             no_chown=False,
             cwd=None,
+            activate=False,
             __env__='base'):
     '''
     Install packages with pip
@@ -173,6 +184,9 @@ def install(pkgs=None,
         a requirements file
     cwd
         Current working directory to run pip from
+    activate
+        Activates the virtual environment, if given via bin_env, 
+        before running install.
 
 
     CLI Example::
@@ -200,6 +214,9 @@ def install(pkgs=None,
         bin_env = env
 
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
+
+    if activate and bin_env:
+        cmd = '. {0} && {1}'.format(_get_env_activate(bin_env), cmd)
 
     if pkgs:
         pkg = pkgs.replace(',', ' ')

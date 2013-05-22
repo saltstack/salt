@@ -59,11 +59,11 @@ def get_selections(fetchempty=True):
     lines = _unpack_lines(out)
 
     for line in lines:
-        package, question, type, value = line
+        package, question, type_, value = line
         if fetchempty or value:
             (selections
                 .setdefault(package, [])
-                .append([question, type, value]))
+                .append([question, type_, value]))
 
     return selections
 
@@ -120,7 +120,7 @@ def set(package, question, type, value, *extra):
     return True
 
 
-def set_file(path):
+def set_file(path, **kwargs):
     '''
     Set answers to debconf questions from a file.
 
@@ -128,7 +128,7 @@ def set_file(path):
 
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
-    path = __salt__['cp.cache_file'](path)
+    path = __salt__['cp.cache_file'](path, kwargs.get('__env__', 'base'))
     if path:
         _set_file(path)
         return True

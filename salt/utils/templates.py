@@ -38,7 +38,9 @@ def wrap_tmpl_func(render_str):
                     context=None, tmplpath=None, **kws):
         if context is None:
             context = {}
-        context.update(kws)
+        # We want explicit context to overwrite the **kws
+        kws.update(context)
+        context = kws
         assert 'opts' in context
         assert 'env' in context
 
@@ -87,8 +89,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
     env_args = {'extensions': [], 'loader': loader}
+
     if hasattr(jinja2.ext, 'with_'):
         env_args['extensions'].append('jinja2.ext.with_')
+    if hasattr(jinja2.ext, 'do'):
+        env_args['extensions'].append('jinja2.ext.do')
+    if hasattr(jinja2.ext, 'loopcontrols'):
+        env_args['extensions'].append('jinja2.ext.loopcontrols')
+
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
     else:

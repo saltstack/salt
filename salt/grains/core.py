@@ -186,7 +186,7 @@ def _netbsd_gpu_data(osdata):
 
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
-                m = re.match("[0-9:]+ ({0}) (.+) \(VGA .+\)"
+                m = re.match(r"[0-9:]+ ({0}) (.+) \(VGA .+\)"
                             .format(vendor), line, re.IGNORECASE)
                 if m:
                     gpus.append({'vendor': m.group(1), 'model': m.group(2)})
@@ -227,7 +227,7 @@ def _bsd_cpudata(osdata):
 
     if osdata['kernel'] == 'NetBSD':
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
-            m = re.match('cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
+            m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
             if m:
                 flag = m.group(1).split(',')
                 grains['cpu_flags'].extend(flag)
@@ -274,12 +274,12 @@ def _sunos_cpudata(osdata):
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
     for line in __salt__['cmd.run'](kstat_info).splitlines():
-        match = re.match('(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
+        match = re.match(r'(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
         if match:
             grains['cpu_model'] = match.group(2)
     isainfo = 'isainfo -n -v'
     for line in __salt__['cmd.run'](isainfo).splitlines():
-        match = re.match('^\s+(.+)', line)
+        match = re.match(r'^\s+(.+)', line)
         if match:
             cpu_flags = match.group(1).split()
             grains['cpu_flags'].extend(cpu_flags)
@@ -455,8 +455,12 @@ def _virtual(osdata):
         kenv = salt.utils.which('kenv')
         if kenv:
             product = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv))
+            maker = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv))
             if product.startswith('VMware'):
                 grains['virtual'] = 'VMware'
+            if maker.startswith('Xen'):
+                grains['virtual_subtype'] = '{0} {1}'.format(maker, product)
+                grains['virtual'] = 'xen'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl))
@@ -471,6 +475,8 @@ def _virtual(osdata):
             zone = __salt__['cmd.run']('{0}'.format(zonename))
             if zone != "global":
                 grains['virtual'] = 'zone'
+                if osdata['os'] == 'SmartOS':
+                    grains.update(_smartos_zone_data(grains))
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
@@ -814,7 +820,10 @@ def hostname():
     #   domain
     grains = {}
     grains['localhost'] = socket.gethostname()
-    grains['fqdn'] = socket.getfqdn()
+    if (re.search('\.', socket.getfqdn())):
+        grains['fqdn'] = socket.getfqdn()
+    else :
+        grains['fqdn'] = grains['localhost']
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
 
@@ -871,8 +880,8 @@ def saltpath():
     '''
     # Provides:
     #   saltpath
-    path = os.path.abspath(os.path.join(__file__, os.path.pardir))
-    return {'saltpath': os.path.dirname(path)}
+    salt_path = os.path.abspath(os.path.join(__file__, os.path.pardir))
+    return {'saltpath': os.path.dirname(salt_path)}
 
 
 def saltversion():
@@ -893,15 +902,15 @@ def _dmidecode_data(regex_dict):
     Parse the output of dmidecode in a generic fashion that can
     be used for the multiple system types which have dmidecode.
     '''
-    # NOTE: This function might gain support for smbios instead
-    #       of dmidecode when salt gets working Solaris support
     ret = {}
 
-    # No use running if dmidecode isn't in the path
-    if not salt.utils.which('dmidecode'):
+    # No use running if dmidecode/smbios isn't in the path
+    if salt.utils.which('dmidecode'):
+        out = __salt__['cmd.run']('dmidecode')
+    elif salt.utils.which('smbios'):
+        out = __salt__['cmd.run']('smbios')
+    else :
         return ret
-
-    out = __salt__['cmd.run']('dmidecode')
 
     for section in regex_dict:
         section_found = False
@@ -965,6 +974,19 @@ def _hw_data(osdata):
             },
         }
         grains.update(_dmidecode_data(linux_dmi_regex))
+    elif osdata['kernel'] == 'SunOS':
+        sunos_dmi_regex = {
+            '(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
+                '[Vv]ersion [Ss]tring:': 'biosversion',
+                '[Rr]elease [Dd]ate:': 'biosreleasedate',
+            },
+            '(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
+                'Manufacturer:': 'manufacturer',
+                'Product(?: Name)?:': 'productname',
+                'Serial Number:': 'serialnumber',
+            },
+        }   
+        grains.update(_dmidecode_data(sunos_dmi_regex))
     # On FreeBSD /bin/kenv (already in base system) can be used instead of dmidecode
     elif osdata['kernel'] == 'FreeBSD':
         kenv = salt.utils.which('kenv')
@@ -1005,6 +1027,35 @@ def _hw_data(osdata):
 
     return grains
 
+def _smartos_zone_data(osdata):
+    '''
+    Return useful information from a SmartOS zone
+    '''
+    # Provides:
+    #   pkgsrcversion
+    #   imageversion
+    grains = {}
+
+    pkgsrcversion = re.compile('^release:\\s(.+)')
+    imageversion = re.compile('Image:\\s(.+)')
+    if os.path.isfile('/etc/pkgsrc_version'):
+        with salt.utils.fopen('/etc/pkgsrc_version', 'r') as fp_:
+            for line in fp_:
+                match = pkgsrcversion.match(line)
+                if match:
+                    grains['pkgsrcversion'] = match.group(1)
+    if os.path.isfile('/etc/product'):
+        with salt.utils.fopen('/etc/product', 'r') as fp_:
+            for line in fp_:
+                match = imageversion.match(line)
+                if match:
+                    grains['imageversion'] = match.group(1)
+    if 'pkgsrcversion' not in grains:
+        grains['pkgsrcversion'] = 'Unknown'
+    if 'imageversion' not in grains:
+        grains['imageversion'] = 'Unknown'
+    
+    return grains
 
 def get_server_id():
     '''

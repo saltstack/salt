@@ -36,10 +36,12 @@ def latest(name,
            target=None,
            runas=None,
            force=None,
+           force_checkout=False,
            submodules=False,
            mirror=False,
            bare=False,
            remote_name='origin',
+           always_fetch=False,
            identity=None,
            **kwargs):
     '''
@@ -56,6 +58,9 @@ def latest(name,
         Name of the user performing repository management operations
     force
         Force git to clone into pre-existing directories (deletes contents)
+    force_checkout
+        Force a checkout even if there might be overwritten changes
+        (Default: False)
     submodules
         Update submodules on clone or branch change (Default: False)
     mirror
@@ -68,6 +73,10 @@ def latest(name,
         defines a different remote name.
         For the first clone the given name is set to the default remote,
         else it is just a additional remote. (Default: 'origin')
+    always_fetch
+        If a tag or branch name is used as the rev a fetch will not occur
+        until the tag or branch name changes. Setting this to true will force
+        a fetch to occur. Only applies when rev is set. (Default: False)
     identity
         A path to a private key to use over SSH
     '''
@@ -110,8 +119,8 @@ def latest(name,
                                                     user=runas)
                 if remote is None or remote[0] != name:
                     __salt__['git.remote_set'](target,
-                                               remote_name=remote_name,
-                                               remote_url=name,
+                                               name=remote_name,
+                                               url=name,
                                                user=runas)
                     ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
 
@@ -128,13 +137,16 @@ def latest(name,
                                                       cwd=target,
                                                       runas=runas)
                     # there is a issues #3938 addressing this
-                    if 0 != retcode:
+                    if 0 != retcode or always_fetch:
                         __salt__['git.fetch'](target,
                                               opts=fetch_opts,
                                               user=runas,
                                               identity=identity)
 
-                    __salt__['git.checkout'](target, rev, user=runas)
+                    __salt__['git.checkout'](target,
+                                             rev,
+                                             force=force_checkout,
+                                             user=runas)
 
                 # check if we are on a branch to merge changes
                 cmd = "git symbolic-ref -q HEAD > /dev/null"

@@ -13,7 +13,10 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux or OpenBSD
     '''
-    return 'group' if __grains__['kernel'] in ('Linux', 'OpenBSD') else False
+    return (
+        'group' if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD')
+        else False
+    )
 
 
 def add(name, gid=None, system=False):

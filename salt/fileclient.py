@@ -259,8 +259,8 @@ class Client(object):
                      '/'.join(['salt:/', sls, 'init.sls'])]:
             dest = self.cache_file(path, env)
             if dest:
-                return dest
-        return False
+                return {'source': path, 'dest': dest}
+        return {}
 
     def get_dir(self, path, dest='', env='base', gzip=None):
         '''

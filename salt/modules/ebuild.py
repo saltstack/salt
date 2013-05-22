@@ -106,7 +106,7 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'emerge --pretend --update --newuse --deep --with-bdeps=y world'
+    cmd = 'emerge --pretend --update --newuse --deep --ask n --with-bdeps=y world'
     out = __salt__['cmd.run_stdout'](cmd)
 
     rexp = re.compile(r'(?m)^\[.+\] '
@@ -122,8 +122,8 @@ def _get_upgradable():
     ret = {}
     for line in upgrades:
         name = _get(line, 'name')
-        version = _get(line, 'version')
-        ret[name] = version
+        version_num = _get(line, 'version')
+        ret[name] = version_num
 
     return ret
 
@@ -207,7 +207,7 @@ def list_pkgs(versions_as_list=False):
                                          _cpv_to_name(cpv),
                                          _cpv_to_version(cpv))
     __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = ret
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -223,7 +223,7 @@ def refresh_db():
     '''
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()
-    return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
+    return __salt__['cmd.retcode']('emerge --sync --ask n --quiet') == 0
 
 
 def install(name=None,
@@ -304,9 +304,9 @@ def install(name=None,
 
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
-        version = kwargs.get('version')
-        if version:
-            pkg_params = {name: version}
+        version_num = kwargs.get('version')
+        if version_num:
+            pkg_params = {name: version_num}
         elif slot is not None:
             pkg_params = {name: ':{0}'.format(slot)}
 
@@ -319,14 +319,14 @@ def install(name=None,
 
     if pkg_type == 'repository':
         targets = list()
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
-            elif version.startswith(':'):
+            elif version_num.startswith(':'):
                 # Really this 'version' is a slot
-                targets.append('{0}{1}'.format(param, version))
+                targets.append('{0}{1}'.format(param, version_num))
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -336,7 +336,7 @@ def install(name=None,
                     targets.append('"{0}{1}-{2}"'.format(prefix, param, verstr))
     else:
         targets = pkg_params
-    cmd = 'emerge --quiet {0} {1}'.format(emerge_opts, ' '.join(targets))
+    cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
     old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
@@ -370,7 +370,7 @@ def update(pkg, slot=None, refresh=False):
         full_atom = pkg
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --oneshot --quiet {0}'.format(full_atom)
+    cmd = 'emerge --update --newuse --oneshot --with-bdeps=y --ask n --quiet {0}'.format(full_atom)
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -394,7 +394,7 @@ def upgrade(refresh=True):
         refresh_db()
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --deep --with-bdeps=y --quiet world'
+    cmd = 'emerge --update --newuse --deep --with-bdeps=y --ask n --quiet world'
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -438,7 +438,7 @@ def remove(name=None, slot=None, pkgs=None, **kwargs):
 
     if not targets:
         return {}
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn ' \
+    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n' \
           '{0}'.format(' '.join(targets))
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
@@ -509,7 +509,7 @@ def depclean(name=None, slot=None, pkgs=None):
     else:
         targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --depclean --quiet {0}'.format(' '.join(targets))
+    cmd = 'emerge --depclean --ask n --quiet {0}'.format(' '.join(targets))
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

@@ -137,11 +137,11 @@ def _interfaces_ip(out):
             ip = value  # pylint: disable-msg=C0103
             cidr = 32
 
-        if type == 'inet':
+        if type_ == 'inet':
             mask = _cidr_to_ipv4_netmask(int(cidr))
             if 'brd' in cols:
                 brd = cols[cols.index('brd') + 1]
-        elif type == 'inet6':
+        elif type_ == 'inet6':
             mask = cidr
         return (ip, mask, brd)
 
@@ -166,12 +166,12 @@ def _interfaces_ip(out):
 
             cols = line.split()
             if len(cols) >= 2:
-                type, value = tuple(cols[0:2])
+                type_, value = tuple(cols[0:2])
                 iflabel = cols[-1:][0]
-                if type in ('inet', 'inet6'):
+                if type_ in ('inet', 'inet6'):
                     if 'secondary' not in cols:
                         ipaddr, netmask, broadcast = parse_network(value, cols)
-                        if type == 'inet':
+                        if type_ == 'inet':
                             if 'inet' not in data:
                                 data['inet'] = list()
                             addr_obj = dict()
@@ -180,7 +180,7 @@ def _interfaces_ip(out):
                             addr_obj['broadcast'] = broadcast
                             addr_obj['label'] = iflabel
                             data['inet'].append(addr_obj)
-                        elif type == 'inet6':
+                        elif type_ == 'inet6':
                             if 'inet6' not in data:
                                 data['inet6'] = list()
                             addr_obj = dict()
@@ -192,14 +192,14 @@ def _interfaces_ip(out):
                             data['secondary'] = list()
                         ip_, mask, brd = parse_network(value, cols)
                         data['secondary'].append({
-                            'type': type,
+                            'type': type_,
                             'address': ip_,
                             'netmask': mask,
                             'broadcast': brd,
                             'label': iflabel,
                             })
                         del ip_, mask, brd
-                elif type.startswith('link'):
+                elif type_.startswith('link'):
                     data['hwaddr'] = value
         if iface:
             ret[iface] = data
@@ -340,16 +340,16 @@ class IPv4Address(object):
 
     def __init__(self, address_str):
         self.address_str = address_str
-        a = self.address_str.split('.')
-        if len(a) != 4:
+        octets = self.address_str.split('.')
+        if len(octets) != 4:
             raise ValueError(
                 'IPv4 addresses must be in dotted-quad form.'
             )
         try:
-            self.dotted_quad = [int(a) for a in a]
-        except ValueError as e:
+            self.dotted_quad = [int(octet) for octet in octets]
+        except ValueError as err:
             raise ValueError(
-                'IPv4 addresses must be in dotted-quad form. {0}'.format(e)
+                'IPv4 addresses must be in dotted-quad form. {0}'.format(err)
             )
 
     def __str__(self):

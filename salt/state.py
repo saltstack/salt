@@ -825,14 +825,7 @@ class State(object):
                         chunk['order'] = cap
                 elif isinstance(chunk['order'], int) and chunk['order'] < 0:
                     chunk['order'] = cap + 1000000 + chunk['order']
-        chunks = sorted(
-                chunks,
-                key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
-                )
-        chunks = sorted(
-                chunks,
-                key=lambda k: k['order']
-                )
+        chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
         return chunks
 
     def format_call(self, data):
@@ -1285,6 +1278,11 @@ class State(object):
                             if chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
+                        elif req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs[r_state].append(chunk)
                     if not found:
                         return 'unmet'
         fun_stats = set()
@@ -1338,6 +1336,11 @@ class State(object):
                             if chunk['state'] == req_key:
                                 reqs.append(chunk)
                                 found = True
+                        elif req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs.append(chunk)
                     if not found:
                         lost[requisite].append(req)
             if lost['require'] or lost['watch']:
@@ -1632,7 +1635,7 @@ class BaseHighState(object):
                                     self.client.get_state(
                                         sls,
                                         env
-                                        ),
+                                        ).get('dest', False),
                                     self.state.rend,
                                     self.state.opts['renderer'],
                                     env=env
@@ -1770,7 +1773,8 @@ class BaseHighState(object):
         '''
         err = ''
         errors = []
-        fn_ = self.client.get_state(sls, env)
+        state_data = self.client.get_state(sls, env)
+        fn_ = state_data.get('dest', False)
         if not fn_:
             errors.append(('Specified SLS {0} in environment {1} is not'
                            ' available on the salt master').format(sls, env))
@@ -1821,6 +1825,13 @@ class BaseHighState(object):
                         env_key, inc_sls = inc_sls.popitem()
                     else:
                         env_key = env
+
+                    if inc_sls.startswith('.'):
+                        p_comps = sls.split('.')
+                        if state_data.get('source', '').endswith('/init.sls'):
+                            inc_sls = sls + inc_sls
+                        else:
+                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment
@@ -2075,7 +2086,11 @@ class BaseHighState(object):
         if not high:
             return ret
         with open(cfn, 'w+') as fp_:
-            self.serial.dump(high, fp_)
+            try:
+                self.serial.dump(high, fp_)
+            except TypeError:
+                # Can't serialize pydsl
+                pass
         return self.state.call_high(high)
 
     def compile_highstate(self):
