@@ -309,7 +309,7 @@ def wait_for_ssh(host, port=22, timeout=900):
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
-                    trysleep=1):
+                    trysleep=1, display_ssh_output=True):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -320,7 +320,8 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             kwargs = {'hostname': host,
                       'port': port,
                       'username': username,
-                      'timeout': ssh_timeout}
+                      'timeout': ssh_timeout,
+                      'display_ssh_output': display_ssh_output}
             if key_filename:
                 if not os.path.isfile(key_filename):
                     raise SaltCloudConfigError(
@@ -389,7 +390,8 @@ def deploy_script(host, port=22, timeout=900, username='root',
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
-                           ssh_timeout=ssh_timeout):
+                           ssh_timeout=ssh_timeout,
+                           display_ssh_output=display_ssh_output):
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username

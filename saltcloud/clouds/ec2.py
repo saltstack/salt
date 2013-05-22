@@ -818,12 +818,19 @@ def create(vm_=None, call=None):
         ip_address = data[0]['instancesSet']['item']['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
 
+    display_ssh_output = config.get_config_value(
+        'display_ssh_output', vm_, __opts__, default=True
+    )
+
     if saltcloud.utils.wait_for_ssh(ip_address):
         for user in usernames:
-            if saltcloud.utils.wait_for_passwd(host=ip_address,
-                                               username=user,
-                                               ssh_timeout=60,
-                                               key_filename=key_filename):
+            if saltcloud.utils.wait_for_passwd(
+                host=ip_address,
+                username=user,
+                ssh_timeout=60,
+                key_filename=key_filename,
+                display_ssh_output=display_ssh_output
+            ):
                 username = user
                 break
         else:
@@ -852,9 +859,7 @@ def create(vm_=None, call=None):
             'minion_pub': vm_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
             'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'display_ssh_output': config.get_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
+            'display_ssh_output': display_ssh_output,
             'minion_conf': saltcloud.utils.minion_conf_string(
                 __opts__, vm_
             ),
