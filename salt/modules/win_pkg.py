@@ -60,7 +60,7 @@ def latest_version(*names, **kwargs):
     pkgs = list_pkgs()
     for name in names:
         candidate = '0'
-        version = '0'
+        version_num = '0'
         pkginfo = _get_package_info(name)
         if not pkginfo:
             # pkg not available in repo, skip
@@ -70,9 +70,9 @@ def latest_version(*names, **kwargs):
             name = pkginfo[candidate]['full_name']
             ret[name] = ''
             if name in pkgs:
-                version = pkgs[name]
+                version_num = pkgs[name]
             if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                    str(version)) > 0:
+                                                    str(version_num)) > 0:
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
@@ -81,9 +81,9 @@ def latest_version(*names, **kwargs):
         name = pkginfo[candidate]['full_name']
         ret[name] = ''
         if name in pkgs:
-            version = pkgs[name]
+            version_num = pkgs[name]
         if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                str(version)) > 0:
+                                                str(version_num)) > 0:
             ret[name] = candidate
     return ret
 
@@ -157,7 +157,7 @@ def version(*names, **kwargs):
     if len(names) == 1:
         versions = _get_package_info(names[0])
         if versions:
-            for version, val in versions.iteritems():
+            for val in versions.itervalues():
                 if 'full_name' in val and len(val.get('full_name', '')) > 0:
                     win_names.append(val.get('full_name', ''))
         nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
@@ -172,7 +172,7 @@ def version(*names, **kwargs):
             ret[name] = ''
             versions = _get_package_info(name)
             if versions:
-                for version, val in versions.iteritems():
+                for val in versions.itervalues():
                     if 'full_name' in val and len(val.get('full_name', '')) > 0:
                         reverse_dict[val.get('full_name', '')] = name
                         win_names.append(val.get('full_name', ''))
@@ -186,7 +186,7 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(*args, **kwargs):
+def list_pkgs(versions_as_list=False):
     '''
         List the packages currently installed in a dict::
 
@@ -195,10 +195,10 @@ def list_pkgs(*args, **kwargs):
         CLI Example::
 
             salt '*' pkg.list_pkgs
+            salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = \
-        salt.utils.is_true(kwargs.get('versions_as_list'))
-
+    versions_as_list = salt.utils.is_true(versions_as_list)
+        
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
             return __context__['pkg.list_pkgs']
@@ -209,19 +209,13 @@ def list_pkgs(*args, **kwargs):
 
     ret = {}
     with salt.utils.winapi.Com():
-        if len(args) == 0:
-            for key, val in _get_reg_software().iteritems():
-                __salt__['pkg_resource.add_pkg'](ret, key, val)
-            for key, val in _get_msi_software().iteritems():
-                __salt__['pkg_resource.add_pkg'](ret, key, val)
-        else:
-            # get package version for each package in *args
-            for arg in args:
-                for key, val in _search_software(arg).iteritems():
-                    __salt__['pkg_resource.add_pkg'](ret, key, val)
+        for key, val in _get_reg_software().iteritems():
+            __salt__['pkg_resource.add_pkg'](ret, key, val)
+        for key, val in _get_msi_software().iteritems():
+            __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = ret
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -424,20 +418,21 @@ def install(name=None, refresh=False, **kwargs):
         if pkginfo[pkg]['full_name'] in old:
             return '{0} already installed'.format(pkginfo[pkg]['full_name'])
     if kwargs.get('version') is not None:
-        version = kwargs['version']
+        version_num = kwargs['version']
     else:
-        version = _get_latest_pkg_version(pkginfo)
-    if pkginfo[version]['installer'].startswith('salt:') or pkginfo[version]['installer'].startswith('http:') or pkginfo[version]['installer'].startswith('https:') or pkginfo[version]['installer'].startswith('ftp:'):
-        cached_pkg = __salt__['cp.is_cached'](pkginfo[version]['installer'])
+        version_num = _get_latest_pkg_version(pkginfo)
+    installer = pkginfo[version_num]['installer']
+    if installer.startswith('salt:') or installer.startswith('http:') or installer.startswith('https:') or installer.startswith('ftp:'):
+        cached_pkg = __salt__['cp.is_cached'](installer)
         if not cached_pkg:
             # It's not cached. Cache it, mate.
             cached_pkg = \
-                __salt__['cp.cache_file'](pkginfo[version]['installer'])
+                __salt__['cp.cache_file'](installer)
     else:
-        cached_pkg = pkginfo[version]['installer']
+        cached_pkg = installer
     cached_pkg = cached_pkg.replace('/', '\\')
-    cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version]['install_flags'])
-    if pkginfo[version].get('msiexec'):
+    cmd = '"' + str(cached_pkg) + '"' + str(pkginfo[version_num]['install_flags'])
+    if pkginfo[version_num].get('msiexec'):
         cmd = 'msiexec /i ' + cmd
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
@@ -496,11 +491,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     '''
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
-    if not targets:
-        return {}
-
-    for target in targets:
+    for target in pkg_params:
         pkginfo = _get_package_info(target)
         if not version:
             version = _get_latest_pkg_version(pkginfo)
@@ -570,7 +561,7 @@ def _get_package_info(name):
     repocache = __opts__['win_repo_cachefile']
     cached_repo = __salt__['cp.is_cached'](repocache)
     if not cached_repo:
-        __salt__['pkg.refresh_db']
+        __salt__['pkg.refresh_db']()
     try:
         with salt.utils.fopen(cached_repo, 'r') as repofile:
             try:

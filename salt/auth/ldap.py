@@ -46,14 +46,14 @@ def _config(key):
     return value
 
 
-def _render_template(filter, username):
+def _render_template(filter_, username):
     '''
-    Render filter template, substituting username where found.
+    Render filter_ template, substituting username where found.
     '''
     env = Environment()
-    template = env.from_string(filter)
-    dict = {'username': username}
-    return template.render(dict)
+    template = env.from_string(filter_)
+    variables = {'username': username}
+    return template.render(variables)
 
 
 class _LDAPConnection:
@@ -92,7 +92,7 @@ def auth(username, password):
     Authenticate via an LDAP bind
     '''
     # Get config params; create connection dictionary
-    filter = _render_template(_config('filter'), username)
+    filter_ = _render_template(_config('filter'), username)
     basedn = _config('basedn')
     scope = _config('scope')
     connargs = {}
@@ -104,10 +104,10 @@ def auth(username, password):
     log.debug(
         'Running LDAP user dn search with filter:{0}, dn:{1}, '
         'scope:{2}'.format(
-            filter, basedn, scope
+            filter_, basedn, scope
         )
     )
-    result = _ldap.search_s(basedn, int(scope), filter)
+    result = _ldap.search_s(basedn, int(scope), filter_)
     if len(result) < 1:
         log.warn('Unable to find user {0}'.format(username))
         return False

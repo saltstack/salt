@@ -37,17 +37,17 @@ def upgrade_available(name):
 
         salt '*' pkgutil.upgrade_available CSWpython
     '''
-    version = None
+    version_num = None
     cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(
         name)
     out = __salt__['cmd.run_stdout'](cmd)
     if out:
-        version = out.split()[2].strip()
-    if version:
-        if version == "SAME":
+        version_num = out.split()[2].strip()
+    if version_num:
+        if version_num == "SAME":
             return ''
         else:
-            return version
+            return version_num
     return ''
 
 
@@ -133,11 +133,11 @@ def list_pkgs(versions_as_list=False):
         if index % 2 == 0:
             name = lines[index].split()[0].strip()
         if index % 2 == 1:
-            version = lines[index].split()[1].strip()
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            version_num = lines[index].split()[1].strip()
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = ret
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
