@@ -1984,6 +1984,13 @@ class BaseHighState(object):
         for env, states in matches.items():
             mods = set()
             for sls_match in states:
+                statefiles = fnmatch.filter(self.avail[env], sls_match)
+                if not statefiles:
+                    # No matching sls file was found!  Output an error
+                    all_errors.append(
+                            'No matching sls found for {0} in env {1}'
+                            .format(sls_match, env)
+                    )
                 for sls in fnmatch.filter(self.avail[env], sls_match):
                     state, errors = self.render_state(sls, env, mods, matches)
                     if state:
