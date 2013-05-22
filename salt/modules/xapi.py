@@ -10,7 +10,7 @@ compatibility in mind.
 '''
 
 import sys
-from contextlib import contextmanager
+import contextlib
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
@@ -32,7 +32,7 @@ def __virtual__():
     return 'virt'
 
 
-@contextmanager
+@contextlib.contextmanager
 def _get_xapi_session():
     '''
     Get a session to XenAPI. By default, use the local UNIX socket.
