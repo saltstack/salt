@@ -15,7 +15,13 @@ from distutils.command.clean import clean
 from distutils.sysconfig import get_python_lib, PREFIX
 
 # Change to salt source's directory prior to running any command
-setup_dirname = os.path.dirname(__file__)
+try:
+    setup_dirname = os.path.dirname(__file__)
+except NameError:
+    # We're most likely being frozen and __file__ triggered this NameError
+    # Let's work around that
+    setup_dirname = os.path.dirname(sys.argv[0])
+
 if setup_dirname != '':
     os.chdir(setup_dirname)
 
@@ -54,11 +60,13 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-salt_version = os.path.join(os.path.abspath(
-    os.path.dirname(__file__)), 'salt', 'version.py')
+salt_version = os.path.join(
+    os.path.abspath(setup_dirname), 'salt', 'version.py'
+)
 
-salt_reqs = os.path.join(os.path.abspath(
-    os.path.dirname(__file__)), 'requirements.txt')
+salt_reqs = os.path.join(
+    os.path.abspath(setup_dirname), 'requirements.txt'
+)
 
 exec(compile(open(salt_version).read(), salt_version, 'exec'))
 
