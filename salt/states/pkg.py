@@ -109,7 +109,7 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
         desired = {name: version}
 
         cver = cur_pkgs.get(name, [])
-        if version in cver:
+        if version and version in cver:
             # The package is installed and is the correct version
             return {'name': name,
                     'changes': {},
