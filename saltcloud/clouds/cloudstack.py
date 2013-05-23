@@ -9,10 +9,10 @@ Use of this module requires the ``apikey, secretkey, host and path`` parameters.
 .. code-block:: yaml
 
     my-cloudstack-cloud-config:
-      apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-      secretkey: 
-      host: 
-      path: 
+      apikey: <your api key > 
+      secretkey: <your secret key >
+      host: localhost 
+      path: /client/api
       provider: cloudstack
 
 '''
@@ -112,13 +112,23 @@ def get_password(vm_):
 
 def get_key():
     '''
-    Returns the ssk key for VM access
+    Returns the ssk private key for VM access
     '''
     return config.get_config_value(
-        'ssh_key', get_configured_provider(), __opts__, search_global=False
+        'private_key', get_configured_provider(), __opts__, search_global=False
        ) 
-    )
 
+def get_keypair(vm_):
+    '''
+    Return the keypair to use
+    '''
+
+    keypair = config.get_config_value('keypair', vm_, __opts__)
+
+    if keypair is not None:
+        return keypair
+
+    raise SaltCloudNotFound('The specified keypair could not be found.')
 
 def create(vm_):
     '''
@@ -131,7 +141,7 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'auth': NodeAuthSSHKey(get_key())
+        'keypair': get_keypair(vm_),
     }
     try:
         data = conn.create_node(**kwargs)
@@ -154,7 +164,7 @@ def create(vm_):
         deploy_kwargs = {
             'host': data.public_ips[0],
             'username': 'root',
-            'password': get_password(vm_),
+            'key_filename': get_key(),
             'script': deploy_script.script,
             'name': vm_['name'],
             'deploy_command': '/tmp/deploy.sh',
