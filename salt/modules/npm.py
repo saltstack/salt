@@ -76,13 +76,16 @@ def install(pkg=None,
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
 
+    # npm >1.2.21 is putting the output to stderr even though retcode is 0
+    npm_output = result['stdout'] or result['stderr']
     try:
-        return json.loads(result['stdout'])
+        return json.loads(npm_output)
     except ValueError:
         # Not JSON! Try to coax the json out of it!
         pass
 
-    lines = result['stdout'].splitlines()
+    lines = npm_output.splitlines()
+    log.error(lines)
 
     # Strip all lines until JSON output starts
     while not lines[0].startswith("{") and not lines[0].startswith("["):
@@ -92,7 +95,7 @@ def install(pkg=None,
         return json.loads(''.join(lines))
     except ValueError:
         # Still no JSON!! Return the stdout as a string
-        return result['stdout']
+        return npm_output
 
 
 def uninstall(pkg,
