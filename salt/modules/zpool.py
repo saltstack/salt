@@ -54,6 +54,20 @@ def status(name=''):
     return ret
 
 
+def iostat(name=''):
+    '''
+    Display I/O statistics for the given pools 
+
+    CLI Example::
+
+        salt '*' zpool.iostat
+    ''' 
+    zpool = _check_zpool()
+    res = __salt__['cmd.run']('{0} iostat -v {1}'.format(zpool, name))
+    ret = res.splitlines()
+    return ret
+
+
 def zpool_list():
     '''
     Return a list of all pools in the system with health status and space usage
