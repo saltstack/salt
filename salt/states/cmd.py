@@ -600,7 +600,7 @@ def script(name,
  
     # If script args present split from name and define args
     if len(name.split()) > 1:
-        cmd_kwargs.update({'args': name.split(' ',1)[1]})
+        cmd_kwargs.update({'args': name.split(' ', 1)[1]})
     
     try:
         cret = _run_check(
