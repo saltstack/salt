@@ -117,6 +117,28 @@ def destroy(pool_name):
         ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
 
 
+def scrub(pool_name=None):
+    '''
+    Begin a scrub
+
+    CLI Example::
+
+        salt '*' zpool.scrub myzpool
+    '''
+    ret = {}
+    if not pool_name:
+        ret['Error'] = 'zpool name parameter is mandatory.'
+        return ret
+    if exists(pool_name):
+        zpool = _check_zpool()
+        cmd = '{0} scrub {1}'.format(zpool, pool_name)
+        res = __salt__['cmd.run'](cmd)
+        ret[pool_name] = res.splitlines()
+        return ret
+    else:
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+
+
 def create(pool_name, *vdevs):
     '''
     Create a new storage pool
