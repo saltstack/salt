@@ -54,6 +54,20 @@ def status(name=''):
     return ret
 
 
+def iostat(name=''):
+    '''
+    Display I/O statistics for the given pools 
+
+    CLI Example::
+
+        salt '*' zpool.iostat
+    ''' 
+    zpool = _check_zpool()
+    res = __salt__['cmd.run']('{0} iostat -v {1}'.format(zpool, name))
+    ret = res.splitlines()
+    return ret
+
+
 def zpool_list():
     '''
     Return a list of all pools in the system with health status and space usage
@@ -99,6 +113,28 @@ def destroy(pool_name):
         if not exists(pool_name):
             ret[pool_name] = "Deleted"
             return ret
+    else:
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+
+
+def scrub(pool_name=None):
+    '''
+    Begin a scrub
+
+    CLI Example::
+
+        salt '*' zpool.scrub myzpool
+    '''
+    ret = {}
+    if not pool_name:
+        ret['Error'] = 'zpool name parameter is mandatory.'
+        return ret
+    if exists(pool_name):
+        zpool = _check_zpool()
+        cmd = '{0} scrub {1}'.format(zpool, pool_name)
+        res = __salt__['cmd.run'](cmd)
+        ret[pool_name] = res.splitlines()
+        return ret
     else:
         ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
 
