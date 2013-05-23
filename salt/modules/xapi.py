@@ -14,14 +14,13 @@ import sys
 import contextlib
 
 import salt.utils
-import salt.modules.cmdmod
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
 # XenAPI.
 debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
 if os.path.isfile(debian_xen_version):
-    xenversion =  salt.modules.cmdmod._run_quiet(debian_xen_version)
+    xenversion =  os.popen(debian_xen_version).readlines()[0].rstrip()
     xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
     if os.path.isdir(xapipath):
         sys.path.append(xapipath)
