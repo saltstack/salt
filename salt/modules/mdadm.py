@@ -14,6 +14,12 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'list_': 'list'
+}
+
+
 def __virtual__():
     '''
     mdadm provides raid functions for Linux
@@ -25,7 +31,7 @@ def __virtual__():
     return 'raid'
 
 
-def list():
+def list_():
     '''
     List the RAID devices.
 
