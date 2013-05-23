@@ -455,8 +455,12 @@ def _virtual(osdata):
         kenv = salt.utils.which('kenv')
         if kenv:
             product = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv))
+            maker = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv))
             if product.startswith('VMware'):
                 grains['virtual'] = 'VMware'
+            if maker.startswith('Xen'):
+                grains['virtual_subtype'] = '{0} {1}'.format(maker, product)
+                grains['virtual'] = 'xen'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl))
@@ -478,19 +482,20 @@ def _virtual(osdata):
             grains['virtual'] = 'zone'
     elif osdata['kernel'] == 'NetBSD':
         if sysctl:
-            model = __salt__['cmd.run']('{0} -n machdep.cpu_brand'
-                                        .format(sysctl))
-            xendomu = __salt__['cmd.run']('{0} -n machdep.xen.suspend'
-                                        .format(sysctl))
-            vmware = __salt__['cmd.run']('{0} -n machdep.dmi.system-vendor'
-                                        .format(sysctl))
-
-            if 'QEMU Virtual CPU' in model:
+            if 'QEMU Virtual CPU' in __salt__['cmd.run'](
+                    '{0} -n machdep.cpu_brand'.format(sysctl)):
                 grains['virtual'] = 'kvm'
-            if not 'invalid' in xendomu:
+            elif not 'invalid' in __salt__['cmd.run'](
+                    '{0} -n machdep.xen.suspend'.format(sysctl)):
                 grains['virtual'] = 'Xen PV DomU'
-            if 'VMware' in vmware:
+            elif 'VMware' in __salt__['cmd.run'](
+                    '{0} -n machdep.dmi.system-vendor'.format(sysctl)):
                 grains['virtual'] = 'VMware'
+            # NetBSD has Xen dom0 support
+            elif __salt__['cmd.run'](
+                '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
+                if os.path.isfile('/var/run/xenconsoled.pid'):
+                    grains['virtual_subtype'] = 'Xen Dom0'
 
     return grains
 
