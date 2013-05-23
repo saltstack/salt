@@ -284,7 +284,7 @@ def find_interfaces(*args):
             try: # a bridge may not contain interfaces
                 if iface in brs[br]['interfaces']:
                     iflist[iface] = br
-            except:
+            except Exception:
                 pass
 
     return iflist
