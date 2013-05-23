@@ -217,6 +217,10 @@ def _interfaces_ipconfig(out):
 
 
 def interfaces():
+    '''
+    Return details about network interfaces
+    '''
+
     with salt.utils.winapi.Com():
         c = wmi.WMI()
         ifaces = {}
