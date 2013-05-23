@@ -256,7 +256,7 @@ class LocalClient(object):
         '''
         group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
         f_tgt = []
-        for minion. ret in group.items():
+        for minion, ret in group.items():
             if len(f_tgt) >= sub:
                 break
             if fun in ret:
