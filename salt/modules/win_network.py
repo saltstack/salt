@@ -233,11 +233,7 @@ def interfaces():
                 ifaces[iface.Description]['inet'] = []
                 for ip in iface.IPAddress:
                     item = {}
-                    item['broadcast'] = ''
-                    try:
-                        item['broadcast'] = iface.DefaultIPGateway[0]
-                    except:
-                        pass
+                    item['broadcast'] = '' if iface.DefaultIPGateway is None else iface.DefaultIPGateway[0]
                     item['netmask'] = iface.IPSubnet[0]
                     item['label'] = iface.Description
                     item['address'] = ip
