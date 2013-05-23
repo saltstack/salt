@@ -11,6 +11,7 @@ import imp
 import logging
 import tempfile
 import traceback
+import sys
 
 # Import third party libs
 import jinja2
@@ -105,7 +106,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     try:
         output = jinja_env.from_string(tmplstr).render(**context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        raise SaltTemplateRenderError(str(exc))
+        raise SaltTemplateRenderError(str(exc) + '; lineno: ' + str(traceback.extract_tb(sys.exc_info()[2])[-1][1]))
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
