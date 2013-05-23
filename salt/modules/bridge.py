@@ -208,8 +208,8 @@ def _os_dispatch(func, *args, **kwargs):
     '''
     Internal, dispatches functions by operating system
     '''
-    _os_func = getattr(sys.modules[__name__],'_{0}_{1}'.
-                            format(__grains__['kernel'].lower(),func))
+    _os_func = getattr(sys.modules[__name__], '_{0}_{1}'.
+                            format(__grains__['kernel'].lower(), func))
     if callable(_os_func):
         return _os_func(*args, **kwargs)
 
