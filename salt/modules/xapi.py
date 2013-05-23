@@ -719,7 +719,7 @@ def vm_netstats(vm_=None):
                 return False
             for vif in vm_rec['VIFs']:
                 vif_rec = _get_record(xapi, 'VIF', vif)
-                ret[vif_rec['device']] = _get_metrics_record(xapi,'VIF',
+                ret[vif_rec['device']] = _get_metrics_record(xapi, 'VIF',
                                                             vif_rec)
                 del ret[vif_rec['device']]['last_updated']
     
