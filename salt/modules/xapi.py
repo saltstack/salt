@@ -9,21 +9,28 @@ XCP is not taking precedence on Xen Source on many platforms, please keep
 compatibility in mind.
 '''
 
+import os
 import sys
 import contextlib
+
+import salt.utils
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
 # XenAPI.
-sys.path.append('/usr/lib/xen-default/lib/python') # Debian
+debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
+if os.path.isfile(debian_xen_version):
+    xenversion =  os.popen(debian_xen_version).readlines()[0].rstrip()
+    xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
+    if os.path.isdir(xapipath):
+        sys.path.append(xapipath)
+
 
 try:
     import xen.xm.XenAPI as XenAPI
     HAS_XENAPI = True
 except ImportError:
     HAS_XENAPI = False
-
-import salt.utils
 
 
 def __virtual__():
