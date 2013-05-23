@@ -236,7 +236,7 @@ def interfaces():
                     item['broadcast'] = ''
                     try:
                         item['broadcast'] = iface.DefaultIPGateway[0]
-                    except:
+                    except Exception:
                         pass
                     item['netmask'] = iface.IPSubnet[0]
                     item['label'] = iface.Description
