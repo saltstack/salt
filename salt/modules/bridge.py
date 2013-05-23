@@ -140,7 +140,7 @@ def _netbsd_brshow(br=None):
             start_int = True
             continue
         if start_int and brname:
-            m = re.match('\s*([a-z0-9]+)\s.*<.*>', line)
+            m = re.match(r'\s*([a-z0-9]+)\s.*<.*>', line)
             if m:
                 brs[brname]['interfaces'].append(m.group(1))
                 if 'STP' in line:
