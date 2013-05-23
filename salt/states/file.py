@@ -1444,7 +1444,7 @@ def comment(name, regex, char='#', backup='.bak'):
     '''
     Comment out specified lines in a file.
 
-    path
+    name
         The full path to the file to be edited
     regex
         A regular expression used to find the lines that are to be commented;
@@ -1524,7 +1524,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     '''
     Uncomment specified commented lines in a file
 
-    path
+    name
         The full path to the file to be edited
     regex
         A regular expression used to find the lines that are to be uncommented.
