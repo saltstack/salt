@@ -9,8 +9,14 @@ XCP is not taking precedence on Xen Source on many platforms, please keep
 compatibility in mind.
 '''
 
+# Import python libs
 import sys
 import contextlib
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+import salt.utils
+
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
@@ -22,8 +28,6 @@ try:
     HAS_XENAPI = True
 except ImportError:
     HAS_XENAPI = False
-
-import salt.utils
 
 
 def __virtual__():
@@ -54,7 +58,7 @@ def _get_xapi_session():
         session.xenapi.login_with_password(xapi_login, xapi_password)
 
         yield session.xenapi
-    except:
+    except Exception:
         raise CommandExecutionError('Failed to connect to XenAPI socket.')
     finally:
         session.logout()
@@ -82,7 +86,7 @@ def _get_label_uuid(xapi, rectype, label):
     '''
     try:
         return getattr(xapi, rectype).get_by_name_label(label)[0]
-    except:
+    except Exception:
         return False
 
 
@@ -381,7 +385,7 @@ def setmem(vm_, memory):
             xapi.VM.set_memory_dynamic_max_live(vm_uuid, mem_target)
             xapi.VM.set_memory_dynamic_min_live(vm_uuid, mem_target)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -402,7 +406,7 @@ def setvcpus(vm_, vcpus):
         try:
             xapi.VM.set_VCPUs_number_live(vm_uuid, vcpus)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -456,7 +460,7 @@ def shutdown(vm_):
         try:
             xapi.VM.clean_shutdown(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -475,7 +479,7 @@ def pause(vm_):
         try:
             xapi.VM.pause(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -494,7 +498,7 @@ def resume(vm_):
         try:
             xapi.VM.unpause(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -545,7 +549,7 @@ def reboot(vm_):
         try:
             xapi.VM.clean_reboot(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -564,7 +568,7 @@ def reset(vm_):
         try:
             xapi.VM.hard_reboot(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -597,7 +601,7 @@ def migrate(vm_, target,
         try:
             xapi.VM.migrate(vm_uuid, target, bool(live), other_config)
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -617,7 +621,7 @@ def destroy(vm_):
         try:
             xapi.VM.hard_shutdown(vm_uuid)
             return True
-        except:
+        except Exception:
             return False
 
 
