@@ -1991,7 +1991,7 @@ class BaseHighState(object):
                             'No matching sls found for \'{0}\' in env \'{1}\''
                             .format(sls_match, env)
                     )
-                for sls in fnmatch.filter(self.avail[env], sls_match):
+                for sls in statefiles:
                     state, errors = self.render_state(sls, env, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
