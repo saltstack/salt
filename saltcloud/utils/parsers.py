@@ -295,8 +295,8 @@ class ExecutionOptionsMixIn(object):
             self.function_provider, self.function_name = self.options.function
             if self.function_name.startswith('-') or '=' in self.function_name:
                 self.error(
-                    '--function expects two arguments: <provider> '
-                    '<function-name>'
+                    '--function expects two arguments: <function-name> '
+                    '<provider>'
                 )
 
 
