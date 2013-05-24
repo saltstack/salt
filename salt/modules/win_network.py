@@ -217,6 +217,10 @@ def _interfaces_ipconfig(out):
 
 
 def interfaces():
+    '''
+    Return details about network interfaces
+    '''
+
     with salt.utils.winapi.Com():
         c = wmi.WMI()
         ifaces = {}
@@ -229,7 +233,11 @@ def interfaces():
                 ifaces[iface.Description]['inet'] = []
                 for ip in iface.IPAddress:
                     item = {}
-                    item['broadcast'] = iface.DefaultIPGateway[0]
+                    item['broadcast'] = ''
+                    try:
+                        item['broadcast'] = iface.DefaultIPGateway[0]
+                    except Exception:
+                        pass
                     item['netmask'] = iface.IPSubnet[0]
                     item['label'] = iface.Description
                     item['address'] = ip

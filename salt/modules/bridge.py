@@ -140,7 +140,7 @@ def _netbsd_brshow(br=None):
             start_int = True
             continue
         if start_int and brname:
-            m = re.match('\s*([a-z0-9]+)\s.*<.*>', line)
+            m = re.match(r'\s*([a-z0-9]+)\s.*<.*>', line)
             if m:
                 brs[brname]['interfaces'].append(m.group(1))
                 if 'STP' in line:
@@ -208,8 +208,8 @@ def _os_dispatch(func, *args, **kwargs):
     '''
     Internal, dispatches functions by operating system
     '''
-    _os_func = getattr(sys.modules[__name__],'_{0}_{1}'.
-                            format(__grains__['kernel'].lower(),func))
+    _os_func = getattr(sys.modules[__name__], '_{0}_{1}'.
+                            format(__grains__['kernel'].lower(), func))
     if callable(_os_func):
         return _os_func(*args, **kwargs)
 
@@ -284,7 +284,7 @@ def find_interfaces(*args):
             try: # a bridge may not contain interfaces
                 if iface in brs[br]['interfaces']:
                     iflist[iface] = br
-            except:
+            except Exception:
                 pass
 
     return iflist
