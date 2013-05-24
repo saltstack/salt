@@ -202,7 +202,9 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
         refresh_db()
 
     # Ignore 'sources' argument
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
