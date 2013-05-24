@@ -130,3 +130,21 @@ the ``fileserver_backend`` option contains multiple backends:
 Then the `roots` backend (the default backend of files in /srv/salt) will be
 searched first for the requested file, then if it is not found on the master
 the git remotes will be searched.
+
+GitFS Remotes over SSH
+======================
+
+In order to configure a ``gitfs_remotes`` repository over SSH transport the 
+``git+ssh`` URL form must be used.
+
+.. code-block:: yaml
+    
+    gitfs_remotes:
+      - git+ssh://git@github.com/example/salt-states.git
+      
+The private key used to connect to the repository must be located in ``~/.ssh/id_rsa``
+for the user running the salt-master.
+
+.. note::
+
+    GitFS requires library ``gitpython`` > 0.3.0.
