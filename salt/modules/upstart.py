@@ -138,11 +138,11 @@ def _service_is_upstart(name):
 def _upstart_is_disabled(name):
     '''
     An Upstart service is assumed disabled if a manual stanza is
-    placed in /etc/init/[name].conf.override.
+    placed in /etc/init/[name].override.
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    return os.access('/etc/init/{0}.conf.override'.format(name), os.R_OK)
+    return os.access('/etc/init/{0}.override'.format(name), os.R_OK)
 
 
 def _upstart_is_enabled(name):
@@ -362,7 +362,7 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
-    override = '/etc/init/{0}.conf.override'.format(name)
+    override = '/etc/init/{0}.override'.format(name)
     if os.access(override, os.R_OK):
         os.unlink(override)
     return _upstart_is_enabled(name)
