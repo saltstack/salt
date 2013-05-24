@@ -53,7 +53,9 @@ def _get_ref(repo, short):
     '''
     for ref in repo.refs:
         if isinstance(ref, git.RemoteReference):
-            if short == os.path.basename(ref.name):
+            parted = ref.name.partition('/')
+            refname = parted[2] if parted[2] else parted[0]
+            if short == refname:
                 return ref
     return False
 
@@ -152,7 +154,8 @@ def envs():
     for repo in repos:
         remote = repo.remote()
         for ref in repo.refs:
-            short = os.path.basename(ref.name)
+            parted = ref.name.partition('/')
+            short = parted[2] if parted[2] else parted[0]
             if isinstance(ref, git.Head):
                 if short == 'master':
                     short = 'base'
