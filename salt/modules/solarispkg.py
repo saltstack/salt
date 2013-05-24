@@ -263,7 +263,8 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     pkg_params, pkg_type = \
         __salt__['pkg_resource.parse_targets'](name,
                                                kwargs.get('pkgs'),
-                                               sources)
+                                               sources,
+                                               **kwargs)
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
