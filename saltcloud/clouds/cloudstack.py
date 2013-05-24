@@ -130,6 +130,18 @@ def get_keypair(vm_):
 
     raise SaltCloudNotFound('The specified keypair could not be found.')
 
+def get_ip(data):
+    '''
+    Return the IP address of the VM
+    If the VM has  public IP as defined by libcloud module then use it
+    Otherwise try to extract the private IP and use that one.
+    '''
+    try:
+       ip = data.public_ips[0]
+    except:
+       ip = data.private_ips[0]
+    return ip
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -162,7 +174,7 @@ def create(vm_):
     if config.get_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
-            'host': data.public_ips[0],
+            'host': get_ip(data),
             'username': 'root',
             'key_filename': get_key(),
             'script': deploy_script.script,
