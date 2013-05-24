@@ -292,8 +292,9 @@ class ExecutionOptionsMixIn(object):
 
     def process_function(self):
         if self.options.function:
-            self.function_provider, self.function_name = self.options.function
-            if self.function_name.startswith('-') or '=' in self.function_name:
+            self.function_name, self.function_provider = self.options.function
+            if self.function_provider.startswith('-') or \
+                    '=' in self.function_provider:
                 self.error(
                     '--function expects two arguments: <function-name> '
                     '<provider>'
