@@ -11,6 +11,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Confine this module to Mac OS with Homebrew.
@@ -145,7 +146,9 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
     old = list_pkgs()
     targets = [x for x in pkg_params if x in old]
     if not targets:

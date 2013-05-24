@@ -198,7 +198,7 @@ def list_pkgs(versions_as_list=False):
             salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-        
+
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
             return __context__['pkg.list_pkgs']
@@ -489,7 +489,9 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
     old = list_pkgs()
     for target in pkg_params:
         pkginfo = _get_package_info(target)
