@@ -176,6 +176,42 @@ class Cloud(object):
                 pmap[prov] = []
         return pmap
 
+    def map_providers_parallel(self, query='list_nodes'):
+        '''
+        Return a mapping of what named VMs are running on what VM providers
+        based on what providers are defined in the configuration and VMs
+
+        Same as map_providers but query in parallel.
+        '''
+        providers = self.get_providers()
+
+        opts = self.opts.copy()
+        multiprocessing_data = []
+        for provider in providers:
+            fun = '{0}.{1}'.format(provider, query)
+            if fun not in self.clouds:
+                log.error(
+                    'Public cloud provider {0} is not available'.format(
+                        provider
+                    )
+                )
+                continue
+            multiprocessing_data.append({
+                'fun': fun,
+                'opts': opts,
+                'query': query,
+                'provider': provider
+            })
+
+        output = {}
+        parallel_pmap = multiprocessing.Pool(len(providers)).map(
+            func=run_paralel_map_providers_query,
+            iterable=multiprocessing_data
+        )
+        for obj in parallel_pmap:
+            output.update(obj)
+        return output
+
     def location_list(self, lookup='all'):
         '''
         Return a mapping of all location data for available providers
@@ -314,7 +350,7 @@ class Cloud(object):
         ret = []
         names = set(names)
 
-        pmap = self.map_providers()
+        pmap = self.map_providers_parallel()
         dels = {}
         for prov, nodes in pmap.items():
             dels[prov] = []
@@ -423,7 +459,7 @@ class Cloud(object):
         Reboot the named VMs
         '''
         ret = []
-        pmap = self.map_providers()
+        pmap = self.map_providers_parallel()
         acts = {}
         for prov, nodes in pmap.items():
             acts[prov] = []
@@ -564,7 +600,7 @@ class Cloud(object):
         handle them
         '''
         ret = {}
-        pmap = self.map_providers()
+        pmap = self.map_providers_parallel()
         found = False
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
@@ -626,7 +662,7 @@ class Cloud(object):
         '''
         Perform an action on a VM which may be specific to this cloud provider
         '''
-        pmap = self.map_providers()
+        pmap = self.map_providers_parallel()
 
         ret = {}
 
@@ -694,7 +730,7 @@ class Map(Cloud):
         self.map = self.read()
 
     def interpolated_map(self, query=None):
-        query_map = self.map_providers(query=query)
+        query_map = self.map_providers_parallel(query=query)
         full_map = {}
         dmap = self.read()
         for profile, vmap in dmap.items():
@@ -809,7 +845,7 @@ class Map(Cloud):
         Create a data map of what to execute on
         '''
         ret = {}
-        pmap = self.map_providers()
+        pmap = self.map_providers_parallel()
         ret['create'] = {}
         exist = set()
         defined = set()
@@ -1070,3 +1106,17 @@ def create_multiprocessing(parallel_data):
         output.pop('deploy_kwargs', None)
 
     return {parallel_data['name']: output}
+
+
+def run_paralel_map_providers_query(data):
+    '''
+    This function will be called from another process when building the
+    providers map.
+    '''
+    cloud = Cloud(data['opts'])
+    try:
+        return {data['provider']: cloud.clouds[data['fun']]()}
+    except Exception:
+        # Failed to communicate with the provider, don't list any
+        # nodes
+        return {data['provider']: []}
