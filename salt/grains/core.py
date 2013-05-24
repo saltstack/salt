@@ -846,6 +846,21 @@ def ip4():
     ips = salt.utils.socket_util.ip4_addrs()
     return {'ipv4': ips}
 
+def ip_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+    ret = {}
+    ifaces = salt.utils.socket_util.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        ret[face] = iface_ips
+    return {'ip_interfaces': ret}
 
 def path():
     '''
