@@ -45,7 +45,6 @@ if salt.utils.is_windows():
     from salt.modules.win_pkg import _get_package_info
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
-    global _get_package_info, _get_latest_pkg_version, _reverse_cmp_pkg_versions
     _get_package_info = namespaced_function(_get_package_info, globals())
     _get_latest_pkg_version = namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = namespaced_function(_reverse_cmp_pkg_versions, globals())
