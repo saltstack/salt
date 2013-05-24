@@ -3,7 +3,6 @@ Module for running ZFS command
 '''
 
 # Import Python libs
-import os
 import logging
 
 # Import Salt libs

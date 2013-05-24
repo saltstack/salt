@@ -201,47 +201,34 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group):
+def _run_check(cmd_kwargs, onlyif, unless, group):
     '''
-    Execute the onlyif logic and return data if the onlyif fails
+    Execute the onlyif and unless logic. 
+    Return a result dict if:
+    * group is not available
+    * onlyif failed (onlyif != 0)
+    * unless succeeded (unless == 0)
+    else return True
     '''
-    ret = {}
-
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
                 os.setegid(egid)
         except KeyError:
-            ret['comment'] = 'The group {0} is not available'.format(group)
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 
     if onlyif:
-        if 'runas' in cmd_kwargs:
-            user = cmd_kwargs.pop('runas')
-        if 'cwd' in cmd_kwargs:
-            cwd = cmd_kwargs.pop('cwd')
-        if __salt__['cmd.retcode'](onlyif,
-                                   cwd=cwd,
-                                   runas=user,
-                                   **cmd_kwargs) != 0:
-            ret['comment'] = 'onlyif exec failed'
-            ret['result'] = True
-            return {'comment': 'onlyif exec failed',
+        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+            return {'comment': 'onlyif execution failed',
                     'result': True}
 
     if unless:
-        if 'runas' in cmd_kwargs:
-            user = cmd_kwargs.pop('runas')
-        if 'cwd' in cmd_kwargs:
-            cwd = cmd_kwargs.pop('cwd')
-        if __salt__['cmd.retcode'](unless,
-                                   cwd=cwd,
-                                   runas=user,
-                                   **cmd_kwargs) == 0:
-            return {'comment': 'unless executed successfully',
+        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+            return {'comment': 'unless execution succeeded',
                     'result': True}
+
     # No reason to stop, return True
     return True
 
@@ -484,7 +471,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group)
+        cret = _run_check(cmd_kwargs, onlyif, unless, group)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -613,11 +600,11 @@ def script(name,
  
     # If script args present split from name and define args
     if len(name.split()) > 1:
-        cmd_kwargs.update({'args': name.split(' ',1)[1]})
+        cmd_kwargs.update({'args': name.split(' ', 1)[1]})
     
     try:
         cret = _run_check(
-            run_check_cmd_kwargs, onlyif, unless, cwd, user, group
+            run_check_cmd_kwargs, onlyif, unless, group
         )
         if isinstance(cret, dict):
             ret.update(cret)
@@ -695,7 +682,7 @@ def call(name, func, args=(), kws=None,
     if HAS_GRP:
         pgid = os.getegid()
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None)
+        cret = _run_check(cmd_kwargs, onlyif, unless, None)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret

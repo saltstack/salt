@@ -820,7 +820,7 @@ def hostname():
     #   domain
     grains = {}
     grains['localhost'] = socket.gethostname()
-    if (re.search('\.', socket.getfqdn())):
+    if '.' in socket.getfqdn():
         grains['fqdn'] = socket.getfqdn()
     else :
         grains['fqdn'] = grains['localhost']
@@ -846,6 +846,21 @@ def ip4():
     ips = salt.utils.socket_util.ip4_addrs()
     return {'ipv4': ips}
 
+def ip_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+    ret = {}
+    ifaces = salt.utils.socket_util.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        ret[face] = iface_ips
+    return {'ip_interfaces': ret}
 
 def path():
     '''
@@ -976,11 +991,11 @@ def _hw_data(osdata):
         grains.update(_dmidecode_data(linux_dmi_regex))
     elif osdata['kernel'] == 'SunOS':
         sunos_dmi_regex = {
-            '(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
+            r'(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
                 '[Vv]ersion [Ss]tring:': 'biosversion',
                 '[Rr]elease [Dd]ate:': 'biosreleasedate',
             },
-            '(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
+            r'(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
                 'Manufacturer:': 'manufacturer',
                 'Product(?: Name)?:': 'productname',
                 'Serial Number:': 'serialnumber',

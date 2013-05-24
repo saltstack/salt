@@ -613,3 +613,58 @@ def sync_contains(value):
         salt '*' makeconf.sync_contains 'rsync://rsync.namerica.gentoo.org/gentoo-portage'
     '''
     return var_contains('SYNC', value)
+
+def get_features():
+    '''
+    Get the value of FEATURES variable in the make.conf
+
+    Return the value of the variable or None if the variable is
+    not in the make.conf
+
+    CLI Example::
+
+        salt '*' makeconf.get_features
+    '''
+    return get_var('FEATURES')
+
+def append_features(value):
+    '''
+    Add to or create a new FEATURES in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.append_features 'webrsync-gpg'
+    '''
+    return append_var('FEATURES', value)
+
+def trim_features(value):
+    '''
+    Remove a value from FEATURES variable in the make.conf
+
+    Return a dict containing the new value for variable::
+
+        {'<variable>': {'old': '<old-value>',
+                        'new': '<new-value>'}}
+
+    CLI Example::
+
+        salt '*' makeconf.trim_features 'webrsync-gpg'
+    '''
+    return trim_var('FEATURES', value)
+
+def features_contains(value):
+    '''
+    Verify if FEATURES variable contains a value in make.conf
+
+    Return True if value is set for var
+
+    CLI Example::
+
+        salt '*' makeconf.features_contains 'webrsync-gpg'
+    '''
+    return var_contains('FEATURES', value)

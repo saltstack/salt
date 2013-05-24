@@ -22,7 +22,7 @@ def sync():
 
         salt '*' eix.sync
     '''
-    cmd = 'eix-sync -q'
+    cmd = 'eix-sync -q -C "--ask" -C "n"'
     if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
         # GPG sign verify is supported only for "webrsync"
         if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'

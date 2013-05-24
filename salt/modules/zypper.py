@@ -78,7 +78,7 @@ def latest_version(*names, **kwargs):
 
     cmd = 'zypper info -t package {0}'.format(' '.join(names))
     output = __salt__['cmd.run_all'](cmd).get('stdout', '')
-    output = re.split('Information for package \S+:\n', output)
+    output = re.split('Information for package \\S+:\n', output)
     for package in output:
         pkginfo = {}
         for line in package.splitlines():
