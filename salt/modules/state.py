@@ -483,10 +483,7 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
 
     for key, value in kwargs.iteritems():
         if not key.startswith('__pub_'):
-            if not isinstance(value, list):
-                kwargs[key] = parse_kwval(value)
-            else:
-                kwargs[key] = value
+            kwargs[key] = parse_kwval(value)
 
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
