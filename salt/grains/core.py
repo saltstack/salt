@@ -758,7 +758,7 @@ def hostname():
     #   domain
     grains = {}
     grains['localhost'] = socket.gethostname()
-    if (re.search('\.', socket.getfqdn())):
+    if '.' in socket.getfqdn():
         grains['fqdn'] = socket.getfqdn()
     else :
         grains['fqdn'] = grains['localhost']
@@ -914,11 +914,11 @@ def _hw_data(osdata):
         grains.update(_dmidecode_data(linux_dmi_regex))
     elif osdata['kernel'] == 'SunOS':
         sunos_dmi_regex = {
-            '(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
+            r'(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
                 '[Vv]ersion [Ss]tring:': 'biosversion',
                 '[Rr]elease [Dd]ate:': 'biosreleasedate',
             },
-            '(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
+            r'(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
                 'Manufacturer:': 'manufacturer',
                 'Product(?: Name)?:': 'productname',
                 'Serial Number:': 'serialnumber',
