@@ -16,6 +16,7 @@ import pipes
 import types
 import re
 import warnings
+import __builtin__
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -976,3 +977,14 @@ def simple_types_filter(datadict):
             value = repr(value)
         simpledict[key] = value
     return simpledict
+
+
+class CloudProviderContext(object):
+    def __init__(self, profile):
+        self.profile = profile
+
+    def __enter__(self):
+        __builtin__.__active_profile_name__ = self.profile
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        del(__builtin__.__active_profile_name__)
