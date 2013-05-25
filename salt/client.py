@@ -250,7 +250,7 @@ class LocalClient(object):
             cli=False,
             **kwargs):
         '''
-        Execute a command on a randome subset of the targetted systems, pass
+        Execute a command on a random subset of the targetted systems, pass
         in the subset via the sub option to signify the number of systems to
         execute on.
         '''
