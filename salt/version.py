@@ -14,6 +14,8 @@ GIT_DESCRIBE_REGEX = (
     r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
 )
 
+VIRTUA_VERSION_REGEX = (r'(?P<year>[\d]{4})Q(?P<quarter>[\d]{1})')
+
 
 def __get_version(version, version_info):
     '''
@@ -63,51 +65,18 @@ def __get_version(version, version_info):
         if not out or err:
             return version, version_info
 
-        match = re.search(GIT_DESCRIBE_REGEX, out)
+        match = re.search(VIRTUA_VERSION_REGEX, out)
         if not match:
             return version, version_info
 
-        parsed_version = '{0}.{1}.{2}'.format(
-            match.group('major'),
-            match.group('minor'),
-            match.group('bugfix')
+        parsed_version = '{0}Q{1}'.format(
+            match.group('year'),
+            match.group('quarter')
         )
 
-        if match.group('noc') is not None and match.group('sha') is not None:
-            # This is not the exact point where a tag was created.
-            # We have the extra information. Let's add it.
-            parsed_version = '{0}-{1}-{2}'.format(
-                parsed_version,
-                match.group('noc'),
-                match.group('sha')
-            )
-
         parsed_version_info = tuple([
-            int(g) for g in match.groups()[:3] if g.isdigit()
+            int(g) for g in match.groups()[:2] if g.isdigit()
         ])
-
-        if parsed_version_info > version_info:
-            warnings.warn(
-                'The parsed version info, `{0}`, is bigger than the one '
-                'defined in the file, `{1}`. Missing version bump?'.format(
-                    parsed_version_info,
-                    version_info
-                ),
-                UserWarning,
-                stacklevel=2
-            )
-            return version, version_info
-        elif parsed_version_info < version_info:
-            warnings.warn(
-                'In order to get the proper salt version with the git hash '
-                'you need to update salt\'s local git tags. Something like: '
-                '\'git fetch --tags\' or \'git fetch --tags upstream\' if '
-                'you followed salt\'s contribute documentation. The version '
-                'string WILL NOT include the git hash.',
-                UserWarning,
-                stacklevel=2
-            )
-            return version, version_info
         return parsed_version, parsed_version_info
     except OSError as os_err:
         if os_err.errno != 2:
