@@ -6,6 +6,7 @@ correct cloud modules
 import os
 import glob
 import time
+import signal
 import logging
 import tempfile
 import multiprocessing
@@ -204,10 +205,25 @@ class Cloud(object):
             })
 
         output = {}
-        parallel_pmap = multiprocessing.Pool(len(providers)).map(
-            func=run_paralel_map_providers_query,
-            iterable=multiprocessing_data
+        providers_count = len(providers)
+        pool = multiprocessing.Pool(
+            providers_count < 10 and providers_count or 10,
+            init_pool_worker
         )
+        try:
+            parallel_pmap = pool.map(
+                func=run_paralel_map_providers_query,
+                iterable=multiprocessing_data
+            )
+        except KeyboardInterrupt:
+            print 'Caught KeyboardInterrupt, terminating workers'
+            pool.terminate()
+            pool.join()
+            raise SaltCloudSystemExit('Keyboard Interrupt caught')
+        else:
+            pool.close()
+            pool.join()
+
         for obj in parallel_pmap:
             output.update(obj)
         return output
@@ -1077,6 +1093,14 @@ class Map(Cloud):
                 output.update(obj)
 
         return output
+
+
+def init_pool_worker():
+    '''
+    Make every worker ignore KeyboarInterrup's since it will be handled by the
+    parent process.
+    '''
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def create_multiprocessing(parallel_data):
