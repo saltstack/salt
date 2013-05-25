@@ -273,7 +273,6 @@ class LocalClient(object):
                 kwarg=kwarg,
                 **kwargs)
 
->>>>>>> 822e780... client.py: fix punctuation typo
     def cmd_batch(
             self,
             tgt,
