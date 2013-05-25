@@ -68,7 +68,13 @@ def _get_process_info(proc):
 
 def _get_process_owner(process):
     owner = {}
-    domain, error_code, user = process.GetOwner()
+    domain, error_code, user = None, None, None
+    try:
+        domain, error_code, user = process.GetOwner()
+        owner['user'] = user.encode('utf-8')
+        owner['user_domain'] = domain.encode('utf-8')
+    except Exception as exc:
+        pass
     if not error_code:
         owner['user'] = user.encode('utf-8')
         owner['user_domain'] = domain.encode('utf-8')
@@ -79,5 +85,4 @@ def _get_process_owner(process):
     else:
         log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
                     .format(process.ProcessId, error_code))
-
     return owner
