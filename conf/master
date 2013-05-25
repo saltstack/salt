@@ -56,7 +56,7 @@
 #root_dir: /
 
 # Directory used to store public key data
-#pki_dir: /etc/salt/pki/master
+pki_dir: /opt/local/etc/salt/pki/master
 
 # Directory to store job and cache data
 #cachedir: /var/cache/salt/master
@@ -249,9 +249,9 @@
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
 
-#file_roots:
-#  base:
-#    - /srv/salt
+file_roots:
+  base:
+    - /opt/local/etc/salt/srv/salt
 
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server, the default is md5, but sha1, sha224, sha256, sha384
@@ -315,9 +315,9 @@
 # a top file and sls files. However, pillar data does not need to be in the
 # highstate format, and is generally just key/value pairs.
 
-#pillar_roots:
-#  base:
-#    - /srv/pillar
+pillar_roots:
+  base:
+    - /opt/local/etc/salt/srv/pillar
 
 # ext_pillar:
 #   - hiera: /etc/hiera.yaml
