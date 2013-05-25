@@ -12,31 +12,32 @@ compatibility in mind.
 import os
 import sys
 import contextlib
+import importlib
 
 import salt.utils
 # This module has only been tested on Debian GNU/Linux and NetBSD, it
 # probably needs more path appending for other distributions.
 # The path to append is the path to python Xen libraries, where resides
 # XenAPI.
-debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
-if os.path.isfile(debian_xen_version):
-    xenversion =  os.popen(debian_xen_version).readlines()[0].rstrip()
-    xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
-    if os.path.isdir(xapipath):
-        sys.path.append(xapipath)
-
-
-try:
-    import xen.xm.XenAPI as XenAPI
-    HAS_XENAPI = True
-except ImportError:
-    HAS_XENAPI = False
+def _check_xenapi():
+    if __grains__['os'] == 'Debian':
+        debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
+        if os.path.isfile(debian_xen_version):
+            # __salt__ is not available in __virtual__
+            xenversion =  salt.modules.cmdmod._run_quiet(debian_xen_version)
+            xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
+            if os.path.isdir(xapipath):
+                sys.path.append(xapipath)
+    try:
+        return importlib.import_module('xen.xm.XenAPI')
+    except ImportError:
+        return False
 
 
 def __virtual__():
-    if HAS_XENAPI is False:
-        return False
-    return 'virt'
+    if _check_xenapi() is not False:
+        return 'virt'
+    return False
 
 
 @contextlib.contextmanager
@@ -44,6 +45,8 @@ def _get_xapi_session():
     '''
     Get a session to XenAPI. By default, use the local UNIX socket.
     '''
+    _xenapi = _check_xenapi()
+
     xapi_uri = __salt__['config.option']('xapi.uri')
     xapi_login = __salt__['config.option']('xapi.login')
     xapi_password = __salt__['config.option']('xapi.password')
@@ -57,7 +60,7 @@ def _get_xapi_session():
         xapi_password = ''
 
     try:
-        session = XenAPI.Session(xapi_uri)
+        session = _xenapi.Session(xapi_uri)
         session.xenapi.login_with_password(xapi_login, xapi_password)
 
         yield session.xenapi
@@ -204,7 +207,7 @@ def vm_state(vm_=None):
     '''
     with _get_xapi_session() as xapi:
         info = {}
-    
+
         if vm_:
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
         else:
@@ -228,7 +231,7 @@ def node_info():
         host_cpu_rec = _get_record(xapi, 'host_cpu', host_rec['host_CPUs'][0])
         # get related metrics
         host_metrics_rec = _get_metrics_record(xapi, 'host', host_rec)
-    
+
         # adapted / cleaned up from Xen's xm
         def getCpuMhz():
             cpu_speeds = [int(host_cpu_rec["speed"])
@@ -238,18 +241,18 @@ def node_info():
                 return sum(cpu_speeds) / len(cpu_speeds)
             else:
                 return 0
-    
+
         def getCpuFeatures():
             if len(host_cpu_rec) > 0:
                 return host_cpu_rec['features']
-    
+
         def getFreeCpuCount():
             cnt = 0
             for host_cpu_it in host_cpu_rec:
                 if len(host_cpu_rec['cpu_pool']) == 0:
                     cnt += 1
             return cnt
-    
+
         info = {
                 'cpucores': _get_val(host_rec,
                                     ["cpu_configuration", "nr_cpus"]),
@@ -292,9 +295,9 @@ def node_info():
                 'xend_config_format': _get_val(host_rec,
                                     ["software_version", "xend_config_format"])
                 }
-    
+
         return info
-    
+
 
 def get_nics(vm_):
     '''
@@ -306,7 +309,7 @@ def get_nics(vm_):
     '''
     with _get_xapi_session() as xapi:
         nic = {}
-    
+
         vm_rec = _get_record_by_label(xapi, 'VM', vm_)
         if vm_rec is False:
             return False
@@ -317,7 +320,7 @@ def get_nics(vm_):
                 'device': vif_rec['device'],
                 'mtu': vif_rec['MTU']
             }
-    
+
         return nic
 
 
@@ -348,9 +351,9 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     with _get_xapi_session() as xapi:
-    
+
         disk = {}
-    
+
         vm_uuid = _get_label_uuid(xapi, 'VM', vm_)
         if vm_uuid is False:
             return False
@@ -364,7 +367,7 @@ def get_disks(vm_):
                 'type': prop['device-type'],
                 'protocol': prop['protocol']
             }
-    
+
         return disk
 
 
@@ -380,7 +383,7 @@ def setmem(vm_, memory):
     '''
     with _get_xapi_session() as xapi:
         mem_target = int(memory) * 1024 * 1024
-    
+
         vm_uuid = _get_label_uuid(xapi, 'VM', vm_)
         if vm_uuid is False:
             return False
@@ -729,9 +732,9 @@ def vm_netstats(vm_=None):
                 ret[vif_rec['device']] = _get_metrics_record(xapi,'VIF',
                                                             vif_rec)
                 del ret[vif_rec['device']]['last_updated']
-    
+
             return ret
-    
+
         info = {}
         if vm_:
             info[vm_] = _info(vm_)
@@ -772,9 +775,9 @@ def vm_diskstats(vm_=None):
                 ret[vbd_rec['device']] = _get_metrics_record(xapi, 'VBD',
                                                             vbd_rec)
                 del ret[vbd_rec['device']]['last_updated']
-    
+
             return ret
-    
+
         info = {}
         if vm_:
             info[vm_] = _info(vm_)
