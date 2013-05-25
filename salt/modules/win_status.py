@@ -68,7 +68,7 @@ def _get_process_info(proc):
 
 def _get_process_owner(process):
     owner = {}
-    domain, error_code, user = '', '', ''
+    domain, error_code, user = None, None, None
     try:
         domain, error_code, user = process.GetOwner()
         owner['user'] = user.encode('utf-8')
