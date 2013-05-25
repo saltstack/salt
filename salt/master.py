@@ -1183,19 +1183,19 @@ class AESFuncs(object):
                     return {}
             else:
                 load['expr_form'] = clear_load['tgt_type']
-        if clear_load.get('form', '') == 'full':
-            load['raw'] = True
+        load['raw'] = True
         ret = {}
         for minion in self.local.cmd_iter(**load):
-            if load.get('raw', False):
+            if clear_load.get('form', '') == 'full':
                 data = minion
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
                 data['ret'] = data.pop('return')
                 ret[minion['id']] = data
             else:
-                id_ = minion.keys()[0]
-                ret[id_] = minion[id_].get('ret', None)
+                ret[minion['id']] = minion['return']
+                if 'jid' in minion:
+                    ret['__jid__'] = minion['jid']
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
             if not key in ret:
                 ret[key] = val
