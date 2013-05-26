@@ -31,6 +31,8 @@ class ConfigTest(integration.ModuleCase):
         # This function is generally only used with cross calls, the yaml
         # interpereter is breaking it for remote calls
         self.assertEqual(self.run_function('config.manage_mode', ['775']), '775')
+        self.assertEqual(self.run_function('config.manage_mode', ['1775']), '1775')
+        self.assertEqual(self.run_function('config.manage_mode', ['0775']), '775')
 
     def test_option(self):
         '''
