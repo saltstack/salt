@@ -36,3 +36,6 @@ grains:
 
 config_test:
   spam: eggs
+
+mine_functions:
+  test.ping: []
