@@ -4,7 +4,6 @@ settings are listed below, along with sane defaults.
 
 couchdb.db:		'salt'
 couchdb.url:		'http://salt:5984/'
-couchdb.create_db:	True
 
 '''
 import time
@@ -30,9 +29,6 @@ def _get_options( ):
 	server_url	= __salt__['config.option']('couchdb.url')
 	if not server_url:
 		server_url = "http://salt:5984/"
-	create_db	= __salt__['config.option']('couchdb.create_db')
-	if create_db == None:
-		create_db = True
 	db_name		= __salt__['config.option']('couchdb.db')
 	if not db_name:
 		db_name = "salt"
@@ -58,11 +54,11 @@ def returner( ret ):
 	options = _get_options( )
 	
 	# Create a connection to the server.
-	_s	= couchdb.client.Server( options["server_url"] )
+	server	= couchdb.client.Server( options["url"] )
 
 	# Create the database if the configuration calls for it.
-	if options["create_db"] and not options["db"] in _s:
+	if not options["db"] in server:
 		server.create( options["db"] )
-	
+
 	# Save the document that comes out of _generate_doc.
-	_s[options["db"]].save( _generate_doc( ret, options ) )
+	server[options["db"]].save( _generate_doc( ret, options ) )
