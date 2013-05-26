@@ -4,7 +4,6 @@ Module for managing timezone on POSIX-like systems.
 
 # Import python libs
 import os
-import re
 import hashlib
 import salt.utils
 import logging
@@ -188,8 +187,7 @@ def get_hwclock():
         if os.path.isfile('/etc/rtc_config'):
             with salt.utils.fopen('/etc/rtc_config', 'r') as fp_:
                 for line in fp_:
-                    match = re.match(r'^zone_info=GMT', line)
-                    if match:
+                    if line.startswith('zone_info=GMT'):
                         return 'UTC'
             return 'localtime'
         else:
