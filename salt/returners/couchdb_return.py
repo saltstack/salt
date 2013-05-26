@@ -4,6 +4,7 @@ settings are listed below, along with sane defaults.
 
 couchdb.db:		'salt'
 couchdb.url:		'http://salt:5984/'
+couchdb.hooks:
 
 '''
 import logging
@@ -30,17 +31,20 @@ def _get_options( ):
 	'''
 	server_url = __salt__['config.option']('couchdb.url')
 	if not server_url:
+		log.debug( "Using default url." )
 		server_url = "http://salt:5984/"
 
 	db_name = __salt__['config.option']('couchdb.db')
 	if not db_name:
+		log.debug( "Using default datatbase." )
 		db_name = "salt"
 
-	doc = __salt__['config.option']('couchdb.doc')
-	if not doc:
-		doc = [ { "import": ["time"], "key": "timestamp", "value": "time.time()" } ]
+	hooks = __salt__['config.option']('couchdb.hooks')
+	if not hooks:
+		log.debug( "Using default hooks" )
+		hooks = [ { "key": "timestamp", "value": "time.time()", "eval": "import time" } ]
 
-	return { "url": server_url, "create": create_db, "db": db_name, "doc": doc }
+	return { "url": server_url, "create": create_db, "db": db_name, "hooks": hooks }
 
 def _generate_doc( ret, options ):
 	'''
@@ -52,16 +56,14 @@ def _generate_doc( ret, options ):
 	r		= ret
 	r["_id"]	= ret["jid"]
 
-	log.debug( "Heh? %s" % options["doc"] )
-	# Iterate though the options["doc"]
-	for _obj in options["doc"]:
-		# If import is defined, iterate through the list and import.
-		if hasattr( _obj, "import" ):
-			for to_import in getattr( _obj, "import" ):
-				eval( "import %s" % to_import )
+	log.debug( "Starting hook iteration" )
+	for hook in options["hooks"]:
 
-		# Set the return object[key] to eval(value) in effect.
-		r[_obj["key"]] = eval( _obj["value"] )
+		# Eval if specified.
+		if hasattr( hook, "eval" ):
+			eval( hook["eval"] )
+
+		r[hook["key"]] = eval( hook["value"] )
 		
 	return r
 
