@@ -215,7 +215,10 @@ def parse_opts():
         dest='name',
         action='append',
         default=[],
-        help='Specific test name to run'
+        help=('Specific test name to run. A named test is the module path '
+              'relative to the tests directory, to execute the config module '
+              'integration tests for instance call:\n'
+              'runtests.py -n integration.modules.config')
     )
     tests_select_group.add_option(
         '--run-destructive',
