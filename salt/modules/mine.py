@@ -92,16 +92,22 @@ def send(func, *args, **kwargs):
     if not func in __salt__:
         return False
     data = {}
+    arg_data = salt.utils.arg_lookup(__salt__[func])
+    func_data = {}
+    for ind in range(len(arg_data.get('args', []))):
+        try:
+            func_data[arg_data[ind]] = args[ind]
+        except IndexError:
+            # Safe error, arg may be in kwargs
+            pass
+    func_data.update(kwargs)
+    f_call = salt.utils.format_call(__salt__[func], func_data)
     try:
-        if args and kwargs:
-            data[func] = __salt__[func](*args, **kwargs)
-        elif args:
-            data[func] = __salt__[func](*args)
-        elif kwargs:
-            data[func] = __salt__[func](**kwargs)
+        if 'kwargs' in f_call:
+            data[func] = __salt__[func](*f_call['args'], **f_call['kwargs'])
         else:
-            data[func] = __salt__[func]()
-    except Exception:
+            data[func] = __salt__[func](*f_call['args'])
+    except Exception as exc:
         log.error(
                 'Function {0} in mine.send failed to execute'.format(
                     func
