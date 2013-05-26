@@ -71,4 +71,9 @@ class ConfigTest(integration.ModuleCase):
                     'config.get',
                     ['config_opt:layer2']),
                 'kosher')
-
+        # Check minion config
+        self.assertEqual(
+                self.run_function(
+                    'config.get',
+                    ['config_test:spam']),
+                'eggs')

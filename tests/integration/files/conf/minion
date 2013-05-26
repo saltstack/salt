@@ -33,3 +33,6 @@ grains:
       - susan
       - ian
       - barbara
+
+config_test:
+  spam: eggs
