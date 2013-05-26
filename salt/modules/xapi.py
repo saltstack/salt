@@ -7,6 +7,13 @@ Xen Source, NOT XenServer nor Xen Cloud Platform. As a matter of fact it
 to adapt this code to XS/XCP, mostly playing with XenAPI version, but as
 XCP is not taking precedence on Xen Source on many platforms, please keep
 compatibility in mind.
+
+Useful documentation:
+
+. http://downloads.xen.org/Wiki/XenAPI/xenapi-1.0.6.pdf
+. http://docs.vmd.citrix.com/XenServer/6.0.0/1.0/en_gb/api/
+. https://github.com/xen-org/xen-api/tree/master/scripts/examples/python
+. http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 '''
 
 import os
@@ -52,7 +59,7 @@ def _get_xapi_session():
     xapi_password = __salt__['config.option']('xapi.password')
 
     if not xapi_uri:
-        # "old" xend method
+        # xend local UNIX socket
         xapi_uri = 'httpu:///var/run/xend/xen-api.sock'
     if not xapi_login:
         xapi_login = ''
@@ -67,7 +74,7 @@ def _get_xapi_session():
     except:
         raise CommandExecutionError('Failed to connect to XenAPI socket.')
     finally:
-        session.logout()
+        session.xenapi.session.logout()
 
 
 # Used rectypes (Record types):
@@ -77,6 +84,16 @@ def _get_xapi_session():
 # VM
 # VIF
 # VBD
+
+
+def _get_xtool():
+    '''
+    Internal, returns xl or xm command line path
+    '''
+    for xtool in ['xl', 'xm']:
+        path = salt.utils.which(xtool)
+        if path is not None:
+            return path
 
 
 def _get_all(xapi, rectype):
@@ -416,6 +433,58 @@ def setvcpus(vm_, vcpus):
             return False
 
 
+def vcpu_pin(vm_, vcpu, cpus):
+    '''
+    Set which CPUs a VCPU can use.
+
+    CLI Example::
+
+        salt 'foo' virt.vcpu_pin domU-id 2 1
+        salt 'foo' virt.vcpu_pin domU-id 2 2-6
+    '''
+    with _get_xapi_session() as xapi:
+
+        vm_uuid = _get_label_uuid(xapi, 'VM', vm_)
+        if vm_uuid is False:
+            return False
+
+        # from xm's main
+        def cpu_make_map(cpulist):
+            cpus = []
+            for c in cpulist.split(','):
+                if c == '':
+                    continue
+                if c.find('-') != -1:
+                    (x,y) = c.split('-')
+                    for i in range(int(x),int(y)+1):
+                        cpus.append(int(i))
+                else:
+                    # remove this element from the list
+                    if c[0] == '^':
+                        cpus = [x for x in cpus if x != int(c[1:])]
+                    else:
+                        cpus.append(int(c))
+            cpus.sort()
+            return ",".join(map(str, cpus))
+    
+        if cpus == 'all':
+            cpumap = cpu_make_map('0-63')
+        else:
+            cpumap = cpu_make_map('{0}'.format(cpus))
+
+        try:
+            xapi.VM.add_to_VCPUs_params_live(vm_uuid,
+                                            'cpumap{0}'.format(vcpu), cpumap)
+            return True
+        # VM.add_to_VCPUs_params_live() implementation in xend 4.1+ has
+        # a bug which makes the client call fail.
+        # That code is accurate for all others XenAPI implementations, but
+        # for that particular one, fallback to xm / xl instead.
+        except:
+            return __salt__['cmd.run']('{0} vcpu-pin {1} {2} {3}'.format(
+                                            _get_xtool(), vm_, vcpu, cpus))
+
+
 def freemem():
     '''
     Return an int representing the amount of memory that has not been given
@@ -521,13 +590,7 @@ def create(config_):
 
         salt '*' virt.create <path to Xen cfg file>
     '''
-    def get_xtool():
-        for xtool in ['xl', 'xm']:
-            path = salt.utils.which(xtool)
-            if path is not None:
-                return path
-
-    return __salt__['cmd.run']('{0} create {1}'.format(get_xtool(), config_))
+    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_))
 
 def start(config_):
     '''
