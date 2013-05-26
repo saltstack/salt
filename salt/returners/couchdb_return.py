@@ -41,17 +41,14 @@ def _get_options( ):
 
 def _generate_doc( ret, options ):
 	'''
-	Create a object that will be saved into the database.
-	
-	Takes a return object that gets passed into the returner, and
-	also a set of options from the salt configuration.
+	Create a object that will be saved into the database based on
+	options.
 	'''
 	r		= ret
 	r["_id"]	= ret["jid"]
 	r["timestamp"]	= time.time( )
 	return r
 
-# Actual returner.
 def returner( ret ):
 	'''
 	Take in the return and shove it into the couchdb database.
