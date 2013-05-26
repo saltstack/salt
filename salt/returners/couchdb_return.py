@@ -14,6 +14,9 @@ defined in either the master or the minion. Defaults are shown below:
 	couchdb.db:		'salt'
 
 '''
+
+import json
+
 # Setup logging..
 import logging
 log = logging.getLogger( __name__ )
@@ -32,6 +35,8 @@ def __virtual__( ):
 
 # Actual returner.
 def returner( ret ):
+	print( ret )
+
 	'''
 	Take in the return from a minion and shove it into the couchdb database.
 	'''
@@ -49,4 +54,5 @@ def returner( ret ):
 	# Get the database object we're interested in.
 	db = couchdb_server[database_name]
 	
+	# db.create( json.dumps( ret ) )
 	print ret.__dict__
