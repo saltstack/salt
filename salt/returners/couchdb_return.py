@@ -38,7 +38,7 @@ def _get_options( ):
 
 	doc = __salt__['config.option']('couchdb.doc')
 	if not doc:
-		doc = { "time": { "import": ["time"], "key": "timestamp", "value": "time.time()" } }
+		doc = [ { "import": ["time"], "key": "timestamp", "value": "time.time()" } ]
 
 	return { "url": server_url, "create": create_db, "db": db_name, "doc": doc }
 
@@ -52,17 +52,17 @@ def _generate_doc( ret, options ):
 	r		= ret
 	r["_id"]	= ret["jid"]
 
+	log.debug( "Heh? %s" % options["doc"] )
 	# Iterate though the options["doc"]
 	for _obj in options["doc"]:
 		# If import is defined, iterate through the list and import.
 		if hasattr( _obj, "import" ):
-			pass
+			for to_import in getattr( _obj, "import" ):
+				eval( "import %s" % to_import )
 
 		# Set the return object[key] to eval(value) in effect.
 		r[_obj["key"]] = eval( _obj["value"] )
 		
-
-	r["timestamp"]	= time.time( )
 	return r
 
 def returner( ret ):
