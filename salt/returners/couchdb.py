@@ -1,3 +1,21 @@
+'''
+Return data to a CouchDB server.
+
+:maintainer:	Some Person <user@host.tld>
+:maturity:	new
+:depends:	python-couchdb
+:platform:	all
+
+This returner requires that the following configuration values be
+defined in either the master or the minion. Defaults are shown below:
+
+	couchdb.host: 'salt'
+	couchdb.port: 5984
+	couchdb.db: 'salt'
+	couchdb.user: None
+	couchdb.pass: None
+
+'''
 # Setup logging..
 import logging
 log = logging.getLogger( __name__ )
