@@ -2,9 +2,15 @@
 Simple returner for CouchDB. Optional configuration
 settings are listed below, along with sane defaults.
 
+couchdb.hooks
+	* is a list of dict objects.
+	* in each dict there is a key and value.
+	* the value is eval()'d
+	* optional "eval", which is executed beforehand.
+
 couchdb.db:		'salt'
 couchdb.url:		'http://salt:5984/'
-couchdb.hooks:
+couchdb.hooks:		[ { "key": "timestamp", "value": "time.time()", "eval": "import time" } ]
 
 '''
 import logging
@@ -56,13 +62,10 @@ def _generate_doc( ret, options ):
 	r		= ret
 	r["_id"]	= ret["jid"]
 
-	log.debug( "Starting hook iteration" )
 	for hook in options["hooks"]:
-		log.debug( "Hook: %s" % hook )
 
 		# Eval if specified.
 		if hasattr( hook, "eval" ):
-			log.debug( "Evaling '%s'" % hook["eval"] )
 			eval( hook["eval"] )
 
 		r[hook["key"]] = eval( hook["value"] )
@@ -82,7 +85,9 @@ def returner( ret ):
 
 	# Create the database if the configuration calls for it.
 	if not options["db"] in server:
+		log.debug( "Creating database %s" % options["db"] )
 		server.create( options["db"] )
 
 	# Save the document that comes out of _generate_doc.
 	server[options["db"]].save( _generate_doc( ret, options ) )
+	
