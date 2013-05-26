@@ -56,6 +56,9 @@ def procs():
 
 
 def _get_process_info(proc):
+    '''
+    Return  process information
+    '''
     cmd = (proc.CommandLine or '').encode('utf-8')
     name = proc.Name.encode('utf-8')
     info = dict(
