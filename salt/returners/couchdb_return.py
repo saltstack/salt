@@ -36,7 +36,7 @@ def _get_options( ):
 
 	db_name = __salt__['config.option']('couchdb.db')
 	if not db_name:
-		log.debug( "Using default datatbase." )
+		log.debug( "Using default database." )
 		db_name = "salt"
 
 	hooks = __salt__['config.option']('couchdb.hooks')
@@ -44,7 +44,7 @@ def _get_options( ):
 		log.debug( "Using default hooks" )
 		hooks = [ { "key": "timestamp", "value": "time.time()", "eval": "import time" } ]
 
-	return { "url": server_url, "create": create_db, "db": db_name, "hooks": hooks }
+	return { "url": server_url, "db": db_name, "hooks": hooks }
 
 def _generate_doc( ret, options ):
 	'''
@@ -58,9 +58,11 @@ def _generate_doc( ret, options ):
 
 	log.debug( "Starting hook iteration" )
 	for hook in options["hooks"]:
+		log.debug( "Hook: %s" % hook )
 
 		# Eval if specified.
 		if hasattr( hook, "eval" ):
+			log.debug( "Evaling '%s'" % hook["eval"] )
 			eval( hook["eval"] )
 
 		r[hook["key"]] = eval( hook["value"] )
