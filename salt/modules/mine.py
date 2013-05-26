@@ -78,6 +78,7 @@ def update(clear=False):
         sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
     except Exception:
         pass
+    return True
 
 
 def send(func, *args, **kwargs):
