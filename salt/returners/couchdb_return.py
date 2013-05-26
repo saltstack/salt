@@ -14,7 +14,6 @@ couchdb.hooks:		[ { "key": "timestamp", "value": "time.time()", "eval": "import 
 
 '''
 import logging
-import time
 
 log = logging.getLogger( __name__ )
 
@@ -90,4 +89,3 @@ def returner( ret ):
 
 	# Save the document that comes out of _generate_doc.
 	server[options["db"]].save( _generate_doc( ret, options ) )
-	
