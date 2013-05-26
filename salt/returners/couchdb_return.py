@@ -1,25 +1,8 @@
 '''
-Return data to a CouchDB server.
-
-:maintainer:	Some Person <user@host.tld>
-:maturity:	new
-:depends:	python-couchdb
-:platform:	all
-
-This returner requires that the following configuration values be
-defined in either the master or the minion. Defaults are shown below:
-
-	couchdb.url:		'http://salt:5984/'
-	couchdb.create_db:	True
-	couchdb.db:		'salt'
-
+couchdb.db:		'salt'
+couchdb.url:		'http://salt:5984/'
 '''
-
-import json
-
-# Setup logging..
-import logging
-log = logging.getLogger( __name__ )
+import time
 
 # Import the required modules.
 try:
@@ -33,26 +16,36 @@ def __virtual__( ):
 		return False
 	return 'couchdb'
 
+# Get the configuration options, and set some defaults
+server_url	= __salt__['config.option']('couchdb.url')
+if not server_url:
+	server_url = "http://salt:5984/"
+create_db	= __salt__['config.option']('couchdb.create_db')
+if create_db == None:
+	create_db = True
+db_name		= __salt__['config.option']('couchdb.db')
+if not db_name:
+	db_name = "salt"
+
 # Actual returner.
 def returner( ret ):
-	print( ret )
-
 	'''
-	Take in the return from a minion and shove it into the couchdb database.
+	Take in the return and shove it into the couchdb database.
 	'''
-
-	# Make a connection to the couchdb server.
-	couchdb_server = couchdb.client.Server( __salt__['config.option']('couchdb.url') )
-
-	# Grab the database name rather than using this long reference everywhere.
-	database_name	= __salt__['config.option']('couchdb.db')
-
-	# If the create_db option was specified, and the database doesn't exist at that url, create it.
-	if __salt__['config.option']('couchdb.create_db') and database_name not in couchdb_server:
-		couchdb_server.create( database_name )
 	
-	# Get the database object we're interested in.
-	db = couchdb_server[database_name]
+	# Get a connection to the couchdb server.
+	couchdb_server	= couchdb.client.Server( server_url )
 	
-	# db.create( json.dumps( ret ) )
-	print ret.__dict__
+	# Create the server if the create_db flag is set and the db
+	# doesn't already exist.
+	if create_db and not db_name in couchdb_server:
+		couchdb_server.create( db_name )
+
+	# Get the database object specifically.
+	db = couchdb_server[db_name]
+
+	# Create a temporary obj that we can add to.
+	obj			= ret
+	obj["_id"]		= ret["jid"]
+	obj["timestamp"]	= time.time( )
+	db.save( obj )
