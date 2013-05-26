@@ -58,6 +58,22 @@ class TestModulesGrains(integration.ModuleCase):
         for grain_name in check_for:
             self.assertTrue(grain_name in lsgrains)
 
+    def test_set_val(self):
+        '''
+        test grains.set_val
+        '''
+        self.assertEqual(
+                self.run_function(
+                    'grains.setval',
+                    ['setgrain', 'grainval']),
+                {'setgrain': 'grainval'})
+        self.assertTrue(
+                self.run_function(
+                    'grains.item', ['setgrain']
+                    )
+                )
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
