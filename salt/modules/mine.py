@@ -114,7 +114,6 @@ def send(func, *args, **kwargs):
                     )
                 )
         return False
-
     load = {
             'cmd': '_mine',
             'data': data,
@@ -123,9 +122,9 @@ def send(func, *args, **kwargs):
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
     try:
-        sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
+        sreq.send('aes', auth.crypticle.dumps(load), 1, 10)
     except Exception:
-        return False
+        return True
     return True
 
 
