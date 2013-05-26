@@ -834,10 +834,12 @@ class AESFuncs(object):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'mine.p')
             if not load.get('clear', False):
-                with salt.utils.fopen(datap, 'r') as fp_:
-                    new = self.serial.load(fp_)
-                new.update(load['data'])
-                load['data'] = new
+                if os.path.isfile(datap):
+                    with salt.utils.fopen(datap, 'r') as fp_:
+                        new = self.serial.load(fp_)
+                    if isinstance(new, dict):
+                        new.update(load['data'])
+                        load['data'] = new
             with salt.utils.fopen(datap, 'w+') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
