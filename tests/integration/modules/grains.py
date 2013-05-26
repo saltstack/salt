@@ -73,6 +73,16 @@ class TestModulesGrains(integration.ModuleCase):
                     )
                 )
 
+    def test_get(self):
+        '''
+        test grains.get
+        '''
+        self.assertEqual(
+                self.run_function(
+                    'grains.get',
+                    ['level1:level2']),
+                'foo')
+
 
 
 if __name__ == '__main__':
