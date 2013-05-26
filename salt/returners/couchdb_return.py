@@ -1,6 +1,11 @@
 '''
+Simple returner for CouchDB. Optional configuration
+settings are listed below, along with sane defaults.
+
 couchdb.db:		'salt'
 couchdb.url:		'http://salt:5984/'
+couchdb.create_db:	True
+
 '''
 import time
 
