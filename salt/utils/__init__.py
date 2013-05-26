@@ -659,7 +659,11 @@ def format_call(fun, data):
         if arg in kwargs:
             ret['args'].append(kwargs[arg])
         else:
-            ret['args'].append(data[arg])
+            try:
+                ret['args'].append(data[arg])
+            except KeyError:
+                # Bad arg match, can safely proceed
+                pass
     return ret
 
 
