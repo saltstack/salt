@@ -9,6 +9,9 @@ import re
 __opts__ = {}
 __pillar__ = {}
 
+__func_alias__ = {
+    'lits_': 'list'
+}
 
 def _pecl(command):
     '''
@@ -66,7 +69,7 @@ def update(pecls):
     return _pecl('install -U {0}'.format(pecls))
 
 
-def list():
+def list_():
     '''
     List installed pecl extensions.
 
