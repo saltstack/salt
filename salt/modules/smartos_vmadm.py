@@ -69,7 +69,7 @@ def _gen_zone_json(**kwargs):
     # This one is mandatory for OS virt
     ret.update(brand='joyent')
     ret.update((key, kwargs[key])
-        for key in verif 
+        for key in check_args 
         if key in kwargs)
 
     return json.dumps(ret)
