@@ -33,3 +33,9 @@ grains:
       - susan
       - ian
       - barbara
+
+config_test:
+  spam: eggs
+
+mine_functions:
+  test.ping: []

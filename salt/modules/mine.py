@@ -22,7 +22,7 @@ def _auth():
     return __context__['auth']
 
 
-def update():
+def update(clear=False):
     '''
     Execute the configured functions and send the data back up to the master
     The functions to be executed are merged from the master config, pillar and
@@ -69,7 +69,8 @@ def update():
     load = {
             'cmd': '_mine',
             'data': data,
-            'id': __opts__['id']
+            'id': __opts__['id'],
+            'clear': clear,
             }
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = _auth()
@@ -77,6 +78,54 @@ def update():
         sreq.send('aes', auth.crypticle.dumps(load), 1, 0)
     except Exception:
         pass
+    return True
+
+
+def send(func, *args, **kwargs):
+    '''
+    Send a specific function to the mine.
+
+    CLI Example::
+
+        salt '*' mine.send network.interfaces eth0
+    '''
+    if not func in __salt__:
+        return False
+    data = {}
+    arg_data = salt.utils.arg_lookup(__salt__[func])
+    func_data = {}
+    for ind in range(len(arg_data.get('args', []))):
+        try:
+            func_data[arg_data[ind]] = args[ind]
+        except IndexError:
+            # Safe error, arg may be in kwargs
+            pass
+    func_data.update(kwargs)
+    f_call = salt.utils.format_call(__salt__[func], func_data)
+    try:
+        if 'kwargs' in f_call:
+            data[func] = __salt__[func](*f_call['args'], **f_call['kwargs'])
+        else:
+            data[func] = __salt__[func](*f_call['args'])
+    except Exception as exc:
+        log.error(
+                'Function {0} in mine.send failed to execute'.format(
+                    func
+                    )
+                )
+        return False
+    load = {
+            'cmd': '_mine',
+            'data': data,
+            'id': __opts__['id'],
+            }
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = _auth()
+    try:
+        sreq.send('aes', auth.crypticle.dumps(load), 1, 10)
+    except Exception:
+        return True
+    return True
 
 
 def get(tgt, fun, expr_form='glob'):

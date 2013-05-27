@@ -7,6 +7,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.winapi
 from salt.utils.socket_util import sanitize_host
 
 # Import 3rd party libraries
