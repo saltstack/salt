@@ -747,7 +747,7 @@ class Loader(object):
                     continue
 
             if whitelist:
-                # It a whitelist is defined then only load the module if it is
+                # If a whitelist is defined then only load the module if it is
                 # in the whitelist
                 if module_name not in whitelist:
                     continue
