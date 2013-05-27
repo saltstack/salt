@@ -169,7 +169,11 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(__opts__, 'openstack', ('user',))
+    return config.is_provider_configured(
+        __opts__,
+        __active_profile_name__ or 'openstack',
+        ('user',)
+    )
 
 
 def get_conn():
