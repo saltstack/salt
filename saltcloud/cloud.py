@@ -8,7 +8,6 @@ import glob
 import time
 import signal
 import logging
-import tempfile
 import multiprocessing
 
 # Import saltcloud libs
@@ -534,8 +533,10 @@ class Cloud(object):
 
         try:
             alias, driver = vm_['provider'].split(':')
-            output = self.clouds['{0}.create'.format(driver)](vm_)
-
+            func = '{0}.create'.format(driver)
+            with saltcloud.utils.CloudProviderContext(self.clouds[func],
+                                                      vm_['provider']):
+                output = self.clouds[func](vm_)
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
                         'all', 'modules', 'states', 'grains'):
@@ -727,17 +728,22 @@ class Cloud(object):
             )
         )
 
-        if kwargs:
+        provider = '{0}:{1}'.format(alias, driver)
+        with saltcloud.utils.CloudProviderContext(
+                self.clouds[fun], provider):
+            if kwargs:
+                return {
+                    alias: {
+                        driver: self.clouds[fun](
+                            call='function', kwargs=kwargs
+                        )
+                    }
+                }
             return {
                 alias: {
-                    driver: self.clouds[fun](call='function', kwargs=kwargs)
+                    driver: self.clouds[fun](call='function')
                 }
             }
-        return {
-            alias: {
-                driver: self.clouds[fun](call='function')
-            }
-        }
 
 
 class Map(Cloud):
