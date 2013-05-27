@@ -86,7 +86,9 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__, 'gogrid', ('apikey', 'sharedsecret')
+        __opts__,
+        __active_profile_name__ or 'gogrid',
+        ('apikey', 'sharedsecret')
     )
 
 
