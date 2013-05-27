@@ -77,7 +77,11 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(__opts__, 'parallels', ('user',))
+    return config.is_provider_configured(
+        __opts__,
+        __active_profile_name__ or 'parallels',
+        ('user',)
+    )
 
 
 def avail_images():
