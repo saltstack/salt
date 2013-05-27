@@ -313,6 +313,10 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'single entry for EC2, Joyent, Openstack, and so '
                         'forth.'
                     )
+                    raise saltcloud.exceptions.SaltCloudConfigError(
+                        'The cloud provider alias {0!r} has multiple entries '
+                        'for the {1[provider]!r} driver.'.format(key, details)
+                    )
                 handled_providers.add(
                     details['provider']
                 )
