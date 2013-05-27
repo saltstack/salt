@@ -38,6 +38,9 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
+    # Check that debconf was loaded
+    if 'debconf.show' not in __salt__:
+        return False
 
     return 'debconf'
 
