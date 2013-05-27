@@ -159,7 +159,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        'aws',
+        __active_profile_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
     )
 
