@@ -102,7 +102,9 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__, 'ibmsce', ('user', 'password')
+        __opts__,
+        __active_profile_name__ or 'ibmsce',
+        ('user', 'password')
     )
 
 
