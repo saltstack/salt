@@ -1,17 +1,19 @@
 '''
 CloudStack Cloud Module
-===================
+=======================
 
-The CloudStack cloud module is used to control access to a CloudStack based Public Cloud.
+The CloudStack cloud module is used to control access to a CloudStack based
+Public Cloud.
 
-Use of this module requires the ``apikey, secretkey, host and path`` parameters.
+Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
+``path`` parameters.
 
 .. code-block:: yaml
 
     my-cloudstack-cloud-config:
-      apikey: <your api key > 
+      apikey: <your api key >
       secretkey: <your secret key >
-      host: localhost 
+      host: localhost
       path: /client/api
       provider: cloudstack
 
@@ -20,9 +22,6 @@ Use of this module requires the ``apikey, secretkey, host and path`` parameters.
 # Import python libs
 import pprint
 import logging
-
-# Import libcloud
-from libcloud.compute.base import NodeAuthSSHKey
 
 # Import salt cloud libs
 import saltcloud.config as config
@@ -44,6 +43,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 
+
 # Only load in this module if the CLOUDSTACK configurations are in place
 def __virtual__():
     '''
@@ -51,8 +51,8 @@ def __virtual__():
     '''
     if get_configured_provider() is False:
         log.debug(
-            'There is no CloudStack cloud provider configuration available. Not '
-            'loading module.'
+            'There is no CloudStack cloud provider configuration available. '
+            'Not loading module.'
         )
         return False
 
@@ -64,7 +64,11 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(__opts__, 'cloudstack', ('apikey','secretkey','host','path'))
+    return config.is_provider_configured(
+        __opts__,
+        __active_profile_name__ or 'cloudstack',
+        ('apikey', 'secretkey', 'host', 'path')
+    )
 
 
 def get_conn():
@@ -74,16 +78,17 @@ def get_conn():
     driver = get_driver(Provider.CLOUDSTACK)
     return driver(
         key=config.get_config_value(
-           'apikey', get_configured_provider(), __opts__, search_global=False
+            'apikey', get_configured_provider(), __opts__, search_global=False
         ),
         secret=config.get_config_value(
-           'secretkey', get_configured_provider(), __opts__, search_global=False
+            'secretkey', get_configured_provider(), __opts__,
+            search_global=False
         ),
         host=config.get_config_value(
-           'host', get_configured_provider(), __opts__, search_global=False
+            'host', get_configured_provider(), __opts__, search_global=False
         ),
         path=config.get_config_value(
-           'path', get_configured_provider(), __opts__, search_global=False
+            'path', get_configured_provider(), __opts__, search_global=False
         )
     )
 
@@ -110,13 +115,15 @@ def get_password(vm_):
         ), search_global=False
     )
 
+
 def get_key():
     '''
     Returns the ssk private key for VM access
     '''
     return config.get_config_value(
         'private_key', get_configured_provider(), __opts__, search_global=False
-       ) 
+    )
+
 
 def get_keypair(vm_):
     '''
@@ -130,6 +137,7 @@ def get_keypair(vm_):
 
     raise SaltCloudNotFound('The specified keypair could not be found.')
 
+
 def get_ip(data):
     '''
     Return the IP address of the VM
@@ -137,10 +145,11 @@ def get_ip(data):
     Otherwise try to extract the private IP and use that one.
     '''
     try:
-       ip = data.public_ips[0]
+        ip = data.public_ips[0]
     except:
-       ip = data.private_ips[0]
+        ip = data.private_ips[0]
     return ip
+
 
 def create(vm_):
     '''
