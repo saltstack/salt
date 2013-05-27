@@ -606,9 +606,7 @@ class Minion(object):
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
-                arg = data['arg'][ind]
-                if '\n' not in arg:
-                    arg = yaml.safe_load(arg)
+                arg = yamlify_arg(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
                 elif isinstance(arg, (dict, int, list, string_types)):
@@ -699,9 +697,7 @@ class Minion(object):
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
-                    arg = data['arg'][ind][index]
-                    if '\n' not in arg:
-                        arg = yaml.safe_load(arg)
+                    arg = yamlify_arg(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
                     elif isinstance(arg, (dict, int, list, string_types)):
