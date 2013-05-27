@@ -214,6 +214,10 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
+                # We're not yet making use of the CloudProviderContext here
+                # because we're just listing information. If and when we find
+                # that a specific cloud provider returns a different listing
+                # based on credentials, we'll revisit this subject
                 data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
@@ -253,6 +257,10 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
+                # We're not yet making use of the CloudProviderContext here
+                # because we're just listing information. If and when we find
+                # that a specific cloud provider returns a different listing
+                # based on credentials, we'll revisit this subject
                 data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
@@ -292,6 +300,10 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
+                # We're not yet making use of the CloudProviderContext here
+                # because we're just listing information. If and when we find
+                # that a specific cloud provider returns a different listing
+                # based on credentials, we'll revisit this subject
                 data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
@@ -1140,8 +1152,7 @@ def create_multiprocessing(parallel_data):
             'Failed to deploy {0[name]!r}. Error: {1}'.format(
                 parallel_data, exc
             ),
-            # Show the traceback if the debug logging level is
-            # enabled
+            # Show the traceback if the debug logging level is enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return {parallel_data['name']: {'Error': str(exc)}}
@@ -1176,6 +1187,5 @@ def run_paralel_map_providers_query(data):
             # enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
-        # Failed to communicate with the provider, don't list any
-        # nodes
+        # Failed to communicate with the provider, don't list any nodes
         return (data['alias'], data['driver'], [])
