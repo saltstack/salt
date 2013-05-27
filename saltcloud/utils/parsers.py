@@ -354,6 +354,11 @@ class CloudQueriesMixIn(object):
                         query += '_select'
                     elif opt.dest == 'list_providers':
                         query = 'list_providers'
+                        if self.args:
+                            self.error(
+                                '\'--list-providers\' does not accept any '
+                                'arguments'
+                            )
                     self.selected_query_option = query
 
             funcname = 'process_{0}'.format(option.dest)
