@@ -427,7 +427,7 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
             # WARN the user!!!!
             log.error(
                 'The {0!r} cloud provider definition has more than one '
-                'entries. Your VM configuration should be specifying the '
+                'entry. Your VM configuration should be specifying the '
                 'provider as \'provider: {0}:<provider-engine>\'. Since '
                 'it\'s not, we\'re returning the first definition which '
                 'might not be what you intended.'.format(
