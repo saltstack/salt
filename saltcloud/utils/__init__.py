@@ -5,6 +5,7 @@ Utility functions for saltcloud
 # Import python libs
 import os
 import pwd
+import sys
 import shutil
 import socket
 import tempfile
@@ -16,7 +17,6 @@ import pipes
 import types
 import re
 import warnings
-import __builtin__
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -980,11 +980,25 @@ def simple_types_filter(datadict):
 
 
 class CloudProviderContext(object):
-    def __init__(self, profile):
+    '''
+    This context manager is responsible for overriding the value of
+    ``__active_profile_name__`` at the module level, reseting to the previous
+    value afterwards.
+    '''
+
+    def __init__(self, function, profile):
         self.profile = profile
+        self.function = function
+        self.default = None
 
     def __enter__(self):
-        __builtin__.__active_profile_name__ = self.profile
+        # Let's store what the module is defining, if anything
+        mod = sys.modules[self.function.__module__]
+        self.default = mod.__active_profile_name__
+        # Override the provided provider within this context
+        mod.__active_profile_name__ = self.profile
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        del(__builtin__.__active_profile_name__)
+        # Reset to previous value
+        sys.modules[
+            self.function.__module__].__active_profile_name__ = self.default
