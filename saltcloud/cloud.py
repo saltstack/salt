@@ -928,6 +928,15 @@ class Map(Cloud):
                             'create map'.format(name)
                         )
                         ret['create'].pop(name)
+                    continue
+
+                # Regarding other providers, simply remove them for the create
+                # map.
+                log.warn(
+                    '{0!r} already exists, removing from the '
+                    'create map'.format(name)
+                )
+                ret['create'].pop(name)
 
         if self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
