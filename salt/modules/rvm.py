@@ -6,6 +6,11 @@ Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 import re
 import os
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __opts__ = {
     'rvm.runas': None,
 }
@@ -102,7 +107,7 @@ def reinstall_ruby(ruby, runas=None):
     return _rvm('reinstall', ruby, runas=runas)
 
 
-def list(runas=None):
+def list_(runas=None):
     '''
     List all rvm installed rubies.
 
