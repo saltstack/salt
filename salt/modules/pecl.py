@@ -10,7 +10,7 @@ __opts__ = {}
 __pillar__ = {}
 
 __func_alias__ = {
-    'lits_': 'list'
+    'list_': 'list'
 }
 
 def _pecl(command):
