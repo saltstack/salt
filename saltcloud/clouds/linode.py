@@ -76,7 +76,11 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(__opts__, 'linode', ('apikey',))
+    return config.is_provider_configured(
+        __opts__,
+        __active_profile_name__ or 'linode',
+        ('apikey',)
+    )
 
 
 def get_conn():
