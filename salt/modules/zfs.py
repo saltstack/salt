@@ -16,10 +16,9 @@ import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
-# Function alias to set mapping.
-__func_alias__ = {
-    'list_': 'list'
-}
+# Function alias to set mapping. Filled
+# in later on.
+__func_alias__ = { }
 
 @salt.utils.memoize
 def _check_zfs( ):
@@ -81,7 +80,8 @@ def _make_function( cmd_name ):
     '''
     def _cmd( *args ):
         '''
-        Generated function.
+        Generated function. Maybe at some point in the
+        future, fill this in dynamically.
         '''
         # Define a return value.
         ret = { }
@@ -113,28 +113,3 @@ for available_cmd in _available_commands( ):
 
     # Update the function alias so that salt finds the functions properly.
     __func_alias__["%s_" % available_cmd] = available_cmd
-
-log.debug( __func_alias__ )
-
-def list_(*args):
-    '''
-    List all filesystems and volumes properties. If 'snapshot' given : list
-    snapshots
-    
-    CLI Example::
-
-        salt '*' zfs.list [snapshot] 
-    '''
-    ret = {}
-    zfs = _check_zfs()
-    if len(args) == 1 and 'snapshot' in args:
-        cmd = '{0} list -t snapshot'.format(zfs)
-    else:
-        cmd = '{0} list'.format(zfs)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        ret['Error'] = _exit_status(retcode)
-        return ret
-    ret = res['stdout'].splitlines()
-    return ret
