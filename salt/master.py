@@ -1206,6 +1206,8 @@ class AESFuncs(object):
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
             if not key in ret:
                 ret[key] = val
+        if clear_load.get('form', '') != 'full':
+            ret.pop('__jid__')
         return ret
 
     def revoke_auth(self, load):

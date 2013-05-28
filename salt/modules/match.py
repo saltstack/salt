@@ -5,6 +5,9 @@ specs.
 
 import salt.minion
 
+__func_alias__ = {
+    'list_': 'list'
+}
 
 def compound(tgt):
     '''
@@ -96,7 +99,7 @@ def grain(tgt):
         return False
 
 
-def list(tgt):
+def list_(tgt):
     '''
     Return True if the minion matches the given list target
 

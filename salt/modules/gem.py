@@ -5,6 +5,9 @@ Manage ruby gems.
 # Import python libs
 import re
 
+__func_alias__ = {
+    'list_': 'list'
+}
 
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
@@ -117,7 +120,7 @@ def update_system(version='', ruby=None, runas=None):
                 format(version=version), ruby, runas=runas)
 
 
-def list(prefix='', ruby=None, runas=None):
+def list_(prefix='', ruby=None, runas=None):
     '''
     List locally installed gems.
 

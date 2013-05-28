@@ -4,6 +4,7 @@ Module for managing VMs on SmartOS
 
 # Import Python libs
 import logging
+import json
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
@@ -35,6 +36,43 @@ def _exit_status(retcode):
             2 : 'Usage error.'
           }[retcode]
     return ret
+
+
+def _gen_zone_json(**kwargs):
+    ''' 
+    Generate the JSON for OS virtualization creation
+    
+    Example layout (all keys are mandatory) :
+
+       {"brand": "joyent",
+        "dataset_uuid": "9eac5c0c-a941-11e2-a7dc-57a6b041988f",
+        "alias": "myname",
+        "hostname": "www.domain.com",
+        "max_physical_memory": 2048,
+        "quota": 10,
+        "nics": [
+            {
+                "nic_tag": "admin",
+                "ip": "192.168.0.1",
+                "netmask": "255.255.255.0",
+                "gateway": "192.168.0.254"
+            }
+        ]}
+    '''
+    ret = {}
+    check_args = (
+        'dataset_uuid','alias','hostname',
+        'max_physical_memory','quota','nics')
+    # Lazy check of arguments
+    if not all (key in kwargs for key in check_args):
+        raise CommandExecutionError('Not all arguments are given')
+    # This one is mandatory for OS virt
+    ret.update(brand='joyent')
+    ret.update((key, kwargs[key])
+        for key in check_args 
+        if key in kwargs)
+
+    return json.dumps(ret)
 
 
 def list_vms():

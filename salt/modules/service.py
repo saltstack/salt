@@ -6,6 +6,9 @@ to this basic module
 # Import python libs
 import os
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 GRAINMAP = {
            'Arch': '/etc/rc.d',
@@ -106,7 +109,7 @@ def status(name, sig=None):
     return __salt__['status.pid'](sig if sig else name)
 
 
-def reload(name):
+def reload_(name):
     '''
     Restart the specified service
 

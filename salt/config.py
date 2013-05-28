@@ -96,7 +96,7 @@ DEFAULT_MINION_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'acceptance_wait_time': 10,
-    'loop_interval': 0.05,
+    'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
     'grains': {},
