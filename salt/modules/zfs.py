@@ -39,6 +39,7 @@ def _available_commands( ):
     if not zfs_path:
         return False
 
+    # TODO: Supress the ERROR log generated when we read stderr.. 
     _return = [ ]
     res = __salt__['cmd.run_all']("%s help" % zfs_path)
     for line in res['stderr'].splitlines( ):
@@ -63,12 +64,6 @@ def _exit_status(retcode):
           }[retcode]
     return ret
 
-def test( ):
-    '''
-    Testing
-    '''
-    return _available_commands( )
-
 def __virtual__():
     '''
     Makes sure that ZFS is available.
@@ -77,6 +72,12 @@ def __virtual__():
         return 'zfs'
     return False
 
+# At this point use the helper commands to dynamically generate
+# functions that are available.
+for available_cmd in _available_commands( ):
+    # Define a new function here based on avaiable_cmd.
+    # Also update __func_alias__
+    pass
 
 def list_(*args):
     '''
