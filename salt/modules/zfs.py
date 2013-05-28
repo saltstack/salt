@@ -10,17 +10,47 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Function alias to set mapping.
 __func_alias__ = {
     'list_': 'list'
 }
 
 @salt.utils.memoize
-def _check_zfs():
+def _check_zfs( ):
     '''
-    Looks to see if zfs is present on the system
+    Looks to see if zfs is present on the system.
+
+    Optional command check.
     '''
+
+    # Get the path to the zfs binary.
     return salt.utils.which('zfs')
 
+def _available_commands( ):
+    '''
+    List available commands based on 'zfs help'. Either
+    returns a list, or False.
+    '''
+    zfs_path = _check_zfs( )
+    if not zfs_path:
+        return False
+
+    _return = [ ]
+    res = __salt__['cmd.run_all']("%s help" % zfs_path)
+    for line in res['stdout'].splitlines( ):
+        if re.match( "	[a-zA-Z]", line ):
+            for cmd in [ cmd.strip() for cmd in ine.split( " " )[0].split( "|" ) ]:
+                _return.append( cmd )
+    return _return
+
+def _check_command( command ):
+    '''
+    Simple check to see if the command is valid.
+    '''
+    return command in _available_commands( )
+
+        if re.match( "	[a-zA-Z]", line ):
+            if line.startswith( 
 
 def _exit_status(retcode):
     '''
@@ -32,6 +62,11 @@ def _exit_status(retcode):
           }[retcode]
     return ret
 
+def test( ):
+    '''
+    Testing
+    '''
+    return _available_commands( )
 
 def __virtual__():
     '''
