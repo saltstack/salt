@@ -12,7 +12,7 @@ import os
 import re
 
 # Function alias to not shadow built-ins.
-def __func_alias__ = {
+__func_alias__ = {
     'reload_': 'reload'
 }
 
@@ -75,7 +75,7 @@ def reload_(name):
     Wrapper for term()
 
     CLI Example::
-    
+
         salt '*' daemontools.reload <service name>
     '''
     term(name)
@@ -100,7 +100,7 @@ def restart(name):
 def full_restart(name):
     '''
     Calls daemontools.restart() function
-    
+
     CLI Example::
 
         salt '*' daemontools.full_restart <service name>
