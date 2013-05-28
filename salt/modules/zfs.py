@@ -8,6 +8,8 @@ import logging
 # from 'zfs help'
 import re
 
+import sys
+
 # Import Salt libs
 import salt.utils
 import salt.modules.cmdmod as salt_cmd
@@ -100,18 +102,18 @@ def _make_function( cmd_name ):
     # At this point return the function we've just defined.
     return _cmd
 
-
-generated = { }
+generated = { } 
 
 # Run through all the available commands
 for available_cmd in _available_commands( ):
 
     generated[available_cmd] = _make_function( available_cmd )
+    setattr( sys.modules[__name__], "%s_" % available_cmd, generated[available_cmd] )
 
     # Update the function alias so that salt finds the functions properly.
-    __func_alias__["generated[%s]" % available_cmd] = available_cmd
+    __func_alias__["%s_" % available_cmd] = available_cmd
 
-log.debug( generated )
+log.debug( __func_alias__ )
 
 def list_(*args):
     '''
