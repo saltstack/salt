@@ -60,18 +60,18 @@ def poweroff():
 
 def reboot():
     '''
-    Reboot the system using the 'reboot' command
+    Reboot the system
     
     CLI Example::
     
         salt '*' system.reboot
     '''
-    cmd = 'reboot'
+    cmd = 'shutdown /r'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
 
-def shutdown():
+def shutdown(timeout=5):
     '''
     Shutdown a running system
     
@@ -79,7 +79,19 @@ def shutdown():
     
         salt '*' system.shutdown
     '''
-    cmd = 'shutdown /s'
+    cmd = 'shutdown /s /t {0}'.format(timeout)
     ret = __salt__['cmd.run'](cmd)
     return ret
 
+
+def shutdown_hard():
+    '''
+    Shutdown a running system with no timeout or warning
+    
+    CLI Example::
+    
+        salt '*' system.shutdown_hard
+    '''
+    cmd = 'shutdown /p'
+    ret = __salt__['cmd.run'](cmd)
+    return ret
