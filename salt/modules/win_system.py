@@ -14,7 +14,7 @@ def __virtual__():
     return 'system'
 
 
-def halt():
+def halt(timeout=5):
     '''
     Halt a running system
     
@@ -22,9 +22,7 @@ def halt():
     
         salt '*' system.halt
     '''
-    cmd = 'shutdown /s'
-    ret = __salt__['cmd.run'](cmd)
-    return ret
+    return shutdown(timeout)
 
 
 def init(runlevel):
@@ -45,7 +43,7 @@ def init(runlevel):
     return 'Not implemented on Windows yet.'
 
 
-def poweroff():
+def poweroff(timeout=5):
     '''
     Poweroff a running system
     
@@ -53,12 +51,10 @@ def poweroff():
     
         salt '*' system.poweroff
     '''
-    cmd = 'shutdown /s'
-    ret = __salt__['cmd.run'](cmd)
-    return ret
+    return shutdown(timeout)
 
 
-def reboot():
+def reboot(timeout=5):
     '''
     Reboot the system
     
@@ -66,7 +62,7 @@ def reboot():
     
         salt '*' system.reboot
     '''
-    cmd = 'shutdown /r'
+    cmd = 'shutdown /r /t {0}'.format(timeout)
     ret = __salt__['cmd.run'](cmd)
     return ret
 
@@ -92,6 +88,6 @@ def shutdown_hard():
     
         salt '*' system.shutdown_hard
     '''
-    cmd = 'shutdown /p'
+    cmd = 'shutdown /p /f'
     ret = __salt__['cmd.run'](cmd)
     return ret
