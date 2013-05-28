@@ -23,8 +23,6 @@ __func_alias__ = { }
 def _check_zfs( ):
     '''
     Looks to see if zfs is present on the system.
-
-    Optional command check.
     '''
 
     # Get the path to the zfs binary.
