@@ -18,6 +18,10 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
 
+# Don't shadow built-in's. 
+__func_alias__ = {
+    'list_': 'list'
+}
 
 VALID_PROTOS = ['http', 'https', 'ftp']
 
@@ -526,7 +530,7 @@ def freeze(bin_env=None,
     return result['stdout'].splitlines()
 
 
-def list(prefix='',
+def list_(prefix='',
          bin_env=None,
          runas=None,
          cwd=None):
