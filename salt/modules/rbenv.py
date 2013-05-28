@@ -125,8 +125,10 @@ def install_ruby(ruby,runas=None):
     if ruby.startswith('ruby-'):
         ruby = re.sub(r'^ruby-','',ruby)
 
-    # TODO: Add FreeBSD MAKE=gmake environment variable to this command
-    return _rbenv_exec('install', ruby, runas=runas)
+    env = None
+    if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
+        env = 'MAKE=gmake'
+    return _rbenv_exec('install', ruby, env=env, runas=runas)
 
 def uninstall_ruby(ruby,runas=None):
     '''
