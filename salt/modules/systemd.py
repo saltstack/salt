@@ -8,6 +8,9 @@ import re
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
@@ -212,7 +215,7 @@ def restart(name):
     return not __salt__['cmd.retcode'](_systemctl_cmd('restart', name))
 
 
-def reload(name):
+def reload_(name):
     '''
     Reload the specified service with systemd
 
