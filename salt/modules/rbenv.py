@@ -135,7 +135,7 @@ def install_ruby(ruby,runas=None):
         return ret['stderr']
     else:
         # Cleanup the failed installation so it doesn't list as installed
-        _rbenv_exec('uninstall', ruby, runas=runas)
+        uninstall_ruby(ruby,runas=runas)
         return False
 
 def uninstall_ruby(ruby,runas=None):
@@ -154,7 +154,7 @@ def uninstall_ruby(ruby,runas=None):
     if ruby.startswith('ruby-'):
         ruby = re.sub(r'^ruby-','',ruby)
 
-    return _rbenv_exec('uninstall', ruby, runas=runas)
+    return _rbenv_exec('uninstall --force', ruby, runas=runas)
 
 def versions(runas=None):
     '''
