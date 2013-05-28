@@ -35,9 +35,14 @@ def init(runlevel):
     
         salt '*' system.init 3
     '''
-    cmd = 'init {0}'.format(runlevel)
-    ret = __salt__['cmd.run'](cmd)
-    return ret
+    #cmd = 'init {0}'.format(runlevel)
+    #ret = __salt__['cmd.run'](cmd)
+    #return ret
+
+    # TODO: Create a mapping of runlevels to 
+    #       corresponding Windows actions
+
+    return 'Not implemented on Windows yet.'
 
 
 def poweroff():
@@ -48,7 +53,7 @@ def poweroff():
     
         salt '*' system.poweroff
     '''
-    cmd = 'poweroff'
+    cmd = 'shutdown /s'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
@@ -74,7 +79,7 @@ def shutdown():
     
         salt '*' system.shutdown
     '''
-    cmd = 'shutdown'
+    cmd = 'shutdown /s'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
