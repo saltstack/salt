@@ -154,7 +154,9 @@ def uninstall_ruby(ruby,runas=None):
     if ruby.startswith('ruby-'):
         ruby = re.sub(r'^ruby-','',ruby)
 
-    return _rbenv_exec('uninstall --force', ruby, runas=runas)
+    args = '--force {0}'.format(ruby)
+    _rbenv_exec('uninstall', args, runas=runas)
+    return True
 
 def versions(runas=None):
     '''
@@ -184,7 +186,11 @@ def default(ruby=None,runas=None):
         salt '*' rbenv.default 2.0.0-p0
     '''
 
-    return _rbenv_exec('global', ruby or '', runas=runas).strip()
+    if ruby:
+        _rbenv_exec('global', ruby, runas=runas)
+        return True
+    else:
+        return _rbenv_exec('global', runas=runas).strip()
 
 def list(runas=None):
     '''
