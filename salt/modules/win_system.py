@@ -22,7 +22,7 @@ def halt():
     
         salt '*' system.halt
     '''
-    cmd = 'halt'
+    cmd = 'shutdown /s'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
