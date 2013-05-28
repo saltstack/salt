@@ -88,7 +88,7 @@ def _make_function( cmd_name ):
 
         # Run the command.
 	#TODO - add arguments into this.
-        res = salt_cmd.run_all( "%s %s" % ( _check_zfs( ), cmd_name ) )
+        res = salt_cmd.run_all( "%s %s %s" % ( _check_zfs( ), cmd_name, " ".join( args ) ) )
 
         # Make a note of the error in the return object if retcode
         # not 0.
