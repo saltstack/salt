@@ -23,6 +23,10 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
+# Function alias to not shadow built-in's
+__func_alias__ = {
+    'list_': 'list'
+}
 
 def __virtual__():
     '''
@@ -248,7 +252,7 @@ def image_meta_delete(id=None,     # pylint: disable-msg=C0103
     return {id: 'Deleted: {0}'.format(pairs)}
 
 
-def list():
+def list_():
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
