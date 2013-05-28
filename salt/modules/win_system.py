@@ -40,7 +40,7 @@ def init(runlevel):
     # TODO: Create a mapping of runlevels to 
     #       corresponding Windows actions
 
-    return 'Not implemented on Windows yet.'
+    return 'Not implemented on Windows at this time.'
 
 
 def poweroff(timeout=5):
