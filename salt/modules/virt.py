@@ -109,13 +109,14 @@ def _get_target(target, ssh):
     return ' %s://%s/%s' % (proto, target, 'system')
 
 
-def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
+def _gen_xml(name, cpu, mem, vda, nicp, emulator, **kwargs):
     '''
     Generate the XML string to define a libvirt vm
     '''
     mem = mem * 1024
+    print 'emulator: {}'.format(emulator)
     data = '''
-<domain type='kvm'>
+<domain type='%%EMULATOR%%'>
         <name>%%NAME%%</name>
         <vcpu>%%CPU%%</vcpu>
         <memory>%%MEM%%</memory>
@@ -137,6 +138,7 @@ def _gen_xml(name, cpu, mem, vda, nicp, **kwargs):
         </features>
 </domain>
 '''
+    data = data.replace('%%EMULATOR%%', emulator)
     data = data.replace('%%NAME%%', name)
     data = data.replace('%%CPU%%', str(cpu))
     data = data.replace('%%MEM%%', str(mem))
@@ -173,8 +175,8 @@ def _image_type(vda):
     '''
     Detect what driver needs to be used for the given image
     '''
-    out = __salt__['cmd.run']('file {0}'.format(vda))
-    if 'Qcow' in out and 'Version: 2' in out:
+    out = __salt__['cmd.run']('qemu-img {0}'.format(vda))
+    if 'qcow2' in out:
         return 'qcow2'
     else:
         return 'raw'
@@ -188,7 +190,7 @@ def _nic_profile(nic):
     return __salt__['config.option']('virt.nic', {}).get(nic, default)
 
 
-def init(name, cpu, mem, image, nic='default', **kwargs):
+def init(name, cpu, mem, image, nic='default', emulator='kvm', **kwargs):
     '''
     Initialize a new vm
 
@@ -206,7 +208,7 @@ def init(name, cpu, mem, image, nic='default', **kwargs):
         os.makedirs(img_dir)
     nicp = _nic_profile(nic)
     salt.utils.copyfile(sfn, img_dest)
-    xml = _gen_xml(name, cpu, mem, img_dest, nicp, **kwargs)
+    xml = _gen_xml(name, cpu, mem, img_dest, nicp, emulator, **kwargs)
     define_xml_str(xml)
     if kwargs.get('seed'):
         __salt__['img.seed'](img_dest, name, kwargs.get('config'))
