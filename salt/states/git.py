@@ -42,8 +42,7 @@ def latest(name,
            bare=False,
            remote_name='origin',
            always_fetch=False,
-           identity=None,
-           **kwargs):
+           identity=None):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
