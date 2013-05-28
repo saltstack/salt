@@ -1,5 +1,4 @@
-'''
-Module for running ZFS command
+''' Module for running ZFS command
 '''
 
 # Import Python libs
@@ -74,13 +73,45 @@ def __virtual__():
         return 'zfs'
     return False
 
-# At this point use the helper commands to dynamically generate
-# functions that are available.
+def _make_function( cmd_name ):
+    '''
+    Returns a function based on the command name.
+    '''
+    def _cmd( *args ):
+        '''
+        Generated function.
+        '''
+        # Define a return value.
+        ret = { }
+
+        # Run the command.
+        res = salt_cmd.run_all( "%s %s %s" % ( _check_zfs( ), cmd_name, args ) )
+
+        # Make a note of the error in the return object if retcode
+        # not 0.
+        if res['retcode'] != 0:
+            ret['Error'] = _exit_status( res['retcode'] )
+
+        # Set the output to be splitlines for now.
+        ret = res['stdout'].splitlines( )
+
+        return ret
+
+    # At this point return the function we've just defined.
+    return _cmd
+
+
+generated = { }
+
+# Run through all the available commands
 for available_cmd in _available_commands( ):
-    # Define a new function here based on avaiable_cmd.
-    # Also update __func_alias__
-    log.debug( "Would create function for %s" % available_cmd )
-    # Use setattr( globals( ), new_func, "%_" % available_cmd )
+
+    generated[available_cmd] = _make_function( available_cmd )
+
+    # Update the function alias so that salt finds the functions properly.
+    __func_alias__["generated[%s]" % available_cmd] = available_cmd
+
+log.debug( generated )
 
 def list_(*args):
     '''
