@@ -39,13 +39,14 @@ def _available_commands( ):
     if not zfs_path:
         return False
 
-    # TODO: Supress the ERROR log generated when we read stderr.. 
     _return = [ ]
-    res = __salt__['cmd.run_all']("%s help" % zfs_path)
+    # Note that we append '|| :' as a unix hack to force return code to be 0.
+    res = __salt__['cmd.run_all']("%s help || :" % zfs_path)
     for line in res['stderr'].splitlines( ):
         if re.match( "	[a-zA-Z]", line ):
             for cmd in [ cmd.strip() for cmd in line.split( " " )[0].split( "|" ) ]:
-                _return.append( cmd )
+                if cmd not in _return:
+                    _return.append( cmd )
     return _return
 
 def _check_command( command ):
@@ -77,7 +78,7 @@ def __virtual__():
 for available_cmd in _available_commands( ):
     # Define a new function here based on avaiable_cmd.
     # Also update __func_alias__
-    pass
+    log.debug( "Would create function for %s" % available_cmd )
 
 def list_(*args):
     '''
