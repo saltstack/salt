@@ -5,6 +5,10 @@ Module for running ZFS command
 # Import Python libs
 import logging
 
+# Regular expressions for matching output
+# from 'zfs help'
+import re
+
 # Import Salt libs
 import salt.utils
 
@@ -37,9 +41,9 @@ def _available_commands( ):
 
     _return = [ ]
     res = __salt__['cmd.run_all']("%s help" % zfs_path)
-    for line in res['stdout'].splitlines( ):
+    for line in res['stderr'].splitlines( ):
         if re.match( "	[a-zA-Z]", line ):
-            for cmd in [ cmd.strip() for cmd in ine.split( " " )[0].split( "|" ) ]:
+            for cmd in [ cmd.strip() for cmd in line.split( " " )[0].split( "|" ) ]:
                 _return.append( cmd )
     return _return
 
