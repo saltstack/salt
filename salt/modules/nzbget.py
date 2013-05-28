@@ -5,6 +5,9 @@ Support for nzbget
 # Import salt libs
 import salt.utils
 
+__func_alias__ = {
+    'list_': 'list'
+}
 
 def __virtual__():
     '''
@@ -82,7 +85,7 @@ def stop(user=None):
     return out
 
 
-def list(user=None):
+def list_(user=None):
     '''
     Return list of active downloads using nzbget -L.
     Default user is root.
