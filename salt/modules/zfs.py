@@ -10,6 +10,10 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'list_': 'list'
+}
+
 @salt.utils.memoize
 def _check_zfs():
     '''
@@ -31,25 +35,21 @@ def _exit_status(retcode):
 
 def __virtual__():
     '''
-    Provides zfs only on supported OS
+    Makes sure that ZFS is available.
     '''
-    supported = set(('Solaris', 'SmartOS', 'FreeBSD'))
-    if __grains__['os'] in supported and _check_zfs():
-        # Don't let this work on Solaris 9 since ZFS is not available on it.
-        if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == '5.9':
-            return False
+    if _check_zfs( ):
         return 'zfs'
     return False
 
 
-def zfs_list(*args):
+def list_(*args):
     '''
     List all filesystems and volumes properties. If 'snapshot' given : list
     snapshots
     
     CLI Example::
 
-        salt '*' zfs.zfs_list [snapshot] 
+        salt '*' zfs.list [snapshot] 
     '''
     ret = {}
     zfs = _check_zfs()
@@ -64,5 +64,3 @@ def zfs_list(*args):
         return ret
     ret = res['stdout'].splitlines()
     return ret
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
