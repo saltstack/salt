@@ -4,10 +4,9 @@
 # Import Python libs
 import logging
 
-# Regular expressions for matching output
-# from 'zfs help'
+# Some std libraries that are made
+# use of.
 import re
-
 import sys
 
 # Import Salt libs
@@ -43,18 +42,15 @@ def _available_commands( ):
     _return = [ ]
     # Note that we append '|| :' as a unix hack to force return code to be 0.
     res = salt_cmd.run_all("%s help || :" % zfs_path)
+
+    # This bit is dependant on specific output from `zfs help` - any major changes
+    # in how this works upstream will require a change.
     for line in res['stderr'].splitlines( ):
         if re.match( "	[a-zA-Z]", line ):
             for cmd in [ cmd.strip() for cmd in line.split( " " )[0].split( "|" ) ]:
                 if cmd not in _return:
                     _return.append( cmd )
     return _return
-
-def _check_command( command ):
-    '''
-    Simple check to see if the command is valid.
-    '''
-    return command in _available_commands( )
 
 def _exit_status(retcode):
     '''
@@ -87,7 +83,6 @@ def _make_function( cmd_name ):
         ret = { }
 
         # Run the command.
-	#TODO - add arguments into this.
         res = salt_cmd.run_all( "%s %s %s" % ( _check_zfs( ), cmd_name, " ".join( args ) ) )
 
         # Make a note of the error in the return object if retcode
@@ -103,13 +98,12 @@ def _make_function( cmd_name ):
     # At this point return the function we've just defined.
     return _cmd
 
-generated = { } 
-
 # Run through all the available commands
 for available_cmd in _available_commands( ):
 
-    generated[available_cmd] = _make_function( available_cmd )
-    setattr( sys.modules[__name__], "%s_" % available_cmd, generated[available_cmd] )
+    # Set the output from _make_function to be 'available_cmd_'.
+    # ie 'list' becomes 'list_' in local module.
+    setattr( sys.modules[__name__], "%s_" % available_cmd, _make_function( available_cmd ) )
 
     # Update the function alias so that salt finds the functions properly.
     __func_alias__["%s_" % available_cmd] = available_cmd
