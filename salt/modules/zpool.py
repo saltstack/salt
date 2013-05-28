@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Provides zpool.
     '''
-    if _check_zpool( ):
+    if _check_zpool():
         return 'zpool'
     return False
 
