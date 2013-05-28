@@ -49,9 +49,6 @@ def _check_command( command ):
     '''
     return command in _available_commands( )
 
-        if re.match( "	[a-zA-Z]", line ):
-            if line.startswith( 
-
 def _exit_status(retcode):
     '''
     Translate exit status of zfs
