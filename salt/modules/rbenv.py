@@ -10,8 +10,13 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
         return False
 
     bin = _rbenv_bin(runas)
+    path = _rbenv_path(runas)
+
     if env:
-        bin = 'env {0} {1}'.format(env, bin)
+        env = ' {0}'.format(env)
+    env = env or ''
+
+    bin = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, bin)
 
     ret = ret or {}
     ret.update(__salt__['cmd.run_all'](
