@@ -75,10 +75,11 @@ def __virtual__():
 
 # At this point use the helper commands to dynamically generate
 # functions that are available.
-for available_cmd in _available_commands( ):
+#for available_cmd in _available_commands( ):
     # Define a new function here based on avaiable_cmd.
     # Also update __func_alias__
-    log.debug( "Would create function for %s" % available_cmd )
+    #log.debug( "Would create function for %s" % available_cmd )
+    # Use setattr( globals( ), new_func, "%_" % available_cmd )
 
 def list_(*args):
     '''
