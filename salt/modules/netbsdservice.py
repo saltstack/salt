@@ -6,6 +6,10 @@ The service module for NetBSD
 import os
 import glob
 
+__func_alias__ = { 
+    'reload_': 'reload'
+}
+
 def __virtual__():
     '''
     Only work on NetBSD
@@ -51,7 +55,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name, **kwargs):
+def reload_(name, **kwargs):
     '''
     Reload the named service
 

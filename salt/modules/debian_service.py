@@ -10,6 +10,9 @@ import re
 # Import salt libs
 from .systemd import _sd_booted
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 def __virtual__():
     '''
@@ -108,7 +111,7 @@ def restart(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     Reload the named service
 
