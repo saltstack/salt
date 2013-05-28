@@ -14,6 +14,10 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+# Function alias to make sure not to shadow built-in's
+__func_alias__ = {
+    'list_': 'list'
+}
 
 def __virtual__():
     '''
@@ -140,7 +144,7 @@ def uninstall(pkg,
     return True
 
 
-def list(pkg=None,
+def list_(pkg=None,
          dir=None):
     '''
     List installed NPM packages.
