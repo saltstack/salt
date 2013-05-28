@@ -128,7 +128,12 @@ def install_ruby(ruby,runas=None):
     env = None
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
         env = 'MAKE=gmake'
-    return _rbenv_exec('install', ruby, env=env, runas=runas)
+
+    result = _rbenv_exec('install', ruby, env=env, runas=runas)
+    if result == False:
+        # Cleanup the failed installation so it doesn't list as installed
+        _rbenv_exec('uninstall', ruby, runas=runas)
+    return result
 
 def uninstall_ruby(ruby,runas=None):
     '''
