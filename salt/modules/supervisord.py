@@ -2,9 +2,12 @@
 Provide the service module for system supervisord or supervisord in a virtualenv
 '''
 
-# Import salt libs
-from salt import exceptions, utils
+# Import python libs
 import os
+
+# Import salt libs
+from salt.exceptions import CommandNotFoundError
+
 
 def _get_supervisorctl_bin(bin_env):
     '''
