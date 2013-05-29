@@ -1366,7 +1366,8 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         An optional second pattern that can limit the scope of the before
         pattern.
     backup : '.bak'
-        The extension for the backed-up version of the file before the edit.
+        The extension for the backed-up version of the file before the edit. If
+        no backups is desired, pass in the empty string: ''
     options : ``-r -e``
         Any options to pass to the ``sed`` command. ``-r`` uses extended
         regular expression syntax and ``-e`` denotes that what follows is an
