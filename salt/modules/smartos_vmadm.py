@@ -186,6 +186,27 @@ def list_inactive_vms():
     return vms
 
 
+def vm_info(uuid=None):
+    '''
+    Return a dict with information about the specified vm on this CN
+
+    CLI Example::
+
+        salt '*' virt.vm_info <uuid>
+    '''
+    info = {}
+    if not uuid:
+        raise CommandExecutionError('UUID parameter is mandatory')
+    vmadm = _check_vmadm()
+    cmd = '{0} get {1}'.format(vmadm, uuid) 
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        raise CommandExecutionError(_exit_status(retcode))
+    info = res['stdout'] 
+    return info
+    
+
 def start(uuid=None):
     '''
     Start a defined domain
@@ -194,7 +215,7 @@ def start(uuid=None):
     
         salt '*' virt.start <uuid>
     '''
-    if not uuid :
+    if not uuid:
         raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
@@ -218,7 +239,7 @@ def shutdown(uuid=None):
 
         salt '*' virt.shutdown <uuid>
     '''
-    if not uuid :
+    if not uuid:
         raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
@@ -242,7 +263,7 @@ def reboot(uuid=None):
     
         salt '*' virt.reboot <uuid>
     '''
-    if not uuid :
+    if not uuid:
         raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
@@ -256,6 +277,28 @@ def reboot(uuid=None):
         return True
     else:
         return False
+
+
+def vm_virt_type(uuid=None):
+    '''
+    Return VM virtualization type : OS or KVM
+
+    CLI Example::
+    
+        salt '*' virt.vm_virt_type <uuid>
+    '''
+    if not uuid:
+        raise CommandExecutionError('UUID parameter is mandatory')
+    vmadm = _check_vmadm()
+    cmd = '{0} list -p -o type uuid={1}'.format(vmadm, uuid)
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        raise CommandExecutionError(_exit_status(retcode))
+    ret = res['stdout']
+    if ret != '':
+        return ret
+    raise CommandExecutionError('We can\'t determine the type of this VM')
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
