@@ -645,7 +645,7 @@ A group consists of a group name and a compound target.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
 Master Logging Settings
