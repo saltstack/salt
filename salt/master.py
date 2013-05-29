@@ -809,7 +809,7 @@ class AESFuncs(object):
             mine = os.path.join(
                     self.opts['cachedir'],
                     'minions',
-                    load['id'],
+                    minion,
                     'mine.p')
             try:
                 with salt.utils.fopen(mine) as fp_:
