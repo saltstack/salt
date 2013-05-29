@@ -1,4 +1,3 @@
-# TODO - add the doc for working with buckets both ways.
 '''
 The backend for a fileserver based on Amazon S3 - see
 http://docs.saltstack.com/ref/file_server/index.html
@@ -67,7 +66,7 @@ def update():
 
     if _s3_sync_on_update:
         # sync the buckets to the local cache
-        # TODO - do something / not here?
+        # TODO - implement full S3 sync versus JIT file serving
         pass
 
 def find_file(path, env='base', **kwargs):
@@ -186,7 +185,6 @@ def file_list(load):
     for buckets in _find_files(resultset[env]).values():
         for env_path in buckets:
             if not salt.fileserver.is_file_ignored(__opts__, env_path):
-                # TODO - should this being a length check?
                 if env_path[env_len:]:
                     ret.append(env_path[env_len:])
 
@@ -199,12 +197,8 @@ def file_list_emptydirs(load):
     # TODO - implement this
 
     ret = []
-    env = load['env']
 
-    resultset = _init()
-
-    if not resultset or env not in resultset:
-        return ret
+    _init()
 
     return ret
 
@@ -227,7 +221,7 @@ def dir_list(load):
     # map and filter the dirs without the env
     for dirs in _find_files(resultset[env], dirs_only = True).values():
         filtered_dirs = map(lambda dir: dir[env_len:-1], dirs)
-        # TODO - this filter = ?
+        # TODO - filter out the empties
         ret += filter(lambda dir: dir, filtered_dirs)
 
     return ret
@@ -262,7 +256,6 @@ def _get_cache_dir():
     Return the path to the s3cache dir
     '''
 
-    # TODO - Should this be an absolute path in case of change in WD?
     # Or is that making too many assumptions?
     return os.path.join(__opts__['cachedir'], 's3cache')
 
@@ -281,7 +274,6 @@ def _get_cached_file_name(bucket_name, path):
     file_path = os.path.join(_get_cache_dir(), bucket_name, path)
 
     # make sure bucket and env directories exist
-    # TODO - should use file.makedirs maybe?
     if not os.path.exists(os.path.dirname(file_path)):
         os.makedirs(os.path.dirname(file_path))
 
@@ -305,7 +297,6 @@ def _refresh_buckets_cache_file(cache_file):
     cache file
     '''
 
-    # TODO - adjust this to only work with buckets for multiple environments
     log.debug('Refreshing buckets cache file')
 
     key, keyid = _get_s3_key()
@@ -458,7 +449,6 @@ def _is_env_per_bucket():
     s3://bucket1/staging/<files>
     etc
     '''
-    # TODO - document this configuration
 
     buckets = _get_buckets()
     if isinstance(buckets, dict):
