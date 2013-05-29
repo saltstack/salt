@@ -12,6 +12,10 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'set_': 'set'
+}
+
 
 def __virtual__():
     '''
@@ -95,7 +99,7 @@ def _set_file(path):
     __salt__['cmd.run_stdout'](cmd)
 
 
-def set(package, question, type, value, *extra):
+def set_(package, question, type, value, *extra):
     '''
     Set answers to debconf questions for a package.
 
