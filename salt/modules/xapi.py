@@ -460,8 +460,8 @@ def vcpu_pin(vm_, vcpu, cpus):
                 if c == '':
                     continue
                 if c.find('-') != -1:
-                    (x,y) = c.split('-')
-                    for i in range(int(x),int(y)+1):
+                    (x, y) = c.split('-')
+                    for i in range(int(x), int(y) + 1):
                         cpus.append(int(i))
                 else:
                     # remove this element from the list
@@ -485,7 +485,7 @@ def vcpu_pin(vm_, vcpu, cpus):
         # a bug which makes the client call fail.
         # That code is accurate for all others XenAPI implementations, but
         # for that particular one, fallback to xm / xl instead.
-        except:
+        except Exception:
             return __salt__['cmd.run']('{0} vcpu-pin {1} {2} {3}'.format(
                                             _get_xtool(), vm_, vcpu, cpus))
 
