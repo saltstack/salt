@@ -1,5 +1,9 @@
 import os
 import re
+import logging
+
+# Set up logger
+log = logging.getLogger(__name__)
 
 __opts__ = {
     'rbenv.root': None,
