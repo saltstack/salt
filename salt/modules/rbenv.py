@@ -134,8 +134,7 @@ def install_ruby(ruby, runas=None):
         salt '*' rbenv.install_ruby 2.0.0-p0
     '''
 
-    if ruby.startswith('ruby-'):
-        ruby = re.sub(r'^ruby-', '', ruby)
+    ruby = re.sub(r'^ruby-', '', ruby)
 
     env = None
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
@@ -163,8 +162,7 @@ def uninstall_ruby(ruby, runas=None):
         salt '*' rbenv.uninstall_ruby 2.0.0-p0
     '''
 
-    if ruby.startswith('ruby-'):
-        ruby = re.sub(r'^ruby-', '', ruby)
+    ruby = re.sub(r'^ruby-', '', ruby)
 
     args = '--force {0}'.format(ruby)
     _rbenv_exec('uninstall', args, runas=runas)
