@@ -5,6 +5,7 @@ import os
 import tempfile
 import integration
 import subprocess
+import time
 
 
 
@@ -20,6 +21,7 @@ class SupervisordTest(integration.ModuleCase,
             self.skipTest('virtualenv not installed')
         self.venv_test_dir = tempfile.mkdtemp()
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
+        self.supervisor_sock = os.path.join(self.venv_dir, 'supervisor.sock')
 
         self.run_function('virtualenv.create', [self.venv_dir])
         self.run_function('pip.install', [], pkgs='supervisor', bin_env=self.venv_dir)
@@ -35,6 +37,7 @@ class SupervisordTest(integration.ModuleCase,
             'file.managed', name=self.supervisor_conf, source='salt://supervisor.conf',
             template='jinja',
             context={
+                'supervisor_sock' : self.supervisor_sock,
                 'virtual_env': self.venv_dir,
                 'autostart': autostart
             }
@@ -44,6 +47,14 @@ class SupervisordTest(integration.ModuleCase,
         self.supervisor_proc = subprocess.Popen([self.supervisord, '-c', self.supervisor_conf])
         if self.supervisor_proc.poll() is not None:
             self.skipTest('failed to start supervisord')
+        timeout = 10
+        while not os.path.exists(self.supervisor_sock):
+            if timeout == 0:
+                self.skipTest('supervisor socket not found - failed to start supervisord')
+                break
+            else:
+                time.sleep(1)
+                timeout -= 1
 
     def tearDown(self):
         if hasattr(self, 'supervisor_proc') and self.supervisor_proc.poll() is not None:
