@@ -19,12 +19,15 @@ class SupervisordTest(integration.ModuleCase,
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
             self.skipTest('virtualenv not installed')
-        self.venv_test_dir = tempfile.mkdtemp()
+
+        self.venv_test_dir = os.path.join(integration.TMP, 'supervisortests')
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         self.supervisor_sock = os.path.join(self.venv_dir, 'supervisor.sock')
 
-        self.run_function('virtualenv.create', [self.venv_dir])
-        self.run_function('pip.install', [], pkgs='supervisor', bin_env=self.venv_dir)
+        if not os.path.exists(self.venv_dir):
+            os.makedirs(self.venv_test_dir)
+            self.run_function('virtualenv.create', [self.venv_dir])
+            self.run_function('pip.install', [], pkgs='supervisor', bin_env=self.venv_dir)
 
         self.supervisord = os.path.join(self.venv_dir, 'bin', 'supervisord')
         if not os.path.exists(self.supervisord):
@@ -60,7 +63,6 @@ class SupervisordTest(integration.ModuleCase,
         if hasattr(self, 'supervisor_proc') and self.supervisor_proc.poll() is not None:
             self.run_function('supervisord.custom', ['shutdown'], conf_file=self.supervisor_conf, bin_env=self.venv_dir)
             self.supervisor_proc.wait()
-        self.run_function('file.remove', [self.venv_test_dir])
 
     def test_running_stopped(self):
         '''
