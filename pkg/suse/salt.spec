@@ -1,7 +1,7 @@
 #
 # spec file for package salt
 #
-# Copyright (c) 2012 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,13 +15,14 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
+
 Name:           salt
-Version:        0.15.1
-Release:        1
-License:        Apache-2.0
+Version:        0.15.2
+Release:        0
 Summary:        A parallel remote execution system
-Url:            http://saltstack.org/
+License:        Apache-2.0
 Group:          System/Monitoring
+Url:            http://saltstack.org/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1:        %{name}-master
 Source2:        %{name}-syndic
@@ -29,25 +30,29 @@ Source3:        %{name}-minion
 Source4:        %{name}-master.service
 Source5:        %{name}-syndic.service
 Source6:        %{name}-minion.service
-Source7:		%{name}.logrotate
+Source7:        %{name}.logrotate
+Source8:        %{name}-daemon.conf
+BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
 BuildRequires:  python-msgpack-python
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq >= 2.1.9
-BuildRequires:  logrotate
+Requires:       logrotate
 Requires:       python-Jinja2
 Requires:       python-M2Crypto
 Requires:       python-PyYAML
 Requires:       python-msgpack-python
 Requires:       python-pycrypto
 Requires:       python-pyzmq >= 2.1.9
-Requires:		logrotate
 Requires(pre): %fillup_prereq
 Requires(pre): %insserv_prereq
+Requires(pre): /usr/sbin/groupadd
+Requires(pre): /usr/sbin/useradd
+Requires(pre): /usr/sbin/userdel
 %if 0%{?suse_version} >= 1210
-BuildRequires:	systemd
+BuildRequires:  systemd
 %{?systemd_requires}
 %endif
 %ifarch %{ix86} x86_64
@@ -113,7 +118,9 @@ python setup.py build
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
 
 ##missing directories
-mkdir -p %{buildroot}%{_sysconfdir}/salt/
+mkdir -p %{buildroot}%{_sysconfdir}/salt/master.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/syndic.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/minion.d
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_localstatedir}/log/salt
 mkdir -p %{buildroot}/%{_sysconfdir}/logrotate.d/
@@ -139,6 +146,9 @@ install -Dpm 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
 #
 ##logrotate file
 install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
+#
+##Salt-master daemon user
+install -Dpm 644  %{SOURCE8} %{buildroot}%{_sysconfdir}/salt/master.d/salt-daemon.conf
 
 %preun -n salt-syndic
 %stop_on_removal salt-syndic
@@ -158,6 +168,10 @@ install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 %service_del_postun salt-syndic.service
 %endif
 %insserv_cleanup
+
+%pre -n salt-master
+getent group salt >/dev/null || /usr/sbin/groupadd -r salt
+getent passwd salt >/dev/null || /usr/sbin/useradd -r -g salt -d /srv/salt -s /bin/false -c "salt-master daemon" salt
 
 %preun -n salt-master
 %stop_on_removal salt-master
@@ -203,6 +217,7 @@ install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 %{_mandir}/man1/salt-syndic.1.*
 %{_sbindir}/rcsalt-syndic
 %{_sysconfdir}/init.d/salt-syndic
+%{_sysconfdir}/salt/syndic.d
 %if 0%{?_unitdir:1}
 %_unitdir/salt-syndic.service
 %endif
@@ -216,6 +231,7 @@ install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 %{_sbindir}/rcsalt-minion
 %config(noreplace) %{_sysconfdir}/init.d/salt-minion
 %config(noreplace) %{_sysconfdir}/salt/minion
+%{_sysconfdir}/salt/minion.d
 %if 0%{?_unitdir:1}
 %_unitdir/salt-minion.service
 %endif
@@ -234,7 +250,9 @@ install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 %{_mandir}/man1/salt-run.1.*
 %{_sbindir}/rcsalt-master
 %config(noreplace) %{_sysconfdir}/init.d/salt-master
-%config(noreplace) %{_sysconfdir}/salt/master
+%attr(0644, salt, root) %config(noreplace) %{_sysconfdir}/salt/master
+%attr(0644, salt, root) %config(noreplace) %{_sysconfdir}/salt/master.d/salt-daemon.conf
+%{_sysconfdir}/salt/master.d
 %if 0%{?_unitdir:1}
 %_unitdir/salt-master.service
 %endif

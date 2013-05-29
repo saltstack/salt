@@ -1,6 +1,10 @@
 '''
 Test the grains module
 '''
+# Import python libs
+import time
+
+# Import salt libs
 import integration
 
 
@@ -67,6 +71,7 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.setval',
                     ['setgrain', 'grainval']),
                 {'setgrain': 'grainval'})
+        time.sleep(2)
         self.assertTrue(
                 self.run_function(
                     'grains.item', ['setgrain']

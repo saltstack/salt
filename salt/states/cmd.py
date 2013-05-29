@@ -395,8 +395,8 @@ def run(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
+        Pass in a list or dict of environment variables to be applied to the
+        command upon execution
 
     umask
         The umask (in octal) to use when running the command.

@@ -3,8 +3,8 @@ Module for managing VMs on SmartOS
 '''
 
 # Import Python libs
-import logging
 import json
+import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
@@ -45,7 +45,7 @@ def _gen_zone_json(**kwargs):
     Example layout (all keys are mandatory) :
 
        {"brand": "joyent",
-        "dataset_uuid": "9eac5c0c-a941-11e2-a7dc-57a6b041988f",
+        "image_uuid": "9eac5c0c-a941-11e2-a7dc-57a6b041988f",
         "alias": "myname",
         "hostname": "www.domain.com",
         "max_physical_memory": 2048,
@@ -60,19 +60,67 @@ def _gen_zone_json(**kwargs):
         ]}
     '''
     ret = {}
-    check_args = (
-        'dataset_uuid','alias','hostname',
-        'max_physical_memory','quota','nics')
+    nics = {}
+    check_args = ( 
+        'image_uuid','alias','hostname',
+        'max_physical_memory','quota','nic_tag',
+        'ip','netmask','gateway')
+    nics_args = ('nic_tag', 'ip', 'netmask', 'gateway')
     # Lazy check of arguments
     if not all (key in kwargs for key in check_args):
-        raise CommandExecutionError('Not all arguments are given')
+        raise CommandExecutionError('Missing arguments for JSON generation')
     # This one is mandatory for OS virt
     ret.update(brand='joyent')
+    # Populate JSON without NIC information
     ret.update((key, kwargs[key])
-        for key in check_args 
+        for key in check_args
+        if key in kwargs and key not in nics_args)
+    # NICs are defined in a subdict
+    nics.update((key, kwargs[key])
+        for key in nics_args
         if key in kwargs)
+    ret.update(nics=[nics])
 
     return json.dumps(ret)
+
+
+def init(**kwargs):
+    '''
+    Initialize a new VM
+
+    CLI Example::
+
+        salt '*' virt.init image_uuid='...' alias='...' [...]
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    check_zone_args = (
+        'image_uuid','alias','hostname',
+        'max_physical_memory','quota','nic_tag',
+        'ip','netmask','gateway')
+    check_kvm_args = ('to_be_implemented')
+    # check routines for mandatory arguments
+    # Zones
+    if all (key in kwargs for key in check_zone_args):
+        ret = _gen_zone_json(**kwargs)
+        # validation first
+        cmd = 'echo \'{0}\' | {1} validate create'.format(ret, vmadm)
+        res = __salt__['cmd.run_all'](cmd)
+        retcode = res['retcode']
+        if retcode != 0:
+            return CommandExecutionError(_exit_status(retcode))
+        # if succedeed, proceed to the VM creation
+        cmd = 'echo \'{0}\' | {1} create'.format(ret, vmadm)
+        res = __salt__['cmd.run_all'](cmd)
+        retcode = res['retcode']
+        if retcode != 0:
+            return CommandExecutionError(_exit_status(retcode))
+        return True
+    # KVM
+    elif all (key in kwargs for key in check_kvm_args):
+        raise CommandExecutionError('KVM is not yet implemented')
+    else:
+        raise CommandExecutionError('Missing mandatory arguments')
 
 
 def list_vms():
