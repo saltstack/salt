@@ -18,17 +18,17 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
     if not is_installed(runas):
         return False
 
-    bin = _rbenv_bin(runas)
+    binary = _rbenv_bin(runas)
     path = _rbenv_path(runas)
 
     if env:
         env = ' {0}'.format(env)
     env = env or ''
 
-    bin = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, bin)
+    binary = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, binary)
 
     result = __salt__['cmd.run_all'](
-        '{0} {1} {2}'.format(bin, command, args),
+        '{0} {1} {2}'.format(binary, command, args),
         runas=runas
     )
 
