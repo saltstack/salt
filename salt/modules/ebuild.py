@@ -226,17 +226,17 @@ def refresh_db():
 
     if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
         # GPG sign verify is supported only for "webrsync"
-        cmd='emerge-webrsync -q'
+        cmd = 'emerge-webrsync -q'
         if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
-            cmd='emerge-delta-webrsync -q'
+            cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd) == 0
     else:
         if __salt__['cmd.retcode']('emerge --sync --ask n --quiet') == 0:
             return True
         # We fall back to "webrsync" if "rsync" fails for some reason
-        cmd='emerge-webrsync -q'
+        cmd = 'emerge-webrsync -q'
         if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
-            cmd='emerge-delta-webrsync -q'
+            cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd) == 0
 
 def install(name=None,
