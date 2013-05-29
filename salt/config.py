@@ -34,6 +34,142 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
+VALID_OPTS = {
+    'master': str,
+    'master_port': int,
+    'master_finger': str,
+    'user': str,
+    'root_dir': str,
+    'pki_dir': str,
+    'id': str,
+    'cachedir': str,
+    'cache_jobs': bool,
+    'conf_file': str,
+    'sock_dir': str,
+    'backup_mode': str,
+    'renderer': str,
+    'failhard': bool,
+    'autoload_dynamic_modules': bool,
+    'environment': str,
+    'state_top': str,
+    'startup_states': str,
+    'sls_list': list,
+    'top_file': str,
+    'file_client': str,
+    'file_roots': dict,
+    'pillar_roots': dict,
+    'hash_type': str,
+    'external_nodes': str,
+    'disable_modules': list,
+    'disable_returners': list,
+    'whitelist_modules': list,
+    'module_dirs': list,
+    'returner_dirs': list,
+    'states_dirs': list,
+    'render_dirs': list,
+    'outputter_dirs': list,
+    'providers': dict,
+    'clean_dynamic_modules': bool,
+    'open_mode': bool,
+    'multiprocessing': bool,
+    'mine_interval': int,
+    'ipc_mode': str,
+    'ipv6': bool,
+    'file_buffer_size': int,
+    'tcp_pub_port': int,
+    'tcp_pull_port': int,
+    'log_file': str,
+    'log_level': bool,
+    'log_level_logfile': bool,
+    'log_datefmt': str,
+    'log_datefmt_logfile': str,
+    'log_fmt_console': str,
+    'log_fmt_logfile': tuple,
+    'log_granular_levels': dict,
+    'test': bool,
+    'cython_enable': bool,
+    'state_verbose': bool,
+    'state_output': str,
+    'acceptance_wait_time': float,
+    'loop_interval': float,
+    'dns_check': bool,
+    'verify_env': bool,
+    'grains': dict,
+    'permissive_pki_access': bool,
+    'default_include': str,
+    'update_url': bool,
+    'update_restart_services': list,
+    'retry_dns': float,
+    'recon_max': float,
+    'win_repo_cachefile': str,
+    'pidfile': str,
+    'range_server': str,
+    'tcp_keepalive': bool,
+    'tcp_keepalive_idle': float,
+    'tcp_keepalive_cnt': float,
+    'tcp_keepalive_intvl': float,
+    'interface': str,
+    'publish_port': int,
+    'auth_mode': int,
+    'user': str,
+    'worker_threads': int,
+    'sock_dir': str,
+    'ret_port': int,
+    'keep_jobs': int,
+    'root_dir': str,
+    'master_roots': dict,
+    'gitfs_remotes': list,
+    'ext_pillar': list,
+    'pillar_version': int,
+    'pillar_opts': bool,
+    'peer': dict,
+    'syndic_master': str,
+    'runner_dirs': list,
+    'outputter_dirs': list,
+    'client_acl': dict,
+    'client_acl_blacklist': dict,
+    'external_auth': dict,
+    'token_expire': int,
+    'file_buffer_size': int,
+    'file_ignore_regex': bool,
+    'file_ignore_glob': bool,
+    'fileserver_backend': list,
+    'max_open_files': int,
+    'hash_type': str,
+    'conf_file': str,
+    'open_mode': bool,
+    'auto_accept': bool,
+    'renderer': str,
+    'failhard': bool,
+    'state_top': str,
+    'master_tops': bool,
+    'external_nodes': str,
+    'order_masters': bool,
+    'job_cache': bool,
+    'ext_job_cache': str,
+    'master_ext_job_cache': str,
+    'minion_data_cache': bool,
+    'ipv6': bool,
+    'publish_session': int,
+    'range_server': str,
+    'reactor': list,
+    'serial': str,
+    'state_verbose': bool,
+    'state_output': str,
+    'search': str,
+    'search_index_interval': int,
+    'loop_interval': int,
+    'nodegroups': dict,
+    'cython_enable': bool,
+    'key_logfile': str,
+    'verify_env': bool,
+    'permissive_pki_access': bool,
+    'default_include': str,
+    'win_repo': str,
+    'win_repo_mastercachefile': str,
+    'win_gitrepos': list,
+}
+
 # default configurations
 DEFAULT_MINION_OPTS = {
     'master': 'salt',
@@ -216,6 +352,40 @@ def _validate_file_roots(opts):
     return opts['file_roots']
 
 
+def _validate_opts(opts):
+    '''
+    Check that all of the types of values passed into the config are
+    of the right types
+    '''
+    errors = []
+    err = ('Key {0} with value {1} has an invalid type of {2}, a {3} is '
+           'required for this value')
+    for key, val in opts.items():
+        if key in VALID_OPTS:
+            if isinstance(VALID_OPTS[key](), list):
+                if isinstance(val, VALID_OPTS[key]):
+                    continue
+                else:
+                    errors.append(err.format(key, val, type(val), 'list'))
+            if isinstance(VALID_OPTS[key](), dict):
+                if isinstance(val, VALID_OPTS[key]):
+                    continue
+                else:
+                    errors.append(err.format(key, val, type(val), 'dict'))
+            else:
+                try:
+                    VALID_OPTS[key](val)
+                except ValueError:
+                    errors.append(
+                            err.format(key, val, type(val), VALID_OPTS[key])
+                            )
+    for error in errors:
+        log.warning(error)
+    if errors:
+        return False
+    return True
+
+
 def _append_domain(opts):
     '''
     Append a domain to the existing id if it doesn't already exist
@@ -365,7 +535,9 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    return apply_minion_config(overrides, defaults)
+    opts = apply_minion_config(overrides, defaults)
+    _validate_opts(opts)
+    return opts
 
 
 def get_id():
@@ -494,7 +666,9 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
 
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
-    return apply_master_config(overrides, defaults)
+    opts = apply_master_config(overrides, defaults)
+    _validate_opts(opts)
+    return opts
 
 
 def apply_master_config(overrides=None, defaults=None):
@@ -622,4 +796,5 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
     # Return the client options
+    _validate_opts(opts)
     return opts
