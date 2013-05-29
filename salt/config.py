@@ -142,7 +142,6 @@ VALID_OPTS = {
     'serial': str,
     'search': str,
     'search_index_interval': int,
-    'loop_interval': int,
     'nodegroups': dict,
     'key_logfile': str,
     'win_repo': str,
