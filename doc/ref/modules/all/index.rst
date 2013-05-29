@@ -26,7 +26,6 @@ Full list of builtin execution modules
     augeas_cfg
     bluez
     brew
-    butterkvm
     cassandra
     cmdmod
     config
@@ -69,7 +68,6 @@ Full list of builtin execution modules
     key
     keystone
     kmod
-    kvm_hyper
     launchctl
     layman
     ldapmod
