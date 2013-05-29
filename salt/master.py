@@ -788,6 +788,8 @@ class AESFuncs(object):
             if env not in file_roots:
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
+        if load.get('env_only'):
+            return mopts
         mopts['renderer'] = self.opts['renderer']
         mopts['failhard'] = self.opts['failhard']
         mopts['state_top'] = self.opts['state_top']
