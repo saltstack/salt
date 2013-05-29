@@ -460,6 +460,8 @@ if __name__ == '__main__':
         code_coverage.save()
         print('Current Directory: {0}'.format(os.getcwd()))
         print('Coverage data file exists? {0}'.format(os.path.isfile('.coverage')))
+        import subprocess
+        subprocess.call(['ls', '-lah'])
 
         report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
         print(
