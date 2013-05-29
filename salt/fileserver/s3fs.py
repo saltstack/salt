@@ -1,20 +1,33 @@
+# TODO - add the doc for working with buckets both ways.
 '''
-The backend for the s3 based file server system.
+The backend for a fileserver based on Amazon S3 - see
+http://docs.saltstack.com/ref/file_server/index.html
+
+This backend exposes directories in S3 buckets as salt environments.  This
+feature is managed by the fileserver_backend option in the salt master
+config.
 
 :configuration: S3 credentials can be either set in the master file using:
+
+    S3 credentials can be set in the master config file with:
 
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    If on EC2 these credentials can be automatically loaded from the
-    instance metadata
+    Alternatively, if on EC2 these credentials can be automatically loaded from
+    instance metadata.
 
-    Example configuration options in master file:
+    s3.buckets in the salt master config should look like this:
 
-    s3.buckets:
-      env:
-        - bucket1
-        - bucket2
+        s3.buckets:
+          - bucket1
+          - bucket2
+
+    The buckets must contain the directory structure. For example:
+
+        /bucket1/<env>/<files and dirs>
+
+        eg. /bucket1/prod/<files and dirs>
 '''
 
 # Import python libs
@@ -34,26 +47,36 @@ import salt.modules
 log = logging.getLogger(__name__)
 
 _s3_cache_expire = 30 # cache for 30 seconds
+_s3_sync_on_update = True  # sync cache on update rather than jit
 
 def envs():
     '''
-    Return the file server environments listed for the buckets
+    Return a list of directories within the bucket that can be 
+    used as environments.
     '''
-    _init()
-    return _get_buckets().keys()
+
+    resultset = _init()
+    return resultset.keys()
 
 def update():
     '''
-    Update the buckets cache file
+    Update the cache file for the bucket.
     '''
+
     _init()
+
+    if _s3_sync_on_update:
+        # sync the buckets to the local cache
+        # TODO - do something / not here?
+        pass
 
 def find_file(path, env='base', **kwargs):
     '''
-    Looks through the buckets cache file for a match. If it's found the file
-    will be retrieved from S3 only if it's cached version is missing or the md5
-    hash doesn't match
+    Look through the buckets cache file for a match.
+    If the field is found, it is retrieved from S3 only if its cached version
+    is missing, or if the MD5 does not match.
     '''
+
     fnd = {'bucket': None,
             'path' : None}
 
@@ -89,32 +112,35 @@ def find_file(path, env='base', **kwargs):
 
 def file_hash(load, fnd):
     '''
-    Return a file hash, the hash type is always md5
+    Return an MD5 file hash
     '''
+
     if 'path' not in load or 'env' not in load:
         return ''
 
     if 'path' not in fnd or 'bucket' not in fnd:
         return ''
 
-    ret = {}
     if not fnd['path']:
-        return ret
+        return {}
 
     # get the env/path file from the cache
     env_path = _get_env_path(load['env'], fnd['path'])
     cache_file = _get_cached_file_name(fnd['bucket'], env_path)
 
     if os.path.isfile(cache_file):
-        ret['hsum'] = salt.utils.get_hash(cache_file)
-        ret['hash_type'] = 'md5' # always md5 due to ETags in S3
-
-    return ret
+        return {
+            'hsum': salt.utils.get_hash(cache_file),
+            'hash_type': 'md5',
+        }
+    else:
+        return {}
 
 def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
+
     ret = {'data': '',
            'dest': ''}
     if 'path' not in load or 'loc' not in load or 'env' not in load:
@@ -144,6 +170,7 @@ def file_list(load):
     '''
     Return a list of all files on the file server in a specified environment
     '''
+
     ret = []
     env = load['env']
 
@@ -159,6 +186,7 @@ def file_list(load):
     for buckets in _find_files(resultset[env]).values():
         for env_path in buckets:
             if not salt.fileserver.is_file_ignored(__opts__, env_path):
+                # TODO - should this being a length check?
                 if env_path[env_len:]:
                     ret.append(env_path[env_len:])
 
@@ -168,10 +196,10 @@ def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
+    # TODO - implement this
+
     ret = []
     env = load['env']
-
-    log.error('***** file_list_emptydirs')
 
     resultset = _init()
 
@@ -184,6 +212,7 @@ def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
+
     ret = []
     env = load['env']
 
@@ -198,6 +227,7 @@ def dir_list(load):
     # map and filter the dirs without the env
     for dirs in _find_files(resultset[env], dirs_only = True).values():
         filtered_dirs = map(lambda dir: dir[env_len:-1], dirs)
+        # TODO - this filter = ?
         ret += filter(lambda dir: dir, filtered_dirs)
 
     return ret
@@ -206,6 +236,7 @@ def _get_s3_key():
     '''
     Get AWS keys from pillar or config
     '''
+
     key = __opts__['s3.key'] if 's3.key' in __opts__ else None
     keyid = __opts__['s3.keyid'] if 's3.keyid' in __opts__ else None
 
@@ -214,33 +245,39 @@ def _get_s3_key():
 def _init():
     '''
     Connect to S3 and download the metadata for each file in all buckets
-    specified and cache the data to disk
+    specified and cache the data to disk.
     '''
+
     cache_file = _get_buckets_cache_filename()
 
     # check mtime of the buckets files cache 
     if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > time.time() - _s3_cache_expire:
-        return _read_buckets_cache_file()
+        return _read_buckets_cache_file(cache_file)
     else:
         # bucket files cache expired
-        return _refresh_buckets_cache_file()
+        return _refresh_buckets_cache_file(cache_file)
 
 def _get_cache_dir():
     '''
     Return the path to the s3cache dir
     '''
+
+    # TODO - Should this be an absolute path in case of change in WD?
+    # Or is that making too many assumptions?
     return os.path.join(__opts__['cachedir'], 's3cache')
 
 def _get_env_path(env, path):
     '''
     Return the path of the file including the environment
     '''
+
     return os.path.join(env, path)
 
 def _get_cached_file_name(bucket_name, path):
     '''
     Return the cached file name for a bucket path file
     '''
+
     file_path = os.path.join(_get_cache_dir(), bucket_name, path)
 
     # make sure bucket and env directories exist
@@ -252,55 +289,88 @@ def _get_cached_file_name(bucket_name, path):
 
 def _get_buckets_cache_filename():
     '''
-    Return the filename and path of the buckets cache file
+    Return the filename of the cache for bucket contents.
+    Create the path if it does not exist.
     '''
-    cache_dir = _get_cache_dir()
 
-    # make sure the cache dirs exists
-    # TODO - should use file.makedirs maybe?
+    cache_dir = _get_cache_dir()
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
     return os.path.join(cache_dir, 'buckets_files.cache')
 
-def _refresh_buckets_cache_file():
+def _refresh_buckets_cache_file(cache_file):
     '''
     Retrieve the content of all buckets and cache the metadata to the buckets
     cache file
     '''
-    key, keyid = _get_s3_key()
-    cache_file = _get_buckets_cache_filename()
 
+    # TODO - adjust this to only work with buckets for multiple environments
+    log.debug('Refreshing buckets cache file')
+
+    key, keyid = _get_s3_key()
     resultset = {}
 
-    # == envs ==
-    for env, buckets in _get_buckets().items():
-        bucket_files = {}
-        # == buckets ==
-        for bucket_name in buckets:
-            # == metadata ==
-            bucket_files[bucket_name] = s3.query(
+    if _is_env_per_bucket():
+        # Single environment per bucket
+        for env, buckets in _get_buckets().items():
+            bucket_files = {}
+            for bucket_name in buckets:
+
+                bucket_files[bucket_name] = s3.query(
+                        key = key,
+                        keyid = keyid,
+                        bucket = bucket_name,
+                        return_bin = False)
+
+            resultset[env] = bucket_files
+
+    else:
+        # Multiple environments per buckets
+        for bucket_name in _get_buckets():
+
+            s3_meta = s3.query(
                     key = key,
                     keyid = keyid,
                     bucket = bucket_name,
                     return_bin = False)
 
-        resultset[env] = bucket_files
+            # pull out the environment dirs (eg. the root dirs)
+            files = filter(lambda key: 'Key' in key, s3_meta)
+            envs = set(
+                    map(lambda fp: (os.path.dirname(fp['Key']).split('/', 1))[0],
+                        files)
+                    )
 
-    # write the metadata to disk
+            # pull out the files for the environment
+            for env in envs:
+                env_files = filter(lambda ef: ef['Key'].startswith(env), files)
+
+                if env not in resultset:
+                    resultset[env] = {}
+
+                if bucket_name not in resultset[env]:
+                    resultset[env][bucket_name] = []
+
+                resultset[env][bucket_name] += env_files
+
+    # write the resultset to disk
     if os.path.isfile(cache_file):
         os.remove(cache_file)
+
+    log.debug('Writing buckets cache file')
 
     with salt.utils.fopen(cache_file, 'w') as fp_:
         pickle.dump(resultset, fp_)
 
     return resultset
 
-def _read_buckets_cache_file():
+def _read_buckets_cache_file(cache_file):
     '''
     Return the contents of the buckets cache file
     '''
-    with salt.utils.fopen(_get_buckets_cache_filename(), 'rb') as fp_:
+
+    with salt.utils.fopen(cache_file, 'rb') as fp_:
         data = pickle.load(fp_)
 
     return data
@@ -310,6 +380,7 @@ def _is_cached_file_current(resultset, env, bucket_name, path):
     Check the cache for the named bucket file and check it's md5 hash against
     the file S3 metadata ETag
     '''
+
     filename = _get_cached_file_name(bucket_name, path)
 
     if not os.path.isfile(filename):
@@ -330,6 +401,7 @@ def _find_files(resultset, dirs_only = False):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
+
     ret = {}
 
     for bucket in resultset.keys():
@@ -346,6 +418,7 @@ def _find_file_meta(resultset, env, bucket_name, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
     '''
+
     env_meta = resultset[env] if env in resultset else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
     files_meta = filter(lambda key: key.has_key('Key'), bucket_meta)
@@ -358,6 +431,39 @@ def _get_buckets():
     '''
     Return the configuration buckets
     '''
+
     return __opts__['s3.buckets'] if 's3.buckets' in __opts__ else {}
 
+def _is_env_per_bucket():
+    '''
+    Return the configuration mode, either buckets per environment
+    eg.
+        s3.buckets:
+            production:
+                - bucket1
+                - bucket2
+            staging:
+                - bucket3
+                - bucket4
 
+    or a list of buckets that have environment dirs in their root
+    eg.
+        s3.buckets:
+            - bucket1
+            - bucket2
+            - bucket3
+            - bucket4
+
+    s3://bucket1/production/<files>
+    s3://bucket1/staging/<files>
+    etc
+    '''
+    # TODO - document this configuration
+
+    buckets = _get_buckets()
+    if isinstance(buckets, dict):
+        return True
+    elif isinstance(buckets, list):
+        return False
+    else:
+        raise ValueError('Incorrect s3.buckets type given in config')
