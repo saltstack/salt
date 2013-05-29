@@ -43,7 +43,7 @@ This is how a state configuration could look like:
 # Import python libs
 import re
 
-def _check_rbenv(ret,runas=None):
+def _check_rbenv(ret, runas=None):
     '''
     Check to see if rbenv is installed.
     '''
@@ -83,11 +83,11 @@ def _check_and_install_ruby(ret, ruby, default=False, runas=None):
             return ret
 
     if default:
-        __salt__['rbenv.default'](ruby,runas=runas)
+        __salt__['rbenv.default'](ruby, runas=runas)
 
     return ret
 
-def installed(name,default=False,runas=None):
+def installed(name, default=False, runas=None):
     '''
     Verify that the specified ruby is installed with rbenv. Rbenv is
     installed if necessary.
@@ -102,7 +102,7 @@ def installed(name,default=False,runas=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if name.startswith('ruby-'):
-        name = re.sub(r'^ruby-','',name)
+        name = re.sub(r'^ruby-', '', name)
 
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
@@ -142,7 +142,7 @@ def _check_and_uninstall_ruby(ret, ruby, runas=None):
 
     return ret
 
-def absent(name,runas=None):
+def absent(name, runas=None):
     '''
     Verify that the specified ruby is not installed with rbenv. Rbenv
     is installed if necessary.
@@ -155,7 +155,7 @@ def absent(name,runas=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if name.startswith('ruby-'):
-        name = re.sub(r'^ruby-','',name)
+        name = re.sub(r'^ruby-', '', name)
 
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be uninstalled'.format(name)
