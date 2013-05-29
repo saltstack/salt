@@ -30,10 +30,10 @@ except ImportError:
         except ImportError:
             from dummy_thread import get_ident as _get_ident
 
-        try:
-            from _abcoll import KeysView, ValuesView, ItemsView
-        except ImportError:
-            pass
+#        try:
+#            from _abcoll import KeysView, ValuesView, ItemsView
+#        except ImportError:
+#            pass
 
         class OrderedDict(dict):
             'Dictionary that remembers insertion order'
@@ -266,17 +266,17 @@ except ImportError:
             def __ne__(self, other):
                 return not self == other
 
-            # -- the following methods are only used in Python 2.7 --
-
-            def viewkeys(self):
-                "od.viewkeys() -> a set-like object providing a view on od's keys"
-                return KeysView(self)
-
-            def viewvalues(self):
-                "od.viewvalues() -> an object providing a view on od's values"
-                return ValuesView(self)
-
-            def viewitems(self):
-                "od.viewitems() -> a set-like object providing a view on od's items"
-                return ItemsView(self)
-        ## end of http://code.activestate.com/recipes/576693/ }}}
+#            # -- the following methods are only used in Python 2.7 --
+#
+#            def viewkeys(self):
+#                "od.viewkeys() -> a set-like object providing a view on od's keys"
+#                return KeysView(self)
+#
+#            def viewvalues(self):
+#                "od.viewvalues() -> an object providing a view on od's values"
+#                return ValuesView(self)
+#
+#            def viewitems(self):
+#                "od.viewitems() -> a set-like object providing a view on od's items"
+#                return ItemsView(self)
+#        ## end of http://code.activestate.com/recipes/576693/ }}}
