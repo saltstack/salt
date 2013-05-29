@@ -18,14 +18,17 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
 
     bin = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, bin)
 
-    ret = ret or {}
-    ret.update(__salt__['cmd.run_all'](
+    result = __salt__['cmd.run_all'](
         '{0} {1} {2}'.format(bin, command, args),
         runas=runas
-    ))
+    )
 
-    if ret['retcode'] == 0:
-        return ret['stdout']
+    if isinstance(ret, dict):
+        ret.update(result)
+        return ret
+
+    if result['retcode'] == 0:
+        return result['stdout']
     else:
         return False
 
@@ -130,7 +133,7 @@ def install_ruby(ruby,runas=None):
         env = 'MAKE=gmake'
 
     ret = {}
-    _rbenv_exec('install', ruby, env=env, runas=runas, ret=ret)
+    ret = _rbenv_exec('install', ruby, env=env, runas=runas, ret=ret)
     if ret['retcode'] == 0:
         return ret['stderr']
     else:
