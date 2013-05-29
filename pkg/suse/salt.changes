@@ -1,4 +1,17 @@
 -------------------------------------------------------------------
+Mon May 27 20:42:06 UTC 2013 - aboe76@gmail.com
+
+- Fixed salt-master config file not readable by user 'salt'
+
+-------------------------------------------------------------------
+Mon May 27 20:04:14 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec: security enhancement.
+  added system user salt to run salt-master under privileged user 'salt'
+  added config dirs, master.d/minion.d/syndic.d to add config files.
+  added salt-daemon.conf were salt user is specified under salt-master.
+
+-------------------------------------------------------------------
 Sun May 12 20:18:24 UTC 2013 - aboe76@gmail.com
 
 - Updated package spec, for systemd unit files
