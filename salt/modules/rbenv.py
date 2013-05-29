@@ -1,3 +1,8 @@
+'''
+Manage ruby installations with rbenv.
+'''
+
+# Import python libs
 import os
 import re
 import logging
