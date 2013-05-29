@@ -781,14 +781,17 @@ class AESFuncs(object):
         '''
         Return the master options to the minion
         '''
-        mopts = dict(self.opts)
-        file_roots = dict(mopts['file_roots'])
+        mopts = {}
         file_roots = {}
         envs = self._file_envs()
         for env in envs:
             if env not in file_roots:
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
+        mopts['renderer'] = self.opts['renderer']
+        mopts['failhard'] = self.opts['failhard']
+        mopts['state_top'] = self.opts['state_top']
+        mopts['nodegroups'] = self.opts['nodegroups']
         return mopts
 
     def _mine_get(self, load):
