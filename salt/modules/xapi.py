@@ -745,6 +745,7 @@ def vm_cputime(vm_=None):
     with _get_xapi_session() as xapi:
         def _info(vm_):
             host_rec = _get_record_by_label(xapi, 'VM', vm_)
+            host_cpus = len(host_rec['host_CPUs'])
             if host_rec is False:
                 return False
             host_metrics = _get_metrics_record(xapi, 'VM', host_rec)
