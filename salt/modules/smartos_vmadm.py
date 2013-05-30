@@ -4,7 +4,6 @@ Module for managing VMs on SmartOS
 
 # Import Python libs
 import json
-import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
@@ -299,6 +298,36 @@ def vm_virt_type(uuid=None):
     if ret != '':
         return ret
     raise CommandExecutionError('We can\'t determine the type of this VM')
+
+
+def setmem(uuid, memory):
+    '''
+    Change the amount of memory allocated to VM. 
+    <memory> is to be specified in MB.
+
+    Note for KVM : this would require a restart of the VM.
+
+    CLI Example::
+
+        salt '*' virt.setmem <uuid> 512
+    '''
+    if not uuid:
+        raise CommandExecutionError('UUID parameter is mandatory')
+    # We want to determine the nature of the VM 
+    vmtype = vm_virt_type(uuid)
+    vmadm = _check_vmadm()
+    warning = []
+    if vmtype == 'OS':
+        cmd = '{0} update {1} max_physical_memory={2}'.format(vmadm, uuid, memory)
+    elif vmtype == 'KVM':
+        cmd = '{0} update {1} ram={2}'.format(vmadm, uuid, memory)
+        warning = 'Done, but please note this will require a restart of the VM'
+    retcode = __salt__['cmd.retcode'](cmd)
+    if retcode != 0:
+        raise CommandExecutionError(_exit_status(retcode))
+    if not warning:
+        return True
+    return warning 
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
