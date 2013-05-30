@@ -316,6 +316,7 @@ def setmem(uuid, memory):
     # We want to determine the nature of the VM 
     vmtype = vm_virt_type(uuid)
     vmadm = _check_vmadm()
+    warning = []
     if vmtype == 'OS':
         cmd = '{0} update {1} max_physical_memory={2}'.format(vmadm, uuid, memory)
     elif vmtype == 'KVM':
