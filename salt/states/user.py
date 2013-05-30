@@ -382,9 +382,16 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
+        beforegroups = set(
+                [g['name'] for g in __salt__['group.getent'](refresh=True)])
         ret['result'] = __salt__['user.delete'](name, purge, force)
+        aftergroups = set(
+                [g['name'] for g in __salt__['group.getent'](refresh=True)])
         if ret['result']:
-            ret['changes'] = {name: 'removed'}
+            ret['changes'] = {}
+            for g in (beforegroups - aftergroups):
+                ret['changes']['{0} group'.format(g)] = 'removed'
+            ret['changes'][name] = 'removed'
             ret['comment'] = 'Removed user {0}'.format(name)
         else:
             ret['result'] = False
