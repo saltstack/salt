@@ -34,7 +34,6 @@ class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
         Run the api
         '''
         self.parse_args()
-        self.process_config_dir()
         self.daemonize_if_required()
         self.set_pidfile()
         client = saltapi.client.SaltAPIClient(self.config)
