@@ -518,8 +518,8 @@ Running and debugging salt states.
 Once the rules in an SLS are ready, they should be tested to ensure they
 work properly. To invoke these rules, simply execute 
 ``salt '*' state.highstate`` on the command line. If you get back only 
-hostnames with a `:` after, but no return, chances are there is a problem with 
-one or more of the sls files. Use the ``salt-call`` command: 
+hostnames with a `':'` after, but no return, chances are there is a problem with 
+one or more of the sls files. On the minion, use the ``salt-call`` command: 
 ``salt-call state.highstate -l debug`` to examine the output for errors. 
 This should help troubleshoot the issue. The minions can also be started in 
 the foreground in debug mode: ``salt-minion -l debug``.
