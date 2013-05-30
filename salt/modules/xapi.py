@@ -20,7 +20,13 @@ Useful documentation:
 import sys
 import contextlib
 import os
-import importlib
+
+try:
+    import importlib
+    HAS_IMPORTLIB = True
+except ImportError:
+    # Python < 2.7 does not have importlib
+    HAS_IMPORTLIB = False
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
@@ -36,12 +42,15 @@ def _check_xenapi():
         debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
-            xenversion =  salt.modules.cmdmod._run_quiet(debian_xen_version)
+            xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
             xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
             if os.path.isdir(xapipath):
                 sys.path.append(xapipath)
+
     try:
-        return importlib.import_module('xen.xm.XenAPI')
+        if HAS_IMPORTLIB:
+            return importlib.import_module('xen.xm.XenAPI')
+        return __import__('xen.xm.XenAPI')
     except ImportError:
         return False
 
@@ -232,9 +241,10 @@ def vm_state(vm_=None):
 
         if vm_:
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
-        else:
-            for vm_ in list_vms():
-                info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
+            return info
+
+        for vm_ in list_vms():
+            info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
         return info
 
 
@@ -470,8 +480,8 @@ def vcpu_pin(vm_, vcpu, cpus):
                     else:
                         cpus.append(int(c))
             cpus.sort()
-            return ",".join(map(str, cpus))
-    
+            return ','.join(map(str, cpus))
+
         if cpus == 'all':
             cpumap = cpu_make_map('0-63')
         else:
@@ -479,7 +489,7 @@ def vcpu_pin(vm_, vcpu, cpus):
 
         try:
             xapi.VM.add_to_VCPUs_params_live(vm_uuid,
-                                            'cpumap{0}'.format(vcpu), cpumap)
+                                             'cpumap{0}'.format(vcpu), cpumap)
             return True
         # VM.add_to_VCPUs_params_live() implementation in xend 4.1+ has
         # a bug which makes the client call fail.
@@ -596,6 +606,7 @@ def create(config_):
         salt '*' virt.create <path to Xen cfg file>
     '''
     return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_))
+
 
 def start(config_):
     '''
@@ -755,16 +766,16 @@ def vm_cputime(vm_=None):
             if cputime:
                 # Divide by vcpus to always return a number between 0 and 100
                 cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
-            return {
-                    'cputime': int(cputime),
-                    'cputime_percent': int('%.0f' %cputime_percent)
-                   }
+            return {'cputime': int(cputime),
+                    'cputime_percent': int('%.0f' % cputime_percent)}
         info = {}
         if vm_:
             info[vm_] = _info(vm_)
-        else:
-            for vm_ in list_vms():
-                info[vm_] = _info(vm_)
+            return info
+
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
+
         return info
 
 
@@ -799,7 +810,7 @@ def vm_netstats(vm_=None):
             for vif in vm_rec['VIFs']:
                 vif_rec = _get_record(xapi, 'VIF', vif)
                 ret[vif_rec['device']] = _get_metrics_record(xapi, 'VIF',
-                                                            vif_rec)
+                                                             vif_rec)
                 del ret[vif_rec['device']]['last_updated']
 
             return ret
@@ -842,7 +853,7 @@ def vm_diskstats(vm_=None):
             for vbd in xapi.VM.get_VBDs(vm_uuid):
                 vbd_rec = _get_record(xapi, 'VBD', vbd)
                 ret[vbd_rec['device']] = _get_metrics_record(xapi, 'VBD',
-                                                            vbd_rec)
+                                                             vbd_rec)
                 del ret[vbd_rec['device']]['last_updated']
 
             return ret
@@ -854,6 +865,3 @@ def vm_diskstats(vm_=None):
             for vm_ in list_vms():
                 info[vm_] = _info(vm_)
         return info
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
