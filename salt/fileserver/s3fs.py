@@ -99,9 +99,20 @@ def find_file(path, env='base', **kwargs):
     if not fnd['path'] or not fnd['bucket']:
         return fnd
 
+    cached_file_path = _get_cached_file_name(fnd['bucket'], env, path)
+
     # check the local cache...
-    if _is_cached_file_current(metadata, fnd['bucket'], env, path):
-        return fnd
+    if os.path.isfile(cached_file_path):
+        file_meta = _find_file_meta(metadata, bucket_name, env, path)
+        file_md5 = filter(str.isalnum, file_meta['ETag']) if file_meta else None
+
+        cached_file_hash = hashlib.md5()
+        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
+            cached_file_hash.update(fp_.read())
+
+        # hashes match we have a cache hit
+        if cached_file_hash.hexdigest() == file_md5:
+            return fnd
 
     # ... or get the file from S3
     key, keyid = _get_s3_key()
@@ -110,7 +121,7 @@ def find_file(path, env='base', **kwargs):
             keyid = keyid,
             bucket = fnd['bucket'],
             path = urllib.quote(path),
-            local_file = _get_cached_file_name(fnd['bucket'], env, path))
+            local_file = cached_file_path)
     return fnd
 
 def file_hash(load, fnd):
@@ -271,7 +282,7 @@ def _get_cached_file_name(bucket_name, env, path):
     Return the cached file name for a bucket path file
     '''
 
-    file_path = os.path.join(_get_cache_dir(), bucket_name, env, path)
+    file_path = os.path.join(_get_cache_dir(), env, bucket_name, path)
 
     # make sure bucket and env directories exist
     if not os.path.exists(os.path.dirname(file_path)):
@@ -367,28 +378,6 @@ def _read_buckets_cache_file(cache_file):
         data = pickle.load(fp_)
 
     return data
-
-def _is_cached_file_current(metadata, bucket_name, env, path):
-    '''
-    Check the cache for the named bucket file and check it's md5 hash against
-    the file S3 metadata ETag
-    '''
-
-    filename = _get_cached_file_name(bucket_name, env, path)
-
-    if not os.path.isfile(filename):
-        return None
-
-    # get the S3 ETag/MD5 for the given file to compare
-    res = _find_file_meta(metadata, bucket_name, env, path)
-    file_md5 = filter(str.isalnum, res['ETag']) if res else None
-
-    # read cache file and generate its md5 hash
-    m = hashlib.md5()
-    with salt.utils.fopen(filename, 'rb') as fp_:
-        m.update(fp_.read())
-
-    return m.hexdigest() == file_md5
 
 def _find_files(resultset, dirs_only = False):
     '''
