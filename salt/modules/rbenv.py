@@ -18,17 +18,17 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
     if not is_installed(runas):
         return False
 
-    bin = _rbenv_bin(runas)
+    binary = _rbenv_bin(runas)
     path = _rbenv_path(runas)
 
     if env:
         env = ' {0}'.format(env)
     env = env or ''
 
-    bin = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, bin)
+    binary = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, binary)
 
     result = __salt__['cmd.run_all'](
-        '{0} {1} {2}'.format(bin, command, args),
+        '{0} {1} {2}'.format(binary, command, args),
         runas=runas
     )
 
@@ -54,14 +54,14 @@ def _rbenv_path(runas=None):
 
     return os.path.expanduser(path)
 
-def _install_rbenv(path,runas=None):
+def _install_rbenv(path, runas=None):
     if os.path.isdir(path):
         return True
 
     return 0 == __salt__['cmd.retcode'](
         'git clone https://github.com/sstephenson/rbenv.git {0}'.format(path), runas=runas)
 
-def _install_ruby_build(path,runas=None):
+def _install_ruby_build(path, runas=None):
     path = '{0}/plugins/ruby-build'.format(path)
     if os.path.isdir(path):
         return True
@@ -69,14 +69,14 @@ def _install_ruby_build(path,runas=None):
     return 0 == __salt__['cmd.retcode'](
         'git clone https://github.com/sstephenson/ruby-build.git {0}'.format(path), runas=runas)
 
-def _update_rbenv(path,runas=None):
+def _update_rbenv(path, runas=None):
     if not os.path.isdir(path):
         return False
 
     return 0 == __salt__['cmd.retcode'](
         'git pull --git-dir {0}'.format(path), runas=runas)
 
-def _update_ruby_build(path,runas=None):
+def _update_ruby_build(path, runas=None):
     path = '{0}/plugins/ruby-build'.format(path)
     if not os.path.isdir(path):
         return False
@@ -84,7 +84,7 @@ def _update_ruby_build(path,runas=None):
     return 0 == __salt__['cmd.retcode'](
         'git pull --git-dir {0}'.format(path), runas=runas)
 
-def install(runas=None,path=None):
+def install(runas=None, path=None):
     '''
     Install Rbenv systemwide
 
@@ -97,7 +97,7 @@ def install(runas=None,path=None):
     path = os.path.expanduser(path)
     return (_install_rbenv(path, runas) and _install_ruby_build(path, runas))
 
-def update(runas=None,path=None):
+def update(runas=None, path=None):
     '''
     Updates the current versions of Rbenv and Ruby-Build
 
@@ -121,7 +121,7 @@ def is_installed(runas=None):
     '''
     return __salt__['cmd.has_exec'](_rbenv_bin(runas))
 
-def install_ruby(ruby,runas=None):
+def install_ruby(ruby, runas=None):
     '''
     Install a ruby implementation.
 
@@ -134,8 +134,7 @@ def install_ruby(ruby,runas=None):
         salt '*' rbenv.install_ruby 2.0.0-p0
     '''
 
-    if ruby.startswith('ruby-'):
-        ruby = re.sub(r'^ruby-','',ruby)
+    ruby = re.sub(r'^ruby-', '', ruby)
 
     env = None
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
@@ -147,10 +146,10 @@ def install_ruby(ruby,runas=None):
         return ret['stderr']
     else:
         # Cleanup the failed installation so it doesn't list as installed
-        uninstall_ruby(ruby,runas=runas)
+        uninstall_ruby(ruby, runas=runas)
         return False
 
-def uninstall_ruby(ruby,runas=None):
+def uninstall_ruby(ruby, runas=None):
     '''
     Uninstall a ruby implementation.
 
@@ -163,8 +162,7 @@ def uninstall_ruby(ruby,runas=None):
         salt '*' rbenv.uninstall_ruby 2.0.0-p0
     '''
 
-    if ruby.startswith('ruby-'):
-        ruby = re.sub(r'^ruby-','',ruby)
+    ruby = re.sub(r'^ruby-', '', ruby)
 
     args = '--force {0}'.format(ruby)
     _rbenv_exec('uninstall', args, runas=runas)
@@ -181,7 +179,7 @@ def versions(runas=None):
 
     return _rbenv_exec('versions', '--bare', runas=runas).splitlines()
 
-def default(ruby=None,runas=None):
+def default(ruby=None, runas=None):
     '''
     Returns or sets the currently defined default ruby.
 

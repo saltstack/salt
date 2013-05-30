@@ -849,13 +849,6 @@ class Loader(object):
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if key[key.index('.') + 1:] != 'core':
-                continue
-            ret = fun()
-            if not isinstance(ret, dict):
-                continue
-            grains_data.update(ret)
-        for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
             try:
@@ -869,6 +862,13 @@ class Loader(object):
                     exc_info=True
                 )
                 continue
+            if not isinstance(ret, dict):
+                continue
+            grains_data.update(ret)
+        for key, fun in funcs.items():
+            if key[key.index('.') + 1:] != 'core':
+                continue
+            ret = fun()
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)

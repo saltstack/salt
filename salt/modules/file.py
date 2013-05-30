@@ -1742,13 +1742,8 @@ def makedirs(path, user=None, group=None, mode=None):
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
     for directory_to_create in directories_to_create:
-        if directory_to_create == os.path.normpath(path):
-            # only the directory passed to this function gets the user, group,
-            # set
-            mkdir(directory_to_create, user=user, group=group, mode=mode)
-            continue
-        # Create the directory
-        mkdir(directory_to_create)
+        # all directories have the user, group and mode set!!
+        mkdir(directory_to_create, user=user, group=group, mode=mode)
 
 
 def makedirs_perms(name, user=None, group=None, mode='0755'):

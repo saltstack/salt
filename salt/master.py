@@ -781,14 +781,19 @@ class AESFuncs(object):
         '''
         Return the master options to the minion
         '''
-        mopts = dict(self.opts)
-        file_roots = dict(mopts['file_roots'])
+        mopts = {}
         file_roots = {}
         envs = self._file_envs()
         for env in envs:
             if env not in file_roots:
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
+        if load.get('env_only'):
+            return mopts
+        mopts['renderer'] = self.opts['renderer']
+        mopts['failhard'] = self.opts['failhard']
+        mopts['state_top'] = self.opts['state_top']
+        mopts['nodegroups'] = self.opts['nodegroups']
         return mopts
 
     def _mine_get(self, load):
@@ -809,7 +814,7 @@ class AESFuncs(object):
             mine = os.path.join(
                     self.opts['cachedir'],
                     'minions',
-                    load['id'],
+                    minion,
                     'mine.p')
             try:
                 with salt.utils.fopen(mine) as fp_:
@@ -1430,7 +1435,7 @@ class ClearFuncs(object):
                 if fnmatch.fnmatch(keyid, line):
                     return True
                 try:
-                    if re.match(line, keyid):
+                    if re.match(r'\A{0}\z'.format(line), keyid):
                         return True
                 except re.error:
                     log.warn(
