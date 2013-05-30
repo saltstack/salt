@@ -87,12 +87,12 @@ def find_file(path, env='base', **kwargs):
 
     env_files = _find_files(metadata[env])
 
-    env_file_path = _get_env_path(env, path)
-    file_path = path if _is_env_per_bucket() else env_file_path
+    if not _is_env_per_bucket():
+        path = os.path.join(env, path)
 
     # look for the files and check if they're ignored globally
     for bucket_name, files in env_files.iteritems():
-        if file_path in files and not is_file_ignored(__opts__, file_path):
+        if path in files and not is_file_ignored(__opts__, path):
             fnd['bucket'] = bucket_name
             fnd['path'] = path
 
@@ -100,7 +100,7 @@ def find_file(path, env='base', **kwargs):
         return fnd
 
     # check the local cache...
-    if _is_cached_file_current(metadata, env, fnd['bucket'], env_file_path):
+    if _is_cached_file_current(metadata, fnd['bucket'], env, path):
         return fnd
 
     # ... or get the file from S3
@@ -109,8 +109,8 @@ def find_file(path, env='base', **kwargs):
             key = key,
             keyid = keyid,
             bucket = fnd['bucket'],
-            path = urllib.quote(file_path),
-            local_file = _get_cached_file_name(fnd['bucket'], env_file_path))
+            path = urllib.quote(path),
+            local_file = _get_cached_file_name(fnd['bucket'], env, path))
     return fnd
 
 def file_hash(load, fnd):
@@ -120,17 +120,19 @@ def file_hash(load, fnd):
 
     ret = {}
 
-    if 'path' not in load or 'env' not in load:
+    if 'env' not in load:
         return ret
 
     if 'path' not in fnd or 'bucket' not in fnd or not fnd['path']:
         return ret
 
-    env_file_path = _get_env_path(load['env'], fnd['path'])
-    cached_file_path = _get_cached_file_name(fnd['bucket'], env_file_path)
-
+    cached_file_path = _get_cached_file_name(
+            fnd['bucket'],
+            load['env'],
+            fnd['path'])
+    
     if os.path.isfile(cached_file_path):
-        ret['hsum'] = salt.utils.get_hash(cached_file_path),
+        ret['hsum'] = salt.utils.get_hash(cached_file_path)
         ret['hash_type'] = 'md5'
 
     return ret
@@ -149,13 +151,15 @@ def serve_file(load, fnd):
     if 'path' not in fnd or 'bucket' not in fnd:
         return ret
 
-    ret['dest'] = fnd['path']
-
     gzip = load.get('gzip', None)
 
     # get the env/path file from the cache
-    env_file_path = _get_env_path(load['env'], fnd['path'])
-    cached_file_path = _get_cached_file_name(fnd['bucket'], env_file_path)
+    cached_file_path = _get_cached_file_name(
+            fnd['bucket'],
+            load['env'],
+            fnd['path'])
+
+    ret['dest'] = fnd['path']
 
     with salt.utils.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])
@@ -262,19 +266,12 @@ def _get_cache_dir():
     # Or is that making too many assumptions?
     return os.path.join(__opts__['cachedir'], 's3cache')
 
-def _get_env_path(env, path):
-    '''
-    Return the path of the file including the environment
-    '''
-
-    return os.path.join(env, path)
-
-def _get_cached_file_name(bucket_name, path):
+def _get_cached_file_name(bucket_name, env, path):
     '''
     Return the cached file name for a bucket path file
     '''
 
-    file_path = os.path.join(_get_cache_dir(), bucket_name, path)
+    file_path = os.path.join(_get_cache_dir(), bucket_name, env, path)
 
     # make sure bucket and env directories exist
     if not os.path.exists(os.path.dirname(file_path)):
@@ -364,24 +361,26 @@ def _read_buckets_cache_file(cache_file):
     Return the contents of the buckets cache file
     '''
 
+    log.debug('Reading buckets cache file')
+
     with salt.utils.fopen(cache_file, 'rb') as fp_:
         data = pickle.load(fp_)
 
     return data
 
-def _is_cached_file_current(resultset, env, bucket_name, path):
+def _is_cached_file_current(metadata, bucket_name, env, path):
     '''
     Check the cache for the named bucket file and check it's md5 hash against
     the file S3 metadata ETag
     '''
 
-    filename = _get_cached_file_name(bucket_name, path)
+    filename = _get_cached_file_name(bucket_name, env, path)
 
     if not os.path.isfile(filename):
         return None
 
     # get the S3 ETag/MD5 for the given file to compare
-    res = _find_file_meta(resultset, env, bucket_name, path)
+    res = _find_file_meta(metadata, bucket_name, env, path)
     file_md5 = filter(str.isalnum, res['ETag']) if res else None
 
     # read cache file and generate its md5 hash
@@ -409,7 +408,7 @@ def _find_files(resultset, dirs_only = False):
 
     return ret
 
-def _find_file_meta(resultset, env, bucket_name, path):
+def _find_file_meta(resultset, bucket_name, env, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
     '''
@@ -430,8 +429,9 @@ def _get_buckets():
     return __opts__['s3.buckets'] if 's3.buckets' in __opts__ else {}
 
 def _trim_env_off_path(paths, env, trim_slash=False):
-    # get the trim length if we need to remove the env and slash from the file
-    # path depending on the bucket mode
+    '''
+    Return a list of file paths with the env directory removed
+    '''
     env_len = None if _is_env_per_bucket() else len(env) + 1
     slash_len = -1 if trim_slash else None
 
