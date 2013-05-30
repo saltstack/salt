@@ -38,10 +38,11 @@ import urllib
 import logging
 
 # Import salt libs
-import salt.fileserver
 import salt.utils
 import salt.utils.s3 as s3
 import salt.modules
+
+from salt.fileserver import is_file_ignored
 
 log = logging.getLogger(__name__)
 
@@ -54,8 +55,9 @@ def envs():
     used as environments.
     '''
 
-    resultset = _init()
-    return resultset.keys()
+    # update and grab the envs from the metadata keys
+    metadata = _init()
+    return metadata.keys()
 
 def update():
     '''
@@ -79,34 +81,36 @@ def find_file(path, env='base', **kwargs):
     fnd = {'bucket': None,
             'path' : None}
 
-    resultset = _init()
-    if not resultset or env not in resultset:
+    metadata = _init()
+    if not metadata or env not in metadata:
         return fnd
 
-    ret = _find_files(resultset[env])
+    env_files = _find_files(metadata[env])
 
-    # look for the path including the env, but only return the path if found
-    env_path = _get_env_path(env, path)
-    for bucket_name, files in ret.iteritems():
-        if env_path in files and not salt.fileserver.is_file_ignored(__opts__, env_path):
+    env_file_path = _get_env_path(env, path)
+    file_path = path if _is_env_per_bucket() else env_file_path
+
+    # look for the files and check if they're ignored globally
+    for bucket_name, files in env_files.iteritems():
+        if file_path in files and not is_file_ignored(__opts__, file_path):
             fnd['bucket'] = bucket_name
             fnd['path'] = path
 
     if not fnd['path'] or not fnd['bucket']:
         return fnd
 
-    # check the cache using the env/path
-    if _is_cached_file_current(resultset, env, fnd['bucket'], env_path):
+    # check the local cache...
+    if _is_cached_file_current(metadata, env, fnd['bucket'], env_file_path):
         return fnd
 
-    # grab from S3 using the env/path, url encode to cover weird chars
+    # ... or get the file from S3
     key, keyid = _get_s3_key()
     s3.query(
             key = key,
             keyid = keyid,
             bucket = fnd['bucket'],
-            path = urllib.quote(env_path),
-            local_file = _get_cached_file_name(fnd['bucket'], env_path))
+            path = urllib.quote(file_path),
+            local_file = _get_cached_file_name(fnd['bucket'], env_file_path))
     return fnd
 
 def file_hash(load, fnd):
@@ -114,26 +118,22 @@ def file_hash(load, fnd):
     Return an MD5 file hash
     '''
 
+    ret = {}
+
     if 'path' not in load or 'env' not in load:
-        return ''
+        return ret
 
-    if 'path' not in fnd or 'bucket' not in fnd:
-        return ''
+    if 'path' not in fnd or 'bucket' not in fnd or not fnd['path']:
+        return ret
 
-    if not fnd['path']:
-        return {}
+    env_file_path = _get_env_path(load['env'], fnd['path'])
+    cached_file_path = _get_cached_file_name(fnd['bucket'], env_file_path)
 
-    # get the env/path file from the cache
-    env_path = _get_env_path(load['env'], fnd['path'])
-    cache_file = _get_cached_file_name(fnd['bucket'], env_path)
+    if os.path.isfile(cached_file_path):
+        ret['hsum'] = salt.utils.get_hash(cached_file_path),
+        ret['hash_type'] = 'md5'
 
-    if os.path.isfile(cache_file):
-        return {
-            'hsum': salt.utils.get_hash(cache_file),
-            'hash_type': 'md5',
-        }
-    else:
-        return {}
+    return ret
 
 def serve_file(load, fnd):
     '''
@@ -142,6 +142,7 @@ def serve_file(load, fnd):
 
     ret = {'data': '',
            'dest': ''}
+
     if 'path' not in load or 'loc' not in load or 'env' not in load:
         return ret
 
@@ -153,10 +154,10 @@ def serve_file(load, fnd):
     gzip = load.get('gzip', None)
 
     # get the env/path file from the cache
-    env_path = _get_env_path(load['env'], fnd['path'])
-    cache_file = _get_cached_file_name(fnd['bucket'], env_path)
+    env_file_path = _get_env_path(load['env'], fnd['path'])
+    cached_file_path = _get_cached_file_name(fnd['bucket'], env_file_path)
 
-    with salt.utils.fopen(cache_file, 'rb') as fp_:
+    with salt.utils.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if gzip and data:
@@ -171,22 +172,19 @@ def file_list(load):
     '''
 
     ret = []
-    env = load['env']
 
-    resultset = _init()
-
-    if not resultset or env not in resultset:
+    if 'env' not in load:
         return ret
 
-    # used to trim the env of the dirs in the map
-    env_len = len(load['env']) + 1
+    env = load['env']
+    metadata = _init()
 
-    # map and filter the files without the env
-    for buckets in _find_files(resultset[env]).values():
-        for env_path in buckets:
-            if not salt.fileserver.is_file_ignored(__opts__, env_path):
-                if env_path[env_len:]:
-                    ret.append(env_path[env_len:])
+    if not metadata or env not in metadata:
+        return ret
+
+    for buckets in _find_files(metadata[env]).values():
+        files = filter(lambda f: not is_file_ignored(__opts__, f), buckets)
+        ret += _trim_env_off_path(files, env)
 
     return ret
 
@@ -195,6 +193,9 @@ def file_list_emptydirs(load):
     Return a list of all empty directories on the master
     '''
     # TODO - implement this
+
+    log.error('### file_list_emptydirs')
+    log.error('### ' + str(load))
 
     ret = []
 
@@ -208,21 +209,22 @@ def dir_list(load):
     '''
 
     ret = []
-    env = load['env']
 
-    resultset = _init()
-
-    if not resultset or env not in resultset:
+    if 'env' not in load:
         return ret
 
-    # used to trim the env of the dirs in the map
-    env_len = len(load['env']) + 1
+    env = load['env']
+    metadata = _init()
 
-    # map and filter the dirs without the env
-    for dirs in _find_files(resultset[env], dirs_only = True).values():
-        filtered_dirs = map(lambda dir: dir[env_len:-1], dirs)
-        # TODO - filter out the empties
-        ret += filter(lambda dir: dir, filtered_dirs)
+    if not metadata or env not in metadata:
+        return ret
+
+    # grab all the dirs from the buckets cache file
+    for dirs in _find_files(metadata[env], dirs_only = True).values():
+        # trim env and trailing slash
+        dirs = _trim_env_off_path(dirs, env, trim_slash=True)
+        # remove empty string left by the base env dir in single bucket mode
+        ret += filter(None, dirs)
 
     return ret
 
@@ -243,9 +245,10 @@ def _init():
     '''
 
     cache_file = _get_buckets_cache_filename()
+    exp = time.time() - _s3_cache_expire
 
     # check mtime of the buckets files cache 
-    if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > time.time() - _s3_cache_expire:
+    if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
         return _read_buckets_cache_file(cache_file)
     else:
         # bucket files cache expired
@@ -302,40 +305,40 @@ def _refresh_buckets_cache_file(cache_file):
     key, keyid = _get_s3_key()
     resultset = {}
 
+    # helper s3 query fuction
+    def __get_s3_meta(bucket, key=key, keyid=keyid):
+        return s3.query(
+                key = key,
+                keyid = keyid,
+                bucket = bucket,
+                return_bin = False)
+
     if _is_env_per_bucket():
         # Single environment per bucket
         for env, buckets in _get_buckets().items():
             bucket_files = {}
             for bucket_name in buckets:
+                s3_meta = __get_s3_meta(bucket_name)
 
-                bucket_files[bucket_name] = s3.query(
-                        key = key,
-                        keyid = keyid,
-                        bucket = bucket_name,
-                        return_bin = False)
+                # grab only the files/dirs
+                bucket_files[bucket_name] = filter(lambda k: 'Key' in k, s3_meta)
 
             resultset[env] = bucket_files
 
     else:
         # Multiple environments per buckets
         for bucket_name in _get_buckets():
-
-            s3_meta = s3.query(
-                    key = key,
-                    keyid = keyid,
-                    bucket = bucket_name,
-                    return_bin = False)
+            s3_meta = __get_s3_meta(bucket_name)
 
             # pull out the environment dirs (eg. the root dirs)
-            files = filter(lambda key: 'Key' in key, s3_meta)
-            envs = set(
-                    map(lambda fp: (os.path.dirname(fp['Key']).split('/', 1))[0],
-                        files)
-                    )
+            files = filter(lambda k: 'Key' in k, s3_meta)
+            envs = map(lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files)
+            envs = set(envs)
 
             # pull out the files for the environment
             for env in envs:
-                env_files = filter(lambda ef: ef['Key'].startswith(env), files)
+                # grab only files/dirs that match this env
+                env_files = filter(lambda k: k['Key'].startswith(env), files)
 
                 if env not in resultset:
                     resultset[env] = {}
@@ -395,13 +398,14 @@ def _find_files(resultset, dirs_only = False):
 
     ret = {}
 
-    for bucket in resultset.keys():
-        ret[bucket] = []
+    for bucket_name, data in resultset.iteritems():
+        if bucket_name not in ret:
+            ret[bucket_name] = []
 
-    for bucket, data in resultset.iteritems():
-        fileData = filter(lambda key: key.has_key('Key'), data)
-        filePaths = map(lambda key: key['Key'], fileData)
-        ret[bucket] += filter(lambda key: key.endswith('/') == dirs_only, filePaths)
+        # grab the paths from the metadata
+        filePaths = map(lambda k: k['Key'], data)
+        # filter out the files or the dirs depending on flag
+        ret[bucket_name] += filter(lambda k: k.endswith('/') == dirs_only, filePaths)
 
     return ret
 
@@ -412,7 +416,7 @@ def _find_file_meta(resultset, env, bucket_name, path):
 
     env_meta = resultset[env] if env in resultset else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
-    files_meta = filter(lambda key: key.has_key('Key'), bucket_meta)
+    files_meta = filter(lambda k: k.has_key('Key'), bucket_meta)
 
     for item_meta in files_meta:
         if 'Key' in item_meta and item_meta['Key'] == path:
@@ -424,6 +428,14 @@ def _get_buckets():
     '''
 
     return __opts__['s3.buckets'] if 's3.buckets' in __opts__ else {}
+
+def _trim_env_off_path(paths, env, trim_slash=False):
+    # get the trim length if we need to remove the env and slash from the file
+    # path depending on the bucket mode
+    env_len = None if _is_env_per_bucket() else len(env) + 1
+    slash_len = -1 if trim_slash else None
+
+    return map(lambda d: d[env_len:slash_len], paths)
 
 def _is_env_per_bucket():
     '''
