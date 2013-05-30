@@ -155,12 +155,12 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_str_lower = gpu['Vendor'].lower()
+        vendor_strings = gpu['Vendor'].lower().split()
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = 'unknown'
         for name in known_vendors:
-            # search for an 'expected' vendor name in the string
-            if name in vendor_str_lower:
+            # search for an 'expected' vendor name in the list of strings
+            if name in vendor_strings:
                 vendor = name
                 break
         gpus.append({'vendor': vendor, 'model': gpu['Device']})
