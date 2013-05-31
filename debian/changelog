@@ -1,3 +1,9 @@
+salt (0.15.2-1) unstable; urgency=low
+
+  * New upstream version
+
+   -- Corey Quinn <corey@sequestered.net>  Wed, 29 May 2013 06:55:32 -0700
+
 salt (0.15.1-1) unstable; urgency=low
 
   * New upstream version
