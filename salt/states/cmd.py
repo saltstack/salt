@@ -278,6 +278,7 @@ def wait(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -348,6 +349,7 @@ def wait_script(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -712,6 +714,7 @@ def wait_call(name,
               unless=None,
               stateful=False,
               **kwargs):
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
