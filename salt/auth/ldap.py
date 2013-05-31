@@ -66,7 +66,7 @@ class _LDAPConnection:
     def __init__(self, server, port, tls, no_verify, binddn, bindpw,
                  anonymous):
         '''
-        Bind to an LDAP directory using passed credentials."""
+        Bind to an LDAP directory using passed credentials.
         '''
         self.server = server
         self.port = port
