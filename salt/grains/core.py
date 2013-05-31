@@ -140,6 +140,7 @@ def _linux_gpu_data():
         lspci_out = __salt__['cmd.run']('lspci -vmm')
 
         cur_dev = {}
+        error = False
         for line in lspci_out.splitlines():
             # check for record-separating empty lines
             if line == '':
@@ -148,8 +149,19 @@ def _linux_gpu_data():
                 # XXX; may also need to search for "3D controller"
                 cur_dev = {}
                 continue
-            key, val = line.split(':', 1)
-            cur_dev[key.strip()] = val.strip()
+            if re.match('^\w+:\s+.*', line):
+                key, val = line.split(':', 1)
+                cur_dev[key.strip()] = val.strip()
+            else:
+                error = True
+                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+
+        if error:
+            log.warn(
+                'Error loading grains, unexpected linux_gpu_data output, '
+                'check that you have a valid shell configured and '
+                'permissions to run lspci command'
+            )
     except OSError:
         pass
 
