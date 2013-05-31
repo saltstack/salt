@@ -345,6 +345,7 @@ def parse_opts():
     logging.root.setLevel(logging.DEBUG)
 
     print_header('Logging tests on {0}'.format(logfile), bottom=False)
+    print('Current Directory: {0}'.format(os.getcwd()))
     print_header(
         'Test suite is running under PID {0}'.format(os.getpid()), bottom=False
     )
@@ -457,6 +458,8 @@ if __name__ == '__main__':
         print('Stopping and saving coverage info')
         code_coverage.stop()
         code_coverage.save()
+        print('Current Directory: {0}'.format(os.getcwd()))
+        print('Coverage data file exists? {0}'.format(os.path.isfile('.coverage')))
 
         report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
         print(
