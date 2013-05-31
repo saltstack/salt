@@ -49,7 +49,7 @@ import urllib
 import logging
 
 # Import salt libs
-import salt.filserver as fs
+import salt.fileserver as fs
 import salt.modules
 import salt.utils
 import salt.utils.s3 as s3
