@@ -16,17 +16,28 @@ config.
     Alternatively, if on EC2 these credentials can be automatically loaded from
     instance metadata.
 
-    s3.buckets in the salt master config should look like this:
+    This fileserver supports two modes of operation for the buckets:
 
+    - A single bucket per environment:
+    eg.
         s3.buckets:
-          - bucket1
-          - bucket2
+            production:
+                - bucket1
+                - bucket2
+            staging:
+                - bucket3
+                - bucket4
 
-    The buckets must contain the directory structure. For example:
+    - Or multiple environments per bucket
+    eg.
+        s3.buckets:
+            - bucket1
+            - bucket2
+            - bucket3
+            - bucket4
 
-        /bucket1/<env>/<files and dirs>
-
-        eg. /bucket1/prod/<files and dirs>
+    A multiple environment bucket must adhere to the following root directory structure:
+        s3://<bucket name>/<environment>/<files>
 '''
 
 # Import python libs
@@ -449,27 +460,8 @@ def _trim_env_off_path(paths, env, trim_slash=False):
 
 def _is_env_per_bucket():
     '''
-    Return the configuration mode, either buckets per environment
-    eg.
-        s3.buckets:
-            production:
-                - bucket1
-                - bucket2
-            staging:
-                - bucket3
-                - bucket4
-
-    or a list of buckets that have environment dirs in their root
-    eg.
-        s3.buckets:
-            - bucket1
-            - bucket2
-            - bucket3
-            - bucket4
-
-    s3://bucket1/production/<files>
-    s3://bucket1/staging/<files>
-    etc
+    Return the configuration mode, either buckets per environment or a list of
+    buckets that have environment dirs in their root
     '''
 
     buckets = _get_buckets()
