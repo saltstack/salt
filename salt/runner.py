@@ -2,9 +2,6 @@
 Execute salt convenience routines
 '''
 
-# Import python libs
-import inspect
-
 # Import salt libs
 import salt.loader
 import salt.exceptions
