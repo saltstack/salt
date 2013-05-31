@@ -249,9 +249,12 @@ def _get_msi_software():
     swbem_services = wmi_service.ConnectServer(this_computer, "root\\cimv2")
     products = swbem_services.ExecQuery("Select * from Win32_Product")
     for product in products:
-        prd_name = product.Name.encode('ascii', 'ignore')
-        prd_ver = product.Version.encode('ascii', 'ignore')
-        win32_products[prd_name] = prd_ver
+        try:
+            prd_name = product.Name.encode('ascii', 'ignore')
+            prd_ver = product.Version.encode('ascii', 'ignore')
+            win32_products[prd_name] = prd_ver
+        except Exception:
+            pass
     return win32_products
 
 
