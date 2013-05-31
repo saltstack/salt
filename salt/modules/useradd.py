@@ -72,14 +72,15 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=True,
+        home=None,
         shell=None,
         unique=True,
         system=False,
         fullname='',
         roomnumber='',
         workphone='',
-        homephone=''):
+        homephone='',
+        createhome=True):
     '''
     Add a user to the minion
 
@@ -107,17 +108,14 @@ def add(name,
             return retval
         if usergroups():
             cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
-    if home:
-        if system:
-            if home is not True:
-                cmd += '-m -d {0} '.format(home)
-            else:
-                cmd += '-d {0} '.format(home)
+    if home is None:
+        if createhome:
+            cmd += '-m '
+    else:
+        if createhome:
+            cmd += '-m -d {0} '.format(home)
         else:
-            if home is not True:
-                cmd += '-m -d {0} '.format(home)
-            else:
-                cmd += '-m '
+            cmd += '-d {0} '.format(home)   
     if not unique:
         cmd += '-o '
     if system:
