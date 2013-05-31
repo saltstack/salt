@@ -6,7 +6,7 @@ Salt 0.10.2 Release Notes
 cleaner ways to access the salt-call capabilities in the API, minion data
 caching and the event system has been added to salt minions.
 
-There have also been updates to the zeromq functions, many more tests
+There have also been updates to the ZeroMQ functions, many more tests
 (thanks to sponsors, the code sprint and many contributors) and a swath
 of bug fixes.
 
@@ -44,7 +44,7 @@ The new config option on the master called ``minion_data_cache`` instructs the
 Salt master to maintain a cache of the minion's grains and pillar data in the
 cachedir. This option is turned off by default to avoid hitting the disk more,
 but when enabled the cache is used to make grain matching from the salt command
-more powerful, since the minions that will match can be pre determined.
+more powerful, since the minions that will match can be predetermined.
 
 Backup Files
 ------------
@@ -99,7 +99,7 @@ OpenBSD.
 SQL Modules
 ^^^^^^^^^^^
 
-The MySQL and Postgres modules have both received a number of additions thanks
+The MySQL and PostgreSQL modules have both received a number of additions thanks
 to the work of Avi Marcus and Roman Imankulov.
 
 ZFS Support on FreeBSD

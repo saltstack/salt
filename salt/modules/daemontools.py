@@ -11,11 +11,15 @@ service state via provider interface:
 import os
 import re
 
-__outputter__ = {
-    'get_all': 'yaml',
+# Function alias to not shadow built-ins.
+__func_alias__ = {
+    'reload_': 'reload'
 }
 
-SERVICE_DIR = "/service"
+if os.path.exists('/service'):
+    SERVICE_DIR = "/service"
+elif os.path.exists('/var/service'):
+    SERVICE_DIR = "/var/service"
 
 
 def _service_path(name):
@@ -24,12 +28,14 @@ def _service_path(name):
     '''
     return '{0}/{1}'.format(SERVICE_DIR, name)
 
+
 #-- states.service  compatible args
-def start(name, enable=None, sig=None):
+def start(name):
     '''
     Starts service via daemontools
 
     CLI Example::
+
         salt '*' daemontools.start <service name>
     '''
     __salt__['file.remove']('{0}/down'.format(_service_path(name)))
@@ -37,12 +43,13 @@ def start(name, enable=None, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-#-- states.service compatible
-def stop(name, enable=None, sig=None):
+#-- states.service compatible args
+def stop(name):
     '''
     Stops service via daemontools
 
     CLI Example::
+
         salt '*' daemontools.stop <service name>
     '''
     __salt__['file.touch']('{0}/down'.format(_service_path(name)))
@@ -55,6 +62,7 @@ def term(name):
     Send a TERM to service via daemontools
 
     CLI Example::
+
         salt '*' daemontools.term <service name>
     '''
     cmd = 'svc -t {0}'.format(_service_path(name))
@@ -62,12 +70,13 @@ def term(name):
 
 
 #-- states.service compatible
-def reload(name):
+def reload_(name):
     '''
     Wrapper for term()
 
-    CLI Example:
-    salt '*' daemontools.reload <service name>
+    CLI Example::
+
+        salt '*' daemontools.reload <service name>
     '''
     term(name)
 
@@ -77,8 +86,9 @@ def restart(name):
     '''
     Restart service via daemontools. This will stop/start service
 
-    CLI Example:
-     salt '*' daemontools.restart <service name>
+    CLI Example::
+
+        salt '*' daemontools.restart <service name>
     '''
     ret = 'restart False'
     if stop(name) and start(name):
@@ -88,7 +98,13 @@ def restart(name):
 
 #-- states.service compatible
 def full_restart(name):
-    ''' Calls daemontools.restart() function '''
+    '''
+    Calls daemontools.restart() function
+
+    CLI Example::
+
+        salt '*' daemontools.full_restart <service name>
+    '''
     restart(name)
 
 
@@ -103,11 +119,11 @@ def status(name, sig=None):
     '''
     cmd = 'svstat {0}'.format(_service_path(name))
     ret = __salt__['cmd.run_stdout'](cmd)
-    m = re.search('\(pid (\d+)\)', ret)
+    match = re.search(r'\(pid (\d+)\)', ret)
     try:
-      pid = m.group(1)
-    except:
-      pid = ''
+        pid = match.group(1)
+    except Exception:
+        pid = ''
     return pid
 
 
@@ -116,6 +132,7 @@ def get_all():
     Return a list of all available services
 
     CLI Example::
+
         salt '*' daemontools.get_all
     '''
     #- List all daemontools services in

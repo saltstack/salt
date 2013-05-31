@@ -19,7 +19,7 @@ The Salt source can be downloaded from the salt github site:
 
 :download:`salt-0.9.2.tar.gz`
 
-Or from PiPy:
+Or from PyPI:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.2.tar.gz
 

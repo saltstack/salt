@@ -42,7 +42,7 @@ Match all minions in the example.net domain or any of the example domains::
 Match all the ``webN`` minions in the example.net domain
 (``web1.example.net``, ``web2.example.net`` … ``webN.example.net``)::
 
-    salt 'web?.example.net test.ping
+    salt 'web?.example.net' test.ping
 
 Match the ``web1`` through ``web5`` minions::
 

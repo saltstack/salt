@@ -13,10 +13,10 @@ class UseraddModuleTest(integration.ModuleCase):
     def setUp(self):
         super(UseraddModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain != 'FreeBSD':
+        if os_grain['kernel'] != 'FreeBSD':
             self.skipTest(
-                'Test not applicable to \'{0}\' kernel'.format(
-                    os_grain
+                'Test not applicable to \'{kernel}\' kernel'.format(
+                    **os_grain
                 )
             )
 
@@ -27,7 +27,7 @@ class UseraddModuleTest(integration.ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(os.geteuid() is not 0, 'you must be root to run this test')
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the
         # name

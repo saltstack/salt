@@ -9,7 +9,14 @@ import re
 __opts__ = {}
 __pillar__ = {}
 
+__func_alias__ = {
+    'list_': 'list'
+}
+
 def _pecl(command):
+    '''
+    Execute the command passed with pecl
+    '''
     cmdline = 'pecl {0}'.format(command)
 
     ret = __salt__['cmd.run_all'](cmdline)
@@ -26,6 +33,10 @@ def install(pecls):
 
     pecls
         The pecl extensions to install.
+
+    CLI Example::
+
+        salt '*' pecl.install fuse
     '''
     return _pecl('install {0}'.format(pecls))
 
@@ -36,25 +47,36 @@ def uninstall(pecls):
 
     pecls
         The pecl extensions to uninstall.
+
+    CLI Example::
+
+        salt '*' pecl.uninstall fuse
     '''
     return _pecl('uninstall {0}'.format(pecls))
 
 
 def update(pecls):
     '''
-    Update one or several pecl exntesions.
+    Update one or several pecl extensions.
 
     pecls
         The pecl extensions to update.
+
+    CLI Example::
+
+        salt '*' pecl.update fuse
     '''
     return _pecl('install -U {0}'.format(pecls))
 
 
-def list():
+def list_():
     '''
     List installed pecl extensions.
-    '''
 
+    CLI Example::
+
+        salt '*' pecl.list
+    '''
     pecls = {}
     lines = _pecl('list').splitlines()
     lines.pop(0)
@@ -67,11 +89,8 @@ def list():
     lines.pop(0)
 
     for line in lines:
-        m = re.match('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)', line)
-        if m:
-            pecls[m.group(1)] = [m.group(2), m.group(3)]
+        match = re.match('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)', line)
+        if match:
+            pecls[match.group(1)] = [match.group(2), match.group(3)]
 
     return pecls
-
-
-

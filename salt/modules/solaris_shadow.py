@@ -15,9 +15,8 @@ import salt.utils
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-
     return 'shadow' if __grains__['kernel'] == 'SunOS' else False
 
 
@@ -106,17 +105,17 @@ def set_password(name, password):
     if not os.path.isfile(s_file):
         return ret
     lines = []
-    with salt.utils.fopen(s_file, 'rb') as f:
-        for line in f:
+    with salt.utils.fopen(s_file, 'rb') as ifile:
+        for line in ifile:
             comps = line.strip().split(':')
-            if not comps[0] == name:
+            if comps[0] != name:
                 lines.append(line)
                 continue
             comps[1] = password
             line = ':'.join(comps)
             lines.append('{0}\n'.format(line))
-    with salt.utils.fopen(s_file, 'w+') as f:
-        f.writelines(lines)
+    with salt.utils.fopen(s_file, 'w+') as ofile:
+        ofile.writelines(lines)
     uinfo = info(name)
     return uinfo['pwd'] == password
 

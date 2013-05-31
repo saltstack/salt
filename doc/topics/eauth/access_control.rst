@@ -17,10 +17,10 @@ all of the three aforementioned systems. While this adds functionality to the
 configuration in 0.10.4, it does not negate the old configuration.
 
 Now specific functions can be opened up to specific minions from specific users
-in the case of external auth and client acls, and for specific minions in the
+in the case of external auth and client ACLs, and for specific minions in the
 case of the peer system.
 
-The access controls are manifest using matchers in these configurations:
+The access controls are manifested using matchers in these configurations:
 
 .. code-block:: yaml
 
@@ -32,7 +32,7 @@ The access controls are manifest using matchers in these configurations:
           - apache.*
 
 In the above example, fred is able to send commands only to minions which match
-the specifieed glob target. This can be expanded to include other functions for
+the specified glob target. This can be expanded to include other functions for
 other minions based on standard targets.
 
 .. code-block:: yaml
@@ -40,6 +40,7 @@ other minions based on standard targets.
     external_auth:
       pam:
         dave:
+          - test.ping
           - mongo\*:
             - network.*
           - log\*:
@@ -47,7 +48,10 @@ other minions based on standard targets.
             - pkg.*
           - 'G@os:RedHat':
             - kmod.*
-          - test.ping
+        steve:
+          - .*
+
 
 The above allows for all minions to be hit by test.ping by dave, and adds a
-few functions for hitting other minions.
+few functions that dave can execute on other minions. It also allows steve
+unrestricted access to salt commands.

@@ -7,6 +7,7 @@ authenticating peers
 # Import python libs
 import os
 import sys
+import time
 import hmac
 import hashlib
 import logging
@@ -14,51 +15,32 @@ import logging
 # Import third party libs
 from M2Crypto import RSA
 from Crypto.Cipher import AES
-try:
-    import win32api
-    import win32con
-    is_windows = True
-except ImportError:
-    is_windows = False
 
-# Import salt utils
+# Import salt libs
 import salt.utils
 import salt.payload
 import salt.utils.verify
-from salt.exceptions import AuthenticationError, SaltClientError, SaltReqTimeoutError
+import salt.version
+from salt.exceptions import (
+    AuthenticationError, SaltClientError, SaltReqTimeoutError
+)
 
 log = logging.getLogger(__name__)
 
 
-def clean_old_key(rsa_path):
+def dropfile(cachedir):
     '''
-    Read in an old m2crypto key and save it back in the clear so
-    pycrypto can handle it
+    Set an aes dropfile to update the publish session key
     '''
-    def foo_pass(self, data=''):
-        return 'foo'
-    mkey = RSA.load_key(rsa_path, callback=foo_pass)
-    try:
-        os.remove(rsa_path)
-    except (IOError, OSError):
-        pass
-    # Set write permission for minion.pem file - reverted after saving the key
-    if is_windows:
-        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
-    try:
-        mkey.save_key(rsa_path, None)
-    except IOError:
-        log.error(
-                ('Failed to update old RSA format for key {0}, future '
-                 'releases may not be able to use this key').format(rsa_path)
-                )
-    # Set read-only permission for minion.pem file
-    if is_windows:
-        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
-    return mkey
+    dfn = os.path.join(cachedir, '.dfn')
+    aes = Crypticle.generate_key_string()
+    mask = os.umask(191)
+    with open(dfn, 'w+') as fp_:
+        fp_.write(aes)
+    os.umask(mask)
 
 
-def gen_keys(keydir, keyname, keysize):
+def gen_keys(keydir, keyname, keysize, user=None):
     '''
     Generate a keypair for use with salt
     '''
@@ -66,12 +48,22 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    gen = RSA.gen_key(keysize, 1, callback=lambda x,y,z:None)
+    gen = RSA.gen_key(keysize, 65537, callback=lambda x, y, z: None)
     cumask = os.umask(191)
     gen.save_key(priv, None)
     os.umask(cumask)
     gen.save_pub_key(pub)
     os.chmod(priv, 256)
+    if user:
+        try:
+            import pwd
+            uid = pwd.getpwnam(user).pw_uid
+            os.chown(priv, uid, -1)
+            os.chown(pub, uid, -1)
+        except (KeyError, ImportError, OSError):
+            # The specified user was not found, allow the backup systems to
+            # report the error
+            pass
     return priv
 
 
@@ -81,6 +73,7 @@ class MasterKeys(dict):
     authentication by the master.
     '''
     def __init__(self, opts):
+        super(MasterKeys, self).__init__()
         self.opts = opts
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
@@ -92,17 +85,14 @@ class MasterKeys(dict):
         Returns a key objects for the master
         '''
         if os.path.exists(self.rsa_path):
-            try:
-                key = RSA.load_key(self.rsa_path)
-            except Exception:
-                # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a pass phrase
-                key = clean_old_key(self.rsa_path)
-
+            key = RSA.load_key(self.rsa_path)
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            gen_keys(self.opts['pki_dir'], 'master', 4096)
+            gen_keys(self.opts['pki_dir'],
+                     'master',
+                     4096,
+                     self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
 
@@ -149,16 +139,14 @@ class Auth(object):
         salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
-            try:
-                key = RSA.load_key(self.rsa_path)
-            except Exception:
-                # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a pass phrase
-                key = clean_old_key(self.rsa_path)
+            key = RSA.load_key(self.rsa_path)
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            gen_keys(self.opts['pki_dir'], 'minion', 4096)
+            gen_keys(self.opts['pki_dir'],
+                     'minion',
+                     4096,
+                     self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
         return key
 
@@ -177,7 +165,9 @@ class Auth(object):
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
         try:
-            pub = RSA.load_pub_key(os.path.join(self.opts['pki_dir'], self.mpub))
+            pub = RSA.load_pub_key(
+                os.path.join(self.opts['pki_dir'], self.mpub)
+            )
             payload['load']['token'] = pub.public_encrypt(self.token, 4)
         except Exception:
             pass
@@ -207,7 +197,7 @@ class Auth(object):
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 m_digest = mkey.public_decrypt(payload['sig'], 5)
-                if not m_digest == digest:
+                if m_digest != digest:
                     return '', ''
         else:
             return '', ''
@@ -223,11 +213,12 @@ class Auth(object):
 
     def verify_master(self, payload):
         '''
+        Verify that the master is the same one that was previously accepted
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
-            if not payload['pub_key'] == local_master_pub:
+            if payload['pub_key'] != local_master_pub:
                 # This is not the last master we connected to
                 log.error('The master key has changed, the salt master could '
                           'have been subverted, verify salt master\'s public '
@@ -235,11 +226,15 @@ class Auth(object):
                 return ''
             try:
                 aes, token = self.decrypt_aes(payload)
-                if not token == self.token:
-                    log.error('The master failed to decrypt the random minion token')
+                if token != self.token:
+                    log.error(
+                        'The master failed to decrypt the random minion token'
+                    )
                     return ''
             except Exception:
-                log.error('The master failed to decrypt the random minion token')
+                log.error(
+                    'The master failed to decrypt the random minion token'
+                )
                 return ''
             return aes
         else:
@@ -247,7 +242,7 @@ class Auth(object):
             aes, token = self.decrypt_aes(payload, False)
             return aes
 
-    def sign_in(self):
+    def sign_in(self, timeout=60, safe=True):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -257,19 +252,29 @@ class Auth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         try:
             self.opts['master_ip'] = salt.utils.dns_check(
-                    self.opts['master'],
-                    True
-                    )
+                self.opts['master'],
+                True,
+                self.opts['ipv6']
+            )
         except SaltClientError:
-            return 'retry'
+            if safe:
+                return 'retry'
+            raise SaltClientError
+
         sreq = salt.payload.SREQ(
-                self.opts['master_uri'],
-                self.opts.get('id', '')
-                )
+            self.opts['master_uri'],
+            self.opts.get('id', '')
+        )
         try:
-            payload = sreq.send_auto(self.minion_sign_in_payload())
+            payload = sreq.send_auto(
+                self.minion_sign_in_payload(),
+                timeout=timeout
+            )
         except SaltReqTimeoutError:
-            return 'retry'
+            if safe:
+                return 'retry'
+            raise SaltClientError
+
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
@@ -280,7 +285,7 @@ class Auth(object):
                         'minion.\nOr restart the Salt Master in open mode to '
                         'clean out the keys. The Salt Minion will now exit.'
                     )
-                    sys.exit(42)
+                    sys.exit(0)
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
@@ -295,26 +300,26 @@ class Auth(object):
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
                 'The master may need to be updated if it is a version of Salt '
-                'lower than 0.10.4, or\n'
+                'lower than {0}, or\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
                 'Salt Minion.\nThe master public key can be found '
-                'at:\n{0}'.format(m_pub_fn)
+                'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
             sys.exit(42)
         if self.opts.get('master_finger', False):
             if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
-                log.critical((
+                log.critical(
                     'The specified fingerprint in the master configuration '
                     'file:\n{0}\nDoes not match the authenticating master\'s '
                     'key:\n{1}\nVerify that the configured fingerprint '
                     'matches the fingerprint of the correct master and that '
                     'this minion is not subject to a man in the middle attack'
-                    ).format(
+                    .format(
                         self.opts['master_finger'],
                         salt.utils.pem_finger(m_pub_fn)
-                        )
                     )
+                )
                 sys.exit(42)
         auth['publish_port'] = payload['publish_port']
         return auth
@@ -370,13 +375,13 @@ class Crypticle(object):
         data = data[:-self.SIG_SIZE]
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
-            log.warning('Failed to authenticate message')
+            log.debug('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         result = 0
-        for x, y in zip(mac_bytes, sig):
-            result |= ord(x) ^ ord(y)
+        for zipped_x, zipped_y in zip(mac_bytes, sig):
+            result |= ord(zipped_x) ^ ord(zipped_y)
         if result != 0:
-            log.warning('Failed to authenticate message')
+            log.debug('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
@@ -417,11 +422,19 @@ class SAuth(Auth):
         in, signing in can occur as often as needed to keep up with the
         revolving master aes key.
         '''
-        creds = self.sign_in()
-        if creds == 'retry':
-            log.error('Failed to authenticate with the master, verify this'\
-                + ' minion\'s public key has been accepted on the salt master')
-            sys.exit(2)
+        while True:
+            creds = self.sign_in(
+                self.opts.get('_auth_timeout', 60),
+                self.opts.get('_safe_auth', True)
+            )
+            if creds == 'retry':
+                if self.opts.get('caller'):
+                    print('Minion failed to authenticate with the master, '
+                          'has the minion key been accepted?')
+                    sys.exit(2)
+                time.sleep(self.opts['acceptance_wait_time'])
+                continue
+            break
         return Crypticle(self.opts, creds['aes'])
 
     def gen_token(self, clear_tok):

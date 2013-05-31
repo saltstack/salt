@@ -100,7 +100,7 @@ def make_pkgng_aware(jname):
 
 def parse_config(config_file=None):
     '''
-    Returns a dict of poudriere main configuration defintions
+    Returns a dict of poudriere main configuration definitions
 
     CLI Example::
 
@@ -110,13 +110,13 @@ def parse_config(config_file=None):
         config_file = _config_file()
     ret = {}
     if _check_config_exists(config_file):
-        with salt.utils.fopen(config_file) as f:
-            for line in f:
-                k, y = line.split('=')
-                ret[k] = y
+        with salt.utils.fopen(config_file) as ifile:
+            for line in ifile:
+                key, val = line.split('=')
+                ret[key] = val
         return ret
-    else:
-        return 'Could not find {0} on file system'.format(config_file)
+
+    return 'Could not find {0} on file system'.format(config_file)
 
 
 def version():
@@ -236,7 +236,7 @@ def bulk_build(jail, pkg_file, keep=False):
     '''
     Run bulk build on poudriere server.
 
-    Return number of pkg builds, failures, and errors, on error dump to cli
+    Return number of pkg builds, failures, and errors, on error dump to CLI
 
     CLI Example::
 

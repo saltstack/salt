@@ -9,8 +9,8 @@ suitable for general use.
 
 0.7.0 Brings the following new features to Salt:
 
-- Integration with facter data from puppet labs
-- Allow for matching minions from the salt client via facter information
+- Integration with Facter data from puppet labs
+- Allow for matching minions from the salt client via Facter information
 - Minion job threading, many jobs can be executed from the master at once
 - Preview of master clustering support - Still experimental
 - Introduce new minion modules for stats, virtualization, service management and more

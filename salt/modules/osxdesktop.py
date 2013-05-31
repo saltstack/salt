@@ -4,6 +4,9 @@ Mac OS X implementations of various commands in the "desktop" interface
 
 
 def __virtual__():
+    '''
+    Only load on Mac systems
+    '''
     if __grains__['os'] == 'MacOS':
         return 'desktop'
     return False
@@ -58,6 +61,17 @@ def lock():
 
         salt '*' desktop.lock
     '''
-    cmd = '/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend'
+    cmd = '/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend'
 
+    return __salt__['cmd.run'](cmd)
+
+def say(*words):
+    '''
+    Say some words.
+
+    CLI Example::
+
+        salt '*' desktop.say <word0> <word1> ... <wordN>
+    '''
+    cmd = 'say {}'.format(' '.join(words))
     return __salt__['cmd.run'](cmd)

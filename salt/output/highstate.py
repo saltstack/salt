@@ -12,11 +12,12 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has two output modes, `full` and `terse`. The
-    default is set to full, which will display many lines of detailed
-    information for each executed chunk. If the `state_output` option is
-    set to `terse` then the output is greatly simplified and shown in only one
-    line
+    The highstate outputter has three output modes, `full`, `terse`, and
+    `mixed`. The default is set to full, which will display many lines of
+    detailed information for each executed chunk. If the `state_output` option
+    is set to `terse` then the output is greatly simplified and shown in only
+    one line.  If `mixed` is used, then terse output will be used unless a
+    state failed, in which case full output will be used.
 '''
 
 # Import python libs
@@ -76,52 +77,70 @@ def output(data):
                 if __opts__.get('state_output', 'full').lower() == 'terse':
                     # Print this chunk in a terse way and continue in the
                     # loop
-                    msg = (' {0}Name: {1} - Function: {2} - Result: {3}{4}'
-                            ).format(
-                                    tcolor,
-                                    comps[2],
-                                    comps[-1],
-                                    str(ret['result']),
-                                    colors['ENDC']
-                                    )
+                    msg = (' {0}Name: {1} - Function: {2}.{3} - '
+                           'Result: {4}{5}').format(tcolor,
+                                                    comps[2],
+                                                    comps[0],
+                                                    comps[-1],
+                                                    str(ret['result']),
+                                                    colors['ENDC'])
                     hstrs.append(msg)
                     continue
-
+                elif __opts__.get('state_output', 'full').lower() == 'mixed':
+                    # Print terse unless it failed
+                    if ret['result'] is not False:
+                        msg = (' {0}Name: {1} - Function: {2}.{3} - '
+                               'Result: {4}{5}').format(tcolor,
+                                                        comps[2],
+                                                        comps[0],
+                                                        comps[-1],
+                                                        str(ret['result']),
+                                                        colors['ENDC'])
+                        hstrs.append(msg)
+                        continue
                 hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                               .format(tcolor, comps[0], colors)))
                 hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[2],
                     colors
-                    ))
+                ))
                 hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[-1],
                     colors
-                    ))
+                ))
                 hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
                     tcolor,
                     str(ret['result']),
                     colors
-                    ))
+                ))
                 hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
                     tcolor,
                     ret['comment'],
                     colors
-                    ))
+                ))
                 changes = '        Changes:   '
-                for key in ret['changes']:
-                    if isinstance(ret['changes'][key], string_types):
-                        changes += (key + ': ' + ret['changes'][key] +
-                                    '\n                   ')
-                    elif isinstance(ret['changes'][key], dict):
-                        changes += (key + ': ' +
-                                    pprint.pformat(ret['changes'][key]) +
-                                    '\n                   ')
-                    else:
-                        changes += (key + ': ' +
-                                    pprint.pformat(ret['changes'][key]) +
-                                    '\n                   ')
+                if not isinstance(ret['changes'], dict):
+                    changes += 'Invalid Changes data: {0}'.format(
+                            ret['changes'])
+                else:
+                    for key in ret['changes']:
+                        if isinstance(ret['changes'][key], string_types):
+                            changes += (key + ': ' + ret['changes'][key] +
+                                        '\n                   ')
+                        elif isinstance(ret['changes'][key], dict):
+                            innerdict = '{ '
+                            for k, v in ret['changes'][key].iteritems():
+                                innerdict += '{0} : {1}\n'.format(k, v)
+                            innerdict += '}'
+                            changes += (key + ': ' +
+                                        innerdict +
+                                        '\n                   ')
+                        else:
+                            changes += (key + ': ' +
+                                        pprint.pformat(ret['changes'][key]) +
+                                        '\n                   ')
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
         hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
@@ -140,4 +159,3 @@ def _strip_clean(returns):
     for tag in rm_tags:
         returns.pop(tag)
     return returns
-

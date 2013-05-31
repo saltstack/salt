@@ -70,7 +70,7 @@ def mode(name):
     mode = __salt__['selinux.getenforce']()
     if mode == tmode:
         ret['result'] = True
-        ret['comment'] = 'Selinux is already in {0} mode'.format(tmode)
+        ret['comment'] = 'SELinux is already in {0} mode'.format(tmode)
         return ret
     # The mode needs to change...
     if __opts__['test']:
@@ -82,7 +82,7 @@ def mode(name):
     mode = __salt__['selinux.setenforce'](tmode)
     if mode == tmode:
         ret['result'] = True
-        ret['comment'] = 'Selinux has been set to {0} mode'.format(tmode)
+        ret['comment'] = 'SELinux has been set to {0} mode'.format(tmode)
         return ret
     ret['comment'] = 'Failed to set SELinux to {0} mode'.format(tmode)
     return ret
@@ -107,7 +107,7 @@ def boolean(name, value, persist=False):
            'comment': '',
            'changes': {}}
     bools = __salt__['selinux.list_sebool']()
-    if not name in bools:
+    if name not in bools:
         ret['comment'] = 'Boolean {0} is not available'.format(name)
         ret['result'] = False
         return ret

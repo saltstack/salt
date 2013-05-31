@@ -31,14 +31,21 @@ Options
 
 .. option:: -t TIMEOUT, --timeout=TIMEOUT
 
-    The timeout in seconds to wait for replies from the Salt minions.
+    The timeout in seconds to wait for replies from the Salt minions. The
+    timeout number specifies how long the command line client will wait to
+    query the minions and check on running jobs.
 
-.. option:: -s STATIC, --static=STATIC
+.. option:: -s, --static
 
     By default as of version 0.9.8 the salt command returns data to the
     console as it is received from minions, but previous releases would return
     data only after all data was received. To only return the data with a hard
     timeout and after all minions have returned then use the static option.
+
+.. option:: --async
+
+    Instead of waiting for the job to run on minions only print the jod id of
+    the started execution and complete.
 
 .. option:: -b BATCH, --batch-size=BATCH
 

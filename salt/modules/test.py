@@ -2,21 +2,16 @@
 Module for running arbitrary tests
 '''
 
-# Import salt libs
+# Import Python libs
+import os
+import sys
 import time
+import random
 
-
-# Load the outputters for the module
-__outputter__ = {
-    'echo': 'txt',
-    'ping': 'txt',
-    'fib': 'yaml',
-    'version': 'txt',
-    'collatz': 'yaml',
-    'conf_test': 'txt',
-    'get_opts': 'yaml',
-    'outputter': 'txt',
-}
+# Import Salt libs
+import salt
+import salt.version
+import salt.loader
 
 
 def echo(text):
@@ -55,6 +50,19 @@ def sleep(length):
     return True
 
 
+def rand_sleep(max=60):
+    '''
+    Sleep for a random number of seconds, used to test long-running commands
+    and minions returning at differing intervals
+
+    CLI Example::
+
+        salt '*' test.rand_sleep 60
+    '''
+    time.sleep(random.randint(0, max))
+    return True
+
+
 def version():
     '''
     Return the version of salt on the minion
@@ -63,8 +71,29 @@ def version():
 
         salt '*' test.version
     '''
-    import salt
     return salt.__version__
+
+
+def versions_information():
+    '''
+    Returns versions of components used by salt as a dict
+
+    CLI Example::
+
+        salt '*' test.versions_information
+    '''
+    return dict(salt.version.versions_information())
+
+
+def versions_report():
+    '''
+    Returns versions of components used by salt
+
+    CLI Example::
+
+        salt '*' test.versions_report
+    '''
+    return '\n'.join(salt.version.versions_report())
 
 
 def conf_test():
@@ -129,11 +158,11 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    a, b = 0, 1
+    fib_a, fib_b = 0, 1
     ret = [0]
-    while b < num:
-        ret.append(b)
-        a, b = b, a + b
+    while fib_b < num:
+        ret.append(fib_b)
+        fib_a, fib_b = fib_b, fib_a + fib_b
     return ret, time.time() - start
 
 
@@ -169,3 +198,77 @@ def outputter(data):
         salt '*' test.outputter foobar
     '''
     return data
+
+
+def retcode(code=42):
+    '''
+    Test that the returncode system is functioning correctly
+
+    CLI Example::
+
+        salt '*' test.retcode 42
+    '''
+    __context__['retcode'] = code
+    return True
+
+
+def provider(module):
+    '''
+    Pass in a function name to discover what provider is being used
+
+    CLI Example::
+
+        salt '*' test.provider service
+    '''
+    func = ''
+    for key in __salt__:
+        if not key.startswith('{0}.'.format(module)):
+            continue
+        func = key
+        break
+    if not func:
+        return ''
+    pfn = sys.modules[__salt__[func].__module__].__file__
+    pfn = os.path.basename(pfn)
+    return pfn[:pfn.rindex('.')]
+
+
+def providers():
+    '''
+    Return a dict of the provider names and the files that provided them
+
+    CLI Example::
+
+        salt '*' test.providers
+    '''
+    ret = {}
+    for funcname in __salt__:
+        modname = funcname.split('.')[0]
+        if modname not in ret:
+            ret[provider(modname)] = modname
+    return ret
+
+
+def not_loaded():
+    '''
+    List the modules that were not loaded by the salt loader system
+
+    CLI Example::
+
+        salt '*' test.not_loaded
+    '''
+    prov = providers()
+    ret = set()
+    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
+    for mod_dir in loader.module_dirs:
+        if not os.path.isabs(mod_dir):
+            continue
+        if not os.path.isdir(mod_dir):
+            continue
+        for fn_ in os.listdir(mod_dir):
+            if fn_.startswith('_'):
+                continue
+            name = fn_.split('.')[0]
+            if name not in prov:
+                ret.add(name)
+    return sorted(ret)

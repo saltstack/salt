@@ -7,7 +7,6 @@
 clean_common() {
 # remove shared job cache and other runtime directories
     rm -rf \
-        /etc/salt \
         /var/cache/salt \
         /var/log/salt \
         /var/run/salt \
@@ -17,8 +16,6 @@ clean_common() {
 clean_conf() {
 # remove config and log file for master, minion, or syndic
     rm -rf \
-        /etc/salt/"$1" \
-        /etc/salt/"$1".d \
         /etc/salt/pki/$1 \
         /var/cache/salt/$1 \
         /var/log/salt/$1 \

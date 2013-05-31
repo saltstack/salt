@@ -17,7 +17,7 @@ import salt.auth
 import salt.key
 
 from salt.utils import parsers
-from salt.utils.verify import verify_env
+from salt.utils.verify import verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
@@ -37,16 +37,16 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.parse_args()
 
         try:
-            local = salt.client.LocalClient(
-                self.get_config_file_path('master')
-            )
+            local = salt.client.LocalClient(self.get_config_file_path())
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
 
         if self.options.batch:
             batch = salt.cli.batch.Batch(self.config)
-            batch.run()
+            # Printing the output is already taken care of in run() itself
+            for res in batch.run():
+                pass
         else:
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']
@@ -68,7 +68,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
 
-            if self.options.eauth:
+            # If using eauth and a token hasn't already been loaded into
+            # kwargs, prompt the user to enter auth credentials
+            if not 'token' in kwargs and self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:
@@ -83,9 +85,19 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 kwargs.update(res)
                 kwargs['eauth'] = self.options.eauth
 
+            if self.config['async']:
+                jid = local.cmd_async(**kwargs)
+                print('Executed command with job ID: {0}'.format(jid))
+                return
             try:
                 # local will be None when there was an error
                 if local:
+                    if self.options.subset:
+                        cmd_func = local.cmd_subset
+                        kwargs['sub'] = self.options.subset
+                        kwargs['cli'] = True
+                    else:
+                        cmd_func = local.cmd_cli
                     if self.options.static:
                         if self.options.verbose:
                             kwargs['verbose'] = True
@@ -102,11 +114,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     else:
                         if self.options.verbose:
                             kwargs['verbose'] = True
-                        for full_ret in local.cmd_cli(**kwargs):
+                        for full_ret in cmd_func(**kwargs):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
             except (SaltInvocationError, EauthAuthenticationError) as exc:
-                ret = exc
+                ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
 
@@ -115,11 +127,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         Print the output from a single return to the terminal
         '''
         # Handle special case commands
-        if self.config['fun'] == 'sys.doc':
+        if self.config['fun'] == 'sys.doc' and not isinstance(ret, Exception):
             self._print_docs(ret)
         else:
             # Determine the proper output method and run it
             salt.output.display_output(ret, out, self.config)
+        if not ret:
+            sys.exit(2)
 
     def _format_ret(self, full_ret):
         '''
@@ -216,15 +230,24 @@ class SaltCall(parsers.SaltCallOptionParser):
             verify_env([
                     self.config['pki_dir'],
                     self.config['cachedir'],
-                    os.path.dirname(self.config['log_file'])
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],
             )
+            if (not self.config['log_file'].startswith('tcp://') or
+                not self.config['log_file'].startswith('udp://') or
+                not self.config['log_file'].startswith('file://')):
+                # Logfile is not using Syslog, verify
+                verify_files(
+                    [self.config['log_file']],
+                    self.config['user']
+                )
 
         if self.options.local:
             self.config['file_client'] = 'local'
+        if self.options.master:
+            self.config['master'] = self.options.master
 
         # Setup file logging!
         self.setup_logfile_logger()
@@ -255,7 +278,7 @@ class SaltRun(parsers.SaltRunOptionParser):
             runner._print_docs()
         else:
             # Run this here so SystemExit isn't raised anywhere else when
-            # someone tries to use the runners via the python api
+            # someone tries to use the runners via the python API
             try:
                 runner.run()
             except SaltClientError as exc:

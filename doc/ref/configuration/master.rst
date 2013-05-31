@@ -45,21 +45,6 @@ The network port to set up the publication interface
     publish_port: 4505
 
 
-.. conf_master:: pub_refresh
-
-``pub_refresh``
----------------
-
-Default: ``False``
-
-The pub_refresh system manually refreshed the master ZeroMQ publisher. It is
-used in some cases where the minions loose connection to the master and it
-is solved by restarting the master.
-
-.. code-block:: yaml
-
-    pub_refresh: False
-
 .. conf_master:: user
 
 ``user``
@@ -87,7 +72,7 @@ seeing on the console(and then salt-master crashes)::
   Too many open files (tcp_listener.cpp:335)
   Aborted (core dumped)
 
-By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
 max open files.
 
 If you wish to set a different value than the default one, uncomment and
@@ -111,6 +96,9 @@ Default: ``5``
 The number of threads to start for receiving commands and replies from minions.
 If minions are stalling on replies because you have many minions, raise the
 worker_threads value.
+
+Worker threads should not be put below 3 when using the peer system, but can
+drop down to 1 worker otherwise.
 
 .. code-block:: yaml
 
@@ -206,6 +194,22 @@ Disabling the job cache will make previously executed jobs unavailable to
 the jobs system and is not generally recommended. Normally it is wise to make
 sure the master has access to a faster IO system or a tmpfs is mounted to the
 jobs dir
+
+.. conf_master:: ext_job_cache
+
+``ext_job_cache``
+-----------------
+
+Default: ''
+
+Used to specify a default returner for all minions, when this option is set
+the specified returner needs to be properly configured and the minions will
+always default to sending returns to this returner. This will also disable the
+local job cache on the master
+
+.. code-block:: yaml
+
+    ext_job_cache: redis
 
 .. conf_master:: sock_dir
 
@@ -336,7 +340,8 @@ Default: ``full``
 
 The state_output setting changes if the output is the full multi line
 output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+the output will be shortened to a single line.  If set to 'mixed', the output
+will be terse unless a state failed, in which case that output will be full.
 
 .. code-block:: yaml
 
@@ -408,7 +413,7 @@ at the moment a single state fails
 
 Default:: ``False``
 
-Set all state calls to only test if they are going to acctually make changes
+Set all state calls to only test if they are going to actually make changes
 or just post what changes are going to be made
 
 .. code-block:: yaml
@@ -425,7 +430,7 @@ Master File Server Settings
 
 Default: ``base: [/srv/salt]``
 
-Salt runs a lightweight file server written in zeromq to deliver files to
+Salt runs a lightweight file server written in ZeroMQ to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
 
@@ -439,7 +444,7 @@ Example:
 
     file_roots:
       base:
-        - /srv/salt/
+        - /srv/salt
       dev:
         - /srv/salt/dev/services
         - /srv/salt/dev/states
@@ -640,7 +645,7 @@ A group consists of a group name and a compound target.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
 Master Logging Settings
@@ -651,13 +656,24 @@ Master Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/var/log/salt/master`
+Default: /var/log/salt/master
 
-The location of the master log file
+The master log can be sent to a regular file, local path name, or network location.
+Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
+with rsyslogd(8) configured for network logging.  The format for remote addresses is:
+``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.  Examples:
 
 .. code-block:: yaml
 
     log_file: /var/log/salt/master
+
+.. code-block:: yaml
+
+    log_file: file:///dev/log
+
+.. code-block:: yaml
+
+    log_file: udp://loghost:10514
 
 .. conf_master:: log_level
 
@@ -666,12 +682,82 @@ The location of the master log file
 
 Default: ``warning``
 
-The level of messages to send to the log file.
-One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+The level of messages to send to the console.
+One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 
 .. code-block:: yaml
 
     log_level: warning
+
+.. conf_master:: log_level_logfile
+
+``log_level_logfile``
+---------------------
+
+Default: ``warning``
+
+The level of messages to send to the log file.
+One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+
+.. code-block:: yaml
+
+    log_level_logfile: warning
+
+.. conf_master:: log_datefmt
+
+``log_datefmt``
+---------------
+
+Default: ``%H:%M:%S``
+
+The date and time format used in console log messages. Allowed date/time formatting
+can be seen on http://docs.python.org/library/time.html#time.strftime
+
+.. code-block:: yaml
+
+    log_datefmt: '%H:%M:%S'
+
+.. conf_master:: log_datefmt_logfile
+
+``log_datefmt_logfile``
+-----------------------
+
+Default: ``%Y-%m-%d %H:%M:%S``
+
+The date and time format used in log file messages. Allowed date/time formatting
+can be seen on http://docs.python.org/library/time.html#time.strftime
+
+.. code-block:: yaml
+
+    log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
+
+.. conf_master:: log_fmt_console
+
+``log_fmt_console``
+-------------------
+
+Default: ``[%(levelname)-8s] %(message)s``
+
+The format of the console logging messages. Allowed formatting options can
+be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+
+.. code-block:: yaml
+
+    log_fmt_console: '[%(levelname)-8s] %(message)s'
+
+.. conf_master:: log_fmt_logfile
+
+``log_fmt_logfile``
+-------------------
+
+Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+
+The format of the log file logging messages. Allowed formatting options can
+be seen on http://docs.python.org/library/logging.html#logrecord-attributes
+
+.. code-block:: yaml
+
+    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 .. conf_master:: log_granular_levels
 
@@ -680,9 +766,9 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 
 Default: ``{}``
 
-Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the Salt library at the 'warning' level, but you
-still wish to have 'salt.modules' at the 'debug' level:
+This can be used to control logging levels more specifically.  The
+example sets the main salt library at the 'warning' level, but sets 
+'salt.modules' to log at the 'debug' level:
 
 .. code-block:: yaml
 
@@ -690,12 +776,14 @@ still wish to have 'salt.modules' at the 'debug' level:
     'salt': 'warning',
     'salt.modules': 'debug'
 
+.. conf_master:: default_include
+
 ``default_include``
 -------------------
 
 Default: ``master.d/*.conf``
 
-The minion can include configuration from other files. Per default the
-minion will automatically include all config files from `master.d/*.conf`
-where minion.d is relative to the directory of the minion configuration
+The master can include configuration from other files. Per default the
+master will automatically include all config files from `master.d/*.conf`
+where master.d is relative to the directory of the master configuration
 file.

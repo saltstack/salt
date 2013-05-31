@@ -7,32 +7,40 @@ from __future__ import absolute_import
 import os
 import re
 import imp
-import random
 import sys
+import stat
+import time
+import shlex
+import shutil
+import random
 import socket
 import logging
 import inspect
 import hashlib
 import datetime
-import tempfile
-import shlex
-import shutil
-import subprocess
-import time
 import platform
+import tempfile
+import subprocess
+import types
+import warnings
+import zmq
 from calendar import month_abbr as months
+import salt._compat
 
 try:
     import fcntl
-    has_fcntl = True
+    HAS_FNCTL = True
 except ImportError:
     # fcntl is not available on windows
-    has_fcntl = False
+    HAS_FNCTL = False
 
 # Import salt libs
+import salt.log
 import salt.minion
 import salt.payload
-from salt.exceptions import SaltClientError, CommandNotFoundError
+from salt.exceptions import (
+    SaltClientError, CommandNotFoundError, SaltSystemExit
+)
 
 
 # Do not use these color declarations, use get_colors()
@@ -58,6 +66,9 @@ RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
 
+log = logging.getLogger(__name__)
+
+
 def _getargs(func):
     '''
     A small wrapper around getargspec that also supports callable classes
@@ -74,7 +85,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
 
     return aspec
 
@@ -106,26 +117,26 @@ def get_colors(use=True):
     as empty strings so that they will not be applied
     '''
     colors = {
-            'BLACK': '\033[0;30m',
-            'DARK_GRAY': '\033[1;30m',
-            'LIGHT_GRAY': '\033[0;37m',
-            'BLUE': '\033[0;34m',
-            'LIGHT_BLUE': '\033[1;34m',
-            'GREEN': '\033[0;32m',
-            'LIGHT_GREEN': '\033[1;32m',
-            'CYAN': '\033[0;36m',
-            'LIGHT_CYAN': '\033[1;36m',
-            'RED': '\033[0;31m',
-            'LIGHT_RED': '\033[1;31m',
-            'PURPLE': '\033[0;35m',
-            'LIGHT_PURPLE': '\033[1;35m',
-            'BROWN': '\033[0;33m',
-            'YELLOW': '\033[1;33m',
-            'WHITE': '\033[1;37m',
-            'DEFAULT_COLOR': '\033[00m',
-            'RED_BOLD': '\033[01;31m',
-            'ENDC': '\033[0m',
-            }
+        'BLACK': '\033[0;30m',
+        'DARK_GRAY': '\033[1;30m',
+        'LIGHT_GRAY': '\033[0;37m',
+        'BLUE': '\033[0;34m',
+        'LIGHT_BLUE': '\033[1;34m',
+        'GREEN': '\033[0;32m',
+        'LIGHT_GREEN': '\033[1;32m',
+        'CYAN': '\033[0;36m',
+        'LIGHT_CYAN': '\033[1;36m',
+        'RED': '\033[0;31m',
+        'LIGHT_RED': '\033[1;31m',
+        'PURPLE': '\033[0;35m',
+        'LIGHT_PURPLE': '\033[1;35m',
+        'BROWN': '\033[0;33m',
+        'YELLOW': '\033[1;33m',
+        'WHITE': '\033[1;37m',
+        'DEFAULT_COLOR': '\033[00m',
+        'RED_BOLD': '\033[01;31m',
+        'ENDC': '\033[0m',
+    }
 
     try:
         fileno = sys.stdout.fileno()
@@ -149,12 +160,13 @@ def daemonize():
             # exit first parent
             sys.exit(0)
     except OSError as exc:
-        msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
-        logging.getLogger(__name__).error(msg)
+        log.error(
+            'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
+        )
         sys.exit(1)
 
     # decouple from parent environment
-    os.chdir("/")
+    os.chdir('/')
     os.setsid()
     os.umask(18)
 
@@ -164,8 +176,11 @@ def daemonize():
         if pid > 0:
             sys.exit(0)
     except OSError as exc:
-        msg = 'fork #2 failed: {0} ({1})'
-        logging.getLogger(__name__).error(msg.format(exc.errno, exc.strerror))
+        log.error(
+            'fork #2 failed: {0} ({1})'.format(
+                exc.errno, exc.strerror
+            )
+        )
         sys.exit(1)
 
     # A normal daemonization redirects the process output to /dev/null.
@@ -178,32 +193,18 @@ def daemonize():
     #os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
-def daemonize_if(opts, **kwargs):
+def daemonize_if(opts):
     '''
     Daemonize a module function process if multiprocessing is True and the
     process is not being called by salt-call
     '''
     if 'salt-call' in sys.argv[0]:
         return
-    if not opts['multiprocessing']:
+    if not opts.get('multiprocessing', True):
         return
     if sys.platform.startswith('win'):
         return
-    # Daemonizing breaks the proc dir, so the proc needs to be rewritten
-    data = {}
-    for key, val in kwargs.items():
-        if key.startswith('__pub_'):
-            data[key[6:]] = val
-    if not 'jid' in data:
-        return
-    serial = salt.payload.Serial(opts)
-    proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
-    fn_ = os.path.join(proc_dir, data['jid'])
     daemonize()
-    sdata = {'pid': os.getpid()}
-    sdata.update(data)
-    with salt.utils.fopen(fn_, 'w+') as f:
-        f.write(serial.dumps(sdata))
 
 
 def profile_func(filename=None):
@@ -220,8 +221,9 @@ def profile_func(filename=None):
                 profiler.dump_stats((filename or '{0}_func.profile'
                                      .format(fun.__name__)))
             except IOError:
-                logging.exception(('Could not open profile file {0}'
-                                   .format(filename)))
+                logging.exception(
+                    'Could not open profile file {0}'.format(filename)
+                )
 
             return retval
         return profiled_func
@@ -230,19 +232,27 @@ def profile_func(filename=None):
 
 def which(exe=None):
     '''
-    Python clone of POSIX's /usr/bin/which
+    Python clone of /usr/bin/which
     '''
     if exe:
         if os.access(exe, os.X_OK):
             return exe
 
         # default path based on busybox's default
-        default_path = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
+        default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
+        search_path = os.environ.get('PATH', default_path)
 
-        for path in os.environ.get('PATH', default_path).split(os.pathsep):
+        for path in search_path.split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
+        log.trace(
+            '{0!r} could not be found in the following search '
+            'path: {1!r}'.format(
+                exe, search_path
+            )
+        )
+    log.trace('No executable was passed to be searched by which')
     return None
 
 
@@ -257,6 +267,7 @@ def which_bin(exes):
         if not path:
             continue
         return path
+    return None
 
 
 def list_files(directory):
@@ -265,7 +276,7 @@ def list_files(directory):
     '''
     ret = set()
     ret.add(directory)
-    for root, dirs, files in os.walk(directory):
+    for root, dirs, files in safe_walk(directory):
         for name in files:
             ret.add(os.path.join(root, name))
         for name in dirs:
@@ -279,7 +290,7 @@ def jid_to_time(jid):
     Convert a salt job id into the time when the job was invoked
     '''
     jid = str(jid)
-    if not len(jid) == 20:
+    if len(jid) != 20:
         return ''
     year = jid[:4]
     month = jid[4:6]
@@ -289,15 +300,13 @@ def jid_to_time(jid):
     second = jid[12:14]
     micro = jid[14:]
 
-    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(
-            year,
-            months[int(month)],
-            day,
-            hour,
-            minute,
-            second,
-            micro
-            )
+    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(year,
+                                                months[int(month)],
+                                                day,
+                                                hour,
+                                                minute,
+                                                second,
+                                                micro)
     return ret
 
 
@@ -316,33 +325,51 @@ def gen_mac(prefix='52:54:'):
     return mac[:-1]
 
 
-def dns_check(addr, safe=False):
+def ip_bracket(addr):
+    '''
+    Convert IP address representation to ZMQ (URL) format. ZMQ expects
+    brackets around IPv6 literals, since they are used in URLs.
+    '''
+    if addr and ':' in addr and not addr.startswith('['):
+        return '[{0}]'.format(addr)
+    return addr
+
+
+def dns_check(addr, safe=False, ipv6=False):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception.
+    exception. Obeys system preference for IPv4/6 address resolution.
     '''
+    error = False
     try:
-        socket.inet_aton(addr)
+        hostnames = socket.getaddrinfo(
+            addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+        )
+        if not hostnames:
+            error = True
+        else:
+            addr = False
+            for h in hostnames:
+                if h[0] == socket.AF_INET or (h[0] == socket.AF_INET6 and ipv6):
+                    addr = ip_bracket(h[4][0])
+                    break
+            if not addr:
+                error = True
     except socket.error:
-        # Not a valid ip adder, check DNS
-        try:
-            addr = socket.gethostbyname(addr)
-        except socket.gaierror:
-            err = ('This master address: \'{0}\' was previously resolvable '
-                   'but now fails to resolve! The previously resolved ip addr '
-                   'will continue to be used').format(addr)
-            if safe:
-                import salt.log
-                if salt.log.is_console_configured():
-                    # If logging is not configured it also means that either
-                    # the master or minion instance calling this hasn't even
-                    # started running
-                    logging.getLogger(__name__).error(err)
-                raise SaltClientError()
-            else:
-                err = err.format(addr)
-                sys.stderr.write(err)
-                sys.exit(42)
+        error = True
+
+    if error:
+        err = ('This master address: \'{0}\' was previously resolvable '
+               'but now fails to resolve! The previously resolved ip addr '
+               'will continue to be used').format(addr)
+        if safe:
+            if salt.log.is_console_configured():
+                # If logging is not configured it also means that either
+                # the master or minion instance calling this hasn't even
+                # started running
+                log.error(err)
+            raise SaltClientError()
+        raise SaltSystemExit(code=42, msg=err)
     return addr
 
 
@@ -350,17 +377,11 @@ def required_module_list(docstring=None):
     '''
     Return a list of python modules required by a salt module that aren't
     in stdlib and don't exist on the current pythonpath.
-
-    NOTE: this function expects docstring to include something like:
-    Required python modules: win32api, win32con, win32security, ntsecuritycon
     '''
-    ret = []
-    txt = 'Required python modules: '
-    data = docstring.splitlines() if docstring else []
-    mod_list = list(x for x in data if x.startswith(txt))
-    if not mod_list:
+    if not docstring:
         return []
-    modules = mod_list[0].replace(txt, '').split(', ')
+    ret = []
+    modules = parse_docstring(docstring).get('deps', [])
     for mod in modules:
         try:
             imp.find_module(mod)
@@ -382,19 +403,22 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
-def prep_jid(cachedir, sum_type, user='root'):
+def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
-    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+    jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
         os.makedirs(jid_dir_)
-        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+        with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
             fn_.write(jid)
+        if nocache:
+            with fopen(os.path.join(jid_dir_, 'nocache'), 'w+') as fn_:
+                fn_.write('')
     else:
-        return prep_jid(cachedir, sum_type)
+        return prep_jid(cachedir, sum_type, user=user, nocache=nocache)
     return jid
 
 
@@ -406,6 +430,35 @@ def jid_dir(jid, cachedir, sum_type):
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
 
+def jid_load(jid, cachedir, sum_type, serial='msgpack'):
+    '''
+    Return the load data for a given job id
+    '''
+    _dir = jid_dir(jid, cachedir, sum_type)
+    load_fn = os.path.join(_dir, '.load.p')
+    if not os.path.isfile(load_fn):
+        return {}
+    serial = salt.payload.Serial(serial)
+    with open(load_fn) as fp_:
+        return serial.load(fp_)
+
+
+def is_jid(jid):
+    '''
+    Returns True if the passed in value is a job id
+    '''
+    if not isinstance(jid, basestring):
+        return False
+    if len(jid) != 20:
+        return False
+    try:
+        int(jid)
+        return True
+    except ValueError:
+        return False
+    return False
+
+
 def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
@@ -415,12 +468,9 @@ def check_or_die(command):
     dependencies.
     '''
     if command is None:
-        raise CommandNotFoundError("'None' is not a valid command.")
+        raise CommandNotFoundError('\'None\' is not a valid command.')
 
-    import salt.modules.cmdmod
-    __salt__ = {'cmd.has_exec': salt.modules.cmdmod.has_exec}
-
-    if not __salt__['cmd.has_exec'](command):
+    if not which(command):
         raise CommandNotFoundError(command)
 
 
@@ -431,12 +481,12 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     '''
     if not os.path.isfile(source):
         raise IOError(
-                '[Errno 2] No such file or directory: {0}'.format(source)
-                )
+            '[Errno 2] No such file or directory: {0}'.format(source)
+        )
     if not os.path.isdir(os.path.dirname(dest)):
         raise IOError(
-                '[Errno 2] No such file or directory: {0}'.format(source)
-                )
+            '[Errno 2] No such file or directory: {0}'.format(source)
+        )
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
     tgt = mkstemp(prefix=bname, dir=dname)
@@ -453,11 +503,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             msecs = str(int(time.time() * 1000000))[-6:]
             stamp = time.asctime().replace(' ', '_')
             stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
-            bkpath = os.path.join(
-                    bkroot,
-                    dname[1:],
-                    '{0}_{1}'.format(bname, stamp)
-                    )
+            bkpath = os.path.join(bkroot,
+                                  dname[1:],
+                                  '{0}_{1}'.format(bname, stamp))
             if not os.path.isdir(os.path.dirname(bkpath)):
                 os.makedirs(os.path.dirname(bkpath))
             shutil.copyfile(dest, bkpath)
@@ -469,8 +517,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
-        cmd = [rcon, dest]
-        subprocess.call(cmd)
+        with open(os.devnull, 'w') as dev_null:
+            cmd = [rcon, dest]
+            subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
         # The temp file failed to move
         try:
@@ -511,7 +560,7 @@ def pem_finger(path, sum_type='md5'):
     '''
     if not os.path.isfile(path):
         return ''
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with fopen(path, 'rb') as fp_:
         key = ''.join(fp_.readlines()[1:-1])
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
@@ -524,7 +573,7 @@ def pem_finger(path, sum_type='md5'):
     return finger.rstrip(':')
 
 
-def build_whitepace_splited_regex(text):
+def build_whitespace_split_regex(text):
     '''
     Create a regular expression at runtime which should match ignoring the
     addition or deletion of white space or line breaks, unless between commas
@@ -533,7 +582,7 @@ def build_whitepace_splited_regex(text):
 
     >>> import re
     >>> from salt.utils import *
-    >>> regex = build_whitepace_splited_regex(
+    >>> regex = build_whitespace_split_regex(
     ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
     ... )
 
@@ -566,6 +615,13 @@ def build_whitepace_splited_regex(text):
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
     return r'(?m)^{0}$'.format(regex)
+
+
+def build_whitepace_splited_regex(text):
+    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
+                  " please use build_whitespace_split_regex instead.",
+                  DeprecationWarning)
+    build_whitespace_split_regex(text)
 
 
 def format_call(fun, data):
@@ -603,7 +659,11 @@ def format_call(fun, data):
         if arg in kwargs:
             ret['args'].append(kwargs[arg])
         else:
-            ret['args'].append(data[arg])
+            try:
+                ret['args'].append(data[arg])
+            except KeyError:
+                # Bad arg match, can safely proceed
+                pass
     return ret
 
 
@@ -640,7 +700,7 @@ def istextfile(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     '''
-    PY3 = sys.version_info[0] == 3
+    PY3 = sys.version_info[0] == 3  # pylint: disable-msg=C0103
     int2byte = (lambda x: bytes((x,))) if PY3 else chr
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
@@ -658,7 +718,7 @@ def istextfile(fp_, blocksize=512):
 
 
 def isorted(to_sort):
-    """
+    '''
     Sort a list of strings ignoring case.
 
     >>> L = ['foo', 'Foo', 'bar', 'Bar']
@@ -667,7 +727,7 @@ def isorted(to_sort):
     >>> sorted(L, key=lambda x: x.lower())
     ['bar', 'Bar', 'foo', 'Foo']
     >>>
-    """
+    '''
     return sorted(to_sort, key=lambda x: x.lower())
 
 
@@ -722,11 +782,11 @@ def memoize(func):
     '''
     cache = {}
 
-    def _m(*args):
+    def _memoize(*args):
         if args not in cache:
             cache[args] = func(*args)
         return cache[args]
-    return _m
+    return _memoize
 
 
 def fopen(*args, **kwargs):
@@ -740,16 +800,32 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
     '''
     fhandle = open(*args, **kwargs)
-    if has_fcntl:
+    if HAS_FNCTL:
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable-msg=C0103
         except AttributeError:
-            FD_CLOEXEC = 1
+            FD_CLOEXEC = 1                  # pylint: disable-msg=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
+
+
+def traverse_dict(data, target, default, delim=':'):
+    '''
+    Traverse a dict using a colon-delimited (or otherwise delimited, using
+    the "delim" param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise
+    return an empty dict.
+    '''
+    try:
+        for each in target.split(delim):
+            data = data[each]
+    except (KeyError, IndexError, TypeError):
+        # Encountered a non-indexable value in the middle of traversing
+        return default
+    return data
 
 
 def mkstemp(*args, **kwargs):
@@ -770,7 +846,7 @@ def mkstemp(*args, **kwargs):
 
 def clean_kwargs(**kwargs):
     '''
-    Clean out the __pub* keys from the kwargs dict passed into the execution 
+    Clean out the __pub* keys from the kwargs dict passed into the execution
     module functions. The __pub* keys are useful for tracking what was used to
     invoke the function call, but they may not be desierable to have if
     passing the kwargs forward wholesale.
@@ -780,3 +856,301 @@ def clean_kwargs(**kwargs):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
+
+
+@memoize
+def is_windows():
+    '''
+    Simple function to return if a host is Windows or not
+    '''
+    return sys.platform.startswith('win')
+
+
+@memoize
+def is_linux():
+    '''
+    Simple function to return if a host is Linux or not
+    '''
+    return sys.platform.startswith('linux')
+
+
+@memoize
+def is_darwin():
+    '''
+    Simple function to return if a host is Darwin (OS X) or not
+    '''
+    return sys.platform.startswith('darwin')
+
+
+def check_ipc_path_max_len(uri):
+    # The socket path is limited to 107 characters on Solaris and
+    # Linux, and 103 characters on BSD-based systems.
+    ipc_path_max_len = getattr(zmq, 'IPC_PATH_MAX_LEN', 103)
+    if ipc_path_max_len and len(uri) > ipc_path_max_len:
+        raise SaltSystemExit(
+            'The socket path is longer than allowed by OS. '
+            '{0!r} is longer than {1} characters. '
+            'Either try to reduce the length of this setting\'s '
+            'path or switch to TCP; in the configuration file, '
+            'set "ipc_mode: tcp".'.format(
+                uri, ipc_path_max_len
+            )
+        )
+
+
+def check_state_result(running):
+    '''
+    Check the total return value of the run and determine if the running
+    dict has any issues
+    '''
+    if not isinstance(running, dict):
+        return False
+    if not running:
+        return False
+    for host in running:
+        if not isinstance(running[host], dict):
+            return False
+
+        if host.find('_|-') == 4:
+            # This is a single ret, no host associated
+            rets = running[host]
+        else:
+            rets = running[host].values()
+
+        if isinstance(rets, dict) and 'result' in rets:
+            if rets['result'] is False:
+                return False
+            return True
+
+        for ret in rets:
+            if not isinstance(ret, dict):
+                return False
+            if 'result' not in ret:
+                return False
+            if ret['result'] is False:
+                return False
+    return True
+
+
+def test_mode(**kwargs):
+    '''
+    Examines the kwargs passed and returns True if any kwarg which matching
+    "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
+    etc) contains a True value (as determined by salt.utils.is_true).
+    '''
+    for arg, value in kwargs.iteritems():
+        try:
+            if arg.lower() == 'test' and is_true(value):
+                return True
+        except AttributeError:
+            continue
+    return False
+
+
+def is_true(value=None):
+    '''
+    Returns a boolean value representing the "truth" of the value passed. The
+    rules for what is a "True" value are:
+
+        1. Integer/float values greater than 0
+        2. The string values "True" and "true"
+        3. Any object for which bool(obj) returns True
+    '''
+    # First, try int/float conversion
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        pass
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        pass
+
+    # Now check for truthiness
+    if isinstance(value, (int, float)):
+        return value > 0
+    elif isinstance(value, basestring):
+        return str(value).lower() == 'true'
+    else:
+        return bool(value)
+
+
+def rm_rf(path):
+    '''
+    Platform-independent recursive delete. Includes code from
+    http://stackoverflow.com/a/2656405
+    '''
+    def _onerror(func, path, exc_info):
+        '''
+        Error handler for `shutil.rmtree`.
+
+        If the error is due to an access error (read only file)
+        it attempts to add write permission and then retries.
+
+        If the error is for another reason it re-raises the error.
+
+        Usage : `shutil.rmtree(path, onerror=onerror)`
+        '''
+        if is_windows() and not os.access(path, os.W_OK):
+            # Is the error an access error ?
+            os.chmod(path, stat.S_IWUSR)
+            func(path)
+        else:
+            raise
+
+    shutil.rmtree(path, onerror=_onerror)
+
+
+def option(value, default='', opts=None, pillar=None):
+    '''
+    Pass in a generic option and receive the value that will be assigned
+    '''
+    if opts is None:
+        opts = {}
+    if pillar is None:
+        pillar = {}
+    if value in opts:
+        return opts[value]
+    if value in pillar.get('master', {}):
+        return pillar['master'][value]
+    if value in pillar:
+        return pillar[value]
+    return default
+
+
+def valid_url(url, protos):
+    '''
+    Return true if the passed URL is in the list of accepted protos
+    '''
+    if salt._compat.urlparse(url).scheme in protos:
+        return True
+    return False
+
+
+def parse_docstring(docstring):
+    '''
+    Parse a docstring into its parts.
+
+    Currently only parses dependencies, can be extended to parse whatever is
+    needed.
+
+    Parses into a dictionary:
+        {
+            'full': full docstring,
+            'deps': list of dependencies (empty list if none)
+        }
+    '''
+    # First try with regex search for :depends:
+    ret = {}
+    ret['full'] = docstring
+    regex = r'([ \t]*):depends:[ \t]+- (\w+)[^\n]*\n(\1[ \t]+- (\w+)[^\n]*\n)*'
+    match = re.search(regex, docstring, re.M)
+    if match:
+        deps = []
+        regex = r'- (\w+)'
+        for line in match.group(0).strip().splitlines():
+            deps.append(re.search(regex, line).group(1))
+        ret['deps'] = deps
+        return ret
+    # Try searching for a one-liner instead
+    else:
+        txt = 'Required python modules: '
+        data = docstring.splitlines()
+        dep_list = list(x for x in data if x.strip().startswith(txt))
+        if not dep_list:
+            ret['deps'] = []
+            return ret
+        deps = dep_list[0].replace(txt, '').strip().split(', ')
+        ret['deps'] = deps
+        return ret
+
+
+def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
+    '''
+    A clone of the python os.walk function with some checks for recursive
+    symlinks. Unlike os.walk this follows symlinks by default.
+    '''
+    islink, join, isdir = os.path.islink, os.path.join, os.path.isdir
+    if _seen is None:
+        _seen = set()
+
+    # We may not have read permission for top, in which case we can't
+    # get a list of the files the directory contains.  os.path.walk
+    # always suppressed the exception then, rather than blow up for a
+    # minor reason when (say) a thousand readable directories are still
+    # left to visit.  That logic is copied here.
+    try:
+        # Note that listdir and error are globals in this module due
+        # to earlier import-*.
+        names = os.listdir(top)
+    except os.error as err:
+        if onerror is not None:
+            onerror(err)
+        return
+
+    if followlinks:
+        status = os.stat(top)
+        # st_ino is always 0 on some filesystems (FAT, NTFS); ignore them
+        if status.st_ino != 0:
+            node = (status.st_dev, status.st_ino)
+            if node in _seen:
+                return
+            _seen.add(node)
+
+    dirs, nondirs = [], []
+    for name in names:
+        full_path = join(top, name)
+        if isdir(full_path):
+            dirs.append(name)
+        else:
+            nondirs.append(name)
+
+    if topdown:
+        yield top, dirs, nondirs
+    for name in dirs:
+        new_path = join(top, name)
+        if followlinks or not islink(new_path):
+            for x in safe_walk(new_path, topdown, onerror, followlinks, _seen):
+                yield x
+    if not topdown:
+        yield top, dirs, nondirs
+
+
+def get_hash(path, form='md5', chunk_size=4096):
+    '''
+    Get the hash sum of a file
+
+    This is better than ``get_sum`` for the following reasons:
+        - It does not read the entire file into memory.
+        - It does not return a string on error. The returned value of
+            ``get_sum`` cannot really be trusted since it is vulnerable to
+            collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
+    '''
+    try:
+        hash_type = getattr(hashlib, form)
+    except AttributeError:
+        raise ValueError('Invalid hash type: {0}'.format(form))
+    with salt.utils.fopen(path, 'rb') as ifile:
+        hash_obj = hash_type()
+        while True:
+            chunk = ifile.read(chunk_size)
+            if not chunk:
+                return hash_obj.hexdigest()
+            hash_obj.update(chunk)
+
+
+def namespaced_function(function, global_dict, defaults=None):
+    ''' 
+    Redefine(clone) a function under a different globals() namespace scope
+    '''
+    if defaults is None:
+        defaults = function.__defaults__
+
+    new_namespaced_function = types.FunctionType(
+        function.__code__,
+        global_dict,
+        name=function.__name__,
+        argdefs=defaults
+    )   
+    new_namespaced_function.__dict__.update(function.__dict__)
+    return new_namespaced_function

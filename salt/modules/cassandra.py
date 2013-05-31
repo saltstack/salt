@@ -15,38 +15,25 @@ Cassandra NoSQL Database Module
 import logging
 log = logging.getLogger(__name__)
 
-has_pycassa = False
+# Import salt libs
+import salt.utils
+
+HAS_PYCASSA = False
 try:
     from pycassa.system_manager import SystemManager
-    has_pycassa = True
+    HAS_PYCASSA = True
 except ImportError:
     pass
-
-__outputter__ = {
-  'compactionstats': 'txt',
-  'tpstats': 'txt',
-  'netstats': 'txt',
-  'info': 'txt',
-  'ring': 'txt',
-}
-
-nt = ''
-host = ''
-thrift_port = ''
 
 
 def __virtual__():
     '''
     Only load if pycassa is available and the system is configured
     '''
-    if not has_pycassa:
+    if not HAS_PYCASSA:
         return False
 
-    nt = __salt__['config.option']('cassandra.nodetool')
-    host = __salt__['config.option']('cassandra.host')
-    thrift_port = str(__salt__['config.option']('cassandra.thrift_port'))
-
-    if nt and host and thrift_port:
+    if HAS_PYCASSA and salt.utils.which('nodetool'):
         return 'cassandra'
     return False
 
@@ -56,13 +43,17 @@ def _nodetool(cmd):
     Internal cassandra nodetool wrapper. Some functions are not
     available via pycassa so we must rely on nodetool.
     '''
-    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nt, host, cmd))
+    nodetool = __salt__['config.option']('cassandra.nodetool')
+    host = __salt__['config.option']('cassandra.host')
+    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nodetool, host, cmd))
 
 
 def _sys_mgr():
     '''
     Return a pycassa system manager connection object
     '''
+    thrift_port = str(__salt__['config.option']('cassandra.THRIFT_PORT'))
+    host = __salt__['config.option']('cassandra.host')
     return SystemManager('{0}:{1}'.format(host, thrift_port))
 
 
@@ -155,17 +146,17 @@ def column_families(keyspace=None):
         salt '*' cassandra.column_families <keyspace>
     '''
     sys = _sys_mgr()
-    ks = sys.list_keyspaces()
+    ksps = sys.list_keyspaces()
 
     if keyspace:
-        if keyspace in ks:
+        if keyspace in ksps:
             return sys.get_keyspace_column_families(keyspace).keys()
         else:
             return None
     else:
         ret = {}
-        for k in ks:
-            ret[k] = sys.get_keyspace_column_families(k).keys()
+        for kspace in ksps:
+            ret[kspace] = sys.get_keyspace_column_families(kspace).keys()
 
         return ret
 
@@ -184,6 +175,6 @@ def column_family_definition(keyspace=None, column_family=None):
 
     try:
         return vars(sys.get_keyspace_column_families(keyspace)[column_family])
-    except:
+    except Exception:
         log.debug('Invalid Keyspace/CF combination')
         return None

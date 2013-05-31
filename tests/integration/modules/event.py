@@ -19,7 +19,7 @@ from salt.utils import event
 
 
 class EventModuleTest(integration.ModuleCase):
-    def test_event_fire_master(self):
+    def __test_event_fire_master(self):
         events = Queue()
 
         def get_event(events):
@@ -38,6 +38,7 @@ class EventModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
 
         eventfired = events.get(block=True, timeout=10)
+        self.assertIsNotNone(eventfired)
         self.assertIn(
             'event.fire_master: just test it!!!!', eventfired['data']
         )
@@ -51,7 +52,7 @@ class EventModuleTest(integration.ModuleCase):
         with self.assertRaises(Empty):
             eventfired = events.get(block=True, timeout=10)
 
-    def test_event_fire(self):
+    def __test_event_fire(self):
         events = Queue()
 
         def get_event(events):
@@ -69,6 +70,7 @@ class EventModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
 
         eventfired = events.get(block=True, timeout=10)
+        self.assertIsNotNone(eventfired)
         self.assertIn('event.fire: just test it!!!!', eventfired)
 
         ret = self.run_function(
@@ -79,7 +81,7 @@ class EventModuleTest(integration.ModuleCase):
         with self.assertRaises(Empty):
             eventfired = events.get(block=True, timeout=10)
 
-    def test_event_fire_ipc_mode_tcp(self):
+    def __test_event_fire_ipc_mode_tcp(self):
         events = Queue()
 
         def get_event(events):
@@ -98,6 +100,7 @@ class EventModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
 
         eventfired = events.get(block=True, timeout=10)
+        self.assertIsNotNone(eventfired)
         self.assertIn('event.fire: just test it!!!!', eventfired)
 
         ret = self.run_function(

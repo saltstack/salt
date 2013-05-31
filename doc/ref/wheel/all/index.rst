@@ -13,3 +13,4 @@ Full list of builtin wheel modules
     config
     file_roots
     key
+    pillar_roots

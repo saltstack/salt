@@ -18,7 +18,7 @@ def ext_pillar(pillar, command):
     Execute a command and read the output as YAML
     '''
     try:
-        return yaml.safe_load(__salt__['cmd.run'](command))
+        return yaml.safe_load(__salt__['cmd.run']('{0}'.format(command)))
     except Exception:
         log.critical(
                 'YAML data from {0} failed to parse'.format(command)

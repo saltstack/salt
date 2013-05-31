@@ -36,7 +36,7 @@ class Batch(object):
         if selected_target_option is not None:
             args.append(selected_target_option)
         else:
-            args.append('glob')
+            args.append(self.opts.get('expr_form', 'glob'))
 
         fret = []
         for ret in self.local.cmd_iter(*args):
@@ -72,7 +72,7 @@ class Batch(object):
         args = [[],
                 self.opts['fun'],
                 self.opts['arg'],
-                9999999999,
+                99999,
                 'list',
                 ]
         bnum = self.get_bnum()
@@ -80,7 +80,7 @@ class Batch(object):
         active = []
         ret = {}
         iters = []
-        # Itterate while we still have things to execute
+        # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
             if len(to_run) <= bnum and not active:
@@ -88,7 +88,7 @@ class Batch(object):
                 while to_run:
                     next_.append(to_run.pop())
             else:
-                for ind in range(bnum - len(active)):
+                for i in range(bnum - len(active)):
                     if to_run:
                         next_.append(to_run.pop())
             active += next_
@@ -97,7 +97,10 @@ class Batch(object):
                 if not self.quiet:
                     print('\nExecuting run on {0}\n'.format(next_))
                 iters.append(
-                        self.local.cmd_iter_no_block(*args))
+                        self.local.cmd_iter_no_block(
+                            *args,
+                            raw=self.opts.get('raw', False))
+                        )
             else:
                 time.sleep(0.02)
             parts = {}
@@ -113,20 +116,26 @@ class Batch(object):
                             if ncnt > 5:
                                 break
                             continue
-                        parts.update(part)
+                        if self.opts.get('raw'):
+                            parts.update({part['id']: part})
+                        else:
+                            parts.update(part)
                 except StopIteration:
                     # remove the iter, it is done
                     pass
             for minion, data in parts.items():
                 active.remove(minion)
-                yield {minion: data['ret']}
-                ret[minion] = data['ret']
-                data[minion] = data.pop('ret')
-                if 'out' in data:
-                    out = data.pop('out')
+                if self.opts.get('raw'):
+                    yield data
                 else:
-                    out = None
+                    yield {minion: data['ret']}
                 if not self.quiet:
+                    ret[minion] = data['ret']
+                    data[minion] = data.pop('ret')
+                    if 'out' in data:
+                        out = data.pop('out')
+                    else:
+                        out = None
                     salt.output.display_output(
                             data,
                             out,

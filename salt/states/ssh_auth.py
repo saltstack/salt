@@ -94,7 +94,7 @@ def present(
         enc='ssh-rsa',
         comment='',
         source='',
-        options=[],
+        options=None,
         config='.ssh/authorized_keys',
         **kwargs):
     '''
@@ -107,7 +107,7 @@ def present(
         The user who owns the ssh authorized keys file to modify
 
     enc
-        Defines what type of key is being used, can be ssh-rsa or ssh-dss
+        Defines what type of key is being used, can be ecdsa ssh-rsa, ssh-dss
 
     comment
         The comment to be placed with the ssh public key
@@ -135,7 +135,7 @@ def present(
                 name,
                 enc,
                 comment,
-                options,
+                options or [],
                 source,
                 config,
                 kwargs.get('__env__', 'base')
@@ -150,7 +150,7 @@ def present(
                 kwargs.get('__env__', 'base'))
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
+        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -174,7 +174,7 @@ def present(
                 name,
                 enc,
                 comment,
-                options,
+                options or [],
                 config)
 
     if data == 'replace':
@@ -219,6 +219,9 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'result': True,
            'comment': ''}
 
+    # Get just the key
+    name = name.split(' ')[0]
+
     if __opts__['test']:
         check = __salt__['ssh.check_key'](
                 user,
@@ -228,7 +231,7 @@ def absent(name, user, config='.ssh/authorized_keys'):
                 [],
                 config)
         if check == 'update' or check == 'exists':
-            ret['return'] = None
+            ret['result'] = None
             ret['comment'] = 'Key {0} is set for removal'.format(name)
             return ret
         else:

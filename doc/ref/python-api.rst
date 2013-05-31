@@ -1,3 +1,5 @@
+.. _python-api:
+
 =================
 Python client API
 =================
@@ -7,7 +9,7 @@ built directly into third party applications as a communication layer. The Salt
 client API is very straightforward.
 
 A number of client command methods are available depending on the exact
-behaviour desired.
+behavior desired.
 
 Using the LocalClient API
 =========================
@@ -36,7 +38,7 @@ same interface used by the ``salt`` command line tool.
 
     The tgt option is the target specification, by default a target is passed
     in as a bash shell glob. The expr_form option allows the tgt to be passed
-    as either a pcre regular expression or as a Python list.
+    as either a PCRE regular expression or as a Python list.
 
 .. cmdoption:: fun
 

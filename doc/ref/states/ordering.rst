@@ -49,6 +49,14 @@ The requisite system works by finding the states that are required and
 executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
+.. note:: Requisite matching
+
+    Requisites match on both the ID Declaration and the ``name`` parameter.
+    Therefore, if you are using the ``pkgs`` or ``sources`` argument to install
+    a list of packages in a pkg state, it's important to note that you cannot
+    have a requisite that matches on an individual package in the list.
+
+
 Multiple Requisites
 -------------------
 

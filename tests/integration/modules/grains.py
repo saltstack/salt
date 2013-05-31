@@ -1,6 +1,10 @@
 '''
 Test the grains module
 '''
+# Import python libs
+import time
+
+# Import salt libs
 import integration
 
 
@@ -24,7 +28,7 @@ class TestModulesGrains(integration.ModuleCase):
         '''
         opts = self.minion_opts
         self.assertEqual(
-            self.run_function('grains.item', ['test_grain']),
+            self.run_function('grains.item', ['test_grain'])['test_grain'],
             opts['grains']['test_grain']
         )
 
@@ -57,6 +61,33 @@ class TestModulesGrains(integration.ModuleCase):
         lsgrains = self.run_function('grains.ls')
         for grain_name in check_for:
             self.assertTrue(grain_name in lsgrains)
+
+    def test_set_val(self):
+        '''
+        test grains.set_val
+        '''
+        self.assertEqual(
+                self.run_function(
+                    'grains.setval',
+                    ['setgrain', 'grainval']),
+                {'setgrain': 'grainval'})
+        time.sleep(4)
+        self.assertTrue(
+                self.run_function(
+                    'grains.item', ['setgrain']
+                    )
+                )
+
+    def test_get(self):
+        '''
+        test grains.get
+        '''
+        self.assertEqual(
+                self.run_function(
+                    'grains.get',
+                    ['level1:level2']),
+                'foo')
+
 
 
 if __name__ == '__main__':

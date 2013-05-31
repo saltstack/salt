@@ -1,0 +1,26 @@
+/*
+Font: 		Nexa Light
+Style: 		Regular
+URL: 		http://www.youworkforthem.com/product.php?sku=T3972
+Foundry: 	Fontfabric
+Foundry: 	http://www.youworkforthem.com/designer/105/fontfabric
+Copyright:	Copyright (c) 2010 by Svetoslav Simov. All rights reserved.
+Version: 	1.1
+Created:	October 11, 2012
+License: 	http://www.youworkforthem.com/font-license 
+License: 	The WebFont(s) listed in this document must follow the YouWorkForThem
+			WebFont license rules. All other parties are strictly restricted 
+			from using the WebFonts(s) listed without a purchased license. 
+			All details above must always remain unaltered and visible in your CSS.
+*/
+
+@font-face {
+	font-family: 'Nexa Light';
+	src: url('nexa-light.eot');
+	src: url('nexa-light.eot?#iefix') format('embedded-opentype'),
+	     url('nexa-light.woff') format('woff'),
+	     url('nexa-light.ttf') format('truetype'),
+	     url('nexa-light.svg#ywftsvg') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}

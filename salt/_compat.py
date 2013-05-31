@@ -1,6 +1,7 @@
 '''
 Salt compatibility code
 '''
+# pylint: disable=W0611
 
 # Import python libs
 import sys
@@ -19,6 +20,7 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
+# pylint: disable-msg=C0103
 if PY3:
     string_types = str,
     integer_types = int,
@@ -109,11 +111,10 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 '''
 
 if PY3:
-    from urllib import parse
+    from urllib.parse import urlparse
     from urllib.error import URLError
     import http.server as BaseHTTPServer
     from urllib.error import HTTPError
-    urlparse = parse
     from urllib.parse import quote as url_quote
     from urllib.parse import quote_plus as url_quote_plus
     from urllib.parse import unquote as url_unquote
@@ -145,3 +146,4 @@ if PY3:
     from io import StringIO
 else:
     from StringIO import StringIO
+# pylint: enable-msg=C0103

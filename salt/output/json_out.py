@@ -4,7 +4,6 @@ The JSON output module converts the return data into JSON.
 
 # Import python libs
 import json
-import traceback
 import logging
 
 log = logging.getLogger(__name__)
@@ -28,6 +27,6 @@ def output(data):
             return json.dumps(data)
         return json.dumps(data, indent=4)
     except TypeError:
-        log.debug(traceback.format_exc())
-    # Return valid json for unserializable objects
+        log.debug('An error occurred while outputting JSON', exc_info=True)
+    # Return valid JSON for unserializable objects
     return json.dumps({})

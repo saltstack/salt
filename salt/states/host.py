@@ -11,7 +11,7 @@ The /etc/hosts file can be managed to contain definitions for specific hosts:
         - ip: 192.168.0.42
 
 Or using the "names:" directive, you can put several names for the same IP.
-(Do not try one name with space-seperated values).
+(Do not try one name with space-separated values).
 
 .. code-block:: yaml
 
@@ -27,7 +27,7 @@ update to remove the old entry.
 '''
 
 
-def present(name, ip):
+def present(name, ip):  # pylint: disable-msg=C0103
     '''
     Ensures that the named host is present with the given ip
 
@@ -59,7 +59,7 @@ def present(name, ip):
         return ret
 
 
-def absent(name, ip):
+def absent(name, ip):  # pylint: disable-msg=C0103
     '''
     Ensure that the named host is absent
 

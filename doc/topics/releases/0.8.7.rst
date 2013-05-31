@@ -4,7 +4,7 @@ Salt 0.8.7 release notes
 
 It has been a month since salt 0.8.0, and it has been a long month! But Salt is
 still coming along strong. 0.8.7 has a lot of changes and a lot of updates.
-This update makes Salt’s ZeroMQ back end better, strips facter from the
+This update makes Salt’s ZeroMQ back end better, strips Facter from the
 dependencies, and introduces interfaces to handle more capabilities.
 
 Many of the major updates are in the background, but the changes should shine
@@ -24,7 +24,7 @@ The major new features and changes in Salt 0.8.7 are:
 * Dynamic state enforcement managers
 * Extract the module loader into salt.loader
 * Make Job ids more granular
-* Replace facter functionality with the new salt grains interface
+* Replace Facter functionality with the new salt grains interface
 * Support for “virtual” salt modules
 * Introduce the salt-call command
 * Better debugging for minion modules

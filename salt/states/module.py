@@ -5,13 +5,16 @@ Execution of Salt modules from within states.
 Individual module calls can be made via states. to call a single module
 function use the run function.
 
-One issue exists, since the name argument is present in the state call and is
-present in many modules, this argument will need to be replaced in the sls
-data with the argument m_name.
+One issue exists, since the name and fun arguments are present in the state
+call data structure and is present in many modules, this argument will need
+to be replaced in the sls data with the arguments m_name and m_fun.
 '''
+# Import python libs
+import datetime
 
 # Import salt libs
 import salt.state
+import salt.loader
 
 
 def wait(name, **kwargs):
@@ -37,6 +40,9 @@ def run(name, **kwargs):
     ``name``
         The module function to execute
 
+    ``returner``
+        Specify the returner to send the return of the module execution to
+
     ``**kwargs``
         Pass any arguments needed to execute the function
     '''
@@ -44,7 +50,7 @@ def run(name, **kwargs):
            'changes': {},
            'comment': '',
            'result': None}
-    if not name in __salt__:
+    if name not in __salt__:
         ret['comment'] = 'Module function {0} is not available'.format(name)
         ret['result'] = False
         return ret
@@ -72,7 +78,7 @@ def run(name, **kwargs):
                 continue
             defaults[key] = kwargs[key]
     # Match up the defaults with the respective args
-    for ind in range(arglen - 1, 0, -1):
+    for ind in range(arglen - 1, -1, -1):
         minus = arglen - ind
         if deflen - minus > -1:
             defaults[aspec[0][ind]] = aspec[3][-minus]
@@ -81,12 +87,17 @@ def run(name, **kwargs):
         if arg == 'name':
             if 'm_name' in kwargs:
                 defaults[arg] = kwargs.pop('m_name')
+        elif arg == 'fun':
+            if 'm_fun' in kwargs:
+                defaults[arg] = kwargs.pop('m_fun')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
     for arg in aspec[0]:
         if arg == 'name':
             rarg = 'm_name'
+        elif arg == 'fun':
+            rarg = 'm_fun'
         else:
             rarg = arg
         if rarg not in kwargs and rarg not in defaults:
@@ -104,6 +115,17 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
 
+    if aspec[1] and aspec[1] in kwargs:
+        varargs = kwargs.pop(aspec[1])
+
+        if not isinstance(varargs, list):
+            msg = "'{0}' must be a list."
+            ret['comment'] = msg.format(aspec[1])
+            ret['result'] = False
+            return ret
+
+        args.extend(varargs)
+
     try:
         if aspec[2]:
             mret = __salt__[name](*args, **kwargs)
@@ -113,10 +135,20 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
     else:
-        ret['changes']['ret'] = mret
+        if mret:
+            ret['changes']['ret'] = mret
 
+    if 'returner' in kwargs:
+        ret_ret = {
+                'id': __opts__['id'],
+                'ret': mret,
+                'fun': name,
+                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+        returners = salt.loader.returners(__opts__, __salt__)
+        if kwargs['returner'] in returners:
+            returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
     return ret
 
-mod_watch = run
+mod_watch = run  # pylint: disable-msg=C0103

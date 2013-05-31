@@ -10,7 +10,33 @@ rc scripts, services can be defined as running or dead.
     httpd:
       service:
         - running
+
+The service can also be set to be started at runtime via the enable option:
+
+.. code-block:: yaml
+
+    openvpn:
+      service:
+        - running
+        - enable: True
+
+By default if a service is triggered to refresh due to a watch statement the
+service is by default restarted. If the desired behaviour is to reload the
+service, then set the reload value to True:
+
+.. code-block:: yaml
+
+    redis:
+      service:
+        - running
+        - enable: True
+        - reload: True
+        - watch:
+          - pkg: redis
 '''
+
+# Import python libs
+import sys
 
 
 def __virtual__():
@@ -33,15 +59,16 @@ def _enable(name, started, **kwargs):
     if not 'service.enable' in __salt__ or not 'service.enabled' in __salt__:
         if started is True:
             ret['comment'] = ('Enable is not available on this minion,'
-                ' service {0} started').format(name)
+                              ' service {0} started').format(name)
             return ret
         elif started is None:
             ret['comment'] = ('Enable is not available on this minion,'
-                ' service {0} is in the desired state').format(name)
+                              ' service {0} is in the desired state'
+                              ).format(name)
             return ret
         else:
             ret['comment'] = ('Enable is not available on this minion,'
-                ' service {0} is dead').format(name)
+                              ' service {0} is dead').format(name)
             return ret
 
     # Service can be enabled
@@ -49,15 +76,15 @@ def _enable(name, started, **kwargs):
         # Service is enabled
         if started is True:
             ret['comment'] = ('Service {0} is already enabled,'
-                ' and is running').format(name)
+                              ' and is running').format(name)
             return ret
         elif started is None:
             ret['comment'] = ('Service {0} is already enabled,'
-                ' and is in the desired state').format(name)
+                              ' and is in the desired state').format(name)
             return ret
         else:
             ret['comment'] = ('Service {0} is already enabled,'
-                ' and is dead').format(name)
+                              ' and is dead').format(name)
             return ret
 
     # Service needs to be enabled
@@ -71,17 +98,17 @@ def _enable(name, started, **kwargs):
         if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
-                ' and is running').format(name)
+                              ' and is running').format(name)
             return ret
         elif started is None:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
-                ' and is in the desired state').format(name)
+                              ' and is in the desired state').format(name)
             return ret
         else:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
-                ' and is dead').format(name)
+                              ' and is dead').format(name)
             return ret
 
     # Service failed to be enabled
@@ -89,17 +116,17 @@ def _enable(name, started, **kwargs):
         ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
-            ' but the service is running').format(name)
+                          ' but the service is running').format(name)
         return ret
     elif started is None:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
-            ' but the service was already running').format(name)
+                          ' but the service was already running').format(name)
         return ret
     else:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
-            ' and the service is dead').format(name)
+                          ' and the service is dead').format(name)
         return ret
 
 
@@ -116,15 +143,16 @@ def _disable(name, started, **kwargs):
     if not 'service.disable' in __salt__ or not 'service.disabled' in __salt__:
         if started is True:
             ret['comment'] = ('Disable is not available on this minion,'
-                ' service {0} started').format(name)
+                              ' service {0} started').format(name)
             return ret
         elif started is None:
             ret['comment'] = ('Disable is not available on this minion,'
-                ' service {0} is in the desired state').format(name)
+                              ' service {0} is in the desired state'
+                              ).format(name)
             return ret
         else:
             ret['comment'] = ('Disable is not available on this minion,'
-                ' service {0} is dead').format(name)
+                              ' service {0} is dead').format(name)
             return ret
 
     # Service can be disabled
@@ -133,15 +161,15 @@ def _disable(name, started, **kwargs):
         if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already disabled,'
-                ' and is running').format(name)
+                              ' and is running').format(name)
             return ret
         elif started is None:
             ret['comment'] = ('Service {0} is already disabled,'
-                ' and is in the desired state').format(name)
+                              ' and is in the desired state').format(name)
             return ret
         else:
             ret['comment'] = ('Service {0} is already disabled,'
-                ' and is dead').format(name)
+                              ' and is dead').format(name)
             return ret
 
     # Service needs to be disabled
@@ -155,35 +183,36 @@ def _disable(name, started, **kwargs):
         if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
-                ' and is running').format(name)
+                              ' and is running').format(name)
             return ret
         elif started is None:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
-                ' and is in the desired state').format(name)
+                              ' and is in the desired state').format(name)
             return ret
         else:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
-                ' and is dead').format(name)
+                              ' and is dead').format(name)
             return ret
 
     # Service failed to be disabled
     if started is True:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
-            ' at boot, and is running').format(name)
+                          ' at boot, and is running').format(name)
         return ret
     elif started is None:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
-            ' at boot, but the service was already running').format(name)
+                          ' at boot, but the service was already running'
+                          ).format(name)
         return ret
     else:
         ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
-            ' at boot, and the service is dead').format(name)
+                          ' at boot, and the service is dead').format(name)
         return ret
 
 
@@ -239,13 +268,19 @@ def running(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
+
     changes = {name: __salt__['service.start'](name)}
 
     if not changes[name]:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            return _enable(name, False, **kwargs)
+            ret = _enable(name, False, **kwargs)
+            ret['result'] = False
         elif enable is False:
             return _disable(name, False, **kwargs)
         else:
@@ -263,7 +298,7 @@ def running(name, enable=None, sig=None, **kwargs):
 
 def dead(name, enable=None, sig=None, **kwargs):
     '''
-    Ensure that the named service is dead
+    Ensure that the named service is dead by stopping the service if it is running
 
     name
         The name of the init or rc script used to manage the service
@@ -298,6 +333,11 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
+
+    # Clear cached service info
+    sys.modules[
+        __salt__['service.status'].__module__
+    ].__context__.pop('service.all', None)
 
     changes = {name: __salt__['service.stop'](name)}
 
@@ -355,6 +395,11 @@ def mod_watch(name, sig=None, reload=False, full_restart=False):
     sig
         The string to search for when looking for the service process with ps
     '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
     if __salt__['service.status'](name, sig):
         if 'service.reload' in __salt__ and reload:
             restart_func = __salt__['service.reload']
@@ -365,10 +410,15 @@ def mod_watch(name, sig=None, reload=False, full_restart=False):
     else:
         restart_func = __salt__['service.start']
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Service is set to be restarted'
+        return ret
+
     result = restart_func(name)
-    return {'name': name,
-            'changes': {name: result},
-            'result': result,
-            'comment': 'Service restarted' if result else \
-                       'Failed to restart the service'
-           }
+
+    ret['changes'] = {name: result}
+    ret['result'] = result
+    ret['comment'] = 'Service restarted' if result else \
+                     'Failed to restart the service'
+    return ret

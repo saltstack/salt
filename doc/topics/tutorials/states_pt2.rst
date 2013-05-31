@@ -27,6 +27,8 @@ an :term:`ID declaration`. For example, a quick modification to our
         - installed
       service:
         - running
+        - require:
+          - pkg: apache
 
 Try stopping Apache before running ``state.highstate`` once again and observe
 the output.
@@ -74,6 +76,8 @@ installed and running. Include the following at the bottom of your
         - installed
       service:
         - running
+        - require:
+          - pkg: apache
 
     /var/www/index.html:                        # ID declaration
       file:                                     # state declaration
@@ -151,6 +155,8 @@ Verify that Apache is now serving your custom HTML.
             - running
             - watch:
               - file: /etc/httpd/extra/httpd-vhosts.conf
+            - require:
+              - pkg: apache
 
     If the pkg and service names differ on your OS or distro of choice you can
     specify each one separately using a :term:`name declaration` which

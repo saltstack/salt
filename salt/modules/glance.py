@@ -14,11 +14,11 @@ Module for handling openstack glance calls.
 '''
 
 # Import third party libs
-has_glance = False
+HAS_GLANCE = False
 try:
     from glanceclient import client
     import glanceclient.v1.images
-    has_glance = True
+    HAS_GLANCE = True
 except ImportError:
     pass
 
@@ -28,7 +28,7 @@ def __virtual__():
     Only load this module if glance
     is installed on this minion.
     '''
-    if has_glance:
+    if HAS_GLANCE:
         return 'glance'
     return False
 
@@ -39,24 +39,23 @@ def _auth():
     '''
     Set up keystone credentials
     '''
-    ks = __salt__['keystone.auth']()
-    token = ks.auth_token
-    endpoint = ks.service_catalog.url_for(
+    kstone = __salt__['keystone.auth']()
+    token = kstone.auth_token
+    endpoint = kstone.service_catalog.url_for(
         service_type='image',
         endpoint_type='publicURL',
         )
 
-    nt = client.Client('1', endpoint, token=token)
-    return nt
+    return client.Client('1', endpoint, token=token)
 
 
 def image_create(**kwargs):
     '''
-    Create an image (nova image-create)
+    Create an image (glance image-create)
 
     CLI Example::
 
-        salt '*' nova.image_create name=f16-jeos is_public=true \
+        salt '*' glance.image_create name=f16-jeos is_public=true \
                  disk_format=qcow2 container_format=ovf \
                  copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
@@ -64,58 +63,62 @@ def image_create(**kwargs):
 
         glance help image-create
     '''
-    nt = _auth()
-    CREATE_PARAMS = glanceclient.v1.images.CREATE_PARAMS
-    fields = dict(filter(lambda x: x[0] in CREATE_PARAMS, kwargs.items()))
+    nt_ks = _auth()
+    fields = dict(
+        filter(
+            lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
+            kwargs.items()
+        )
+    )
 
-    image = nt.images.create(**fields)
+    image = nt_ks.images.create(**fields)
     newimage = image_list(str(image.id))
     return {newimage['name']: newimage}
 
 
-def image_delete(id=None, name=None):
+def image_delete(id=None, name=None):  # pylint: disable-msg=C0103
     '''
-    Delete an image (nova image-delete)
+    Delete an image (glance image-delete)
 
     CLI Examples::
 
-        salt '*' nova.image_delete c2eb2eb0-53e1-4a80-b990-8ec887eae7df
-        salt '*' nova.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
-        salt '*' nova.image_delete name=f16-jeos
+        salt '*' glance.image_delete c2eb2eb0-53e1-4a80-b990-8ec887eae7df
+        salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
+        salt '*' glance.image_delete name=f16-jeos
     '''
-    nt = _auth()
+    nt_ks = _auth()
     if name:
-        for image in nt.images.list():
+        for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id
+                id = image.id  # pylint: disable-msg=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
-    nt.images.delete(id)
+    nt_ks.images.delete(id)
     ret = 'Deleted image with ID {0}'.format(id)
     if name:
         ret += ' ({0})'.format(name)
     return ret
 
 
-def image_show(id=None, name=None):
+def image_show(id=None, name=None):  # pylint: disable-msg=C0103
     '''
-    Return details about a specific image (nova image-show)
+    Return details about a specific image (glance image-show)
 
     CLI Example::
 
-        salt '*' nova.image_get
+        salt '*' glance.image_get
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
     if name:
-        for image in nt.images.list():
+        for image in nt_ks.images.list():
             if image.name == name:
-                id = image.id
+                id = image.id  # pylint: disable-msg=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
-    image = nt.images.get(id)
+    image = nt_ks.images.get(id)
     ret[image.name] = {
             'id': image.id,
             'name': image.name,
@@ -136,17 +139,17 @@ def image_show(id=None, name=None):
     return ret
 
 
-def image_list(id=None):
+def image_list(id=None):  # pylint: disable-msg=C0103
     '''
-    Return a list of available images (nova image-list)
+    Return a list of available images (glance image-list)
 
     CLI Example::
 
-        salt '*' nova.image_list
+        salt '*' glance.image_list
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = {}
-    for image in nt.images.list():
+    for image in nt_ks.images.list():
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
@@ -172,15 +175,15 @@ def image_list(id=None):
 def _item_list():
     '''
     Template for writing list functions
-    Return a list of available items (nova items-list)
+    Return a list of available items (glance items-list)
 
     CLI Example::
 
-        salt '*' nova.item_list
+        salt '*' glance.item_list
     '''
-    nt = _auth()
+    nt_ks = _auth()
     ret = []
-    for item in nt.items.list():
+    for item in nt_ks.items.list():
         ret.append(item.__dict__)
         #ret[item.name] = {
         #        'name': item.name,
@@ -188,7 +191,7 @@ def _item_list():
     return ret
 
 #The following is a list of functions that need to be incorporated in the
-#nova module. This list should be updated as functions are added.
+#glance module. This list should be updated as functions are added.
 
 #image-download      Download a specific image.
 #image-update        Update a specific image.

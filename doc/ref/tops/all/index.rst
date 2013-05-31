@@ -11,3 +11,5 @@ Full list of builtin master tops modules
     :template: autosummary.rst.tmpl
 
     ext_nodes
+    cobbler
+    mongo

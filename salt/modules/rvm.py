@@ -4,21 +4,32 @@ Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 
 # Import python libs
 import re
+import os
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'list_': 'list'
+}
 
 __opts__ = {
     'rvm.runas': None,
 }
 
+def _get_rvm_location(runas=None):
+    if runas:
+        rvmpath = '~{0}/.rvm/bin/rvm'.format(runas)
+        return os.path.expanduser(rvmpath)
+    return '/usr/local/rvm/bin/rvm'
 
 def _rvm(command, arguments='', runas=None):
     if not runas:
         runas = __salt__['config.option']('rvm.runas')
-    if not is_installed():
+    if not is_installed(runas):
         return False
 
     ret = __salt__['cmd.run_all'](
-        '/usr/local/rvm/bin/rvm {command} {arguments}'.
-        format(command=command, arguments=arguments),
+        '{rvmpath} {command} {arguments}'.
+        format(rvmpath=_get_rvm_location(runas), command=command, arguments=arguments),
         runas=runas)
     if ret['retcode'] == 0:
         return ret['stdout']
@@ -32,23 +43,31 @@ def _rvm_do(ruby, command, runas=None):
                 runas=runas)
 
 
-def is_installed():
+def is_installed(runas=None):
     '''
     Check if RVM is installed.
+    
+    CLI Example::
+
+        salt '*' rvm.is_installed
     '''
-    return __salt__['cmd.has_exec']('/usr/local/rvm/bin/rvm')
+    return __salt__['cmd.has_exec'](_get_rvm_location(runas))
 
 
-def install():
+def install(runas=None):
     '''
     Install RVM system wide.
+
+    CLI Example::
+
+        salt '*' rvm.install
     '''
     # RVM dependencies on Ubuntu 10.04:
     #   bash coreutils gzip bzip2 gawk sed curl git-core subversion
     installer = 'https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer'
     return 0 == __salt__['cmd.retcode'](
         # the RVM installer automatically does a multi-user install when it is invoked with root privileges
-        'curl -s {installer} | bash -s stable'.format(installer=installer))
+        'curl -s {installer} | bash -s stable'.format(installer=installer), runas=runas)
 
 
 def install_ruby(ruby, runas=None):
@@ -59,6 +78,10 @@ def install_ruby(ruby, runas=None):
         The version of ruby to install.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.install_ruby 1.9.3-p385
     '''
     # MRI/RBX/REE dependencies for Ubuntu 10.04:
     #   build-essential openssl libreadline6 libreadline6-dev curl
@@ -76,23 +99,33 @@ def reinstall_ruby(ruby, runas=None):
         The version of ruby to reinstall.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.reinstall_ruby 1.9.3-p385
     '''
     return _rvm('reinstall', ruby, runas=runas)
 
 
-def list(runas=None):
+def list_(runas=None):
     '''
     List all rvm installed rubies.
 
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.list
     '''
     rubies = []
 
     for line in _rvm('list', '', runas=runas).splitlines():
-        m = re.match('^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
-        if m:
-            rubies.append([m.group(2), m.group(3), m.group(1) == '*'])
+        match = re.match(r'^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]', line)
+        if match:
+            rubies.append([
+                match.group(2), match.group(3), match.group(1) == '*'
+            ])
     return rubies
 
 
@@ -104,6 +137,10 @@ def set_default(ruby, runas=None):
         The version of ruby to make the default.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.set_default 2.0.0
     '''
     return _rvm('alias', 'create default {ruby}'.format(ruby=ruby), runas=runas)
 
@@ -116,6 +153,10 @@ def get(version='stable', runas=None):
         Which version of RVM to install, e.g. stable or head.
     ruby
         The version of ruby to reinstall.
+
+    CLI Example::
+
+        salt '*' rvm.get
     '''
     return _rvm('get', version, runas=runas)
 
@@ -132,6 +173,10 @@ def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
         The user to run rvm as.
     binaries : None
         The names of the binaries to create wrappers for. When nothing is given, wrappers for ruby, gem, rake, irb, rdoc, ri and testrb are generated.
+
+    CLI Example::
+    
+        salt '*' rvm.wrapper <ruby_string> <wrapper_prefix>
     '''
     return _rvm('wrapper', '{ruby_string} {wrapper_prefix} {binaries}'.
                 format(ruby_string=ruby_string,
@@ -149,6 +194,10 @@ def rubygems(ruby, version, runas=None):
         The version of rubygems to install or 'remove' to use the version that ships with 1.9
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.rubygems 2.0.0 1.8.24
     '''
     return _rvm_do(ruby, 'rubygems', version, runas=runas)
 
@@ -163,6 +212,10 @@ def gemset_create(ruby, gemset, runas=None):
         The name of the gemset to create.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_create 2.0.0 foobar
     '''
     return _rvm_do(ruby, 'rvm gemset create {gemset}'.format(gemset=gemset), runas=runas)
 
@@ -175,12 +228,16 @@ def gemset_list(ruby='default', runas=None):
         The ruby version to list the gemsets for
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_list
     '''
     gemsets = []
     for line in _rvm_do(ruby, 'rvm gemset list', runas=runas).splitlines():
-        m = re.match('^   ([^ ]+)', line)
-        if m:
-            gemsets.append(m.group(1))
+        match = re.match('^   ([^ ]+)', line)
+        if match:
+            gemsets.append(match.group(1))
     return gemsets
 
 
@@ -194,6 +251,10 @@ def gemset_delete(ruby, gemset, runas=None):
         The gemset to delete.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_delete 2.0.0 foobar
     '''
     return _rvm_do(ruby, 'rvm --force gemset delete {gemset}'.format(gemset=gemset), runas=runas)
 
@@ -208,8 +269,12 @@ def gemset_empty(ruby, gemset, runas=None):
         The gemset to empty.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_empty 2.0.0 foobar
     '''
-    return _rvm_do(ruby, 'rvm --force gemset empty', gemset, runas=runas)
+    return _rvm_do(ruby, 'rvm --force gemset empty {gemset}'.format(gemset=gemset), runas=runas)
 
 
 def gemset_copy(source, destination, runas=None):
@@ -222,6 +287,10 @@ def gemset_copy(source, destination, runas=None):
         The destination gemset.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_copy foobar bazquo
     '''
     return _rvm('gemset copy', source, destination, runas=runas)
 
@@ -234,21 +303,25 @@ def gemset_list_all(runas=None):
 
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.gemset_list_all
     '''
     gemsets = {}
     current_ruby = None
     for line in _rvm_do('default', 'rvm gemset list_all', runas=runas).splitlines():
-        m = re.match('^gemsets for ([^ ]+)', line)
-        if m:
-            current_ruby = m.group(1)
+        match = re.match('^gemsets for ([^ ]+)', line)
+        if match:
+            current_ruby = match.group(1)
             gemsets[current_ruby] = []
-        m = re.match('^   ([^ ]+)', line)
-        if m:
-            gemsets[current_ruby].append(m.group(1))
+        match = re.match('^   ([^ ]+)', line)
+        if match:
+            gemsets[current_ruby].append(match.group(1))
     return gemsets
 
 
-def do(ruby, command, runas=None):
+def do(ruby, command, runas=None):  # pylint: disable-msg=C0103
     '''
     Execute a command in an RVM controlled environment.
 
@@ -258,5 +331,9 @@ def do(ruby, command, runas=None):
         The command to execute.
     runas : None
         The user to run rvm as.
+
+    CLI Example::
+
+        salt '*' rvm.do 2.0.0 <command>
     '''
     return _rvm_do(ruby, command, runas=runas)

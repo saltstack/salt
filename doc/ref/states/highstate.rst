@@ -65,14 +65,16 @@ ID declaration
 
         Occurs on the top level or under the :term:`extend declaration`.
 
-.. note:: Naming gotchas
-
-        Must **not** contain a dot, otherwise highstate summary output will be
-        unpredictable. (This has been fixed in versions 0.9.7 and above)
-
         Must be unique across entire state tree. If the same ID declaration is
         used twice, only the first one matched will be used. All subsequent
         ID declarations with the same name will be ignored.
+
+.. note:: Naming gotchas
+
+        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate summary output was
+        unpredictable. (It was fixed in versions 0.9.7 and above)
+
+
 
 Extend declaration
 ------------------
@@ -108,6 +110,14 @@ declaration that will restart Apache whenever the Apache configuration file,
     mywebsite:
       file:
         - managed
+
+    .. seealso:: watch_in and require_in
+
+        Sometimes it is more convenient to use the :term:`watch_in` or 
+        :term:`require_in` syntax instead of extending another ``SLS``
+        file.
+
+        :doc:`State Requisites </ref/states/requisites>`
 
 State declaration
 -----------------
@@ -337,6 +347,9 @@ components.
       <ID Declaration>:
         [<overrides>]
 
+
+    # standard declaration
+
     <ID Declaration>:
       <State Declaration>:
         - <Function>
@@ -347,6 +360,9 @@ components.
         - <Requisite Declaration>:
           - <Requisite Reference>
           - <Requisite Reference>
+
+
+    # inline function and names
 
     <ID Declaration>:
       <State Declaration>.<Function>:
@@ -359,4 +375,23 @@ components.
           - <name>
         - <Requisite Declaration>:
           - <Requisite Reference>
+          - <Requisite Reference>
+
+ 
+    # multiple states for single id
+
+    <ID Declaration>:
+      <State Declaration>:
+        - <Function> 
+        - <Function Arg>
+        - <Name>: <name>
+        - <Requisite Declaration>:
+          - <Requisite Reference>
+      <State Declaration>:
+        - <Function>
+        - <Function Arg>
+        - <Names>:
+          - <name>
+          - <name>
+        - <Requisite Declaration>:
           - <Requisite Reference>

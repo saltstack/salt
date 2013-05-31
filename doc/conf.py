@@ -90,14 +90,14 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # -- General configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2012, Thomas S. Hatch'
+copyright = '2013, Thomas S. Hatch'
 
 version = __version__
 release = version
 
 master_doc = 'contents'
 templates_path = ['_templates']
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '_incl/*']
 
 extensions = [
     'saltdocs',
@@ -125,13 +125,17 @@ extlinks = {
 
 
 ### HTML options
-html_theme = 'default'
+if on_rtd:
+    html_theme = 'default'
+else:
+    html_theme = 'saltstack'
 
+html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = 'salt-vert.png'
+html_logo = 'saltstack_logo.png'
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
@@ -139,9 +143,15 @@ html_additional_pages = {
     '404': '404.html',
 }
 
+html_default_sidebars = [
+    'localtoc.html',
+    'relations.html',
+    'sourcelink.html',
+    'searchbox.html',
+]
 html_sidebars = {
     'ref/**/all/salt.*': [
-        'autosummarysidebar.html',
+        'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
@@ -150,6 +160,7 @@ html_sidebars = {
 }
 
 html_context = {
+    'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
@@ -168,7 +179,7 @@ latex_documents = [
   ('contents', 'Salt.tex', 'Salt Documentation', 'Thomas Hatch', 'manual'),
 ]
 
-latex_logo = '_static/salt-vert.png'
+latex_logo = '_static/saltstack_logo.png'
 
 
 ### Manpage options
@@ -195,7 +206,7 @@ man_pages = [
 epub_title = 'Salt Documentation'
 epub_author = 'Thomas S. Hatch'
 epub_publisher = epub_author
-epub_copyright = '2012, Thomas S. Hatch'
+epub_copyright = '2013, Thomas S. Hatch'
 
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.org/'

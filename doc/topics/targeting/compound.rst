@@ -22,6 +22,8 @@ P      Grains PCRE match    ``P@os:(RedHat|Fedora|CentOS)``
 L      List of minions      ``L@minion1.example.com,minion3.domain.com or bl*.domain.com``
 I      Pillar glob match    ``I@pdata:foobar``
 S      Subnet/IP addr match ``S@192.168.1.0/24`` or ``S@192.168.1.100``
+R      Range cluster match  ``R@%foo.bar``
+D      Minion Data match    ``D@key:value``
 ====== ==================== ===============================================================
 
 Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.
@@ -39,6 +41,11 @@ That same example expressed in a :term:`top file` looks like the following::
       'webserv* and G@os:Debian or E@web-dc1-srv.*':
         - match: compound
         - webserver
+
+Note that you cannot have a leading ``not`` in a command.  Instead you must do
+something like the following::
+
+    salt -C '* and not G@kernel:Darwin' test.ping
 
 .. _`glob`: http://docs.python.org/library/fnmatch.html
 .. _`regular expression`: http://docs.python.org/library/re.html#module-re

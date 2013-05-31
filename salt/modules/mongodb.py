@@ -5,7 +5,7 @@ Module to provide MongoDB functionality to Salt
     parameters as well as configuration settings::
 
         mongodb.host: 'localhost'
-        mongodb.port: '27017'
+        mongodb.port: 27017
         mongodb.user: ''
         mongodb.password: ''
 
@@ -16,12 +16,15 @@ Module to provide MongoDB functionality to Salt
 # Import python libs
 import logging
 
+# Import salt libs
+from salt._compat import string_types
+
 # Import third party libs
 try:
     import pymongo
-    has_mongodb = True
+    HAS_MONGODB = True
 except ImportError:
-    has_mongodb = False
+    HAS_MONGODB = False
 
 log = logging.getLogger(__name__)
 
@@ -30,12 +33,13 @@ def __virtual__():
     '''
     Only load this module if pymongo is installed
     '''
-    if has_mongodb:
+    if HAS_MONGODB:
         return 'mongodb'
     else:
         return False
 
-def _connect(user=None, password=None, host=None, port=None, database="admin"):
+
+def _connect(user=None, password=None, host=None, port=None, database='admin'):
     '''
     Returns a tuple of (user, host, port) with config, pillar, or default
     values assigned to missing values.
@@ -51,79 +55,120 @@ def _connect(user=None, password=None, host=None, port=None, database="admin"):
 
     try:
         conn = pymongo.connection.Connection(host=host, port=port)
-        db = pymongo.database.Database(conn, database)
+        mdb = pymongo.database.Database(conn, database)
         if user and password:
-            db.authenticate(user, password)
+            mdb.authenticate(user, password)
     except pymongo.errors.PyMongoError:
-        log.error("Error connecting to database {0}".format(database.message))
+        log.error('Error connecting to database {0}'.format(database))
         return False
 
     return conn
 
+
 def db_list(user=None, password=None, host=None, port=None):
     '''
     List all Mongodb databases
+
+    CLI Example::
+
+        salt '*' mongodb.db_list <user> <password> <host> <port>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Listing databases")
+        log.info('Listing databases')
         return conn.database_names()
-    except pymongo.errors.PyMongoError as e:
-        log.error(e)
-        return e.message
+    except pymongo.errors.PyMongoError as err:
+        log.error(err)
+        return err.message
 
-def db_exists(name, user=None, password=None, host=None, port=None, database="admin"):
+
+def db_exists(name, user=None, password=None, host=None, port=None):
     '''
     Checks if a database exists in Mongodb
+
+    CLI Example::
+
+        salt '*' mongodb.db_exists <name> <user> <password> <host> <port>
     '''
     dbs = db_list(user, password, host, port)
-    for db in dbs:
-        if name == db:
-            return True
 
-    return False
+    if isinstance(dbs, string_types):
+        return False
+
+    return name in dbs
+
 
 def db_remove(name, user=None, password=None, host=None, port=None):
     '''
     Remove a Mongodb database
+
+    CLI Example::
+
+        salt '*' mongodb.db_remove <name> <user> <password> <host> <port>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Removing database {0}".format(name))
+        log.info('Removing database {0}'.format(name))
         conn.drop_database(name)
-    except pymongo.errors.PyMongoError as e:
-        log.error("Removing database {0} failed with error: {1}".format(
-            name, e.message))
-        return e.message
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Removing database {0} failed with error: {1}'.format(
+                name, err.message
+            )
+        )
+        return err.message
 
     return True
 
-def user_list(user=None, password=None, host=None, port=None, database="admin"):
+
+def user_list(user=None, password=None, host=None, port=None, database='admin'):
     '''
     List users of a Mongodb database
+
+    CLI Example::
+
+        salt '*' mongodb.user_list <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Listing users")
-        db = pymongo.database.Database(conn, database)
+        log.info('Listing users')
+        mdb = pymongo.database.Database(conn, database)
 
         output = []
 
-        for user in db.system.users.find():
-            output.append([("user", user['user']), ("readOnly", user['readOnly'])])
-
+        for user in mdb.system.users.find():
+            output.append([
+                ('user', user['user']),
+                ('readOnly', user.get('readOnly', 'None'))
+            ])
         return output
 
-    except pymongo.errors.PyMongoError as e:
-        log.error("Listing users failed with error: {0}".format(e.message))
-        return e.message
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Listing users failed with error: {0}'.format(
+                err.message
+            )
+        )
+        return err.message
 
-def user_exists(name, user=None, password=None, host=None, port=None, database="admin"):
+
+def user_exists(name, user=None, password=None, host=None, port=None,
+                database='admin'):
     '''
     Checks if a user exists in Mongodb
+
+    CLI Example::
+
+        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
     users = user_list(user, password, host, port, database)
     for user in users:
@@ -132,36 +177,57 @@ def user_exists(name, user=None, password=None, host=None, port=None, database="
 
     return False
 
-def user_create(name, passwd, user=None, password=None, host=None, port=None, database="admin"):
+
+def user_create(name, passwd, user=None, password=None, host=None, port=None,
+                database='admin'):
     '''
     Create a Mongodb user
+
+    CLI Example::
+
+        salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Creating user {0}".format(name))
-        db = pymongo.database.Database(conn, database)
-        db.add_user(name, passwd)
-    except pymongo.errors.PyMongoError as e:
-        log.error("Creating database {0} failed with error: {1}".format(
-            name, e.message))
-        return e.message
-
+        log.info('Creating user {0}'.format(name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.add_user(name, passwd)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Creating database {0} failed with error: {1}'.format(
+                name, err.message
+            )
+        )
+        return err.message
     return True
 
-def user_remove(name, user=None, password=None, host=None, port=None, database="admin"):
+
+def user_remove(name, user=None, password=None, host=None, port=None,
+                database='admin'):
     '''
     Remove a Mongodb user
+
+    CLI Example::
+
+        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
 
     try:
-        log.info("Removing user {0}".format(name))
-        db = pymongo.database.Database(conn, database)
-        db.remove_user(name)
-    except pymongo.errors.PyMongoError as e:
-        log.error("Creating database {0} failed with error: {1}".format(
-            name, e.message))
-        return e.message
+        log.info('Removing user {0}'.format(name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.remove_user(name)
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Creating database {0} failed with error: {1}'.format(
+                name, err.message
+            )
+        )
+        return err.message
 
     return True

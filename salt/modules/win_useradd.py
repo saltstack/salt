@@ -5,6 +5,7 @@ NOTE: This currently only works with local user accounts, not domain accounts
 '''
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 
@@ -12,10 +13,21 @@ def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
-    return 'user' if __grains__['kernel'] == 'Windows' else False
+    return 'user' if salt.utils.is_windows() else False
 
 
-def add(name, uid=None, gid=None, groups=None, home=False, shell=None, system=False):
+def add(name,
+        uid=None,
+        gid=None,
+        groups=None,
+        home=False,
+        shell=None,
+        unique=False,
+        system=False,
+        fullname=False,
+        roomnumber=False,
+        workphone=False,
+        homephone=False):
     '''
     Add a user to the minion
 
@@ -29,9 +41,10 @@ def add(name, uid=None, gid=None, groups=None, home=False, shell=None, system=Fa
     return not ret['retcode']
 
 
-def delete(name):
+def delete(name, purge=False, force=False):
     '''
     Remove a user from the minion
+    NOTE: purge and force have not been implemented on Windows yet
 
     CLI Example::
 
@@ -136,6 +149,26 @@ def chprofile(name, profile):
         return post_info['profile'] == profile
     return False
 
+def chfullname(name, fullname):
+    '''
+    Change the full name of the user
+
+    CLI Example::
+
+        salt '*' user.chfullname user 'First Last'
+    '''
+    pre_info = info(name)
+    if not pre_info:
+        return False
+    if fullname == pre_info['fullname']:
+        return True
+    cmd = 'net user {0} /fullname:"{1}"'.format(name, fullname)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['fullname'] != pre_info['fullname']:
+        return post_info['fullname'] == fullname
+    return False
+
 
 def chgroups(name, groups, append=False):
     '''
@@ -176,14 +209,14 @@ def info(name):
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'name could not be found' in line:
-            return False
+            return {}
         if 'successfully' not in line:
             comps = line.split('    ', 1)
             if not len(comps) > 1:
                 continue
             items[comps[0].strip()] = comps[1].strip()
     grouplist = []
-    groups = items['Local Group Memberships'].split(' ')
+    groups = items['Local Group Memberships'].split('  ')
     for group in groups:
         if not group:
             continue
@@ -197,6 +230,7 @@ def info(name):
     ret['profile'] = items['User profile']
     ret['home'] = items['Home directory']
     ret['groups'] = grouplist
+    ret['gid'] = ''
 
     return ret
 
@@ -228,6 +262,9 @@ def getent():
 
         salt '*' user.getent
     '''
+    if 'user.getent' in __context__:
+        return __context__['user.getent']
+
     ret = []
     users = []
     startusers = False
@@ -247,19 +284,18 @@ def getent():
     #return users
     for user in users:
         stuff = {}
-        info = __salt__['user.info'](user)
-        uid = __salt__['file.user_to_uid'](info['name'])
+        user_info = __salt__['user.info'](user)
+        uid = __salt__['file.user_to_uid'](user_info['name'])
 
         stuff['gid'] = ''
-        stuff['groups'] = info['groups']
-        stuff['home'] = info['home']
-        stuff['name'] = info['name']
+        stuff['groups'] = user_info['groups']
+        stuff['home'] = user_info['home']
+        stuff['name'] = user_info['name']
         stuff['passwd'] = ''
         stuff['shell'] = ''
         stuff['uid'] = uid
 
         ret.append(stuff)
 
-
+    __context__['user.getent'] = ret
     return ret
-

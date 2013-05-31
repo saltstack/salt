@@ -6,6 +6,7 @@ Modules used to control the master itself
 import salt.loader
 import salt.payload
 import salt.utils
+import salt.exceptions
 
 
 class Wheel(object):
@@ -16,11 +17,20 @@ class Wheel(object):
         self.opts = opts
         self.w_funcs = salt.loader.wheels(opts)
 
+    def get_docs(self):
+        '''
+        Return a dictionary of functions and the inline documentation for each
+        '''
+        ret = [(fun, self.w_funcs[fun].__doc__)
+                for fun in sorted(self.w_funcs)]
+
+        return dict(ret)
+
     def call_func(self, fun, **kwargs):
         '''
         Execute a master control function
         '''
-        if not fun in self.w_funcs:
+        if fun not in self.w_funcs:
             return 'Unknown wheel function'
         f_call = salt.utils.format_call(self.w_funcs[fun], kwargs)
         return self.w_funcs[fun](*f_call.get('args', ()), **f_call.get('kwargs', {}))
@@ -35,4 +45,7 @@ class Wheel(object):
         sreq = salt.payload.SREQ(
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
-        return sreq.send('clear', load)
+        ret = sreq.send('clear', load)
+        if ret == '':
+            raise salt.exceptions.EauthAuthenticationError
+        return ret

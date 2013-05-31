@@ -1,5 +1,6 @@
 '''
-Service support for Debian systems - uses update-rc.d and service to modify the system
+Service support for Debian systems - uses update-rc.d and service to modify the
+system
 '''
 
 # Import python libs
@@ -7,9 +8,11 @@ import glob
 import re
 
 # Import salt libs
-import salt.utils
 from .systemd import _sd_booted
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 def __virtual__():
     '''
@@ -35,11 +38,11 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    prefix = '/etc/rc{0}.d/S'.format(_get_runlevel())
+    prefix = '/etc/rc[S{0}].d/S'.format(_get_runlevel())
     ret = set()
     lines = glob.glob('{0}*'.format(prefix))
     for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
+        ret.add(re.split(prefix + r'\d+', line)[1])
     return sorted(ret)
 
 
@@ -51,12 +54,7 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    prefix = '/etc/rc{0}.d/K'.format(_get_runlevel())
-    ret = set()
-    lines = glob.glob('{0}*'.format(prefix))
-    for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
-    return sorted(ret)
+    return sorted(set(get_all()) - set(get_enabled()))
 
 
 def get_all():
@@ -67,7 +65,14 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(get_enabled() + get_disabled())
+    ret = set()
+    lines = glob.glob('/etc/init.d/*')
+    for line in lines:
+        service = line.split('/etc/init.d/')[1]
+        # Remove README.  If it's an enabled service, it will be added back in.
+        if service != 'README':
+            ret.add(service)
+    return sorted(ret | set(get_enabled()))
 
 
 def start(name):
@@ -94,7 +99,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
     Restart the named service
 
@@ -102,13 +107,11 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     Reload the named service
 
@@ -117,6 +120,18 @@ def reload(name):
         salt '*' service.reload <service name>
     '''
     cmd = 'service {0} reload'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def force_reload(name):
+    '''
+    Force-reload the named service
+
+    CLI Example::
+
+        salt '*' service.force_reload <service name>
+    '''
+    cmd = 'service {0} force-reload'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -144,6 +159,9 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
     '''
     cmd = 'update-rc.d {0} enable'.format(name)
+    osmajor = __grains__['osrelease'].split('.')[0]
+    if int(osmajor) >= 6:
+        cmd = 'insserv {0} && '.format(name) + cmd
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -161,7 +179,7 @@ def disable(name, **kwargs):
 
 def enabled(name):
     '''
-    Return True if the named servioce is enabled, false otherwise
+    Return True if the named service is enabled, false otherwise
 
     CLI Example::
 
@@ -172,7 +190,7 @@ def enabled(name):
 
 def disabled(name):
     '''
-    Return True if the named servioce is enabled, false otherwise
+    Return True if the named service is enabled, false otherwise
 
     CLI Example::
 

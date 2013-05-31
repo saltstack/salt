@@ -12,6 +12,7 @@ import salt.log
 import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import pickle
+from salt.utils.odict import OrderedDict
 
 # Import third party libs
 import zmq
@@ -23,7 +24,7 @@ try:
     import msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
-    if msgpack.loads(msgpack.dumps([1, 2, 3])) is None:
+    if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
@@ -32,8 +33,8 @@ except ImportError:
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
-        log_format = '[%(levelname)-8s] %(message)s'
-        salt.log.setup_console_logger(log_format=log_format)
+        LOG_FORMAT = '[%(levelname)-8s] %(message)s'
+        salt.log.setup_console_logger(log_format=LOG_FORMAT)
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         sys.exit(1)
 
@@ -106,7 +107,33 @@ class Serial(object):
         if self.serial == 'pickle':
             return pickle.dumps(msg)
         else:
-            return msgpack.dumps(msg)
+            try:
+                return msgpack.dumps(msg)
+            except TypeError:
+                if msgpack.version >= (0, 2, 0):
+                    # Should support OrderedDict serialization, so, let's
+                    # raise the exception
+                    raise
+
+                # msgpack is < 0.2.0, let's make it's life easier
+                # Since OrderedDict is identified as a dictionary, we can't
+                # make use of msgpack custom types, we will need to convert by
+                # hand.
+                # This means iterating through all elements of a dictionary or
+                # list/tuple
+                def odict_encoder(obj):
+                    if isinstance(obj, OrderedDict):
+                        return dict(obj)
+                    return obj
+
+                if isinstance(msg, dict):
+                    for k, v in msg.copy().iteritems():
+                        msg[k] = odict_encoder(v)
+                elif isinstance(msg, (list, tuple)):
+                    msg = list(msg)
+                    for idx, entry in enumerate(msg):
+                        msg[idx] = odict_encoder(entry)
+                return msgpack.dumps(msg)
 
     def dump(self, msg, fn_):
         '''
@@ -129,6 +156,10 @@ class SREQ(object):
             self.socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, 5000
             )
+
+        if master.startswith('tcp://[') and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = linger
         if id_:
             self.socket.setsockopt(zmq.IDENTITY, id_)
@@ -141,8 +172,8 @@ class SREQ(object):
         '''
         payload = {'enc': enc}
         payload['load'] = load
-        package = self.serial.dumps(payload)
-        self.socket.send(package)
+        pkg = self.serial.dumps(payload)
+        self.socket.send(pkg)
         self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
         while True:
@@ -156,27 +187,27 @@ class SREQ(object):
                         timeout * tried
                     )
                 )
-        try:
-            return self.serial.loads(self.socket.recv())
-        finally:
-            self.poller.unregister(self.socket)
+        return self.serial.loads(self.socket.recv())
 
-    def send_auto(self, payload):
+    def send_auto(self, payload, tries=1, timeout=60):
         '''
         Detect the encryption type based on the payload
         '''
         enc = payload.get('enc', 'clear')
         load = payload.get('load', {})
-        return self.send(enc, load)
+        return self.send(enc, load, tries, timeout)
 
     def destroy(self):
         for socket in self.poller.sockets.keys():
-            if not socket.closed:
+            if socket.closed is False:
+                socket.setsockopt(zmq.LINGER, 1)
                 socket.close()
             self.poller.unregister(socket)
-        if not self.socket.closed:
+        if self.socket.closed is False:
+            self.socket.setsockopt(zmq.LINGER, 1)
             self.socket.close()
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()

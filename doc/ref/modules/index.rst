@@ -8,12 +8,17 @@ Salt modules are the functions called by the :command:`salt` command.
 
     Salt ships with many modules that cover a wide variety of tasks.
 
-Easy Modules to write
-=====================
+Modules Are Easy to Write!
+==========================
 
 Salt modules are amazingly simple to write. Just write a regular Python module
-or a regular `Cython`_ module and place it in the ``salt/modules`` directory. You
-can also place them in a directory called ``_modules/`` in your state directory.
+or a regular `Cython`_ module and place it in the ``salt/modules`` directory.
+You can also place them in a directory called ``_modules/`` within the
+:conf_master:`file_roots` specified by the master config file, and they will be
+synced to the minions when :mod:`state.highstate
+<salt.modules.state.highstate>` is run, or by executing the
+:mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>` or
+:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
 Since Salt modules are just Python/Cython modules, there are no restraints on
 what you can put inside of a Salt module. If a Salt module has errors and
@@ -166,7 +171,7 @@ documentation for all available modules:
     salt '*' sys.doc
 
 This function simple prints out the docstrings found in the modules, when
-writing Salt modules, please follow the formating conventions for docstrings as
+writing Salt modules, please follow the formatting conventions for docstrings as
 they appear in the other modules.
 
 Adding Documentation to Salt Modules
@@ -196,8 +201,8 @@ to the calling terminal.
 
 .. _`Python docstring`: #term-docstring
 
-Add Module meta data
---------------------
+Add Module metadata
+-------------------
 
 Add information about the module using the following field lists:
 
@@ -208,7 +213,7 @@ Add information about the module using the following field lists:
     :depends:       python-mysqldb
     :platform:      all
 
-The maintaner field is a comma-delimited list of developers who help maintain
+The maintainer field is a comma-delimited list of developers who help maintain
 this module.
 
 The maturity field indicates the level of quality and testing for this module.
@@ -217,7 +222,7 @@ Standard labels will be determined.
 The depends field is a comma-delimited list of modules that this module depends
 on.
 
-The platform field is a comma-delimited list of platforms that this modules is
+The platform field is a comma-delimited list of platforms that this module is
 known to run on.
 
 How Functions are Read

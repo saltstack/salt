@@ -2,13 +2,11 @@
 Execute salt convenience routines
 '''
 
-# Import python libs
-import sys
-
 # Import salt libs
 import salt.loader
 import salt.exceptions
 import salt.utils
+import salt.minion
 
 
 class RunnerClient(object):
@@ -37,13 +35,18 @@ class RunnerClient(object):
 
         return dict(ret)
 
-    def cmd(self, fun, arg):
+    def cmd(self, fun, arg, kwarg=None):
         '''
         Execute a runner with the given arguments
         '''
+        if not isinstance(kwarg, dict):
+            kwarg = {}
         self._verify_fun(fun)
-        # pylint: disable-msg=W0142
-        return self.functions[fun](*arg)
+        args, kwargs = salt.minion.detect_kwargs(
+                self.functions[fun],
+                arg,
+                kwarg)
+        return self.functions[fun](*args, **kwargs)
 
     def low(self, fun, low):
         '''
@@ -77,7 +80,7 @@ class Runner(RunnerClient):
         else:
             try:
                 return super(Runner, self).cmd(
-                        self.opts['fun'], self.opts['arg'])
+                        self.opts['fun'], self.opts['arg'], self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 print ret

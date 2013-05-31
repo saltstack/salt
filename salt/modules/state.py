@@ -12,8 +12,8 @@ import json
 import salt.utils
 import salt.state
 import salt.payload
-from salt.utils.yaml import load as yaml_load
-from salt.utils.yaml import CustomLoader as YamlCustomLoader
+from salt.utils.yamlloader import load as _yaml_load
+from salt.utils.yamlloader import CustomLoader as _YamlCustomLoader
 from salt._compat import string_types
 
 
@@ -25,6 +25,37 @@ __outputter__ = {
 }
 
 log = logging.getLogger(__name__)
+
+
+def _filter_running(runnings):
+    '''
+    Filter out the result: True + no changes data
+    '''
+    ret = dict((tag, value) for tag, value in runnings.iteritems() if not value['result'] or value['changes'])
+    return ret
+
+
+def _set_retcode(ret):
+    '''
+    Set the return code based on the data back from the state system
+    '''
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+        return
+    if not salt.utils.check_state_result(ret):
+        __context__['retcode'] = 2
+
+
+def _check_pillar(kwargs):
+    '''
+    Check the pillar for errors, refuse to run the state it there are errors
+    in the pillar and return the pillar errors
+    '''
+    if kwargs.get('force'):
+        return True
+    if '_errors' in __pillar__:
+        return False
+    return True
 
 
 def running():
@@ -41,10 +72,11 @@ def running():
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
         err = ('The function "{0}" is running as PID {1} and was started at '
-               '{2} ').format(
+               '{2} with jid {3}').format(
                 data['fun'],
                 data['pid'],
                 salt.utils.jid_to_time(data['jid']),
+                data['jid'],
                 )
         ret.append(err)
     return ret
@@ -61,12 +93,19 @@ def low(data):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
+        __context__['retcode'] = 1
         return err
-    return st_.call(data)
+    ret = st_.call(data)
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+    if salt.utils.check_state_result(ret):
+        __context__['retcode'] = 2
+    return ret
 
 
 def high(data):
@@ -80,9 +119,12 @@ def high(data):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
-    return st_.call_high(data)
+    ret = st_.call_high(data)
+    _set_retcode(ret)
+    return ret
 
 
 def template(tem):
@@ -95,9 +137,12 @@ def template(tem):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
-    return st_.call_template(tem)
+    ret = st_.call_template(tem)
+    _set_retcode(ret)
+    return ret
 
 
 def template_str(tem):
@@ -110,9 +155,12 @@ def template_str(tem):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     st_ = salt.state.State(__opts__)
-    return st_.call_template_str(tem)
+    ret = st_.call_template_str(tem)
+    _set_retcode(ret)
+    return ret
 
 
 def highstate(test=None, **kwargs):
@@ -125,15 +173,37 @@ def highstate(test=None, **kwargs):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
-    salt.utils.daemonize_if(__opts__, **kwargs)
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     opts = copy.copy(__opts__)
 
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = None
 
-    st_ = salt.state.HighState(opts)
-    ret = st_.call_highstate()
+    if 'env' in kwargs:
+        opts['environment'] = kwargs['env']
+
+    pillar = kwargs.get('pillar')
+
+    st_ = salt.state.HighState(opts, pillar)
+    st_.push_active()
+    try:
+        ret = st_.call_highstate(
+                exclude=kwargs.get('exclude', []),
+                cache=kwargs.get('cache', None),
+                cache_name=kwargs.get('cache_name', 'highstate')
+                )
+    finally:
+        st_.pop_active()
+    if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
+        ret = _filter_running(ret)
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
@@ -146,10 +216,11 @@ def highstate(test=None, **kwargs):
         msg = 'Unable to write to "state.highstate" cache file {0}'
         log.error(msg.format(cache_file))
 
+    _set_retcode(ret)
     return ret
 
 
-def sls(mods, env='base', test=None, **kwargs):
+def sls(mods, env='base', test=None, exclude=None, **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
@@ -158,27 +229,62 @@ def sls(mods, env='base', test=None, **kwargs):
 
         salt '*' state.sls core,edit.vim dev
     '''
+
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
     opts = copy.copy(__opts__)
 
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = None
 
-    salt.utils.daemonize_if(opts, **kwargs)
-    st_ = salt.state.HighState(opts)
+    pillar = kwargs.get('pillar')
+
+    serial = salt.payload.Serial(__opts__)
+    cfn = os.path.join(
+            __opts__['cachedir'],
+            '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
+            )
+
+    st_ = salt.state.HighState(opts, pillar)
+
+    if kwargs.get('cache'):
+        if os.path.isfile(cfn):
+            with open(cfn, 'r') as fp_:
+                high_ = serial.load(fp_)
+                return st_.state.call_high(high_)
 
     if isinstance(mods, string_types):
         mods = mods.split(',')
 
-    high, errors = st_.render_highstate({env: mods})
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({env: mods})
 
-    if errors:
-        return errors
+        if errors:
+            __context__['retcode'] = 1
+            return errors
 
-    ret = st_.state.call_high(high)
-    serial = salt.payload.Serial(__opts__)
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(',')
+            if '__exclude__' in high_:
+                high_['__exclude__'].extend(exclude)
+            else:
+                high_['__exclude__'] = exclude
+        ret = st_.state.call_high(high_)
+    finally:
+        st_.pop_active()
+    if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
+        ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     try:
         with salt.utils.fopen(cache_file, 'w+') as fp_:
@@ -186,10 +292,17 @@ def sls(mods, env='base', test=None, **kwargs):
     except (IOError, OSError):
         msg = 'Unable to write to "state.sls" cache file {0}'
         log.error(msg.format(cache_file))
+    _set_retcode(ret)
+    with open(cfn, 'w+') as fp_:
+        try:
+            serial.dump(high_, fp_)
+        except TypeError:
+            # Can't serialize pydsl
+            pass
     return ret
 
 
-def top(topfn):
+def top(topfn, test=None, **kwargs):
     '''
     Execute a specific top file instead of the default
 
@@ -199,10 +312,30 @@ def top(topfn):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
+    if not _check_pillar(kwargs):
+        __context__['retcode'] = 5
+        err = ['Pillar failed to render with the following messages:']
+        err += __pillar__['_errors']
+        return err
+    if salt.utils.test_mode(test=test, **kwargs):
+        __opts__['test'] = True
+    else:
+        __opts__['test'] = None
     st_ = salt.state.HighState(__opts__)
+    st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
-    return st_.call_highstate()
+    try:
+        ret = st_.call_highstate(
+                exclude=kwargs.get('exclude', []),
+                cache=kwargs.get('cache', None),
+                cache_name=kwargs.get('cache_name', 'highstate')
+                )
+    finally:
+        st_.pop_active()
+    _set_retcode(ret)
+    return ret
 
 
 def show_highstate():
@@ -214,7 +347,10 @@ def show_highstate():
         salt '*' state.show_highstate
     '''
     st_ = salt.state.HighState(__opts__)
-    return st_.compile_highstate()
+    ret = st_.compile_highstate()
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+    return ret
 
 
 def show_lowstate():
@@ -226,7 +362,10 @@ def show_lowstate():
         salt '*' state.show_lowstate
     '''
     st_ = salt.state.HighState(__opts__)
-    return st_.compile_low_chunks()
+    ret = st_.compile_low_chunks()
+    if isinstance(ret, list):
+        __context__['retcode'] = 1
+    return ret
 
 
 def show_sls(mods, env='base', test=None, **kwargs):
@@ -239,40 +378,59 @@ def show_sls(mods, env='base', test=None, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     opts = copy.copy(__opts__)
-    if not test is None:
-        opts['test'] = test
-    salt.utils.daemonize_if(opts, **kwargs)
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = None
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
-    high, errors = st_.render_highstate({env: mods})
-    errors += st_.state.verify_high(high)
+    high_, errors = st_.render_highstate({env: mods})
+    errors += st_.state.verify_high(high_)
     if errors:
+        __context__['retcode'] = 1
         return errors
-    return high
+    return high_
 
 
 def show_top():
     '''
     Return the top data that the minion will use for a highstate
-    '''
-    st_ = salt.state.HighState(__opts__)
-    return st_.get_top()
-
-
-def show_masterstate():
-    '''
-    Display the data gathered from the master compiled state
 
     CLI Example::
 
-        salt '*' state.show_masterstate
+        salt '*' state.show_top
     '''
-    st_ = salt.state.RemoteHighState(__opts__, __grains__)
-    return st_.compile_master()
+    st_ = salt.state.HighState(__opts__)
+    ret = {}
+    static = st_.get_top()
+    ext = st_.client.ext_nodes()
+    for top_ in [static, ext]:
+        for env in top_:
+            if env not in ret:
+                ret[env] = top_[env]
+            else:
+                for match in top_[env]:
+                    if match not in ret[env]:
+                        ret[env][match] = top_[env][match]
+                    else:
+                        ret[env][match].extend(top_[env][match])
+    return ret
+
+# Just commenting out, someday I will get this working
+#def show_masterstate():
+#    '''
+#    Display the data gathered from the master compiled state
+#
+#    CLI Example::
+#
+#        salt '*' state.show_masterstate
+#    '''
+#    st_ = salt.state.RemoteHighState(__opts__, __grains__)
+#    return st_.compile_master()
 
 
-def single(fun, name, test=None, kwval_as='yaml', **kwargs):
+def single(fun, name, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -289,35 +447,51 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     '''
     conflict = running()
     if conflict:
+        __context__['retcode'] = 1
         return conflict
     comps = fun.split('.')
     if len(comps) < 2:
+        __context__['retcode'] = 1
         return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
                    '__id__': name,
                    'name': name})
     opts = copy.copy(__opts__)
-    if not test is None:
-        opts['test'] = test
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = None
     st_ = salt.state.State(opts)
     err = st_.verify_data(kwargs)
     if err:
+        __context__['retcode'] = 1
         return err
 
-    if kwval_as == 'yaml':
-        def parse_kwval(value):
-            return yaml_load(value, YamlCustomLoader)
-    elif kwval_as == 'json':
-        def parse_kwval(value):
-            return json.loads(value)
-    else:
-        return 'Unknown format({0}) for state keyword arguments!'.format(
-                kwval_as)
-
-    for key, value in kwargs.iteritems():
-        if not key.startswith('__pub_'):
-            kwargs[key] = parse_kwval(value)
-
-    return {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+    ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
+    _set_retcode(ret)
+    return ret
+
+
+def clear_cache():
+    '''
+    Clear out cached state files, forcing even cache runs to refresh the cache
+    on the next state execution.
+
+    Remember that the state cache is completely disabled by default, this
+    execution only applies if cache=True is used in states
+
+    CLI Example::
+
+        salt '*' state.clear_cache
+    '''
+    ret = []
+    for fn_ in os.listdir(__opts__['cachedir']):
+        if fn_.endswith('.cache.p'):
+            path = os.path.join(__opts__['cachedir'], fn_)
+            if not os.path.isfile(path):
+                continue
+            os.remove(path)
+            ret.append(fn_)
+    return ret

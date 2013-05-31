@@ -5,28 +5,21 @@ Manages configuration files via augeas
 '''
 
 # Load third party libs
-has_augeas = False
+HAS_AUGEAS = False
 try:
     from augeas import Augeas
-    has_augeas = True
+    HAS_AUGEAS = True
 except ImportError:
     pass
-
-__outputter__ = {
-    'ls': 'yaml',
-    'get': 'yaml',
-    'match': 'yaml',
-}
 
 
 def __virtual__():
     '''
     Only run this module if the augeas python module is installed
     '''
-    if has_augeas:
+    if HAS_AUGEAS:
         return 'augeas'
-    else:
-        return False
+    return False
 
 
 def _recurmatch(path, aug):
@@ -43,7 +36,7 @@ def _recurmatch(path, aug):
         yield (clean_path, aug.get(path))
 
         for i in aug.match(clean_path + '/*'):
-            i = i.replace('!', '\!')  # escape some dirs
+            i = i.replace('!', '\\!')  # escape some dirs
             for _match in _recurmatch(i, aug):
                 yield _match
 
@@ -198,7 +191,7 @@ def remove(path):
     return ret
 
 
-def ls(path):
+def ls(path):  # pylint: disable-msg=C0103
     '''
     List the direct children of a node
 

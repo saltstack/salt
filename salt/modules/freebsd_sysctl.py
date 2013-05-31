@@ -7,10 +7,11 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 
 
-__outputter__ = {
-    'assign': 'txt',
-    'get': 'txt',
-}
+def __virtual__():
+    '''
+    Only run on FreeBSD systems
+    '''
+    return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
 
 
 def _formatfor(name, value, config, tail=''):
@@ -18,13 +19,6 @@ def _formatfor(name, value, config, tail=''):
         return '{0}="{1}"{2}'.format(name, value, tail)
     else:
         return '{0}={1}{2}'.format(name, value, tail)
-
-
-def __virtual__():
-    '''
-    Only run on Linux systems
-    '''
-    return 'sysctl' if __grains__['os'] == 'FreeBSD' else False
 
 
 def show():
@@ -53,13 +47,15 @@ def show():
     cmd = 'sysctl -ae'
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
+    comps = ['']
     for line in out:
-        if line.split('.')[0] not in roots:
-            comps = line.split('=')
+        if any([line.startswith('{0}.'.format(root)) for root in roots]):
+            comps = line.split('=', 1)
+            ret[comps[0]] = comps[1]
+        elif comps[0]:
             ret[comps[0]] += '{0}\n'.format(line)
+        else:
             continue
-        comps = line.split('=')
-        ret[comps[0]] = comps[1]
     return ret
 
 
@@ -109,29 +105,29 @@ def persist(name, value, config='/etc/sysctl.conf'):
     edited = False
     value = str(value)
 
-    with salt.utils.fopen(config, 'r') as f:
-        for l in f:
-            if not l.startswith('{0}='.format(name)):
-                nlines.append(l)
+    with salt.utils.fopen(config, 'r') as ifile:
+        for line in ifile:
+            if not line.startswith('{0}='.format(name)):
+                nlines.append(line)
                 continue
             else:
-                k, rest = l.split('=', 1)
+                key, rest = line.split('=', 1)
                 if rest.startswith('"'):
-                    z, v, rest = rest.split('"', 2)
+                    _, rest_v, rest = rest.split('"', 2)
                 elif rest.startswith('\''):
-                    z, v, rest = rest.split('\'', 2)
+                    _, rest_v, rest = rest.split('\'', 2)
                 else:
-                    v = rest.split()[0]
-                    rest = rest[len(v):]
-                if v == value:
+                    rest_v = rest.split()[0]
+                    rest = rest[len(rest_v):]
+                if rest_v == value:
                     return 'Already set'
-                new_line = _formatfor(k, value, config, rest)
+                new_line = _formatfor(key, value, config, rest)
                 nlines.append(new_line)
                 edited = True
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
-    with salt.utils.fopen(config, 'w+') as f:
-        f.writelines(nlines)
+    with salt.utils.fopen(config, 'w+') as ofile:
+        ofile.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)
     return 'Updated'

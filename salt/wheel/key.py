@@ -25,7 +25,7 @@ def delete(match):
     Delete keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
-    return skey.delete(match)
+    return skey.delete_key(match)
 
 def reject(match):
     '''

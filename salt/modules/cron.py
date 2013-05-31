@@ -21,7 +21,7 @@ def _render_tab(lst):
     for pre in lst['pre']:
         ret.append('{0}\n'.format(pre))
     if len(ret):
-        if not ret[-1] == TAG:
+        if ret[-1] != TAG:
             ret.append(TAG)
     else:
         ret.append(TAG)
@@ -58,8 +58,23 @@ def _get_cron_cmdstr(user, path):
 def write_cron_file(user, path):
     '''
     Writes the contents of a file to a user's crontab
+
+    CLI Example::
+
+        salt '*' cron.write_cron_file root /tmp/new_cron
     '''
     return __salt__['cmd.retcode'](_get_cron_cmdstr(user, path)) == 0
+
+
+def write_cron_file_verbose(user, path):
+    '''
+    Writes the contents of a file to a user's crontab and return error message on error
+
+    CLI Example::
+
+        salt '*' cron.write_cron_file_verbose root /tmp/new_cron
+    '''
+    return __salt__['cmd.run_all'](_get_cron_cmdstr(user, path))
 
 
 def _write_cron_lines(user, lines):
@@ -88,7 +103,7 @@ def raw_cron(user):
         cmd = 'crontab -l {0}'.format(user)
     else:
         cmd = 'crontab -l -u {0}'.format(user)
-    return __salt__['cmd.run_stdout'](cmd)
+    return __salt__['cmd.run_stdout'](cmd, rstrip=False)
 
 
 def list_tab(user):
@@ -143,7 +158,7 @@ def list_tab(user):
     return ret
 
 # For consistency's sake
-ls = list_tab
+ls = list_tab  # pylint: disable-msg=C0103
 
 
 def set_special(user, special, cmd):
@@ -174,7 +189,7 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
 
     CLI Example::
 
-        salt '*' cron.set_job root \* \* \* \* 1 /usr/local/weekly
+        salt '*' cron.set_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
     # Scrub the types
     minute = str(minute)
@@ -185,11 +200,11 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
     lst = list_tab(user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if not minute == cron['min'] or \
-                    not hour == cron['hour'] or \
-                    not dom == cron['daymonth'] or \
-                    not month == cron['month'] or \
-                    not dow == cron['dayweek']:
+            if minute != cron['min'] or \
+                    hour != cron['hour'] or \
+                    dom != cron['daymonth'] or \
+                    month != cron['month'] or \
+                    dow != cron['dayweek']:
                 rm_job(user, minute, hour, dom, month, dow, cmd)
                 jret = set_job(user, minute, hour, dom, month, dow, cmd)
                 if jret == 'new':
@@ -217,7 +232,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
 
     CLI Example::
 
-        salt '*' cron.rm_job root \* \* \* \* 1 /usr/local/weekly
+        salt '*' cron.rm_job root '*' '*' '*' '*' 1 /usr/local/weekly
     '''
     lst = list_tab(user)
     ret = 'absent'
@@ -234,7 +249,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
         return comdat['stderr']
     return ret
 
-rm = rm_job
+rm = rm_job  # pylint: disable-msg=C0103
 
 
 def set_env(user, name, value=None):
@@ -248,7 +263,7 @@ def set_env(user, name, value=None):
     lst = list_tab(user)
     for env in lst['env']:
         if name == env['name']:
-            if not value == env['value']:
+            if value != env['value']:
                 rm_env(user, name)
                 jret = set_env(user, name, value)
                 if jret == 'new':

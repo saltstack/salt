@@ -1,28 +1,39 @@
 '''
-Module for managing partitions on posix-like systems.
+Module for managing partitions on POSIX-like systems.
 
 Some functions may not be available, depending on your version of parted.
 
 Check man 8 parted for more information, or the online docs at:
 
 http://www.gnu.org/software/parted/manual/html_chapter/parted_2.html
+
+In light of parted not directly supporting partition IDs, some of this module
+has been written to utilize sfdisk instead. For further information, please
+reference the man page for sfdisk::
+
+    man 8 sfdisk
 '''
 
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
+
+
+# Define a function alias in order not to shadow built-in's
+__func_alias__ = {
+    'set_': 'set'
+}
 
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only work on POSIX-like systems
     '''
-    # Disable on these platorms, specific service modules exist:
-    disable = [
-        'Windows',
-        ]
-    if __grains__['os'] in disable:
+    if salt.utils.is_windows():
         return False
     return 'partition'
 
@@ -43,13 +54,15 @@ def probe(device=''):
 
 def part_list(device, unit=None):
     '''
-    Ask the kernel to update its local partition data
+    partition.part_list device unit
+
+    Prints partition information of given <device>
 
     CLI Examples::
 
-        salt '*' partition.partlist /dev/sda
-        salt '*' partition.partlist /dev/sda unit=s
-        salt '*' partition.partlist /dev/sda unit=kB
+        salt '*' partition.part_list /dev/sda
+        salt '*' partition.part_list /dev/sda unit=s
+        salt '*' partition.part_list /dev/sda unit=kB
     '''
     if unit:
         cmd = 'parted -m -s {0} unit {1} print'.format(device, unit)
@@ -97,7 +110,9 @@ def align_check(device, part_type, partition):
 
         salt '*' partition.align_check /dev/sda minimal 1
     '''
-    cmd = 'parted -m -s {0} align-check {1} {2}'.format(device, part_type, partition)
+    cmd = 'parted -m -s {0} align-check {1} {2}'.format(
+        device, part_type, partition
+    )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -117,7 +132,7 @@ def check(device, minor):
     return out
 
 
-def cp(device, from_minor, to_minor):
+def cp(device, from_minor, to_minor):  # pylint: disable-msg=C0103
     '''
     partition.check device from_minor to_minor
 
@@ -134,20 +149,64 @@ def cp(device, from_minor, to_minor):
     return out
 
 
-def mkfs(device, minor, fs_type):
+def get_id(device, minor):
     '''
-    partition.mkfs device minor fs_type
+    partition.get_id
 
-    Makes a file system <fs_type> on partition <minor>, destroying all data
+    Prints the system ID for the partition. Some typical values are::
+
+         b: FAT32 (vfat)
+         7: HPFS/NTFS
+        82: Linux Swap
+        83: Linux
+        8e: Linux LVM
+        fd: Linux RAID Auto
+
+    CLI Example::
+
+        salt '*' partition.get_id /dev/sda 1
+    '''
+    cmd = 'sfdisk --print-id {0} {1}'.format(device, minor)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def set_id(device, minor, system_id):
+    '''
+    partition.set_id
+
+    Sets the system ID for the partition. Some typical values are::
+
+         b: FAT32 (vfat)
+         7: HPFS/NTFS
+        82: Linux Swap
+        83: Linux
+        8e: Linux LVM
+        fd: Linux RAID Auto
+
+    CLI Example::
+
+        salt '*' partition.set_id /dev/sda 1 83
+    '''
+    cmd = 'sfdisk --change-id {0} {1} {2}'.format(device, minor, system_id)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def mkfs(device, fs_type):
+    '''
+    partition.mkfs device fs_type
+
+    Makes a file system <fs_type> on partition <device>, destroying all data
         that resides on that partition. <fs_type> must be one of "ext2",
         "fat32", "fat16", "linux-swap" or "reiserfs" (if libreiserfs is
         installed)
 
     CLI Example::
 
-        salt '*' partition.mkfs 2 fat32
+        salt '*' partition.mkfs /dev/sda2 fat32
     '''
-    cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
+    cmd = 'mkfs.{0} {1}'.format(fs_type, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -158,7 +217,7 @@ def mklabel(device, label_type):
 
     Create a new disklabel (partition table) of label_type.
     Type should be one of "aix", "amiga", "bsd", "dvh", "gpt", "loop", "mac",
-        "msdos", "pc98", or "sun".
+    "msdos", "pc98", or "sun".
 
     CLI Example::
 
@@ -181,7 +240,9 @@ def mkpart(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
     '''
-    cmd = 'parted -m -s {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+        device, part_type, fs_type, start, end
+    )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -200,7 +261,9 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
     '''
-    cmd = 'parted -m -s {0} mkpart {1} {2} {3} {4}'.format(device, part_type, fs_type, start, end)
+    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+        device, part_type, fs_type, start, end
+    )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -252,12 +315,15 @@ def resize(device, minor, start, end):
 
         salt '*' partition.resize /dev/sda 3 200 850
     '''
-    cmd = 'parted -m -s {0} resize {1} {2} {3}'.format(device, minor, start, end)
-    out = __salt__['cmd.run'](cmd).splitlines()
-    return out
+    out = __salt__['cmd.run'](
+        'parted -m -s -- {0} resize {1} {2} {3}'.format(
+            device, minor, start, end
+        )
+    )
+    return out.splitlines()
 
 
-def rm(device, minor):
+def rm(device, minor):  # pylint: disable-msg=C0103
     '''
     partition.rm device minor
 
@@ -272,7 +338,7 @@ def rm(device, minor):
     return out
 
 
-def set(device, minor, flag, state):
+def set_(device, minor, flag, state):
     '''
     partition.set device  minor flag state
 
@@ -302,4 +368,3 @@ def toggle(device, partition, flag):
     cmd = 'parted -m -s {0} toggle {1} {2} {3}'.format(device, partition, flag)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

@@ -22,8 +22,13 @@ def present(name, gid=None, system=False):
         The name of the group to manage
 
     gid
-        The group id to assign to the named group, if left empty then the next
+        The group id to assign to the named group; if left empty, then the next
         available group id will be assigned
+
+    system 
+        Whether or not the named group is a system group.  This is essentially
+        the '-r' option of 'groupadd'.
+
     '''
     ret = {'name': name,
            'changes': {},

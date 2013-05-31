@@ -14,7 +14,7 @@ the SLS files can be any structured format that can be dreamed up.
 Currently there is support for ``Jinja + YAML``, ``Mako + YAML``, 
 ``Wempy + YAML``, ``Jinja + json`` ``Mako + json`` and ``Wempy + json``. But
 renderers can be written to support anything. This means that the Salt states
-could be managed by xml files, html files, puppet files, or any format that
+could be managed by XML files, HTML files, puppet files, or any format that
 can be translated into the data structure used by the state system.
 
 Multiple Renderers
@@ -49,7 +49,7 @@ Composing Renderers
 -------------------
 A renderer can be composed from other renderers by connecting them in a series
 of pipes(``|``). In fact, the default ``Jinja + YAML`` renderer is implemented
-by combining a yaml renderer and a jinja renderer. Such renderer configuration
+by combining a YAML renderer and a Jinja renderer. Such renderer configuration
 is specified as: ``jinja | yaml``.
 
 Other renderer combinations are possible, here's a few examples:
@@ -63,7 +63,7 @@ Other renderer combinations are possible, here's a few examples:
   
   ``jinja | mako | yaml``
       This one allows you to use both jinja and mako templating syntax in the
-      input and then parse the final rendererd output as YAML.
+      input and then parse the final rendered output as YAML.
 
 And here's a contrived example sls file using the ``jinja | mako | yaml`` renderer:
 
@@ -98,12 +98,19 @@ accepts as input and what it returns as output.
 Writing Renderers
 -----------------
 
-Writing a renderer is easy, all that is required is that a Python module
-is placed in the rendered directory and that the module implements the
-render function. The render function will be passed the path of the SLS file.
-In the render function, parse the passed file and return the data structure
+Writing a renderer is easy, all that is required is that a Python module is
+placed in the rendered directory and that the module implements the ``render``
+function. The ``render`` function will be passed the path of the SLS file.  In
+the ``render`` function, parse the passed file and return the data structure
 derived from the file. You can place your custom renderers in a ``_renderers``
-directory in your file root (``/srv/salt/``).
+directory within the :conf_master:`file_roots` specified by the master config
+file. These custom renderers are distributed when `state.highstate`_ is run, or
+by executing the `saltutil.sync_renderers`_ or `saltutil.sync_all`_ functions.
+
+.. _`state.highstate`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.state.html#salt.modules.state.highstate
+.. _`saltutil.sync_renderers`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_renderers
+.. _`saltutil.sync_all`: https://salt.readthedocs.org/en/latest/ref/modules/all/salt.modules.saltutil.html#salt.modules.saltutil.sync_all
+
 
 Examples
 --------

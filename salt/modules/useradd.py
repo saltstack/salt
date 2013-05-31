@@ -9,27 +9,35 @@ try:
 except ImportError:
     pass
 import logging
-from copy import deepcopy
+import copy
 
 # Import salt libs
-from salt._compat import string_types, callable
+import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is Linux or OpenBSD
+    and remove some of the functionality on OS X
     '''
+    # XXX: Why are these imports in __virtual__?
     import sys
+    from salt._compat import callable
     if __grains__['kernel'] == 'Darwin':
         mod = sys.modules[__name__]
         for attr in dir(mod):
-
             if callable(getattr(mod, attr)):
-                if not attr in ('getent', 'info', 'list_groups', '__virtual__'):
+                if not attr in ('_format_info', 'getent', 'info',
+                                'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
-    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
+    return (
+        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD',
+                                           'NetBSD')
+        else False
+    )
 
 
 def _get_gecos(name):
@@ -41,7 +49,8 @@ def _get_gecos(name):
         return {}
     else:
         # Assign empty strings for any unspecified trailing GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
+        while len(gecos_field) < 4:
+            gecos_field.append('')
         return {'fullname': str(gecos_field[0]),
                 'roomnumber': str(gecos_field[1]),
                 'workphone': str(gecos_field[2]),
@@ -53,10 +62,10 @@ def _build_gecos(gecos_dict):
     Accepts a dictionary entry containing GECOS field names and their values,
     and returns a full GECOS comment string, to be used with usermod.
     '''
-    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname',''),
-                                    gecos_dict.get('roomnumber',''),
-                                    gecos_dict.get('workphone',''),
-                                    gecos_dict.get('homephone',''))
+    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
+                                    gecos_dict.get('roomnumber', ''),
+                                    gecos_dict.get('workphone', ''),
+                                    gecos_dict.get('homephone', ''))
 
 
 def add(name,
@@ -78,8 +87,6 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if isinstance(groups, string_types):
-        groups = groups.split(',')
     cmd = 'useradd '
     if shell:
         cmd += '-s {0} '.format(shell)
@@ -87,23 +94,37 @@ def add(name,
         cmd += '-u {0} '.format(uid)
     if gid not in (None, ''):
         cmd += '-g {0} '.format(gid)
-    if groups:
-        cmd += '-G "{0}" '.format(','.join(groups))
+    elif groups is not None and name in groups:
+        def usergroups():
+            retval = False
+            try:
+                for line in salt.utils.fopen('/etc/login.defs'):
+                    if 'USERGROUPS_ENAB' in line[:15]:
+                        if "yes" in line:
+                            retval = True
+            except Exception:
+                log.debug('Error reading /etc/login.defs', exc_info=True)
+            return retval
+        if usergroups():
+            cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
     if home:
-        if home is not True:
-            if system:
-                cmd += '-d {0} '.format(home)
-            else:
+        if system:
+            if home is not True:
                 cmd += '-m -d {0} '.format(home)
+            else:
+                cmd += '-d {0} '.format(home)
         else:
-            if not system:
+            if home is not True:
+                cmd += '-m -d {0} '.format(home)
+            else:
                 cmd += '-m '
     if not unique:
         cmd += '-o '
     if system:
-        cmd += '-r '
+        if not __grains__['kernel'] == 'NetBSD':
+            cmd += '-r '
     cmd += name
-    ret = __salt__['cmd.retcode'](cmd)
+    ret = __salt__['cmd.run_all'](cmd)['retcode']
     if ret != 0:
         return False
     else:
@@ -115,6 +136,8 @@ def add(name,
         # to return False when the user was successfully created since A) the
         # user does exist, and B) running useradd again would result in a
         # nonzero exit status and be interpreted as a False result.
+        if groups:
+            chgroups(name, groups)
         if fullname:
             chfullname(name, fullname)
         if roomnumber:
@@ -154,9 +177,13 @@ def getent():
 
         salt '*' user.getent
     '''
+    if 'user.getent' in __context__:
+        return __context__['user.getent']
+
     ret = []
     for data in pwd.getpwall():
-        ret.append(info(data.pw_name))
+        ret.append(_format_info(data))
+    __context__['user.getent'] = ret
     return ret
 
 
@@ -271,10 +298,11 @@ def chfullname(name, fullname):
     '''
     fullname = str(fullname)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if fullname == pre_info['fullname']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -294,10 +322,11 @@ def chroomnumber(name, roomnumber):
     '''
     roomnumber = str(roomnumber)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -317,10 +346,11 @@ def chworkphone(name, workphone):
     '''
     workphone = str(workphone)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if workphone == pre_info['workphone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -340,10 +370,11 @@ def chhomephone(name, homephone):
     '''
     homephone = str(homephone)
     pre_info = _get_gecos(name)
-    if not pre_info: return False
+    if not pre_info:
+        return False
     if homephone == pre_info['homephone']:
         return True
-    gecos_field = deepcopy(pre_info)
+    gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
@@ -361,37 +392,35 @@ def info(name):
 
         salt '*' user.info root
     '''
-    ret = {}
     try:
         data = pwd.getpwnam(name)
-        ret['gid'] = data.pw_gid
-        ret['groups'] = list_groups(name)
-        ret['home'] = data.pw_dir
-        ret['name'] = data.pw_name
-        ret['passwd'] = data.pw_passwd
-        ret['shell'] = data.pw_shell
-        ret['uid'] = data.pw_uid
-        # Put GECOS info into a list
-        gecos_field = data.pw_gecos.split(',', 3)
-        # Assign empty strings for any unspecified GECOS fields
-        while len(gecos_field) < 4: gecos_field.append('')
-        ret['fullname'] = gecos_field[0]
-        ret['roomnumber'] = gecos_field[1]
-        ret['workphone'] = gecos_field[2]
-        ret['homephone'] = gecos_field[3]
     except KeyError:
-        ret['gid'] = ''
-        ret['groups'] = ''
-        ret['home'] = ''
-        ret['name'] = ''
-        ret['passwd'] = ''
-        ret['shell'] = ''
-        ret['uid'] = ''
-        ret['fullname'] = ''
-        ret['roomnumber'] = ''
-        ret['workphone'] = ''
-        ret['homephone'] = ''
-    return ret
+        return {}
+    else:
+        return _format_info(data)
+
+
+def _format_info(data):
+    '''
+    Return user information in a pretty way
+    '''
+    # Put GECOS info into a list
+    gecos_field = data.pw_gecos.split(',', 3)
+    # Make sure our list has at least four elements
+    while len(gecos_field) < 4:
+        gecos_field.append('')
+
+    return {'gid': data.pw_gid,
+            'groups': list_groups(data.pw_name),
+            'home': data.pw_dir,
+            'name': data.pw_name,
+            'passwd': data.pw_passwd,
+            'shell': data.pw_shell,
+            'uid': data.pw_uid,
+            'fullname': gecos_field[0],
+            'roomnumber': gecos_field[1],
+            'workphone': gecos_field[2],
+            'homephone': gecos_field[3]}
 
 
 def list_groups(name):
@@ -403,11 +432,31 @@ def list_groups(name):
         salt '*' user.list_groups foo
     '''
     ugrp = set()
+
     # Add the primary user's group
-    ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    try:
+        ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    except KeyError:
+        # The user's applied default group is undefined on the system, so
+        # it does not exist
+        pass
+
+    groups = grp.getgrall()
+
     # Now, all other groups the user belongs to
-    for group in grp.getgrall():
+    for group in groups:
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
 
     return sorted(list(ugrp))
+
+
+def list_users():
+    '''
+    Return a list of all users
+
+    CLI Example::
+
+        salt '*' user.list_users
+    '''
+    return sorted([user.pw_name for user in pwd.getpwall()])

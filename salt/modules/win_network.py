@@ -6,20 +6,26 @@ Module for gathering and managing network information
 import re
 
 # Import salt libs
+import salt.utils
 from salt.utils.socket_util import sanitize_host
+try:
+    import salt.utils.winapi
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
 
-__outputter__ = {
-    'dig':     'txt',
-    'ping':    'txt',
-    'netstat': 'txt',
-}
+# Import 3rd party libraries
+try:
+    import wmi
+except ImportError:
+    HAS_DEPENDENCIES = False
 
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if __grains__['os'] == 'Windows':
+    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return 'network'
     return False
 
@@ -155,14 +161,14 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     Returns an IPv4 netmask
     '''
     netmask = ''
-    for n in range(4):
-        if n:
+    for idx in range(4):
+        if idx:
             netmask += '.'
         if cidr_bits >= 8:
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '{0:d}'.format(256-(2**(8-cidr_bits)))
+            netmask += '{0:d}'.format(256 - (2 ** (8 - cidr_bits)))
             cidr_bits = 0
     return netmask
 
@@ -174,20 +180,21 @@ def _interfaces_ipconfig(out):
     '''
     ifaces = dict()
     iface = None
+    adapter_iface_regex = re.compile(r'adapter (\S.+):$')
 
     for line in out.splitlines():
         if not line:
             continue
         # TODO what does Windows call Infiniband and 10/40gige adapters
         if line.startswith('Ethernet'):
-            iface = ifaces[re.search('adapter (\S.+):$').group(1)]
+            iface = ifaces[adapter_iface_regex.search(line).group(1)]
             iface['up'] = True
             addr = None
             continue
         if iface:
-            k, v = line.split(',', 1)
-            key = k.strip(' .')
-            val = v.strip()
+            key, val = line.split(',', 1)
+            key = key.strip(' .')
+            val = val.strip()
             if addr and key in ('Subnet Mask'):
                 addr['netmask'] = val
             elif key in ('IP Address', 'IPv4 Address'):
@@ -209,10 +216,35 @@ def _interfaces_ipconfig(out):
             elif key in ('Media State'):
                 # XXX seen used for tunnel adaptors
                 # might be useful
-                iface['up'] = (v != 'Media disconnected')
+                iface['up'] = (val != 'Media disconnected')
 
 
 def interfaces():
-    cmd = __salt__['cmd.run']('ipconfig /all')
-    ifaces = _ifconfig(cmd)
+    '''
+    Return details about each network interface
+    '''
+    with salt.utils.winapi.Com():
+        c = wmi.WMI()
+        ifaces = {}
+        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
+            ifaces[iface.Description] = dict()
+            if iface.MACAddress:
+                ifaces[iface.Description]['hwaddr'] = iface.MACAddress
+            if iface.IPEnabled:
+                ifaces[iface.Description]['up'] = True
+                ifaces[iface.Description]['inet'] = []
+                for ip in iface.IPAddress:
+                    item = {}
+                    item['broadcast'] = ''
+                    try:
+                        item['broadcast'] = iface.DefaultIPGateway[0]
+                    except Exception:
+                        pass
+                    item['netmask'] = iface.IPSubnet[0]
+                    item['label'] = iface.Description
+                    item['address'] = ip
+                    ifaces[iface.Description]['inet'].append(item)
+            else:
+                ifaces[iface.Description]['up'] = False
     return ifaces
+

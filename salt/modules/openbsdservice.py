@@ -5,9 +5,6 @@ The service module for OpenBSD
 # Import python libs
 import os
 
-# Import salt libs
-import salt.utils
-
 # XXX enable/disable support would be nice
 
 
@@ -16,10 +13,10 @@ def __virtual__():
     Only work on OpenBSD
     '''
     if __grains__['os'] == 'OpenBSD' and os.path.exists('/etc/rc.d/rc.subr'):
-        v = map(int, __grains__['kernelrelease'].split('.'))
+        krel = map(int, __grains__['kernelrelease'].split('.'))
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
-        if v[0] > 5 or (v[0] == 5 and v[1] > 0):
+        if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
             return 'service'
     return False
 
@@ -48,7 +45,7 @@ def stop(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
     Restart the named service
 
@@ -56,8 +53,6 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 

@@ -6,12 +6,13 @@ to this basic module
 # Import python libs
 import os
 
-# Import salt libs
-import salt.utils
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
-
-grainmap = {
+GRAINMAP = {
            'Arch': '/etc/rc.d',
+           'Arch ARM': '/etc/rc.d',
            'Debian': '/etc/init.d',
            'Fedora': '/etc/init.d',
            'RedHat': '/etc/init.d',
@@ -21,6 +22,9 @@ grainmap = {
            'CloudLinux': '/etc/init.d',
            'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
+           'SUSE  Enterprise Server': '/etc/init.d',
+           'openSUSE': '/etc/init.d',
+           'OEL': '/etc/init.d',
           }
 
 def __virtual__():
@@ -28,7 +32,7 @@ def __virtual__():
     Only work on systems which default to systemd
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = [
+    disable = set((
                'RedHat',
                'CentOS',
                'Amazon',
@@ -39,7 +43,12 @@ def __virtual__():
                'Ubuntu',
                'Debian',
                'Arch',
-              ]
+               'Arch ARM',
+               'ALT',
+               'SUSE  Enterprise Server',
+               'openSUSE',
+               'OEL',
+              ))
     if __grains__['os'] in disable:
         return False
     # Disable on all non-Linux OSes as well
@@ -56,7 +65,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = os.path.join(grainmap[__grains__['os']],
+    cmd = os.path.join(GRAINMAP[__grains__['os']],
             name + ' start')
     return not __salt__['cmd.retcode'](cmd)
 
@@ -69,22 +78,20 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = os.path.join(grainmap[__grains__['os']],
+    cmd = os.path.join(GRAINMAP[__grains__['os']],
             name + ' stop')
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(name):
+def restart(name, **kwargs):
     '''
-    Restart the named service
+    Restart the specified service
 
     CLI Example::
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
-    cmd = os.path.join(grainmap[__grains__['os']],
+    cmd = os.path.join(GRAINMAP[__grains__['os']],
             name + ' restart')
     return not __salt__['cmd.retcode'](cmd)
 
@@ -102,14 +109,38 @@ def status(name, sig=None):
     return __salt__['status.pid'](sig if sig else name)
 
 
-def reload(name):
+def reload_(name):
     '''
-    Restart the named service
+    Restart the specified service
 
     CLI Example::
 
         salt '*' service.reload <service name>
     '''
-    cmd = os.path.join(grainmap[__grains__['os']],
+    cmd = os.path.join(GRAINMAP[__grains__['os']],
             name + ' reload')
     return not __salt__['cmd.retcode'](cmd)
+
+
+def get_all():
+    '''
+    Return a list of all available services
+
+    CLI Example::
+
+        salt '*' service.get_all
+    '''
+    if not os.path.isdir(GRAINMAP[__grains__['os']]):
+        return []
+    return sorted(os.listdir(GRAINMAP[__grains__['os']]))
+
+
+def available(name):
+    '''
+    Return if the specified service is available
+
+    CLI Example::
+
+        salt '*' service.available
+    '''
+    return name in get_all()

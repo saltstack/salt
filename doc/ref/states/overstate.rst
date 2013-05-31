@@ -42,14 +42,34 @@ or to execute a state.highstate.
         - mysql
         - webservers
 
-The above defined over state will execute the msql stage first because it is
+The above defined over state will execute the mysql stage first because it is
 required by the webservers stage. The webservers stage will then be executed
 only if the mysql stage executes without any issues. The webservers stage
 will execute state.highstate on the matched minions, while the mysql stage
 will execute state.sls with the named sls files.
 
 Finally the all stage will execute state.highstate on all systems only if the
-mysql and webservers stages complete without issue.
+mysql and webservers stages complete without failures. The overstate system
+checks for any states that return a result of `False`, if the run has any
+`False` returns then the overstate will quit.
+
+Adding Functions To Overstate
+=============================
+
+In 0.15.0 the ability to execute module functions directly in the overstate
+was added. Functions are called as a stage with the function key:
+
+.. code-block:: yaml
+
+    http:
+      function:
+        pkg.install:
+          - http
+
+
+The list of function arguments are passed after the declared function.
+Requisites only functions properly if the given function supports returning
+a custom return code.
 
 Executing the Over State
 ========================

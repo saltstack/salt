@@ -1,6 +1,6 @@
 '''
-The Salt Key backend api and interface used by the CLI. The Key class can be
-used to manage salt keys directly without interfacing with the cli.
+The Salt Key backend API and interface used by the CLI. The Key class can be
+used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
@@ -16,7 +16,7 @@ import salt.utils.event
 
 class KeyCLI(object):
     '''
-    Manage key cli operations
+    Manage key CLI operations
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -98,10 +98,19 @@ class KeyCLI(object):
                     matches,
                     'key',
                     self.opts)
-            veri = raw_input('Proceed? [n/Y] ')
-            if veri.lower().startswith('n'):
-                return
-        self.key.delete_key(match)
+            try:
+                veri = raw_input('Proceed? [N/y] ')
+            except KeyboardInterrupt:
+                raise SystemExit("\nExiting on CTRL-c")
+            if veri.lower().startswith('y'):
+                self.key.delete_key(match)
+        else:
+            print('Deleting the following keys:')
+            salt.output.display_output(
+                    matches,
+                    'key',
+                    self.opts)
+            self.key.delete_key(match)
 
     def delete_all(self):
         '''
@@ -228,6 +237,18 @@ class Key(object):
                                         'minions_rejected')
         return minions_accepted, minions_pre, minions_rejected
 
+    def check_minion_cache(self):
+        '''
+        Check the minion cache to make sure that old minion data is cleared
+        '''
+        m_cache = os.path.join(self.opts['cachedir'], 'minions')
+        if not os.path.isdir(m_cache):
+            return
+        keys = self.list_keys()
+        for minion in os.listdir(m_cache):
+            if minion not in keys['minions']:
+                shutil.rmtree(os.path.join(m_cache, minion))
+
     def check_master(self):
         '''
         Log if the master is not running
@@ -253,7 +274,7 @@ class Key(object):
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
                 if fnmatch.fnmatch(key, match):
-                    if not status in ret:
+                    if status not in ret:
                         ret[status] = []
                     ret[status].append(key)
         return ret
@@ -279,7 +300,8 @@ class Key(object):
         for dir_ in acc, pre, rej:
             ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
-                ret[os.path.basename(dir_)].append(fn_)
+                if os.path.isfile(os.path.join(dir_, fn_)):
+                    ret[os.path.basename(dir_)].append(fn_)
         return ret
 
     def all_keys(self):
@@ -382,6 +404,8 @@ class Key(object):
                     self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.list_keys()
 
     def delete_all(self):
@@ -398,6 +422,8 @@ class Key(object):
                     self.event.fire_event(eload, 'key')
                 except (OSError, IOError):
                     pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.list_keys()
 
     def reject(self, match):
@@ -424,6 +450,8 @@ class Key(object):
                     self.event.fire_event(eload, 'key')
                 except (IOError, OSError):
                     pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.name_match(match)
 
     def reject_all(self):
@@ -449,6 +477,8 @@ class Key(object):
                 self.event.fire_event(eload, 'key')
             except (IOError, OSError):
                 pass
+        self.check_minion_cache()
+        salt.crypt.dropfile(self.opts['cachedir'])
         return self.list_keys()
 
     def finger(self, match):

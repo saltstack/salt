@@ -58,28 +58,14 @@ See the note above about Salt's dependencies.
 Post-installation tasks
 =======================
 
-**Configuration files**
+**systemd**
 
-The Salt package installs two template configuration files,
-``/etc/salt/master.template`` and ``/etc/salt/minion.template``. These
-files need to be copied as follows:
+Activate the Salt Master and/or Minion via ``systemctl`` as follows:
 
 .. code-block:: bash
 
-   cp /etc/salt/master.template /etc/salt/master
-   cp /etc/salt/minion.template /etc/salt/minion
-
-Note: only the configuration files for the services to be run need be
-copied.
-
-**rc.conf**
-
-Activate the Salt Master and/or Minion in ``/etc/rc.conf`` as follows:
-
-.. code-block:: diff
-
-    -DAEMONS=(syslog-ng network crond)
-    +DAEMONS=(syslog-ng network crond @salt-master @salt-minion)
+    systemctl enable salt-master.service
+    systemctl enable salt-minion.service
 
 **Start the Master**
 
@@ -89,7 +75,7 @@ seen here:
 
 .. code-block:: bash
 
-    rc.d start salt-master
+    systemctl start salt-master
 
 Now go to the :doc:`Configuring Salt</topics/configuration>` page.
 

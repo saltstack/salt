@@ -20,6 +20,16 @@ integration.test: True
 grains:
   test_grain: spam
   role: sub
-
+  planets:
+    - jupiter
+    - saturn
+    - uranus
+    - neptune
+  level1:
+    level2: bar
+  companions:
+    two:
+      - jamie
+      - zoe
 
 ipc_mode: tcp

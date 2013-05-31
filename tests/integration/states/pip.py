@@ -59,7 +59,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
         try:
             os.makedirs(ographite)
-        except OSError, err:
+        except OSError as err:
             if err.errno == 13:
                 # Permission denied
                 self.skipTest(
@@ -88,7 +88,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    'There was no error installing package \'carbon\' '
+                    'There was no error installing package \'"carbon"\' '
                     'although it does not show when calling \'pip.freeze\'.'
                 )
         finally:

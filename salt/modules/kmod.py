@@ -4,7 +4,7 @@ Module to manage Linux kernel modules
 
 # Import python libs
 import os
-
+import re
 
 def __virtual__():
     '''
@@ -24,7 +24,7 @@ def _new_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(post - pre)
+    return post - pre
 
 
 def _rm_mods(pre_mods, post_mods):
@@ -38,7 +38,71 @@ def _rm_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(pre - post)
+    return pre - post
+
+
+def _union_module(a, b):
+    '''
+    Return union of two list where duplicated items are only once
+    '''
+    return list(set(a) | set(b))
+
+
+def _get_modules_conf():
+    '''
+    Return location of modules config file.
+    Default: /etc/modules
+    '''
+    if __grains__['os'] == 'Arch':
+        return '/etc/modules-load.d/salt_managed.conf'
+    return '/etc/modules'
+
+
+def _strip_module_name(mod):
+    '''
+    Return module name and strip configuration. It is possible insert modules
+    in this format:
+        bonding mode=4 miimon=1000
+    This method return only 'bonding'
+    '''
+    if mod.strip() == '':
+        return False
+    return mod.split()[0]
+
+
+def _set_persistent_module(mod):
+    '''
+    Add module to configuration file to make it persistent. If module is
+    commented uncomment it.
+    '''
+    conf = _get_modules_conf()
+    mod_name = _strip_module_name(mod)
+    if not mod_name or mod_name in mod_list(True) or mod_name not in available():
+        return set()
+    escape_mod = re.escape(mod)
+    ## If module is commented only uncomment it
+    if __salt__['file.contains_regex_multiline'](conf, "^#[\t ]*{}[\t ]*$".format(escape_mod)):
+        __salt__['file.uncomment'](conf, escape_mod)
+    else:
+        __salt__['file.append'](conf, mod)
+    return set([mod_name,])
+
+
+def _remove_persistent_module(mod, comment):
+    '''
+    Remove module from configuration file. If comment is true only comment line
+    where module is.
+    '''
+    conf = _get_modules_conf()
+    mod_name = _strip_module_name(mod)
+    if not mod_name or mod_name not in mod_list(True):
+        return set()
+    escape_mod = re.escape(mod)
+    if comment:
+        __salt__['file.comment'](conf, "^[\t ]*{}[\t ]?".format(escape_mod))
+    else:
+        __salt__['file.sed'](conf, "^[\t ]*{}[\t ]?".format(escape_mod), '')
+    return set([mod_name,])
 
 
 def available():
@@ -50,7 +114,7 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
-    mod_dir = os.path.join('/lib/modules/', os.uname()[2], 'kernel')
+    mod_dir = os.path.join('/lib/modules/', os.uname()[2])
     for root, dirs, files in os.walk(mod_dir):
         for fn_ in files:
             if '.ko' in fn_:
@@ -97,7 +161,7 @@ def lsmod():
     return ret
 
 
-def mod_list():
+def mod_list(only_persist=False):
     '''
     Return a list of the loaded module names
 
@@ -106,28 +170,59 @@ def mod_list():
         salt '*' kmod.mod_list
     '''
     mods = set()
-    for mod in lsmod():
-        mods.add(mod['module'])
+    if only_persist:
+        with open(_get_modules_conf(), 'r') as modules_file:
+            for line in modules_file:
+                line = line.strip()
+                mod_name = _strip_module_name(line)
+                if not line.startswith('#') and mod_name:
+                    mods.add(mod_name)
+    else:
+        for mod in lsmod():
+            mods.add(mod['module'])
     return sorted(list(mods))
 
 
-def load(mod):
+def load(mod, persist=False):    
     '''
     Load the specified kernel module
+
+    mod
+        Name of module to add
+
+    persist
+        Write module to /etc/modules to make it load on system reboot
 
     CLI Example::
 
         salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('modprobe {0}'.format(mod))
-    post_mods = lsmod()
-    return _new_mods(pre_mods, post_mods)
+    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
+    if response['retcode'] == 0:
+        post_mods = lsmod()
+        mods = _new_mods(pre_mods, post_mods)
+        persist_mods = set()
+        if persist:
+            persist_mods = _set_persistent_module(mod)
+        return sorted(list(mods | persist_mods))
+    else:
+        return 'Module {0} not found'.format(mod)
 
 
-def remove(mod):
+def remove(mod, persist=False, comment=True):
     '''
     Remove the specified kernel module
+
+    mod
+        Name of module to remove
+
+    persist
+        Also remove module from /etc/modules
+
+    comment
+        If persist is set don't remove line from /etc/modules but only
+        comment it
 
     CLI Example::
 
@@ -136,4 +231,8 @@ def remove(mod):
     pre_mods = lsmod()
     __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
     post_mods = lsmod()
-    return _rm_mods(pre_mods, post_mods)
+    mods = _rm_mods(pre_mods, post_mods)
+    persist_mods = set()
+    if persist:
+        persist_mods = _remove_persistent_module(mod, comment)
+    return sorted(list(mods | persist_mods))

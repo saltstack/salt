@@ -64,7 +64,7 @@ def info(name):
                 'members': grinfo.gr_mem}
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return info on all groups
 
@@ -72,9 +72,13 @@ def getent():
 
         salt '*' group.getent
     '''
+    if 'group.getent' in __context__ and not refresh:
+        return __context__['group.getent']
+
     ret = []
     for grinfo in grp.getgrall():
         ret.append(info(grinfo.gr_name))
+    __context__['group.getent'] = ret
     return ret
 
 
@@ -89,7 +93,7 @@ def chgid(name, gid):
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:
         return True
-    cmd = 'pw groupmod -g {0} {1}'.format(gid, name)
+    cmd = 'pw groupmod {0} -g {1}'.format(name, gid)
     __salt__['cmd.run'](cmd)
     post_gid = __salt__['file.group_to_gid'](name)
     if post_gid != pre_gid:

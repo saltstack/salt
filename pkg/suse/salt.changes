@@ -1,0 +1,145 @@
+-------------------------------------------------------------------
+Mon May 27 20:42:06 UTC 2013 - aboe76@gmail.com
+
+- Fixed salt-master config file not readable by user 'salt'
+
+-------------------------------------------------------------------
+Mon May 27 20:04:14 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec: security enhancement.
+  added system user salt to run salt-master under privileged user 'salt'
+  added config dirs, master.d/minion.d/syndic.d to add config files.
+  added salt-daemon.conf were salt user is specified under salt-master.
+
+-------------------------------------------------------------------
+Sun May 12 20:18:24 UTC 2013 - aboe76@gmail.com
+
+- Updated package spec, for systemd unit files
+  according to how systemd files needs to be packaged
+- added logrotate on salt log files
+- fixed rpmlint complain about reload function in init files
+
+-------------------------------------------------------------------
+Wed May  8 21:44:49 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.15.1
+- bugfix release.
+- fixes suse service check
+
+-------------------------------------------------------------------
+Sat May  4 08:16:27 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.15.0
+  Major update:
+  - salt mine function
+  - ipv6 support
+  - copy files from minions to master
+  - better template debugging
+  - state event firing
+  - major syndic updates
+  - peer system updates
+  - minion key revokation
+  - function return codes
+  - functions in overstate
+  - Pillar error reporting
+  - Cached State Data
+  - Monitoring states
+- Read http://docs.saltstack.com/topics/releases/0.15.0.html for more information
+- improved init files overwrite with /etc/default/salt
+
+-------------------------------------------------------------------
+Tue Apr 23 19:18:29 UTC 2013 - aboe76@gmail.com
+
+- Updated init files:
+- removed probe/reload/force reload
+  this isn't supported
+
+-------------------------------------------------------------------
+Sun Apr 14 14:46:00 UTC 2013 - aboe76@gmail.com
+
+- Updated init files
+
+-------------------------------------------------------------------
+Sun Apr 14 07:00:51 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.14.1 bugfix release:
+- some major fixes for the syndic system,
+- fixes to file.recurse and external auth and
+- fixes for windows
+
+-------------------------------------------------------------------
+Thu Apr 11 05:37:29 UTC 2013 - aboe76@gmail.com
+
+- Updated salt init files with option -d to really daemonize it
+
+-------------------------------------------------------------------
+Sat Mar 23 23:51:53 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.14.0
+  MAJOR FEATURES:
+    - Salt - As a Cloud Controller
+    - Libvirt State
+    - New get Functions
+
+-------------------------------------------------------------------
+Tue Mar 19 06:46:36 UTC 2013 - aboe76@gmail.com
+
+- Updated to 0.13.3
+  Last Bugfixes release before 0.14.0
+
+-------------------------------------------------------------------
+Wed Mar 13 22:04:43 UTC 2013 - aboe76@gmail.com
+
+- Updated 0.13.2
+  Bugfixes release (not specified)
+
+-------------------------------------------------------------------
+Mon Feb 25 17:52:59 UTC 2013 - aboe76@gmail.com
+
+- Updated spec file, postun removal of init.d files 
+
+-------------------------------------------------------------------
+Sat Feb 16 09:25:30 UTC 2013 - aboe76@gmail.com
+
+- Updated to Salt 0.13.1 bugfixes:
+- Fix #3693 (variable ref'ed before assignment)
+- Fix stack trace introduced with
+- Updated limit to be escaped like before and after.
+- Import install command from setuptools if we use them.
+- Fix user info not displayed correctly when group doesn't map cleanly
+- fix bug: Client.cache_dir()
+- Fix #3717
+- Fix #3716
+- Fix cmdmod.py daemon error
+- Updated test to properly determine homebrew user
+- Fixed whitespace issue
+
+-------------------------------------------------------------------
+Thu Feb 14 06:43:08 UTC 2013 - aboe76@gmail.com
+
+- Updated to salt 0.13.0
+
+-------------------------------------------------------------------
+Wed Jan 30 20:57:57 UTC 2013 - aboe76@gmail.com
+
+- Updated Suse Copyright in Spec-file
+
+-------------------------------------------------------------------
+Mon Jan 28 15:23:08 UTC 2013 - toddrme2178@gmail.com
+
+- Cleanup spec file
+
+-------------------------------------------------------------------
+Sat Jan 26 09:29:39 UTC 2013 - aboe76@gmail.com
+
+- split syndic from master in separate package
+
+-------------------------------------------------------------------
+Tue Jan 22 17:53:39 UTC 2013 - aboe76@gmail.com
+
+- updated to salt 0.12.1 bugfix release
+
+-------------------------------------------------------------------
+Wed Jan 16 06:38:40 UTC 2013 - aboe76@gmail.com
+
+- uploaded to salt 0.12.0

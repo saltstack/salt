@@ -28,7 +28,7 @@ class Service(win32serviceutil.ServiceFramework):
     def sleep(self, sec):
         win32api.Sleep(sec * 1000, True)
 
-    def SvcDoRun(self):
+    def SvcDoRun(self):  # pylint: disable-msg=C0103
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
         try:
             self.ReportServiceStatus(win32service.SERVICE_RUNNING)
@@ -36,13 +36,13 @@ class Service(win32serviceutil.ServiceFramework):
             self.start()
             self.log('wait')
             win32event.WaitForSingleObject(self.stop_event,
-                                            win32event.INFINITE)
+                                           win32event.INFINITE)
             self.log('done')
-        except Exception as x:
-            self.log('Exception: {0}'.format(x))
+        except Exception as err:
+            self.log('Exception: {0}'.format(err))
             self.SvcStop()
 
-    def SvcStop(self):
+    def SvcStop(self):  # pylint: disable-msg=C0103
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
         self.log('stopping')
         self.stop()
@@ -91,5 +91,5 @@ def instart(cls, name, display_name=None, stay_alive=True):
                 cls._svc_name_
                 )
         print('Start ok')
-    except Exception as x:
-        print(str(x))
+    except Exception as err:
+        print(str(err))

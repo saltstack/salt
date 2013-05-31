@@ -24,7 +24,7 @@ def mounted(
         device,
         fstype,
         mkmnt=False,
-        opts=['defaults'],
+        opts=None,
         dump=0,
         pass_num=0,
         config='/etc/fstab',
@@ -75,6 +75,8 @@ def mounted(
     # string
     if isinstance(opts, string_types):
         opts = opts.split(',')
+    elif opts is None:
+        opts = ['defaults']
 
     # Get the active data
     active = __salt__['mount.active']()
@@ -97,10 +99,10 @@ def mounted(
     if persist:
         if __opts__['test']:
             fstab_data = __salt__['mount.fstab'](config)
-            if not name in fstab_data:
+            if name not in fstab_data:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is mounted but needs to '
-                                  'be set to be made persistant').format(name)
+                                  'be set to be made persistent').format(name)
                 return ret
 
         # present, new, change, bad config

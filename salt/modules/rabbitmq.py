@@ -41,27 +41,29 @@ def list_users(runas=None):
 
         salt '*' rabbitmq.list_users
     '''
-    d = {}
-    res = __salt__['cmd.run']('rabbitmqctl list_users')
+    ret = {}
+    res = __salt__['cmd.run']('rabbitmqctl list_users',
+                              runas=runas)
     for line in res.splitlines():
         if '...' not in line or line == '\n':
-            s = line.split('\t')
-            if len(s) < 2:
+            parts = line.split('\t')
+            if len(parts) < 2:
                 continue
-            user, properties = s[0], s[1]
-            d[user] = properties
-    return d
+            user, properties = parts[0], parts[1]
+            ret[user] = properties
+    return ret
 
 
 def list_vhosts(runas=None):
     '''
-    Return a list of vhost based of of rabbitmqctl list_vhosts.
+    Return a list of vhost based on rabbitmqctl list_vhosts.
 
     CLI Example::
 
         salt '*' rabbitmq.list_vhosts
     '''
-    res = __salt__['cmd.run']('rabbitmqctl list_vhosts')
+    res = __salt__['cmd.run']('rabbitmqctl list_vhosts',
+                              runas=runas)
     lines = res.splitlines()
     vhost_list = [line for line in lines if '...' not in line]
     return vhost_list
@@ -75,7 +77,7 @@ def user_exists(name, runas=None):
 
         salt '*' rabbitmq.user_exists rabbit_user
     '''
-    user_list = list_users()
+    user_list = list_users(runas=runas)
     log.debug(user_list)
 
     return name in user_list
@@ -89,7 +91,7 @@ def vhost_exists(name, runas=None):
 
         salt '*' rabbitmq.vhost_exists rabbit_host
     '''
-    return name in list_vhosts()
+    return name in list_vhosts(runas=runas)
 
 
 def add_user(name, password, runas=None):
@@ -101,7 +103,8 @@ def add_user(name, password, runas=None):
         salt '*' rabbitmq.add_user rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} {1}'.format(name, password))
+        'rabbitmqctl add_user {0} {1}'.format(name, password),
+        runas=runas)
 
     msg = 'Added'
     return _format_response(res, msg)
@@ -115,7 +118,8 @@ def delete_user(name, runas=None):
 
         salt '*' rabbitmq.delete_user rabbit_user
     '''
-    res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name))
+    res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name),
+                              runas=runas)
     msg = 'Deleted'
 
     return _format_response(res, msg)
@@ -130,7 +134,8 @@ def change_password(name, password, runas=None):
         salt '*' rabbitmq.change_password rabbit_user password
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl change_password {0} {1}'.format(name, password))
+        'rabbitmqctl change_password {0} {1}'.format(name, password),
+        runas=runas)
     msg = 'Password Changed'
 
     return _format_response(res, msg)
@@ -144,7 +149,8 @@ def clear_password(name, runas=None):
 
         salt '*' rabbitmq.clear_password rabbit_user
     '''
-    res = __salt__['cmd.run']('rabbitmqctl clear_password {0}'.format(name))
+    res = __salt__['cmd.run']('rabbitmqctl clear_password {0}'.format(name),
+                              runas=runas)
     msg = 'Password Cleared'
 
     return _format_response(res, msg)
@@ -158,7 +164,8 @@ def add_vhost(vhost, runas=None):
 
         salt '*' rabbitmq add_vhost '<vhost_name>'
     '''
-    res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost))
+    res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost),
+                              runas=runas)
 
     msg = 'Added'
     return _format_response(res, msg)
@@ -172,7 +179,8 @@ def delete_vhost(vhost, runas=None):
 
         salt '*' rabbitmq.delete_vhost '<vhost_name>'
     '''
-    res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost))
+    res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost),
+                              runas=runas)
     msg = 'Deleted'
     return _format_response(res, msg)
 
@@ -188,7 +196,8 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(
-            vhost, user, conf, write, read))
+            vhost, user, conf, write, read),
+        runas=runas)
     msg = 'Permissions Set'
     return _format_response(res, msg)
 
@@ -202,5 +211,6 @@ def list_user_permissions(name, user=None):
         salt '*' rabbitmq.list_user_permissions 'user'.
     '''
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_user_permissions {0}'.format(name))
+        'rabbitmqctl list_user_permissions {0}'.format(name),
+        runas=user)
     return [r.split('\t') for r in res.splitlines()]

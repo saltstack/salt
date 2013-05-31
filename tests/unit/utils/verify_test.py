@@ -10,6 +10,7 @@ import stat
 import shutil
 import resource
 import tempfile
+import socket
 
 # Import Salt libs
 import salt.utils
@@ -32,7 +33,7 @@ class TestVerify(TestCase):
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 
-    def test_zmq_verify_insuficient(self):
+    def test_zmq_verify_insufficient(self):
         import zmq
         zmq.__version__ = '2.1.0'
         self.assertFalse(zmq_version())
@@ -75,6 +76,10 @@ class TestVerify(TestCase):
 
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
+        if socket.has_ipv6:
+            # Only run if Python is built with IPv6 support; otherwise
+            # this will just fail.
+            self.assertTrue(verify_socket('::', 18000, 18001))
 
     @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment does not like too many open files')
@@ -171,7 +176,7 @@ class TestVerify(TestCase):
                     handler.messages
                 )
                 handler.clear()
-            except IOError, err:
+            except IOError as err:
                 if err.errno == 24:
                     # Too many open files
                     self.skipTest('We\'ve hit the max open files setting')

@@ -10,6 +10,7 @@
 
 # Import python libs
 import os
+import pwd
 import shutil
 import tempfile
 
@@ -49,10 +50,49 @@ class PipModuleTest(integration.ModuleCase):
                 'a `pip` binary'.format(func)
             )
 
+    def test_issue_4805_nested_requirements_runas_no_chown(self):
+        self.run_function('virtualenv.create', [self.venv_dir])
+
+        # Create a requirements file that depends on another one.
+        req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
+        req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
+        with open(req1_filename, 'wb') as f:
+            f.write('-r requirements2.txt')
+        with open(req2_filename, 'wb') as f:
+            f.write('pep8')
+
+        this_user = pwd.getpwuid(os.getuid())[0]
+        ret = self.run_function('pip.install', requirements=req1_filename,
+                                runas=this_user, no_chown=True)
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn('installed pep8', ret['stdout'])
+
     def test_pip_uninstall(self):
         # Let's create the testing virtualenv
         self.run_function('virtualenv.create', [self.venv_dir])
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn('installed pep8', ret['stdout'])
+        ret = self.run_function(
+            'pip.uninstall', ['pep8'], bin_env=self.venv_dir
+        )
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn('uninstalled pep8', ret['stdout'])
+
+    def test_pip_install_upgrade(self):
+        # Create the testing virtualenv
+        self.run_function('virtualenv.create', [self.venv_dir])
+        ret = self.run_function(
+            'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
+        )
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn('installed pep8', ret['stdout'])
+        ret = self.run_function(
+            'pip.install',
+            ['pep8'],
+            bin_env=self.venv_dir,
+            upgrade=True
+        )
         self.assertEqual(ret['retcode'], 0)
         self.assertIn('installed pep8', ret['stdout'])
         ret = self.run_function(

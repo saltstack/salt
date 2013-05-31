@@ -16,7 +16,7 @@ def __virtual__():
     Check if the os is Linux, and then if selinux is running in permissive or
     enforcing mode.
     '''
-    required_cmds = ('semanage', 'seinfo', 'setenforce', 'setsebool')
+    required_cmds = ('semanage', 'setsebool')
 
     # Iterate over all of the commands this module uses and make sure
     # each of them are available in the standard PATH to prevent breakage
@@ -90,7 +90,9 @@ def setenforce(mode):
             mode = '0'
     else:
         return 'Invalid mode {0}'.format(mode)
-    __salt__['cmd.run']('setenforce {0}'.format(mode))
+    enforce = os.path.join(selinux_fs_path(), 'enforce')
+    with salt.utils.fopen(enforce, 'w') as _fp:
+        _fp.write(mode)
     return getenforce()
 
 

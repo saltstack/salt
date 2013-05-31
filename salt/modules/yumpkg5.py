@@ -3,8 +3,12 @@ Support for YUM
 '''
 
 # Import python libs
+import copy
 import logging
-from collections import namedtuple
+import collections
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +17,7 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # Work only on RHEL/Fedora based distros with python 2.6 or greater
+    # Work only on RHEL/Fedora based distros with python 2.5 and below
     try:
         os_grain = __grains__['os']
         os_family = __grains__['os_family']
@@ -24,6 +28,14 @@ def __virtual__():
     # Fedora <= 10 need to use this module
     if os_grain == 'Fedora' and os_major_version < 11:
         return 'pkg'
+    # XCP == 1.x uses a CentOS 5 base
+    elif os_grain == 'XCP':
+        if os_major_version == 1:
+            return 'pkg'
+    # XenServer 6 and earlier uses a CentOS 5 base
+    elif os_grain == 'XenServer':
+        if os_major_version <= 6:
+            return 'pkg'
     else:
         # RHEL <= 5 and all variants need to use this module
         if os_family == 'RedHat' and os_major_version <= 5:
@@ -37,41 +49,87 @@ def _parse_yum(arg):
     '''
     cmd = 'yum -q {0}'.format(arg)
     out = __salt__['cmd.run_stdout'](cmd)
-    YumOut = namedtuple('YumOut', ('name', 'version', 'status'))
+    yum_out = collections.namedtuple('YumOut', ('name', 'version', 'status'))
 
     results = []
 
     for line in out.splitlines():
-        if len(line.split()) == 3:
-            namearchstr, pkgver, pkgstatus = line.split()
-            pkgname = namearchstr.rpartition('.')[0]
-
-            results.append(YumOut(pkgname, pkgver, pkgstatus))
-
+        if not line.startswith('Loaded plugin'):
+            line = line.split()
+            if len(line) == 3:
+                namearchstr, pkgver, pkgstatus = line
+                pkgname = namearchstr.rpartition('.')[0]
+                results.append(yum_out(pkgname, pkgver, pkgstatus))
     return results
 
 
-def _list_removed(old, new):
+def _get_repo_options(**kwargs):
     '''
-    List the packages which have been removed between the two package objects
+    Returns a string of '--enablerepo' and '--disablerepo' options to be used
+    in the yum command, based on the kwargs.
     '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
+    # Get repo options from the kwargs
+    fromrepo = kwargs.get('fromrepo', '')
+    repo = kwargs.get('repo', '')
+    disablerepo = kwargs.get('disablerepo', '')
+    enablerepo = kwargs.get('enablerepo', '')
+
+    # Support old 'repo' argument
+    if repo and not fromrepo:
+        fromrepo = repo
+
+    repo_arg = ''
+    if fromrepo:
+        log.info('Restricting to repo "{0}"'.format(fromrepo))
+        repo_arg = '--disablerepo="*" --enablerepo="{0}"'.format(fromrepo)
+    else:
+        repo_arg = ''
+        if disablerepo:
+            log.info('Disabling repo "{0}"'.format(disablerepo))
+            repo_arg += '--disablerepo="{0}" '.format(disablerepo)
+        if enablerepo:
+            log.info('Enabling repo "{0}"'.format(enablerepo))
+            repo_arg += '--enablerepo="{0}" '.format(enablerepo)
+    return repo_arg
 
 
-def available_version(name):
+def latest_version(*names, **kwargs):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
+
+    A specific repo can be requested using the ``fromrepo`` keyword argument.
 
     CLI Example::
 
-        salt '*' pkg.available_version <package name>
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package name> fromrepo=epel-testing
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    out = _parse_yum('list update {0}'.format(name))
-    return out[0].version if out else ''
+    if len(names) == 0:
+        return ''
+    ret = {}
+    # Initialize the dict with empty strings
+    for name in names:
+        ret[name] = ''
+
+    # Get updates for specified package(s)
+    repo_arg = _get_repo_options(**kwargs)
+    updates = _parse_yum('{0} list available {1}'.format(repo_arg,
+                                                         ' '.join(names)))
+    for pkg in updates:
+        ret[pkg.name] = pkg.version
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
+
+# available_version is being deprecated
+available_version = latest_version
 
 
 def upgrade_available(name):
@@ -82,25 +140,24 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return available_version(name) != ''
+    return latest_version(name) != ''
 
 
-def version(name):
+def version(*names, **kwargs):
     '''
-    Returns a version if the package is installed, else returns an empty string
+    Returns a string representing the package version or an empty string if not
+    installed. If more than one package name is specified, a dict of
+    name/version pairs is returned.
 
     CLI Example::
 
         salt '*' pkg.version <package name>
+        salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    out = _parse_yum('list installed {0}'.format(name))
-    if out:
-        return out[0].version
-    else:
-        return ''
+    return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def list_pkgs():
+def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
 
@@ -110,19 +167,41 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
+    versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
+    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-' \
+          '%{ARCH}\n"'
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
-        pkgver = version
+        try:
+            name, pkgver, rel, arch = line.split('_|-')
+        # Handle unpack errors (should never happen with the queryformat we are
+        # using, but can't hurt to be careful).
+        except ValueError:
+            continue
+        # Support 32-bit packages on x86_64 systems
+        if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
+            name += '.i686'
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+    if not versions_as_list:
+        __salt__['pkg_resource.stringify'](ret)
     return ret
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -130,6 +209,8 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
     out = _parse_yum('check-update')
     return dict([(i.name, i.version) for i in out])
 
@@ -148,8 +229,13 @@ def refresh_db():
     return True
 
 
-def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
-            sources=None, **kwargs):
+def install(name=None,
+            refresh=False,
+            fromrepo=None,
+            skip_verify=False,
+            pkgs=None,
+            sources=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
     before package is installed.
@@ -161,28 +247,49 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
         software repository. To install a package file manually, use the
         "sources" option.
 
+        32-bit packages can be installed on 64-bit systems by appending
+        ``.i686`` to the end of the package name.
+
         CLI Example::
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to clean the yum database before executing.
-
-    repo
-        Specify a package repository from which to install the package
-        (e.g., ``yum --enablerepo=somerepo``)
+        Whether or not to update the yum database before executing.
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
+
+    version
+        Install a specific version of the package, e.g. 1.2.3-4.el5. Ignored
+        if "pkgs" or "sources" is passed.
+
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
 
 
     Multiple Package Installation Options:
 
     pkgs
         A list of packages to install from a software repository. Must be
-        passed as a python list.
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version.
 
-        CLI Example::
-            salt '*' pkg.install pkgs='["foo","bar"]'
+        CLI Examples::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
 
     sources
         A list of RPM packages to install. Must be passed as a list of dicts,
@@ -190,97 +297,188 @@ def install(name=None, refresh=False, repo='', skip_verify=False, pkgs=None,
         or local path to the package.
 
         CLI Example::
-            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"},{"bar": "salt://bar.rpm"}]'
+            salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
 
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>']}
+                       'new': '<new-version>'}}
     '''
-    # Catch both boolean input from state and string input from CLI
-    if refresh is True or refresh == 'True':
+    if salt.utils.is_true(refresh):
         refresh_db()
 
-    pkg_params,pkg_type = __salt__['pkg_resource.parse_targets'](name,
-                                                                 pkgs,
-                                                                 sources)
+    pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
+                                                                  pkgs,
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
-        repo='--enablerepo={0}'.format(repo) if repo else '',
-        gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkg=' '.join(pkg_params),
-    )
+    version_num = kwargs.get('version')
+    if version_num:
+        if pkgs is None and sources is None:
+            # Allow "version" to work for single package target
+            pkg_params = {name: version_num}
+        else:
+            log.warning('"version" parameter will be ignored for multiple '
+                        'package targets')
+
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+
     old = list_pkgs()
-    stderr = __salt__['cmd.run_all'](cmd).get('stderr','')
-    if stderr:
-        log.error(stderr)
+    downgrade = []
+    if pkg_type == 'repository':
+        targets = []
+        for pkgname, version_num in pkg_params.iteritems():
+            if version_num is None:
+                targets.append(pkgname)
+            else:
+                cver = old.get(pkgname, '')
+                if __grains__.get('cpuarch', '') == 'x86_64' \
+                        and pkgname.endswith('.i686'):
+                    # Remove '.i686' from pkgname
+                    pkgname = pkgname[:-5]
+                    arch = '.i686'
+                else:
+                    arch = ''
+                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
+                if not cver or __salt__['pkg.compare'](pkg1=version_num,
+                                                       oper='>=',
+                                                       pkg2=cver):
+                    targets.append(pkgstr)
+                else:
+                    downgrade.append(pkgstr)
+    else:
+        targets = pkg_params
+
+    if targets:
+        cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
+            repo=repo_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(targets),
+        )
+        __salt__['cmd.run_all'](cmd)
+
+    if downgrade:
+        cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
+            repo=repo_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(downgrade),
+        )
+        __salt__['cmd.run_all'](cmd)
+
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old,new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def upgrade():
+def upgrade(refresh=True):
     '''
     Run a full system upgrade, a yum upgrade
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
+                       'new': '<new-version>'}}
 
     CLI Example::
 
         salt '*' pkg.upgrade
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
     old = list_pkgs()
     cmd = 'yum -q -y upgrade'
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(pkg):
+def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with yum remove
+    Remove packages with ``yum -q -y remove``.
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
-    cmd = 'yum -q -y remove ' + pkg
-    __salt__['cmd.retcode'](cmd)
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    cmd = 'yum -q -y remove "{0}"'.format('" "'.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return _list_removed(old, new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(pkg):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Yum does not have a purge, this function calls remove
+    Package purges are not supported by yum, this function is identical to
+    ``remove()``.
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(pkg)
+    return remove(name=name, pkgs=pkgs)
 
+
+def perform_cmp(pkg1='', pkg2=''):
+    '''
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example::
+
+        salt '*' pkg.perform_cmp '0.2.4-0' '0.2.4.1-0'
+        salt '*' pkg.perform_cmp pkg1='0.2.4-0' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.perform_cmp'](pkg1=pkg1, pkg2=pkg2)
+
+
+def compare(pkg1='', oper='==', pkg2=''):
+    '''
+    Compare two version strings.
+
+    CLI Example::
+
+        salt '*' pkg.compare '0.2.4-0' '<' '0.2.4.1-0'
+        salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
+    '''
+    return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)

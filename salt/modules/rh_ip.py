@@ -5,20 +5,25 @@ The networking module for RHEL/Fedora based distros
 # Import python libs
 import logging
 import re
-from os.path import exists, join
+import os.path
+import os
 import StringIO
 
 # import third party libs
 import jinja2
+import jinja2.exceptions
 
 # Import salt libs
 import salt.utils
+from salt.modules import __path__ as saltmodpath
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
-env = jinja2.Environment(loader=jinja2.PackageLoader('salt.modules', 'rh_ip'))
+ENV = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(saltmodpath[0] + os.sep + 'rh_ip')
+)
 
 
 def __virtual__():
@@ -37,8 +42,8 @@ _ETHTOOL_CONFIG_OPTS = [
     'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [
-    'domain', 'peerdns', 'defaultroute',
-    'mtu', 'static-routes'
+    'domain', 'peerdns', 'defroute',
+    'mtu', 'static-routes', 'gateway'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -108,9 +113,9 @@ def _parse_rh_config(path):
 
 def _parse_ethtool_opts(opts, iface):
     '''
-    Fiters given options and outputs valid settings for ETHTOOLS_OPTS
+    Filters given options and outputs valid settings for ETHTOOLS_OPTS
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
     config = {}
@@ -159,9 +164,9 @@ def _parse_ethtool_opts(opts, iface):
 
 def _parse_settings_bond(opts, iface):
     '''
-    Fiters given options and outputs valid settings for requested
+    Filters given options and outputs valid settings for requested
     operation. If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
 
@@ -249,9 +254,9 @@ def _parse_settings_bond(opts, iface):
 
 def _parse_settings_bond_0(opts, iface, bond_def):
     '''
-    Fiters given options and outputs valid settings for bond0.
+    Filters given options and outputs valid settings for bond0.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
     bond = {'mode': '0'}
@@ -262,7 +267,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:
+                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -287,23 +292,23 @@ def _parse_settings_bond_0(opts, iface, bond_def):
 def _parse_settings_bond_1(opts, iface, bond_def):
 
     '''
-    Fiters given options and outputs valid settings for bond1.
+    Filters given options and outputs valid settings for bond1.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
     bond = {'mode': '1'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['integer'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -322,9 +327,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
 
 def _parse_settings_bond_2(opts, iface, bond_def):
     '''
-    Fiters given options and outputs valid settings for bond2.
+    Filters given options and outputs valid settings for bond2.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
 
@@ -335,7 +340,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
-                for ip in opts['arp_ip_target']:
+                for ip in opts['arp_ip_target']:  # pylint: disable-msg=C0103
                     bond['arp_ip_target'].append(ip)
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
@@ -370,23 +375,23 @@ def _parse_settings_bond_2(opts, iface, bond_def):
 def _parse_settings_bond_3(opts, iface, bond_def):
 
     '''
-    Fiters given options and outputs valid settings for bond3.
+    Filters given options and outputs valid settings for bond3.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
     bond = {'mode': '3'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['interger'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -405,32 +410,32 @@ def _parse_settings_bond_3(opts, iface, bond_def):
 
 def _parse_settings_bond_4(opts, iface, bond_def):
     '''
-    Fiters given options and outputs valid settings for bond4.
+    Filters given options and outputs valid settings for bond4.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
 
     bond = {'mode': '4'}
 
-    for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate', 'ad_select']:
-        if bo in opts:
-            if bo == 'lacp_rate':
-                if opts[bo] == 'fast':
-                    opts.update({bo: '1'})
-                if opts[bo] == 'slow':
-                    opts.update({bo: '0'})
+    for binding in ['miimon', 'downdelay', 'updelay', 'lacp_rate', 'ad_select']:
+        if binding in opts:
+            if binding == 'lacp_rate':
+                if opts[binding] == 'fast':
+                    opts.update({binding: '1'})
+                if opts[binding] == 'slow':
+                    opts.update({binding: '0'})
                 valid = ['fast', '1', 'slow', '0']
             else:
                 valid = ['integer']
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, valid)
+                _raise_error_iface(iface, binding, valid)
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -457,23 +462,23 @@ def _parse_settings_bond_4(opts, iface, bond_def):
 def _parse_settings_bond_5(opts, iface, bond_def):
 
     '''
-    Fiters given options and outputs valid settings for bond5.
+    Filters given options and outputs valid settings for bond5.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
     bond = {'mode': '5'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['integer'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -493,23 +498,23 @@ def _parse_settings_bond_5(opts, iface, bond_def):
 def _parse_settings_bond_6(opts, iface, bond_def):
 
     '''
-    Fiters given options and outputs valid settings for bond6.
+    Filters given options and outputs valid settings for bond6.
     If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was
+    function will log what the Interface, Setting and what it was
     expecting.
     '''
     bond = {'mode': '6'}
 
-    for bo in ['miimon', 'downdelay', 'updelay']:
-        if bo in opts:
+    for binding in ['miimon', 'downdelay', 'updelay']:
+        if binding in opts:
             try:
-                int(opts[bo])
-                bond.update({bo: opts[bo]})
+                int(opts[binding])
+                bond.update({binding: opts[binding]})
             except Exception:
-                _raise_error_iface(iface, bo, ['integer'])
+                _raise_error_iface(iface, binding, ['integer'])
         else:
-            _log_default_iface(iface, bo, bond_def[bo])
-            bond.update({bo: bond_def[bo]})
+            _log_default_iface(iface, binding, bond_def[binding])
+            bond.update({binding: bond_def[binding]})
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
@@ -528,7 +533,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
 
 def _parse_settings_eth(opts, iface_type, enabled, iface):
     '''
-    Fiters given options and outputs valid settings for a
+    Filters given options and outputs valid settings for a
     network interface.
     '''
     result = {'name': iface}
@@ -541,7 +546,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if 'dns' in opts:
         result['dns'] = opts['dns']
-        result['peernds'] = 'yes'
+        result['peerdns'] = 'yes'
 
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
@@ -591,12 +596,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay']:
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
             result[opt] = opts[opt]
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['peerdns', 'slave', 'vlan']:
+    for opt in ['peerdns', 'slave', 'vlan', 'defroute']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -647,14 +652,14 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except:
+        except Exception:
             _raise_error_network('networking', valid)
 
     if opts['networking'] in valid:
         if opts['networking'] in _CONFIG_TRUE:
             result['networking'] = 'yes'
         elif opts['networking'] in _CONFIG_FALSE:
-                result['networking'] = 'no'
+            result['networking'] = 'no'
     else:
         _raise_error_network('networking', valid)
 
@@ -662,7 +667,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except:
+        except Exception:
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
@@ -675,7 +680,7 @@ def _parse_network_settings(opts, current):
             if opts['nozeroconf'] in _CONFIG_TRUE:
                 result['nozeroconf'] = 'true'
             elif opts['nozeroconf'] in _CONFIG_FALSE:
-                    result['nozeroconf'] = 'false'
+                result['nozeroconf'] = 'false'
         else:
             _raise_error_network('nozeroconf', valid)
 
@@ -718,9 +723,9 @@ def _write_file_iface(iface, data, folder, pattern):
     '''
     Writes a file to disk
     '''
-    filename = join(folder, pattern.format(iface))
-    if not exists(folder):
-        msg = '{0} cannot be written. {1} does not exists'
+    filename = os.path.join(folder, pattern.format(iface))
+    if not os.path.exists(folder):
+        msg = '{0} cannot be written. {1} does not exist'
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
@@ -759,16 +764,20 @@ def build_bond(iface, settings):
     rh_major = __grains__['osrelease'][:1]
 
     opts = _parse_settings_bond(settings, iface)
-    template = env.get_template('conf.jinja')
+    try:
+        template = ENV.get_template('conf.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template conf.jinja')
+        return ''
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf')
-    path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
+    path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
-            'sed -i -e "/^alias\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
         __salt__['cmd.run'](
-            'sed -i -e "/^options\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
         __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
     __salt__['kmod.load']('bonding')
@@ -787,7 +796,10 @@ def build_interface(iface, iface_type, enabled, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
-    rh_major = __grains__['osrelease'][:1]
+    if __grains__['os'] == 'Fedora':
+        rh_major = '6'
+    else:
+        rh_major = __grains__['osrelease'][:1]
 
     iface = iface.lower()
     iface_type = iface_type.lower()
@@ -810,14 +822,22 @@ def build_interface(iface, iface_type, enabled, settings):
 
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
-        template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
+        try:
+            template = ENV.get_template('rh{0}_eth.jinja'.format(rh_major))
+        except jinja2.exceptions.TemplateNotFound:
+            log.error(
+                'Could not load template rh{0}_eth.jinja'.format(
+                    rh_major
+                )
+            )
+            return ''
         ifcfg = template.render(opts)
 
     if settings['test']:
         return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}')
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
 
     return _read_file(path)
 
@@ -844,7 +864,7 @@ def get_bond(iface):
 
         salt '*' ip.get_bond bond0
     '''
-    path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
+    path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     return _read_file(path)
 
 
@@ -856,11 +876,11 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     '''
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
     return _read_file(path)
 
 
-def up(iface, iface_type, opts):
+def up(iface, iface_type, opts):  # pylint: disable-msg=C0103
     '''
     Start up a network interface
 
@@ -919,7 +939,11 @@ def build_network_settings(settings):
 
     # Build settings
     opts = _parse_network_settings(settings, current_network_settings)
-    template = env.get_template('network.jinja')
+    try:
+        template = ENV.get_template('network.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template network.jinja')
+        return ''
     network = template.render(opts)
 
     if settings['test']:

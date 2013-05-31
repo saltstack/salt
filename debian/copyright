@@ -4,7 +4,7 @@ Upstream-Contact: salt-users@googlegroups.com
 Source: https://github.com/saltstack/salt
 
 Files: *
-Copyright: 2012 Thomas S Hatch <thatch45@gmail.com>
+Copyright: 2012-2013 Thomas S Hatch <thatch45@gmail.com>
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -41,6 +41,6 @@ License: Apache-2.0
  See the License for the specific language governing permissions and
  limitations under the License.
  .
- On Debian systems, the full text of the Apache Licens, Version 2.0 can be
+ On Debian systems, the full text of the Apache License, Version 2.0 can be
  found in the file
  `/usr/share/common-licenses/Apache-2.0'.

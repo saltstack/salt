@@ -3,23 +3,34 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 '''
 
+import errno
+
 # Import salt libs
 import salt.loader
 
 
 STATIC = (
-          'yaml_out',
-          'text_out',
-          'raw_out',
-          'json_out',
-          )
+    'yaml_out',
+    'text_out',
+    'raw_out',
+    'json_out',
+)
 
 
 def display_output(data, out, opts=None):
     '''
     Print the passed data using the desired output
     '''
-    print(get_printout(out, opts)(data).rstrip())
+    try:
+        print(get_printout(out, opts)(data).rstrip())
+    except Exception:
+        opts.pop('output', None)
+        try:
+            print(get_printout('nested', opts)(data).rstrip())
+        except IOError as e:
+            # Only raise if it's NOT a broken pipe
+            if e.errno != errno.EPIPE:
+                raise e
 
 
 def get_printout(out, opts=None, **kwargs):
@@ -47,14 +58,14 @@ def get_printout(out, opts=None, **kwargs):
             out = out[:-4]
 
     if out is None:
-        out = 'pprint'
+        out = 'nested'
 
     opts.update(kwargs)
-    if not 'color' in opts:
+    if 'color' not in opts:
         opts['color'] = not bool(opts.get('no_color', False))
     outputters = salt.loader.outputters(opts)
-    if not out in outputters:
-        return outputters['pprint']
+    if out not in outputters:
+        return outputters['nested']
     return outputters[out]
 
 

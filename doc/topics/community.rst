@@ -77,10 +77,23 @@ A few examples of salt states from the community:
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
 * https://github.com/rentalita/ubuntu-setup/
 * https://github.com/brutasse/states
+* https://github.com/bclermont/states
+* https://github.com/pcrews/salt-data
 
 Follow on ohloh
 ===============
 
 https://www.ohloh.net/p/salt
+
+Other community links
+=====================
+
+- `Salt Stack Inc. <http://saltstack.com>`_
+- `Subreddit <http://www.reddit.com/r/saltstack>`_
+- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
+- `YouTube <http://www.youtube.com/user/SaltStack>`_
+- `Facebook <https://www.facebook.com/SaltStack>`_
+- `Twitter <https://twitter.com/SaltStackInc>`_
+- `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
 
 .. include:: hacking.rst

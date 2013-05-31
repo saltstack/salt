@@ -10,7 +10,11 @@ Full list of builtin pillar modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cmd_json
     cmd_yaml
+    cobbler
     hiera
+    libvirt
     mongo
     pillar_ldap
+    puppet

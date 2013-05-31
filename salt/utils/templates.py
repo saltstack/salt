@@ -11,16 +11,18 @@ import imp
 import logging
 import tempfile
 import traceback
+import sys
 
 # Import third party libs
 import jinja2
+import jinja2.ext
 
 # Import salt libs
 import salt.utils
 import salt.exceptions
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class SaltTemplateRenderError(salt.exceptions.SaltException):
@@ -28,8 +30,8 @@ class SaltTemplateRenderError(salt.exceptions.SaltException):
 
 
 # FIXME: also in salt/template.py
-sls_encoding = 'utf-8'  # this one has no BOM.
-sls_encoder = codecs.getencoder(sls_encoding)
+SLS_ENCODING = 'utf-8'  # this one has no BOM.
+SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
 def wrap_tmpl_func(render_str):
@@ -37,7 +39,9 @@ def wrap_tmpl_func(render_str):
                     context=None, tmplpath=None, **kws):
         if context is None:
             context = {}
-        context.update(kws)
+        # We want explicit context to overwrite the **kws
+        kws.update(context)
+        context = kws
         assert 'opts' in context
         assert 'env' in context
 
@@ -45,14 +49,14 @@ def wrap_tmpl_func(render_str):
             if from_str:
                 tmplstr = tmplsrc
             else:
-                with codecs.open(tmplsrc, 'r', sls_encoding) as tmplsrc:
+                with codecs.open(tmplsrc, 'r', SLS_ENCODING) as tmplsrc:
                     tmplstr = tmplsrc.read()
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
-        except SaltTemplateRenderError, exc:
+        except SaltTemplateRenderError as exc:
             return dict(result=False, data=str(exc))
         except Exception:
             return dict(result=False, data=traceback.format_exc())
@@ -60,7 +64,7 @@ def wrap_tmpl_func(render_str):
             if to_str:  # then render as string
                 return dict(result=True, data=output)
             with tempfile.NamedTemporaryFile('wb', delete=False) as outf:
-                outf.write(sls_encoder(output)[0])
+                outf.write(SLS_ENCODER(output)[0])
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
@@ -85,15 +89,28 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(context, os.path.dirname(tmplpath))
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
+    env_args = {'extensions': [], 'loader': loader}
+
+    if hasattr(jinja2.ext, 'with_'):
+        env_args['extensions'].append('jinja2.ext.with_')
+    if hasattr(jinja2.ext, 'do'):
+        env_args['extensions'].append('jinja2.ext.do')
+    if hasattr(jinja2.ext, 'loopcontrols'):
+        env_args['extensions'].append('jinja2.ext.loopcontrols')
+
     if opts.get('allow_undefined', False):
-        jinja_env = jinja2.Environment(loader=loader)
+        jinja_env = jinja2.Environment(**env_args)
     else:
         jinja_env = jinja2.Environment(
-                        loader=loader, undefined=jinja2.StrictUndefined)
+                        undefined=jinja2.StrictUndefined, **env_args)
     try:
         output = jinja_env.from_string(tmplstr).render(**context)
-    except jinja2.exceptions.TemplateSyntaxError, exc:
-        raise SaltTemplateRenderError(str(exc))
+    except jinja2.exceptions.TemplateSyntaxError as exc:
+        error = '{0}; line {1} in template'.format(
+                exc,
+                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        )
+        raise SaltTemplateRenderError(error)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
@@ -134,7 +151,7 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
-def py(sfn, string=False, **kwargs):
+def py(sfn, string=False, **kwargs):  # pylint: disable-msg=C0103
     '''
     Render a template from a python source file
 
@@ -169,13 +186,13 @@ def py(sfn, string=False, **kwargs):
                 'data': trb}
 
 
-jinja = wrap_tmpl_func(render_jinja_tmpl)
-mako = wrap_tmpl_func(render_mako_tmpl)
-wempy = wrap_tmpl_func(render_wempy_tmpl)
+JINJA = wrap_tmpl_func(render_jinja_tmpl)
+MAKO = wrap_tmpl_func(render_mako_tmpl)
+WEMPY = wrap_tmpl_func(render_wempy_tmpl)
 
-template_registry = {
-    'jinja': jinja,
-    'mako': mako,
+TEMPLATE_REGISTRY = {
+    'jinja': JINJA,
+    'mako': MAKO,
     'py': py,
-    'wempy': wempy,
+    'wempy': WEMPY,
 }

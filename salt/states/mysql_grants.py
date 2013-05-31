@@ -14,9 +14,9 @@ with the grant itself.
 The ``database`` parameter needs to specify a 'priv_level' in the same
 specification as defined in the MySQL documentation:
 
-* \*
-* \*.\*
-* db_name.\*
+* \\*
+* \\*.\\*
+* db_name.\\*
 * db_name.tbl_name
 * etc...
 
@@ -64,7 +64,7 @@ def present(name,
         The name (key) of the grant to add
 
     grant
-        The grant priv_type (ie. select,insert,update OR all privileges)
+        The grant priv_type (i.e. select,insert,update OR all privileges)
 
     database
         The database priv_level (ie. db.tbl OR db.*)
@@ -73,12 +73,12 @@ def present(name,
         The user to apply the grant to
 
     host
-        The MySQL server
+        The network/host that the grant should apply to
 
     grant_option
         Adds the WITH GRANT OPTION to the defined grant. default: False
 
-    excape
+    escape
         Defines if the database value gets escaped or not. default: True
     '''
     comment = 'Grant {0} on {1} to {2}@{3} is already present'
@@ -125,16 +125,16 @@ def absent(name,
         The name (key) of the grant to add
 
     grant
-        The grant priv_type (ie. select,insert,update OR all privileges)
+        The grant priv_type (i.e. select,insert,update OR all privileges)
 
     database
-        The database priv_level (ie. db.tbl OR db.*)
+        The database priv_level (i.e. db.tbl OR db.*)
 
     user
         The user to apply the grant to
 
     host
-        The MySQL server
+        The network/host that the grant should apply to
     '''
     ret = {'name': name,
            'changes': {},

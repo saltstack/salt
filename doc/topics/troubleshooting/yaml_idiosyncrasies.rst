@@ -79,6 +79,15 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
 
 .. _`dicts`: http://docs.python.org/library/stdtypes.html#dict
 
+True/False, Yes/No, On/Off
+==========================
+
+PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
+versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
+``on``, and ``off``). This can be especially problematic when constructing
+Pillar data. Make sure that your Pillars which need to use the string versions
+of these values are enclosed in quotes.
+
 Integers are Parsed as Integers
 ===============================
 
@@ -220,7 +229,7 @@ Examples:
 
 
     
-List of useable `Unicode characters`_  will help you to identify correct numbers.
+List of usable `Unicode characters`_  will help you to identify correct numbers.
 
 .. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
 

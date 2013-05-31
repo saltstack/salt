@@ -5,8 +5,8 @@ State Modules
 State Modules are the components that map to actual enforcement and management
 of Salt states.
 
-States are - Easy to Write!
-===========================
+States are Easy to Write!
+=========================
 
 State Modules should be easy to write and straightforward. The information
 passed to the SLS data structures will map directly to the states modules.
@@ -17,7 +17,7 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name"
-      file: # maps to State module filename eg https://github.com/saltstack/salt/blob/develop/salt/states/file.py
+      file: # maps to State module filename e.g. https://github.com/saltstack/salt/blob/develop/salt/states/file.py
         - managed # maps to the managed function in the file State module
         - user: root # one of many options passed to the manage function
         - group: root
@@ -35,10 +35,13 @@ Using Custom State Modules
 ==========================
 
 Place your custom state modules inside a ``_states`` directory within the
-``file_roots`` specified by the master config file. These custom state modules
-can then be distributed in a number of ways. Custom state modules are
-distributed when state.highstate is run, or via the saltutil.sync_states
-function.
+:conf_master:`file_roots` specified by the master config file. These custom
+state modules can then be distributed in a number of ways. Custom state modules
+are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is
+run, or by executing the :mod:`saltutil.sync_states
+<salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>` functions.
+
 
 Cross Calling Modules
 =====================

@@ -5,7 +5,7 @@
 
     Support for Alternatives system
 
-    :codeauthor: :email:`Radek Rada <radek.rada@gmail.com>`
+    :codeauthor: Radek Rada <radek.rada@gmail.com>
     :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
@@ -57,8 +57,12 @@ def display(name):
 
 def show_current(name):
     '''
-    '''
+    Display the current alternatives for the given name
 
+    CLI Example::
+
+        salt '*' alternatives.show_current emacs
+    '''
     alt_link_path = '/etc/alternatives/{0}'.format(name)
     if os.path.islink(alt_link_path):
         path = os.path.realpath(alt_link_path)

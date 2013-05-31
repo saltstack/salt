@@ -23,15 +23,20 @@ import shutil
 
 # Import salt libs
 from salt.states.git import _fail, _neutral_test
+from salt import utils
 
 log = logging.getLogger(__name__)
 
+if utils.is_windows():
+    hg_binary = "hg.exe"
+else:
+    hg_binary = "hg"
 
 def __virtual__():
     '''
     Only load if hg is available
     '''
-    return 'hg' if __salt__['cmd.has_exec']('hg') else False
+    return 'hg' if __salt__['cmd.has_exec'](hg_binary) else False
 
 
 def latest(name,
@@ -41,7 +46,7 @@ def latest(name,
            force=False,
         ):
     '''
-    Make sure the repository is cloned to to given directory and is up to date
+    Make sure the repository is cloned to the given directory and is up to date
 
     name
         Address of the remote repository as passed to "hg clone"

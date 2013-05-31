@@ -113,7 +113,7 @@ files by using an :term:`include declaration`. For example:
 .. code-block:: yaml
 
     include:
-      - python-libs
+      - python.python-libs
 
     django:
       pkg.installed:
@@ -139,11 +139,12 @@ vhosts file is changed:
 .. code-block:: yaml
 
     include:
-      - apache
+      - apache.apache
 
     extend:
       apache:
         service:
+          - running
           - watch:
             - file: /etc/httpd/extra/httpd-vhosts.conf
 
@@ -151,7 +152,7 @@ vhosts file is changed:
       file.managed:
         - source: salt://apache/httpd-vhosts.conf
 
-.. include:: extend_with_require_watch.rst
+.. include:: /_incl/extend_with_require_watch.rst
 
 :term:`Name declaration`
 ------------------------
@@ -166,11 +167,12 @@ rewritten as follows:
     :emphasize-lines: 8,10,12
 
     include:
-      - apache
+      - apache.apache
 
     extend:
       apache:
         service:
+          - running
           - watch:
             - file: mywebsite
 

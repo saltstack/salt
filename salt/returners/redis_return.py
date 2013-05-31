@@ -16,13 +16,13 @@ import json
 # Import third party libs
 try:
     import redis
-    has_redis = True
+    HAS_REDIS = True
 except ImportError:
-    has_redis = False
+    HAS_REDIS = False
 
 
 def __virtual__():
-    if not has_redis:
+    if not HAS_REDIS:
         return False
     return 'redis'
 
@@ -45,7 +45,7 @@ def returner(ret):
     serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
     serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
     serv.sadd('minions', ret['id'])
-    serv.sadd('jids', jid)
+    serv.sadd('jids', ret['jid'])
 
 
 def save_load(jid, load):

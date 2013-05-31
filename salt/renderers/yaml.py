@@ -6,23 +6,10 @@ import logging
 import warnings
 
 # Import salt libs
-from salt.utils.yaml import CustomLoader, load
-from salt.exceptions import SaltRenderError
+from salt.utils.yamlloader import CustomLoader, load
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
-
-# code fragment taken from https://gist.github.com/844388
-has_ordered_dict = True
-try:
-    # included in standard lib from Python 2.7
-    from collections import OrderedDict
-except ImportError:
-    # try importing the backported drop-in replacement
-    # it's available on PyPI
-    try:
-        from ordereddict import OrderedDict
-    except ImportError:
-        has_ordered_dict = False
 
 
 def get_yaml_loader(argline):
@@ -38,14 +25,9 @@ Options:
 ''')
         raise
     if ('-o', '') in opts:
-        if has_ordered_dict:
-            def Loader(*args):
-                return CustomLoader(*args, dictclass=OrderedDict)
-            return Loader
-        else:
-            raise SaltRenderError(
-                    'OrderedDict not available! It is required when using '
-                    'the ordered option(-o) with yaml renderer.')
+        def Loader(*args):  # pylint: disable-msg=C0103
+            return CustomLoader(*args, dictclass=OrderedDict)
+        return Loader
     return CustomLoader
 
 

@@ -30,6 +30,10 @@ def present(
     '''
     Verifies that the specified host is known by the specified user
 
+    On many systems, specifically those running with openssh 4 or older, the
+    ``enc`` option must be set, only openssh 5 and above can detect the key
+    type.
+
     name
         The name of the remote host (i.e. "github.com")
 
@@ -37,7 +41,7 @@ def present(
         The user who owns the ssh authorized keys file to modify
 
     enc
-        Defines what type of key is being used, can be ssh-rsa or ssh-dss
+        Defines what type of key is being used, can be ecdsa ssh-rsa or ssh-dss
 
     fingerprint
         The fingerprint of the key which must be presented in the known_hosts

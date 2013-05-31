@@ -18,7 +18,7 @@ __opts__ = {}
 # TODO: Make this module support windows hosts
 # TODO: Make this module support BSD hosts properly, this is very Linux specific
 def __virtual__():
-    if 'Windows' in __grains__['os']:
+    if salt.utils.is_windows():
         return False
     return 'status'
 
@@ -74,7 +74,7 @@ def procs():
 
 def custom():
     '''
-    Return a custom composite of status data and info for this minon,
+    Return a custom composite of status data and info for this minion,
     based on the minion config file. An example config like might be::
 
         status.cpustats.custom: [ 'cpu', 'ctxt', 'btime', 'processes' ]
@@ -136,7 +136,7 @@ def loadavg():
 
 def cpustats():
     '''
-    Return the CPU stats for this minon
+    Return the CPU stats for this minion
 
     CLI Example::
 
@@ -290,15 +290,18 @@ def diskusage(*args):
 
     if len(fstypes) > 0:
         # determine which mount points host the specified fstypes
-        p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
-                            for fstype in fstypes))
-        with salt.utils.fopen(procf, 'r') as fp:
-            for line in fp:
+        regex = re.compile(
+            '|'.join(
+                fnmatch.translate(fstype).format('(%s)') for fstype in fstypes
+            )
+        )
+        with salt.utils.fopen(procf, 'r') as ifile:
+            for line in ifile:
                 comps = line.split()
                 if len(comps) >= 3:
                     mntpt = comps[1]
                     fstype = comps[2]
-                    if p.match(fstype):
+                    if regex.match(fstype):
                         selected.add(mntpt)
 
     # query the filesystems disk usage
@@ -409,7 +412,7 @@ def netdev():
     return ret
 
 
-def w():
+def w():  # pylint: disable-msg=C0103
     '''
     Return a list of logged in users for this minion, using the w command
 
@@ -464,6 +467,12 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     '''
+    # Check whether the sig is already quoted (we check at the end in case they
+    # send a sig like `-E 'someregex'` to use egrep) and doesn't begin with a
+    # dash (again, like `-E someregex`).  Quote sigs that qualify.
+    if (not sig.endswith('"') and not sig.endswith("'") and
+            not sig.startswith('-')):
+        sig = "'" + sig + "'"
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
+        __grains__, sig)
     return (__salt__['cmd.run_stdout'](cmd) or '')

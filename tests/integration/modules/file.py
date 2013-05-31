@@ -1,6 +1,7 @@
 # Import python libs
 import getpass
 import grp
+import pwd
 import os
 import shutil
 import sys
@@ -30,7 +31,7 @@ class FileModuleTest(integration.ModuleCase):
         self.mybadsymlink = os.path.join(integration.TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
-        os.symlink('/nonexistantpath', self.mybadsymlink)
+        os.symlink('/nonexistentpath', self.mybadsymlink)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
@@ -48,7 +49,7 @@ class FileModuleTest(integration.ModuleCase):
         if sys.platform == 'darwin':
             group = 'staff'
         elif sys.platform.startswith('linux'):
-            group = getpass.getuser()
+            group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIsNone(ret)
         fstat = os.stat(self.myfile)
@@ -58,7 +59,7 @@ class FileModuleTest(integration.ModuleCase):
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_user(self):
         user = 'notanyuseriknow'
-        group = getpass.getuser()
+        group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIn('not exist', ret)
 
@@ -76,7 +77,7 @@ class FileModuleTest(integration.ModuleCase):
         if sys.platform == 'darwin':
             group = 'staff'
         elif sys.platform.startswith('linux'):
-            group = getpass.getuser()
+            group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chown',
                                 arg=['/tmp/nosuchfile', user, group])
         self.assertIn('File not found', ret)
@@ -96,7 +97,7 @@ class FileModuleTest(integration.ModuleCase):
         if sys.platform == 'darwin':
             group = 'everyone'
         elif sys.platform.startswith('linux'):
-            group = getpass.getuser()
+            group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chgrp', arg=[self.myfile, group])
         self.assertIsNone(ret)
         fstat = os.stat(self.myfile)

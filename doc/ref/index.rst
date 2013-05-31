@@ -15,7 +15,7 @@ Client API
 ----------
 
 The primary interface used to extend Salt, is to simply use it. Salt executions
-can be called via the Salt client api, making programming master side solutions
+can be called via the Salt client API, making programming master side solutions
 with Salt is easy.
 
 Adding Loadable Plugins
@@ -70,7 +70,7 @@ Renderers
 `````````
 
 Salt states are controlled by simple data structures, these structures can be
-abstracted in a number of ways. While the default is to be in a yaml file
+abstracted in a number of ways. While the default is to be in a YAML file
 wrapped in a jinja template, any abstraction can be used. This means that any
 format that can be dreamed is possible, so long as a renderer is written for
 it.

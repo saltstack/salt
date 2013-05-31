@@ -30,6 +30,17 @@ Match all minions with 64-bit CPUs and return number of available cores::
 
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
+Listing Grains
+==============
+
+Available grains can be listed by using the 'grains.ls' module::
+
+    salt '*' grains.ls
+
+Grains data can be listed by using the 'grains.items' module::
+
+    salt '*' grains.items
+
 Grains in the Minion Config
 ===========================
 
@@ -59,9 +70,16 @@ package or the custom grains directory. The functions in the modules of
 the grains must return a Python `dict`_, where the keys in the dict are the
 names of the grains and the values are the values.
 
-Custom grains should be placed in a ``_grains`` directory located under
-your :conf_master:`file_roots`. Before adding a grain to Salt, consider
-what the grain is and remember that grains need to be static data.
+Custom grains should be placed in a ``_grains`` directory located under the
+:conf_master:`file_roots` specified by the master config file. They will be
+distributed to the minions when :mod:`state.highstate
+<salt.modules.state.highstate>` is run, or by executing the
+:mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
+:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+
+Before adding a grain to Salt, consider what the grain is and remember that
+grains need to be static data. If the data is something that is likely to
+change, consider using :doc:`Pillar <../pillar/index>` instead.
 
 .. _`dict`: http://docs.python.org/library/stdtypes.html#typesmapping
 

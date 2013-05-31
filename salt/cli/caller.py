@@ -25,6 +25,9 @@ from salt.exceptions import (
     CommandExecutionError,
 )
 
+# Import third party libs
+import yaml
+
 
 class Caller(object):
     '''
@@ -35,6 +38,7 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
+        self.opts['caller'] = True
         self.serial = salt.payload.Serial(self.opts)
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
@@ -56,10 +60,11 @@ class Caller(object):
                 ret['jid'])
         if fun not in self.minion.functions:
             sys.stderr.write('Function {0} is not available\n'.format(fun))
-            sys.exit(1)
+            sys.exit(-1)
         try:
-            args, kw = salt.minion.detect_kwargs(
+            args, kwargs = salt.minion.detect_kwargs(
                 self.minion.functions[fun], self.opts['arg'])
+            args, kwargs = self.parse_args(args, kwargs)
             sdata = {
                     'fun': fun,
                     'pid': os.getpid(),
@@ -67,11 +72,14 @@ class Caller(object):
                     'tgt': 'salt-call'}
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(self.serial.dumps(sdata))
-            ret['return'] = self.minion.functions[fun](*args, **kw)
-        except (TypeError, CommandExecutionError) as exc:
+            func = self.minion.functions[fun]
+            ret['return'] = func(*args, **kwargs)
+            ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                    'retcode', 0)
+        except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
-                self.opts['log_level'].lower, logging.ERROR)
+                self.opts['log_level'].lower(), logging.ERROR)
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
@@ -88,6 +96,8 @@ class Caller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
+            if oput == 'highstate':
+                ret['return'] = {'local': ret['return']}
         if self.opts.get('return', ''):
             ret['id'] = self.opts['id']
             ret['fun'] = fun
@@ -97,6 +107,34 @@ class Caller(object):
                 except Exception:
                     pass
         return ret
+
+    def parse_arg(self, arg):
+        '''
+        Yaml-erize an argument
+        '''
+        try:
+            if '\n' not in arg:
+                arg = yaml.safe_load(arg)
+            if isinstance(arg, bool):
+                return str(arg)
+            return arg
+        except Exception:
+            return arg
+
+    def parse_args(self, args=None, kwargs=None):
+        '''
+        Read in the args and kwargs and return the structures with parsed
+        arguments
+        '''
+        r_args = []
+        r_kwargs = {}
+        if args:
+            for arg in args:
+                r_args.append(self.parse_arg(arg))
+        if kwargs:
+            for key, val in kwargs.items():
+                r_kwargs[key] = self.parse_arg(val)
+        return r_args, r_kwargs
 
     def print_docs(self):
         '''
@@ -123,7 +161,15 @@ class Caller(object):
         Execute the salt call logic
         '''
         ret = self.call()
+        out = ret['return']
+        # If the type of return is not a dict we wrap the return data
+        # This will ensure that --local and local functions will return the
+        # same data structure as publish commands.
+        if not isinstance(ret['return'], dict):
+            out = {'local': ret['return']}
         salt.output.display_output(
-                {'local': ret['return']},
-                ret.get('out', 'pprint'),
+                out,
+                ret.get('out', 'nested'),
                 self.opts)
+        if self.opts.get('retcode_passthrough', False):
+            sys.exit(ret['retcode'])

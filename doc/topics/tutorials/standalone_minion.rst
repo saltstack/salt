@@ -31,6 +31,8 @@ this data from the master.
 Now the salt-call command will not look for a master and will assume that the
 local system has all of the file ad pillar resources.
 
+
+
 Running States Masterless
 =========================
 
@@ -58,3 +60,12 @@ to be modified in any way to work with a minion.
 This makes it easy to "script" deployments with Salt states without having to
 set up a master, and allows for these SLS modules to be easily moved into a
 Salt master as the deployment grows.
+
+Now the declared state can now be executed with::
+    
+    salt-call state.highstate
+
+Or the salt-call command can be executed with the `--local` flag, this makes it
+unnecessary to change the configuration file::
+
+    salt-call state.highstate --local

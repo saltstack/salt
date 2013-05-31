@@ -10,9 +10,19 @@ import logging
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.crypt
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
+
+def _auth():
+    '''
+    Return the auth object
+    '''
+    if not 'auth' in __context__:
+        __context__['auth'] = salt.crypt.SAuth(__opts__)
+    return __context__['auth']
 
 
 def recv(files, dest):
@@ -20,6 +30,10 @@ def recv(files, dest):
     Used with salt-cp, pass the files dict, and the destination.
 
     This function receives small fast copy files from the master via salt-cp
+
+    CLI Example::
+
+        This function does not work via the CLI
     '''
     ret = {}
     for path, data in files.items():
@@ -47,7 +61,8 @@ def _mk_client():
     Create a file client and add it to the context
     '''
     if not 'cp.fileclient' in __context__:
-        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+        __context__['cp.fileclient'] = \
+                salt.fileclient.get_file_client(__opts__)
 
 
 def _render_filenames(path, dest, env, template):
@@ -55,7 +70,7 @@ def _render_filenames(path, dest, env, template):
         return (path, dest)
 
     # render the path as a template using path_template_engine as the engine
-    if template not in salt.utils.templates.template_registry:
+    if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
             'Attempted to render file paths with unavailable engine '
             '{0}'.format(template)
@@ -73,7 +88,7 @@ def _render_filenames(path, dest, env, template):
         tmp_path_fn = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
-        data = salt.utils.templates.template_registry[template](
+        data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
@@ -101,6 +116,23 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     CLI Example::
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
+
+    Template rendering can be enabled on both the source and destination file
+    names like so::
+
+        salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
+
+    This example would instruct all Salt minions to download the vimrc from a
+    directory with the same name as their os grain and copy it to /etc/vimrc
+
+    For larger files, the cp.get_file module also supports gzip compression.
+    Because gzip is CPU-intensive, this should only be used in scenarios where
+    the compression ratio is very high (e.g. pretty-printed JSON or YAML
+    files).
+
+    Use the *gzip* named argument to enable it.  Valid values are 1..9, where 1
+    is the lightest compression and 9 the heaviest.  1 uses the least CPU on
+    the master (and minion), 9 uses the most.
     '''
     (path, dest) = _render_filenames(path, dest, env, template)
 
@@ -149,6 +181,8 @@ def get_dir(path, dest, env='base', template=None, gzip=None):
     CLI Example::
 
         salt '*' cp.get_dir salt://path/to/dir/ /minion/dest
+
+    get_dir supports the same template and gzip arguments as get_file.
     '''
     (path, dest) = _render_filenames(path, dest, env, template)
 
@@ -171,7 +205,7 @@ def get_url(path, dest, env='base'):
 
 def get_file_str(path, env='base'):
     '''
-    Return the contents of a file from a url
+    Return the contents of a file from a URL
 
     CLI Example::
 
@@ -194,8 +228,11 @@ def cache_file(path, env='base'):
     _mk_client()
     result = __context__['cp.fileclient'].cache_file(path, env)
     if not result:
-        log.error('Unable to cache file "{0}" from env '
-                  '"{1}".'.format(path,env))
+        log.error(
+            'Unable to cache file "{0}" from env "{1}".'.format(
+                path, env
+            )
+        )
     return result
 
 
@@ -291,7 +328,7 @@ def list_master_dirs(env='base'):
     '''
     List all of the directories stored on the master
 
-    CLI Exmaple::
+    CLI Example::
 
         salt '*' cp.list_master_dirs
     '''
@@ -336,3 +373,40 @@ def hash_file(path, env='base'):
     '''
     _mk_client()
     return __context__['cp.fileclient'].hash_file(path, env)
+
+
+def push(path):
+    '''
+    Push a file from the minion up to the master, the file will be saved to
+    the salt master in the master's minion files cachedir
+    (defaults to /var/cache/salt/master/minions/files)
+
+    Since this feature allows a minion to push a file up to the master server
+    it is disabled by default for security purposes. To enable add the option:
+    file_recv: True
+    to the master configuration and restart the master
+
+    CLI Example::
+
+        salt '*' cp.push /etc/fstab
+    '''
+    if '../' in path or not os.path.isabs(path):
+        return False
+    path = os.path.realpath(path)
+    if not os.path.isfile(path):
+        return False
+    auth = _auth()
+
+    load = {'cmd': '_file_recv',
+            'id': __opts__['id'],
+            'path': path.lstrip(os.sep)}
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    with salt.utils.fopen(path) as fp_:
+        while True:
+            load['loc'] = fp_.tell()
+            load['data'] = fp_.read(__opts__['file_buffer_size'])
+            if not load['data']:
+                return True
+            ret = sreq.send('aes', auth.crypticle.dumps(load))
+            if not ret:
+                return ret
