@@ -99,7 +99,7 @@ class Schedule(object):
                     self.returners['{0}.returner'.format(returner)](ret)
                 else:
                     log.info(
-                        'Job {1} using invalid returner: {0} Ignoring.'.format(
+                        'Job {0} using invalid returner: {1} Ignoring.'.format(
                         func, returner
                         )
                     )
