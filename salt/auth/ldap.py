@@ -85,7 +85,8 @@ class _LDAPConnection:
             )
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
-        if not anonymous:
+
+            if not anonymous:
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:
             raise CommandExecutionError(
