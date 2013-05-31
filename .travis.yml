@@ -10,11 +10,15 @@ before_install:
   - (git describe && git fetch --tags) || (git remote add upstream git://github.com/saltstack/salt.git && git fetch --tags upstream)
   - pip install mock --use-mirrors --mirrors=http://testpypi.python.org/pypi
   - pip install http://dl.dropbox.com/u/174789/m2crypto-0.20.1.tar.gz
+  - pip install coveralls
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install --use-mirrors --mirrors=http://testpypi.python.org/pypi unittest2 ordereddict; fi"
 
 install: pip install -r requirements.txt --use-mirrors --mirrors=http://testpypi.python.org/pypi
 
-script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v'"
+script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/coverage run setup.py test --runtests-opts='--run-destructive --sysinfo -v'"
+
+after_script:
+  - coveralls
 
 notifications:
   irc:
