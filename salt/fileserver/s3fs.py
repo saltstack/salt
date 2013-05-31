@@ -49,11 +49,10 @@ import urllib
 import logging
 
 # Import salt libs
+import salt.filserver as fs
+import salt.modules
 import salt.utils
 import salt.utils.s3 as s3
-import salt.modules
-
-from salt.fileserver import is_file_ignored
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +113,7 @@ def find_file(path, env='base', **kwargs):
 
     # look for the files and check if they're ignored globally
     for bucket_name, files in env_files.iteritems():
-        if path in files and not is_file_ignored(__opts__, path):
+        if path in files and not fs.is_file_ignored(__opts__, path):
             fnd['bucket'] = bucket_name
             fnd['path'] = path
 
@@ -202,7 +201,7 @@ def file_list(load):
         return ret
 
     for buckets in _find_files(metadata[env]).values():
-        files = filter(lambda f: not is_file_ignored(__opts__, f), buckets)
+        files = filter(lambda f: not fs.is_file_ignored(__opts__, f), buckets)
         ret += _trim_env_off_path(files, env)
 
     return ret
@@ -212,15 +211,9 @@ def file_list_emptydirs(load):
     Return a list of all empty directories on the master
     '''
     # TODO - implement this
-
-    log.error('### file_list_emptydirs')
-    log.error('### ' + str(load))
-
-    ret = []
-
     _init()
 
-    return ret
+    return []
 
 def dir_list(load):
     '''
