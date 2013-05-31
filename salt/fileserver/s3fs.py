@@ -64,12 +64,23 @@ def update():
     Update the cache file for the bucket.
     '''
 
-    _init()
+    metadata = _init()
 
     if _s3_sync_on_update:
+        key, keyid = _get_s3_key()
+
         # sync the buckets to the local cache
-        # TODO - implement full S3 sync versus JIT file serving
-        pass
+        log.info('Syncing local cache from S3...')
+        for env, env_meta in metadata.iteritems():
+            for bucket, files in _find_files(env_meta).iteritems():
+                for file_path in files:
+                    cached_file_path = _get_cached_file_name(bucket, env, file_path)
+                    log.info('{0} - {1} : {2}'.format(bucket, env, file_path))
+
+                    # load the file from S3 if it's not in the cache or it's old
+                    _get_file_from_s3(metadata, env, bucket, file_path, cached_file_path)
+
+        log.info('Sync local cache from S3 completed.')
 
 def find_file(path, env='base', **kwargs):
     '''
@@ -101,27 +112,9 @@ def find_file(path, env='base', **kwargs):
 
     cached_file_path = _get_cached_file_name(fnd['bucket'], env, path)
 
-    # check the local cache...
-    if os.path.isfile(cached_file_path):
-        file_meta = _find_file_meta(metadata, bucket_name, env, path)
-        file_md5 = filter(str.isalnum, file_meta['ETag']) if file_meta else None
+    # jit load the file from S3 if it's not in the cache or it's old
+    _get_file_from_s3(metadata, env, fnd['bucket'], path, cached_file_path)
 
-        cached_file_hash = hashlib.md5()
-        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
-            cached_file_hash.update(fp_.read())
-
-        # hashes match we have a cache hit
-        if cached_file_hash.hexdigest() == file_md5:
-            return fnd
-
-    # ... or get the file from S3
-    key, keyid = _get_s3_key()
-    s3.query(
-            key = key,
-            keyid = keyid,
-            bucket = fnd['bucket'],
-            path = urllib.quote(path),
-            local_file = cached_file_path)
     return fnd
 
 def file_hash(load, fnd):
@@ -311,7 +304,7 @@ def _refresh_buckets_cache_file(cache_file):
     log.debug('Refreshing buckets cache file')
 
     key, keyid = _get_s3_key()
-    resultset = {}
+    metadata = {}
 
     # helper s3 query fuction
     def __get_s3_meta(bucket, key=key, keyid=keyid):
@@ -331,7 +324,7 @@ def _refresh_buckets_cache_file(cache_file):
                 # grab only the files/dirs
                 bucket_files[bucket_name] = filter(lambda k: 'Key' in k, s3_meta)
 
-            resultset[env] = bucket_files
+            metadata[env] = bucket_files
 
     else:
         # Multiple environments per buckets
@@ -348,24 +341,24 @@ def _refresh_buckets_cache_file(cache_file):
                 # grab only files/dirs that match this env
                 env_files = filter(lambda k: k['Key'].startswith(env), files)
 
-                if env not in resultset:
-                    resultset[env] = {}
+                if env not in metadata:
+                    metadata[env] = {}
 
-                if bucket_name not in resultset[env]:
-                    resultset[env][bucket_name] = []
+                if bucket_name not in metadata[env]:
+                    metadata[env][bucket_name] = []
 
-                resultset[env][bucket_name] += env_files
+                metadata[env][bucket_name] += env_files
 
-    # write the resultset to disk
+    # write the metadata to disk
     if os.path.isfile(cache_file):
         os.remove(cache_file)
 
     log.debug('Writing buckets cache file')
 
     with salt.utils.fopen(cache_file, 'w') as fp_:
-        pickle.dump(resultset, fp_)
+        pickle.dump(metadata, fp_)
 
-    return resultset
+    return metadata
 
 def _read_buckets_cache_file(cache_file):
     '''
@@ -379,14 +372,14 @@ def _read_buckets_cache_file(cache_file):
 
     return data
 
-def _find_files(resultset, dirs_only = False):
+def _find_files(metadata, dirs_only = False):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
 
     ret = {}
 
-    for bucket_name, data in resultset.iteritems():
+    for bucket_name, data in metadata.iteritems():
         if bucket_name not in ret:
             ret[bucket_name] = []
 
@@ -397,12 +390,12 @@ def _find_files(resultset, dirs_only = False):
 
     return ret
 
-def _find_file_meta(resultset, bucket_name, env, path):
+def _find_file_meta(metadata, bucket_name, env, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
     '''
 
-    env_meta = resultset[env] if env in resultset else {}
+    env_meta = metadata[env] if env in metadata else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
     files_meta = filter(lambda k: k.has_key('Key'), bucket_meta)
 
@@ -416,6 +409,34 @@ def _get_buckets():
     '''
 
     return __opts__['s3.buckets'] if 's3.buckets' in __opts__ else {}
+
+def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
+    '''
+    Checks the local cache for the file, if it's old or missing go grab the
+    file from S3 and update the cache
+    '''
+
+    # check the local cache...
+    if os.path.isfile(cached_file_path):
+        file_meta = _find_file_meta(metadata, bucket_name, env, path)
+        file_md5 = filter(str.isalnum, file_meta['ETag']) if file_meta else None
+
+        cached_file_hash = hashlib.md5()
+        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
+            cached_file_hash.update(fp_.read())
+
+        # hashes match we have a cache hit
+        if cached_file_hash.hexdigest() == file_md5:
+            return
+
+    # ... or get the file from S3
+    key, keyid = _get_s3_key()
+    s3.query(
+            key = key,
+            keyid = keyid,
+            bucket = bucket_name,
+            path = urllib.quote(path),
+            local_file = cached_file_path)
 
 def _trim_env_off_path(paths, env, trim_slash=False):
     '''
