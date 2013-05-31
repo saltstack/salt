@@ -149,7 +149,7 @@ def _linux_gpu_data():
                 # XXX; may also need to search for "3D controller"
                 cur_dev = {}
                 continue
-            if re.match('^\w+:\s+.*', line):
+            if re.match(r'^\w+:\s+.*', line):
                 key, val = line.split(':', 1)
                 cur_dev[key.strip()] = val.strip()
             else:
