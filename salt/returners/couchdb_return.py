@@ -84,12 +84,12 @@ def returner(ret):
     options = _get_options()
 
     # Create a connection to the server.
-    server = couchdb.client.Server(options["url"])
+    server = couchdb.client.Server(options['url'])
 
     # Create the database if the configuration calls for it.
-    if options["db"] not in server:
-        log.debug("Creating database %s" % options["db"])
-        server.create(options["db"])
+    if options['db'] not in server:
+        log.debug('Creating database "{0}"'.format(options['db']))
+        server.create(options['db'])
 
     # Save the document that comes out of _generate_doc.
-    server[options["db"]].save(_generate_doc(ret, options))
+    server[options['db']].save(_generate_doc(ret, options))

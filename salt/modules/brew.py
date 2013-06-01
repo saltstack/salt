@@ -42,7 +42,7 @@ def _tap(tap, runas=None):
 
     cmd = 'brew tap {0}'.format(tap)
     if __salt__['cmd.retcode'](cmd, runas=runas):
-        log.error("Failed to tap '%s'" % tap)
+        log.error('Failed to tap "{0}"'.format(tap))
         return False
 
     return True
