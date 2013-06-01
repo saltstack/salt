@@ -6,7 +6,7 @@ Set up the version of Salt
 import sys
 
 
-__version_info__ = (0, 15, 2)
+__version_info__ = (0, 15, 3)
 __version__ = '.'.join(map(str, __version_info__))
 
 GIT_DESCRIBE_REGEX = (
