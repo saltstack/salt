@@ -123,7 +123,7 @@ def get_conn():
         __opts__,
         search_global=False,
         default='DFW'
-    )
+    ).upper()
     if force_first_gen:
         log.info('Rackspace driver will only have access to first-gen images')
         driver = get_driver(Provider.RACKSPACE)

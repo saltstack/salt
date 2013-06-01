@@ -143,8 +143,8 @@ it can be verified with Salt:
     # salt myinstance test.ping
 
 
-First and Second Generation Images
-----------------------------------
+First and Next Generation Images
+--------------------------------
 
 Rackspace provides two sets of virtual machine images, *first* and *next*
 generation. As of ``0.8.9`` salt-cloud will default to using the *next*
