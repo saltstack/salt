@@ -43,7 +43,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
         except Exception:
             pass
 
-        log.warning('Caught exception reading from URL. Retry no. %s'%(i))
+        log.warning('Caught exception reading from URL. Retry no. {0}'.format(i))
         time.sleep(2 ** i)
     log.error('Failed to read from URL for {0} times. Giving up.'.format(num_retries))
     return ''
