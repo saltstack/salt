@@ -92,7 +92,7 @@ def start():
                 apiopts['ssl_crt'], apiopts['ssl_key'])
         wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': application})
         server = wsgiserver.CherryPyWSGIServer(
-                ('0.0.0.0', apiopts['port']),
+                (apiopts['host'], apiopts['port']),
                 wsgi_app=wsgi_d)
         server.ssl_adapter = ssl_a
 
