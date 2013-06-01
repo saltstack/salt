@@ -1,4 +1,22 @@
 -------------------------------------------------------------------
+Sat Jun  1 21:51:07 UTC 2013 - aboe76@gmail.com
+
+- Service release 0.15.3
+  showstoppers from 0.15.2:
+  - mine fix cross validity.
+  - redhat package issue
+  - pillar refresh fix
+
+-------------------------------------------------------------------
+Wed May 29 16:10:42 UTC 2013 - aboe76@gmail.com
+
+- Service release 0.15.2
+  xinetd service name not appended
+  virt-module uses qemu-img
+  publish.publish returns same info as salt-master
+  updated gitfs module  
+
+-------------------------------------------------------------------
 Mon May 27 20:42:06 UTC 2013 - aboe76@gmail.com
 
 - Fixed salt-master config file not readable by user 'salt'
