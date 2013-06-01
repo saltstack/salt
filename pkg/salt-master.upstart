@@ -4,6 +4,7 @@ start on (net-device-up
           and local-filesystems
           and runlevel [2345])
 stop on runlevel [!2345]
+limit nofile 100000 100000
 
 script
 exec salt-master
