@@ -684,6 +684,7 @@ class Minion(object):
             self.opts['id'],
             self.opts['environment'],
         ).compile_pillar()
+        self.module_refresh()
 
     def clean_die(self, signum, frame):
         '''
