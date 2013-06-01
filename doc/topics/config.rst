@@ -489,6 +489,7 @@ the API Access tab.
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       provider: digital_ocean
+      location: New York 1
 
 
 **NOTE**: With the new providers configuration syntax you would have 
