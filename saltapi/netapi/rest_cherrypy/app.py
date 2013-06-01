@@ -900,7 +900,7 @@ class API(object):
         '''
         conf = {
             'global': {
-                'server.socket_host': '0.0.0.0',
+                'server.socket_host': apiopts.get('host', '0.0.0.0'),
                 'server.socket_port': apiopts.get('port', 8000),
                 'debug': apiopts.get('debug', False),
             },
