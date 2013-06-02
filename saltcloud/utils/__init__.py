@@ -12,6 +12,7 @@ import time
 import subprocess
 import multiprocessing
 import logging
+import pipes
 import types
 import re
 import warnings
@@ -533,6 +534,14 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         ' '.join(environ), deploy_command
                     )
 
+                    # Since we're trying to enforce system variables and we do
+                    # not know which shell we'll encounter on the other side,
+                    # let's force it to be `sh` which supports passing
+                    # environment variable on the same command line
+                    deploy_command = 'sh -c {0}'.format(
+                        pipes.quote(deploy_command)
+                    )
+
                 if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
@@ -726,8 +735,8 @@ def root_cmd(command, tty, sudo, **kwargs):
             '-i {0}'.format(kwargs['key_filename'])
         ])
 
-    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2!r}'.format(
-        ' '.join(ssh_args), kwargs, command
+    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
+        ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
 
