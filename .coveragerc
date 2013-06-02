@@ -1,2 +1,10 @@
 [run]
 branch = True
+
+[report]
+include =
+	salt/*
+
+omit =
+	# omit all of our tests
+	tests/*
