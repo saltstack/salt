@@ -142,3 +142,20 @@ it can be verified with Salt:
 
     # salt myinstance test.ping
 
+
+First and Next Generation Images
+--------------------------------
+
+Rackspace provides two sets of virtual machine images, *first* and *next*
+generation. As of ``0.8.9`` salt-cloud will default to using the *next*
+generation images. To force the use of first generation images, on the profile 
+configuration please add:
+
+.. code-block:: yaml
+
+    FreeBSD-9.0-512:
+      provider: my-openstack-config
+      size: 512MB Standard Instance
+      image: FreeBSD 9.0
+      force_first_gen: True
+
