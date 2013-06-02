@@ -15,10 +15,10 @@ before_install:
 
 install: pip install -r requirements.txt --use-mirrors --mirrors=http://testpypi.python.org/pypi
 
-script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/coverage run setup.py test --runtests-opts='--run-destructive --sysinfo -v'"
+script: "sudo -E /home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/python setup.py test --runtests-opts='--run-destructive --sysinfo -v --coverage --no-coverage-report'"
 
 after_script:
-  - coveralls
+  - coveralls --verbose
 
 notifications:
   irc:
