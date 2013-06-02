@@ -3,8 +3,8 @@ branch = True
 
 [report]
 include =
-	salt/
+	salt/**
 
 omit =
 	# omit all of our tests
-	tests/
+	tests/**
