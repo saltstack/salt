@@ -11,7 +11,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.15.2
+Version: 0.15.3
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -26,7 +26,6 @@ Source4: %{name}-master.service
 Source5: %{name}-syndic.service
 Source6: %{name}-minion.service
 Source7: README.fedora
-Patch0: 0004-more-complete-ordereddict-recipe.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -131,8 +130,6 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -q
-
-%patch0 -p1
 
 %build
 
@@ -312,6 +309,10 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Sat Jun 1 2013 Clint Savage <herlo1@gmail.com> - 0.15.3-1
+- Update to patch release 0.15.3
+- Removed OrderedDict patch
+
 * Fri May 31 2013 Clint Savage <herlo1@gmail.com> - 0.15.2-1
 - Update to patch release 0.15.2
 - Patch OrderedDict for failed tests (SaltStack#4912)
