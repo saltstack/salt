@@ -22,10 +22,18 @@ except ImportError:
     xmlrunner = None
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+SALT_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
     os.path.join(TMP, 'xml-test-reports')
 )
+
+
+try:
+    if SALT_ROOT:
+        os.chdir(SALT_ROOT)
+except OSError, err:
+    print 'Failed to change directory to salt\'s source: {0}'.format(err)
 
 try:
     import coverage
@@ -34,7 +42,7 @@ try:
     # Setup coverage
     code_coverage = coverage.coverage(
         branch=True,
-        source=[os.path.join(os.path.dirname(TEST_DIR), 'salt')],
+        source=[os.path.join(os.getcwd(), 'salt')],
     )
 except ImportError:
     code_coverage = None
@@ -281,6 +289,12 @@ def parse_opts():
         help='Run tests and report code coverage'
     )
     output_options_group.add_option(
+        '--no-coverage-report',
+        default=False,
+        action='store_true',
+        help='Don\'t build the coverage HTML report'
+    )
+    output_options_group.add_option(
         '--no-colors',
         '--no-colours',
         default=False,
@@ -461,19 +475,20 @@ if __name__ == '__main__':
         print('Current Directory: {0}'.format(os.getcwd()))
         print('Coverage data file exists? {0}'.format(os.path.isfile('.coverage')))
 
-        report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
-        print(
-            '\nGenerating Coverage HTML Report Under {0!r} ...'.format(
-                report_dir
-            )
-        ),
-        sys.stdout.flush()
+        if opts.no_coverage_report is False:
+            report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
+            print(
+                '\nGenerating Coverage HTML Report Under {0!r} ...'.format(
+                    report_dir
+                )
+            ),
+            sys.stdout.flush()
 
-        if os.path.isdir(report_dir):
-            import shutil
-            shutil.rmtree(report_dir)
-        code_coverage.html_report(directory=report_dir)
-        print('Done.\n')
+            if os.path.isdir(report_dir):
+                import shutil
+                shutil.rmtree(report_dir)
+            code_coverage.html_report(directory=report_dir)
+            print('Done.\n')
 
     if false_count > 0:
         sys.exit(1)
