@@ -32,7 +32,7 @@ XML_OUTPUT_DIR = os.environ.get(
 try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
-except OSError, err:
+except OSError as err:
     print 'Failed to change directory to salt\'s source: {0}'.format(err)
 
 try:
