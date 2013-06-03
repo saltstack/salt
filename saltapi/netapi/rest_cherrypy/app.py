@@ -440,9 +440,20 @@ class LowDataAdapter(object):
         :status 401: authentication required
         :status 406: requested Content-Type not available
         '''
+        import inspect
+
+        # Grab all available client interfaces
+        clients = [name for name, _ in inspect.getmembers(saltapi.APIClient,
+            predicate=inspect.ismethod) if not name.startswith('__')]
+        clients.remove('run') # run method calls client interfaces
+
+        # Grab a list of output formats
+        formats = [ctype for ctype, _ in ct_out_map]
+
         return {
-            'status': cherrypy.response.status,
             'return': "Welcome",
+            'clients': clients,
+            'output': formats,
         }
 
     def POST(self, **kwargs):
