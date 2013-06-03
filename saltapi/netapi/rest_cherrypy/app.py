@@ -604,9 +604,9 @@ class Minions(LowDataAdapter):
         job_data = next(self.exec_lowstate(), {})
 
         cherrypy.response.status = 202
-        return [{
+        return {
             'return': job_data,
-        }]
+        }
 
 
 class Jobs(LowDataAdapter):
