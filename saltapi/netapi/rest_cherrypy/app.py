@@ -586,8 +586,14 @@ class Minions(LowDataAdapter):
 
                 - return:
                     jid: '20130118105423694155'
-                    minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
 
+                return:
+                - jid: '20130603122505459265'
+                  minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
+                _links:
+                  jobs:
+                  - href: /jobs/20130603122505459265
+                
         :form lowstate: lowstate data for the
             :py:mod:`~salt.client.LocalClient`; the ``client`` parameter will
             be set to ``local_async``
