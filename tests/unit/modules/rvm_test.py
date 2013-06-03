@@ -67,7 +67,7 @@ rvm rubies
                  ['ruby', '1.9.2-p180', False],
                  ['ruby', '1.9.3-p125', False],
                  ['ruby', 'head', False]],
-                rvm.list())
+                rvm.list_())
 
     def test_gemset_list(self):
         output = '''

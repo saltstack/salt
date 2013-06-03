@@ -292,7 +292,7 @@ def traceroute(host):
     traceroute_version = re.findall(r'version (\d+)\.(\d+)\.(\d+)', out2)[0]
 
     for line in out.splitlines():
-        if not ' ' in line:
+        if ' ' not in line:
             continue
         if line.startswith('traceroute'):
             continue

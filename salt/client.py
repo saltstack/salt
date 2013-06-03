@@ -108,7 +108,7 @@ class LocalClient(object):
         user = getpass.getuser()
         # if our user is root, look for other ways to figure out
         # who we are
-        if user == 'root' or 'SUDO_USER' in os.environ:
+        if (user == 'root' or user == self.opts['user']) and 'SUDO_USER' in os.environ:
             env_vars = ['SUDO_USER']
             for evar in env_vars:
                 if evar in os.environ:
@@ -250,7 +250,7 @@ class LocalClient(object):
             cli=False,
             **kwargs):
         '''
-        Execute a command on a randome subset of the targetted systems, pass
+        Execute a command on a random subset of the targetted systems, pass
         in the subset via the sub option to signify the number of systems to
         execute on.
         '''

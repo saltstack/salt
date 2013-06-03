@@ -27,8 +27,8 @@ def __virtual__():
 
     if __grains__['os'] in supported and _check_pkgin():
         return 'pkg'
-    else:
-        return False
+
+    return False
 
 
 def _splitpkg(name):
@@ -208,7 +208,8 @@ def install(name=None, refresh=False, fromrepo=None,
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
 
     # Support old "repo" argument
     repo = kwargs.get('repo', '')

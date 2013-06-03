@@ -122,7 +122,7 @@ def list_upgrades(refresh=True):
                 pkglist, [pkg]
             )
             for pkg in exactmatch:
-                if pkg.arch == rpmUtils.arch.getCanonArch() \
+                if pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib() \
                         or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join(
                         [pkg['version'], pkg['release']]
@@ -200,7 +200,7 @@ def latest_version(*names, **kwargs):
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-                    and (pkg.arch == rpmUtils.arch.getCanonArch()
+                    and (pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib()
                          or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
@@ -456,7 +456,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 

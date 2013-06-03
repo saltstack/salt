@@ -781,14 +781,19 @@ class AESFuncs(object):
         '''
         Return the master options to the minion
         '''
-        mopts = dict(self.opts)
-        file_roots = dict(mopts['file_roots'])
+        mopts = {}
         file_roots = {}
         envs = self._file_envs()
         for env in envs:
             if env not in file_roots:
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
+        if load.get('env_only'):
+            return mopts
+        mopts['renderer'] = self.opts['renderer']
+        mopts['failhard'] = self.opts['failhard']
+        mopts['state_top'] = self.opts['state_top']
+        mopts['nodegroups'] = self.opts['nodegroups']
         return mopts
 
     def _mine_get(self, load):
@@ -809,7 +814,7 @@ class AESFuncs(object):
             mine = os.path.join(
                     self.opts['cachedir'],
                     'minions',
-                    load['id'],
+                    minion,
                     'mine.p')
             try:
                 with salt.utils.fopen(mine) as fp_:
@@ -833,6 +838,13 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'mine.p')
+            if not load.get('clear', False):
+                if os.path.isfile(datap):
+                    with salt.utils.fopen(datap, 'r') as fp_:
+                        new = self.serial.load(fp_)
+                    if isinstance(new, dict):
+                        new.update(load['data'])
+                        load['data'] = new
             with salt.utils.fopen(datap, 'w+') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
@@ -1183,22 +1195,24 @@ class AESFuncs(object):
                     return {}
             else:
                 load['expr_form'] = clear_load['tgt_type']
-        if clear_load.get('form', '') == 'full':
-            load['raw'] = True
+        load['raw'] = True
         ret = {}
         for minion in self.local.cmd_iter(**load):
-            if load.get('raw', False):
+            if clear_load.get('form', '') == 'full':
                 data = minion
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
                 data['ret'] = data.pop('return')
                 ret[minion['id']] = data
             else:
-                id_ = minion.keys()[0]
-                ret[id_] = minion[id_].get('ret', None)
+                ret[minion['id']] = minion['return']
+                if 'jid' in minion:
+                    ret['__jid__'] = minion['jid']
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
             if not key in ret:
                 ret[key] = val
+        if clear_load.get('form', '') != 'full':
+            ret.pop('__jid__')
         return ret
 
     def revoke_auth(self, load):
@@ -1421,7 +1435,7 @@ class ClearFuncs(object):
                 if fnmatch.fnmatch(keyid, line):
                     return True
                 try:
-                    if re.match(line, keyid):
+                    if re.match(r'\A{0}\z'.format(line), keyid):
                         return True
                 except re.error:
                     log.warn(

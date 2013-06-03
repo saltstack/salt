@@ -140,6 +140,7 @@ def _linux_gpu_data():
         lspci_out = __salt__['cmd.run']('lspci -vmm')
 
         cur_dev = {}
+        error = False
         for line in lspci_out.splitlines():
             # check for record-separating empty lines
             if line == '':
@@ -148,19 +149,30 @@ def _linux_gpu_data():
                 # XXX; may also need to search for "3D controller"
                 cur_dev = {}
                 continue
-            key, val = line.split(':', 1)
-            cur_dev[key.strip()] = val.strip()
+            if re.match(r'^\w+:\s+.*', line):
+                key, val = line.split(':', 1)
+                cur_dev[key.strip()] = val.strip()
+            else:
+                error = True
+                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+
+        if error:
+            log.warn(
+                'Error loading grains, unexpected linux_gpu_data output, '
+                'check that you have a valid shell configured and '
+                'permissions to run lspci command'
+            )
     except OSError:
         pass
 
     gpus = []
     for gpu in devs:
-        vendor_str_lower = gpu['Vendor'].lower()
+        vendor_strings = gpu['Vendor'].lower().split()
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = 'unknown'
         for name in known_vendors:
-            # search for an 'expected' vendor name in the string
-            if name in vendor_str_lower:
+            # search for an 'expected' vendor name in the list of strings
+            if name in vendor_strings:
                 vendor = name
                 break
         gpus.append({'vendor': vendor, 'model': gpu['Device']})
@@ -171,7 +183,7 @@ def _linux_gpu_data():
     return grains
 
 
-def _netbsd_gpu_data(osdata):
+def _netbsd_gpu_data():
     '''
     num_gpus: int
     gpus:
@@ -257,7 +269,7 @@ def _bsd_cpudata(osdata):
     return grains
 
 
-def _sunos_cpudata(osdata):
+def _sunos_cpudata():
     '''
     Return the CPU information for Solaris-like systems
     '''
@@ -476,7 +488,7 @@ def _virtual(osdata):
             if zone != "global":
                 grains['virtual'] = 'zone'
                 if osdata['os'] == 'SmartOS':
-                    grains.update(_smartos_zone_data(grains))
+                    grains.update(_smartos_zone_data())
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
@@ -519,7 +531,7 @@ def _ps(osdata):
     return grains
 
 
-def _windows_platform_data(osdata):
+def _windows_platform_data():
     '''
     Use the platform module for as much as we can.
     '''
@@ -651,7 +663,7 @@ def os_data():
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
-        grains.update(_windows_platform_data(grains))
+        grains.update(_windows_platform_data())
         grains.update(_windows_cpudata())
         grains.update(_ps(grains))
         return grains
@@ -757,7 +769,7 @@ def os_data():
                         grains['os'] = osname
                         grains['osrelease'] = osrelease
 
-        grains.update(_sunos_cpudata(grains))
+        grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
@@ -769,7 +781,7 @@ def os_data():
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
         if grains['kernel'] == 'NetBSD':
-            grains.update(_netbsd_gpu_data(grains))
+            grains.update(_netbsd_gpu_data())
     if not grains['os']:
         grains['os'] = 'Unknown {0}'.format(grains['kernel'])
         grains['os_family'] = 'Unknown'
@@ -1042,7 +1054,7 @@ def _hw_data(osdata):
 
     return grains
 
-def _smartos_zone_data(osdata):
+def _smartos_zone_data():
     '''
     Return useful information from a SmartOS zone
     '''

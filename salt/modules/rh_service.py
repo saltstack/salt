@@ -124,7 +124,7 @@ def _services():
     for line in __salt__['cmd.run']('/sbin/chkconfig --list').splitlines():
         cols = line.split()
         try:
-            name = cols[0]
+            name = cols[0].strip(':')
         except IndexError:
             continue
         if name in ret:

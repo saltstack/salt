@@ -134,10 +134,10 @@ def detect_kwargs(func, args, data=None):
                     # Invalid kwarg
                     pass
                 elif has_kwargs:
-                    kwargs[comps[0]] = '='.join(comps[1:])
+                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
                     continue
                 elif comps[0] in kwarg_spec:
-                    kwargs[comps[0]] = '='.join(comps[1:])
+                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
                     continue
         _args.append(arg)
     if has_kwargs and isinstance(data, dict):
@@ -145,6 +145,18 @@ def detect_kwargs(func, args, data=None):
         for key, val in data.items():
             kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs
+
+
+def yamlify_arg(arg):
+    '''
+    yaml.safe_load the arg unless it has a newline in it
+    '''
+    try:
+        if '\n' not in arg:
+            return yaml.safe_load(arg)
+    except Exception:
+        pass
+    return arg
 
 
 class SMinion(object):

@@ -27,6 +27,8 @@ except ImportError:
 __defopts__ = {'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
                'auth.ldap.tls': False,
+               'auth.ldap.no_verify': False,
+               'auth.ldap.anonymous': False,
                'auth.ldap.scope': 2
                }
 
@@ -61,28 +63,35 @@ class _LDAPConnection:
     Setup an LDAP connection.
     '''
 
-    def __init__(self, server, port, tls, binddn, bindpw):
+    def __init__(self, server, port, tls, no_verify, binddn, bindpw,
+                 anonymous):
         '''
-        Bind to an LDAP directory using passed credentials."""
+        Bind to an LDAP directory using passed credentials.
         '''
         self.server = server
         self.port = port
         self.tls = tls
         self.binddn = binddn
         self.bindpw = bindpw
+        schema = 'ldap'
         try:
+            if no_verify:
+                ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
+                                ldap.OPT_X_TLS_NEVER)
+            if self.tls:
+                schema = 'ldaps'
             self.ldap = ldap.initialize(
-                'ldap://{0}:{1}'.format(self.server, self.port)
+                '{0}://{1}:{2}'.format(schema, self.server, self.port)
             )
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
-            if self.tls:
-                self.ldap.start_tls_s()
-            self.ldap.simple_bind_s(self.binddn, self.bindpw)
-        except Exception:
+
+            if not anonymous:
+                self.ldap.simple_bind_s(self.binddn, self.bindpw)
+        except Exception as ldap_error:
             raise CommandExecutionError(
-                'Failed to bind to LDAP server {0}:{1} as {2}'.format(
-                    self.server, self.port, self.binddn
+                'Failed to bind to LDAP server {0}:{1} as {2}: {3}'.format(
+                    self.server, self.port, self.binddn, ldap_error
                 )
             )
 
@@ -96,7 +105,8 @@ def auth(username, password):
     basedn = _config('basedn')
     scope = _config('scope')
     connargs = {}
-    for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
+    for name in ['server', 'port', 'tls', 'binddn', 'bindpw', 'no_verify',
+                 'anonymous']:
         connargs[name] = _config(name)
     # Initial connection with config basedn and bindpw
     _ldap = _LDAPConnection(**connargs).ldap

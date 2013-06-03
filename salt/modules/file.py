@@ -1322,11 +1322,12 @@ def check_managed(
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 
-    sfn, source_sum, comment = '', None, ''
+    sfn = ''
+    source_sum = None
 
     if contents is None:
         # Gather the source file from the server
-        sfn, source_sum, comment = get_managed(
+        sfn, source_sum, comments = get_managed(
                 name,
                 template,
                 source,
@@ -1338,17 +1339,16 @@ def check_managed(
                 context,
                 defaults,
                 **kwargs)
-        if comment:
+        if comments:
             __clean_tmp(sfn)
-            return False, comment
+            return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
-        comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
-            comment += '{0}: {1}\n'.format(key, val)
-        return None, comment
+        comments = ['The following values are set to be changed:\n']
+        comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
+        return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
 
@@ -1742,13 +1742,8 @@ def makedirs(path, user=None, group=None, mode=None):
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
     for directory_to_create in directories_to_create:
-        if directory_to_create == os.path.normpath(path):
-            # only the directory passed to this function gets the user, group,
-            # set
-            mkdir(directory_to_create, user=user, group=group, mode=mode)
-            continue
-        # Create the directory
-        mkdir(directory_to_create)
+        # all directories have the user, group and mode set!!
+        mkdir(directory_to_create, user=user, group=group, mode=mode)
 
 
 def makedirs_perms(name, user=None, group=None, mode='0755'):

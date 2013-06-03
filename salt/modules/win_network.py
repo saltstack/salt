@@ -8,21 +8,24 @@ import re
 # Import salt libs
 import salt.utils
 from salt.utils.socket_util import sanitize_host
+try:
+    import salt.utils.winapi
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
-HAS_WMI = False
 try:
     import wmi
-    HAS_WMI = True
 except ImportError:
-    pass
+    HAS_DEPENDENCIES = False
 
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return 'network'
     return False
 
@@ -218,9 +221,8 @@ def _interfaces_ipconfig(out):
 
 def interfaces():
     '''
-    Return details about network interfaces
+    Return details about each network interface
     '''
-
     with salt.utils.winapi.Com():
         c = wmi.WMI()
         ifaces = {}
