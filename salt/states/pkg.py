@@ -48,6 +48,8 @@ if salt.utils.is_windows():
     _get_package_info = namespaced_function(_get_package_info, globals())
     _get_latest_pkg_version = namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = namespaced_function(_reverse_cmp_pkg_versions, globals())
+    # The following imports are used by the namespaced win_pkg funcs
+    # and need to be included in their globals.
     import msgpack
     from distutils.version import LooseVersion
 

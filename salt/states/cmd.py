@@ -278,6 +278,7 @@ def wait(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -348,6 +349,7 @@ def wait_script(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -398,16 +400,16 @@ def run(name,
         Pass in a list or dict of environment variables to be applied to the
         command upon execution
 
+    stateful
+        The command being executed is expected to return data about executing
+        a state
+
     umask
         The umask (in octal) to use when running the command.
 
     quiet
         The command will be executed quietly, meaning no log entries of the
         actual command or its return data
-
-    stateful
-        The command being executed is expected to return data about executing
-        a state
     '''
     ret = {'name': name,
            'changes': {},
@@ -712,6 +714,7 @@ def wait_call(name,
               unless=None,
               stateful=False,
               **kwargs):
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,

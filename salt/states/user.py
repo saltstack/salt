@@ -36,7 +36,7 @@ def _changes(name,
              groups=None,
              optional_groups=None,
              remove_groups=True,
-             home=True,
+             home=None,
              password=None,
              enforce_password=True,
              shell=None,
@@ -90,8 +90,7 @@ def _changes(name,
                     change['groups'].append(wanted_group)
     if home:
         if lusr['home'] != home:
-            if home is not True:
-                change['home'] = home
+            change['home'] = home
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -121,7 +120,8 @@ def present(name,
             groups=None,
             optional_groups=None,
             remove_groups=True,
-            home=True,
+            home=None,
+            createhome=True,
             password=None,
             enforce_password=True,
             shell=None,
@@ -168,6 +168,11 @@ def present(name,
 
     home
         The location of the home directory to manage
+
+    createhome
+        If True, the home directory will be created if it doesn't exist.
+        Please note that directories leading up to the home directory
+        will NOT be created.
 
     password
         A password hash to set for the user
@@ -338,7 +343,8 @@ def present(name,
                                 fullname=fullname,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
-                                homephone=homephone):
+                                homephone=homephone,
+                                createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if password:
@@ -382,9 +388,16 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
+        beforegroups = set(
+                [g['name'] for g in __salt__['group.getent'](refresh=True)])
         ret['result'] = __salt__['user.delete'](name, purge, force)
+        aftergroups = set(
+                [g['name'] for g in __salt__['group.getent'](refresh=True)])
         if ret['result']:
-            ret['changes'] = {name: 'removed'}
+            ret['changes'] = {}
+            for g in (beforegroups - aftergroups):
+                ret['changes']['{0} group'.format(g)] = 'removed'
+            ret['changes'][name] = 'removed'
             ret['comment'] = 'Removed user {0}'.format(name)
         else:
             ret['result'] = False

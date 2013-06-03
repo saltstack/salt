@@ -1,7 +1,7 @@
 # Maintainer: Christer Edwards <christer.edwards@gmail.com>
 pkgname=salt-git
 _gitname="salt"
-pkgver=v0.15.0.786.g0a800ec
+pkgver=v0.15.0.1086.gfaf0bcf
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
@@ -80,8 +80,8 @@ package() {
   install -Dm644 ${srcdir}/salt/pkg/salt-common.logrotate ${pkgdir}/etc/logrotate.d/salt
 
   ## install bash-completion
-  mkdir -p ${pkgdir}usr/share/bash-completion/completion/
-  install -Dm644 ${srcdir}/salt/pkg/salt.bash ${pkgdir}usr/share/bash-completion/completion/salt
+  mkdir -p ${pkgdir}/usr/share/bash-completion/completion/
+  install -Dm644 ${srcdir}/salt/pkg/salt.bash ${pkgdir}/usr/share/bash-completion/completion/salt
 
   # remove vcs leftovers
   find "$pkgdir" -type d -name .git -exec rm -r '{}' +
