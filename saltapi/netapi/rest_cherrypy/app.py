@@ -606,6 +606,10 @@ class Minions(LowDataAdapter):
         cherrypy.response.status = 202
         return {
             'return': job_data,
+            '_links': {
+                'jobs': [{'href': '/jobs/{0}'.format(i['jid'])}
+                    for i in job_data],
+            },
         }
 
 
