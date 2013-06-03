@@ -840,7 +840,7 @@ def mkstemp(*args, **kwargs):
     if close_fd is False:
         return (fd_, fpath)
     os.close(fd_)
-    del(fd_)
+    del fd_
     return fpath
 
 
