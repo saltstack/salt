@@ -601,7 +601,7 @@ class Minions(LowDataAdapter):
         '''
         for chunk in cherrypy.request.lowstate:
             chunk['client'] = 'local_async'
-        job_data = next(self.exec_lowstate(), {})
+        job_data = list(self.exec_lowstate())
 
         cherrypy.response.status = 202
         return {
