@@ -22,6 +22,7 @@ import copy
 import logging
 import msgpack
 import os
+import locale
 from distutils.version import LooseVersion
 
 # Import salt libs
@@ -279,6 +280,7 @@ def _get_reg_software():
                    'SchedulingAgent',
                    'WIC'
                    ]
+    encoding = locale.getpreferredencoding()
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
     reg_entries = dict(list(_get_user_keys().items()) +
@@ -303,6 +305,8 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     "DisplayName")
+                try: prd_name=prd_name.decode(encoding)
+                except: pass
                 prd_ver = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,
