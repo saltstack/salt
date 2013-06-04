@@ -1063,6 +1063,9 @@ class Minion(object):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
+            # Python handles ctrl-C event in another thread on windows
+            # Add a short sleep to yield to it
+            time.sleep(0.05)
 
     def tune_in_no_block(self):
         '''
