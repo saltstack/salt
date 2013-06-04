@@ -1793,7 +1793,7 @@ class ClearFuncs(object):
             )
             return ''
         # to make sure we don't step on anyone else's toes
-        del(good)
+        del good
 
         # Check for external auth calls
         if extra.get('token', False):

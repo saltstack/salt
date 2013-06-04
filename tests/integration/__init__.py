@@ -340,7 +340,7 @@ class TestDaemon(object):
             )
             return False
 
-        del(wait_minion_connections)
+        del wait_minion_connections
 
         sync_needed = self.opts.clean
         if self.opts.clean is False:
@@ -384,7 +384,7 @@ class TestDaemon(object):
             if sync_minions.exitcode > 0:
                 return False
             sync_minions.terminate()
-            del(sync_minions)
+            del sync_minions
 
         return True
 
