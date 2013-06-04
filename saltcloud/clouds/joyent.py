@@ -314,11 +314,11 @@ def create(vm_):
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
+            vm_, pprint.pformat(data)
         )
     )
 
-    ret.update(data.__dict__)
+    ret.update(data)
     return ret
 
 
@@ -331,7 +331,11 @@ def create_node(**kwargs):
     image = kwargs['image']
     location = kwargs['location']
 
-    data = json.dumps({'name': name, 'package': size.id, 'dataset': image.id})
+    data = json.dumps({
+        'name': name,
+        'package': size['id'],
+        'dataset': image['id']
+    })
 
     try:
         ret = query2(command='/my/machines', data=data, method='POST',
@@ -360,8 +364,8 @@ def destroy(name, call=None):
 
     '''
     node = get_node(name)
-    ret = query2(command='my/machines/{0}'.format(node.id),
-                 location=node.location, method='DELETE')
+    ret = query2(command='my/machines/{0}'.format(node['id']),
+                 location=node['location'], method='DELETE')
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -379,8 +383,8 @@ def reboot(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node.id),
-                      location=node.location, data={'action': 'reboot'})
+                      command='/my/machines/{0}'.format(node['id']),
+                      location=node['location'], data={'action': 'reboot'})
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -398,8 +402,8 @@ def stop(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node.id),
-                      location=node.location, data={'action': 'stop'})
+                      command='/my/machines/{0}'.format(node['id']),
+                      location=node['location'], data={'action': 'stop'})
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -417,8 +421,8 @@ def start(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/%s' % node.id,
-                      location=node.location, data={'action': 'start'})
+                      command='/my/machines/%s' % node['id'],
+                      location=node['location'], data={'action': 'start'})
     return ret[0] in VALID_RESPONSE_CODES
 
 
