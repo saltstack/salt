@@ -451,6 +451,7 @@ class Minion(object):
             self.opts,
             self.functions,
             self.returners)
+        self.children = []
 
     def __prep_mod_opts(self):
         '''
@@ -572,7 +573,7 @@ class Minion(object):
         # side.
         instance = self
         if self.opts['multiprocessing']:
-            if sys.platform.startswith('win'):
+            if salt.utils.is_windows():
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
@@ -584,7 +585,7 @@ class Minion(object):
                 target=target, args=(instance, self.opts, data)
             )
         process.start()
-        process.join()
+        self.children.append(process)
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -596,13 +597,16 @@ class Minion(object):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = cls(opts)
+        sdata = {'pid': os.getpid()}
         if opts['multiprocessing']:
             fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             salt.utils.daemonize_if(opts)
-            sdata = {'pid': os.getpid()}
-            sdata.update(data)
-            with salt.utils.fopen(fn_, 'w+') as fp_:
-                fp_.write(minion_instance.serial.dumps(sdata))
+        else:
+            sdata['tid'] = threading.current_thread().ident
+        sdata.update(data)
+        fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
+        with open(fn_, 'w+') as fp_:
+            fp_.write(minion_instance.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -819,6 +823,17 @@ class Minion(object):
                 data['arg'] = []
             self._handle_decoded_payload(data)
 
+    def _cleanup_children(self):
+        if self.children:
+            running_children = []
+            while self.children:
+                process = self.children.pop()
+                if process.is_alive():
+                    running_children.append(process)
+                else:
+                    process.join()
+            self.children = running_children
+
     @property
     def master_pub(self):
         '''
@@ -1000,6 +1015,12 @@ class Minion(object):
 
         loop_interval = int(self.opts['loop_interval'])
         while True:
+            try:
+                self._cleanup_children()
+            except Exception as exc:
+                log.error(
+                    'Exception {0} occurred in cleanup children'.format(exc)
+                )
             try:
                 self.schedule.eval()
                 # Check if scheduler requires lower loop interval than

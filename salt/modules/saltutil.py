@@ -14,6 +14,7 @@ import logging
 import fnmatch
 import time
 import sys
+import threading
 
 # Import salt libs
 import salt.payload
@@ -363,17 +364,27 @@ def running():
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         with salt.utils.fopen(path, 'rb') as fp_:
-            data = serial.loads(fp_.read())
+            try:
+                data = serial.loads(fp_.read())
+            except Exception:
+                # Invalid serial object
+                continue
         if not isinstance(data, dict):
             # Invalid serial object
             continue
-        if not procs.get(str(data['pid'])):
+        if not procs.get(data['pid']):
             # The process is no longer running, clear out the file and
             # continue
             os.remove(path)
             continue
         if data.get('pid') == pid:
-            continue
+            if not data.has_key('tid'):
+                continue
+            elif not data.get('tid') in [t.ident for t in threading.enumerate()]:
+                os.remove(path)
+                continue
+            elif data.get('tid') == threading.current_thread().ident:
+                continue
         ret.append(data)
     return ret
 

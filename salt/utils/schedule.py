@@ -49,6 +49,18 @@ class Schedule(object):
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
+        self.children = []
+
+    def _cleanup_children(self):
+        if self.children:
+            running_children = []
+            while self.children:
+                process = self.children.pop()
+                if process.is_alive():
+                    running_children.append(process)
+                else:
+                    process.join()
+            self.children = running_children
 
     def option(self, opt):
         '''
@@ -62,7 +74,7 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
-        if salt.utils.is_windows():
+        if salt.utils.is_windows() and self.opts.get('multiprocessing', True):
             self.functions = salt.loader.minion_mods(self.opts)
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
@@ -108,6 +120,12 @@ class Schedule(object):
         '''
         Evaluate and execute the schedule
         '''
+        try:
+            self._cleanup_children()
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in cleanup schedule children'.format(exc)
+            )
         schedule = self.option('schedule')
         if not isinstance(schedule, dict):
             return
@@ -151,12 +169,25 @@ class Schedule(object):
             else:
                 log.debug('Running scheduled job: {0}'.format(job))
 
+            # Multiprocessing will fail on windows if self cannot be pickled.
+            # self.function and self.returners cannot as the
+            # module names are mangled by the loader.
+            #
+            # To workaround this temporarily clear the function dicts
+            # and restore them after the process has been spwaned.
             if self.opts.get('multiprocessing', True):
                 thread_cls = multiprocessing.Process
+                if salt.utils.is_windows():
+                    saved_functions = self.functions
+                    saved_returners = self.returners
+                    self.functions = {}
+                    self.returners = {}
             else:
                 thread_cls = threading.Thread
             proc = thread_cls(target=self.handle_func, args=(func, data))
             proc.start()
-            if self.opts.get('multiprocessing', True):
-                proc.join()
+            if self.opts.get('multiprocessing', True) and salt.utils.is_windows():
+                    self.functions = saved_functions
+                    self.returners = saved_returners
+            self.children.append(proc)
             self.intervals[job] = int(time.time())
