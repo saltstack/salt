@@ -181,7 +181,10 @@ def create(vm_):
         )
 
     log.info(
-        'Creating Cloud VM {0} in {1}'.format(vm_['name'], vm_['location'])
+        'Creating Cloud VM {0} in {1}'.format(
+            vm_['name'],
+            vm_.get('location', DEFAULT_LOCATION)
+        )
     )
 
     ## added . for fqdn hostnames
@@ -190,7 +193,7 @@ def create(vm_):
         'name': vm_['name'],
         'image': get_image(vm_),
         'size': get_size(vm_),
-        'location': vm_['location']
+        'location': vm_.get('location', DEFAULT_LOCATION)
 
     }
     try:
@@ -230,7 +233,10 @@ def create(vm_):
         try:
             data = saltcloud.utils.wait_for_ip(
                 __query_node_data,
-                update_args=(data['id'], vm_['location']),
+                update_args=(
+                    data['id'],
+                    vm_.get('location', DEFAULT_LOCATION)
+                ),
                 interval=1
             )
         except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
