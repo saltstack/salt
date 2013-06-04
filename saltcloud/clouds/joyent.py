@@ -97,16 +97,6 @@ VALID_RESPONSE_CODES = [
 ]
 
 
-class DictObject(dict):
-    '''
-    handy class to make a dictionary into a simple object
-    '''
-    def __init__(self, data):
-        self.update(data)
-        for key, value in data.items():
-            setattr(self, key, value)
-
-
 # Only load in this module is the JOYENT configurations are in place
 def __virtual__():
     '''
@@ -127,7 +117,6 @@ def __virtual__():
     list_nodes_select = namespaced_function(
         list_nodes_select, globals(), (conn,)
     )
-
     return 'joyent'
 
 
@@ -256,9 +245,9 @@ def create(vm_):
     data = reformat_node(data)
 
     if config.get_config_value('deploy', vm_, __opts__) is True:
-        host = data.public_ips[0]
+        host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
-            host = data.private_ips[0]
+            host = data['private_ips'][0]
 
         deploy_script = script(vm_)
         deploy_kwargs = {
@@ -557,9 +546,9 @@ def key_list(key='name', items=None):
         for item in items:
             if 'name' in item:
                 # added for consistency with old code
-                if not 'id' in item:
+                if 'id' not in item:
                     item['id'] = item['name']
-                ret[item['name']] = DictObject(item)
+                ret[item['name']] = item
     return ret
 
 
@@ -603,7 +592,7 @@ def reformat_node(item=None, full=False):
 
     :param item: node dictionary
     :param full: full or brief output
-    :return: DictObject
+    :return: dict
     '''
     desired_keys = [
         'id', 'name', 'state', 'public_ips', 'private_ips', 'size', 'image',
@@ -632,7 +621,7 @@ def reformat_node(item=None, full=False):
     if 'state' in item.keys():
         item['state'] = joyent_node_state(item['state'])
 
-    return DictObject(item)
+    return item
 
 
 def list_nodes(full=False):
