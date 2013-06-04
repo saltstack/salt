@@ -87,7 +87,7 @@ def verify(*package):
         if 'missing' in line:
             line = ' ' + line
             fdict['missing'] = True
-            del(fdict['mismatch'])
+            del fdict['mismatch']
         fname = line[13:]
         if line[11:12] in ftypes:
             fdict['type'] = ftypes[line[11:12]]

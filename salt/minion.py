@@ -1127,7 +1127,7 @@ class Minion(object):
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
         if hasattr(self, 'local'):
-            del(self.local)
+            del self.local
 
     def __del__(self):
         self.destroy()
