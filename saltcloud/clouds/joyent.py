@@ -97,16 +97,6 @@ VALID_RESPONSE_CODES = [
 ]
 
 
-class DictObject(dict):
-    '''
-    handy class to make a dictionary into a simple object
-    '''
-    def __init__(self, data):
-        self.update(data)
-        for key, value in data.items():
-            setattr(self, key, value)
-
-
 # Only load in this module is the JOYENT configurations are in place
 def __virtual__():
     '''
@@ -127,7 +117,6 @@ def __virtual__():
     list_nodes_select = namespaced_function(
         list_nodes_select, globals(), (conn,)
     )
-
     return 'joyent'
 
 
@@ -192,7 +181,10 @@ def create(vm_):
         )
 
     log.info(
-        'Creating Cloud VM {0} in {1}'.format(vm_['name'], vm_['location'])
+        'Creating Cloud VM {0} in {1}'.format(
+            vm_['name'],
+            vm_.get('location', DEFAULT_LOCATION)
+        )
     )
 
     ## added . for fqdn hostnames
@@ -201,7 +193,7 @@ def create(vm_):
         'name': vm_['name'],
         'image': get_image(vm_),
         'size': get_size(vm_),
-        'location': vm_['location']
+        'location': vm_.get('location', DEFAULT_LOCATION)
 
     }
     try:
@@ -229,6 +221,11 @@ def create(vm_):
         if rcode not in VALID_RESPONSE_CODES:
             # Trigger a wait for IP error
             return False
+
+        if data['state'] != 'running':
+            # Still not running, trigger another iteration
+            return
+
         if isinstance(data['ips'], list) and len(data['ips']) > 0:
             return data
 
@@ -241,7 +238,10 @@ def create(vm_):
         try:
             data = saltcloud.utils.wait_for_ip(
                 __query_node_data,
-                update_args=(data['id'], vm_['location']),
+                update_args=(
+                    data['id'],
+                    vm_.get('location', DEFAULT_LOCATION)
+                ),
                 interval=1
             )
         except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
@@ -256,9 +256,9 @@ def create(vm_):
     data = reformat_node(data)
 
     if config.get_config_value('deploy', vm_, __opts__) is True:
-        host = data.public_ips[0]
+        host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
-            host = data.private_ips[0]
+            host = data['private_ips'][0]
 
         deploy_script = script(vm_)
         deploy_kwargs = {
@@ -319,11 +319,11 @@ def create(vm_):
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
+            vm_, pprint.pformat(data)
         )
     )
 
-    ret.update(data.__dict__)
+    ret.update(data)
     return ret
 
 
@@ -336,7 +336,11 @@ def create_node(**kwargs):
     image = kwargs['image']
     location = kwargs['location']
 
-    data = json.dumps({'name': name, 'package': size.id, 'dataset': image.id})
+    data = json.dumps({
+        'name': name,
+        'package': size['id'],
+        'dataset': image['id']
+    })
 
     try:
         ret = query2(command='/my/machines', data=data, method='POST',
@@ -365,8 +369,8 @@ def destroy(name, call=None):
 
     '''
     node = get_node(name)
-    ret = query2(command='my/machines/{0}'.format(node.id),
-                 location=node.location, method='DELETE')
+    ret = query2(command='my/machines/{0}'.format(node['id']),
+                 location=node['location'], method='DELETE')
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -384,8 +388,8 @@ def reboot(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node.id),
-                      location=node.location, data={'action': 'reboot'})
+                      command='/my/machines/{0}'.format(node['id']),
+                      location=node['location'], data={'action': 'reboot'})
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -403,8 +407,8 @@ def stop(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/{0}'.format(node.id),
-                      location=node.location, data={'action': 'stop'})
+                      command='/my/machines/{0}'.format(node['id']),
+                      location=node['location'], data={'action': 'stop'})
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -422,8 +426,8 @@ def start(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/%s' % node.id,
-                      location=node.location, data={'action': 'start'})
+                      command='/my/machines/%s' % node['id'],
+                      location=node['location'], data={'action': 'start'})
     return ret[0] in VALID_RESPONSE_CODES
 
 
@@ -557,9 +561,9 @@ def key_list(key='name', items=None):
         for item in items:
             if 'name' in item:
                 # added for consistency with old code
-                if not 'id' in item:
+                if 'id' not in item:
                     item['id'] = item['name']
-                ret[item['name']] = DictObject(item)
+                ret[item['name']] = item
     return ret
 
 
@@ -603,7 +607,7 @@ def reformat_node(item=None, full=False):
 
     :param item: node dictionary
     :param full: full or brief output
-    :return: DictObject
+    :return: dict
     '''
     desired_keys = [
         'id', 'name', 'state', 'public_ips', 'private_ips', 'size', 'image',
@@ -632,7 +636,7 @@ def reformat_node(item=None, full=False):
     if 'state' in item.keys():
         item['state'] = joyent_node_state(item['state'])
 
-    return DictObject(item)
+    return item
 
 
 def list_nodes(full=False):
