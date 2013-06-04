@@ -221,6 +221,11 @@ def create(vm_):
         if rcode not in VALID_RESPONSE_CODES:
             # Trigger a wait for IP error
             return False
+
+        if data['state'] != 'running':
+            # Still not running, trigger another iteration
+            return
+
         if isinstance(data['ips'], list) and len(data['ips']) > 0:
             return data
 
