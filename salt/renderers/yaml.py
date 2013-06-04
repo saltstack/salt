@@ -49,5 +49,5 @@ def render(yaml_data, env='', sls='', argline='', **kws):
                     warn=item.message, sls=sls, env=env))
         if not data:
             data = {}
-        log.trace('Results of YAML rendering: \n{0}'.format(data))
+        log.debug('Results of YAML rendering: \n{0}'.format(data))
         return data
