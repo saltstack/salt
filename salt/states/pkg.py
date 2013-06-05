@@ -104,6 +104,11 @@ def _find_install_targets(name=None, version=None, pkgs=None, sources=None):
     else:
         if salt.utils.is_windows():
             pkginfo = _get_package_info(name)
+            if not pkginfo:
+                return {'name':name,
+                        'changes':{},
+                        'result':False,
+                        'comment':('Package {0} not found in the repository.'.format(name))}
             if version is None:
                 version = _get_latest_pkg_version(pkginfo)
             name = pkginfo[version]['full_name']
