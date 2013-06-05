@@ -38,7 +38,7 @@ def returner(ret):
     '''
     If an error occurs, log it to sentry
     '''
-    def connect_sentry(message, result):
+    def connect_sentry(result):
         pillar_data = __salt__['pillar.raw']()
         sentry_data = {
             'result': result,
@@ -70,15 +70,15 @@ def returner(ret):
     try:
         if 'success' not in ret:
             logger.debug('no success data, report')
-            connect_sentry(ret['return'], ret)
+            connect_sentry(ret['return'])
         else:
             if not ret['success']:
                 logger.debug('not a success, report')
-                connect_sentry(ret['return'], ret)
+                connect_sentry(ret['return'])
             else:
                 for state in ret['return']:
                     if not ret['return'][state]['result'] and \
                        ret['return'][state]['comment'] != requisite_error:
-                        connect_sentry(state, ret['return'][state])
+                        connect_sentry(state)
     except Exception as err:
         logger.error("Can't run connect_sentry: %s", err, exc_info=True)

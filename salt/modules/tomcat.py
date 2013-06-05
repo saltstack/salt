@@ -50,6 +50,10 @@ import os
 # Import Salt libs
 import salt.utils
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 # Private
 def __virtual__():
     '''
@@ -280,7 +284,7 @@ def start(app, url='http://localhost:8080/manager', timeout=180):
     return _simple_cmd('start', app, url, timeout=timeout)
 
 
-def reload(app, url='http://localhost:8080/manager', timeout=180):
+def reload_(app, url='http://localhost:8080/manager', timeout=180):
     '''
     Reload the webapp
     

@@ -31,15 +31,15 @@ def active():
                                    'Function': job['fun'],
                                    'Arguments': list(job['arg']),
                                    'Target': job['tgt'],
-                                   'Target-type': job['tgt_type']}
+                                   'Target-type': job['tgt_type'],
+                                   'User': job.get('user', 'root')}
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:
         jid_dir = salt.utils.jid_dir(
                 jid,
                 __opts__['cachedir'],
-                __opts__['hash_type']
-                )
+                __opts__['hash_type'])
         if not os.path.isdir(jid_dir):
             continue
         for minion in os.listdir(jid_dir):
@@ -142,6 +142,7 @@ def print_job(job_id):
                                     'Arguments': list(load['arg']),
                                     'Target': load['tgt'],
                                     'Target-type': load['tgt_type'],
+                                    'User': load.get('user', 'root'),
                                     'Result': hosts_return}
                         salt.output.display_output(ret, 'yaml', __opts__)
     return ret

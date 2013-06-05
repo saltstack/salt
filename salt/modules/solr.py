@@ -450,8 +450,8 @@ def lucene_version(core_name=None):
         for name in __salt__['config.option']('solr.cores'):
             resp = _get_admin_info('system', core_name=name)
             if resp['success']:
-                version = resp['data']['lucene']['lucene-spec-version']
-                data = {name: {'lucene_version': version}}
+                version_num = resp['data']['lucene']['lucene-spec-version']
+                data = {name: {'lucene_version': version_num}}
             else:  # generally this means that an exception happened.
                 data = {name: {'lucene_version': None}}
                 success = False
@@ -460,8 +460,8 @@ def lucene_version(core_name=None):
     else:
         resp = _get_admin_info('system', core_name=core_name)
         if resp['success']:
-            version = resp['data']['lucene']['lucene-spec-version']
-            return _get_return_dict(True, {'version': version}, resp['errors'])
+            version_num = resp['data']['lucene']['lucene-spec-version']
+            return _get_return_dict(True, {'version': version_num}, resp['errors'])
         else:
             return resp
 
@@ -502,8 +502,8 @@ def version(core_name=None):
     else:
         resp = _get_admin_info('system', core_name=core_name)
         if resp['success']:
-            version = resp['data']['lucene']['solr-spec-version']
-            return _get_return_dict(True, {'version': version},
+            version_num = resp['data']['lucene']['solr-spec-version']
+            return _get_return_dict(True, {'version': version_num},
                                     resp['errors'], resp['warnings'])
         else:
             return resp
@@ -630,7 +630,7 @@ def is_replication_enabled(host=None, core_name=None):
             #check for errors on the slave
             if 'ERROR' in slave:
                 success = False
-                err = "{0}: {1} - {2}".format(name, slave['ERROR'], master_url)
+                err = "{0}: {1} - {2}".format(core, slave['ERROR'], master_url)
                 resp['errors'].append(err)
                 #if there is an error return everything
                 data = slave if core is None else {core: {'data': slave}}
@@ -708,7 +708,7 @@ def match_index_versions(host=None, core_name=None):
             if 'ERROR' in slave:
                 error = slave['ERROR']
                 success = False
-                err = "{0}: {1} - {2}".format(name, error, master_url)
+                err = "{0}: {1} - {2}".format(core, error, master_url)
                 resp['errors'].append(err)
                 #if there was an error return the entire response so the
                 #alterer can get what it wants
