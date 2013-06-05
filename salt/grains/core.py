@@ -49,8 +49,10 @@ if salt.utils.is_windows():
         import salt.utils.winapi
         HAS_WMI = True
     except ImportError:
-        log.exception("Unable to import Python wmi module, some core grains "
-                      "will be missing")
+        log.exception(
+            'Unable to import Python wmi module, some core grains '
+            'will be missing'
+        )
 
 
 def _windows_cpudata():
@@ -198,8 +200,11 @@ def _netbsd_gpu_data():
 
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
-                m = re.match(r"[0-9:]+ ({0}) (.+) \(VGA .+\)"
-                            .format(vendor), line, re.IGNORECASE)
+                m = re.match(
+                    r'[0-9:]+ ({0}) (.+) \(VGA .+\)'.format(vendor),
+                    line,
+                    re.IGNORECASE
+                )
                 if m:
                     gpus.append({'vendor': m.group(1), 'model': m.group(2)})
     except OSError:
@@ -279,7 +284,7 @@ def _sunos_cpudata():
     #   cpu_model
     #   cpu_flags
     grains = {}
-    grains['cpu_flags'] = [] 
+    grains['cpu_flags'] = []
 
     grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
@@ -381,9 +386,9 @@ def _virtual(osdata):
             if 'Vendor: Bochs' in output:
                 grains['virtual'] = 'kvm'
             # Product Name: (oVirt) www.ovirt.org
-            # Red Hat Community virtualization Project based on kvm 
+            # Red Hat Community virtualization Project based on kvm
             elif 'Manufacturer: oVirt' in output:
-                grains['virtual'] = 'kvm'                
+                grains['virtual'] = 'kvm'
             elif 'VirtualBox' in output:
                 grains['virtual'] = 'VirtualBox'
             # Product Name: VMware Virtual Platform
@@ -485,7 +490,7 @@ def _virtual(osdata):
         zonename = salt.utils.which('zonename')
         if zonename:
             zone = __salt__['cmd.run']('{0}'.format(zonename))
-            if zone != "global":
+            if zone != 'global':
                 grains['virtual'] = 'zone'
                 if osdata['os'] == 'SmartOS':
                     grains.update(_smartos_zone_data())
@@ -748,26 +753,27 @@ def os_data():
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os_family'] = 'Solaris'
-        if os.path.isfile('/etc/release'):
+        uname_v = __salt__['cmd.run']('uname -v')
+        if 'joyent_' in uname_v:
+            # See https://github.com/joyent/smartos-live/issues/224
+            grains['os'] = 'SmartOS'
+            grains['osrelease'] = uname_v
+        elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
-                if 'SmartOS' in rel_data:
-                    grains['os'] = 'SmartOS'
-                    grains['osrelease'] = __salt__['cmd.run']('uname -v')
+                try:
+                    release_re = r'(Solaris|OpenIndiana(?: Development)?)' \
+                                 r'\s+(\d+ \d+\/\d+|oi_\S+)?'
+                    osname, osrelease = re.search(release_re,
+                                                  rel_data).groups()
+                except AttributeError:
+                    # Set a blank osrelease grain and fallback to 'Solaris'
+                    # as the 'os' grain.
+                    grains['os'] = 'Solaris'
+                    grains['osrelease'] = ''
                 else:
-                    try:
-                        release_re = '(Solaris|OpenIndiana(?: Development)?)' \
-                                     r'\s+(\d+ \d+\/\d+|oi_\S+)?'
-                        osname, osrelease = re.search(release_re,
-                                                      rel_data).groups()
-                    except AttributeError:
-                        # Set a blank osrelease grain and fallback to 'Solaris'
-                        # as the 'os' grain.
-                        grains['os'] = 'Solaris'
-                        grains['osrelease'] = ''
-                    else:
-                        grains['os'] = osname
-                        grains['osrelease'] = osrelease
+                    grains['os'] = osname
+                    grains['osrelease'] = osrelease
 
         grains.update(_sunos_cpudata())
     elif grains['kernel'] == 'VMkernel':
@@ -1012,7 +1018,7 @@ def _hw_data(osdata):
                 'Product(?: Name)?:': 'productname',
                 'Serial Number:': 'serialnumber',
             },
-        }   
+        }
         grains.update(_dmidecode_data(sunos_dmi_regex))
     # On FreeBSD /bin/kenv (already in base system) can be used instead of dmidecode
     elif osdata['kernel'] == 'FreeBSD':
@@ -1081,7 +1087,7 @@ def _smartos_zone_data():
         grains['pkgsrcversion'] = 'Unknown'
     if 'imageversion' not in grains:
         grains['imageversion'] = 'Unknown'
-    
+
     return grains
 
 def get_server_id():

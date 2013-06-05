@@ -47,4 +47,7 @@ def render(yaml_data, env='', sls='', argline='', **kws):
                 log.warn(
                     '{warn} found in salt://{sls} environment={env}'.format(
                     warn=item.message, sls=sls, env=env))
-        return data if data else {}
+        if not data:
+            data = {}
+        log.debug('Results of YAML rendering: \n{0}'.format(data))
+        return data
