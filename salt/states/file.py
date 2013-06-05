@@ -33,7 +33,7 @@ salt fileserver. Here's an example:
 
 .. code-block:: yaml
 
-    /etc/foo.conf
+    /etc/foo.conf:
       file.managed:
         - source:
           - salt://foo.conf.{{ grains['fqdn'] }}
