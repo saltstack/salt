@@ -68,7 +68,7 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
-        salt.utils.daemonize_if(self.opts, **ret)
+        salt.utils.daemonize_if(self.opts)
         if 'args' in data:
             if 'kwargs' in data:
                 ret['return'] = self.functions[func](
@@ -99,7 +99,7 @@ class Schedule(object):
                     self.returners['{0}.returner'.format(returner)](ret)
                 else:
                     log.info(
-                        'Job {1} using invalid returner: {0} Ignoring.'.format(
+                        'Job {0} using invalid returner: {1} Ignoring.'.format(
                         func, returner
                         )
                     )

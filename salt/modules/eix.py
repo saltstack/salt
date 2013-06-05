@@ -22,9 +22,23 @@ def sync():
 
         salt '*' eix.sync
     '''
-    cmd = 'eix-sync -q'
-    return __salt__['cmd.retcode'](cmd) == 0
-
+    cmd = 'eix-sync -q -C "--ask" -C "n"'
+    if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
+        # GPG sign verify is supported only for "webrsync"
+        if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
+            cmd += ' -W'
+        else:
+            cmd += ' -w'
+        return __salt__['cmd.retcode'](cmd) == 0
+    else:
+        if __salt__['cmd.retcode'](cmd) == 0:
+            return True
+        # We fall back to "webrsync" if "rsync" fails for some reason
+        if salt.utils.which('emerge-delta-webrsync'): # We prefer 'delta-webrsync' to 'webrsync'
+            cmd += ' -W'
+        else:
+            cmd += ' -w'
+        return __salt__['cmd.retcode'](cmd) == 0
 
 def update():
     '''

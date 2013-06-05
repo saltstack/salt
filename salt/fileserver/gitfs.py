@@ -27,8 +27,8 @@ except ImportError:
 import salt.utils
 import salt.fileserver
 
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -38,11 +38,11 @@ def __virtual__():
         return False
     if not 'git' in __opts__['fileserver_backend']:
         return False
-    if not git.__version__ > '0.3.0':
-        return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
                   'could not be loaded, is git-python installed?')
+        return False
+    if not git.__version__ > '0.3.0':
         return False
     return 'git'
 
@@ -53,7 +53,9 @@ def _get_ref(repo, short):
     '''
     for ref in repo.refs:
         if isinstance(ref, git.RemoteReference):
-            if short == os.path.basename(ref.name):
+            parted = ref.name.partition('/')
+            refname = parted[2] if parted[2] else parted[0]
+            if short == refname:
                 return ref
     return False
 
@@ -152,7 +154,8 @@ def envs():
     for repo in repos:
         remote = repo.remote()
         for ref in repo.refs:
-            short = os.path.basename(ref.name)
+            parted = ref.name.partition('/')
+            short = parted[2] if parted[2] else parted[0]
             if isinstance(ref, git.Head):
                 if short == 'master':
                     short = 'base'
@@ -175,7 +178,10 @@ def find_file(path, short='base', **kwargs):
     if short == 'base':
         short = 'master'
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', short, path)
-    hashes_glob = os.path.join(__opts__['cachedir'], 'gitfs/hash', short, '{0}.hash.*'.format(path))
+    hashes_glob = os.path.join(__opts__['cachedir'],
+                                        'gitfs/hash',
+                                        short,
+                                        '{0}.hash.*'.format(path))
     blobshadest = os.path.join(
             __opts__['cachedir'],
             'gitfs/hash',

@@ -4,6 +4,7 @@ A module to wrap pacman calls, since Arch is the best
 '''
 
 # Import python libs
+import copy
 import logging
 import re
 
@@ -24,11 +25,7 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
+    return [x for x in old if x not in new]
 
 
 def latest_version(*names, **kwargs):
@@ -56,12 +53,12 @@ def latest_version(*names, **kwargs):
           '{0}'.format(' '.join(names))
     for line in __salt__['cmd.run_stdout'](cmd).splitlines():
         try:
-            name, version = line.split()
+            name, version_num = line.split()
             # Only add to return dict if package is in the list of packages
             # passed, otherwise dependencies will make their way into the
             # return data.
             if name in names:
-                ret[name] = version
+                ret[name] = version_num
         except (ValueError, IndexError):
             pass
 
@@ -95,7 +92,7 @@ def list_upgrades():
     '''
     upgrades = {}
     lines = __salt__['cmd.run'](
-        'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
+        'pacman -Sypu --print-format "%n %v" | egrep -v ' r'"^\s|^:"'
     ).splitlines()
     for line in lines:
         comps = line.split(' ')
@@ -130,6 +127,15 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     cmd = 'pacman -Q'
     ret = {}
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -137,14 +143,15 @@ def list_pkgs(versions_as_list=False):
         if not line:
             continue
         try:
-            name, version = line.split()[0:2]
+            name, version_num = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
                       'line: "{0}"'.format(line))
         else:
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -229,15 +236,16 @@ def install(name=None,
     '''
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
-    if version:
+    version_num = kwargs.get('version')
+    if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
-            pkg_params = {name: version}
+            pkg_params = {name: version_num}
         else:
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
@@ -249,11 +257,11 @@ def install(name=None,
     elif pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -263,7 +271,7 @@ def install(name=None,
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version, name)
+                          '"{1}"'.format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -279,6 +287,7 @@ def install(name=None,
 
     old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -297,59 +306,83 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
     old = list_pkgs()
-    cmd = 'pacman -Syu --noprogressbar --noconfirm '
-    __salt__['cmd.retcode'](cmd)
+    cmd = 'pacman -Syu --noprogressbar --noconfirm'
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name, **kwargs):
+def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with ``pacman -R``
+    remove and purge do identical things but with different pacman commands,
+    this function performs the common logic.
+    '''
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    remove_arg = '-Rsc' if action == 'purge' else '-R'
+    cmd = 'pacman {0} --noprogressbar --noconfirm {1}'.format(remove_arg,
+                                                              ' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
-    Return a list containing the removed packages.
+
+def remove(name=None, pkgs=None, **kwargs):
+    '''
+    Remove packages with ``pacman -R``.
+
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-    return _list_removed(old, new)
+    return _uninstall(action='remove', name=name, pkgs=pkgs)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``pacman -Rsc``
 
-    Return a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-    return _list_removed(old, new)
+    return _uninstall(action='purge', name=name, pkgs=pkgs)
 
 
 def perform_cmp(pkg1='', pkg2=''):

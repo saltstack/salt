@@ -8,11 +8,11 @@ salt.renderers.stateconf
 :maturity: new
 :platform: all
 
-This module provides a custom renderer that process a salt file with a
-specified templating engine(e.g., Jinja) and a chosen data renderer(e.g., YAML),
-extract arguments for any ``stateconf.set`` state and provide the extracted
-arguments (including salt specific args, such as 'require', etc) as template
-context. The goal is to make writing reusable/configurable/ parameterized
+This module provides a custom renderer that processes a salt file with a
+specified templating engine (e.g., Jinja) and a chosen data renderer (e.g., YAML),
+extracts arguments for any ``stateconf.set`` state, and provides the extracted
+arguments (including Salt-specific args, such as ``require``, etc) as template
+context. The goal is to make writing reusable/configurable/parameterized
 salt files easier and cleaner.
 
 To use this renderer, either set it as the default renderer via the
@@ -24,7 +24,7 @@ Instead, you specify them as renderer arguments: ``#!stateconf mako . yaml``.
 
 Here's a list of features enabled by this renderer.
 
-- Prefixes any state id(declaration or reference) that starts with a dot(``.``)
+- Prefixes any state id (declaration or reference) that starts with a dot (``.``)
   to avoid duplicated state ids when the salt file is included by other salt
   files.
 
@@ -107,7 +107,7 @@ Here's a list of features enabled by this renderer.
   file. (*IMPORTANT: Both the included and the extending sls files must use the
   stateconf renderer for this ``extend`` to work!*)
 
-  Notice that the end of configuration marker(``# --- end of state config --``)
+  Notice that the end of configuration marker (``# --- end of state config --``)
   is needed to separate the use of 'stateconf.set' form the rest of your salt
   file. The regex that matches such marker can be configured via the
   ``stateconf_end_marker`` option in your master or minion config file.
@@ -173,9 +173,9 @@ Here's a list of features enabled by this renderer.
         - sls: some.users
 
 
-- Optionally(enabled by default, *disable* via the `-G` renderer option,
+- Optionally (enabled by default, *disable* via the `-G` renderer option,
   e.g., in the shebang line: ``#!stateconf -G``), generates a
-  ``stateconf.set`` goal state(state id named as ``.goal`` by default,
+  ``stateconf.set`` goal state (state id named as ``.goal`` by default,
   configurable via the master/minion config option, ``stateconf_goal_state``)
   that requires all other states in the salt file. Note, the ``.goal``
   state id is subject to dot-prefix rename rule mentioned earlier.
@@ -186,16 +186,16 @@ Here's a list of features enabled by this renderer.
   all states in the Tomcat sls file will be executed before some state in
   the webapp sls file.
 
-- Optionally(enable via the `-o` renderer option, e.g., in the shebang line:
+- Optionally (enable via the `-o` renderer option, e.g., in the shebang line:
   ``#!stateconf -o``), orders the states in a sls file by adding a
   ``require`` requisite to each state such that every state requires the
   state defined just before it. The order of the states here is the order
-  they are defined in the sls file.(Note: this feature is only available
+  they are defined in the sls file. (Note: this feature is only available
   if your minions are using Python >= 2.7. For Python2.6, it should also
   work if you install the `ordereddict` module from PyPI)
 
   By enabling this feature, you are basically agreeing to author your sls
-  files in a way that gives up the explicit(or implicit?) ordering imposed
+  files in a way that gives up the explicit (or implicit?) ordering imposed
   by the use of ``require``, ``watch``, ``require_in`` or ``watch_in``
   requisites, and instead, you rely on the order of states you define in
   the sls files. This may or may not be a better way for you. However, if
@@ -217,7 +217,7 @@ Here's a list of features enabled by this renderer.
   template engine available within your sls file.
 
   Finally, with the use of this feature, it becomes possible to easily make
-  an included sls file execute all its states *after* some state(say, with
+  an included sls file execute all its states *after* some state (say, with
   id ``X``) in the including sls file.  All you have to do is to make state,
   ``X``, ``require_in`` the first state defined in the included sls file.
 
@@ -238,7 +238,7 @@ writing your states like this::
 
 Instead, you should define the state id and the ``name`` argument separately
 for each state, and the id should be something meaningful and easy to reference
-within a requisite(which I think is a good habit anyway, and such extra
+within a requisite (which I think is a good habit anyway, and such extra
 indirection would also makes your sls file easier to modify later). Thus, the
 above states should be written like this::
 

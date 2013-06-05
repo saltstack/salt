@@ -12,6 +12,13 @@ Databases can be set as either absent or present
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the postgres module is present
+    '''
+    return 'postgres_database' if 'postgres.user_exists' in __salt__ else False
+
+
 def present(name,
             tablespace=None,
             encoding=None,

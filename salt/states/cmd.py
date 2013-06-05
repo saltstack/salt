@@ -145,8 +145,10 @@ def _reinterpreted_state(state):
     try:
         data = json.loads(out)
         if not isinstance(data, dict):
-            return _failout(state,
-                       'script JSON output must be a JSON object (e.g., {})!')
+            return _failout(
+                state,
+                'script JSON output must be a JSON object (e.g., {})!'
+            )
         is_json = True
     except Exception:
         idx = out.rstrip().rfind('\n')
@@ -158,9 +160,11 @@ def _reinterpreted_state(state):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
-            return _failout(state,
+            return _failout(
+                state,
                 'Failed parsing script output! '
-                'Stdout must be JSON or a line of name=value pairs.')
+                'Stdout must be JSON or a line of name=value pairs.'
+            )
 
     changed = _is_true(data.get('changed', 'no'))
 
@@ -197,33 +201,34 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
+def _run_check(cmd_kwargs, onlyif, unless, group):
     '''
-    Execute the onlyif logic and return data if the onlyif fails
+    Execute the onlyif and unless logic. 
+    Return a result dict if:
+    * group is not available
+    * onlyif failed (onlyif != 0)
+    * unless succeeded (unless == 0)
+    else return True
     '''
-    ret = {}
-
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
                 os.setegid(egid)
         except KeyError:
-            ret['comment'] = 'The group {0} is not available'.format(group)
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            ret['comment'] = 'onlyif exec failed'
-            ret['result'] = True
-            return {'comment': 'onlyif exec failed',
+            return {'comment': 'onlyif execution failed',
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless executed successfully',
+            return {'comment': 'unless execution succeeded',
                     'result': True}
+
     # No reason to stop, return True
     return True
 
@@ -273,6 +278,7 @@ def wait(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -343,6 +349,7 @@ def wait_script(name,
         The command being executed is expected to return data about executing
         a state
     '''
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -390,8 +397,12 @@ def run(name,
         The shell to use for execution, defaults to the shell grain
 
     env
-        The root directory of the environment for the referencing script. The
-        environments are defined in the master config file.
+        Pass in a list or dict of environment variables to be applied to the
+        command upon execution
+
+    stateful
+        The command being executed is expected to return data about executing
+        a state
 
     umask
         The umask (in octal) to use when running the command.
@@ -399,10 +410,6 @@ def run(name,
     quiet
         The command will be executed quietly, meaning no log entries of the
         actual command or its return data
-
-    stateful
-        The command being executed is expected to return data about executing
-        a state
     '''
     ret = {'name': name,
            'changes': {},
@@ -424,8 +431,8 @@ def run(name,
                         key, val = var.split('=')
                         _env[key] = val
                     except ValueError:
-                        ret['comment'] = 'Invalid environmental var: "{0}"'.format(
-                                var)
+                        ret['comment'] = \
+                            'Invalid environmental var: "{0}"'.format(var)
                         return ret
                 env = _env
         elif isinstance(env, dict):
@@ -440,8 +447,8 @@ def run(name,
                     if isinstance(comp, dict):
                         _env.update(comp)
                     else:
-                        ret['comment'] = 'Invalid environmental var: "{0}"'.format(
-                                env)
+                        ret['comment'] = \
+                            'Invalid environmental var: "{0}"'.format(env)
                         return ret
                 except Exception:
                     _env = {}
@@ -450,8 +457,8 @@ def run(name,
                             key, val = var.split('=')
                             _env[key] = val
                         except ValueError:
-                            ret['comment'] = 'Invalid environmental var: "{0}"'.format(
-                                    var)
+                            ret['comment'] = \
+                                'Invalid environmental var: "{0}"'.format(var)
                             return ret
             env = _env
 
@@ -466,7 +473,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)
+        cret = _run_check(cmd_kwargs, onlyif, unless, group)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -572,28 +579,35 @@ def script(name,
         pgid = os.getegid()
 
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({
-                  'runas': user,
-                  'shell': shell or __grains__['shell'],
-                  'env': env,
-                  'onlyif': onlyif,
-                  'unless': unless,
-                  'user': user,
-                  'group': group,
-                  'cwd': cwd,
-                  'template': template,
-                  'umask': umask})
+    cmd_kwargs.update({'runas': user,
+                       'shell': shell or __grains__['shell'],
+                       'env': env,
+                       'onlyif': onlyif,
+                       'unless': unless,
+                       'user': user,
+                       'group': group,
+                       'cwd': cwd,
+                       'template': template,
+                       'umask': umask})
 
-    run_check_cmd_kwargs = {'cwd': cwd,
-                  'runas': user,
-                  'shell': shell or __grains__['shell'], }
+    run_check_cmd_kwargs = {
+        'cwd': cwd,
+        'runas': user,
+        'shell': shell or __grains__['shell']
+    }
 
     # Change the source to be the name arg if it is not specified
     if source is None:
         source = name
-
+ 
+    # If script args present split from name and define args
+    if len(name.split()) > 1:
+        cmd_kwargs.update({'args': name.split(' ', 1)[1]})
+    
     try:
-        cret = _run_check(run_check_cmd_kwargs, onlyif, unless, cwd, user, group, shell)
+        cret = _run_check(
+            run_check_cmd_kwargs, onlyif, unless, group
+        )
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -666,12 +680,11 @@ def call(name, func, args=(), kws=None,
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env'),
-                  'umask': kwargs.get('umask'),
-                  }
+                  'umask': kwargs.get('umask')}
     if HAS_GRP:
         pgid = os.getegid()
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, None, None, None, None)
+        cret = _run_check(cmd_kwargs, onlyif, unless, None)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -701,6 +714,7 @@ def wait_call(name,
               unless=None,
               stateful=False,
               **kwargs):
+    # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
             'result': True,
@@ -726,11 +740,8 @@ def mod_watch(name, **kwargs):
     elif kwargs['sfun'] == 'wait_call' or kwargs['sfun'] == 'call':
         return call(name, **kwargs)
 
-
     return {'name': name,
             'changes': {},
-            'comment': ('cmd.{0} does not work with the watch requisite, '
-                       'please use cmd.wait or cmd.wait_script').format(
-                           kwargs['sfun']
-                           ),
+            'comment': 'cmd.{0[sfun]} does not work with the watch requisite, '
+                       'please use cmd.wait or cmd.wait_script'.format(kwargs),
             'result': False}

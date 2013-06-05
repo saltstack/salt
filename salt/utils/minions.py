@@ -70,15 +70,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via regular expressions
         '''
-        ret = set()
         cwd = os.getcwd()
         os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         reg = re.compile(expr)
-        for fn_ in os.listdir('.'):
-            if reg.match(fn_):
-                ret.add(fn_)
+        ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
         os.chdir(cwd)
-        return list(ret)
+        return ret
 
     def _check_grain_minions(self, expr):
         '''

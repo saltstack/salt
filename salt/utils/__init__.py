@@ -21,6 +21,8 @@ import datetime
 import platform
 import tempfile
 import subprocess
+import types
+import warnings
 import zmq
 from calendar import month_abbr as months
 import salt._compat
@@ -33,6 +35,7 @@ except ImportError:
     HAS_FNCTL = False
 
 # Import salt libs
+import salt.log
 import salt.minion
 import salt.payload
 from salt.exceptions import (
@@ -63,6 +66,9 @@ RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
 
+log = logging.getLogger(__name__)
+
+
 def _getargs(func):
     '''
     A small wrapper around getargspec that also supports callable classes
@@ -79,7 +85,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
 
     return aspec
 
@@ -154,12 +160,13 @@ def daemonize():
             # exit first parent
             sys.exit(0)
     except OSError as exc:
-        msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
-        logging.getLogger(__name__).error(msg)
+        log.error(
+            'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
+        )
         sys.exit(1)
 
     # decouple from parent environment
-    os.chdir("/")
+    os.chdir('/')
     os.setsid()
     os.umask(18)
 
@@ -169,8 +176,11 @@ def daemonize():
         if pid > 0:
             sys.exit(0)
     except OSError as exc:
-        msg = 'fork #2 failed: {0} ({1})'
-        logging.getLogger(__name__).error(msg.format(exc.errno, exc.strerror))
+        log.error(
+            'fork #2 failed: {0} ({1})'.format(
+                exc.errno, exc.strerror
+            )
+        )
         sys.exit(1)
 
     # A normal daemonization redirects the process output to /dev/null.
@@ -183,7 +193,7 @@ def daemonize():
     #os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
-def daemonize_if(opts, **kwargs):
+def daemonize_if(opts):
     '''
     Daemonize a module function process if multiprocessing is True and the
     process is not being called by salt-call
@@ -211,8 +221,9 @@ def profile_func(filename=None):
                 profiler.dump_stats((filename or '{0}_func.profile'
                                      .format(fun.__name__)))
             except IOError:
-                logging.exception(('Could not open profile file {0}'
-                                   .format(filename)))
+                logging.exception(
+                    'Could not open profile file {0}'.format(filename)
+                )
 
             return retval
         return profiled_func
@@ -228,12 +239,20 @@ def which(exe=None):
             return exe
 
         # default path based on busybox's default
-        default_path = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
+        default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
+        search_path = os.environ.get('PATH', default_path)
 
-        for path in os.environ.get('PATH', default_path).split(os.pathsep):
+        for path in search_path.split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
+        log.trace(
+            '{0!r} could not be found in the following search '
+            'path: {1!r}'.format(
+                exe, search_path
+            )
+        )
+    log.trace('No executable was passed to be searched by which')
     return None
 
 
@@ -311,8 +330,8 @@ def ip_bracket(addr):
     Convert IP address representation to ZMQ (URL) format. ZMQ expects
     brackets around IPv6 literals, since they are used in URLs.
     '''
-    if addr and ":" in addr and not addr.startswith('['):
-        return "[{0}]".format(addr)
+    if addr and ':' in addr and not addr.startswith('['):
+        return '[{0}]'.format(addr)
     return addr
 
 
@@ -323,8 +342,9 @@ def dns_check(addr, safe=False, ipv6=False):
     '''
     error = False
     try:
-        hostnames = socket.getaddrinfo(addr, None, socket.AF_UNSPEC,
-                                       socket.SOCK_STREAM)
+        hostnames = socket.getaddrinfo(
+            addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+        )
         if not hostnames:
             error = True
         else:
@@ -335,7 +355,7 @@ def dns_check(addr, safe=False, ipv6=False):
                     break
             if not addr:
                 error = True
-    except socket.gaierror:
+    except socket.error:
         error = True
 
     if error:
@@ -343,17 +363,13 @@ def dns_check(addr, safe=False, ipv6=False):
                'but now fails to resolve! The previously resolved ip addr '
                'will continue to be used').format(addr)
         if safe:
-            import salt.log
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
                 # the master or minion instance calling this hasn't even
                 # started running
-                logging.getLogger(__name__).error(err)
+                log.error(err)
             raise SaltClientError()
-        else:
-            err = err.format(addr)
-            sys.stderr.write(err)
-            sys.exit(42)
+        raise SaltSystemExit(code=42, msg=err)
     return addr
 
 
@@ -391,7 +407,7 @@ def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
-    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+    jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
     if not os.path.isdir(jid_dir_):
@@ -452,7 +468,7 @@ def check_or_die(command):
     dependencies.
     '''
     if command is None:
-        raise CommandNotFoundError("'None' is not a valid command.")
+        raise CommandNotFoundError('\'None\' is not a valid command.')
 
     if not which(command):
         raise CommandNotFoundError(command)
@@ -557,7 +573,7 @@ def pem_finger(path, sum_type='md5'):
     return finger.rstrip(':')
 
 
-def build_whitepace_splited_regex(text):
+def build_whitespace_split_regex(text):
     '''
     Create a regular expression at runtime which should match ignoring the
     addition or deletion of white space or line breaks, unless between commas
@@ -566,7 +582,7 @@ def build_whitepace_splited_regex(text):
 
     >>> import re
     >>> from salt.utils import *
-    >>> regex = build_whitepace_splited_regex(
+    >>> regex = build_whitespace_split_regex(
     ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
     ... )
 
@@ -599,6 +615,13 @@ def build_whitepace_splited_regex(text):
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
     return r'(?m)^{0}$'.format(regex)
+
+
+def build_whitepace_splited_regex(text):
+    warnings.warn("The build_whitepace_splited_regex function is deprecated,"
+                  " please use build_whitespace_split_regex instead.",
+                  DeprecationWarning)
+    build_whitespace_split_regex(text)
 
 
 def format_call(fun, data):
@@ -636,7 +659,11 @@ def format_call(fun, data):
         if arg in kwargs:
             ret['args'].append(kwargs[arg])
         else:
-            ret['args'].append(data[arg])
+            try:
+                ret['args'].append(data[arg])
+            except KeyError:
+                # Bad arg match, can safely proceed
+                pass
     return ret
 
 
@@ -691,7 +718,7 @@ def istextfile(fp_, blocksize=512):
 
 
 def isorted(to_sort):
-    """
+    '''
     Sort a list of strings ignoring case.
 
     >>> L = ['foo', 'Foo', 'bar', 'Bar']
@@ -700,7 +727,7 @@ def isorted(to_sort):
     >>> sorted(L, key=lambda x: x.lower())
     ['bar', 'Bar', 'foo', 'Foo']
     >>>
-    """
+    '''
     return sorted(to_sort, key=lambda x: x.lower())
 
 
@@ -813,7 +840,7 @@ def mkstemp(*args, **kwargs):
     if close_fd is False:
         return (fd_, fpath)
     os.close(fd_)
-    del(fd_)
+    del fd_
     return fpath
 
 
@@ -890,6 +917,11 @@ def check_state_result(running):
         else:
             rets = running[host].values()
 
+        if isinstance(rets, dict) and 'result' in rets:
+            if rets['result'] is False:
+                return False
+            return True
+
         for ret in rets:
             if not isinstance(ret, dict):
                 return False
@@ -949,7 +981,7 @@ def rm_rf(path):
     http://stackoverflow.com/a/2656405
     '''
     def _onerror(func, path, exc_info):
-        """
+        '''
         Error handler for `shutil.rmtree`.
 
         If the error is due to an access error (read only file)
@@ -958,7 +990,7 @@ def rm_rf(path):
         If the error is for another reason it re-raises the error.
 
         Usage : `shutil.rmtree(path, onerror=onerror)`
-        """
+        '''
         if is_windows() and not os.access(path, os.W_OK):
             # Is the error an access error ?
             os.chmod(path, stat.S_IWUSR)
@@ -1057,10 +1089,10 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         return
 
     if followlinks:
-        stat = os.stat(top)
+        status = os.stat(top)
         # st_ino is always 0 on some filesystems (FAT, NTFS); ignore them
-        if stat.st_ino != 0:
-            node = (stat.st_dev, stat.st_ino)
+        if status.st_ino != 0:
+            node = (status.st_dev, status.st_ino)
             if node in _seen:
                 return
             _seen.add(node)
@@ -1105,3 +1137,20 @@ def get_hash(path, form='md5', chunk_size=4096):
             if not chunk:
                 return hash_obj.hexdigest()
             hash_obj.update(chunk)
+
+
+def namespaced_function(function, global_dict, defaults=None):
+    ''' 
+    Redefine(clone) a function under a different globals() namespace scope
+    '''
+    if defaults is None:
+        defaults = function.__defaults__
+
+    new_namespaced_function = types.FunctionType(
+        function.__code__,
+        global_dict,
+        name=function.__name__,
+        argdefs=defaults
+    )   
+    new_namespaced_function.__dict__.update(function.__dict__)
+    return new_namespaced_function

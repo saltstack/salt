@@ -36,7 +36,7 @@ def _changes(name,
              groups=None,
              optional_groups=None,
              remove_groups=True,
-             home=True,
+             home=None,
              password=None,
              enforce_password=True,
              shell=None,
@@ -49,7 +49,7 @@ def _changes(name,
     otherwise return False.
     '''
 
-    if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+    if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
         lshad = __salt__['shadow.info'](name)
 
     lusr = __salt__['user.info'](name)
@@ -70,6 +70,8 @@ def _changes(name,
         lusr['groups'].remove(
             __salt__['file.gid_to_group'](gid or lusr['gid'])
         )
+    if name in lusr['groups'] and name not in wanted_groups:
+        lusr['groups'].remove(name)
     # remove default group from wanted_groups, as this requirement is
     # already met
     if gid and __salt__['file.gid_to_group'](gid or lusr['gid']) in \
@@ -88,13 +90,12 @@ def _changes(name,
                     change['groups'].append(wanted_group)
     if home:
         if lusr['home'] != home:
-            if home is not True:
-                change['home'] = home
+            change['home'] = home
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
     if password:
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             if lshad['pwd'] == '!' or \
                     lshad['pwd'] != '!' and enforce_password:
                 if lshad['pwd'] != password:
@@ -119,7 +120,8 @@ def present(name,
             groups=None,
             optional_groups=None,
             remove_groups=True,
-            home=True,
+            home=None,
+            createhome=True,
             password=None,
             enforce_password=True,
             shell=None,
@@ -166,6 +168,11 @@ def present(name,
 
     home
         The location of the home directory to manage
+
+    createhome
+        If True, the home directory will be created if it doesn't exist.
+        Please note that directories leading up to the home directory
+        will NOT be created.
 
     password
         A password hash to set for the user
@@ -261,7 +268,7 @@ def present(name,
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
-        if not __grains__['os'] in ('FreeBSD', 'OpenBSD'):
+        if not __grains__['os'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
@@ -280,14 +287,14 @@ def present(name,
 
         post = __salt__['user.info'](name)
         spost = {}
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             if lshad['pwd'] != password:
                 spost = __salt__['shadow.info'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
                 ret['changes'][key] = post[key]
-        if __grains__['os'] not in ('FreeBSD', 'OpenBSD'):
+        if __grains__['os'] not in ('FreeBSD', 'OpenBSD', 'NetBSD'):
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
@@ -336,7 +343,8 @@ def present(name,
                                 fullname=fullname,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
-                                homephone=homephone):
+                                homephone=homephone,
+                                createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if password:
@@ -380,9 +388,16 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
+        beforegroups = set(
+                [g['name'] for g in __salt__['group.getent'](refresh=True)])
         ret['result'] = __salt__['user.delete'](name, purge, force)
+        aftergroups = set(
+                [g['name'] for g in __salt__['group.getent'](refresh=True)])
         if ret['result']:
-            ret['changes'] = {name: 'removed'}
+            ret['changes'] = {}
+            for g in (beforegroups - aftergroups):
+                ret['changes']['{0} group'.format(g)] = 'removed'
+            ret['changes'][name] = 'removed'
             ret['comment'] = 'Removed user {0}'.format(name)
         else:
             ret['result'] = False

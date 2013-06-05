@@ -42,6 +42,7 @@ def installed(name,
               no_download=False,
               install_options=None,
               user=None,
+              no_chown=False,
               cwd=None,
               __env__='base'):
     '''
@@ -126,6 +127,7 @@ def installed(name,
         no_download=no_download,
         install_options=install_options,
         runas=user,
+        no_chown=no_chown,
         cwd=cwd,
         __env__=__env__
     )

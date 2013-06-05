@@ -7,6 +7,7 @@ import re
 import logging
 
 # Import salt libs
+import salt.utils
 import salt.utils.socket_util
 
 
@@ -18,7 +19,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] in ('Windows',):
+    if salt.utils.is_windows():
         return False
 
     return 'network'
@@ -124,15 +125,15 @@ def subnets():
         salt '*' network.subnets
     '''
     ifaces = interfaces()
-    subnets = []
+    subnetworks = []
 
     for ipv4_info in ifaces.values():
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
             network = _calculate_subnet(ipv4['address'], ipv4['netmask'])
-            subnets.append(network)
-    return subnets
+            subnetworks.append(network)
+    return subnetworks
 
 
 def in_subnet(cidr):
@@ -146,7 +147,7 @@ def in_subnet(cidr):
     try:
         netstart, netsize = cidr.split('/')
         netsize = int(netsize)
-    except:
+    except Exception:
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
@@ -288,10 +289,10 @@ def traceroute(host):
     # Parse version of traceroute
     cmd2 = 'traceroute --version'
     out2 = __salt__['cmd.run'](cmd2)
-    traceroute_version = re.findall('version (\d+)\.(\d+)\.(\d+)', out2)[0]
+    traceroute_version = re.findall(r'version (\d+)\.(\d+)\.(\d+)', out2)[0]
 
     for line in out.splitlines():
-        if not ' ' in line:
+        if ' ' not in line:
             continue
         if line.startswith('traceroute'):
             continue
@@ -346,7 +347,7 @@ def arp():
 
     CLI Example::
 
-        salt '*' \* network.arp
+        salt '*' '*' network.arp
     '''
     ret = {}
     out = __salt__['cmd.run']('arp -an')

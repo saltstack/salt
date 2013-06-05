@@ -57,6 +57,10 @@ def compile_template(template, renderers, default, env='', sls='', **kwargs):
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
+        try:
+            input_data.seek(0)
+        except Exception as e:
+            pass
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
         if argline:

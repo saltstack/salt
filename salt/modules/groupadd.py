@@ -13,7 +13,10 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux or OpenBSD
     '''
-    return 'group' if __grains__['kernel'] in ('Linux', 'OpenBSD') else False
+    return (
+        'group' if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD')
+        else False
+    )
 
 
 def add(name, gid=None, system=False):
@@ -75,7 +78,7 @@ def _format_info(data):
             'members': data.gr_mem}
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return info on all groups
 
@@ -83,7 +86,7 @@ def getent():
 
         salt '*' group.getent
     '''
-    if 'group.getent' in __context__:
+    if 'group.getent' in __context__ and not refresh:
         return __context__['group.getent']
 
     ret = []

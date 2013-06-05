@@ -15,6 +15,7 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def _auth():
     '''
     Return the auth object
@@ -22,6 +23,7 @@ def _auth():
     if not 'auth' in __context__:
         __context__['auth'] = salt.crypt.SAuth(__opts__)
     return __context__['auth']
+
 
 def recv(files, dest):
     '''
@@ -59,7 +61,8 @@ def _mk_client():
     Create a file client and add it to the context
     '''
     if not 'cp.fileclient' in __context__:
-        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+        __context__['cp.fileclient'] = \
+                salt.fileclient.get_file_client(__opts__)
 
 
 def _render_filenames(path, dest, env, template):
@@ -114,8 +117,8 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
 
-    Template rendering can be enabled on both the source and destination file names
-    like so::
+    Template rendering can be enabled on both the source and destination file
+    names like so::
 
         salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
 
@@ -123,13 +126,13 @@ def get_file(path, dest, env='base', makedirs=False, template=None, gzip=None):
     directory with the same name as their os grain and copy it to /etc/vimrc
 
     For larger files, the cp.get_file module also supports gzip compression.
-    Because gzip is CPU-intensive, this should only be used in
-    scenarios where the compression ratio is very high (e.g. pretty-printed JSON
-    or YAML files).
+    Because gzip is CPU-intensive, this should only be used in scenarios where
+    the compression ratio is very high (e.g. pretty-printed JSON or YAML
+    files).
 
-    Use the *gzip* named argument to enable it.  Valid values are 1..9,
-    where 1 is the lightest compression and 9 the heaviest.  1 uses the least CPU
-    on the master (and minion), 9 uses the most.
+    Use the *gzip* named argument to enable it.  Valid values are 1..9, where 1
+    is the lightest compression and 9 the heaviest.  1 uses the least CPU on
+    the master (and minion), 9 uses the most.
     '''
     (path, dest) = _render_filenames(path, dest, env, template)
 
@@ -392,13 +395,11 @@ def push(path):
     path = os.path.realpath(path)
     if not os.path.isfile(path):
         return False
-    auth  = _auth()
-    
-    load = {
-            'cmd': '_file_recv',
+    auth = _auth()
+
+    load = {'cmd': '_file_recv',
             'id': __opts__['id'],
-            'path': path.lstrip(os.sep),
-            }
+            'path': path.lstrip(os.sep)}
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     with salt.utils.fopen(path) as fp_:
         while True:

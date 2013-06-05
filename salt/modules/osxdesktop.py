@@ -61,7 +61,7 @@ def lock():
 
         salt '*' desktop.lock
     '''
-    cmd = '/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend'
+    cmd = '/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend'
 
     return __salt__['cmd.run'](cmd)
 

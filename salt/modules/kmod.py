@@ -53,6 +53,8 @@ def _get_modules_conf():
     Return location of modules config file.
     Default: /etc/modules
     '''
+    if __grains__['os'] == 'Arch':
+        return '/etc/modules-load.d/salt_managed.conf'
     return '/etc/modules'
 
 

@@ -38131,7 +38131,7 @@ This is necessary and can not be replaced by a require clause in the pkg.
 .ft C
 base:
   pkgrepo.managed:
-    \- human_name: Logstash PPA
+    \- humanname: Logstash PPA
     \- name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
     \- dist: precise
     \- file: /etc/apt/sources.list.d/logstash.list
@@ -38341,7 +38341,7 @@ Package repositories can be managed with the pkgrepo state:
 .ft C
 base:
   pkgrepo.managed:
-    \- human_name: CentOS\-$releasever \- Base
+    \- humanname: CentOS\-$releasever \- Base
     \- mirrorlist: http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
     \- comments:
         \- #http://mirror.centos.org/centos/$releasever/os/$basearch/

@@ -2,8 +2,14 @@
 Homebrew for Mac OS X
 '''
 
+# Import python libs
+import copy
+import logging
+
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -14,6 +20,32 @@ def __virtual__():
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
         return 'pkg'
     return False
+
+
+def _list_taps():
+    '''
+    List currently
+    '''
+    cmd = 'brew tap'
+    taps = __salt__['cmd.run'](cmd).splitlines()
+
+    return taps
+
+
+def _tap(tap, runas=None):
+    '''
+    Add unofficial Github repos to the list of formulas that brew tracks,
+    updates, and installs from.
+    '''
+    if tap in _list_taps():
+        return True
+
+    cmd = 'brew tap {0}'.format(tap)
+    if __salt__['cmd.retcode'](cmd, runas=runas):
+        log.error('Failed to tap "{0}"'.format(tap))
+        return False
+
+    return True
 
 
 def list_pkgs(versions_as_list=False):
@@ -27,16 +59,26 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     cmd = 'brew list --versions'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version = line.split(' ')[0:2]
+            name, version_num = line.split(' ')[0:2]
         except ValueError:
             continue
-        __salt__['pkg_resource.add_pkg'](ret, name, version)
+        __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -81,23 +123,44 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def remove(pkgs, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
-    Removes packages with ``brew uninstall``
+    Removes packages with ``brew uninstall``.
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
-        salt '*' pkg.remove <package,package,package>
+        salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    formulas = ' '.join(pkgs.split(','))
-    cmd = 'brew uninstall {0}'.format(formulas)
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    cmd = 'brew uninstall {0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
-    return __salt__['cmd.run'](cmd)
 
-
-def install(name=None, pkgs=None, **kwargs):
+def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     '''
     Install the passed package(s) with ``brew install``
 
@@ -106,8 +169,29 @@ def install(name=None, pkgs=None, **kwargs):
         ignored if "pkgs" is passed.
 
         CLI Example::
+
             salt '*' pkg.install <package name>
 
+    taps
+        Unofficial Github repos to use when updating and installing formulas.
+
+        CLI Example::
+
+            salt '*' pkg.install <package name> tap='<tap>'
+            salt '*' pkg.install zlib taps='homebrew/dupes'
+            salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]'
+
+    options
+        Options to pass to brew. Only applies to inital install. Due to how brew
+        works, modifying chosen options requires a full uninstall followed by a
+        fresh install. Note that if "pkgs" is used, all options will be passed
+        to all packages. Unreconized options for a package will be silently
+        ignored by brew.
+
+        CLI Example::
+
+            salt '*' pkg.install <package name> tap='<tap>'
+            salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
 
     Multiple Package Installation Options:
 
@@ -115,6 +199,7 @@ def install(name=None, pkgs=None, **kwargs):
         A list of formulas to install. Must be passed as a python list.
 
         CLI Example::
+
             salt '*' pkg.install pkgs='["foo","bar"]'
 
 
@@ -138,12 +223,30 @@ def install(name=None, pkgs=None, **kwargs):
     old = list_pkgs()
     homebrew_binary = __salt__['cmd.run']('brew --prefix') + "/bin/brew"
     user = __salt__['file.get_user'](homebrew_binary)
-    cmd = 'brew install {0}'.format(formulas)
+
+    # Ensure we've tapped the repo if necessary
+    if taps:
+        if not isinstance(taps, list):
+            # Feels like there is a better way to allow for tap being
+            # specified as both a string and a list
+            taps = [taps]
+
+        for tap in taps:
+            if user != __opts__['user']:
+                _tap(tap, runas=user)
+            else:
+                _tap(tap)
+
+    if options:
+        cmd = 'brew install {0} {1}'.format(formulas, ' '.join(options))
+    else:
+        cmd = 'brew install {0}'.format(formulas)
+
     if user != __opts__['user']:
         __salt__['cmd.run'](cmd, runas=user)
     else:
         __salt__['cmd.run'](cmd)
-
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 

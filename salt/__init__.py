@@ -15,7 +15,7 @@ import salt.log
 
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
-from salt.version import __version__  # pylint: disable-msg=W402
+from salt.version import __version__
 from salt.utils import migrations
 
 try:
@@ -180,7 +180,10 @@ class Minion(parsers.MinionOptionParser):
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
         self.set_pidfile()
-        self.minion = salt.minion.Minion(self.config)
+        if isinstance(self.config.get('master'), list):
+            self.minion = salt.minion.MultiMinion(self.config)
+        else:
+            self.minion = salt.minion.Minion(self.config)
 
     def start(self):
         '''

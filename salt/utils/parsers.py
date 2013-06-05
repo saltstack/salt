@@ -19,7 +19,12 @@ import traceback
 from functools import partial
 
 # Import salt libs
-from salt import config, loader, log, version
+import salt.log as log
+import salt.config as config
+import salt.loader as loader
+import salt.utils as utils
+import salt.version as version
+import salt.exceptions as exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -46,7 +51,10 @@ class MixInMeta(type):
 
 class OptionParserMeta(MixInMeta):
     def __new__(cls, name, bases, attrs):
-        instance = super(OptionParserMeta, cls).__new__(cls, name, bases, attrs)
+        instance = super(OptionParserMeta, cls).__new__(cls,
+                                                        name,
+                                                        bases,
+                                                        attrs)
         if not hasattr(instance, '_mixin_setup_funcs'):
             instance._mixin_setup_funcs = []
         if not hasattr(instance, '_mixin_process_funcs'):
@@ -72,7 +80,9 @@ class OptionParserMeta(MixInMeta):
                 if getattr(func, '_mixin_prio_', None) is not None:
                     # Function already has the attribute set, don't override it
                     continue
-                func.__func__._mixin_prio_ = getattr(base, '_mixin_prio_', 1000)
+                func.__func__._mixin_prio_ = getattr(base,
+                                                     '_mixin_prio_',
+                                                     1000)
 
         return instance
 
@@ -470,9 +480,9 @@ class TargetOptionsMixIn(object):
         if len(group_options_selected) > 1:
             self.error(
                 "The options {0} are mutually exclusive. Please only choose "
-                "one of them".format('/'.join([
-                    option.get_opt_string() for option in group_options_selected
-                ]))
+                "one of them".format('/'.join(
+                    [option.get_opt_string()
+                     for option in group_options_selected]))
             )
         self.config['selected_target_option'] = self.selected_target_option
 
@@ -485,12 +495,12 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             '-C', '--compound',
             default=False,
             action='store_true',
-            help=('The compound target option allows for multiple target types '
-                  'to be evaluated, allowing for greater granularity in target '
-                  'matching. The compound target is space delimited, targets '
-                  'other than globs are preceded with an identifier matching '
-                  'the specific targets argument type: salt \'G@os:RedHat and '
-                  'webser* or E@database.*\'')
+            help=('The compound target option allows for multiple target '
+                  'types to be evaluated, allowing for greater granularity in '
+                  'target matching. The compound target is space delimited, '
+                  'targets other than globs are preceded with an identifier '
+                  'matching the specific targets argument type: salt '
+                  '\'G@os:RedHat and webser* or E@database.*\'')
         )
         group.add_option(
             '-X', '--exsel',
@@ -587,7 +597,7 @@ class OutputOptionsMixIn(object):
             )
 
         outputters = loader.outputters(
-            config.minion_config(None, check_dns=False)
+            config.minion_config(None)
         )
 
         group.add_option(
@@ -717,18 +727,28 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         opts.update(config.minion_config(self.get_config_file_path('minion')))
         # Override the user from the master config file
         opts['user'] = user
+        # Override the name of the PID file.
+        opts['pidfile'] = '/var/run/salt-syndic.pid'
 
-        if 'syndic_master' not in opts:
+        if not opts.get('syndic_master', None):
             self.error(
                 'The syndic_master needs to be configured in the salt master '
                 'config, EXITING!'
             )
 
-        from salt import utils
         # Some of the opts need to be changed to match the needed opts
         # in the minion class.
-        opts['master'] = opts['syndic_master']
-        opts['master_ip'] = utils.dns_check(opts['master'], ipv6=opts['ipv6'])
+        opts['master'] = opts.get('syndic_master', opts['master'])
+        try:
+            opts['master_ip'] = utils.dns_check(
+                opts['master'],
+                ipv6=opts['ipv6']
+            )
+        except exceptions.SaltSystemExit as exc:
+            self.exit(
+                status=exc.code,
+                msg='{0}: {1}\n'.format(self.get_prog_name(), exc.message)
+            )
 
         opts['master_uri'] = 'tcp://{0}:{1}'.format(
             opts['master_ip'], str(opts['master_port'])
@@ -765,6 +785,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             dest='async',
             action='store_true',
             help=('Run the salt command but don\'t wait for a reply')
+        )
+        self.add_option(
+            '--subset',
+            default=0,
+            dest='subset',
+            type=int,
+            help=('Execute the routine on a random subset of the targetted '
+                  'minions. The minions will be verified that they have the '
+                  'named function before executing')
         )
         self.add_option(
             '-v', '--verbose',
@@ -1007,7 +1036,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Answer Yes to all questions presented, defaults to False'
         )
 
-        key_options_group = optparse.OptionGroup(self, "Key Generation Options")
+        key_options_group = optparse.OptionGroup(self,
+                                                 "Key Generation Options")
         self.add_option_group(key_options_group)
         key_options_group.add_option(
             '--gen-keys',
@@ -1115,6 +1145,16 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'all modules if none are specified.')
         )
         self.add_option(
+            '--master',
+            default='',
+            dest='master',
+            help=('Specify the master to use. The minion must be '
+                  'authenticated with the master. If this option is omitted, '
+                  'the master options from the minion config will be used. '
+                  'If multi masters are set up the first listed master that '
+                  'responds will be used.')
+        )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -1142,10 +1182,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(
-            self.get_config_file_path(),
-            check_dns=not self.options.local
-        )
+        return config.minion_config(self.get_config_file_path())
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
@@ -1155,7 +1192,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.config.setdefault('module_dirs', []).extend(
                     os.path.abspath(x) for x in module_dir.split(','))
                 continue
-            self.config.setdefault('module_dirs', []).append(os.path.abspath(module_dir))
+            self.config.setdefault('module_dirs',
+                                   []).append(os.path.abspath(module_dir))
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,

@@ -14,15 +14,16 @@ Using homebrew:
     brew install swig
     brew install zmq
 
-Using macports, zmq and swig may need to be installed this way:
+Using macports, zmq, swig, and pip may need to be installed this way:
 
 .. code-block:: bash
 
-    sudo port install pyzmq
+    sudo port install py-zmq
     sudo port install py27-m2crypto
     sudo port install py27-crypto
     sudo port install py27-msgpack
-    sudo port install python-swig
+    sudo port install swig-python
+    sudo port install py-pip
 
 For installs using the OSX system python, pip install needs to use 'sudo':
 

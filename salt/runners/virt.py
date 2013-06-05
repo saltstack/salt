@@ -34,7 +34,7 @@ def _find_vm(name, data, quiet=False):
     '''
     for hv_ in data:
         # Check if data is a dict, and not '"virt.full_info" is not available.'
-        if not isinstance(data[hv_, dict]):
+        if not isinstance(data[hv_], dict):
             continue
         if name in data[hv_].get('vm_info', {}):
             ret = {hv_: {name: data[hv_]['vm_info'][name]}}
@@ -46,13 +46,15 @@ def _find_vm(name, data, quiet=False):
             return ret
     return {}
 
+
 def query(hyper=None, quiet=False):
     '''
     Query the virtual machines
     '''
     ret = {}
     client = salt.client.LocalClient(__opts__['conf_file'])
-    for info in client.cmd_iter('virtual:physical', 'virt.full_info', expr_form='grain'):
+    for info in client.cmd_iter('virtual:physical',
+                                'virt.full_info', expr_form='grain'):
         if not info:
             continue
         if not isinstance(info, dict):
@@ -95,7 +97,7 @@ def hyper_info(hyper=None):
     return data
 
 
-def init(name, cpu, mem, image, hyper=None, seed=True):
+def init(name, cpu, mem, image, hyper=None, seed=True, nic='default'):
     '''
     Initialize a new vm
     '''
@@ -113,18 +115,25 @@ def init(name, cpu, mem, image, hyper=None, seed=True):
             return 'fail'
     else:
         hyper = _determine_hyper(data)
-    
+
     client = salt.client.LocalClient(__opts__['conf_file'])
 
     print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.init',
-            [name, cpu, mem, image, 'seed={0}'.format(seed)],
+            [
+                name,
+                cpu,
+                mem,
+                image,
+                'seed={0}'.format(seed),
+                'nic={0}'.format(nic)
+            ],
             timeout=600)
 
-    for info in cmd_ret:
-        print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
+    next(cmd_ret)
+    print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
 
     return 'good'
 
@@ -300,4 +309,6 @@ def migrate(name, target=''):
         print('Target hypervisor {0} not found'.format(origin_data))
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
-    print client.cmd_async(origin_hyper, 'virt.migrate_non_shared', [name, target])
+    print client.cmd_async(origin_hyper,
+                           'virt.migrate_non_shared',
+                           [name, target])

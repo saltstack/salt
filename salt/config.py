@@ -34,6 +34,121 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
+VALID_OPTS = {
+    'master': str,
+    'master_port': int,
+    'master_finger': str,
+    'user': str,
+    'root_dir': str,
+    'pki_dir': str,
+    'id': str,
+    'cachedir': str,
+    'cache_jobs': bool,
+    'conf_file': str,
+    'sock_dir': str,
+    'backup_mode': str,
+    'renderer': str,
+    'failhard': bool,
+    'autoload_dynamic_modules': bool,
+    'environment': str,
+    'state_top': str,
+    'startup_states': str,
+    'sls_list': list,
+    'top_file': str,
+    'file_client': str,
+    'file_roots': dict,
+    'pillar_roots': dict,
+    'hash_type': str,
+    'external_nodes': str,
+    'disable_modules': list,
+    'disable_returners': list,
+    'whitelist_modules': list,
+    'module_dirs': list,
+    'returner_dirs': list,
+    'states_dirs': list,
+    'render_dirs': list,
+    'outputter_dirs': list,
+    'providers': dict,
+    'clean_dynamic_modules': bool,
+    'open_mode': bool,
+    'multiprocessing': bool,
+    'mine_interval': int,
+    'ipc_mode': str,
+    'ipv6': bool,
+    'file_buffer_size': int,
+    'tcp_pub_port': int,
+    'tcp_pull_port': int,
+    'log_file': str,
+    'log_level': bool,
+    'log_level_logfile': bool,
+    'log_datefmt': str,
+    'log_datefmt_logfile': str,
+    'log_fmt_console': str,
+    'log_fmt_logfile': tuple,
+    'log_granular_levels': dict,
+    'test': bool,
+    'cython_enable': bool,
+    'state_verbose': bool,
+    'state_output': str,
+    'acceptance_wait_time': float,
+    'loop_interval': float,
+    'dns_check': bool,
+    'verify_env': bool,
+    'grains': dict,
+    'permissive_pki_access': bool,
+    'default_include': str,
+    'update_url': bool,
+    'update_restart_services': list,
+    'retry_dns': float,
+    'recon_max': float,
+    'win_repo_cachefile': str,
+    'pidfile': str,
+    'range_server': str,
+    'tcp_keepalive': bool,
+    'tcp_keepalive_idle': float,
+    'tcp_keepalive_cnt': float,
+    'tcp_keepalive_intvl': float,
+    'interface': str,
+    'publish_port': int,
+    'auth_mode': int,
+    'worker_threads': int,
+    'ret_port': int,
+    'keep_jobs': int,
+    'master_roots': dict,
+    'gitfs_remotes': list,
+    'ext_pillar': list,
+    'pillar_version': int,
+    'pillar_opts': bool,
+    'peer': dict,
+    'syndic_master': str,
+    'runner_dirs': list,
+    'client_acl': dict,
+    'client_acl_blacklist': dict,
+    'external_auth': dict,
+    'token_expire': int,
+    'file_ignore_regex': bool,
+    'file_ignore_glob': bool,
+    'fileserver_backend': list,
+    'max_open_files': int,
+    'auto_accept': bool,
+    'master_tops': bool,
+    'order_masters': bool,
+    'job_cache': bool,
+    'ext_job_cache': str,
+    'master_ext_job_cache': str,
+    'minion_data_cache': bool,
+    'publish_session': int,
+    'reactor': list,
+    'serial': str,
+    'search': str,
+    'search_index_interval': int,
+    'nodegroups': dict,
+    'key_logfile': str,
+    'win_repo': str,
+    'win_repo_mastercachefile': str,
+    'win_gitrepos': list,
+}
+
 # default configurations
 DEFAULT_MINION_OPTS = {
     'master': 'salt',
@@ -59,10 +174,10 @@ DEFAULT_MINION_OPTS = {
     'file_client': 'remote',
     'file_roots': {
         'base': ['/srv/salt'],
-        },
+    },
     'pillar_roots': {
         'base': ['/srv/pillar'],
-        },
+    },
     'hash_type': 'md5',
     'external_nodes': '',
     'disable_modules': [],
@@ -96,7 +211,7 @@ DEFAULT_MINION_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'acceptance_wait_time': 10,
-    'loop_interval': 0.05,
+    'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
     'grains': {},
@@ -130,13 +245,13 @@ DEFAULT_MASTER_OPTS = {
     'cachedir': '/var/cache/salt/master',
     'file_roots': {
         'base': ['/srv/salt'],
-        },
+    },
     'master_roots': {
         'base': ['/srv/salt-master'],
-        },
+    },
     'pillar_roots': {
         'base': ['/srv/pillar'],
-        },
+    },
     'gitfs_remotes': [],
     'ext_pillar': [],
     'pillar_version': 2,
@@ -214,6 +329,40 @@ def _validate_file_roots(opts):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             opts['file_roots'][env] = []
     return opts['file_roots']
+
+
+def _validate_opts(opts):
+    '''
+    Check that all of the types of values passed into the config are
+    of the right types
+    '''
+    errors = []
+    err = ('Key {0} with value {1} has an invalid type of {2}, a {3} is '
+           'required for this value')
+    for key, val in opts.items():
+        if key in VALID_OPTS:
+            if isinstance(VALID_OPTS[key](), list):
+                if isinstance(val, VALID_OPTS[key]):
+                    continue
+                else:
+                    errors.append(err.format(key, val, type(val), 'list'))
+            if isinstance(VALID_OPTS[key](), dict):
+                if isinstance(val, VALID_OPTS[key]):
+                    continue
+                else:
+                    errors.append(err.format(key, val, type(val), 'dict'))
+            else:
+                try:
+                    VALID_OPTS[key](val)
+                except ValueError:
+                    errors.append(
+                            err.format(key, val, type(val), VALID_OPTS[key])
+                            )
+    for error in errors:
+        log.warning(error)
+    if errors:
+        return False
+    return True
 
 
 def _append_domain(opts):
@@ -302,7 +451,7 @@ def include_config(include, orig_path, verbose):
     if isinstance(include, str):
         include = [include]
 
-    include_config = {}
+    configuration = {}
     for path in include:
         # Allow for includes like ~/foo
         path = os.path.expanduser(path)
@@ -321,14 +470,14 @@ def include_config(include, orig_path, verbose):
         for fn_ in sorted(glob.glob(path)):
             try:
                 log.debug('Including configuration from {0}'.format(fn_))
-                include_config.update(_read_conf_file(fn_))
+                configuration.update(_read_conf_file(fn_))
             except Exception as err:
                 log.warn(
                     'Error parsing configuration file: {0} - {1}'.format(
                         fn_, err
                     )
                 )
-    return include_config
+    return configuration
 
 
 def prepend_root_dir(opts, path_options):
@@ -348,9 +497,9 @@ def prepend_root_dir(opts, path_options):
 
 
 def minion_config(path,
-                  check_dns=True,
                   env_var='SALT_MINION_CONFIG',
-                  defaults=None):
+                  defaults=None,
+                  **kwargs):
     '''
     Reads in the minion configuration file and sets up special options
     '''
@@ -365,7 +514,9 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    return apply_minion_config(overrides, check_dns, defaults)
+    opts = apply_minion_config(overrides, defaults)
+    _validate_opts(opts)
+    return opts
 
 
 def get_id():
@@ -379,9 +530,8 @@ def get_id():
     - localhost may be better than killing the minion
     '''
 
-    log.debug('Guessing ID. The id can be explicitly in set {0}'.format(
-            '/etc/salt/minion')
-            )
+    log.debug('Guessing ID. The id can be explicitly in set {0}'
+              .format('/etc/salt/minion'))
     fqdn = socket.getfqdn()
     if 'localhost' != fqdn:
         log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
@@ -398,8 +548,8 @@ def get_id():
                 if ip.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
-                            log.info(('Found minion id in hosts file: {0}'
-                                ).format(name))
+                            log.info('Found minion id in hosts file: {0}'
+                                     .format(name))
                             return name, False
                 line = f.readline()
     except Exception:
@@ -413,18 +563,18 @@ def get_id():
     for a in ip_addresses:
         if not a.is_private:
             log.info('Using public ip address for id: {0}'.format(a))
-            return a, True
+            return str(a), True
 
     if ip_addresses:
         a = ip_addresses.pop(0)
         log.info('Using private ip address for id: {0}'.format(a))
-        return a, True
+        return str(a), True
 
     log.error('No id found, falling back to localhost')
     return 'localhost', False
 
 
-def apply_minion_config(overrides=None, check_dns=True, defaults=None):
+def apply_minion_config(overrides=None, defaults=None, **kwargs):
     '''
     Returns minion configurations dict.
     '''
@@ -471,13 +621,13 @@ def apply_minion_config(overrides=None, check_dns=True, defaults=None):
     if '__mine_interval' not in opts.get('schedule', {}):
         if not 'schedule' in opts:
             opts['schedule'] = {}
-        opts['schedule'] = {
+        opts['schedule'].update({
                 '__mine_interval':
                 {
                     'function': 'mine.update',
                     'minutes': opts['mine_interval']
-                    }
                 }
+        })
     return opts
 
 
@@ -495,7 +645,9 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
 
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
-    return apply_master_config(overrides, defaults)
+    opts = apply_master_config(overrides, defaults)
+    _validate_opts(opts)
+    return opts
 
 
 def apply_master_config(overrides=None, defaults=None):
@@ -558,7 +710,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except:
+            except Exception:
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: {0}'.format(
                         regex
@@ -623,4 +775,5 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         with salt.utils.fopen(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
     # Return the client options
+    _validate_opts(opts)
     return opts

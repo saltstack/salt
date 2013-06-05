@@ -27,33 +27,11 @@ __outputter__ = {
 log = logging.getLogger(__name__)
 
 
-def __resolve_struct(value, kwval_as):
-    '''
-    Take a string representing a structure and safely serialize it with the
-    specified medium
-    '''
-    if kwval_as == 'yaml':
-        return  _yaml_load(value, _YamlCustomLoader)
-    elif kwval_as == 'json':
-        return json.loads(value)
-    elif kwval_as is None or kwval_as == 'verbatim':
-        return value
-
-
-def _filter_running(running):
+def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = {}
-    for tag in running:
-        if running[tag]['result']:
-            # It is true
-            if running[tag]['changes']:
-                # It is blue
-                ret[tag] = running[tag]
-                continue
-        else:
-            ret[tag] = running[tag]
+    ret = dict((tag, value) for tag, value in runnings.iteritems() if not value['result'] or value['changes'])
     return ret
 
 
@@ -212,9 +190,7 @@ def highstate(test=None, **kwargs):
     if 'env' in kwargs:
         opts['environment'] = kwargs['env']
 
-    pillar = __resolve_struct(
-            kwargs.get('pillar', ''),
-            kwargs.get('kwval_as', 'yaml'))
+    pillar = kwargs.get('pillar')
 
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
@@ -270,9 +246,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     else:
         opts['test'] = None
 
-    pillar = __resolve_struct(
-            kwargs.get('pillar', ''),
-            kwargs.get('kwval_as', 'yaml'))
+    pillar = kwargs.get('pillar')
 
     serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
@@ -285,15 +259,15 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
             with open(cfn, 'r') as fp_:
-                high = serial.load(fp_)
-                return st_.state.call_high(high)
+                high_ = serial.load(fp_)
+                return st_.state.call_high(high_)
 
     if isinstance(mods, string_types):
         mods = mods.split(',')
 
     st_.push_active()
     try:
-        high, errors = st_.render_highstate({env: mods})
+        high_, errors = st_.render_highstate({env: mods})
 
         if errors:
             __context__['retcode'] = 1
@@ -302,11 +276,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         if exclude:
             if isinstance(exclude, str):
                 exclude = exclude.split(',')
-            if '__exclude__' in high:
-                high['__exclude__'].extend(exclude)
+            if '__exclude__' in high_:
+                high_['__exclude__'].extend(exclude)
             else:
-                high['__exclude__'] = exclude
-        ret = st_.state.call_high(high)
+                high_['__exclude__'] = exclude
+        ret = st_.state.call_high(high_)
     finally:
         st_.pop_active()
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
@@ -320,7 +294,11 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
         log.error(msg.format(cache_file))
     _set_retcode(ret)
     with open(cfn, 'w+') as fp_:
-        serial.dump(high, fp_)
+        try:
+            serial.dump(high_, fp_)
+        except TypeError:
+            # Can't serialize pydsl
+            pass
     return ret
 
 
@@ -404,17 +382,15 @@ def show_sls(mods, env='base', test=None, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = None
-    log.critical('BAR')
-    log.critical(opts)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
-    high, errors = st_.render_highstate({env: mods})
-    errors += st_.state.verify_high(high)
+    high_, errors = st_.render_highstate({env: mods})
+    errors += st_.state.verify_high(high_)
     if errors:
         __context__['retcode'] = 1
         return errors
-    return high
+    return high_
 
 
 def show_top():
@@ -429,16 +405,16 @@ def show_top():
     ret = {}
     static = st_.get_top()
     ext = st_.client.ext_nodes()
-    for top in [static, ext]:
-        for env in top:
+    for top_ in [static, ext]:
+        for env in top_:
             if env not in ret:
-                ret[env] = top[env]
+                ret[env] = top_[env]
             else:
-                for match in top[env]:
+                for match in top_[env]:
                     if match not in ret[env]:
-                        ret[env][match] = top[env][match]
+                        ret[env][match] = top_[env][match]
                     else:
-                        ret[env][match].extend(top[env][match])
+                        ret[env][match].extend(top_[env][match])
     return ret
 
 # Just commenting out, someday I will get this working
@@ -454,7 +430,7 @@ def show_top():
 #    return st_.compile_master()
 
 
-def single(fun, name, test=None, kwval_as='yaml', **kwargs):
+def single(fun, name, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -491,23 +467,6 @@ def single(fun, name, test=None, kwval_as='yaml', **kwargs):
     if err:
         __context__['retcode'] = 1
         return err
-
-    if kwval_as == 'yaml':
-        def parse_kwval(value):
-            return _yaml_load(value, _YamlCustomLoader)
-    elif kwval_as == 'json':
-        def parse_kwval(value):
-            return json.loads(value)
-    elif kwval_as is None or kwval_as == 'verbatim':
-        parse_kwval = lambda value: value
-    else:
-        __context__['retcode'] = 1
-        return 'Unknown format({0}) for state keyword arguments!'.format(
-                kwval_as)
-
-    for key, value in kwargs.iteritems():
-        if not key.startswith('__pub_'):
-            kwargs[key] = parse_kwval(value)
 
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}

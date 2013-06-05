@@ -119,7 +119,6 @@ if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
 	SALTMINION='/usr/bin/salt-minion'
-	SERVICE='salt-minion'
 fi
 test -x $SALTMINION || { echo "$SALTMINION not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
@@ -171,7 +170,7 @@ case "$1" in
 	echo -n "Starting salt-minion daemon: "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
-	/sbin/startproc -f -p /var/run/${SERVICE} ${SALTMINION} -d
+	/sbin/startproc ${SALTMINION} -d
 	
 	# Remember status and be verbose
 	rc_status -v
@@ -211,6 +210,9 @@ case "$1" in
 	# Remember status and be quiet
 	rc_status
 	;;
+    reload)
+      echo "can't reload configuration, you have to restart it"
+    ;;
     status)
 	echo -n "Checking for service salt-minion "
 	## Check status with checkproc(8), if process is running
@@ -231,7 +233,7 @@ case "$1" in
 	rc_status -v
 	;;
     *)
-	echo "Usage: $0 {start|stop|status|try-restart|restart}"
+	echo "Usage: $0 {start|stop|status|try-restart|restart|reload}"
 	exit 1
 	;;
 esac

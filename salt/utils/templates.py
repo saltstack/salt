@@ -11,6 +11,7 @@ import imp
 import logging
 import tempfile
 import traceback
+import sys
 
 # Import third party libs
 import jinja2
@@ -38,7 +39,9 @@ def wrap_tmpl_func(render_str):
                     context=None, tmplpath=None, **kws):
         if context is None:
             context = {}
-        context.update(kws)
+        # We want explicit context to overwrite the **kws
+        kws.update(context)
+        context = kws
         assert 'opts' in context
         assert 'env' in context
 
@@ -87,17 +90,27 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     else:
         loader = JinjaSaltCacheLoader(opts, context['env'])
     env_args = {'extensions': [], 'loader': loader}
+
     if hasattr(jinja2.ext, 'with_'):
         env_args['extensions'].append('jinja2.ext.with_')
+    if hasattr(jinja2.ext, 'do'):
+        env_args['extensions'].append('jinja2.ext.do')
+    if hasattr(jinja2.ext, 'loopcontrols'):
+        env_args['extensions'].append('jinja2.ext.loopcontrols')
+
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
     else:
         jinja_env = jinja2.Environment(
-                        undefined=jinja2.StrictUndefined,**env_args)
+                        undefined=jinja2.StrictUndefined, **env_args)
     try:
         output = jinja_env.from_string(tmplstr).render(**context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        raise SaltTemplateRenderError(str(exc))
+        error = '{0}; line {1} in template'.format(
+                exc,
+                traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        )
+        raise SaltTemplateRenderError(error)
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)

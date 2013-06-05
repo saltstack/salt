@@ -28,6 +28,7 @@ from salt.exceptions import (
 # Import third party libs
 import yaml
 
+
 class Caller(object):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
@@ -164,10 +165,11 @@ class Caller(object):
         # If the type of return is not a dict we wrap the return data
         # This will ensure that --local and local functions will return the
         # same data structure as publish commands.
-        if type(ret['return']) != type({}):
+        if not isinstance(ret['return'], dict):
             out = {'local': ret['return']}
         salt.output.display_output(
                 out,
                 ret.get('out', 'nested'),
                 self.opts)
-        sys.exit(ret['retcode'])
+        if self.opts.get('retcode_passthrough', False):
+            sys.exit(ret['retcode'])

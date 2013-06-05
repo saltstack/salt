@@ -34,7 +34,8 @@ def __virtual__():
                                 'list_groups', 'list_users', '__virtual__'):
                     delattr(mod, attr)
     return (
-        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD')
+        'user' if __grains__['kernel'] in ('Linux', 'Darwin', 'OpenBSD',
+                                           'NetBSD')
         else False
     )
 
@@ -71,14 +72,15 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=True,
+        home=None,
         shell=None,
         unique=True,
         system=False,
         fullname='',
         roomnumber='',
         workphone='',
-        homephone=''):
+        homephone='',
+        createhome=True):
     '''
     Add a user to the minion
 
@@ -106,23 +108,21 @@ def add(name,
             return retval
         if usergroups():
             cmd += '-g {0} '.format(__salt__['file.group_to_gid'](name))
-    if home:
-        if system:
-            if home is not True:
-                cmd += '-m -d {0} '.format(home)
-            else:
-                cmd += '-d {0} '.format(home)
+    if home is None:
+        if createhome:
+            cmd += '-m '
+    else:
+        if createhome:
+            cmd += '-m -d {0} '.format(home)
         else:
-            if home is not True:
-                cmd += '-m -d {0} '.format(home)
-            else:
-                cmd += '-m '
+            cmd += '-d {0} '.format(home)   
     if not unique:
         cmd += '-o '
     if system:
-        cmd += '-r '
+        if not __grains__['kernel'] == 'NetBSD':
+            cmd += '-r '
     cmd += name
-    ret = __salt__['cmd.retcode'](cmd)
+    ret = __salt__['cmd.run_all'](cmd)['retcode']
     if ret != 0:
         return False
     else:
@@ -439,12 +439,7 @@ def list_groups(name):
         # it does not exist
         pass
 
-    # If we already grabbed the group list, it's overkill to grab it again
-    if 'user.getgrall' in __context__:
-        groups = __context__['user.getgrall']
-    else:
-        groups = grp.getgrall()
-        __context__['user.getgrall'] = groups
+    groups = grp.getgrall()
 
     # Now, all other groups the user belongs to
     for group in groups:

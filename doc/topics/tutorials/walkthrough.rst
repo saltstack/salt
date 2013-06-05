@@ -245,7 +245,7 @@ minions to specify what the role or roles a minion might be. These static
 grains can be set in the minion configuration file or via the ``grains.set``
 function.
 
-Targetting
+Targeting
 ~~~~~~~~~~
 
 Salt allows for minions to be targeted based on a wide range of criteria.

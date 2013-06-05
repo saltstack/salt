@@ -6,6 +6,9 @@ to this basic module
 # Import python libs
 import os
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
 GRAINMAP = {
            'Arch': '/etc/rc.d',
@@ -29,7 +32,7 @@ def __virtual__():
     Only work on systems which default to systemd
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = [
+    disable = set((
                'RedHat',
                'CentOS',
                'Amazon',
@@ -45,7 +48,7 @@ def __virtual__():
                'SUSE  Enterprise Server',
                'openSUSE',
                'OEL',
-              ]
+              ))
     if __grains__['os'] in disable:
         return False
     # Disable on all non-Linux OSes as well
@@ -106,7 +109,7 @@ def status(name, sig=None):
     return __salt__['status.pid'](sig if sig else name)
 
 
-def reload(name):
+def reload_(name):
     '''
     Restart the specified service
 

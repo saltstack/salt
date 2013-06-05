@@ -15,11 +15,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    # Disable on these platforms, specific service modules exist:
-    disable = [
-        'Windows',
-        ]
-    if __grains__['os'] in disable:
+    if salt.utils.is_windows():
         return False
     return 'timezone'
 
@@ -47,6 +43,8 @@ def get_zone():
     elif 'FreeBSD' in __grains__['os_family']:
         return ('FreeBSD does not store a human-readable timezone. Please'
                 'consider using timezone.get_zonecode or timezone.zonecompare')
+    elif 'Solaris' in __grains__['os_family']:
+        cmd = 'grep "TZ=" /etc/TIMEZONE'
     out = __salt__['cmd.run'](cmd).split('=')
     ret = out[1].replace('"', '')
     return ret
@@ -90,13 +88,20 @@ def set_zone(timezone):
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
-    zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+    if 'Solaris' in __grains__['os_family']:
+        zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
+    else:
+        zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
     if not os.path.exists(zonepath):
         return 'Zone does not exist: {0}'.format(zonepath)
 
     if os.path.exists('/etc/localtime'):
         os.unlink('/etc/localtime')
-    os.symlink(zonepath, '/etc/localtime')
+
+    if 'Solaris' in __grains__['os_family']:
+        __salt__['file.sed']('/etc/default/init', '^TZ=.*', 'TZ={0}'.format(timezone))
+    else:
+        os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
         __salt__['file.sed']('/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
@@ -122,15 +127,19 @@ def zone_compare(timezone):
 
         salt '*' timezone.zone_compare 'America/Denver'
     '''
-    if not os.path.exists('/etc/localtime'):
-        return 'Error: /etc/localtime does not exist.'
+    if 'Solaris' in __grains__['os_family']:
+        return 'Not implemented for Solaris family'
 
+    tzfile = '/etc/localtime'
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+
+    if not os.path.exists(tzfile):
+        return 'Error: {0} does not exist.'.format(tzfile)
 
     with salt.utils.fopen(zonepath, 'r') as fp_:
         usrzone = hashlib.md5(fp_.read()).hexdigest()
 
-    with salt.utils.fopen('/etc/localtime', 'r') as fp_:
+    with salt.utils.fopen(tzfile, 'r') as fp_:
         etczone = hashlib.md5(fp_.read()).hexdigest()
 
     if usrzone == etczone:
@@ -158,16 +167,31 @@ def get_hwclock():
         cmd = 'tail -n 1 /etc/adjtime'
         return __salt__['cmd.run'](cmd)
     elif 'Debian' in __grains__['os_family']:
+        #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
         out = __salt__['cmd.run'](cmd).split('=')
-        if out[1] == 'yes':
-            return 'UTC'
+        if len(out) > 1:
+            if out[1] == 'yes':
+                return 'UTC'
+            else:
+                return 'localtime'
         else:
-            return 'localtime'
+            #Since Wheezy
+            cmd = 'tail -n 1 /etc/adjtime'
+            return __salt__['cmd.run'](cmd)
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'grep "^clock=" /etc/conf.d/hwclock | grep -vE "^#"'
         out = __salt__['cmd.run'](cmd).split('=')
         return out[1].replace('"', '')
+    elif 'Solaris' in __grains__['os_family']:
+        if os.path.isfile('/etc/rtc_config'):
+            with salt.utils.fopen('/etc/rtc_config', 'r') as fp_:
+                for line in fp_:
+                    if line.startswith('zone_info=GMT'):
+                        return 'UTC'
+            return 'localtime'
+        else:
+            return 'UTC'
 
 
 def set_hwclock(clock):
@@ -179,12 +203,27 @@ def set_hwclock(clock):
         salt '*' timezone.set_hwclock UTC
     '''
     timezone = get_zone()
-    zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+
+    if 'Solaris' in __grains__['os_family']:
+        if 'sparc' in __grains__['cpuarch']:
+            return 'UTC is the only choice for SPARC architecture' 
+        if clock == 'localtime': 
+            cmd = 'rtc -z {0}'.format(timezone)
+            __salt__['cmd.run'](cmd)
+            return True 
+        elif clock == 'UTC':
+            cmd = 'rtc -z GMT'
+            __salt__['cmd.run'](cmd)
+            return True
+    else:
+        zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
+
     if not os.path.exists(zonepath):
         return 'Zone does not exist: {0}'.format(zonepath)
 
-    os.unlink('/etc/localtime')
-    os.symlink(zonepath, '/etc/localtime')
+    if 'Solaris' not in __grains__['os_family']:
+        os.unlink('/etc/localtime')
+        os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
         __salt__['file.sed']('/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(clock))
@@ -201,4 +240,3 @@ def set_hwclock(clock):
         __salt__['file.sed']('/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
 
     return True
-

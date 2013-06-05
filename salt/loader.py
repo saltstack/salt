@@ -252,9 +252,9 @@ def grains(opts):
         opts['grains'] = {}
 
     load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
-    grains = load.gen_grains()
-    grains.update(opts['grains'])
-    return grains
+    grains_info = load.gen_grains()
+    grains_info.update(opts['grains'])
+    return grains_info
 
 
 def call(fun, **kwargs):
@@ -322,9 +322,11 @@ class Loader(object):
     also be used to only load specific functions from a directory, or to
     call modules in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts=dict(), tag='module',
+    def __init__(self, module_dirs, opts=None, tag='module',
                  loaded_base_name=None, mod_type_check=None):
         self.module_dirs = module_dirs
+        if opts is None:
+            opts = {}
         if '_' in tag:
             raise LoaderError('Cannot tag loader with an "_"')
         self.tag = tag
@@ -351,10 +353,12 @@ class Loader(object):
             mod_opts[key] = val
         return mod_opts
 
-    def call(self, fun, arg=list()):
+    def call(self, fun, arg=None):
         '''
         Call a function in the load path.
         '''
+        if arg is None:
+            arg = []
         name = fun[:fun.rindex('.')]
         try:
             fn_, path, desc = imp.find_module(name, self.module_dirs)
@@ -488,7 +492,15 @@ class Loader(object):
                         # the callable object is an exception, don't load it
                         continue
 
-                funcs['{0}.{1}'.format(module_name, attr)] = func
+                # Let's get the function name.
+                # If the module has the __func_alias__ attribute, it must be a
+                # dictionary mapping in the form of(key -> value):
+                #   <real-func-name> -> <desired-func-name>
+                #
+                # It default's of course to the found callable attribute name
+                # if no alias is defined.
+                funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+                funcs['{0}.{1}'.format(module_name, funcname)] = func
                 self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
@@ -735,7 +747,7 @@ class Loader(object):
                     continue
 
             if whitelist:
-                # It a whitelist is defined then only load the module if it is
+                # If a whitelist is defined then only load the module if it is
                 # in the whitelist
                 if module_name not in whitelist:
                     continue
@@ -748,8 +760,6 @@ class Loader(object):
                     )
                 )
             for attr in getattr(mod, '__load__', dir(mod)):
-                # functions are namespaced with their module name
-                attr_name = '{0}.{1}'.format(module_name, attr)
 
                 if attr.startswith('_'):
                     # skip private attributes
@@ -766,8 +776,24 @@ class Loader(object):
                             continue
                     # now that callable passes all the checks, add it to the
                     # library of available functions of this type
-                    funcs[attr_name] = func
-                    log.trace('Added {0} to {1}'.format(attr_name, self.tag))
+
+                    # Let's get the function name.
+                    # If the module has the __func_alias__ attribute, it must
+                    # be a dictionary mapping in the form of(key -> value):
+                    #   <real-func-name> -> <desired-func-name>
+                    #
+                    # It default's of course to the found callable attribute
+                    # name if no alias is defined.
+                    funcname = getattr(mod, '__func_alias__', {}).get(
+                        attr, attr
+                    )
+
+                    # functions are namespaced with their module name
+                    module_func_name = '{0}.{1}'.format(module_name, funcname)
+                    funcs[module_func_name] = func
+                    log.trace(
+                        'Added {0} to {1}'.format(module_func_name, self.tag)
+                    )
                     self._apply_outputter(func, mod)
 
         # now that all the functions have been collected, iterate back over
@@ -820,15 +846,8 @@ class Loader(object):
         members. Then verify that the returns are python dict's and return
         a dict containing all of the returned values.
         '''
-        grains = {}
+        grains_data = {}
         funcs = self.gen_functions()
-        for key, fun in funcs.items():
-            if key[key.index('.') + 1:] != 'core':
-                continue
-            ret = fun()
-            if not isinstance(ret, dict):
-                continue
-            grains.update(ret)
         for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
@@ -845,5 +864,12 @@ class Loader(object):
                 continue
             if not isinstance(ret, dict):
                 continue
-            grains.update(ret)
-        return grains
+            grains_data.update(ret)
+        for key, fun in funcs.items():
+            if key[key.index('.') + 1:] != 'core':
+                continue
+            ret = fun()
+            if not isinstance(ret, dict):
+                continue
+            grains_data.update(ret)
+        return grains_data

@@ -2,11 +2,15 @@
 Manage groups on Windows
 '''
 
+# Import salt libs
+import salt.utils
+
+
 def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    return 'group' if __grains__['kernel'] == 'Windows' else False
+    return 'group' if salt.utils.is_windows() else False
 
 
 def add(name, gid=None, system=False):
@@ -68,7 +72,7 @@ def info(name):
             'members': gr_mem}
 
 
-def getent():
+def getent(refresh=False):
     '''
     Return info on all groups
 
@@ -76,7 +80,7 @@ def getent():
 
         salt '*' group.getent
     '''
-    if 'group.getent' in __context__:
+    if 'group.getent' in __context__ and not refresh:
         return __context__['group.getent']
 
     ret = []

@@ -103,7 +103,7 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(
             ret,
-            "{0} => {1}".format(current_rev, self.new_rev),
+            '{0} => {1}'.format(current_rev, self.new_rev),
             keys=['revision']
         )
         self.assertTrue(os.path.isdir(os.path.join(self.target, '.svn')))

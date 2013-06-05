@@ -137,15 +137,15 @@ def _interfaces_ip(out):
             ip = value  # pylint: disable-msg=C0103
             cidr = 32
 
-        if type == 'inet':
+        if type_ == 'inet':
             mask = _cidr_to_ipv4_netmask(int(cidr))
             if 'brd' in cols:
                 brd = cols[cols.index('brd') + 1]
-        elif type == 'inet6':
+        elif type_ == 'inet6':
             mask = cidr
         return (ip, mask, brd)
 
-    groups = re.compile('\r?\n\d').split(out)
+    groups = re.compile('\r?\n\\d').split(out)
     for group in groups:
         iface = None
         data = dict()
@@ -153,7 +153,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):
@@ -166,12 +166,12 @@ def _interfaces_ip(out):
 
             cols = line.split()
             if len(cols) >= 2:
-                type, value = tuple(cols[0:2])
+                type_, value = tuple(cols[0:2])
                 iflabel = cols[-1:][0]
-                if type in ('inet', 'inet6'):
+                if type_ in ('inet', 'inet6'):
                     if 'secondary' not in cols:
                         ipaddr, netmask, broadcast = parse_network(value, cols)
-                        if type == 'inet':
+                        if type_ == 'inet':
                             if 'inet' not in data:
                                 data['inet'] = list()
                             addr_obj = dict()
@@ -180,7 +180,7 @@ def _interfaces_ip(out):
                             addr_obj['broadcast'] = broadcast
                             addr_obj['label'] = iflabel
                             data['inet'].append(addr_obj)
-                        elif type == 'inet6':
+                        elif type_ == 'inet6':
                             if 'inet6' not in data:
                                 data['inet6'] = list()
                             addr_obj = dict()
@@ -192,14 +192,14 @@ def _interfaces_ip(out):
                             data['secondary'] = list()
                         ip_, mask, brd = parse_network(value, cols)
                         data['secondary'].append({
-                            'type': type,
+                            'type': type_,
                             'address': ip_,
                             'netmask': mask,
                             'broadcast': brd,
                             'label': iflabel,
                             })
                         del ip_, mask, brd
-                elif type.startswith('link'):
+                elif type_.startswith('link'):
                     data['hwaddr'] = value
         if iface:
             ret[iface] = data
@@ -214,16 +214,16 @@ def _interfaces_ifconfig(out):
     '''
     ret = dict()
 
-    piface = re.compile('^([^\s:]+)')
-    pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
-    pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
+    piface = re.compile(r'^([^\s:]+)')
+    pmac = re.compile('.*?(?:HWaddr|ether|address:|lladdr) ([0-9a-fA-F:]+)')
+    pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
-    pmask = re.compile('.*?(?:Mask:|netmask )(?:(0x[0-9a-fA-F]{8})|([\d\.]+))')
-    pmask6 = re.compile('.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
+    pmask = re.compile(r'.*?(?:Mask:|netmask )(?:((?:0x)?[0-9a-fA-F]{8})|([\d\.]+))')
+    pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pupdown = re.compile('UP')
-    pbcast = re.compile('.*?(?:Bcast:|broadcast )([\d\.]+)')
+    pbcast = re.compile(r'.*?(?:Bcast:|broadcast )([\d\.]+)')
 
-    groups = re.compile('\r?\n(?=\S)').split(out)
+    groups = re.compile('\r?\n(?=\\S)').split(out)
     for group in groups:
         data = dict()
         iface = ''
@@ -276,6 +276,11 @@ def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
     '''
+    if salt.utils.is_windows():
+        from salt.modules.win_network import interfaces as win_interfaces
+        ifaces = win_interfaces()
+        return ifaces
+
     ifaces = dict()
     if salt.utils.which('ip'):
         cmd1 = subprocess.Popen(
@@ -312,6 +317,22 @@ def ip4_addrs():
     return sorted(ret)
 
 
+def hex2ip(hex_ip):
+    '''
+    Convert a hex string to an ip, if a failure occurs the original hex is
+    returned
+    '''
+    try:
+        hip = int(hex_ip, 16)
+    except ValueError:
+        return hex_ip
+    return '{0}.{1}.{2}.{3}'.format(
+            hip >> 24 & 255,
+            hip >> 16 & 255,
+            hip >> 8 & 255,
+            hip & 255)
+
+
 class IPv4Address(object):
     '''
     A very minimal subset of the IPv4Address object in the ip_address module.
@@ -319,16 +340,16 @@ class IPv4Address(object):
 
     def __init__(self, address_str):
         self.address_str = address_str
-        a = self.address_str.split('.')
-        if len(a) != 4:
+        octets = self.address_str.split('.')
+        if len(octets) != 4:
             raise ValueError(
                 'IPv4 addresses must be in dotted-quad form.'
             )
         try:
-            self.dotted_quad = [int(a) for a in a]
-        except ValueError as e:
+            self.dotted_quad = [int(octet) for octet in octets]
+        except ValueError as err:
             raise ValueError(
-                'IPv4 addresses must be in dotted-quad form. {0}'.format(e)
+                'IPv4 addresses must be in dotted-quad form. {0}'.format(err)
             )
 
     def __str__(self):

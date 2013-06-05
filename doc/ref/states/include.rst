@@ -30,6 +30,19 @@ the following syntax is used:
     include:
       - dev: http
 
+Relative Include
+================
+
+In Salt 0.16.0 the capability to include sls formulas which are relative to
+the running sls formula was added, simply precede the formula name with a
+`.`:
+
+.. code-block:: yaml
+
+    include:
+      - .virt
+      - .virt.hyper
+
 Exclude
 =======
 

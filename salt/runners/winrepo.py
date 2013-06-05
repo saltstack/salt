@@ -35,10 +35,10 @@ def genrepo():
                         config = yaml.safe_load(slsfile.read()) or {}
                     except yaml.parser.ParserError as exc:
                         # log.debug doesn't seem to be working
-                        # delete the following print statement 
+                        # delete the following print statement
                         # when log.debug works
                         log.debug('Failed to compile'
-                                '{0}: {1}'.format(os.path.join(root, name), exc))
+                                  '{0}: {1}'.format(os.path.join(root, name), exc))
                         print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
                 if config:
                     ret.update(config)
@@ -46,6 +46,7 @@ def genrepo():
         repo.write(msgpack.dumps(ret))
     salt.output.display_output(ret, 'pprint', __opts__)
     return ret
+
 
 def update_git_repos():
     '''
@@ -61,7 +62,9 @@ def update_git_repos():
         else:
             targetname = gitrepo
         gittarget = os.path.join(repo, targetname)
-        result = mminion.states['git.latest'](gitrepo, target=gittarget, force=True)
+        result = mminion.states['git.latest'](gitrepo,
+                                              target=gittarget,
+                                              force=True)
         ret[result['name']] = result['result']
     salt.output.display_output(ret, 'pprint', __opts__)
     return ret

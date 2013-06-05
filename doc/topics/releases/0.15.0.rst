@@ -38,7 +38,7 @@ until now files could not be easily copied from the minion up to the master.
 
 A new function called ``cp.push`` can push files from the minions up to the
 master server. The uploaded files are then cached on the master in the master
-cachedir for each minon.
+cachedir for each minion.
 
 Better Template Debugging
 -------------------------
@@ -84,7 +84,9 @@ In the past when a minion was decommissioned the key needed to be manually
 deleted on the master, but now a function on the minion can be used to revoke
 the calling minion's key:
 
-salt-call saltutil.revoke_auth
+.. code-block:: bash
+
+    $ salt-call saltutil.revoke_auth
 
 Function Return Codes
 ---------------------

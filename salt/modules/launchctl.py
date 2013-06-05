@@ -46,7 +46,7 @@ def _available_services():
                 try:
                     # This assumes most of the plist files will be already in XML format
                     plist = plistlib.readPlist(file_path)
-                except:
+                except Exception:
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(file_path)

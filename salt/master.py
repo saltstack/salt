@@ -15,7 +15,10 @@ import stat
 import logging
 import hashlib
 import datetime
-import pwd
+try:
+    import pwd
+except ImportError:  # This is in case windows minion is importing
+    pass
 import getpass
 import resource
 import subprocess
@@ -40,7 +43,6 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.key
-import salt.utils
 import salt.fileserver
 import salt.utils.atomicfile
 import salt.utils.event
@@ -242,7 +244,7 @@ class Master(SMaster):
         mof_c = self.opts['max_open_files']
         if mof_c > mof_h:
             # The configured value is higher than what's allowed
-            log.warning(
+            log.info(
                 'The value for the \'max_open_files\' setting, {0}, is higher '
                 'than what the user running salt is allowed to raise to, {1}. '
                 'Defaulting to {1}.'.format(mof_c, mof_h)
@@ -251,11 +253,11 @@ class Master(SMaster):
 
         if mof_s < mof_c:
             # There's room to raise the value. Raise it!
-            log.warning('Raising max open files value to {0}'.format(mof_c))
+            log.info('Raising max open files value to {0}'.format(mof_c))
             resource.setrlimit(resource.RLIMIT_NOFILE, (mof_c, mof_h))
             try:
                 mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
-                log.warning(
+                log.info(
                     'New values for max open files soft/hard values: '
                     '{0}/{1}'.format(mof_s, mof_h)
                 )
@@ -686,6 +688,8 @@ class AESFuncs(object):
         Take a minion id and a string signed with the minion private key
         The string needs to verify as 'salt' with the minion public key
         '''
+        if not salt.utils.verify.valid_id(id_):
+            return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with salt.utils.fopen(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
@@ -718,6 +722,8 @@ class AESFuncs(object):
         '''
         if 'id' not in load:
             log.error('Received call for external nodes without an id')
+            return {}
+        if not salt.utils.verify.valid_id(load['id']):
             return {}
         ret = {}
         # The old ext_nodes method is set to be deprecated in 0.10.4
@@ -775,14 +781,19 @@ class AESFuncs(object):
         '''
         Return the master options to the minion
         '''
-        mopts = dict(self.opts)
-        file_roots = dict(mopts['file_roots'])
+        mopts = {}
         file_roots = {}
         envs = self._file_envs()
         for env in envs:
             if env not in file_roots:
                 file_roots[env] = []
         mopts['file_roots'] = file_roots
+        if load.get('env_only'):
+            return mopts
+        mopts['renderer'] = self.opts['renderer']
+        mopts['failhard'] = self.opts['failhard']
+        mopts['state_top'] = self.opts['state_top']
+        mopts['nodegroups'] = self.opts['nodegroups']
         return mopts
 
     def _mine_get(self, load):
@@ -790,8 +801,10 @@ class AESFuncs(object):
         Gathers the data from the specified minions' mine
         '''
         if any(key not in load for key in ('id', 'tgt', 'fun')):
-            return False
+            return {}
         ret = {}
+        if not salt.utils.verify.valid_id(load['id']):
+            return ret
         checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
                 load['tgt'],
@@ -801,7 +814,7 @@ class AESFuncs(object):
             mine = os.path.join(
                     self.opts['cachedir'],
                     'minions',
-                    load['id'],
+                    minion,
                     'mine.p')
             try:
                 with salt.utils.fopen(mine) as fp_:
@@ -818,11 +831,20 @@ class AESFuncs(object):
         '''
         if 'id' not in load or 'data' not in load:
             return False
+        if not salt.utils.verify.valid_id(load['id']):
+            return False
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'mine.p')
+            if not load.get('clear', False):
+                if os.path.isfile(datap):
+                    with salt.utils.fopen(datap, 'r') as fp_:
+                        new = self.serial.load(fp_)
+                    if isinstance(new, dict):
+                        new.update(load['data'])
+                        load['data'] = new
             with salt.utils.fopen(datap, 'w+') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
@@ -838,6 +860,8 @@ class AESFuncs(object):
             return False
         if os.path.isabs(load['path']) or '../' in load['path']:
             # Can overwrite master files!!
+            return False
+        if not salt.utils.verify.valid_id(load['id']):
             return False
         cpath = os.path.join(
                 self.opts['cachedir'],
@@ -866,6 +890,8 @@ class AESFuncs(object):
         Return the pillar data for the minion
         '''
         if any(key not in load for key in ('id', 'grains', 'env')):
+            return False
+        if not salt.utils.verify.valid_id(load['id']):
             return False
         pillar = salt.pillar.Pillar(
                 self.opts,
@@ -909,6 +935,8 @@ class AESFuncs(object):
         '''
         if 'id' not in load:
             return False
+        if not salt.utils.verify.valid_id(load['id']):
+            return False
         if 'events' not in load and ('tag' not in load or 'data' not in load):
             return False
         if 'events' in load:
@@ -925,6 +953,8 @@ class AESFuncs(object):
         '''
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
+            return False
+        if not salt.utils.verify.valid_id(load['id']):
             return False
         if load['jid'] == 'req':
         # The minion is returning a standalone job, request a jobid
@@ -994,6 +1024,8 @@ class AESFuncs(object):
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
             return None
+        if not salt.utils.verify.valid_id(load['id']):
+            return False
         # set the write flag
         jid_dir = salt.utils.jid_dir(
                 load['jid'],
@@ -1163,19 +1195,24 @@ class AESFuncs(object):
                     return {}
             else:
                 load['expr_form'] = clear_load['tgt_type']
-        if clear_load.get('form', '') == 'full':
-            load['raw'] = True
+        load['raw'] = True
         ret = {}
         for minion in self.local.cmd_iter(**load):
-            if load.get('raw', False):
+            if clear_load.get('form', '') == 'full':
                 data = minion
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
                 data['ret'] = data.pop('return')
                 ret[minion['id']] = data
             else:
-                id_ = minion.keys()[0]
-                ret[id_] = minion[id_].get('ret', None)
+                ret[minion['id']] = minion['return']
+                if 'jid' in minion:
+                    ret['__jid__'] = minion['jid']
+        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
+            if not key in ret:
+                ret[key] = val
+        if clear_load.get('form', '') != 'full':
+            ret.pop('__jid__')
         return ret
 
     def revoke_auth(self, load):
@@ -1319,13 +1356,12 @@ class ClearFuncs(object):
 
     def _check_permissions(self, filename):
         '''
-        check if the specified filename has correct permissions
+        Check if the specified filename has correct permissions
         '''
-        if 'os' in os.environ:
-            if os.environ['os'].startswith('Windows'):
-                return True
+        if salt.utils.is_windows():
+            return True
 
-        import pwd  # after confirming not running Windows
+        # After we've ascertained we're not on windows
         import grp
         try:
             user = self.opts['user']
@@ -1364,7 +1400,7 @@ class ClearFuncs(object):
 
             # check if writable by group or other
             if not (stat.S_IWGRP & fmode.st_mode or
-              stat.S_IWOTH & fmode.st_mode):
+                    stat.S_IWOTH & fmode.st_mode):
                 return True
 
         return False
@@ -1399,7 +1435,7 @@ class ClearFuncs(object):
                 if fnmatch.fnmatch(keyid, line):
                     return True
                 try:
-                    if re.match(line, keyid):
+                    if re.match(r'\A{0}\z'.format(line), keyid):
                         return True
                 except re.error:
                     log.warn(
@@ -1430,6 +1466,12 @@ class ClearFuncs(object):
 
         salt.utils.verify.check_max_open_files(self.opts)
 
+        if not salt.utils.verify.valid_id(load['id']):
+            log.info(
+                'Authentication request from invalid id {id}'.format(**load)
+                )
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
@@ -1751,7 +1793,7 @@ class ClearFuncs(object):
             )
             return ''
         # to make sure we don't step on anyone else's toes
-        del(good)
+        del good
 
         # Check for external auth calls
         if extra.get('token', False):

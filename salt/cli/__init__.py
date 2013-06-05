@@ -92,6 +92,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             try:
                 # local will be None when there was an error
                 if local:
+                    if self.options.subset:
+                        cmd_func = local.cmd_subset
+                        kwargs['sub'] = self.options.subset
+                        kwargs['cli'] = True
+                    else:
+                        cmd_func = local.cmd_cli
                     if self.options.static:
                         if self.options.verbose:
                             kwargs['verbose'] = True
@@ -108,7 +114,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     else:
                         if self.options.verbose:
                             kwargs['verbose'] = True
-                        for full_ret in local.cmd_cli(**kwargs):
+                        for full_ret in cmd_func(**kwargs):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
             except (SaltInvocationError, EauthAuthenticationError) as exc:
@@ -240,6 +246,8 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         if self.options.local:
             self.config['file_client'] = 'local'
+        if self.options.master:
+            self.config['master'] = self.options.master
 
         # Setup file logging!
         self.setup_logfile_logger()

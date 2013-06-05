@@ -119,7 +119,6 @@ if [ -f /etc/default/salt ]; then
     . /etc/default/salt
 else
 	SALTSYNDIC='/usr/bin/salt-syndic'
-	SERVICE='salt-syndic'
 fi
 test -x $SALTSYNDIC || { echo "$SALTMINION not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
@@ -171,7 +170,7 @@ case "$1" in
 	echo -n "Starting salt-syndic daemon: "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
-	/sbin/startproc -f -p /var/run/${SERVICE} ${SALTSYNDIC} -d
+	/sbin/startproc ${SALTSYNDIC} -d
 	
 	# Remember status and be verbose
 	rc_status -v
@@ -211,6 +210,9 @@ case "$1" in
 	# Remember status and be quiet
 	rc_status
 	;;
+    reload)
+        echo "can't reload configuration, you have to restart it"
+    ;;    
     status)
 	echo -n "Checking for service salt-syndic "
 	## Check status with checkproc(8), if process is running
@@ -231,7 +233,7 @@ case "$1" in
 	rc_status -v
 	;;
     *)
-	echo "Usage: $0 {start|stop|status|try-restart|restart}"
+	echo "Usage: $0 {start|stop|status|try-restart|restart|reload}"
 	exit 1
 	;;
 esac

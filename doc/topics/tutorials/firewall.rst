@@ -15,7 +15,7 @@ rules for allowing these incoming connections to the master.
 RHEL 6 / CENTOS 6
 =================
 
-The lokkit command packaged with some linux distributions makes opening
+The lokkit command packaged with some Linux distributions makes opening
 iptables firewall ports very simple via the command line. Just be careful
 to not lock out access to the server by neglecting to open the ssh
 port.

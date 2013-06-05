@@ -340,7 +340,8 @@ Default: ``full``
 
 The state_output setting changes if the output is the full multi line
 output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+the output will be shortened to a single line.  If set to 'mixed', the output
+will be terse unless a state failed, in which case that output will be full.
 
 .. code-block:: yaml
 
@@ -644,7 +645,7 @@ A group consists of a group name and a compound target.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
 
 Master Logging Settings

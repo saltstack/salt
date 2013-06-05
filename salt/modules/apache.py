@@ -3,6 +3,7 @@ Support for Apache
 '''
 
 # Import python libs
+import os
 import re
 
 # Import salt libs
@@ -60,7 +61,7 @@ def fullversion():
     out = __salt__['cmd.run'](cmd).splitlines()
     # Example
     #  -D APR_HAS_MMAP
-    define_re = re.compile('^\s+-D\s+')
+    define_re = re.compile(r'^\s+-D\s+')
     for line in out:
         if ': ' in line:
             comps = line.split(': ')
@@ -206,3 +207,44 @@ def signal(signal=None):
     else:
         ret = 'Command: "{0}" completed successfully!'.format(cmd)
     return ret
+
+
+def useradd(pwfile, user, password, opts=''):
+    '''
+    Add an HTTP user using the htpasswd command. If the htpasswd file does not
+    exist, it will be created. Valid options that can be passed are:
+
+        n  Don't update file; display results on stdout.
+        m  Force MD5 encryption of the password (default).
+        d  Force CRYPT encryption of the password.
+        p  Do not encrypt the password (plaintext).
+        s  Force SHA encryption of the password.
+
+    CLI Examples::
+
+        salt '*' apache.useradd /etc/httpd/htpasswd larry badpassword
+        salt '*' apache.useradd /etc/httpd/htpasswd larry badpass opts=ns
+    '''
+    if not os.path.exists(pwfile):
+        opts += 'c'
+
+    cmd = 'htpasswd -b{0} {1} {2} {3}'.format(opts, pwfile, user, password)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def userdel(pwfile, user):
+    '''
+    Delete an HTTP user from the specified htpasswd file.
+
+    CLI Examples::
+
+        salt '*' apache.userdel /etc/httpd/htpasswd larry
+    '''
+    if not os.path.exists(pwfile):
+        return 'Error: The specified htpasswd file does not exist'
+
+    cmd = 'htpasswd -D {0} {1}'.format(pwfile, user)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+

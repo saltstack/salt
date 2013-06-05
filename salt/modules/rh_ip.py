@@ -652,7 +652,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except:
+        except Exception:
             _raise_error_network('networking', valid)
 
     if opts['networking'] in valid:
@@ -667,7 +667,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except:
+        except Exception:
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
@@ -774,10 +774,10 @@ def build_bond(iface, settings):
     path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
-            'sed -i -e "/^alias\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
         __salt__['cmd.run'](
-            'sed -i -e "/^options\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
         __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
     __salt__['kmod.load']('bonding')

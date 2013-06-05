@@ -5,6 +5,7 @@ A state module to manage installed NPM packages.
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
+
 def installed(name,
               dir=None,
               runas=None,
@@ -29,13 +30,13 @@ def installed(name,
     prefix = name.split('@')[0].split('<')[0].split('>')[0].strip()
 
     try:
-        installed = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if prefix.lower() in (p.lower() for p in installed):
+    if prefix.lower() in (p.lower() for p in installed_pkgs):
         if force_reinstall is False:
             ret['result'] = True
             ret['comment'] = 'Package already installed'
@@ -57,7 +58,7 @@ def installed(name,
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
-    if call:
+    if call or isinstance(call, list) or isinstance(call, dict):
         ret['result'] = True
         version = call[0]['version']
         pkg_name = call[0]['name']
@@ -68,6 +69,7 @@ def installed(name,
         ret['comment'] = 'Could not install package'
 
     return ret
+
 
 def removed(name,
             dir=None,
@@ -86,13 +88,13 @@ def removed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        installed = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret
 
-    if name not in installed:
+    if name not in installed_pkgs:
         ret["result"] = True
         ret["comment"] = "Package is not installed."
         return ret
@@ -102,16 +104,18 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    call = __salt__["npm.uninstall"](
-        pkg=name,
-        dir=dir,
-        runas=runas)
-
-    ret["result"] = True
-    ret["changes"][name] = "Removed"
-    ret["comment"] = "Package was successfully removed."
+    if __salt__["npm.uninstall"](pkg=name,
+                                 dir=dir,
+                                 runas=runas):
+        ret["result"] = True
+        ret["changes"][name] = 'Removed'
+        ret["comment"] = 'Package was successfully removed.'
+    else:
+        ret["result"] = False
+        ret["comment"] = 'Error removing package.'
 
     return ret
+
 
 def bootstrap(
             name,
@@ -143,11 +147,10 @@ def bootstrap(
 
     if call:
         ret['result'] = True
-        ret['changes'] = name,'Bootstrapped'
+        ret['changes'] = name, 'Bootstrapped'
         ret['comment'] = 'Directory was successfully bootstrapped'
     else:
         ret['result'] = False
         ret['comment'] = 'Could not bootstrap directory'
 
     return ret
-

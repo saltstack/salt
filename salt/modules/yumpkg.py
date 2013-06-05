@@ -6,9 +6,10 @@ Support for YUM
 '''
 
 # Import python libs
-import yaml
+import copy
 import os
 import logging
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -99,17 +100,6 @@ class _YumErrorLogger(object):
         self.messages[package] = msgs
 
 
-def _list_removed(old, new):
-    '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
-
-
 def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
@@ -132,7 +122,7 @@ def list_upgrades(refresh=True):
                 pkglist, [pkg]
             )
             for pkg in exactmatch:
-                if pkg.arch == rpmUtils.arch.getBaseArch() \
+                if pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib() \
                         or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join(
                         [pkg['version'], pkg['release']]
@@ -210,7 +200,7 @@ def latest_version(*names, **kwargs):
         )
         for pkg in exactmatch:
             if pkg.name in ret \
-                    and (pkg.arch == rpmUtils.arch.getBaseArch()
+                    and (pkg.arch in rpmUtils.arch.legitMultiArchesInSameLib()
                          or pkg.arch == 'noarch'):
                 ret[pkg.name] = '-'.join([pkg.version, pkg.release])
 
@@ -259,6 +249,15 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     yb = yum.YumBase()
     for p in yb.rpmdb:
@@ -271,6 +270,7 @@ def list_pkgs(versions_as_list=False):
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -456,7 +456,8 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
@@ -528,6 +529,7 @@ def install(name=None,
     except Exception as e:
         log.error('Install failed: {0}'.format(e))
 
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -568,35 +570,53 @@ def upgrade(refresh=True):
     except Exception as e:
         log.error('Upgrade failed: {0}'.format(e))
 
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(pkgs, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
-    Removes packages with yum remove
+    Removes packages using python API for yum.
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
-        salt '*' pkg.remove <package,package,package>
+        salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
+
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
 
     yumbase = yum.YumBase()
     setattr(yumbase.conf, 'assumeyes', True)
-    pkgs = pkgs.split(',')
-    old = list_pkgs()
 
     # same comments as in upgrade for remove.
-    for pkg in pkgs:
+    for target in targets:
         if __grains__.get('cpuarch', '') == 'x86_64' \
-                and pkg.endswith('.i686'):
-            pkg = pkg[:-5]
+                and target.endswith('.i686'):
+            target = target[:-5]
             arch = 'i686'
         else:
             arch = None
-        yumbase.remove(name=pkg, arch=arch)
+        yumbase.remove(name=target, arch=arch)
 
     log.info('Resolving dependencies')
     yumbase.resolveDeps()
@@ -606,22 +626,36 @@ def remove(pkgs, **kwargs):
     yumlogger.log_accumulated_errors()
     yumbase.closeRpmDB()
 
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
-    return _list_removed(old, new)
 
-
-def purge(pkgs, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Yum does not have a purge, this function calls remove
+    Package purges are not supported by yum, this function is identical to
+    ``remove()``.
 
-    Return a list containing the removed packages:
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(pkgs)
+    return remove(name=name, pkgs=pkgs)
 
 
 def verify(*package):

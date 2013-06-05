@@ -44,6 +44,9 @@ file:
 The above configuration will execute the state.over runner every 3 hours,
 30 minutes and 35 seconds, or every 12,635 seconds.
 
+Scheduler With Returner
+=======================
+
 The scheduler is also useful for tasks like gathering monitoring data about
 a minion, this schedule option will gather status data and send it to a mysql
 returner database:

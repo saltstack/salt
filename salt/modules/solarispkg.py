@@ -3,6 +3,7 @@ Package support for Solaris
 '''
 
 # Import python libs
+import copy
 import os
 import logging
 
@@ -20,17 +21,6 @@ def __virtual__():
     if __grains__['os'] == 'Solaris':
         return 'pkg'
     return False
-
-
-def _list_removed(old, new):
-    '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
 
 
 def _write_adminfile(kwargs):
@@ -82,6 +72,15 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     cmd = '/usr/bin/pkginfo -x'
 
@@ -93,10 +92,11 @@ def list_pkgs(versions_as_list=False):
         if index % 2 == 0:
             name = lines[index].split()[0].strip()
         if index % 2 == 1:
-            version = lines[index].split()[1].strip()
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            version_num = lines[index].split()[1].strip()
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -260,12 +260,17 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     Note: the ID declaration is ignored, as the package name is read from the
     "sources" parameter.
     '''
-
     pkg_params, pkg_type = \
         __salt__['pkg_resource.parse_targets'](name,
                                                kwargs.get('pkgs'),
-                                               sources)
+                                               sources,
+                                               **kwargs)
+
     if pkg_params is None or len(pkg_params) == 0:
+        return {}
+
+    if not sources:
+        log.error('"sources" param required for solaris pkg_add installs')
         return {}
 
     if 'admin_source' in kwargs:
@@ -273,10 +278,7 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     else:
         adminfile = _write_adminfile(kwargs)
 
-    # Get a list of the packages before install so we can diff after to see
-    # what got installed.
     old = list_pkgs()
-
     cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
 
     # Only makes sense in a global zone but works fine in non-globals.
@@ -286,11 +288,9 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        stderr = __salt__['cmd.run_all'](temp_cmd).get('stderr', '')
-        if stderr:
-            log.error(stderr)
+        __salt__['cmd.run_all'](temp_cmd)
 
-    # Get a list of the packages again, including newly installed ones.
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
 
     # Remove the temp adminfile
@@ -300,9 +300,12 @@ def install(name=None, refresh=False, sources=None, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkgrm
+    Remove packages with pkgrm
+
+    name
+        The name of the package to be deleted.
 
     By default salt automatically provides an adminfile, to automate package
     removal, with these options set::
@@ -329,15 +332,28 @@ def remove(name, **kwargs):
 
         man -s 4 admin
 
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
+
     CLI Example::
 
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove SUNWgit
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-
-    # Check to see if the package is installed before we proceed
-    if version(name) == '':
-        return ''
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
 
     if 'admin_source' in kwargs:
         adminfile = __salt__['cp.cache_file'](kwargs['admin_source'])
@@ -372,36 +388,43 @@ def remove(name, **kwargs):
         os.write(fd_, 'basedir={0}\n'.format(basedir))
         os.close(fd_)
 
-    # Get a list of the currently installed pkgs.
-    old = list_pkgs()
-
     # Remove the package
-    cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile, name)
-    __salt__['cmd.retcode'](cmd)
-
+    cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile,
+                                                 ' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
     # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)
-
-    # Get a list of the packages after the uninstall
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-
-    # Compare the pre and post remove package objects and report the
-    # uninstalled pkgs.
-    return _list_removed(old, new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a single package with pkgrm
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name, **kwargs)
+    return remove(name=name, pkgs=pkgs, **kwargs)
 
 
 def perform_cmp(pkg1='', pkg2=''):

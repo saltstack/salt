@@ -223,7 +223,8 @@
 
 # The state_output setting changes if the output is the full multi line
 # output for each changed state if set to 'full', but if set to 'terse'
-# the output will be shortened to a single line.
+# the output will be shortened to a single line.  If set to 'mixed', the output
+# will be terse unless a state failed, in which case that output will be full.
 #state_output: full
 
 
@@ -302,6 +303,8 @@
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
 # environments.
+# Note:  file:// repos will be treated as a remote, so refs you want used must
+# exist in that repo as *local* refs.
 
 
 #####         Pillar settings        #####

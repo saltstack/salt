@@ -8,21 +8,24 @@ import re
 # Import salt libs
 import salt.utils
 from salt.utils.socket_util import sanitize_host
+try:
+    import salt.utils.winapi
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
-HAS_WMI = False
 try:
     import wmi
-    HAS_WMI = True
 except ImportError:
-    pass
+    HAS_DEPENDENCIES = False
 
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return 'network'
     return False
 
@@ -177,13 +180,14 @@ def _interfaces_ipconfig(out):
     '''
     ifaces = dict()
     iface = None
+    adapter_iface_regex = re.compile(r'adapter (\S.+):$')
 
     for line in out.splitlines():
         if not line:
             continue
         # TODO what does Windows call Infiniband and 10/40gige adapters
         if line.startswith('Ethernet'):
-            iface = ifaces[re.search('adapter (\S.+):$').group(1)]
+            iface = ifaces[adapter_iface_regex.search(line).group(1)]
             iface['up'] = True
             addr = None
             continue
@@ -216,6 +220,9 @@ def _interfaces_ipconfig(out):
 
 
 def interfaces():
+    '''
+    Return details about each network interface
+    '''
     with salt.utils.winapi.Com():
         c = wmi.WMI()
         ifaces = {}
@@ -228,7 +235,11 @@ def interfaces():
                 ifaces[iface.Description]['inet'] = []
                 for ip in iface.IPAddress:
                     item = {}
-                    item['broadcast'] = iface.DefaultIPGateway[0]
+                    item['broadcast'] = ''
+                    try:
+                        item['broadcast'] = iface.DefaultIPGateway[0]
+                    except Exception:
+                        pass
                     item['netmask'] = iface.IPSubnet[0]
                     item['label'] = iface.Description
                     item['address'] = ip

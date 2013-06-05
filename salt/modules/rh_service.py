@@ -35,7 +35,7 @@ def __virtual__():
     Only work on systems which default to systemd
     '''
     # Enable on these platforms only.
-    enable = [
+    enable = set((
         'RedHat',
         'CentOS',
         'Scientific',
@@ -45,7 +45,7 @@ def __virtual__():
         'ALT',
         'OEL',
         'SUSE  Enterprise Server'
-    ]
+    ))
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Fedora':
             if __grains__.get('osrelease', 0) > 15:
@@ -124,7 +124,7 @@ def _services():
     for line in __salt__['cmd.run']('/sbin/chkconfig --list').splitlines():
         cols = line.split()
         try:
-            name = cols[0]
+            name = cols[0].strip(':')
         except IndexError:
             continue
         if name in ret:

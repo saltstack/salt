@@ -2,6 +2,9 @@
 Pkgutil support for Solaris
 '''
 
+# Import python libs
+import copy
+
 # Import salt libs
 import salt.utils
 
@@ -13,17 +16,6 @@ def __virtual__():
     if __grains__['os'] == 'Solaris':
         return 'pkgutil'
     return False
-
-
-def _list_removed(old, new):
-    '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
 
 
 def refresh_db():
@@ -45,17 +37,17 @@ def upgrade_available(name):
 
         salt '*' pkgutil.upgrade_available CSWpython
     '''
-    version = None
+    version_num = None
     cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(
         name)
     out = __salt__['cmd.run_stdout'](cmd)
     if out:
-        version = out.split()[2].strip()
-    if version:
-        if version == "SAME":
+        version_num = out.split()[2].strip()
+    if version_num:
+        if version_num == "SAME":
             return ''
         else:
-            return version
+            return version_num
     return ''
 
 
@@ -86,7 +78,7 @@ def upgrade(refresh=True, **kwargs):
     '''
     Upgrade all of the packages to the latest available version.
 
-    Returns a dict containing the new package names and versions::
+    Returns a dict containing the changes::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
@@ -98,19 +90,14 @@ def upgrade(refresh=True, **kwargs):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    # Get a list of the packages before install so we can diff after to see
-    # what got installed.
     old = list_pkgs()
 
     # Install or upgrade the package
     # If package is already installed
     cmd = '/opt/csw/bin/pkgutil -yu'
-    __salt__['cmd.run'](cmd)
-
-    # Get a list of the packages again, including newly installed ones.
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-
-    # Return a list of the new package installed.
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
@@ -122,9 +109,19 @@ def list_pkgs(versions_as_list=False):
 
     CLI Example::
 
-        salt '*' pkgutil.list_pkgs
+        salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     ret = {}
     cmd = '/usr/bin/pkginfo -x'
 
@@ -136,10 +133,11 @@ def list_pkgs(versions_as_list=False):
         if index % 2 == 0:
             name = lines[index].split()[0].strip()
         if index % 2 == 1:
-            version = lines[index].split()[1].strip()
-            __salt__['pkg_resource.add_pkg'](ret, name, version)
+            version_num = lines[index].split()[1].strip()
+            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -174,90 +172,121 @@ def latest_version(name, **kwargs):
 available_version = latest_version
 
 
-def install(name, refresh=False, version=None, **kwargs):
+def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     '''
-    Install the named package using the pkgutil tool.
+    Install packages using the pkgutil tool.
+
+    CLI Example::
+
+        salt '*' pkg.install <package_name>
+        salt '*' pkg.install SMClgcc346
+
+
+    Multiple Package Installation Options:
+
+    pkgs
+        A list of packages to install from OpenCSW. Must be passed as a python
+        list.
+
+        CLI Example::
+            salt '*' pkg.install pkgs='["foo", "bar"]'
+            salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
+
 
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
-
-    CLI Example::
-
-        salt '*' pkgutil.install <package_name>
-        salt '*' pkgutil.install SMClgcc346
     '''
-
     if refresh:
         refresh_db()
 
-    if version:
-        pkg = "{0}-{1}".format(name, version)
-    else:
-        pkg = "{0}".format(name)
+    # Ignore 'sources' argument
+    pkg_params = __salt__['pkg_resource.parse_targets'](name,
+                                                        pkgs,
+                                                        **kwargs)[0]
 
-    cmd = '/opt/csw/bin/pkgutil -yu '
+    if pkg_params is None or len(pkg_params) == 0:
+        return {}
 
-    # Get a list of the packages before install so we can diff after to see
-    # what got installed.
+    if pkgs is None and version and len(pkg_params) == 1:
+        pkg_params = {name: version}
+    targets = []
+    for param, pkgver in pkg_params.iteritems():
+        if pkgver is None:
+            targets.append(param)
+        else:
+            targets.append('{0}-{1}'.format(param, pkgver))
+
+    cmd = '/opt/csw/bin/pkgutil -yu {0}'.format(' '.join(targets))
     old = list_pkgs()
-
-    # Install or upgrade the package
-    # If package is already installed
-    cmd += '{0}'.format(pkg)
-    __salt__['cmd.run'](cmd)
-
-    # Get a list of the packages again, including newly installed ones.
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-
-    # Return a list of the new package installed.
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     '''
     Remove a package and all its dependencies which are not in use by other
     packages.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
-        salt '*' pkgutil.remove <package name>
-        salt '*' pkgutil.remove SMCliconv
+        salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-
-    # Check to see if the package is installed before we proceed
-    if version(name) == '':
-        return ''
-
-    # Get a list of the currently installed pkgs.
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
-
-    # Remove the package
-    cmd = '/opt/csw/bin/pkgutil -yr {0}'.format(name)
-    __salt__['cmd.run'](cmd)
-
-    # Get a list of the packages after the uninstall
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    cmd = '/opt/csw/bin/pkgutil -yr {0}'.format(' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-
-    # Compare the pre and post remove package objects and report the uninstalled pkgs.
-    return _list_removed(old, new)
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove a package and all its dependencies which are not in use by other
-    packages.
+    Package purges are not supported, this function is identical to
+    ``remove()``.
 
-    Returns a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
-        salt '*' pkgutil.purge <package name>
+        salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name, **kwargs)
+    return remove(name=name, pkgs=pkgs)
 
 
 def perform_cmp(pkg1='', pkg2=''):

@@ -485,13 +485,13 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
     return known_hosts[0] if known_hosts else None
 
 
-def recv_known_host(user, hostname, enc=None, port=None, hash_hostname=False):
+def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     '''
     Retrieve information about host public key from remote server
 
     CLI Example::
 
-        salt '*' ssh.recv_known_host <user> <hostname> enc=<enc> port=<port>
+        salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
     chunks = ['ssh-keyscan', ]
     if port:
@@ -531,7 +531,8 @@ def check_known_host(user, hostname, key=None, fingerprint=None,
     if key:
         return 'exists' if key == known_host['key'] else 'update'
     elif fingerprint:
-        return 'exists' if fingerprint == known_host['fingerprint'] else 'update'
+        return ('exists' if fingerprint == known_host['fingerprint']
+                else 'update')
     else:
         return 'exists'
 
@@ -576,8 +577,8 @@ def set_known_host(user, hostname,
 
     CLI Example::
 
-        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' enc='ssh-rsa'\
-                 config='.ssh/known_hosts'
+        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
+                 enc='ssh-rsa' config='.ssh/known_hosts'
     '''
     update_required = False
     stored_host = get_known_host(user, hostname, config)
@@ -590,7 +591,9 @@ def set_known_host(user, hostname,
     if not update_required:
         return {'status': 'exists', 'key': stored_host}
 
-    remote_host = recv_known_host(user, hostname, enc=enc, port=port,
+    remote_host = recv_known_host(hostname,
+                                  enc=enc,
+                                  port=port,
                                   hash_hostname=hash_hostname)
     if not remote_host:
         return {'status': 'error',

@@ -340,7 +340,7 @@ def check_hash(path, hash):
 def find(path, **kwargs):
     '''
     Approximate the Unix find(1) command and return a list of paths that
-    meet the specified critera.
+    meet the specified criteria.
 
     The options include match criteria::
 
@@ -424,9 +424,9 @@ def find(path, **kwargs):
 
     CLI Examples::
 
-        salt '*' file.find / type=f name=\*.bak size=+10m
+        salt '*' file.find / type=f name=\\*.bak size=+10m
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
-        salt '*' file.find /var/log name=\*.[0-9] mtime=+30d size=+10m delete
+        salt '*' file.find /var/log name=\\*.[0-9] mtime=+30d size=+10m delete
     '''
     try:
         finder = salt.utils.find.Finder(kwargs)
@@ -443,7 +443,7 @@ def _sed_esc(string, escape_all=False):
     Escape single quotes and forward slashes
     '''
     special_chars = "^.[$()|*+?{"
-    string = string.replace("'", "'\"'\"'").replace("/", "\/")
+    string = string.replace("'", "'\"'\"'").replace("/", "\\/")
     if escape_all is True:
         for char in special_chars:
             string = string.replace(char, "\\" + char)
@@ -573,10 +573,10 @@ def psed(path, before, after, limit='', backup='.bak', flags='gMS',
         Flags to modify the search. Valid values are :
             ``g``: Replace all occurrences of the pattern, not just the first.
             ``I``: Ignore case.
-            ``L``: Make \w, \W, \b, \B, \s and \S dependent on the locale.
+            ``L``: Make \\w, \\W, \b, \\B, \\s and \\S dependent on the locale.
             ``M``: Treat multiple lines as a single line.
             ``S``: Make `.` match all characters, including newlines.
-            ``U``: Make \w, \W, \b, \B, \d, \D, \s and \S dependent on Unicode.
+            ``U``: Make \\w, \\W, \\b, \\B, \\d, \\D, \\s and \\S dependent on Unicode.
             ``X``: Verbose (whitespace is ignored).
     multi: ``False``
         If True, treat the entire file as a single line
@@ -1322,11 +1322,12 @@ def check_managed(
     # If the source is a list then find which file exists
     source, source_hash = source_list(source, source_hash, env)
 
-    sfn, source_sum, comment = '', None, ''
+    sfn = ''
+    source_sum = None
 
     if contents is None:
         # Gather the source file from the server
-        sfn, source_sum, comment = get_managed(
+        sfn, source_sum, comments = get_managed(
                 name,
                 template,
                 source,
@@ -1338,17 +1339,16 @@ def check_managed(
                 context,
                 defaults,
                 **kwargs)
-        if comment:
+        if comments:
             __clean_tmp(sfn)
-            return False, comment
+            return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, env, template, contents)
     __clean_tmp(sfn)
     if changes:
-        comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
-            comment += '{0}: {1}\n'.format(key, val)
-        return None, comment
+        comments = ['The following values are set to be changed:\n']
+        comments.extend('{0}: {1}\n'.format(key, val) for key, val in changes.iteritems())
+        return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
 
@@ -1400,7 +1400,7 @@ def check_file_meta(
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
         with salt.utils.fopen(tmp, 'w') as tmp_:
-            tmp_.write(contents)
+            tmp_.write(str(contents))
         # Compare the static contents with the named file
         with contextlib.nested(
                 salt.utils.fopen(tmp, 'rb'),
@@ -1434,7 +1434,7 @@ def get_diff(
 
     CLI Example::
 
-        salt \* file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
+        salt '*' file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
     '''
     ret = ''
 
@@ -1545,7 +1545,7 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(contents)
+                tmp_.write(str(contents))
 
             # Compare contents of files to know if we need to replace
             with contextlib.nested(
@@ -1656,7 +1656,7 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
             with salt.utils.fopen(tmp, 'w') as tmp_:
-                tmp_.write(contents)
+                tmp_.write(str(contents))
             # Copy into place
             salt.utils.copyfile(
                     tmp,
@@ -1742,13 +1742,8 @@ def makedirs(path, user=None, group=None, mode=None):
     # create parent directories from the topmost to the most deeply nested one
     directories_to_create.reverse()
     for directory_to_create in directories_to_create:
-        if directory_to_create == os.path.normpath(path):
-            # only the directory passed to this function gets the user, group,
-            # set
-            mkdir(directory_to_create, user=user, group=group, mode=mode)
-            continue
-        # Create the directory
-        mkdir(directory_to_create)
+        # all directories have the user, group and mode set!!
+        mkdir(directory_to_create, user=user, group=group, mode=mode)
 
 
 def makedirs_perms(name, user=None, group=None, mode='0755'):
@@ -1761,7 +1756,6 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
         salt '*' file.makedirs_perms /opt/code
     '''
     path = os.path
-    mkdir = os.mkdir
     head, tail = path.split(name)
     if not tail:
         head, tail = path.split(head)
@@ -1774,7 +1768,7 @@ def makedirs_perms(name, user=None, group=None, mode='0755'):
                 raise
         if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
-    mkdir(name)
+    os.mkdir(name)
     check_perms(
             name,
             None,

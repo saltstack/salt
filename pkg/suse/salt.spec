@@ -1,7 +1,7 @@
 #
 # spec file for package salt
 #
-# Copyright (c) 2012 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,13 +15,14 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
+
 Name:           salt
-Version:        0.15.0
-Release:        1
-License:        Apache-2.0
+Version:        0.15.3
+Release:        0
 Summary:        A parallel remote execution system
-Url:            http://saltstack.org/
+License:        Apache-2.0
 Group:          System/Monitoring
+Url:            http://saltstack.org/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 Source1:        %{name}-master
 Source2:        %{name}-syndic
@@ -29,12 +30,16 @@ Source3:        %{name}-minion
 Source4:        %{name}-master.service
 Source5:        %{name}-syndic.service
 Source6:        %{name}-minion.service
+Source7:        %{name}.logrotate
+Source8:        %{name}-daemon.conf
+BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
 BuildRequires:  python-msgpack-python
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq >= 2.1.9
+Requires:       logrotate
 Requires:       python-Jinja2
 Requires:       python-M2Crypto
 Requires:       python-PyYAML
@@ -43,8 +48,12 @@ Requires:       python-pycrypto
 Requires:       python-pyzmq >= 2.1.9
 Requires(pre): %fillup_prereq
 Requires(pre): %insserv_prereq
+Requires(pre): /usr/sbin/groupadd
+Requires(pre): /usr/sbin/useradd
+Requires(pre): /usr/sbin/userdel
 %if 0%{?suse_version} >= 1210
 BuildRequires:  systemd
+%{?systemd_requires}
 %endif
 %ifarch %{ix86} x86_64
 %if 0%{?suse_version} && 0%{?sles_version} == 0
@@ -108,57 +117,98 @@ python setup.py build
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
 
-mkdir -p %{buildroot}%{_sysconfdir}/salt/
+##missing directories
+mkdir -p %{buildroot}%{_sysconfdir}/salt/master.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/syndic.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/minion.d
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_localstatedir}/log/salt
-%if 0%{?suse_version} >= 1210
-mkdir -p %{buildroot}/lib/systemd/system
-%endif
+mkdir -p %{buildroot}/%{_sysconfdir}/logrotate.d/
 mkdir -p %{buildroot}/%{_sbindir}
-install -p -m 0640 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
-install -m0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-master
-install -m0755 %{SOURCE2} %{buildroot}%{_initddir}/salt-syndic
-install -m0755 %{SOURCE3} %{buildroot}%{_initddir}/salt-minion
-ln -sf /etc/init.d/salt-master %{buildroot}%{_sbindir}/rcsalt-master
-ln -sf /etc/init.d/salt-syndic %{buildroot}%{_sbindir}/rcsalt-syndic
-ln -sf /etc/init.d/salt-minion %{buildroot}%{_sbindir}/rcsalt-minion
+#
+##init scripts
+install -Dpm 0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-master
+install -Dpm 0755 %{SOURCE2} %{buildroot}%{_initddir}/salt-syndic
+install -Dpm 0755 %{SOURCE3} %{buildroot}%{_initddir}/salt-minion
+ln -sf %{_initddir}/salt-master %{buildroot}%{_sbindir}/rcsalt-master
+ln -sf %{_initddir}/salt-syndic %{buildroot}%{_sbindir}/rcsalt-syndic
+ln -sf %{_initddir}/salt-minion %{buildroot}%{_sbindir}/rcsalt-minion
 
-
-%if 0%{?suse_version} >= 1210
-install -m 644  %{SOURCE4} %{buildroot}/lib/systemd/system/salt-master.service
-install -m 644  %{SOURCE5} %{buildroot}/lib/systemd/system/salt-syndic.service
-install -m 644  %{SOURCE6} %{buildroot}/lib/systemd/system/salt-minion.service
+%if 0%{?_unitdir:1}
+install -Dpm 644  %{SOURCE4} %{buildroot}%_unitdir/salt-master.service
+install -Dpm 644  %{SOURCE5} %{buildroot}%_unitdir/salt-syndic.service
+install -Dpm 644  %{SOURCE6} %{buildroot}%_unitdir/salt-minion.service
 %endif
+#
+##config files
+install -Dpm 0640 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
+install -Dpm 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
+#
+##logrotate file
+install -Dpm 644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
+#
+##Salt-master daemon user
+install -Dpm 644  %{SOURCE8} %{buildroot}%{_sysconfdir}/salt/master.d/salt-daemon.conf
 
 %preun -n salt-syndic
 %stop_on_removal salt-syndic
+%if 0%{?_unitdir:1}
+%service_del_preun salt-syndic.service
+%endif
 
 %post -n salt-syndic
 %fillup_and_insserv
+%if 0%{?_unitdir:1}
+%service_add_post salt-syndic.service
+%endif
 
 %postun -n salt-syndic
 %restart_on_update salt-syndic
+%if 0%{?_unitdir:1}
+%service_del_postun salt-syndic.service
+%endif
 %insserv_cleanup
+
+%pre -n salt-master
+getent group salt >/dev/null || /usr/sbin/groupadd -r salt
+getent passwd salt >/dev/null || /usr/sbin/useradd -r -g salt -d /srv/salt -s /bin/false -c "salt-master daemon" salt
 
 %preun -n salt-master
 %stop_on_removal salt-master
+%if 0%{?_unitdir:1}
+%service_del_preun salt-master.service
+%endif
 
 %post -n salt-master
 %fillup_and_insserv
+%if 0%{?_unitdir:1}
+%service_add_post salt-master.service
+%endif
 
 %postun -n salt-master
 %restart_on_update salt-master
+%if 0%{?_unitdir:1}
+%service_del_postun salt-master.service
+%endif
 %insserv_cleanup
 
 %preun -n salt-minion
 %stop_on_removal salt-minion
+%if 0%{?_unitdir:1}
+%service_del_preun salt-minion.service
+%endif
 
 %post -n salt-minion
 %fillup_and_insserv
+%if 0%{?_unitdir:1}
+%service_add_post salt-minion.service
+%endif
 
 %postun -n salt-minion
 %restart_on_update salt-minion
+%if 0%{?_unitdir:1}
+%service_del_postun salt-minion.service
+%endif
 %insserv_cleanup
 
 %files -n salt-syndic
@@ -167,8 +217,9 @@ install -m 644  %{SOURCE6} %{buildroot}/lib/systemd/system/salt-minion.service
 %{_mandir}/man1/salt-syndic.1.*
 %{_sbindir}/rcsalt-syndic
 %{_sysconfdir}/init.d/salt-syndic
-%if 0%{?suse_version} >= 1210
-/lib/systemd/system/salt-syndic.service
+%{_sysconfdir}/salt/syndic.d
+%if 0%{?_unitdir:1}
+%_unitdir/salt-syndic.service
 %endif
 
 %files -n salt-minion
@@ -180,8 +231,9 @@ install -m 644  %{SOURCE6} %{buildroot}/lib/systemd/system/salt-minion.service
 %{_sbindir}/rcsalt-minion
 %config(noreplace) %{_sysconfdir}/init.d/salt-minion
 %config(noreplace) %{_sysconfdir}/salt/minion
-%if 0%{?suse_version} >= 1210
-/lib/systemd/system/salt-minion.service
+%{_sysconfdir}/salt/minion.d
+%if 0%{?_unitdir:1}
+%_unitdir/salt-minion.service
 %endif
 
 %files -n salt-master
@@ -198,9 +250,11 @@ install -m 644  %{SOURCE6} %{buildroot}/lib/systemd/system/salt-minion.service
 %{_mandir}/man1/salt-run.1.*
 %{_sbindir}/rcsalt-master
 %config(noreplace) %{_sysconfdir}/init.d/salt-master
-%config(noreplace) %{_sysconfdir}/salt/master
-%if 0%{?suse_version} >= 1210
-/lib/systemd/system/salt-master.service
+%attr(0644, salt, root) %config(noreplace) %{_sysconfdir}/salt/master
+%attr(0644, salt, root) %config(noreplace) %{_sysconfdir}/salt/master.d/salt-daemon.conf
+%{_sysconfdir}/salt/master.d
+%if 0%{?_unitdir:1}
+%_unitdir/salt-master.service
 %endif
 
 %files
@@ -208,6 +262,7 @@ install -m 644  %{SOURCE6} %{buildroot}/lib/systemd/system/salt-minion.service
 %doc LICENSE
 %dir %{_sysconfdir}/salt
 %{_mandir}/man7/salt.7.*
+%config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %{python_sitelib}/*
 
 %changelog

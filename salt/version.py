@@ -35,10 +35,20 @@ def __get_version(version, version_info):
     import subprocess
 
     try:
+        cwd = os.path.abspath(os.path.dirname(__file__))
+    except NameError:
+        # We're most likely being frozen and __file__ triggered this NameError
+        # Let's work around that
+        import inspect
+        cwd = os.path.abspath(
+            os.path.dirname(inspect.getsourcefile(__get_version))
+        )
+
+    try:
         kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=os.path.abspath(os.path.dirname(__file__))
+            cwd=cwd
         )
 
         if not sys.platform.startswith('win'):
@@ -89,11 +99,16 @@ def __get_version(version, version_info):
             return version, version_info
         elif parsed_version_info < version_info:
             warnings.warn(
+                'The parsed version info, `{0}`, is lower than the one '
+                'defined in the file, `{1}`.'
                 'In order to get the proper salt version with the git hash '
                 'you need to update salt\'s local git tags. Something like: '
                 '\'git fetch --tags\' or \'git fetch --tags upstream\' if '
                 'you followed salt\'s contribute documentation. The version '
-                'string WILL NOT include the git hash.',
+                'string WILL NOT include the git hash.'.format(
+                    parsed_version_info,
+                    version_info
+                ),
                 UserWarning,
                 stacklevel=2
             )

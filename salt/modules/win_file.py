@@ -13,6 +13,7 @@ import os
 import stat
 import os.path
 import logging
+import tempfile # do no remove. Used in import of salt.modules.file.__clean_tmp
 
 # Import third party libs
 try:
@@ -24,14 +25,15 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import check_hash, check_managed, check_perms, \
-        directory_exists, get_managed, mkdir, makedirs, makedirs_perms, \
-        patch, remove, source_list, sed_contains, touch, append, contains, \
-        contains_regex, contains_regex_multiline, contains_glob, patch, \
-        uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment, \
-        manage_file, file_exists, get_diff, get_managed, check_perms, \
-        check_managed, check_file_meta, contains_regex
+from salt.modules.file import (check_hash, check_managed, check_perms, # pylint: disable=W0611
+        directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
+        patch, remove, source_list, sed_contains, touch, append, contains,
+        contains_regex, contains_regex_multiline, contains_glob, patch,
+        uncomment, sed, find, psed, get_sum, check_hash, get_hash, comment,
+        manage_file, file_exists, get_diff, get_managed, __clean_tmp, _is_bin,
+        check_managed, check_file_meta, contains_regex)
 
+from salt.utils import namespaced_function
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +44,19 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
+            global check_perms, get_managed, makedirs_perms, manage_file
+            global source_list, mkdir, __clean_tmp, makedirs, _is_bin
+
+            check_perms = namespaced_function(check_perms, globals())
+            get_managed = namespaced_function(get_managed, globals())
+            makedirs_perms = namespaced_function(makedirs_perms, globals())
+            makedirs = namespaced_function(makedirs, globals())
+            manage_file = namespaced_function(manage_file, globals())
+            source_list = namespaced_function(source_list, globals())
+            mkdir = namespaced_function(mkdir, globals())
+            __clean_tmp = namespaced_function(__clean_tmp, globals())
+            _is_bin = namespaced_function(_is_bin, globals())
+            
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False

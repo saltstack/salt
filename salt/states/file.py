@@ -261,14 +261,13 @@ def _get_recurse_dest(prefix, fn_, source, env):
     return os.path.join(prefix, os.path.relpath(fn_, cachedir))
 
 
-def _check_directory(
-        name,
-        user,
-        group,
-        recurse,
-        mode,
-        clean,
-        require):
+def _check_directory(name,
+                     user,
+                     group,
+                     recurse,
+                     mode,
+                     clean,
+                     require):
     '''
     Check what changes need to be made on a directory
     '''
@@ -299,17 +298,30 @@ def _check_directory(
                 fchange = _check_dir_meta(path, user, group, mode)
                 if fchange:
                     changes[path] = fchange
+    if clean:
+        keep = _gen_keep_files(name, require)
+        for root, dirs, files in os.walk(name):
+            for fname in files:
+                fchange = {}
+                path = os.path.join(root, fname)
+                if path not in keep:
+                    fchange['removed'] = 'Removed due to clean'
+                    changes[path] = fchange
+            for name_ in dirs:
+                fchange = {}
+                path = os.path.join(root, name_)
+                if path not in keep:
+                    fchange['removed'] = 'Removed due to clean'
+                    changes[path] = fchange
+
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
     if changes:
-        comment = 'The following files will be changed:\n'
-        acomment = ''
+        comments = ['The following files will be changed:\n']
         for fn_ in changes:
             key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
-            acomment += '{0}: {1} - {2}\n'.format(fn_, key, val)
-        if acomment:
-            comment += acomment
-        return None, comment
+            comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
+        return None, ''.join(comments)
     return True, 'The directory {0} is in the correct state'.format(name)
 
 
@@ -454,6 +466,12 @@ def symlink(
     '''
     Create a symlink
 
+    If the file already exists and is a symlink pointing to any location other
+    then the specified target, the symlink will be replaced. If the specified
+    location if the symlink is a regular file or directory then the state will
+    return False. If the regular file or directory is desired to be replaced
+    with a symlink pass force: True.
+
     name
         The location of the symlink to create
 
@@ -523,7 +541,7 @@ def symlink(
     if not os.path.exists(name):
         # The link is not present, make it
         os.symlink(target, name)
-        ret['comment'] = 'Created new symlink {0}'.format(name)
+        ret['comment'] = 'Created new symlink {0} -> {1}'.format(name, target)
         ret['changes']['new'] = name
         return ret
 
@@ -778,7 +796,7 @@ def managed(name,
     )
 
     # Gather the source file from the server
-    sfn, source_sum, comment = __salt__['file.get_managed'](
+    sfn, source_sum, comment_ = __salt__['file.get_managed'](
         name,
         template,
         source,
@@ -791,8 +809,8 @@ def managed(name,
         defaults,
         **kwargs
     )
-    if comment and contents is not None:
-        return _error(ret, comment)
+    if comment_ and contents is None:
+        return _error(ret, comment_)
     else:
         return __salt__['file.manage_file'](name,
                                             sfn,
@@ -1102,10 +1120,10 @@ def recurse(name,
         list and preserve in the destination.
         Example::
 
-          - exclude: APPDATA*               :: glob matches APPDATA.01,
-                                               APPDATA.02,.. for exclusion
-          - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
-                                               or TEMPDATA for exclusion
+          - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
+                                                   APPDATA.02,.. for exclusion
+          - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
+                                                   or TEMPDATA for exclusion
 
     maxdepth
         When copying, only copy paths which are depth maxdepth from the source
@@ -1346,6 +1364,24 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     edit.  In general the ``limit`` pattern should be as specific as possible
     and ``before`` and ``after`` should contain the minimal text to be changed.
 
+    before
+        A pattern that should exist in the file before the edit.
+    after
+        A pattern that should exist in the file after the edit.
+    limit
+        An optional second pattern that can limit the scope of the before
+        pattern.
+    backup : '.bak'
+        The extension for the backed-up version of the file before the edit. If
+        no backups is desired, pass in the empty string: ''
+    options : ``-r -e``
+        Any options to pass to the ``sed`` command. ``-r`` uses extended
+        regular expression syntax and ``-e`` denotes that what follows is an
+        expression that sed will execute.
+    flags : ``g``
+        Any flags to append to the sed expression. ``g`` specifies the edit
+        should be made globally (and not stop after the first replacement).
+
     Usage::
 
         # Disable the epel repo by default
@@ -1432,7 +1468,7 @@ def comment(name, regex, char='#', backup='.bak'):
     '''
     Comment out specified lines in a file.
 
-    path
+    name
         The full path to the file to be edited
     regex
         A regular expression used to find the lines that are to be commented;
@@ -1512,7 +1548,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     '''
     Uncomment specified commented lines in a file
 
-    path
+    name
         The full path to the file to be edited
     regex
         A regular expression used to find the lines that are to be uncommented.
@@ -1670,7 +1706,7 @@ def append(name,
     for chunk in text:
 
         if __salt__['file.contains_regex_multiline'](
-                name, salt.utils.build_whitepace_splited_regex(chunk)):
+                name, salt.utils.build_whitespace_split_regex(chunk)):
             continue
 
         try:
@@ -1824,11 +1860,11 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
-    exists = os.path.exists(name)
-    if not exists and ret['result']:
+    extant = os.path.exists(name)
+    if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
-    elif exists and ret['result']:
+    elif extant and ret['result']:
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )

@@ -108,7 +108,7 @@ class LocalClient(object):
         user = getpass.getuser()
         # if our user is root, look for other ways to figure out
         # who we are
-        if user == 'root' or 'SUDO_USER' in os.environ:
+        if (user == 'root' or user == self.opts['user']) and 'SUDO_USER' in os.environ:
             env_vars = ['SUDO_USER']
             for evar in env_vars:
                 if evar in os.environ:
@@ -121,9 +121,9 @@ class LocalClient(object):
         return user
 
     def _convert_range_to_list(self, tgt):
-        range = seco.range.Range(self.opts['range_server'])
+        range_ = seco.range.Range(self.opts['range_server'])
         try:
-            return range.expand(tgt)
+            return range_.expand(tgt)
         except seco.range.RangeException as err:
             print("Range server exception: {0}".format(err))
             return []
@@ -237,6 +237,41 @@ class LocalClient(object):
             return pub_data['jid']
         except KeyError:
             return 0
+
+    def cmd_subset(
+            self,
+            tgt,
+            fun,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            kwarg=None,
+            sub=3,
+            cli=False,
+            **kwargs):
+        '''
+        Execute a command on a random subset of the targetted systems, pass
+        in the subset via the sub option to signify the number of systems to
+        execute on.
+        '''
+        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
+        f_tgt = []
+        for minion, ret in group.items():
+            if len(f_tgt) >= sub:
+                break
+            if fun in ret:
+                f_tgt.append(minion)
+        func = self.cmd
+        if cli:
+            func = self.cmd_cli
+        return func(
+                f_tgt,
+                fun,
+                arg,
+                expr_form='list',
+                ret=ret,
+                kwarg=kwarg,
+                **kwargs)
 
     def cmd_batch(
             self,
@@ -718,6 +753,34 @@ class LocalClient(object):
                 return ret
             time.sleep(0.02)
 
+    def get_cache_returns(self, jid):
+        '''
+        Execute a single pass to gather the contents of the job cache
+        '''
+        ret = {}
+        jid_dir = salt.utils.jid_dir(jid,
+                                     self.opts['cachedir'],
+                                     self.opts['hash_type'])
+        for fn_ in os.listdir(jid_dir):
+            if fn_.startswith('.'):
+                continue
+            if fn_ not in ret:
+                retp = os.path.join(jid_dir, fn_, 'return.p')
+                outp = os.path.join(jid_dir, fn_, 'out.p')
+                if not os.path.isfile(retp):
+                    continue
+                while fn_ not in ret:
+                    try:
+                        ret_data = self.serial.load(
+                            salt.utils.fopen(retp, 'r'))
+                        ret[fn_] = {'ret': ret_data}
+                        if os.path.isfile(outp):
+                            ret[fn_]['out'] = self.serial.load(
+                                salt.utils.fopen(outp, 'r'))
+                    except Exception:
+                        pass
+        return ret
+
     def get_cli_static_event_returns(
             self,
             jid,
@@ -1011,7 +1074,7 @@ class LocalClient(object):
                 return payload
 
         # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-        del(sreq)
+        del sreq
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1022,7 +1085,7 @@ class LocalClient(object):
         # threads per test case which uses self.client
         if hasattr(self, 'event'):
             # The call bellow will take care of calling 'self.event.destroy()'
-            del(self.event)
+            del self.event
 
 
 class FunctionWrapper(dict):

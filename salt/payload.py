@@ -12,6 +12,7 @@ import salt.log
 import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import pickle
+from salt.utils.odict import OrderedDict
 
 # Import third party libs
 import zmq
@@ -106,7 +107,33 @@ class Serial(object):
         if self.serial == 'pickle':
             return pickle.dumps(msg)
         else:
-            return msgpack.dumps(msg)
+            try:
+                return msgpack.dumps(msg)
+            except TypeError:
+                if msgpack.version >= (0, 2, 0):
+                    # Should support OrderedDict serialization, so, let's
+                    # raise the exception
+                    raise
+
+                # msgpack is < 0.2.0, let's make it's life easier
+                # Since OrderedDict is identified as a dictionary, we can't
+                # make use of msgpack custom types, we will need to convert by
+                # hand.
+                # This means iterating through all elements of a dictionary or
+                # list/tuple
+                def odict_encoder(obj):
+                    if isinstance(obj, OrderedDict):
+                        return dict(obj)
+                    return obj
+
+                if isinstance(msg, dict):
+                    for k, v in msg.copy().iteritems():
+                        msg[k] = odict_encoder(v)
+                elif isinstance(msg, (list, tuple)):
+                    msg = list(msg)
+                    for idx, entry in enumerate(msg):
+                        msg[idx] = odict_encoder(entry)
+                return msgpack.dumps(msg)
 
     def dump(self, msg, fn_):
         '''
@@ -145,8 +172,8 @@ class SREQ(object):
         '''
         payload = {'enc': enc}
         payload['load'] = load
-        package = self.serial.dumps(payload)
-        self.socket.send(package)
+        pkg = self.serial.dumps(payload)
+        self.socket.send(pkg)
         self.poller.register(self.socket, zmq.POLLIN)
         tried = 0
         while True:
@@ -162,13 +189,13 @@ class SREQ(object):
                 )
         return self.serial.loads(self.socket.recv())
 
-    def send_auto(self, payload):
+    def send_auto(self, payload, tries=1, timeout=60):
         '''
         Detect the encryption type based on the payload
         '''
         enc = payload.get('enc', 'clear')
         load = payload.get('load', {})
-        return self.send(enc, load)
+        return self.send(enc, load, tries, timeout)
 
     def destroy(self):
         for socket in self.poller.sockets.keys():

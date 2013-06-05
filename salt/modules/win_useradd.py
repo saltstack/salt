@@ -5,6 +5,7 @@ NOTE: This currently only works with local user accounts, not domain accounts
 '''
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 
@@ -12,7 +13,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
-    return 'user' if __grains__['kernel'] == 'Windows' else False
+    return 'user' if salt.utils.is_windows() else False
 
 
 def add(name,
@@ -283,13 +284,13 @@ def getent():
     #return users
     for user in users:
         stuff = {}
-        info = __salt__['user.info'](user)
-        uid = __salt__['file.user_to_uid'](info['name'])
+        user_info = __salt__['user.info'](user)
+        uid = __salt__['file.user_to_uid'](user_info['name'])
 
         stuff['gid'] = ''
-        stuff['groups'] = info['groups']
-        stuff['home'] = info['home']
-        stuff['name'] = info['name']
+        stuff['groups'] = user_info['groups']
+        stuff['home'] = user_info['home']
+        stuff['name'] = user_info['name']
         stuff['passwd'] = ''
         stuff['shell'] = ''
         stuff['uid'] = uid

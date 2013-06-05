@@ -4,13 +4,12 @@ Support for reboot, shutdown, etc
 
 import salt.utils
 
-UNSUPPORTED = ('Windows')
 
 def __virtual__():
     '''
     Only supported on POSIX-like systems
     '''
-    if __grains__['os'] in UNSUPPORTED or not salt.utils.which('shutdown'):
+    if salt.utils.is_windows() or not salt.utils.which('shutdown'):
         return False
     return 'system'
 

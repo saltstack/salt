@@ -56,7 +56,7 @@ sass (3.1.15, 3.1.7)
                  'rake': ['0.9.2', '0.8.7'],
                  'responds_to_parent': ['1.0.20091013'],
                  'sass': ['3.1.15', '3.1.7']},
-                gem.list())
+                gem.list_())
 
     def test_sources_list(self):
         output = '''*** CURRENT SOURCES ***

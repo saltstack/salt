@@ -382,8 +382,7 @@ class Compiler(object):
                         chunk['order'] = cap
                 elif isinstance(chunk['order'], int) and chunk['order'] < 0:
                     chunk['order'] = cap + 1000000 + chunk['order']
-        chunks.sort(key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k))
-        chunks.sort(key=lambda k: k['order'])
+        chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
     def compile_high_data(self, high):
@@ -826,14 +825,7 @@ class State(object):
                         chunk['order'] = cap
                 elif isinstance(chunk['order'], int) and chunk['order'] < 0:
                     chunk['order'] = cap + 1000000 + chunk['order']
-        chunks = sorted(
-                chunks,
-                key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
-                )
-        chunks = sorted(
-                chunks,
-                key=lambda k: k['order']
-                )
+        chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
         return chunks
 
     def format_call(self, data):
@@ -1286,6 +1278,11 @@ class State(object):
                             if chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
+                        elif req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs[r_state].append(chunk)
                     if not found:
                         return 'unmet'
         fun_stats = set()
@@ -1339,6 +1336,11 @@ class State(object):
                             if chunk['state'] == req_key:
                                 reqs.append(chunk)
                                 found = True
+                        elif req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs.append(chunk)
                     if not found:
                         lost[requisite].append(req)
             if lost['require'] or lost['watch']:
@@ -1633,7 +1635,7 @@ class BaseHighState(object):
                                     self.client.get_state(
                                         sls,
                                         env
-                                        ),
+                                        ).get('dest', False),
                                     self.state.rend,
                                     self.state.opts['renderer'],
                                     env=env
@@ -1771,7 +1773,8 @@ class BaseHighState(object):
         '''
         err = ''
         errors = []
-        fn_ = self.client.get_state(sls, env)
+        state_data = self.client.get_state(sls, env)
+        fn_ = state_data.get('dest', False)
         if not fn_:
             errors.append(('Specified SLS {0} in environment {1} is not'
                            ' available on the salt master').format(sls, env))
@@ -1822,6 +1825,13 @@ class BaseHighState(object):
                         env_key, inc_sls = inc_sls.popitem()
                     else:
                         env_key = env
+
+                    if inc_sls.startswith('.'):
+                        p_comps = sls.split('.')
+                        if state_data.get('source', '').endswith('/init.sls'):
+                            inc_sls = sls + inc_sls
+                        else:
+                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment
@@ -1974,7 +1984,14 @@ class BaseHighState(object):
         for env, states in matches.items():
             mods = set()
             for sls_match in states:
-                for sls in fnmatch.filter(self.avail[env], sls_match):
+                statefiles = fnmatch.filter(self.avail[env], sls_match)
+                if not statefiles:
+                    # No matching sls file was found!  Output an error
+                    all_errors.append(
+                            'No matching sls found for \'{0}\' in env \'{1}\''
+                            .format(sls_match, env)
+                    )
+                for sls in statefiles:
                     state, errors = self.render_state(sls, env, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
@@ -1982,7 +1999,6 @@ class BaseHighState(object):
 
         self.clean_duplicate_extends(highstate)
         return highstate, all_errors
-
 
     def clean_duplicate_extends(self, highstate):
         if '__extend__' in highstate:
@@ -1993,25 +2009,27 @@ class BaseHighState(object):
                         highext.append(item)
             highstate['__extend__'] = [{t[0]: t[1]} for t in highext]
 
-
     def merge_included_states(self, highstate, state, errors):
         # The extend members can not be treated as globally unique:
         if '__extend__' in state:
-            highstate.setdefault('__extend__', []).extend(state.pop('__extend__'))
+            highstate.setdefault('__extend__',
+                                 []).extend(state.pop('__extend__'))
         if '__exclude__' in state:
-            highstate.setdefault('__exclude__', []).extend(state.pop('__exclude__'))
+            highstate.setdefault('__exclude__',
+                                 []).extend(state.pop('__exclude__'))
         for id_ in state:
             if id_ in highstate:
                 if highstate[id_] != state[id_]:
-                    errors.append(('Detected conflicting IDs, SLS'
-                    ' IDs need to be globally unique.\n    The'
-                    ' conflicting ID is "{0}" and is found in SLS'
-                    ' "{1}:{2}" and SLS "{3}:{4}"').format(
-                            id_,
-                            highstate[id_]['__env__'],
-                            highstate[id_]['__sls__'],
-                            state[id_]['__env__'],
-                            state[id_]['__sls__'])
+                    errors.append((
+                            'Detected conflicting IDs, SLS'
+                            ' IDs need to be globally unique.\n    The'
+                            ' conflicting ID is "{0}" and is found in SLS'
+                            ' "{1}:{2}" and SLS "{3}:{4}"').format(
+                                    id_,
+                                    highstate[id_]['__env__'],
+                                    highstate[id_]['__sls__'],
+                                    state[id_]['__env__'],
+                                    state[id_]['__sls__'])
                     )
         try:
             highstate.update(state)
@@ -2020,9 +2038,6 @@ class BaseHighState(object):
                 'Error when rendering state with contents: {0}'.format(state)
             )
 
-
-
-
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate'):
         '''
         Run the sequence to execute the salt highstate for this minion
@@ -2030,17 +2045,16 @@ class BaseHighState(object):
         #Check that top file exists
         tag_name = 'no_|-states_|-states_|-None'
         ret = {tag_name: {
-                   'result': False,
-                   'comment': 'No states found for this minion',
-                   'name': 'No States',
-                   'changes': {},
-                   '__run_num__': 0,
-                   }
-              }
+                'result': False,
+                'comment': 'No states found for this minion',
+                'name': 'No States',
+                'changes': {},
+                '__run_num__': 0,
+        }}
         cfn = os.path.join(
                 self.opts['cachedir'],
                 '{0}.cache.p'.format(cache_name)
-                )
+        )
 
         if cache:
             if os.path.isfile(cfn):
@@ -2076,7 +2090,11 @@ class BaseHighState(object):
         if not high:
             return ret
         with open(cfn, 'w+') as fp_:
-            self.serial.dump(high, fp_)
+            try:
+                self.serial.dump(high, fp_)
+            except TypeError:
+                # Can't serialize pydsl
+                pass
         return self.state.call_high(high)
 
     def compile_highstate(self):

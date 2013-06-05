@@ -335,6 +335,13 @@ fi
                 ret
             )
 
+    def test_pydsl(self):
+        '''
+        Test the basics of the pydsl
+        '''
+        ret = self.run_function('state.sls', mods='pydsl-1')
+        self.assertSaltTrueReturn(ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

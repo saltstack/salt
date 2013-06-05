@@ -18,6 +18,10 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
 
+# Don't shadow built-in's. 
+__func_alias__ = {
+    'list_': 'list'
+}
 
 VALID_PROTOS = ['http', 'https', 'ftp']
 
@@ -42,6 +46,36 @@ def _get_pip_bin(bin_env):
 
     return bin_env
 
+
+def _get_cached_requirements(requirements):
+    """Get the location of a cached requirements file; caching if necessary."""
+    cached_requirements = __salt__['cp.is_cached'](
+        requirements, __env__
+    )
+    if not cached_requirements:
+        # It's not cached, let's cache it.
+        cached_requirements = __salt__['cp.cache_file'](
+            requirements, __env__
+        )
+    # Check if the master version has changed.
+    if __salt__['cp.hash_file'](requirements, __env__) != \
+            __salt__['cp.hash_file'](cached_requirements, __env__):
+        cached_requirements = __salt__['cp.cache_file'](
+            requirements, __env__
+        )
+
+    return cached_requirements
+
+
+def _get_env_activate(bin_env):
+    if not bin_env:
+        raise CommandNotFoundError('Could not find a `activate` binary')
+
+    if os.path.isdir(bin_env):
+        activate_bin = os.path.join(bin_env, 'bin', 'activate')
+        if os.path.isfile(activate_bin):
+            return activate_bin
+    raise CommandNotFoundError('Could not find a `activate` binary')
 
 def install(pkgs=None,
             requirements=None,
@@ -69,7 +103,9 @@ def install(pkgs=None,
             no_download=False,
             install_options=None,
             runas=None,
+            no_chown=False,
             cwd=None,
+            activate=False,
             __env__='base'):
     '''
     Install packages with pip
@@ -147,8 +183,14 @@ def install(pkgs=None,
         path, be sure to use absolute path.
     runas
         User to run pip as
+    no_chown
+        When runas is given, do not attempt to copy and chown
+        a requirements file
     cwd
         Current working directory to run pip from
+    activate
+        Activates the virtual environment, if given via bin_env, 
+        before running install.
 
 
     CLI Example::
@@ -177,6 +219,9 @@ def install(pkgs=None,
 
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
 
+    if activate and bin_env:
+        cmd = '. {0} && {1}'.format(_get_env_activate(bin_env), cmd)
+
     if pkgs:
         pkg = pkgs.replace(',', ' ')
         # It's possible we replaced version-range commas with semicolons so
@@ -189,20 +234,7 @@ def install(pkgs=None,
     treq = None
     if requirements:
         if requirements.startswith('salt://'):
-            cached_requirements = __salt__['cp.is_cached'](
-                requirements, __env__
-            )
-            if not cached_requirements:
-                # It's not cached, let's cache it.
-                cached_requirements = __salt__['cp.cache_file'](
-                    requirements, __env__
-                )
-            # Check if the master version has changed.
-            if __salt__['cp.hash_file'](requirements, __env__) != \
-                    __salt__['cp.hash_file'](cached_requirements, __env__):
-                cached_requirements = __salt__['cp.cache_file'](
-                    requirements, __env__
-                )
+            cached_requirements = _get_cached_requirements(requirements)
             if not cached_requirements:
                 return {
                     'result': False,
@@ -212,10 +244,9 @@ def install(pkgs=None,
                         )
                     )
                 }
-
             requirements = cached_requirements
 
-        if runas:
+        if runas and not no_chown:
             # Need to make a temporary copy since the runas user will, most
             # likely, not have the right permissions to read the file
             treq = salt.utils.mkstemp()
@@ -488,7 +519,7 @@ def freeze(bin_env=None,
         )
 
     # We use dot(.) instead of source because it's apparently the better and/or
-    # more supported way to source files on the various "major" linux shells.
+    # more supported way to source files on the various "major" Linux shells.
     cmd = '. {0}; {1} freeze'.format(activate, pip_bin)
 
     result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
@@ -499,7 +530,7 @@ def freeze(bin_env=None,
     return result['stdout'].splitlines()
 
 
-def list(prefix='',
+def list_(prefix='',
          bin_env=None,
          runas=None,
          cwd=None):

@@ -5,6 +5,7 @@ Support for iptables
 # Import python libs
 import os
 import sys
+import shlex
 
 # Import salt libs
 import salt.utils
@@ -28,6 +29,8 @@ def _conf():
         return '/etc/sysconfig/iptables'
     elif __grains__['os_family'] == 'Arch':
         return '/etc/iptables/iptables.rules'
+    elif __grains__['os'] == 'Gentoo':
+        return '/var/lib/iptables/rules-save'
     else:
         return False
 
@@ -263,10 +266,10 @@ def _parse_conf(conf_file=None, in_mem=False):
             parser = _parser()
             parsed_args = []
             if sys.version.startswith('2.6'):
-                (opts, args) = parser.parse_args(line.split())
+                (opts, args) = parser.parse_args(shlex.split(line))
                 parsed_args = vars(opts)
             else:
-                parsed_args = vars(parser.parse_args(line.split()))
+                parsed_args = vars(parser.parse_args(shlex.split(line)))
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:

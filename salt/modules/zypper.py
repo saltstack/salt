@@ -3,6 +3,7 @@ Package support for openSUSE via the zypper package manager
 '''
 
 # Import python libs
+import copy
 import logging
 import re
 
@@ -22,17 +23,6 @@ def __virtual__():
     if not salt.utils.which('zypper'):
         return False
     return 'pkg'
-
-
-def _list_removed(old, new):
-    '''
-    List the packages which have been removed between the two package objects
-    '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
 
 
 def list_upgrades(refresh=True):
@@ -81,10 +71,33 @@ def latest_version(*names, **kwargs):
     '''
     if len(names) == 0:
         return ''
+
     ret = {}
-    updates = list_upgrades()
     for name in names:
-        ret[name] = updates.get(name, '')
+        ret[name] = ''
+
+    cmd = 'zypper info -t package {0}'.format(' '.join(names))
+    output = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    output = re.split('Information for package \\S+:\n', output)
+    for package in output:
+        pkginfo = {}
+        for line in package.splitlines():
+            try:
+                key, val = line.split(':', 1)
+                key = key.lower()
+                val = val.strip()
+            except ValueError:
+                continue
+            else:
+                pkginfo[key] = val
+
+        # Ignore if the needed keys weren't found in this iteration
+        if not set(('name', 'version', 'status')) <= set(pkginfo.keys()):
+            continue
+
+        status = pkginfo['status'].lower()
+        if 'not installed' in status or 'out-of-date' in status:
+            ret[pkginfo['name']] = pkginfo['version']
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -131,16 +144,25 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\n"'
     ret = {}
     for line in __salt__['cmd.run'](cmd).splitlines():
-        name, version, rel = line.split('_|-')
-        pkgver = version
+        name, pkgver, rel = line.split('_|-')
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -234,15 +256,16 @@ def install(name=None,
 
     pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name,
                                                                   pkgs,
-                                                                  sources)
+                                                                  sources,
+                                                                  **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version = kwargs.get('version')
-    if version:
+    version_num = kwargs.get('version')
+    if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
-            pkg_params = {name: version}
+            pkg_params = {name: version_num}
         else:
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
@@ -250,11 +273,11 @@ def install(name=None,
     if pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version in pkg_params.iteritems():
-            if version is None:
+        for param, version_num in pkg_params.iteritems():
+            if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version)
+                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
@@ -265,7 +288,7 @@ def install(name=None,
                     log.debug(targets)
                 else:
                     msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version, name)
+                          '"{1}"'.format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -288,6 +311,7 @@ def install(name=None,
     if downgrades:
         cmd = 'zypper -n install -l --force {0}'.format(' '.join(downgrades))
         __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -309,58 +333,81 @@ def upgrade(refresh=True):
         refresh_db()
     old = list_pkgs()
     cmd = 'zypper -n up -l'
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return __salt__['pkg_resource.find_changes'](old, new)
 
 
-def remove(name, **kwargs):
+def _uninstall(action='remove', name=None, pkgs=None):
     '''
-    Remove a single package with ``zypper remove``
+    remove and purge do identical things but with different zypper commands,
+    this function performs the common logic.
+    '''
+    purge_arg = '-u' if action == 'purge' else ''
+    pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
+    old = list_pkgs()
+    targets = [x for x in pkg_params if x in old]
+    if not targets:
+        return {}
+    cmd = 'zypper -n remove {0} {1}'.format(purge_arg, ' '.join(targets))
+    __salt__['cmd.run_all'](cmd)
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return __salt__['pkg_resource.find_changes'](old, new)
 
-    Return a list containing the removed packages.
+
+def remove(name=None, pkgs=None, **kwargs):
+    '''
+    Remove packages with ``zypper -n remove``
+
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package1>,<package2>,<package3>
+        salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    cmd = 'zypper -n remove {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-    return _list_removed(old, new)
+    return _uninstall(action='remove', name=name, pkgs=pkgs)
 
 
-def purge(name, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):
     '''
     Recursively remove a package and all dependencies which were installed
-    with it, this will call a ``zypper remove -u``
+    with it, this will call a ``zypper -n remove -u``
 
-    Return a list containing the removed packages.
+    name
+        The name of the package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+
+    Returns a dict containing the changes.
 
     CLI Example::
 
         salt '*' pkg.purge <package name>
+        salt '*' pkg.purge <package1>,<package2>,<package3>
+        salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    old = list_pkgs()
-    cmd = 'zypper -n remove -u {0}'.format(name)
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
-    return _list_removed(old, new)
+    return _uninstall(action='purge', name=name, pkgs=pkgs)
 
 
 def perform_cmp(pkg1='', pkg2=''):

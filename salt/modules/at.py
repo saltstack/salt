@@ -19,15 +19,12 @@ import salt.utils
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
 
-# Known not to work
-BAD = ('Windows',)
-
 
 def __virtual__():
     '''
     Most everything has the ability to support at(1)
     '''
-    if __grains__['os'] in BAD or not salt.utils.which('at'):
+    if salt.utils.is_windows() or not salt.utils.which('at'):
         return False
     return 'at'
 
@@ -79,7 +76,7 @@ def atq(tag=None):
 
         # Jobs created with at.at() will use the following
         # comment to denote a tagged job.
-        job_kw_regex = re.compile('^### SALT: (\w+)')
+        job_kw_regex = re.compile(r'^### SALT: (\w+)')
 
         # Redhat/CentOS
         if __grains__['os_family'] == 'RedHat':

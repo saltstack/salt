@@ -20,3 +20,6 @@ file_buffer_size: 8192
 
 ext_pillar:
   - cmd_yaml: cat ext.yaml
+
+config_opt:
+  layer2: 'kosher'
