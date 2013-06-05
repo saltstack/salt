@@ -433,6 +433,7 @@ class Minion(object):
         '''
         # Late setup the of the opts grains, so we can log from the grains
         # module
+        self.real_minion = real_minion
         opts['grains'] = salt.loader.grains(opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
@@ -445,14 +446,15 @@ class Minion(object):
         ).compile_pillar()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
-        self.functions, self.returners = self.__load_modules()
-        self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'], real_minion)
-        self.schedule = salt.utils.schedule.Schedule(
-            self.opts,
-            self.functions,
-            self.returners)
+        self.proc_dir = get_proc_dir(opts['cachedir'], self.real_minion)
         self.children = []
+        if self.real_minion:
+            self.module_refresh()
+            self.matcher = Matcher(self.opts, self.functions)
+            self.schedule = salt.utils.schedule.Schedule(
+                self.opts,
+                self.functions,
+                self.returners)       
 
     def __prep_mod_opts(self):
         '''
@@ -561,9 +563,7 @@ class Minion(object):
         '''
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
-                self.functions, self.returners = self.__load_modules()
-                self.schedule.functions = self.functions
-                self.schedule.returners = self.returners
+                self.module_refresh()
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -616,6 +616,11 @@ class Minion(object):
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         with open(fn_, 'w+') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
+
+        if not minion_instance.real_minion:
+            # Load the modules after writing to proc file to avoid client timeouts
+            minion_instance.module_refresh()
+
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -841,7 +846,8 @@ class Minion(object):
                 else:
                     process.join()
             self.children = running_children
-        self.schedule._cleanup_children()
+        if hasattr(self, 'schedule'):
+            self.schedule._cleanup_children()
 
     @property
     def master_pub(self):
@@ -880,8 +886,9 @@ class Minion(object):
         Refresh the functions and returners.
         '''
         self.functions, self.returners = self.__load_modules()
-        self.schedule.functions = self.functions
-        self.schedule.returners = self.returners
+        if hasattr(self, 'schedule'):
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def pillar_refresh(self):
         '''
