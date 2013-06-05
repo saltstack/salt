@@ -907,8 +907,10 @@ class Map(Cloud):
 
                 # FIXME: what about other providers?
                 if prov in ('aws', 'ec2'):
-                    if pmap['aws'][name]['state'] != 'TERMINATED' or \
-                            pmap['ec2'][name]['state'] != 'TERMINATED':
+                    if ('aws' in pmap and
+                            pmap['aws'][name]['state'] != 'TERMINATED') or (
+                            'ec2' in pmap and
+                            pmap['ec2'][name]['state'] != 'TERMINATED'):
                         log.info(
                             '{0!r} already exists, removing from the '
                             'create map'.format(name)
