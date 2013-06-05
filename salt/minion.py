@@ -98,7 +98,7 @@ def resolve_dns(opts):
     return ret
 
 
-def get_proc_dir(cachedir):
+def get_proc_dir(cachedir, cleanup=True):
     '''
     Return the directory that process data is stored in
     '''
@@ -106,7 +106,7 @@ def get_proc_dir(cachedir):
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it
         os.makedirs(fn_)
-    else:
+    elif cleanup:
         # proc_dir is present, clean out old proc files
         for proc_fn in os.listdir(fn_):
             os.remove(os.path.join(fn_, proc_fn))
@@ -426,7 +426,7 @@ class Minion(object):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True):
+    def __init__(self, opts, timeout=60, safe=True, cleanup_proc_dir=True):
         '''
         Pass in the options dict
         '''
@@ -446,7 +446,7 @@ class Minion(object):
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'])
+        self.proc_dir = get_proc_dir(opts['cachedir'], cleanup_proc_dir)
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -572,7 +572,15 @@ class Minion(object):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        if self.opts['multiprocessing']:
+        if (salt.utils.is_windows() and data['fun'] == 'saltutil.find_job') or \
+           not self.opts['multiprocessing']:
+            # find_jobs is "special". The client expects a quick response.
+            # Spawning a new minion process takes too long on windows so always use a thread 
+            process = threading.Thread(
+                target=target, args=(instance, self.opts, data)
+            )
+        else:
+            # Multiprocessing
             if salt.utils.is_windows():
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
@@ -580,10 +588,7 @@ class Minion(object):
             process = multiprocessing.Process(
                 target=target, args=(instance, self.opts, data)
             )
-        else:
-            process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
-            )
+
         process.start()
         self.children.append(process)
 
@@ -595,8 +600,8 @@ class Minion(object):
         '''
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
-        if not minion_instance:
-            minion_instance = cls(opts)
+        if minion_instance is None:
+            minion_instance = cls(opts, cleanup_proc_dir=False)
         if opts['multiprocessing']:
             salt.utils.daemonize_if(opts)
             sdata = {'pid': os.getpid()}
