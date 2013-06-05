@@ -372,7 +372,7 @@ def running():
         if not isinstance(data, dict):
             # Invalid serial object
             continue
-        if not procs.get(data['pid']):
+        if not procs.get(str(data['pid'])):
             # The process is no longer running, clear out the file and
             # continue
             os.remove(path)

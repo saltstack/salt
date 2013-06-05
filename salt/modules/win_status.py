@@ -50,7 +50,7 @@ def procs():
 
         process_info = {}
         for proc in processes:
-            process_info[proc.ProcessId] = _get_process_info(proc)
+            process_info[str(proc.ProcessId)] = _get_process_info(proc)
 
         return process_info
 
