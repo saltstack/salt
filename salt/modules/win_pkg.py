@@ -434,7 +434,7 @@ def install(name=None, refresh=False, **kwargs):
         version_num = _get_latest_pkg_version(pkginfo)
     installer = pkginfo[version_num].get('installer')
     if not installer:
-	return 'Error: No installer configured for package {0}'.format(name)
+        return 'Error: No installer configured for package {0}'.format(name)
     if installer.startswith('salt:') or installer.startswith('http:') or installer.startswith('https:') or installer.startswith('ftp:'):
         cached_pkg = __salt__['cp.is_cached'](installer)
         if not cached_pkg:
@@ -513,7 +513,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
         uninstaller = pkginfo[version].get('uninstaller')
         if not uninstaller:
-	    uninstaller = pkginfo[version].get('installer')
+            uninstaller = pkginfo[version].get('installer')
         if not uninstaller:
             return 'Error: No installer or uninstaller configured for package {0}'.format(name)
         if uninstaller.startswith('salt:'):
