@@ -597,12 +597,14 @@ class Minion(object):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = cls(opts)
-        sdata = {'pid': os.getpid()}
         if opts['multiprocessing']:
-            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             salt.utils.daemonize_if(opts)
+            sdata = {'pid': os.getpid()}
         else:
-            sdata['tid'] = threading.current_thread().ident
+            sdata = {
+                'pid': os.getpid(),
+                'tid': threading.current_thread().ident
+            }
         sdata.update(data)
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         with open(fn_, 'w+') as fp_:
