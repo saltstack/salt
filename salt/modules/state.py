@@ -95,6 +95,7 @@ def low(data):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    __opts__['test'] = None
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
@@ -121,6 +122,7 @@ def high(data):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    __opts__['test'] = None
     st_ = salt.state.State(__opts__)
     ret = st_.call_high(data)
     _set_retcode(ret)
@@ -139,6 +141,7 @@ def template(tem):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    __opts__['test'] = None
     st_ = salt.state.State(__opts__)
     ret = st_.call_template(tem)
     _set_retcode(ret)
@@ -157,6 +160,7 @@ def template_str(tem):
     if conflict:
         __context__['retcode'] = 1
         return conflict
+    __opts__['test'] = None
     st_ = salt.state.State(__opts__)
     ret = st_.call_template_str(tem)
     _set_retcode(ret)

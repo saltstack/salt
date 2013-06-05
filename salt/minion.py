@@ -427,7 +427,7 @@ class Minion(object):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True, cleanup_proc_dir=True):
+    def __init__(self, opts, timeout=60, safe=True, real_minion=True):
         '''
         Pass in the options dict
         '''
@@ -447,7 +447,7 @@ class Minion(object):
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'], cleanup_proc_dir)
+        self.proc_dir = get_proc_dir(opts['cachedir'], real_minion)
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -603,7 +603,7 @@ class Minion(object):
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if minion_instance is None:
-            minion_instance = cls(opts, cleanup_proc_dir=False)
+            minion_instance = cls(opts, real_minion=False)
         if opts['multiprocessing']:
             salt.utils.daemonize_if(opts)
             sdata = {'pid': os.getpid()}
@@ -704,7 +704,7 @@ class Minion(object):
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if not minion_instance:
-            minion_instance = cls(opts)
+            minion_instance = cls(opts, real_minion=False)
         ret = {
             'return': {},
             'success': {},
@@ -761,14 +761,13 @@ class Minion(object):
         '''
         jid = ret.get('jid', ret.get('__jid__'))
         fun = ret.get('fun', ret.get('__fun__'))
-        if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, jid)
-            if os.path.isfile(fn_):
-                try:
-                    os.remove(fn_)
-                except (OSError, IOError):
-                    # The file is gone already
-                    pass
+        fn_ = os.path.join(self.proc_dir, jid)
+        if os.path.isfile(fn_):
+            try:
+                os.remove(fn_)
+            except (OSError, IOError):
+                # The file is gone already
+                pass
         log.info('Returning information for job: {0}'.format(jid))
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         if ret_cmd == '_syndic_return':
@@ -842,6 +841,7 @@ class Minion(object):
                 else:
                     process.join()
             self.children = running_children
+        self.schedule._cleanup_children()
 
     @property
     def master_pub(self):
@@ -1025,56 +1025,53 @@ class Minion(object):
         loop_interval = int(self.opts['loop_interval'])
         while True:
             try:
-                self._cleanup_children()
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in cleanup children'.format(exc)
-                )
-            try:
-                self.schedule.eval()
-                # Check if scheduler requires lower loop interval than
-                # the loop_interval setting
-                if self.schedule.loop_interval < loop_interval:
-                    loop_interval = self.schedule.loop_interval
-                    log.debug(
-                        'Overriding loop_interval because of scheduled jobs.'
+                try:
+                    self.schedule.eval()
+                    # Check if scheduler requires lower loop interval than
+                    # the loop_interval setting
+                    if self.schedule.loop_interval < loop_interval:
+                        loop_interval = self.schedule.loop_interval
+                        log.debug(
+                            'Overriding loop_interval because of scheduled jobs.'
+                        )
+                except Exception as exc:
+                    log.error(
+                        'Exception {0} occurred in scheduled job'.format(exc)
                     )
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in scheduled job'.format(exc)
-                )
-            try:
-                socks = dict(self.poller.poll(
-                    loop_interval * 1000)
-                )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv())
-                    self._handle_payload(payload)
-                # Check the event system
-                if self.epoller.poll(1):
-                    try:
-                        while True:
-                            package = self.epull_sock.recv(zmq.NOBLOCK)
-                            if package.startswith('module_refresh'):
-                                self.module_refresh()
-                            elif package.startswith('pillar_refresh'):
-                                self.pillar_refresh()
-                            self.epub_sock.send(package)
-                    except Exception:
-                        pass
-            except zmq.ZMQError:
-                # This is thrown by the interrupt caused by python handling the
-                # SIGCHLD. This is a safe error and we just start the poll
-                # again
-                continue
-            except Exception:
-                log.critical(
-                    'An exception occurred while polling the minion',
-                    exc_info=True
-                )
-            # Python may receive ctrl-C event in another thread on windows 
-            # Add a short sleep to give the other threads a chance
-            time.sleep(0.05)
+                try:
+                    socks = dict(self.poller.poll(
+                        loop_interval * 1000)
+                    )
+                    if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                        payload = self.serial.loads(self.socket.recv())
+                        self._handle_payload(payload)
+                    # Check the event system
+                    if self.epoller.poll(1):
+                        try:
+                            while True:
+                                package = self.epull_sock.recv(zmq.NOBLOCK)
+                                if package.startswith('module_refresh'):
+                                    self.module_refresh()
+                                elif package.startswith('pillar_refresh'):
+                                    self.pillar_refresh()
+                                self.epub_sock.send(package)
+                        except Exception:
+                            pass
+                except zmq.ZMQError:
+                    # This is thrown by the interrupt caused by python handling the
+                    # SIGCHLD. This is a safe error and we just start the poll
+                    # again
+                    continue
+                except Exception:
+                    log.critical(
+                        'An exception occurred while polling the minion',
+                        exc_info=True
+                    )
+                # Python may receive ctrl-C event in another thread on windows 
+                # Add a short sleep to give the other threads a chance
+                time.sleep(0.05)
+            finally:
+                self._cleanup_children()
 
     def tune_in_no_block(self):
         '''
