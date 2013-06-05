@@ -278,6 +278,25 @@ def reboot(uuid=None):
         return False
 
 
+def destroy(uuid=None):
+    '''
+    Hard power down the virtual machine, this is equivalent to pulling the power
+
+    CLI Example::
+    
+        salt '*' virt.destroy <uuid>
+    '''
+    if not uuid:
+        raise CommandExecutionError('UUID parameter is mandatory')
+    vmadm = _check_vmadm()
+    cmd = '{0} delete {1}'.format(vmadm, uuid)
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        raise CommandExecutionError(_exit_status(retcode))
+    return True 
+
+
 def vm_virt_type(uuid=None):
     '''
     Return VM virtualization type : OS or KVM
