@@ -755,6 +755,7 @@ def os_data():
         grains['os_family'] = 'Solaris'
         uname_v = __salt__['cmd.run']('uname -v')
         if 'joyent_' in uname_v:
+            # See https://github.com/joyent/smartos-live/issues/224
             grains['os'] = 'SmartOS'
             grains['osrelease'] = uname_v
         elif os.path.isfile('/etc/release'):
