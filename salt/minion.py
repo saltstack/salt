@@ -17,6 +17,7 @@ import time
 import traceback
 import sys
 import signal
+import uuid
 
 # Import third party libs
 import zmq
@@ -577,7 +578,8 @@ class Minion(object):
             # find_jobs is "special". The client expects a quick response.
             # Spawning a new minion process takes too long on windows so always use a thread 
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
+                target=target, args=(instance, self.opts, data),
+                name=uuid.uuid4()
             )
         else:
             # Multiprocessing
@@ -608,7 +610,7 @@ class Minion(object):
         else:
             sdata = {
                 'pid': os.getpid(),
-                'tid': threading.current_thread().ident
+                'tid': threading.current_thread().name
             }
         sdata.update(data)
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])

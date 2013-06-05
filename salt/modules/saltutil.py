@@ -380,10 +380,10 @@ def running():
         if data.get('pid') == pid:
             if not data.has_key('tid'):
                 continue
-            elif not data.get('tid') in [t.ident for t in threading.enumerate()]:
+            elif not data.get('tid') in [t.name for t in threading.enumerate()]:
                 os.remove(path)
                 continue
-            elif data.get('tid') == threading.current_thread().ident:
+            elif data.get('tid') == threading.current_thread().name:
                 continue
         ret.append(data)
     return ret
