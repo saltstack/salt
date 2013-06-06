@@ -372,7 +372,7 @@ def get_macs(uuid=None):
     ret = res['stdout']
     if ret != '':
         return ret
-    raise CommandExecutionError('We can\'t the MAC address of this VM')
+    raise CommandExecutionError('We can\'t find the MAC address of this VM')
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
