@@ -12,6 +12,8 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}'
+
 
 def __virtual__():
     '''
@@ -43,24 +45,40 @@ def __virtual__():
     return False
 
 
-def _parse_yum(arg):
+def _parse_pkginfo(line):
     '''
-    A small helper to parse yum output; returns a list of namedtuples
+    A small helper to parse package information; returns a namedtuple
     '''
-    cmd = 'yum -q {0}'.format(arg)
-    out = __salt__['cmd.run_stdout'](cmd)
-    yum_out = collections.namedtuple('YumOut', ('name', 'version', 'status'))
+    pkginfo = collections.namedtuple('PkgInfo', ('name', 'version'))
 
-    results = []
+    try:
+        name, pkgver, rel, arch = line.split('_|-')
+    # Handle unpack errors (should never happen with the queryformat we are
+    # using, but can't hurt to be careful).
+    except ValueError:
+        return None
 
-    for line in out.splitlines():
-        if not line.startswith('Loaded plugin'):
-            line = line.split()
-            if len(line) == 3:
-                namearchstr, pkgver, pkgstatus = line
-                pkgname = namearchstr.rpartition('.')[0]
-                results.append(yum_out(pkgname, pkgver, pkgstatus))
-    return results
+    # Support 32-bit packages on x86_64 systems
+    if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
+        name += '.i686'
+    if rel:
+        pkgver += '-{0}'.format(rel)
+
+    return pkginfo(name, pkgver)
+
+
+def _repoquery(repoquery_args):
+    '''
+    Runs a repoquery command and returns a list of namedtuples
+    '''
+    ret = []
+    cmd = 'repoquery {0}'.format(repoquery_args)
+    output = __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines()
+    for line in output:
+        pkginfo = _parse_pkginfo(line)
+        if pkginfo is not None:
+            ret.append(pkginfo)
+    return ret
 
 
 def _get_repo_options(**kwargs):
@@ -119,8 +137,10 @@ def latest_version(*names, **kwargs):
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
-    updates = _parse_yum('{0} list available {1}'.format(repo_arg,
-                                                         ' '.join(names)))
+    updates = _repoquery('{0} --pkgnarrow=available --queryformat "{1}" '
+                         '{2}'.format(repo_arg,
+                                      __QUERYFORMAT,
+                                      ' '.join(names)))
     for pkg in updates:
         ret[pkg.name] = pkg.version
     # Return a string if only one package name passed
@@ -178,21 +198,12 @@ def list_pkgs(versions_as_list=False):
             return ret
 
     ret = {}
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-' \
-          '%{ARCH}\n"'
+    cmd = 'rpm -qa --queryformat "{0}\n"'.format(__QUERYFORMAT)
     for line in __salt__['cmd.run'](cmd).splitlines():
-        try:
-            name, pkgver, rel, arch = line.split('_|-')
-        # Handle unpack errors (should never happen with the queryformat we are
-        # using, but can't hurt to be careful).
-        except ValueError:
+        pkginfo = _parse_pkginfo(line)
+        if pkginfo is None:
             continue
-        # Support 32-bit packages on x86_64 systems
-        if __grains__.get('cpuarch', '') == 'x86_64' and arch == 'i686':
-            name += '.i686'
-        if rel:
-            pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+        __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, pkginfo.version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
@@ -201,7 +212,7 @@ def list_pkgs(versions_as_list=False):
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -211,8 +222,11 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    out = _parse_yum('check-update')
-    return dict([(i.name, i.version) for i in out])
+
+    repo_arg = _get_repo_options(**kwargs)
+    updates = _repoquery('{0} --all --pkgnarrow=updates --queryformat '
+                         '"{1}"'.format(repo_arg, __QUERYFORMAT))
+    return dict([(x.name, x.version) for x in updates])
 
 
 def refresh_db():

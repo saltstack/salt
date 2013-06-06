@@ -36,6 +36,7 @@ Requires: dmidecode
 %endif
 
 Requires: pciutils
+Requires: yum-utils
 
 %if 0%{?with_python26}
 BuildRequires: python26-zmq
