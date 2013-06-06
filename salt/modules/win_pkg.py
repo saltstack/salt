@@ -5,6 +5,7 @@ A module to manage software on Windows
             - win32com
             - win32con
             - win32api
+            - pywintypes
 '''
 
 # Import third party libs
@@ -13,6 +14,7 @@ try:
     import win32com.client
     import win32api
     import win32con
+    import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -250,6 +252,16 @@ def _get_msi_software():
     this_computer = "."
     wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
     swbem_services = wmi_service.ConnectServer(this_computer, "root\\cimv2")
+
+    # Find out whether the Windows Installer provider is present. It
+    # is optional on Windows Server 2003 and 64-bit operating systems See
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa392726%28v=vs.85%29.aspx#windows_installer_provider
+    try:
+        swbem_services.Get("Win32_Product")
+    except pywintypes.com_error:
+        log.warning("Windows Installer (MSI) provider not found; package management will not work correctly on MSI packages")
+        return win32_products
+
     products = swbem_services.ExecQuery("Select * from Win32_Product")
     for product in products:
         try:
@@ -371,7 +383,7 @@ def _get_user_keys():
 def _get_reg_value(reg_hive, reg_key, value_name=''):
     '''
     Read one value from Windows registry.
-    If 'name' is empty string, reads default value.
+    If 'name' is empty map, reads default value.
     '''
     try:
         key_handle = win32api.RegOpenKeyEx(
@@ -575,7 +587,7 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
 def _get_package_info(name):
     '''
     Return package info.
-    Returns empty string if package not available
+    Returns empty map if package not available
     TODO: Add option for version
     '''
     repocache = __opts__['win_repo_cachefile']
