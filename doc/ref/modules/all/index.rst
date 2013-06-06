@@ -74,7 +74,7 @@ Full list of builtin execution modules
     linux_acl
     linux_lvm
     linux_sysctl
-    locale
+    localemod
     locate
     logrotate
     makeconf
