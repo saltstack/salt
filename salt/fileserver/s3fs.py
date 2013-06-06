@@ -325,6 +325,10 @@ def _refresh_buckets_cache_file(cache_file):
             for bucket_name in buckets:
                 s3_meta = __get_s3_meta(bucket_name)
 
+                # s3 query returned nothing
+                if not s3_meta:
+                    continue
+
                 # grab only the files/dirs
                 bucket_files[bucket_name] = filter(lambda k: 'Key' in k, s3_meta)
 
@@ -334,6 +338,10 @@ def _refresh_buckets_cache_file(cache_file):
         # Multiple environments per buckets
         for bucket_name in _get_buckets():
             s3_meta = __get_s3_meta(bucket_name)
+
+            # s3 query returned nothing
+            if not s3_meta:
+                continue
 
             # pull out the environment dirs (eg. the root dirs)
             files = filter(lambda k: 'Key' in k, s3_meta)
