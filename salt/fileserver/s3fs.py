@@ -325,7 +325,7 @@ def _refresh_buckets_cache_file(cache_file):
             for bucket_name in buckets:
                 s3_meta = __get_s3_meta(bucket_name)
 
-                # s3 query returned noting
+                # s3 query returned nothing
                 if not s3_meta:
                     continue
 
@@ -339,7 +339,7 @@ def _refresh_buckets_cache_file(cache_file):
         for bucket_name in _get_buckets():
             s3_meta = __get_s3_meta(bucket_name)
 
-            # s3 query returned noting
+            # s3 query returned nothing
             if not s3_meta:
                 continue
 
