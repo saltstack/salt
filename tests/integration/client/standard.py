@@ -55,7 +55,15 @@ class StdTest(integration.ModuleCase):
                 'minion',
                 'test.ping',
                 )
-        self.assertTrue(ret['minion'])
+        self.assertIn('minion', ret)
+        self.assertEqual(ret['minion'], {'ret': True, 'success': True})
+        
+        ret = self.client.cmd_full_return(
+                'minion',
+                'test.pong',
+                )
+        self.assertIn('minion', ret)
+        self.assertEqual(ret['minion'], {'ret': '"test.pong" is not available.', 'success': False})
 
 if __name__ == "__main__":
     loader = TestLoader()
