@@ -287,6 +287,22 @@ class LogLevelMixIn(object):
             return
 
         self.add_option(
+            '--log-file',
+            help='Log file to store logging information.'
+        )
+
+        self.add_option(
+            '--log-file-level',
+            dest='log_level_logfile',
+            choices=list(log.LOG_LEVELS),
+            help=('Logging level to use for the log file. One of {0}. '
+                  'Default: \'{1}\'.').format(
+                      ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                      getattr(self, '_default_logging_level_', 'warning')
+                  )
+        )
+
+        self.add_option(
             '-l', '--log-level',
             choices=list(log.LOG_LEVELS),
             help=('Console logging log level. One of {0}. For the log file '
