@@ -648,7 +648,7 @@ class Minion(object):
             except TypeError as exc:
                 trb = traceback.format_exc()
                 aspec = _getargs(minion_instance.functions[data['fun']])
-                log.warning(('TypeError encountered executiing {0}. See debug '
+                log.warning(('TypeError encountered executing {0}. See debug '
                              'log for more info.  Possibly a missing '
                              'arguments issue:  {1}').format(function_name,
                                                              aspec))
