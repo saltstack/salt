@@ -137,6 +137,8 @@ Install on Windows XP 32bit
 
 8.  Install `pycrypto-2.3.win32-py2.7.msi`_
 
+9.  Install `M2Crypto`_
+
 9.  Install `PyYAML-3.10.win32-py2.7.msi`_
 
 10.  Install `Cython-0.15.1.win32-py2.79.exe`_
@@ -256,3 +258,4 @@ For more info check `http://csa-net.dk/salt`_
 .. _Cython-0.15.1.win32-py2.79.exe: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython
 .. _distribute_setup.py: http://python-distribute.org/distribute_setup.py
 .. _pip: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+.. _M2Crypto: http://sourceforge.net/projects/pywin32/files/
