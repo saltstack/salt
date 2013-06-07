@@ -163,20 +163,26 @@ Install on Windows XP 32bit
 
         pip install jinja2
 
-16.  Install Messagepack
+16.  Install wmi 
+
+.. code-block:: bash
+
+        pip install wmi
+
+17.  Install Messagepack
 
 .. code-block:: bash
 
         pip install msgpack-python
 
-17.  Install Salt
+18.  Install Salt
 
 .. code-block:: bash
 
         cd ./salt
         python setup.py install
 
-18.  Edit c:\\etc\\salt\\minion
+19.  Edit c:\\etc\\salt\\minion
 
 .. code-block:: bash
 
@@ -190,14 +196,14 @@ Install on Windows XP 32bit
         open_mode: False
         multiprocessing: False
 
-19.  Start the salt-minion
+20.  Start the salt-minion
 
 .. code-block:: bash
 
         cd c:\python27\scripts
         python salt-minion
 
-20.  On the salt-master accept the new minion's key
+21.  On the salt-master accept the new minion's key
 
 .. code-block:: bash
 
@@ -205,7 +211,7 @@ Install on Windows XP 32bit
 
         (This accepts all unaccepted keys. If you're concerned about security just accept the key for this specific minion)
 
-21.  Test that your minion is responding
+22.  Test that your minion is responding
 
         a.  On the salt-master run:
 
