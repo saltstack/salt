@@ -29,7 +29,6 @@ if salt.utils.which('initctl'):
         HAS_UPSTART = True
 
 
-
 def __virtual__():
     '''
     Only work on systems which default to systemd
@@ -246,6 +245,22 @@ def restart(name, **kwargs):
     else:
         _add_custom_initscript(name)
         cmd = '/sbin/service {0} restart'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def reload(name, **kwargs):
+    '''
+    Reload the named service
+
+    CLI Example::
+
+        salt '*' service.reload <service name>
+    '''
+    if _service_is_upstart(name):
+        cmd = 'reload {0}'.format(name)
+    else:
+        _add_custom_initscript(name)
+        cmd = '/sbin/service {0} reload'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
