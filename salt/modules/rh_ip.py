@@ -752,7 +752,7 @@ def _read_temp(data):
     return output
 
 
-def build_bond(iface, settings):
+def build_bond(iface, **settings):
     '''
     Create a bond script in /etc/modprobe.d with the passed settings
     and load the bonding kernel module.
@@ -788,7 +788,7 @@ def build_bond(iface, settings):
     return _read_file(path)
 
 
-def build_interface(iface, iface_type, enabled, settings):
+def build_interface(iface, iface_type, enabled, **settings):
     '''
     Build an interface script for a network interface.
 
@@ -842,7 +842,7 @@ def build_interface(iface, iface_type, enabled, settings):
     return _read_file(path)
 
 
-def down(iface, iface_type, opts):
+def down(iface, iface_type):
     '''
     Shutdown a network interface
 
@@ -880,7 +880,7 @@ def get_interface(iface):
     return _read_file(path)
 
 
-def up(iface, iface_type, opts):  # pylint: disable-msg=C0103
+def up(iface, iface_type):  # pylint: disable-msg=C0103
     '''
     Start up a network interface
 
@@ -905,7 +905,7 @@ def get_network_settings():
     return _read_file(_RH_NETWORK_FILE)
 
 
-def apply_network_settings(opts):
+def apply_network_settings(**settings):
     '''
     Apply global network configuration.
 
@@ -913,10 +913,10 @@ def apply_network_settings(opts):
 
         salt '*' ip.apply_network_settings
     '''
-    if not 'require_reboot' in opts:
-        opts['require_reboot'] = False
+    if not 'require_reboot' in settings:
+        settings['require_reboot'] = False
 
-    if opts['require_reboot'] in _CONFIG_TRUE:
+    if settings['require_reboot'] in _CONFIG_TRUE:
         log.warning(
             'The network state sls is requiring a reboot of the system to '
             'properly apply network configuration.'
@@ -926,7 +926,7 @@ def apply_network_settings(opts):
         return __salt__['service.restart']('network')
 
 
-def build_network_settings(settings):
+def build_network_settings(**settings):
     '''
     Build the global network script.
 
