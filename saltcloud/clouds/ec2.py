@@ -734,12 +734,6 @@ def create(vm_=None, call=None):
 
     log.debug('The new VM instance_id is {0}'.format(instance_id))
 
-    set_tags(
-        vm_['name'], {'Name': vm_['name']},
-        instance_id=instance_id, call='action', location=location
-    )
-    log.info('Created node {0}'.format(vm_['name']))
-
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
@@ -810,6 +804,12 @@ def create(vm_=None, call=None):
             pass
         finally:
             raise SaltCloudSystemExit(exc.message)
+
+    set_tags(
+        vm_['name'], {'Name': vm_['name']},
+        instance_id=instance_id, call='action', location=location
+    )
+    log.info('Created node {0}'.format(vm_['name']))
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = data[0]['instancesSet']['item']['privateIpAddress']
