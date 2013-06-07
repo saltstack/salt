@@ -79,6 +79,8 @@ def _process_emerge_err(stderr):
             changes['license'] = rexp.findall(section)
         elif 'The following USE changes' in section:
             changes['use'] = rexp.findall(section)
+        elif 'The following mask changes' in section:
+            changes['mask'] = rexp.findall(section)
     ret['changes'] = changes
     return ret
 
