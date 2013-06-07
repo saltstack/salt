@@ -139,52 +139,54 @@ Install on Windows XP 32bit
 
 9.  Install `M2Crypto`_
 
-9.  Install `PyYAML-3.10.win32-py2.7.msi`_
+10.  Install `pywin32`_
 
-10.  Install `Cython-0.15.1.win32-py2.79.exe`_
+11.  Install `PyYAML-3.10.win32-py2.7.msi`_
 
-11.  Download and run `distribute_setup.py`_
+12.  Install `Cython-0.15.1.win32-py2.79.exe`_
+
+13.  Download and run `distribute_setup.py`_
 
 .. code-block:: bash
 
     python distribute_setup.py
 
-12.  Download and run `pip`_
+14.  Download and run `pip`_
 
 .. code-block:: bash
 
         python get-pip.py
 
-13.  Add c:\\python27\\scripts to your path
+15.  Add c:\\python27\\scripts to your path
 
-14.  Close terminal window and open a new terminal window (*cmd*)
+16.  Close terminal window and open a new terminal window (*cmd*)
 
-15.  Install jinja2
+17.  Install jinja2
 
 .. code-block:: bash
 
         pip install jinja2
 
-16.  Install wmi 
+18.  Install wmi 
 
 .. code-block:: bash
 
         pip install wmi
 
-17.  Install Messagepack
+19.  Install Messagepack
 
 .. code-block:: bash
 
         pip install msgpack-python
 
-18.  Install Salt
+20.  Install Salt
 
 .. code-block:: bash
 
         cd ./salt
         python setup.py install
 
-19.  Edit c:\\etc\\salt\\minion
+21.  Edit c:\\etc\\salt\\minion
 
 .. code-block:: bash
 
@@ -198,14 +200,14 @@ Install on Windows XP 32bit
         open_mode: False
         multiprocessing: False
 
-20.  Start the salt-minion
+22.  Start the salt-minion
 
 .. code-block:: bash
 
         cd c:\python27\scripts
         python salt-minion
 
-21.  On the salt-master accept the new minion's key
+23.  On the salt-master accept the new minion's key
 
 .. code-block:: bash
 
@@ -213,7 +215,7 @@ Install on Windows XP 32bit
 
         (This accepts all unaccepted keys. If you're concerned about security just accept the key for this specific minion)
 
-22.  Test that your minion is responding
+24.  Test that your minion is responding
 
         a.  On the salt-master run:
 
@@ -258,4 +260,5 @@ For more info check `http://csa-net.dk/salt`_
 .. _Cython-0.15.1.win32-py2.79.exe: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython
 .. _distribute_setup.py: http://python-distribute.org/distribute_setup.py
 .. _pip: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
-.. _M2Crypto: http://sourceforge.net/projects/pywin32/files/
+.. _M2Crypto: http://chandlerproject.org/pub/Projects/MeTooCrypto/M2Crypto-0.21.1.win32-py2.7.exe
+.. _pywin32: http://sourceforge.net/projects/pywin32/files/
