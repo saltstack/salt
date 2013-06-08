@@ -1987,7 +1987,7 @@ class BaseHighState(object):
                 statefiles = fnmatch.filter(self.avail[env], sls_match)
                 if not statefiles:
                     # No matching sls file was found!  Output an error
-                    all_errors.append(
+                    log.error(
                             'No matching sls found for \'{0}\' in env \'{1}\''
                             .format(sls_match, env)
                     )
@@ -2247,4 +2247,3 @@ class RemoteHighState(object):
                     72000))
         except SaltReqTimeoutError:
             return {}
-
