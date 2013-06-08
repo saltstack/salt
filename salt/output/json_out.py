@@ -23,9 +23,9 @@ def output(data):
     try:
         if 'output_indent' in __opts__:
             if __opts__['output_indent'] >= 0:
-                return json.dumps(data, indent=__opts__['output_indent'])
-            return json.dumps(data)
-        return json.dumps(data, indent=4)
+                return json.dumps(data, default=repr, indent=__opts__['output_indent'])
+            return json.dumps(data, default=repr)
+        return json.dumps(data, default=repr, indent=4)
     except TypeError:
         log.debug('An error occurred while outputting JSON', exc_info=True)
     # Return valid JSON for unserializable objects
