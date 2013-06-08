@@ -1131,7 +1131,9 @@ def create_multiprocessing(parallel_data):
     if parallel_data['opts'].get('show_deploy_args', False) is False:
         output.pop('deploy_kwargs', None)
 
-    return {parallel_data['name']: output}
+    return {
+        parallel_data['name']: saltcloud.utils.simple_types_filter(output)
+    }
 
 
 def run_paralel_map_providers_query(data):
@@ -1141,7 +1143,11 @@ def run_paralel_map_providers_query(data):
     '''
     cloud = Cloud(data['opts'])
     try:
-        return {data['provider']: cloud.clouds[data['fun']]()}
+        return {
+            data['provider']: saltcloud.utils.simple_types_filter(
+                cloud.clouds[data['fun']]()
+            )
+        }
     except Exception:
         # Failed to communicate with the provider, don't list any
         # nodes
