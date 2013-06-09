@@ -94,7 +94,6 @@ class Pillar(object):
         The options need to be altered to conform to the file client
         '''
         opts = dict(opts_in)
-        opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
         opts['grains'] = grains
         opts['id'] = id_
