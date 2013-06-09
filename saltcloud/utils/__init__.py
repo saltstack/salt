@@ -919,7 +919,7 @@ def wait_for_ip(update_callback,
     while True:
         log.debug(
             'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
-                timeout // 60,
+                int(timeout // 60),
                 int(timeout % 60)
             )
         )
@@ -941,7 +941,7 @@ def wait_for_ip(update_callback,
         if timeout < 0:
             raise SaltCloudExecutionTimeout(
                 'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
-                    duration // 60,
+                    int(duration // 60),
                     int(duration % 60)
                 )
             )
