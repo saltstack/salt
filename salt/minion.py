@@ -17,7 +17,6 @@ import time
 import traceback
 import sys
 import signal
-import uuid
 
 # Import third party libs
 import zmq
@@ -447,7 +446,7 @@ class Minion(object):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
         self.proc_dir = get_proc_dir(opts['cachedir'], self.real_minion)
-        self.children = []
+        self.children = {}
         if self.real_minion:
             self.module_refresh()
             self.matcher = Matcher(self.opts, self.functions)
@@ -564,6 +563,36 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.module_refresh()
+
+            if salt.utils.is_windows() and data['fun'] == 'saltutil.find_job':
+                # This needs to return within ~5 seconds which is cutting it very fine on windows.
+                # Speed it up as much as possible
+                ret = {'retcode':0, 'success':True}
+                jid = data['arg'][0]
+                if jid in self.children.iterkeys():
+                    ret['return'] = self.children[jid]['data']
+                else:
+                    ret['return'] = {}
+                    
+                ret['jid'] = data['jid']
+                ret['fun'] = data['fun']
+                self._return_pub(ret)
+                if data['ret']:
+                    for returner in set(data['ret'].split(',')):
+                        ret['id'] = self.opts['id']
+                        try:
+                            self.returners['{0}.returner'.format(
+                                returner
+                            )](ret)
+                        except Exception as exc:
+                            log.error(
+                                'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
+                return
+
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -573,13 +602,9 @@ class Minion(object):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        if (salt.utils.is_windows() and data['fun'] == 'saltutil.find_job') or \
-           not self.opts['multiprocessing']:
-            # find_jobs is "special". The client expects a quick response.
-            # Spawning a new minion process takes too long on windows so always use a thread 
+        if not self.opts['multiprocessing']:
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data),
-                name=uuid.uuid4()
+                target=target, args=(instance, self.opts, data)
             )
         else:
             # Multiprocessing
@@ -590,9 +615,9 @@ class Minion(object):
             process = multiprocessing.Process(
                 target=target, args=(instance, self.opts, data)
             )
-
         process.start()
-        self.children.append(process)
+
+        self.children[data['jid']] = {'process':process, 'data':data}
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -604,15 +629,10 @@ class Minion(object):
         # multiprocessing communication.
         if minion_instance is None:
             minion_instance = cls(opts, real_minion=False)
-        if opts['multiprocessing']:
-            salt.utils.daemonize_if(opts)
-            sdata = {'pid': os.getpid()}
-        else:
-            sdata = {
-                'pid': os.getpid(),
-                'tid': threading.current_thread().name
-            }
+        salt.utils.daemonize_if(opts)
+        sdata = {'pid': os.getpid()}
         sdata.update(data)
+
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         with open(fn_, 'w+') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
@@ -838,13 +858,14 @@ class Minion(object):
 
     def _cleanup_children(self):
         if self.children:
-            running_children = []
-            while self.children:
-                process = self.children.pop()
+            running_children = {}
+            for jid, child in self.children.iteritems():
+                process = child['process']
+                process.join(0.001)
                 if process.is_alive():
-                    running_children.append(process)
+                    running_children[jid] = child
                 else:
-                    process.join()
+                    log.debug('Process/thread for {} ended'.format(jid))
             self.children = running_children
         if hasattr(self, 'schedule'):
             self.schedule._cleanup_children()
@@ -1614,3 +1635,4 @@ class Matcher(object):
                 salt.utils.minions.nodegroup_comp(tgt, nodegroups)
             )
         return False
+
