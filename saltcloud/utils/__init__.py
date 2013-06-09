@@ -526,21 +526,26 @@ def deploy_script(host, port=22, timeout=900, username='root',
                                 type(script_env)
                             )
                         )
-                    environ = []
+                    environ_script_contents = ['#!/bin/sh']
                     for key, value in script_env.iteritems():
-                        environ.append('{0}=\'{1}\''.format(key, value))
+                        environ_script_contents.append(
+                            'setenv {0} \'{1}\' >/dev/null 2>&1 || '
+                            'export {0}=\'{1}\''.format(key, value)
+                        )
+                    environ_script_contents.append(deploy_command)
 
-                    deploy_command = '{0} {1}'.format(
-                        ' '.join(environ), deploy_command
+                    # Upload our environ setter wrapper
+                    scp_file(
+                        '/tmp/environ-deploy-wrapper.sh',
+                        '\n'.join(environ_script_contents),
+                        kwargs
                     )
-
-                    # Since we're trying to enforce system variables and we do
-                    # not know which shell we'll encounter on the other side,
-                    # let's force it to be `sh` which supports passing
-                    # environment variable on the same command line
-                    deploy_command = 'sh -c {0}'.format(
-                        pipes.quote(deploy_command)
+                    root_cmd(
+                        'chmod +x /tmp/environ-deploy-wrapper.sh',
+                        tty, sudo, **kwargs
                     )
+                    # The deploy command is now our wrapper
+                    deploy_command = '/tmp/environ-deploy-wrapper.sh'
 
                 if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
                     raise SaltCloudSystemExit(
@@ -554,6 +559,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 if not keep_tmp:
                     root_cmd('rm /tmp/deploy.sh', tty, sudo, **kwargs)
                     log.debug('Removed /tmp/deploy.sh')
+                    if script_env:
+                        root_cmd(
+                            'rm /tmp/environ-deploy-wrapper.sh',
+                            tty, sudo, **kwargs
+                        )
+                        log.debug('Removed /tmp/environ-deploy-wrapper.sh')
 
             if keep_tmp:
                 log.debug('Not removing deployment files from /tmp/')
