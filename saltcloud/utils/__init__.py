@@ -920,7 +920,7 @@ def wait_for_ip(update_callback,
         log.debug(
             'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
                 timeout // 60,
-                timeout % 60
+                int(timeout % 60)
             )
         )
         data = update_callback(*update_args, **update_kwargs)
