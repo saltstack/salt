@@ -125,19 +125,17 @@ def __virtual__():
         PRE_IMPORT_LOCALS_KEYS
     )
     for key in keysdiff:
-        if not callable(POST_IMPORT_LOCALS_KEYS[key]):
-            continue
-        # skip callables that might be exceptions
-        if any(['Error' in POST_IMPORT_LOCALS_KEYS[key].__name__,
-                'Exception' in POST_IMPORT_LOCALS_KEYS[key].__name__]):
-            continue
-        globals().update(
-            {
-                key: namespaced_function(
-                    POST_IMPORT_LOCALS_KEYS[key], globals(), ()
-                )
-            }
-        )
+        # only import callables that actually have __code__ (this includes
+        # functions but excludes Exception classes)
+        if (callable(POST_IMPORT_LOCALS_KEYS[key]) and
+            hasattr(POST_IMPORT_LOCALS_KEYS[key], "__code__")):
+            globals().update(
+                {
+                    key: namespaced_function(
+                        POST_IMPORT_LOCALS_KEYS[key], globals(), ()
+                    )
+                }
+            )
 
     global avail_images, avail_sizes, avail_locations, script
     global list_nodes, list_nodes_full, list_nodes_select
