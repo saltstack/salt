@@ -296,6 +296,7 @@ def _get_reg_software():
                    'WIC'
                    ]
     encoding = locale.get_locale()
+
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
     reg_entries = dict(list(_get_user_keys().items()) +
