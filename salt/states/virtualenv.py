@@ -7,6 +7,7 @@ Setup of Python virtualenv sandboxes.
 # Import python libs
 import logging
 import os
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +56,10 @@ def managed(name,
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
 
-    venv_py = os.path.join(name, 'bin', 'python')
+    if salt.utils.is_windows():
+        venv_py = os.path.join(name, 'Scripts', 'python.exe')
+    else:
+        venv_py = os.path.join(name, 'bin', 'python')
     venv_exists = os.path.exists(venv_py)
 
     # Bail out early if the specified requirements file can't be found
