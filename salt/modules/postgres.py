@@ -644,6 +644,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
         return True
     else:
         log.info('Failed to delete user \'{0}\'.'.format(name, ))
+        return False
 
 
 def user_remove(username,
