@@ -936,11 +936,13 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         actions_group.add_option(
             '-l', '--list',
             default='',
-            help=('List the public keys. Takes the args: '
-                  '"pre", "un", "unaccepted": Unaccepted/unsigned keys '
-                  '"acc", "accepted": Accepted/signed keys '
-                  '"rej", "rejected": Rejected keys '
-                  '"all": all keys')
+            metavar='ARG',
+            help=('List the public keys. The args '
+                  '"pre", "un", and "unaccepted" will list '
+                  'unaccepted/unsigned keys. '
+                  '"acc" or "accepted" will list accepted/signed keys. '
+                  '"rej" or "rejected" will list rejected keys. '
+                  'Finally, "all" will list all keys.')
         )
 
         actions_group.add_option(

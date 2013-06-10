@@ -24,7 +24,7 @@ def __virtual__():
     os_family = __grains__['os_family']
     try:
         os_major = int(__grains__['osrelease'].split('.')[0])
-    except ValueError:
+    except (AttributeError, ValueError):
         os_major = 0
 
     if os_grain == 'Amazon':
@@ -51,9 +51,11 @@ def list_pkgs(*packages):
     errors = []
     pkgs = {}
     if not packages:
-        cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
     else:
-        cmd = "rpm -q --qf '%{{NAME}} %{{VERSION}}\\n' {0}".format(' '.join(packages))
+        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
+            ' '.join(packages)
+        )
     for line in __salt__['cmd.run'](cmd).splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -149,9 +151,11 @@ def file_dict(*packages):
     ret = {}
     pkgs = {}
     if not packages:
-        cmd = "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
     else:
-        cmd = "rpm -q --qf '%{{NAME}} %{{VERSION}}\\n' {0}".format(' '.join(packages))
+        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
+            ' '.join(packages)
+        )
     for line in __salt__['cmd.run'](cmd).splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -165,4 +169,3 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
-
