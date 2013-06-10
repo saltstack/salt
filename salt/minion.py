@@ -865,7 +865,7 @@ class Minion(object):
                 if process.is_alive():
                     running_children[jid] = child
                 else:
-                    log.debug('Process/thread for {} ended'.format(jid))
+                    log.debug('Process/thread for {0} ended'.format(jid))
             self.children = running_children
         if hasattr(self, 'schedule'):
             self.schedule._cleanup_children()
