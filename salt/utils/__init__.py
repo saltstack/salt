@@ -705,7 +705,17 @@ def istextfile(fp_, blocksize=512):
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
         b'\n\r\t\f\b')
-    block = fp_.read(blocksize)
+    try:
+        block = fp_.read(blocksize)
+    except AttributeError:
+        # This wasn't an open filehandle, so treat it as a file path and try to
+        # open the file
+        try:
+            with open(fp_, 'rb') as fp2_:
+                block = fp2_.read(blocksize)
+        except IOError:
+            # Unable to open file, bail out and return false
+            return False
     if b'\x00' in block:
         # Files with null bytes are binary
         return False
@@ -1140,7 +1150,7 @@ def get_hash(path, form='md5', chunk_size=4096):
 
 
 def namespaced_function(function, global_dict, defaults=None):
-    ''' 
+    '''
     Redefine(clone) a function under a different globals() namespace scope
     '''
     if defaults is None:
@@ -1151,6 +1161,6 @@ def namespaced_function(function, global_dict, defaults=None):
         global_dict,
         name=function.__name__,
         argdefs=defaults
-    )   
+    )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
