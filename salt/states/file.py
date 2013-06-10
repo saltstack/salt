@@ -1616,7 +1616,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     )
 
     if slines != nlines:
-        if not salt.utils.istexfile(name):
+        if not salt.utils.istextfile(name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
