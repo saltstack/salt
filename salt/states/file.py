@@ -1450,13 +1450,18 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         nlines = fp_.readlines()
 
     if slines != nlines:
-        # Changes happened, add them
-        ret['changes']['diff'] = ''.join(difflib.unified_diff(slines, nlines))
-        # Don't check the result -- sed is not designed to be able to check the
-        # result, because of backreferences and so forth.  Just report that sed
-        # was run, and assume it was successful (no error!)
-        ret['result'] = True
-        ret['comment'] = 'sed ran without error'
+        if not salt.utils.istextfile(name):
+            ret['changes']['diff'] = 'Replace binary file'
+        else:
+            # Changes happened, add them
+            ret['changes']['diff'] = ''.join(difflib.unified_diff(slines,
+                                                                  nlines))
+
+            # Don't check the result -- sed is not designed to be able to check
+            # the result, because of backreferences and so forth. Just report
+            # that sed was run, and assume it was successful (no error!)
+            ret['result'] = True
+            ret['comment'] = 'sed ran without error'
     else:
         ret['result'] = True
         ret['comment'] = 'sed ran without error, but no changes were made'
@@ -1531,10 +1536,13 @@ def comment(name, regex, char='#', backup='.bak'):
                                                               unanchor_regex)
 
     if slines != nlines:
-        # Changes happened, add them
-        ret['changes']['diff'] = (
-            ''.join(difflib.unified_diff(slines, nlines))
-        )
+        if not salt.utils.istextfile(name):
+            ret['changes']['diff'] = 'Replace binary file'
+        else:
+            # Changes happened, add them
+            ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(slines, nlines))
+            )
 
     if ret['result']:
         ret['comment'] = 'Commented lines successfully'
@@ -1611,10 +1619,13 @@ def uncomment(name, regex, char='#', backup='.bak'):
     )
 
     if slines != nlines:
-        # Changes happened, add them
-        ret['changes']['diff'] = (
-            ''.join(difflib.unified_diff(slines, nlines))
-        )
+        if not salt.utils.istexfile(name):
+            ret['changes']['diff'] = 'Replace binary file'
+        else:
+            # Changes happened, add them
+            ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(slines, nlines))
+            )
 
     if ret['result']:
         ret['comment'] = 'Uncommented lines successfully'
@@ -1731,10 +1742,13 @@ def append(name,
         nlines = fp_.readlines()
 
     if slines != nlines:
-        # Changes happened, add them
-        ret['changes']['diff'] = (
-            ''.join(difflib.unified_diff(slines, nlines))
-        )
+        if not salt.utils.istextfile(name):
+            ret['changes']['diff'] = 'Replace binary file'
+        else:
+            # Changes happened, add them
+            ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(slines, nlines))
+            )
 
     ret['comment'] = 'Appended {0} lines'.format(count)
     ret['result'] = True
