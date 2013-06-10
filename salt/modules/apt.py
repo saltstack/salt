@@ -139,7 +139,7 @@ def latest_version(*names, **kwargs):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
-    pkgs = list_pkgs()
+    pkgs = list_pkgs(versions_as_list=True)
     fromrepo = _get_repo(**kwargs)
     repo = ' -o APT::Default-Release="{0}"'.format(fromrepo) \
         if fromrepo else ''
@@ -154,10 +154,15 @@ def latest_version(*names, **kwargs):
         else:
             candidate = ''
 
-        installed = pkgs.get(name, '')
-        if candidate:
-            if not installed or compare(pkg1=installed, oper='<',
-                                        pkg2=candidate):
+        installed = pkgs.get(name, [])
+        if not installed:
+            ret[name] = candidate
+        else:
+            # If there are no installed versions that are greater than or equal
+            # to the install candidate, then the candidate is an upgrade, so
+            # add it to the return dict
+            if not any([compare(pkg1=x, oper='>=', pkg2=candidate)
+                        for x in installed]):
                 ret[name] = candidate
 
     # Return a string if only one package name passed
@@ -443,6 +448,20 @@ def upgrade(refresh=True, **kwargs):
     return __salt__['pkg_resource.find_changes'](old, new)
 
 
+def _clean_pkglist(pkgs):
+    '''
+    Go through package list and, if any packages have a mix of actual versions
+    and virtual package markers, remove the virtual package markers.
+    '''
+    for key in pkgs.keys():
+        if '1' in pkgs[key] and len(pkgs[key]) > 1:
+            while True:
+                try:
+                    pkgs[key].remove('1')
+                except ValueError:
+                    break
+
+
 def list_pkgs(versions_as_list=False):
     '''
     List the packages currently installed in a dict::
@@ -504,6 +523,7 @@ def list_pkgs(versions_as_list=False):
             __salt__['pkg_resource.add_pkg'](ret, virtname, '1')
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    _clean_pkglist(ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
