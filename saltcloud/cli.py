@@ -133,7 +133,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.handle_exception(msg, exc)
             else:
                 try:
-                    ret = mapper.map_providers(
+                    ret = mapper.map_providers_parallel(
                         query=self.selected_query_option
                     )
                 except (SaltCloudException, Exception) as exc:
