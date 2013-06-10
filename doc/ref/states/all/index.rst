@@ -16,6 +16,7 @@ Full list of builtin state modules
     cron
     debconfmod
     disk
+    eselect
     file
     gem
     git
@@ -51,6 +52,7 @@ Full list of builtin state modules
     quota
     rabbitmq_user
     rabbitmq_vhost
+    rbenv
     rvm
     selinux
     service

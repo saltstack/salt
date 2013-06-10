@@ -5,6 +5,7 @@ A module to manage software on Windows
             - win32com
             - win32con
             - win32api
+            - pywintypes
 '''
 
 # Import third party libs
@@ -13,6 +14,7 @@ try:
     import win32com.client
     import win32api
     import win32con
+    import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -22,6 +24,7 @@ import copy
 import logging
 import msgpack
 import os
+import locale
 from distutils.version import LooseVersion
 
 # Import salt libs
@@ -140,6 +143,8 @@ def list_available(*names):
         versions = {}
         for name in names:
             pkginfo = _get_package_info(name)
+            if not pkginfo:
+                continue
             versions[name] = pkginfo.keys() if pkginfo else []
     return versions
 
@@ -247,6 +252,16 @@ def _get_msi_software():
     this_computer = "."
     wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
     swbem_services = wmi_service.ConnectServer(this_computer, "root\\cimv2")
+
+    # Find out whether the Windows Installer provider is present. It
+    # is optional on Windows Server 2003 and 64-bit operating systems See
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa392726%28v=vs.85%29.aspx#windows_installer_provider
+    try:
+        swbem_services.Get("Win32_Product")
+    except pywintypes.com_error:
+        log.warning("Windows Installer (MSI) provider not found; package management will not work correctly on MSI packages")
+        return win32_products
+
     products = swbem_services.ExecQuery("Select * from Win32_Product")
     for product in products:
         try:
@@ -279,6 +294,7 @@ def _get_reg_software():
                    'SchedulingAgent',
                    'WIC'
                    ]
+    encoding = locale.getpreferredencoding()
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
     reg_entries = dict(list(_get_user_keys().items()) +
@@ -303,6 +319,8 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     "DisplayName")
+                try: prd_name=prd_name.decode(encoding)
+                except: pass
                 prd_ver = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,
@@ -365,7 +383,7 @@ def _get_user_keys():
 def _get_reg_value(reg_hive, reg_key, value_name=''):
     '''
     Read one value from Windows registry.
-    If 'name' is empty string, reads default value.
+    If 'name' is empty map, reads default value.
     '''
     try:
         key_handle = win32api.RegOpenKeyEx(
@@ -417,6 +435,8 @@ def install(name=None, refresh=False, **kwargs):
         refresh_db()
     old = list_pkgs()
     pkginfo = _get_package_info(name)
+    if not pkginfo:
+        return 'Error: Unable to locate package {0}'.format(name)
     for pkg in pkginfo.keys():
         if pkginfo[pkg]['full_name'] in old:
             return '{0} already installed'.format(pkginfo[pkg]['full_name'])
@@ -424,7 +444,9 @@ def install(name=None, refresh=False, **kwargs):
         version_num = kwargs['version']
     else:
         version_num = _get_latest_pkg_version(pkginfo)
-    installer = pkginfo[version_num]['installer']
+    installer = pkginfo[version_num].get('installer')
+    if not installer:
+        return 'Error: No installer configured for package {0}'.format(name)
     if installer.startswith('salt:') or installer.startswith('http:') or installer.startswith('https:') or installer.startswith('ftp:'):
         cached_pkg = __salt__['cp.is_cached'](installer)
         if not cached_pkg:
@@ -501,21 +523,26 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         if not version:
             version = _get_latest_pkg_version(pkginfo)
 
-        if pkginfo[version]['uninstaller'].startswith('salt:'):
+        uninstaller = pkginfo[version].get('uninstaller')
+        if not uninstaller:
+            uninstaller = pkginfo[version].get('installer')
+        if not uninstaller:
+            return 'Error: No installer or uninstaller configured for package {0}'.format(name)
+        if uninstaller.startswith('salt:'):
             cached_pkg = \
-                __salt__['cp.is_cached'](pkginfo[version]['uninstaller'])
+                __salt__['cp.is_cached'](uninstaller)
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
                 cached_pkg = \
-                    __salt__['cp.cache_file'](pkginfo[version]['uninstaller'])
+                    __salt__['cp.cache_file'](uninstaller)
         else:
-            cached_pkg = pkginfo[version]['uninstaller']
+            cached_pkg = uninstaller
         cached_pkg = cached_pkg.replace('/', '\\')
         if not os.path.exists(os.path.expandvars(cached_pkg)) \
                 and '(x86)' in cached_pkg:
             cached_pkg = cached_pkg.replace('(x86)', '')
         cmd = '"' + str(os.path.expandvars(
-            cached_pkg)) + '"' + str(pkginfo[version]['uninstall_flags'])
+            cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', ''))
         if pkginfo[version].get('msiexec'):
             cmd = 'msiexec /x ' + cmd
         __salt__['cmd.run_all'](cmd)
@@ -560,7 +587,7 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
 def _get_package_info(name):
     '''
     Return package info.
-    Returns empty string if package not available
+    Returns empty map if package not available
     TODO: Add option for version
     '''
     repocache = __opts__['win_repo_cachefile']

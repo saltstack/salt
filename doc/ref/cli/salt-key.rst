@@ -22,9 +22,12 @@ Options
 
     Print a usage message briefly summarizing these command-line options.
 
-.. option:: -l, --list
+.. option:: -l ARG, --list=ARG
 
-    List the unaccepted minion public keys.
+    List the public keys. The args "pre", "un", and "unaccepted" will list
+    unaccepted/unsigned keys. "acc" or "accepted" will list accepted/signed
+    keys. "rej" or "rejected" will list rejected keys. Finally, "all" will list
+    all keys.
 
 .. option:: -L, --list-all
 

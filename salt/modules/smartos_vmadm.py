@@ -17,6 +17,13 @@ def _check_vmadm():
     return salt.utils.which('vmadm')
 
 
+def _check_dladm():
+    '''
+    Looks to see if dladm is present on the system
+    '''
+    return salt.utils.which('dladm')
+
+
 def __virtual__():
     '''
     Provides virt on SmartOS
@@ -187,7 +194,7 @@ def list_inactive_vms():
 
 def vm_info(uuid=None):
     '''
-    Return a dict with information about the specified vm on this CN
+    Return a dict with information about the specified VM on this CN
 
     CLI Example::
 
@@ -278,6 +285,25 @@ def reboot(uuid=None):
         return False
 
 
+def destroy(uuid=None):
+    '''
+    Hard power down the virtual machine, this is equivalent to pulling the power
+
+    CLI Example::
+    
+        salt '*' virt.destroy <uuid>
+    '''
+    if not uuid:
+        raise CommandExecutionError('UUID parameter is mandatory')
+    vmadm = _check_vmadm()
+    cmd = '{0} delete {1}'.format(vmadm, uuid)
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        raise CommandExecutionError(_exit_status(retcode))
+    return True 
+
+
 def vm_virt_type(uuid=None):
     '''
     Return VM virtualization type : OS or KVM
@@ -328,6 +354,25 @@ def setmem(uuid, memory):
     if not warning:
         return True
     return warning 
+
+
+def get_macs(uuid=None):
+    '''
+    Return a list off MAC addresses from the named VM 
+
+    CLI Example::
+    
+        salt '*' virt.get_macs <uuid>
+    '''
+    if not uuid:
+        raise CommandExecutionError('UUID parameter is mandatory')
+    dladm = _check_dladm()
+    cmd = '{0} show-vnic -o MACADDRESS -p -z {1}'.format(dladm, uuid)
+    res = __salt__['cmd.run_all'](cmd)
+    ret = res['stdout']
+    if ret != '':
+        return ret
+    raise CommandExecutionError('We can\'t find the MAC address of this VM')
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

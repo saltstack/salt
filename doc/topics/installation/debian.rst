@@ -106,14 +106,6 @@ more appropriate for you.
 3. The version numbering and backporting process should provide clean
 upgrade paths between debian versions.
 
-4. The packages currently depend on zeromq 2 rather than 3.2. This is
-likely to be a problem for some users. Work has commenced to depend on
-and build against zeromq 3.2. This is expected to be resolved in the
-next few weeks.
-
-There many situations where these packages (and their predecessors)
-have proven to be stable.
-
 If you have any questions regarding these, please email the mailing
 list or look for joehh on irc.
 

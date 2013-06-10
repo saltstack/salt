@@ -646,14 +646,19 @@ class Minion(object):
                     function_name, exc
                 )
             except TypeError as exc:
+                trb = traceback.format_exc()
                 aspec = _getargs(minion_instance.functions[data['fun']])
+                log.warning(('TypeError encountered executing {0}. See debug '
+                             'log for more info.  Possibly a missing '
+                             'arguments issue:  {1}').format(function_name,
+                                                             aspec))
                 msg = 'Missing arguments executing "{0}": {1}'.format(
                     function_name, aspec
                 )
                 log.warning(msg)
                 log.debug(
-                    '"Missing args" caused by exc: {0}'.format(exc),
-                    exc_info=True
+                        'TypeError intercepted: {0}\n{1}'.format(exc, trb),
+                        exc_info=True
                 )
                 ret['return'] = msg
             except Exception:
@@ -1127,7 +1132,7 @@ class Minion(object):
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
         if hasattr(self, 'local'):
-            del(self.local)
+            del self.local
 
     def __del__(self):
         self.destroy()

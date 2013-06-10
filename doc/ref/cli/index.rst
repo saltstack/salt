@@ -63,7 +63,8 @@ system properties. So minions running on a particular operating system can
 be called to execute a function, or a specific kernel.
 
 Calling via a grain is done by passing the -G option to salt, specifying
-a grain and a regular expression to match the value of the grain.
+a grain and a glob expression to match the value of the grain. The syntax for
+the target is the grain key followed by a globexpression: "os:Arch*".
 
 .. code-block:: bash
 
