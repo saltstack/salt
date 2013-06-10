@@ -172,17 +172,19 @@ def managed(name, type, enabled=True, **kwargs):
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
-        new = __salt__['ip.build_interface'](name, type, enabled, kwargs)
+        new = __salt__['ip.build_interface'](name, type, enabled, **kwargs)
         if __opts__['test']:
             if old == new:
                 pass
             if not old and new:
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be added.'.format(name)
+                ret['comment'] = 'Interface {0} is set to be ' \
+                                 'added.'.format(name)
             elif old != new:
                 diff = difflib.unified_diff(old, new)
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be updated.'.format(name)
+                ret['comment'] = 'Interface {0} is set to be ' \
+                                 'updated.'.format(name)
                 ret['changes']['interface'] = ''.join(diff)
         else:
             if not old and new:
@@ -199,17 +201,19 @@ def managed(name, type, enabled=True, **kwargs):
     if type == 'bond':
         try:
             old = __salt__['ip.get_bond'](name)
-            new = __salt__['ip.build_bond'](name, kwargs)
+            new = __salt__['ip.build_bond'](name, **kwargs)
             if __opts__['test']:
                 if old == new:
                     pass
                 if not old and new:
                     ret['result'] = None
-                    ret['comment'] = 'Bond interface {0} is set to be added.'.format(name)
+                    ret['comment'] = 'Bond interface {0} is set to be ' \
+                                     'added.'.format(name)
                 elif old != new:
                     diff = difflib.unified_diff(old, new)
                     ret['result'] = None
-                    ret['comment'] = 'Bond interface {0} is set to be updated.'.format(name)
+                    ret['comment'] = 'Bond interface {0} is set to be ' \
+                                     'updated.'.format(name)
                     ret['changes']['bond'] = ''.join(diff)
             else:
                 if not old and new:
@@ -226,12 +230,12 @@ def managed(name, type, enabled=True, **kwargs):
     if __opts__['test']:
         return ret
 
-    #Bring up/shutdown interface
+    # Bring up/shutdown interface
     try:
         if enabled:
-            __salt__['ip.up'](name, type, kwargs)
+            __salt__['ip.up'](name, type)
         else:
-            __salt__['ip.down'](name, type, kwargs)
+            __salt__['ip.down'](name, type)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
@@ -263,7 +267,7 @@ def system(name, **kwargs):
     # Build global network settings
     try:
         old = __salt__['ip.get_network_settings']()
-        new = __salt__['ip.build_network_settings'](kwargs)
+        new = __salt__['ip.build_network_settings'](**kwargs)
         if __opts__['test']:
             if old == new:
                 return ret
@@ -292,7 +296,7 @@ def system(name, **kwargs):
     # Apply global network settings
     if apply_net_settings:
         try:
-            __salt__['ip.apply_network_settings'](kwargs)
+            __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
             ret['comment'] = error.message

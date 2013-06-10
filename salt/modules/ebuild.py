@@ -63,6 +63,28 @@ def _cpv_to_version(cpv):
     return str(cpv[len(_cpv_to_name(cpv) + '-'):])
 
 
+def _process_emerge_err(stderr):
+    '''
+    Used to parse emerge output to provide meaningful output when emerge fails
+    '''
+    ret = {}
+    changes = {}
+    rexp = re.compile(r'([<>=][^ ]+/[^ ]+ [^\n]+)')
+
+    sections = re.split('\n\n', stderr)
+    for section in sections:
+        if 'The following keyword changes' in section:
+            changes['keywords'] = rexp.findall(section)
+        elif 'The following license changes' in section:
+            changes['license'] = rexp.findall(section)
+        elif 'The following USE changes' in section:
+            changes['use'] = rexp.findall(section)
+        elif 'The following mask changes' in section:
+            changes['mask'] = rexp.findall(section)
+    ret['changes'] = changes
+    return ret
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -352,8 +374,10 @@ def install(name=None,
         targets = pkg_params
     cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
     old = list_pkgs()
-    __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -385,8 +409,10 @@ def update(pkg, slot=None, refresh=False):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --oneshot --with-bdeps=y --ask n --quiet {0}'.format(full_atom)
-    __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 
@@ -409,8 +435,10 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --deep --with-bdeps=y --ask n --quiet world'
-    __salt__['cmd.run_all'](cmd)
+    call = __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
+    if call['retcode'] != 0:
+        return _process_emerge_err(call['stderr'])
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
 

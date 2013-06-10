@@ -114,6 +114,10 @@ def absent(name, runas=None):
             ret['comment'] = 'User {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = 'User {0} failed to be removed'.format(name)
+            return ret
     else:
         ret['comment'] = 'User {0} is not present, so it cannot ' \
                          'be removed'.format(name)
