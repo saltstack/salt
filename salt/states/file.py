@@ -748,22 +748,19 @@ def managed(name,
         return _error(
             ret, 'Context must be formed as a dict')
 
-    if not replace:
-        if os.path.exists(name):
-           # Check and set the permissions if necessary
-            ret, perms = __salt__['file.check_perms'](name,
-                                                      ret,
-                                                      user,
-                                                      group,
-                                                      mode)
-            if __opts__['test']:
-                ret['comment'] = 'File {0} not updated'.format(name)
-            elif not ret['changes'] and ret['result']:
-                ret['comment'] = ('File {0} exists with proper permissions. '
-                                  'No changes made.'.format(name))
-            return ret
-        if not source:
-            return touch(name, makedirs=makedirs)
+    if not replace and os.path.exists(name):
+       # Check and set the permissions if necessary
+        ret, perms = __salt__['file.check_perms'](name,
+                                                  ret,
+                                                  user,
+                                                  group,
+                                                  mode)
+        if __opts__['test']:
+            ret['comment'] = 'File {0} not updated'.format(name)
+        elif not ret['changes'] and ret['result']:
+            ret['comment'] = ('File {0} exists with proper permissions. '
+                              'No changes made.'.format(name))
+        return ret
 
     if name in _ACCUMULATORS:
         if not context:
