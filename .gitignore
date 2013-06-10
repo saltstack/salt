@@ -34,7 +34,3 @@ htmlcov/
 
 # ignore ctags file
 tags
-
-#kate
-*.kate-swp
-*~
