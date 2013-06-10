@@ -56,10 +56,9 @@ class Schedule(object):
             running_children = []
             while self.children:
                 process = self.children.pop()
+                process.join(0.001)
                 if process.is_alive():
                     running_children.append(process)
-                else:
-                    process.join()
             self.children = running_children
 
     def option(self, opt):

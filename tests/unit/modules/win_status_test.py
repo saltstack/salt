@@ -11,6 +11,9 @@ from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 
 # wmi and pythoncom modules are platform specific...
+win32process = new.module('win32process')
+sys.modules['win32process'] = win32process
+
 wmi = new.module('wmi')
 sys.modules['wmi'] = wmi
 

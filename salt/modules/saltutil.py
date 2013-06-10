@@ -354,7 +354,7 @@ def running():
 
         salt '*' saltutil.running
     '''
-    procs = __salt__['status.procs']()
+    procs = __salt__['status.procs'](details=False)
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
@@ -387,7 +387,6 @@ def running():
                 continue
         ret.append(data)
     return ret
-
 
 def find_job(jid):
     '''

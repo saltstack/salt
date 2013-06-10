@@ -447,6 +447,7 @@ class Minion(object):
         self.mod_opts = self.__prep_mod_opts()
         self.proc_dir = get_proc_dir(opts['cachedir'], self.real_minion)
         self.children = {}
+        self.next_tid = 0
         if self.real_minion:
             self.module_refresh()
             self.matcher = Matcher(self.opts, self.functions)
@@ -604,8 +605,10 @@ class Minion(object):
         instance = self
         if not self.opts['multiprocessing']:
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
+                target = target, args=(instance, self.opts, data),
+                name = "Thread-{0}".format(self.next_tid)
             )
+            self.next_tid += 1
         else:
             # Multiprocessing
             if salt.utils.is_windows():
@@ -631,6 +634,8 @@ class Minion(object):
             minion_instance = cls(opts, real_minion=False)
         salt.utils.daemonize_if(opts)
         sdata = {'pid': os.getpid()}
+        if not opts['multiprocessing']:
+            sdata['tid'] = threading.current_thread().name
         sdata.update(data)
 
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])

@@ -38,7 +38,7 @@ def _number(text):
         return text
 
 
-def procs():
+def procs(details=True):
     '''
     Return the process data
 
@@ -67,8 +67,11 @@ def procs():
         if not line:
             continue
         comps = line.split()
-        ret[comps[pind]] = {'user': comps[uind],
-                            'cmd': ' '.join(comps[cind:])}
+        if details:
+            ret[comps[pind]] = {'user': comps[uind],
+                                'cmd': ' '.join(comps[cind:])}
+        else:
+            ret[comps[pind]] = True
     return ret
 
 

@@ -13,6 +13,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 try:
+    import win32process
     import pythoncom
     import wmi
     import salt.utils.winapi
@@ -36,7 +37,7 @@ def __virtual__():
     return False
 
 
-def procs():
+def procs(details=True):
     '''
     Return the process data
 
@@ -44,15 +45,19 @@ def procs():
 
         salt '*' status.procs
     '''
-    with salt.utils.winapi.Com():
-        wmi_obj = wmi.WMI()
-        processes = wmi_obj.win32_process()
 
-        process_info = {}
-        for proc in processes:
-            process_info[str(proc.ProcessId)] = _get_process_info(proc)
+    process_info = {}
+    if details:
+        with salt.utils.winapi.Com():
+            wmi_obj = wmi.WMI()
+            processes = wmi_obj.win32_process()
+            for proc in processes:
+                process_info[str(proc.ProcessId)] = _get_process_info(proc)
+    else:
+        for pid in win32process.EnumProcesses():
+            process_info[str(pid)] = True
 
-        return process_info
+    return process_info
 
 
 def _get_process_info(proc):
