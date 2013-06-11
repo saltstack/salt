@@ -880,6 +880,14 @@ class Minion(object):
         if hasattr(self, 'schedule'):
             self.schedule._cleanup_children()
 
+    def _join_children(self):
+        if self.children:
+            for child in self.children.itervalues():
+                process = child['process']
+                process.join()
+        if hasattr(self, 'schedule'):
+            self.schedule._join_children()
+
     @property
     def master_pub(self):
         '''
@@ -1061,55 +1069,58 @@ class Minion(object):
         self._state_run()
 
         loop_interval = int(self.opts['loop_interval'])
-        while True:
-            try:
+        try:
+            while True:
                 try:
-                    self.schedule.eval()
-                    # Check if scheduler requires lower loop interval than
-                    # the loop_interval setting
-                    if self.schedule.loop_interval < loop_interval:
-                        loop_interval = self.schedule.loop_interval
-                        log.debug(
-                            'Overriding loop_interval because of scheduled jobs.'
+                    try:
+                        self.schedule.eval()
+                        # Check if scheduler requires lower loop interval than
+                        # the loop_interval setting
+                        if self.schedule.loop_interval < loop_interval:
+                            loop_interval = self.schedule.loop_interval
+                            log.debug(
+                                'Overriding loop_interval because of scheduled jobs.'
+                            )
+                    except Exception as exc:
+                        log.error(
+                            'Exception {0} occurred in scheduled job'.format(exc)
                         )
-                except Exception as exc:
-                    log.error(
-                        'Exception {0} occurred in scheduled job'.format(exc)
-                    )
-                try:
-                    socks = dict(self.poller.poll(
-                        loop_interval * 1000)
-                    )
-                    if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                        payload = self.serial.loads(self.socket.recv())
-                        self._handle_payload(payload)
-                    # Check the event system
-                    if self.epoller.poll(1):
-                        try:
-                            while True:
-                                package = self.epull_sock.recv(zmq.NOBLOCK)
-                                if package.startswith('module_refresh'):
-                                    self.module_refresh()
-                                elif package.startswith('pillar_refresh'):
-                                    self.pillar_refresh()
-                                self.epub_sock.send(package)
-                        except Exception:
-                            pass
-                except zmq.ZMQError:
-                    # This is thrown by the interrupt caused by python handling the
-                    # SIGCHLD. This is a safe error and we just start the poll
-                    # again
-                    continue
-                except Exception:
-                    log.critical(
-                        'An exception occurred while polling the minion',
-                        exc_info=True
-                    )
-                # Python may receive ctrl-C event in another thread on windows 
-                # Add a short sleep to give the other threads a chance
-                time.sleep(0.05)
-            finally:
-                self._cleanup_children()
+                    try:
+                        socks = dict(self.poller.poll(
+                            loop_interval * 1000)
+                        )
+                        if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                            payload = self.serial.loads(self.socket.recv())
+                            self._handle_payload(payload)
+                        # Check the event system
+                        if self.epoller.poll(1):
+                            try:
+                                while True:
+                                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                                    if package.startswith('module_refresh'):
+                                        self.module_refresh()
+                                    elif package.startswith('pillar_refresh'):
+                                        self.pillar_refresh()
+                                    self.epub_sock.send(package)
+                            except Exception:
+                                pass
+                    except zmq.ZMQError:
+                        # This is thrown by the interrupt caused by python handling the
+                        # SIGCHLD. This is a safe error and we just start the poll
+                        # again
+                        continue
+                    except Exception:
+                        log.critical(
+                            'An exception occurred while polling the minion',
+                            exc_info=True
+                        )
+                    # Python may receive ctrl-C event in another thread on windows 
+                    # Add a short sleep to give the other threads a chance
+                    time.sleep(0.05)
+                finally:
+                    self._cleanup_children()
+        finally:
+            self._join_children()
 
     def tune_in_no_block(self):
         '''

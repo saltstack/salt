@@ -61,6 +61,11 @@ class Schedule(object):
                     running_children.append(process)
             self.children = running_children
 
+    def _join_children(self):
+        if self.children:
+            for process in self.children:
+                process.join()
+
     def option(self, opt):
         '''
         Return the schedule data structure
