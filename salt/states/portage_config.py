@@ -16,7 +16,7 @@ def __virtual__():
     '''
     Only load if the portage_config module is available in __salt__
     '''
-    return 'portage_config' if 'portage_config.has_flag' in __salt__ else False
+    return 'portage_config' if 'portage_config.get_missing_flags' in __salt__ else False
 
 def mod_init(low):
     '''
@@ -26,7 +26,7 @@ def mod_init(low):
     return True
 
 def _flags_helper(conf, atom, flags, test=False):
-    flags = __salt__['portage_config.has_flags'](conf, atom, flags)
+    flags = __salt__['portage_config.get_missing_flags'](conf, atom, flags)
     if flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
         if not test:

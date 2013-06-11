@@ -21,7 +21,7 @@ except ImportError:
 
 def __virtual__():
     '''
-    Confirm this module is on a Gentoo based system
+    Confirm this module is on a Gentoo based system.
     '''
     return 'portage_config' if (HAS_PORTAGE and __grains__['os'] == 'Gentoo') else False
 
@@ -42,17 +42,24 @@ def _p_to_cp(p):
     return None
 
 def enforce_nice_config():
-    convert_all_package_confs_to_dir()
-    order_all_package_confs()
+    '''
+    Enforce a nice tree structure for /etc/portage/package.* configuration files.
 
-def convert_all_package_confs_to_dir():
+    CLI Example::
+
+        salt '*' portage_config.enforce_nice_config
+    '''
+    _convert_all_package_confs_to_dir()
+    _order_all_package_confs()
+
+def _convert_all_package_confs_to_dir():
     '''
     Convert all /etc/portage/package.* configuration files to directories.
     '''
     for file in supported_confs:
         _package_conf_file_to_dir(file)
 
-def order_all_package_confs():
+def _order_all_package_confs():
     '''
     Place all entries in /etc/portage/package.* config dirs in the correct file.
     '''
@@ -61,6 +68,9 @@ def order_all_package_confs():
     _unify_keywords()
 
 def _unify_keywords():
+    '''
+    Merge /etc/portage/package.keywords and /etc/portage/package.accept_keywords.
+    '''
     old_path = base_path.format('keywords')
     new_path = base_path.format('accept_keywords')
     if exists(old_path):
@@ -81,6 +91,9 @@ def _unify_keywords():
             remove(old_path)
 
 def _package_conf_file_to_dir(file_name):
+    '''
+    Convert a config file to a config directory.
+    '''
     if file_name in supported_confs:
         path = base_path.format(file_name)
         if exists(path):
@@ -100,6 +113,9 @@ def _package_conf_file_to_dir(file_name):
             return True
 
 def _package_conf_ordering(conf, clean = True, keep_backup = False):
+    '''
+    Move entries in the correct file.
+    '''
     if conf in supported_confs:
         rearrange = []
         path = base_path.format(conf)
@@ -154,7 +170,7 @@ def _package_conf_ordering(conf, clean = True, keep_backup = False):
                 if len(triplet[1]) == 0 and len(triplet[2]) == 0 and triplet[0]!=path:
                     rmtree(triplet[0])
 
-def merge_flags(*args):
+def _merge_flags(*args):
     '''
     Merges multiple lists of flags removing duplicates and resolving conflicts giving priority to lasts lists.
     '''
@@ -257,7 +273,7 @@ def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite =
                             added = True
                             break
                         continue
-                    merged_flags = merge_flags(new_flags, old_flags)
+                    merged_flags = _merge_flags(new_flags, old_flags)
                     if merged_flags:
                         new_contents += '{0} {1}\n'.format(atom, ' '.join(merged_flags))
                     else:
@@ -320,7 +336,7 @@ def get_flags_from_package_conf(conf, atom):
                         flags.extend(f_tmp)
                     else:
                         flags.append('~ARCH')
-            return merge_flags(flags)
+            return _merge_flags(flags)
 
 def has_flag(conf, atom, flag):
     '''
@@ -335,7 +351,13 @@ def has_flag(conf, atom, flag):
         return True
     return False
 
-def has_flags(conf, atom, flags):
+def get_missing_flags(conf, atom, flags):
+    '''
+    Find out which of the given flags are currently not set.
+    CLI Example::
+
+        salt '*' portage_config.get_missing_flags use salt "['ldap', '-libvirt', 'openssl']"
+    '''
     new_flags = []
     for flag in flags:
         if not has_flag(conf, atom, flag):
