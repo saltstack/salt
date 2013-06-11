@@ -267,7 +267,8 @@ def _check_directory(name,
                      recurse,
                      mode,
                      clean,
-                     require):
+                     require,
+                     exclude_pat):
     '''
     Check what changes need to be made on a directory
     '''
@@ -305,12 +306,18 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, fname)
                 if path not in keep:
+                    if not _check_include_exclude(path[len(name) + 1:], None,
+                                                  exclude_pat):
+                        continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
             for name_ in dirs:
                 fchange = {}
                 path = os.path.join(root, name_)
                 if path not in keep:
+                    if not _check_include_exclude(path[len(name) + 1:], None,
+                                                  exclude_pat):
+                        continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
 
@@ -923,7 +930,8 @@ def directory(name,
             recurse or [],
             dir_mode,
             clean,
-            require)
+            require,
+            exclude_pat)
         return ret
 
     if not os.path.isdir(name):
@@ -1670,7 +1678,7 @@ def append(name,
         if not __salt__['file.directory_exists'](dirname):
             __salt__['file.makedirs'](name)
             check_res, check_msg = _check_directory(
-                dirname, None, None, False, None, False, False
+                dirname, None, None, False, None, False, False, None
             )
             if not check_res:
                 return _error(ret, check_msg)
