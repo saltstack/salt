@@ -363,3 +363,69 @@ def is_fuse_exec(cmd):
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path))
     return 'libfuse' in out
+
+
+def swaps():
+    '''
+    Return a dict containing information on active swap
+
+    CLI Example::
+
+        salt '*' mount.swaps
+    '''
+    ret = {}
+    with open('/proc/swaps') as fp_:
+        for line in fp_:
+            if line.startswith('Filename'):
+                continue
+            comps = line.split()
+            ret[comps[0]] = {
+                    'type': comps[1],
+                    'size': comps[2],
+                    'used': comps[3],
+                    'priority': comps[4]}
+    return ret
+
+
+def swapon(name, priority=None):
+    '''
+    Activate a swap disk
+
+    CLI Example::
+
+        salt '*' mount.swapon /root/swapfile
+    '''
+    ret = {}
+    on_ = swaps()
+    if name in on_:
+        ret['stats'] = on_[name]
+        ret['new'] = False
+        return ret
+    cmd = 'swapon {0}'.format(name)
+    if priority:
+        cmd += ' -p {0}'.format(priority)
+    __salt__['cmd.run'](cmd)
+    on_ = swaps()
+    if name in on_:
+        ret['stats'] = on_[name]
+        ret['new'] = True
+        return ret
+    return ret
+
+
+def swapoff(name):
+    '''
+    Deactivate a named swap mount
+
+    CLI Example::
+
+        salt '*' mount.swapoff /root/swapfile
+    '''
+    on_ = swaps()
+    if name in on_:
+        __salt__['cmd.run']('swapoff {0}'.format(name))
+        on_ = swaps()
+        if name in on_:
+            return False
+        return True
+    return None

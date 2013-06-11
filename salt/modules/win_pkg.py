@@ -74,19 +74,20 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
             if name in pkgs:
                 version_num = pkgs[name]
-            if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                    str(version_num)) > 0:
+            if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
+                                       pkg2=str(version_num)):
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
-            if __salt__['pkg_resource.perform_cmp'](str(ver), str(candidate)) > 0:
+            if __salt__['pkg.compare'](pkg1=str(ver), oper='>',
+                                       pkg2=str(candidate)):
                 candidate = ver
         name = pkginfo[candidate]['full_name']
         ret[name] = ''
         if name in pkgs:
             version_num = pkgs[name]
-        if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                str(version_num)) > 0:
+        if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
+                                   pkg2=str(version_num)):
             ret[name] = candidate
     return ret
 
@@ -294,7 +295,8 @@ def _get_reg_software():
                    'SchedulingAgent',
                    'WIC'
                    ]
-    encoding = locale.getpreferredencoding()
+    encoding = locale.get_locale()
+
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
     reg_entries = dict(list(_get_user_keys().items()) +
@@ -319,8 +321,10 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     "DisplayName")
-                try: prd_name=prd_name.decode(encoding)
-                except: pass
+                try:
+                    prd_name = prd_name.decode(encoding)
+                except:
+                    pass
                 prd_ver = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,

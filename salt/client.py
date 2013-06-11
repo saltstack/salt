@@ -818,6 +818,7 @@ class LocalClient(object):
                     continue
                 found.add(raw['id'])
                 ret[raw['id']] = {'ret': raw['return']}
+                ret[raw['id']]['success'] = raw.get('success', False)
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 if len(found.intersection(minions)) >= len(minions):

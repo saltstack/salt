@@ -904,6 +904,9 @@ class State(object):
                         for key, val in arg.items():
                             if key == 'names':
                                 names.update(val)
+                            elif key == 'state':
+                                # Don't pass down a state override
+                                continue
                             elif (key == 'name' and
                                   not isinstance(val, string_types)):
                                 # Invalid name, fall back to ID
