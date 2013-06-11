@@ -226,7 +226,7 @@ def install(pkgs=None,
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
 
     if activate and bin_env:
-        if saltutils.is_windows():
+        if salt.utils.is_windows():
             source_cmd = ''
         else:
             source_cmd = '. '
