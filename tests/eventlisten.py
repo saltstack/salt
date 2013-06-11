@@ -49,7 +49,7 @@ def parse():
 
         opts['id'] = options.node
 
-    opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['id'])
+    opts['sock_dir'] = os.path.join(opts['sock_dir'], opts['node'])
 
     return opts
 
