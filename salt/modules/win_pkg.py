@@ -295,7 +295,7 @@ def _get_reg_software():
                    'SchedulingAgent',
                    'WIC'
                    ]
-    encoding = locale.get_locale()
+    encoding = locale.getpreferredencoding()
 
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
