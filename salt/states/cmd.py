@@ -367,6 +367,7 @@ def run(name,
         stateful=False,
         umask=None,
         quiet=False,
+        timeout=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met
@@ -410,6 +411,10 @@ def run(name,
     quiet
         The command will be executed quietly, meaning no log entries of the
         actual command or its return data
+
+    timeout
+        If the command has not terminated after timeout seconds, send the
+        subprocess sigterm, and if sigterm is ignored, follow up with sigkill
     '''
     ret = {'name': name,
            'changes': {},
@@ -481,7 +486,7 @@ def run(name,
         # Wow, we passed the test, run this sucker!
         if not __opts__['test']:
             try:
-                cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
+                cmd_all = __salt__['cmd.run_all'](name, timeout=timeout, **cmd_kwargs)
             except CommandExecutionError as err:
                 ret['comment'] = str(err)
                 return ret
@@ -511,6 +516,7 @@ def script(name,
            env=None,
            stateful=False,
            umask=None,
+           timeout=None,
            **kwargs):
     '''
     Download a script from a remote source and execute it. The name can be the
@@ -562,6 +568,11 @@ def script(name,
     stateful
         The command being executed is expected to return data about executing
         a state
+
+    timeout
+        If the command has not terminated after timeout seconds, send the
+        subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
     '''
     ret = {'changes': {},
            'comment': '',
@@ -588,7 +599,8 @@ def script(name,
                        'group': group,
                        'cwd': cwd,
                        'template': template,
-                       'umask': umask})
+                       'umask': umask,
+                       'timeout': timeout})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
@@ -599,11 +611,11 @@ def script(name,
     # Change the source to be the name arg if it is not specified
     if source is None:
         source = name
- 
+
     # If script args present split from name and define args
     if len(name.split()) > 1:
         cmd_kwargs.update({'args': name.split(' ', 1)[1]})
-    
+
     try:
         cret = _run_check(
             run_check_cmd_kwargs, onlyif, unless, group
