@@ -196,4 +196,3 @@ def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
        }
     
     return ret
-

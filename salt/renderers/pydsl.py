@@ -114,7 +114,7 @@ also a :term:`function declaration` object, so you can chain several requisite c
 together.
 
 Arguments to a requisite call can be a list of :term:`state declaration` objects and/or
-a set of keyword arguments whose names are state modules and values are IDs of 
+a set of keyword arguments whose names are state modules and values are IDs of
 :term:`ID declaration`'s or names of :term:`name declaration`'s.
 
 .. code-block:: python
@@ -353,5 +353,3 @@ def _wrap_sls(method):
         sls = pydsl.Sls.get_render_stack()[-1]
         return getattr(sls, method.__name__)(*args, **kws)
     return _sls_method
-
-
