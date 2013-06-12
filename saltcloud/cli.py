@@ -117,9 +117,11 @@ class SaltCloud(parsers.SaltCloudParser):
                     saltcloud.output.double_layer(
                         mapper.provider_list()
                     )
+                    self.exit(0)
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
+
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
@@ -131,7 +133,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.handle_exception(msg, exc)
             else:
                 try:
-                    ret = mapper.map_providers(
+                    ret = mapper.map_providers_parallel(
                         query=self.selected_query_option
                     )
                 except (SaltCloudException, Exception) as exc:
@@ -143,6 +145,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.location_list(self.options.list_locations)
                 )
+                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing locations: {0}'
                 self.handle_exception(msg, exc)
@@ -152,6 +155,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.image_list(self.options.list_images)
                 )
+                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing images: {0}'
                 self.handle_exception(msg, exc)
@@ -161,6 +165,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 saltcloud.output.double_layer(
                     mapper.size_list(self.options.list_sizes)
                 )
+                self.exit(0)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error listing sizes: {0}'
                 self.handle_exception(msg, exc)
@@ -219,8 +224,8 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.function:
             prov_func = '{0}.{1}'.format(
-                self.function_name,
                 self.function_provider,
+                self.function_name
             )
             if prov_func not in mapper.clouds:
                 self.error(

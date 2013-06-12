@@ -292,11 +292,12 @@ class ExecutionOptionsMixIn(object):
 
     def process_function(self):
         if self.options.function:
-            self.function_provider, self.function_name = self.options.function
-            if self.function_name.startswith('-') or '=' in self.function_name:
+            self.function_name, self.function_provider = self.options.function
+            if self.function_provider.startswith('-') or \
+                    '=' in self.function_provider:
                 self.error(
-                    '--function expects two arguments: <provider> '
-                    '<function-name>'
+                    '--function expects two arguments: <function-name> '
+                    '<provider>'
                 )
 
 
@@ -353,6 +354,11 @@ class CloudQueriesMixIn(object):
                         query += '_select'
                     elif opt.dest == 'list_providers':
                         query = 'list_providers'
+                        if self.args:
+                            self.error(
+                                '\'--list-providers\' does not accept any '
+                                'arguments'
+                            )
                     self.selected_query_option = query
 
             funcname = 'process_{0}'.format(option.dest)

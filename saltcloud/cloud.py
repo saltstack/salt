@@ -249,6 +249,10 @@ class Cloud(object):
             if fun not in self.clouds:
                 # The capability to gather locations is not supported by this
                 # cloud module
+                log.debug(
+                    'The {0!r} cloud provider is unable to get the locations '
+                    'information'.format(prov)
+                )
                 continue
             try:
                 locations[prov] = self.clouds[fun]()
@@ -282,6 +286,10 @@ class Cloud(object):
             if not fun in self.clouds:
                 # The capability to gather images is not supported by this
                 # cloud module
+                log.debug(
+                    'The {0!r} cloud provider is unable to get the images '
+                    'information'.format(prov)
+                )
                 continue
             try:
                 images[prov] = self.clouds[fun]()
@@ -315,6 +323,10 @@ class Cloud(object):
             if not fun in self.clouds:
                 # The capability to gather sizes is not supported by this
                 # cloud module
+                log.debug(
+                    'The {0!r} cloud provider is unable to get the sizes '
+                    'information'.format(prov)
+                )
                 continue
             try:
                 sizes[prov] = self.clouds[fun]()
@@ -719,7 +731,7 @@ class Cloud(object):
 
         return ret
 
-    def do_function(self, func, prov, kwargs):
+    def do_function(self, prov, func, kwargs):
         '''
         Perform a function against a cloud provider
         '''
@@ -916,6 +928,15 @@ class Map(Cloud):
                             'create map'.format(name)
                         )
                         ret['create'].pop(name)
+                    continue
+
+                # Regarding other providers, simply remove them for the create
+                # map.
+                log.warn(
+                    '{0!r} already exists, removing from the '
+                    'create map'.format(name)
+                )
+                ret['create'].pop(name)
 
         if self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:

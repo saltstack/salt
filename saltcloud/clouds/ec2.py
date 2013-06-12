@@ -728,7 +728,7 @@ def create(vm_=None, call=None):
             # Show the traceback if the debug logging level is enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
-        return False
+        raise
 
     instance_id = data[0]['instanceId']
 
