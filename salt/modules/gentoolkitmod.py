@@ -35,7 +35,7 @@ def revdep_rebuild(lib=None):
 
         salt '*' gentoolkit.revdep_rebuild
     '''
-    cmd = 'revdep-rebuild --quiet --no-progress'
+    cmd = 'revdep-rebuild -i --quiet --no-progress'
     if lib is not None:
         cmd += ' --library={0}'.format(lib)
     return __salt__['cmd.retcode'](cmd) == 0
