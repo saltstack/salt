@@ -104,7 +104,7 @@ def running(name,
             )
             ret.update(_check_error(result, comment))
             changes.append(comment)
-        else:       
+        else:
             comment = 'Not starting already running service: {0}'.format(name)
             result = comment
             ret.update({'comment': comment})

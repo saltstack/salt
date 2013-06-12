@@ -203,7 +203,7 @@ def _is_true(val):
 
 def _run_check(cmd_kwargs, onlyif, unless, group):
     '''
-    Execute the onlyif and unless logic. 
+    Execute the onlyif and unless logic.
     Return a result dict if:
     * group is not available
     * onlyif failed (onlyif != 0)

@@ -1,5 +1,5 @@
 '''
-Monit service module. This module will create a monit type 
+Monit service module. This module will create a monit type
 service watcher.
 '''
 

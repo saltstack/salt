@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
 
-# Don't shadow built-in's. 
+# Don't shadow built-in's.
 __func_alias__ = {
     'list_': 'list'
 }
@@ -195,7 +195,7 @@ def install(pkgs=None,
     cwd
         Current working directory to run pip from
     activate
-        Activates the virtual environment, if given via bin_env, 
+        Activates the virtual environment, if given via bin_env,
         before running install.
 
 

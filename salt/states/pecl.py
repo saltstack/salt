@@ -21,7 +21,7 @@ def installed(
         The pecl extension name to install
 
     version
-        The pecl extension version to install. This option may be 
+        The pecl extension version to install. This option may be
         ignored to install the latest stable version.
     '''
     # Check to see if we have a designated version

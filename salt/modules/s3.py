@@ -182,4 +182,3 @@ def _get_key(key, keyid, service_url):
         service_url = 's3.amazonaws.com'
 
     return key, keyid, service_url
-

@@ -910,7 +910,7 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 def symlink(src, link):
-    '''  
+    '''
     Create a symbolic link to a file
     CLI Example::
         salt '*' file.symlink /path/to/file /path/to/link
@@ -918,9 +918,9 @@ def symlink(src, link):
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
 
-    try: 
+    try:
         os.symlink(src,link)
-        return True 
+        return True
     except (OSError, IOError):
         raise CommandExecutionError('Could not create "{0}"'.format(link))
     return False

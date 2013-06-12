@@ -264,14 +264,14 @@ def chgrp(path, group):
 
 
 def stats(path, hash_type='md5', follow_symlink=False):
-    '''  
+    '''
     Return a dict containing the stats for a given file
 
     CLI Example::
 
         salt '*' file.stats /etc/passwd
     '''
-    ret = {} 
+    ret = {}
     if not os.path.exists(path):
         return ret
     if follow_symlink:
