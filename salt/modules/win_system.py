@@ -37,7 +37,7 @@ def init(runlevel):
     #ret = __salt__['cmd.run'](cmd)
     #return ret
 
-    # TODO: Create a mapping of runlevels to 
+    # TODO: Create a mapping of runlevels to
     #       corresponding Windows actions
 
     return 'Not implemented on Windows at this time.'

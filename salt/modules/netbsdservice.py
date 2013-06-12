@@ -6,7 +6,7 @@ The service module for NetBSD
 import os
 import glob
 
-__func_alias__ = { 
+__func_alias__ = {
     'reload_': 'reload'
 }
 

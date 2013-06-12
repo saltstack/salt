@@ -180,6 +180,17 @@ sys.stdout.write('cheese')
                                    runas=runas).strip()
         self.assertEqual(result, expected_result)
 
+    def test_timeout(self):
+        '''
+        cmd.run trigger timeout
+        '''
+        self.assertTrue('Timed out' in self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
+
+    def test_timeout_success(self):
+        '''
+        cmd.run sufficient timeout to succeed
+        '''
+        self.assertTrue('hello' == self.run_function('cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
 
 if __name__ == '__main__':
     from integration import run_tests
