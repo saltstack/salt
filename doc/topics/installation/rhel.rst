@@ -8,15 +8,16 @@ of RHEL, including CentOS, Scientific Linux, Oracle Linux and Amazon Linux. Repo
 Installation
 ============
 
-Salt and all dependencies have been accepted into the yum 
-repositories for EPEL5 and EPEL6. The latest salt version can be found in epel-testing, while an older but more tested version can be found in regular epel.
+Salt and all dependencies have been accepted into the yum repositories for
+EPEL5 and EPEL6. The latest salt version can be found in epel-testing, while an
+older but more tested version can be found in regular epel.
 
 Example showing how to install salt from epel-testing:
 
 .. code-block:: bash
 
     yum --enablerepo=epel-testing install salt-minion
-    
+
 On RHEL6, the proper Jinja package 'python-jinja2' was moved from EPEL to the
 "RHEL Server Optional Channel". Verify this repository is enabled before
 installing salt on RHEL6.
