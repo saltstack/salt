@@ -60,7 +60,11 @@ def _cpv_to_name(cpv):
 def _cpv_to_version(cpv):
     if cpv == '':
         return ''
-    return str(cpv[len(_cpv_to_name(cpv) + '-'):])
+    version=portage.versions.cpv_getversion(cpv)
+    if version:
+        return version
+    else:
+        return ''
 
 
 def _process_emerge_err(stderr):
