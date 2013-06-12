@@ -206,11 +206,11 @@ def set_hwclock(clock):
 
     if 'Solaris' in __grains__['os_family']:
         if 'sparc' in __grains__['cpuarch']:
-            return 'UTC is the only choice for SPARC architecture' 
-        if clock == 'localtime': 
+            return 'UTC is the only choice for SPARC architecture'
+        if clock == 'localtime':
             cmd = 'rtc -z {0}'.format(timezone)
             __salt__['cmd.run'](cmd)
-            return True 
+            return True
         elif clock == 'UTC':
             cmd = 'rtc -z GMT'
             __salt__['cmd.run'](cmd)

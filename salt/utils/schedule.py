@@ -14,7 +14,7 @@ code-block:: yaml
         kwargs:
           test: True
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds 
+This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
 '''
 
@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 class Schedule(object):
     '''
-    Create a Schedule object, pass in the opts and the functions dict to use 
+    Create a Schedule object, pass in the opts and the functions dict to use
     '''
     def __init__(self, opts, functions, returners=None, intervals=None):
         self.opts = opts

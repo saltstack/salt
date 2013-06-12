@@ -72,7 +72,7 @@ def update_installed():
 
 def avail(search=None):
     '''
-    Return a list of available images 
+    Return a list of available images
 
     CLI Example::
         
@@ -85,7 +85,7 @@ def avail(search=None):
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
-        return ret 
+        return ret
     if search:
         for line in res['stdout'].splitlines():
             if search in line:
@@ -102,7 +102,7 @@ def list_installed():
     CLI Example::
         
         salt '*' imgadm.list_installed
-    ''' 
+    '''
     ret = {}
     imgadm = _check_imgadm()
     cmd = '{0} list'.format(imgadm)
@@ -110,7 +110,7 @@ def list_installed():
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
-        return ret 
+        return ret
     ret = res['stdout'].splitlines()
     return ret
 
@@ -124,7 +124,7 @@ def show(uuid=None):
         salt '*' imgadm.show e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid :
+    if not uuid:
         ret['Error'] = 'UUID parameter is mandatory'
         return ret
     imgadm = _check_imgadm()
@@ -133,7 +133,7 @@ def show(uuid=None):
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
-        return ret 
+        return ret
     ret[uuid] = res['stdout'].splitlines()
     return ret
 
@@ -156,7 +156,7 @@ def get(uuid=None):
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
-        return ret 
+        return ret
     ret[uuid] = res['stdout'].splitlines()
     return ret
 
@@ -179,7 +179,7 @@ def import_image(uuid=None):
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
-        return ret 
+        return ret
     ret[uuid] = res['stdout'].splitlines()
     return ret
 
@@ -202,7 +202,7 @@ def delete(uuid=None):
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
-        return ret 
+        return ret
     ret[uuid] = res['stdout'].splitlines()
     return ret
 

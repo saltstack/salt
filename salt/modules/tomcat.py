@@ -97,7 +97,7 @@ def _auth(uri):
         return False
     
     basic = urllib2.HTTPBasicAuthHandler()
-    basic.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)    
+    basic.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)
     digest = urllib2.HTTPDigestAuthHandler()
     digest.add_password(realm='Tomcat Manager Application', uri=uri, user=user, passwd=password)
     return urllib2.build_opener(basic, digest)

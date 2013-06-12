@@ -187,7 +187,7 @@ def _merge_flags(*args):
             tmp.append(k)
         else:
             tmp.append('-'+k)
-    tmp.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) #just aesthetic, can be commented for a small perfomance boost
+    tmp.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
     return tmp
 
 def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite = False):
@@ -227,7 +227,7 @@ def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite =
             if not new_flags:
                 return
 
-        new_flags.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) #just aesthetic, can be commented for a small perfomance boost
+        new_flags.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
 
         package_file = _p_to_cp(atom)
         if not package_file:

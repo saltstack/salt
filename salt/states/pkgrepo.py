@@ -225,7 +225,7 @@ def managed(name, **kwargs):
                                                                       str(e))
         return ret
     try:
-        repodict = __salt__['pkg.get_repo'](repokwargs['repo'], 
+        repodict = __salt__['pkg.get_repo'](repokwargs['repo'],
                                             ppa_auth=repokwargs.get('ppa_auth', None))
         if repo:
             for kwarg in sanitizedkwargs:
@@ -298,4 +298,3 @@ def absent(name, **kwargs):
     ret['result'] = False
     ret['comment'] = 'Failed to remove repo {0}'.format(name)
     return ret
-

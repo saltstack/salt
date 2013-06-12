@@ -442,7 +442,7 @@ def kill_job(jid):
 
 def regen_keys():
     '''
-    Used to regenerate the minion keys. 
+    Used to regenerate the minion keys.
 
     CLI Example::
 

@@ -183,7 +183,7 @@ def mod_list(only_persist=False):
     return sorted(list(mods))
 
 
-def load(mod, persist=False):    
+def load(mod, persist=False):
     '''
     Load the specified kernel module
 
