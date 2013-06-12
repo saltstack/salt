@@ -26,7 +26,7 @@ class NestDisplay(object):
                     ret,
                     self.colors['ENDC'])
         # Number includes all python numbers types (float, int, long, complex, ...)
-        elif isinstance(ret, Number): 
+        elif isinstance(ret, Number):
             out += '{0}{1}{2}{3}{4}\n'.format(
                     ' ' * indent,
                     self.colors['YELLOW'],
