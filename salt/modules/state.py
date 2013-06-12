@@ -322,7 +322,7 @@ def top(topfn, test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         __opts__['test'] = True
     else:
-        opts['test'] = __opts__.get('test', None)
+        __opts__['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
