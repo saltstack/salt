@@ -1169,7 +1169,14 @@ def run_paralel_map_providers_query(data):
                 cloud.clouds[data['fun']]()
             )
         }
-    except Exception:
+    except Exception as err:
+        log.debug(
+            'Failed to execute \'{0}()\' while querying for running '
+            'nodes: {1}'.format(data['fun'], err),
+            # Show the traceback if the debug logging level is
+            # enabled
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
         # Failed to communicate with the provider, don't list any
         # nodes
         return {data['provider']: []}
