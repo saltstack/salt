@@ -468,7 +468,7 @@ def is_provider_configured(opts, provider, required_keys=()):
                 # There's at least one require configuration key which is not
                 # set.
                 return False
-        # If we reached this far, there's a properly configured pprovider,
+        # If we reached this far, there's a properly configured provider,
         # return it!
         return opts['providers'][alias][driver]
 
