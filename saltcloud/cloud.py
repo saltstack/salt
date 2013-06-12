@@ -59,19 +59,12 @@ class Cloud(object):
 
     def get_configured_providers(self):
         providers = set()
-        for alias, entries in self.opts['providers'].iteritems():
-            for entry in entries:
-                provider = entry.get('provider', None)
-                if provider is None:
-                    log.warn(
-                        'There\'s a configured provider under {0} lacking the '
-                        '\'provider\' required configuration setting.'.format(
-                            alias
-                        )
-                    )
-                    continue
-                if provider is not None and alias not in providers:
-                    providers.add(alias)
+        for alias, drivers in self.opts['providers'].iteritems():
+            if len(drivers) > 1:
+                for driver in drivers:
+                    providers.add('{0}:{1}'.format(alias, driver))
+                continue
+            providers.add(alias)
         return providers
 
     def build_lookup(self, lookup):
