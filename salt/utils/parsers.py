@@ -869,9 +869,19 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Detect compound command and set up the data for it
         if ',' in self.args[1]:
             self.config['fun'] = self.args[1].split(',')
-            self.config['arg'] = []
-            for comp in ' '.join(self.args[2:]).split(','):
-                self.config['arg'].append(comp.split())
+            self.config['arg'] = [[]]
+            command_index = 0
+            for arg in self.args[2:]:
+                if ',' in arg:
+                    sub_args = arg.split(",")
+                    for sub_arg_index, sub_arg in enumerate(sub_args):
+                        if sub_arg:
+                            self.config['arg'][command_index].append(sub_arg)
+                        if sub_arg_index != len(sub_args) - 1:
+                            command_index += 1
+                            self.config['arg'].append([])
+                else:
+                    self.config['arg'][command_index].append(arg)
             if len(self.config['fun']) != len(self.config['arg']):
                 self.exit(42, 'Cannot execute compound command without '
                               'defining all arguments.')
