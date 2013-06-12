@@ -46,36 +46,6 @@ class Cloud(object):
         self.opts = opts
         self.clouds = saltcloud.loader.clouds(self.opts)
 
-    def provider(self, vm_):
-        '''
-        Return the top level module that will be used for the given VM data
-        set
-        '''
-        provider = vm_['provider']
-        if ':' in provider:
-            # We have the alias and the provider
-            # Return the provider
-            alias, provider = provider.split(':')
-            return provider
-
-        try:
-            # There's no <alias>:<provider> entry, return the first one if
-            # defined
-            if provider in self.opts['providers']:
-                return self.opts['providers'][provider][0]['provider']
-        except Exception, err:
-            log.error(
-                'Failed to get the proper cloud provider. '
-                'Error: {0}'.format(err),
-                # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
-            )
-
-        # Let's try, as a last resort, to get the provider from self.opts
-        if 'provider' in self.opts:
-            if '{0}.create'.format(self.opts['provider']) in self.clouds:
-                return self.opts['provider']
-
     def get_providers(self):
         '''
         Return the providers configured within the VM settings.
@@ -513,11 +483,14 @@ class Cloud(object):
             'minion', vm_, self.opts, default={}
         )
 
-        fun = '{0}.create'.format(self.provider(vm_))
+        alias, driver = vm_['provider'].split(':')
+        fun = '{0}.create'.format(driver)
         if fun not in self.clouds:
             log.error(
-                'Public cloud provider {0} is not available'.format(
-                    self.provider(vm_)
+                'Creating {0[name]!r} using {0[provider]!r} as the provider '
+                'cannot complete since {1!r} is not available'.format(
+                    vm_,
+                    driver
                 )
             )
             return
@@ -568,7 +541,8 @@ class Cloud(object):
         vm_['os'] = config.get_config_value('script', vm_, self.opts)
 
         try:
-            output = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+            alias, driver = vm_['provider'].split(':')
+            output = self.clouds['{0}.create'.format(driver)](vm_)
 
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
