@@ -111,21 +111,21 @@ def apply_cloud_config(overrides, defaults=None):
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    opts = defaults.copy()
+    config = defaults.copy()
     if overrides:
-        opts.update(overrides)
+        config.update(overrides)
 
     # If the user defined providers in salt cloud's main configuration file, we
     # need to take care for proper and expected format.
-    if 'providers' in opts:
-        for alias, details in opts.copy()['providers'].items():
+    if 'providers' in config:
+        for alias, details in config.copy()['providers'].items():
             if isinstance(details, dict):
-                opts['providers'][alias] = [details]
+                config['providers'][alias] = [details]
 
     # Migrate old configuration
-    opts = old_to_new(opts)
+    config = old_to_new(config)
 
-    return opts
+    return config
 
 
 def old_to_new(opts):
@@ -163,7 +163,10 @@ def old_to_new(opts):
     return opts
 
 
-def vm_profiles_config(path, env_var='SALT_CLOUDVM_CONFIG', defaults=None):
+def vm_profiles_config(opts,
+                       path,
+                       env_var='SALT_CLOUDVM_CONFIG',
+                       defaults=None):
     '''
     Read in the salt cloud VM config file
     '''
@@ -182,26 +185,26 @@ def vm_profiles_config(path, env_var='SALT_CLOUDVM_CONFIG', defaults=None):
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_vm_profiles_config(overrides, defaults)
+    return apply_vm_profiles_config(opts, overrides, defaults)
 
 
-def apply_vm_profiles_config(overrides, defaults=None):
+def apply_vm_profiles_config(opts, overrides, defaults=None):
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
-    opts = defaults.copy()
+    config = defaults.copy()
     if overrides:
-        opts.update(overrides)
+        config.update(overrides)
 
     vms = {}
 
-    for key, val in opts.items():
+    for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
         if not isinstance(val, dict):
             raise saltcloud.exceptions.SaltCloudConfigError(
                 'The VM profiles configuration found in {0[conf_file]!r} is '
-                'not in the proper format'.format(opts)
+                'not in the proper format'.format(config)
             )
         val['profile'] = key
         vms[key] = val
@@ -232,7 +235,8 @@ def apply_vm_profiles_config(overrides, defaults=None):
     return vms.values()
 
 
-def cloud_providers_config(path,
+def cloud_providers_config(opts,
+                           path,
                            env_var='SALT_CLOUD_PROVIDERS_CONFIG',
                            defaults=None):
     '''
@@ -253,40 +257,38 @@ def cloud_providers_config(path,
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_cloud_providers_config(overrides, defaults)
+    return apply_cloud_providers_config(opts, overrides, defaults)
 
 
-def apply_cloud_providers_config(overrides, defaults=None):
+def apply_cloud_providers_config(opts, overrides, defaults=None):
     '''
     Apply the loaded cloud providers configuration.
     '''
     if defaults is None:
         defaults = PROVIDER_CONFIG_DEFAULTS
 
-    opts = defaults.copy()
+    config = defaults.copy()
     if overrides:
-        opts.update(overrides)
+        config.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    for name, config in opts.copy().items():
+    for name, settings in config.copy().items():
         if '.' in name:
             log.warn(
                 'Please switch to the new providers configuration syntax'
             )
 
             # Let's help out and migrate the data
-            opts = old_to_new(opts)
+            config = old_to_new(config)
 
             # old_to_new will migrate the old data into the 'providers' key of
-            # the opts dictionary. Let's map it correctly
-            for name, config in opts.pop('providers').items():
-                opts[name] = config
-
+            # the config dictionary. Let's map it correctly
+            for prov_name, prov_settings in config.pop('providers').items():
+                config[prov_name] = prov_settings
             break
 
     providers = {}
-
-    for key, val in opts.items():
+    for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include'):
             continue
 

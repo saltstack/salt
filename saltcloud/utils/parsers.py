@@ -175,7 +175,7 @@ class CloudConfigMixIn(object):
     def process_vm_config(self):
         try:
             self.profiles_config = config.vm_profiles_config(
-                self.options.vm_config
+                self.cloud_config, self.options.vm_config
             )
         except exceptions.SaltCloudConfigError as exc:
             self.error(exc)
@@ -185,7 +185,7 @@ class CloudConfigMixIn(object):
     def process_providers_config(self):
         try:
             self.providers_config = config.cloud_providers_config(
-                self.options.providers_config
+                self.cloud_config, self.options.providers_config
             )
         except exceptions.SaltCloudConfigError as exc:
             self.error(exc)
