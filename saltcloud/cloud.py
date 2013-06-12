@@ -364,9 +364,9 @@ class Cloud(object):
         '''
         ret = []
 
-        for vm_ in self.opts['vm']:
+        for vm_name, vm_details in self.opts['profiles'].iteritems():
             ret.append(
-                {vm_['name']: self.create(vm_)}
+                {vm_name: self.create(vm_details)}
             )
 
         return ret
@@ -595,7 +595,7 @@ class Cloud(object):
         return output
 
     def profile_provider(self, profile=None):
-        for definition in self.opts['vm']:
+        for definition in self.opts['profiles'].values():
             if definition['profile'] != profile:
                 continue
 
@@ -631,7 +631,7 @@ class Cloud(object):
         pmap = self.map_providers_parallel()
         found = False
         for name in self.opts['names']:
-            for vm_ in self.opts['vm']:
+            for vm_ in self.opts['profiles'].values():
                 vm_profile = vm_['profile']
                 if vm_profile != self.opts['profile']:
                     continue
@@ -677,7 +677,7 @@ class Cloud(object):
                 except (SaltCloudSystemExit, SaltCloudConfigError), exc:
                     if len(self.opts['names']) == 1:
                         raise
-                    ret['name'] = {'Error': exc.message}
+                    ret[name] = {'Error': exc.message}
 
         if not found:
             msg = 'Profile {0} is not defined'.format(self.opts['profile'])
@@ -879,7 +879,7 @@ class Map(Cloud):
         defined = set()
         for profile in self.map:
             pdata = {}
-            for pdef in self.opts['vm']:
+            for pdef in self.opts['profiles'].values():
                 # The named profile does not exist
                 if pdef.get('profile', None) == profile:
                     pdata = pdef

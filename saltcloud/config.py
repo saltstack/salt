@@ -107,7 +107,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # Grab data from the 4 sources
     # 1st - Master config
     # 2nd Override master config with salt-cloud config
-    master_config.update(cloud_config)
+    master_config.update(overrides)
 
     # We now set the gathered data as the overrides
     overrides = master_config
@@ -173,10 +173,10 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         providers_config = cloud_providers_config(providers_config_path)
     opts['providers'] = providers_config
 
-    # 4th - Include VM config
+    # 4th - Include VM profiles config
     if vm_config is None:
-        vm_config = vm_profiles_config(vm_config_path)
-    opts['vm'] = vm_config
+        vm_config = vm_profiles_config(vm_config_path, providers_config)
+    opts['profiles'] = vm_config
 
     # Return the final options
     return opts
@@ -228,17 +228,19 @@ def old_to_new(opts):
             name = opt.split('.', 1)[1]
             provider_config[name] = value
 
+        lprovider = provider.lower()
         if provider_config:
-            provider_config['provider'] = provider.lower()
-            opts.setdefault('providers', {}).setdefault(
-                provider.lower(), []).append(
-                    provider_config
-                )
-
+            provider_config['provider'] = lprovider
+            opts.setdefault('providers', {})
+            # provider alias
+            opts['providers'][lprovider] = {}
+            # provider alias, provider driver
+            opts['providers'][lprovider][lprovider] = provider_config
     return opts
 
 
 def vm_profiles_config(path,
+                       providers,
                        env_var='SALT_CLOUDVM_CONFIG',
                        defaults=None):
     '''
@@ -259,10 +261,10 @@ def vm_profiles_config(path,
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_vm_profiles_config(overrides, defaults)
+    return apply_vm_profiles_config(providers, overrides, defaults)
 
 
-def apply_vm_profiles_config(overrides, defaults=None):
+def apply_vm_profiles_config(providers, overrides, defaults=None):
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
@@ -286,6 +288,36 @@ def apply_vm_profiles_config(overrides, defaults=None):
     # Is any VM profile extending data!?
     for profile, details in vms.copy().items():
         if 'extends' not in details:
+            if ':' in details['provider']:
+                alias, driver = details['provider'].split(':')
+                if alias not in providers or driver not in providers[alias]:
+                    log.warning(
+                        'The profile {0!r} is defining {1[provider]!r} as the '
+                        'provider. Since there\'s no valid configuration for '
+                        'that provider, the profile will be removed from the '
+                        'available listing'.format(profile, details)
+                    )
+                    vms.pop(profile)
+                    continue
+                providers[alias][driver].setdefault('profiles', {}).update(
+                    {profile: details}
+                )
+            if details['provider'] not in providers:
+                log.warning(
+                    'The profile {0!r} is defining {1[provider]!r} as the '
+                    'provider. Since there\'s no valid configuration for '
+                    'that provider, the profile will be removed from the '
+                    'available listing'.format(profile, details)
+                )
+                vms.pop(profile)
+                continue
+
+            driver = providers[details['provider']].keys()[0]
+            providers[details['provider']][driver].setdefault(
+                'profiles', {}).update({profile: details})
+            details['provider'] = '{0[provider]}:{1}'.format(details, driver)
+            vms[profile] = details
+
             continue
 
         extends = details.pop('extends')
@@ -303,10 +335,42 @@ def apply_vm_profiles_config(overrides, defaults=None):
         extended.pop('profile')
         extended.update(details)
 
+        if ':' not in extended['provider']:
+            if extended['provider'] not in providers:
+                log.warning(
+                    'The profile {0!r} is defining {1[provider]!r} as the '
+                    'provider. Since there\'s no valid configuration for '
+                    'that provider, the profile will be removed from the '
+                    'available listing'.format(profile, extended)
+                )
+                vms.pop(profile)
+                continue
+
+            driver = providers[extended['provider']].keys()[0]
+            providers[details['provider']][driver].setdefault(
+                'profiles', {}).update({profile: details})
+
+            extended['provider'] = '{0[provider]}:{1}'.format(extended, driver)
+        else:
+            alias, driver = extended['provider'].split(':')
+            if alias not in providers or driver not in providers[alias]:
+                log.warning(
+                    'The profile {0!r} is defining {1[provider]!r} as the '
+                    'provider. Since there\'s no valid configuration for '
+                    'that provider, the profile will be removed from the '
+                    'available listing'.format(profile, extended)
+                )
+                vms.pop(profile)
+                continue
+
+            providers[alias][driver].setdefault('profiles', {}).update(
+                {profile: extended}
+            )
+
         # Update the profile's entry with the extended data
         vms[profile] = extended
 
-    return vms.values()
+    return vms
 
 
 def cloud_providers_config(path,
@@ -403,6 +467,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
     for provider_alias, entries in providers.copy().items():
 
         for driver, details in entries.iteritems():
+            # Set a holder for the defined profiles
+            providers[provider_alias][driver]['profiles'] = {}
+
             if 'extends' not in details:
                 continue
 
@@ -485,16 +552,15 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
     if vm_ and name:
         if ':' in vm_['provider']:
             # The provider is defined as <provider-alias>:<provider-name>
-            alias, provider = vm_['provider'].split(':')
-            if alias in opts['providers']:
-                for entry in opts['providers'][alias]:
-                    if entry['provider'] == provider:
-                        if name in entry:
-                            if type(value) is dict:
-                                value.update(entry[name])
-                            else:
-                                value = entry[name]
-                            break
+            alias, driver = vm_['provider'].split(':')
+            if alias in opts['providers'] and \
+                    driver in opts['providers'][alias]:
+                details = opts['providers'][alias][driver]
+                if name in details:
+                    if isinstance(value, dict):
+                        value.update(details[name].copy())
+                    else:
+                        value = details[name]
         elif len(opts['providers'].get(vm_['provider'], ())) > 1:
             # The provider is NOT defined as <provider-alias>:<provider-name>
             # and there's more than one entry under the alias.
@@ -509,17 +575,21 @@ def get_config_value(name, vm_, opts, default=None, search_global=True):
                 )
             )
 
-        if name in opts['providers'].get(vm_['provider'], [{}])[0]:
-            # The setting name exists in the VM's provider configuration.
-            # Return it!
-            if type(value) is dict:
-                value.update(opts['providers'][vm_['provider']][0][name])
-            else:
-                value = opts['providers'][vm_['provider']][0][name]
+        if vm_['provider'] in opts['providers']:
+            # There's only one driver defined for this provider. This is safe.
+            alias_defs = opts['providers'].get(vm_['provider'])
+            provider_driver_defs = alias_defs[alias_defs.keys()[0]]
+            if name in provider_driver_defs:
+                # The setting name exists in the VM's provider configuration.
+                # Return it!
+                if isinstance(value, dict):
+                    value.update(provider_driver_defs[name].copy())
+                else:
+                    value = provider_driver_defs[name]
 
     if name and vm_ and name in vm_:
         # The setting name exists in VM configuration.
-        if type(value) is dict:
+        if isinstance(value, dict):
             value.update(vm_[name])
         else:
             value = vm_[name]
@@ -533,7 +603,7 @@ def is_provider_configured(opts, provider, required_keys=()):
     configuration.
     '''
     if ':' in provider:
-        alias, driver = provider.split('.')
+        alias, driver = provider.split(':')
         if alias not in opts['providers']:
             return False
         if driver not in opts['providers'][alias]:

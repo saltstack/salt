@@ -8,7 +8,7 @@ Primary interfaces for the salt-cloud system
 # salt VM config, where VMs are defined - /etc/salt/cloud.profiles
 #
 # The cli, master and cloud configs will merge for opts
-# the VM data will be in opts['vm']
+# the VM data will be in opts['profiles']
 
 # Import python libs
 import os
