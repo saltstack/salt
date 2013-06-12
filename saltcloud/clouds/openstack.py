@@ -193,6 +193,14 @@ def get_conn():
         )
     }
 
+    insecure = config.get_config_value(
+        'insecure', vm_, __opts__, search_global=False
+    )
+
+    if insecure:
+        import libcloud.security
+        libcloud.security.VERIFY_SSL_CERT = False
+
     password = config.get_config_value(
         'password', vm_, __opts__, search_global=False
     )
