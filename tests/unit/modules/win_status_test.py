@@ -11,6 +11,9 @@ from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 
 # wmi and pythoncom modules are platform specific...
+win32process = new.module('win32process')
+sys.modules['win32process'] = win32process
+
 wmi = new.module('wmi')
 sys.modules['wmi'] = wmi
 
@@ -76,7 +79,7 @@ class TestProcsCount(TestProcsBase):
         self.assertEqual(len(self.result), 2)
 
     def test_process_key_is_pid(self):
-        self.assertSetEqual(set(self.result.keys()), set([100, 101]))
+        self.assertSetEqual(set(self.result.keys()), set(["100", "101"]))
 
 
 class TestProcsAttributes(TestProcsBase):
@@ -93,7 +96,7 @@ class TestProcsAttributes(TestProcsBase):
             user_domain=self._expected_domain,
             get_owner_result=0)
         self.call_procs()
-        self.proc = self.result[pid]
+        self.proc = self.result[str(pid)]
 
     def test_process_cmd_is_set(self):
         self.assertEqual(self.proc['cmd'], self._expected_cmd)
@@ -120,7 +123,7 @@ class TestProcsUnicodeAttributes(TestProcsBase):
             cmd=unicode_str,
             name=unicode_str)
         self.call_procs()
-        self.proc = self.result[pid]
+        self.proc = self.result[str(pid)]
 
     def test_process_cmd_is_utf8(self):
         self.assertEqual(self.proc['cmd'], self.utf8str)
@@ -144,12 +147,12 @@ class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
         self.call_procs()
 
     def test_user_is_set(self):
-        self.assertEqual(self.result[0]['user'], self.expected_user)
-        self.assertEqual(self.result[4]['user'], self.expected_user)
+        self.assertEqual(self.result['0']['user'], self.expected_user)
+        self.assertEqual(self.result['4']['user'], self.expected_user)
 
     def test_process_user_domain_is_set(self):
-        self.assertEqual(self.result[0]['user_domain'], self.expected_domain)
-        self.assertEqual(self.result[4]['user_domain'], self.expected_domain)
+        self.assertEqual(self.result['0']['user_domain'], self.expected_domain)
+        self.assertEqual(self.result['4']['user_domain'], self.expected_domain)
 
 
 class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
@@ -170,7 +173,7 @@ class TestEmptyCommandLine(TestProcsBase):
         pid = 100
         self.add_process(pid=pid, cmd=None)
         self.call_procs()
-        self.proc = self.result[pid]
+        self.proc = self.result[str(pid)]
 
     def test_cmd_is_empty_string(self):
         self.assertEqual(self.proc['cmd'], '')

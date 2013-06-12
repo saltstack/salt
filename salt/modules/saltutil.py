@@ -14,6 +14,7 @@ import logging
 import fnmatch
 import time
 import sys
+import threading
 
 # Import salt libs
 import salt.payload
@@ -353,7 +354,7 @@ def running():
 
         salt '*' saltutil.running
     '''
-    procs = __salt__['status.procs']()
+    procs = __salt__['status.procs'](details=False)
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
@@ -363,7 +364,11 @@ def running():
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         with salt.utils.fopen(path, 'rb') as fp_:
-            data = serial.loads(fp_.read())
+            try:
+                data = serial.loads(fp_.read())
+            except Exception:
+                # Invalid serial object
+                continue
         if not isinstance(data, dict):
             # Invalid serial object
             continue
@@ -373,10 +378,15 @@ def running():
             os.remove(path)
             continue
         if data.get('pid') == pid:
-            continue
+            if not data.has_key('tid'):
+                continue
+            elif not data.get('tid') in [t.name for t in threading.enumerate()]:
+                os.remove(path)
+                continue
+            elif data.get('tid') == threading.current_thread().name:
+                continue
         ret.append(data)
     return ret
-
 
 def find_job(jid):
     '''

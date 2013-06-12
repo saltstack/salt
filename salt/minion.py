@@ -98,7 +98,7 @@ def resolve_dns(opts):
     return ret
 
 
-def get_proc_dir(cachedir):
+def get_proc_dir(cachedir, cleanup=True):
     '''
     Return the directory that process data is stored in
     '''
@@ -106,7 +106,7 @@ def get_proc_dir(cachedir):
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it
         os.makedirs(fn_)
-    else:
+    elif cleanup:
         # proc_dir is present, clean out old proc files
         for proc_fn in os.listdir(fn_):
             os.remove(os.path.join(fn_, proc_fn))
@@ -426,12 +426,13 @@ class Minion(object):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True):
+    def __init__(self, opts, timeout=60, safe=True, real_minion=True):
         '''
         Pass in the options dict
         '''
         # Late setup the of the opts grains, so we can log from the grains
         # module
+        self.real_minion = real_minion
         opts['grains'] = salt.loader.grains(opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
@@ -444,13 +445,16 @@ class Minion(object):
         ).compile_pillar()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
-        self.functions, self.returners = self.__load_modules()
-        self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'])
-        self.schedule = salt.utils.schedule.Schedule(
-            self.opts,
-            self.functions,
-            self.returners)
+        self.proc_dir = get_proc_dir(opts['cachedir'], self.real_minion)
+        self.children = {}
+        self.next_tid = 0
+        if self.real_minion:
+            self.module_refresh()
+            self.matcher = Matcher(self.opts, self.functions)
+            self.schedule = salt.utils.schedule.Schedule(
+                self.opts,
+                self.functions,
+                self.returners)       
 
     def __prep_mod_opts(self):
         '''
@@ -559,9 +563,37 @@ class Minion(object):
         '''
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
-                self.functions, self.returners = self.__load_modules()
-                self.schedule.functions = self.functions
-                self.schedule.returners = self.returners
+                self.module_refresh()
+
+            if salt.utils.is_windows() and data['fun'] == 'saltutil.find_job':
+                # This needs to return within ~5 seconds which is cutting it very fine on windows.
+                # Speed it up as much as possible
+                ret = {'retcode':0, 'success':True}
+                jid = data['arg'][0]
+                if jid in self.children.iterkeys():
+                    ret['return'] = self.children[jid]['data']
+                else:
+                    ret['return'] = {}
+                    
+                ret['jid'] = data['jid']
+                ret['fun'] = data['fun']
+                self._return_pub(ret)
+                if data['ret']:
+                    for returner in set(data['ret'].split(',')):
+                        ret['id'] = self.opts['id']
+                        try:
+                            self.returners['{0}.returner'.format(
+                                returner
+                            )](ret)
+                        except Exception as exc:
+                            log.error(
+                                'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
+                return
+
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             target = Minion._thread_multi_return
         else:
@@ -571,20 +603,24 @@ class Minion(object):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        if self.opts['multiprocessing']:
-            if sys.platform.startswith('win'):
+        if not self.opts['multiprocessing']:
+            process = threading.Thread(
+                target = target, args=(instance, self.opts, data),
+                name = "Thread-{0}".format(self.next_tid)
+            )
+            self.next_tid += 1
+        else:
+            # Multiprocessing
+            if salt.utils.is_windows():
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
             process = multiprocessing.Process(
                 target=target, args=(instance, self.opts, data)
             )
-        else:
-            process = threading.Thread(
-                target=target, args=(instance, self.opts, data)
-            )
         process.start()
-        process.join()
+
+        self.children[data['jid']] = {'process':process, 'data':data}
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -594,15 +630,22 @@ class Minion(object):
         '''
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
-        if not minion_instance:
-            minion_instance = cls(opts)
-        if opts['multiprocessing']:
-            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-            salt.utils.daemonize_if(opts)
-            sdata = {'pid': os.getpid()}
-            sdata.update(data)
-            with salt.utils.fopen(fn_, 'w+') as fp_:
-                fp_.write(minion_instance.serial.dumps(sdata))
+        if minion_instance is None:
+            minion_instance = cls(opts, real_minion=False)
+        salt.utils.daemonize_if(opts)
+        sdata = {'pid': os.getpid()}
+        if not opts['multiprocessing']:
+            sdata['tid'] = threading.current_thread().name
+        sdata.update(data)
+
+        fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
+        with open(fn_, 'w+') as fp_:
+            fp_.write(minion_instance.serial.dumps(sdata))
+
+        if not minion_instance.real_minion:
+            # Load the modules after writing to proc file to avoid client timeouts
+            minion_instance.module_refresh()
+
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -696,7 +739,7 @@ class Minion(object):
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if not minion_instance:
-            minion_instance = cls(opts)
+            minion_instance = cls(opts, real_minion=False)
         ret = {
             'return': {},
             'success': {},
@@ -753,14 +796,13 @@ class Minion(object):
         '''
         jid = ret.get('jid', ret.get('__jid__'))
         fun = ret.get('fun', ret.get('__fun__'))
-        if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, jid)
-            if os.path.isfile(fn_):
-                try:
-                    os.remove(fn_)
-                except (OSError, IOError):
-                    # The file is gone already
-                    pass
+        fn_ = os.path.join(self.proc_dir, jid)
+        if os.path.isfile(fn_):
+            try:
+                os.remove(fn_)
+            except (OSError, IOError):
+                # The file is gone already
+                pass
         log.info('Returning information for job: {0}'.format(jid))
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         if ret_cmd == '_syndic_return':
@@ -824,6 +866,28 @@ class Minion(object):
                 data['arg'] = []
             self._handle_decoded_payload(data)
 
+    def _cleanup_children(self):
+        if self.children:
+            running_children = {}
+            for jid, child in self.children.iteritems():
+                process = child['process']
+                process.join(0.001)
+                if process.is_alive():
+                    running_children[jid] = child
+                else:
+                    log.debug('Process/thread for {0} ended'.format(jid))
+            self.children = running_children
+        if hasattr(self, 'schedule'):
+            self.schedule._cleanup_children()
+
+    def _join_children(self):
+        if self.children:
+            for child in self.children.itervalues():
+                process = child['process']
+                process.join()
+        if hasattr(self, 'schedule'):
+            self.schedule._join_children()
+
     @property
     def master_pub(self):
         '''
@@ -861,8 +925,9 @@ class Minion(object):
         Refresh the functions and returners.
         '''
         self.functions, self.returners = self.__load_modules()
-        self.schedule.functions = self.functions
-        self.schedule.returners = self.returners
+        if hasattr(self, 'schedule'):
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def pillar_refresh(self):
         '''
@@ -1004,49 +1069,58 @@ class Minion(object):
         self._state_run()
 
         loop_interval = int(self.opts['loop_interval'])
-        while True:
-            try:
-                self.schedule.eval()
-                # Check if scheduler requires lower loop interval than
-                # the loop_interval setting
-                if self.schedule.loop_interval < loop_interval:
-                    loop_interval = self.schedule.loop_interval
-                    log.debug(
-                        'Overriding loop_interval because of scheduled jobs.'
-                    )
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in scheduled job'.format(exc)
-                )
-            try:
-                socks = dict(self.poller.poll(
-                    loop_interval * 1000)
-                )
-                if self.socket in socks and socks[self.socket] == zmq.POLLIN:
-                    payload = self.serial.loads(self.socket.recv())
-                    self._handle_payload(payload)
-                # Check the event system
-                if self.epoller.poll(1):
+        try:
+            while True:
+                try:
                     try:
-                        while True:
-                            package = self.epull_sock.recv(zmq.NOBLOCK)
-                            if package.startswith('module_refresh'):
-                                self.module_refresh()
-                            elif package.startswith('pillar_refresh'):
-                                self.pillar_refresh()
-                            self.epub_sock.send(package)
+                        self.schedule.eval()
+                        # Check if scheduler requires lower loop interval than
+                        # the loop_interval setting
+                        if self.schedule.loop_interval < loop_interval:
+                            loop_interval = self.schedule.loop_interval
+                            log.debug(
+                                'Overriding loop_interval because of scheduled jobs.'
+                            )
+                    except Exception as exc:
+                        log.error(
+                            'Exception {0} occurred in scheduled job'.format(exc)
+                        )
+                    try:
+                        socks = dict(self.poller.poll(
+                            loop_interval * 1000)
+                        )
+                        if self.socket in socks and socks[self.socket] == zmq.POLLIN:
+                            payload = self.serial.loads(self.socket.recv())
+                            self._handle_payload(payload)
+                        # Check the event system
+                        if self.epoller.poll(1):
+                            try:
+                                while True:
+                                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                                    if package.startswith('module_refresh'):
+                                        self.module_refresh()
+                                    elif package.startswith('pillar_refresh'):
+                                        self.pillar_refresh()
+                                    self.epub_sock.send(package)
+                            except Exception:
+                                pass
+                    except zmq.ZMQError:
+                        # This is thrown by the interrupt caused by python handling the
+                        # SIGCHLD. This is a safe error and we just start the poll
+                        # again
+                        continue
                     except Exception:
-                        pass
-            except zmq.ZMQError:
-                # This is thrown by the interrupt caused by python handling the
-                # SIGCHLD. This is a safe error and we just start the poll
-                # again
-                continue
-            except Exception:
-                log.critical(
-                    'An exception occurred while polling the minion',
-                    exc_info=True
-                )
+                        log.critical(
+                            'An exception occurred while polling the minion',
+                            exc_info=True
+                        )
+                    # Python may receive ctrl-C event in another thread on windows 
+                    # Add a short sleep to give the other threads a chance
+                    time.sleep(0.05)
+                finally:
+                    self._cleanup_children()
+        finally:
+            self._join_children()
 
     def tune_in_no_block(self):
         '''
@@ -1587,3 +1661,4 @@ class Matcher(object):
                 salt.utils.minions.nodegroup_comp(tgt, nodegroups)
             )
         return False
+
