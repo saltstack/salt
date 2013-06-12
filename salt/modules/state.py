@@ -189,7 +189,7 @@ def highstate(test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = None
 
     if 'env' in kwargs:
         opts['environment'] = kwargs['env']
@@ -248,7 +248,7 @@ def sls(mods, env='base', test=None, exclude=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = None
 
     pillar = kwargs.get('pillar')
 
@@ -323,11 +323,12 @@ def top(topfn, test=None, **kwargs):
         err = ['Pillar failed to render with the following messages:']
         err += __pillar__['_errors']
         return err
+    opts=copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
-        __opts__['test'] = True
+        opts['test'] = True
     else:
-        opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.HighState(__opts__)
+        opts['test'] = None
+    st_ = salt.state.HighState(opts)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     try:
@@ -385,7 +386,7 @@ def show_sls(mods, env='base', test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = None
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -465,7 +466,7 @@ def single(fun, name, test=None, **kwargs):
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = None
     st_ = salt.state.State(opts)
     err = st_.verify_data(kwargs)
     if err:
