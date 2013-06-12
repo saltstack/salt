@@ -58,14 +58,7 @@ def _cpv_to_name(cpv):
 
 
 def _cpv_to_version(cpv):
-    if cpv == '':
-        return ''
-    version=portage.versions.cpv_getversion(cpv)
-    if version:
-        return version
-    else:
-        return ''
-
+    return portage.versions.cpv_getversion(cpv)
 
 def _process_emerge_err(stderr):
     '''
