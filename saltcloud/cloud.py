@@ -529,7 +529,7 @@ class Cloud(object):
             vm_['pub_key'] = pub
             vm_['priv_key'] = priv
 
-        key_id = vm_['name']
+        key_id = minion_dict.get('id', vm_['name'])
 
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
