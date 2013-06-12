@@ -50,14 +50,68 @@ PROVIDER_CONFIG_DEFAULTS = {
 log = logging.getLogger(__name__)
 
 
-def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
+def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
+                 master_config_path=None, master_config=None,
+                 providers_config_path=None, providers_config=None,
+                 vm_config_path=None, vm_config=None):
     '''
     Read in the salt cloud config and return the dict
     '''
+    # Load the cloud configuration
+    overrides = salt.config.load_config(path, env_var)
+
+    if master_config_path is not None and master_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `master_config` or `master_config_path`, not both.'
+        )
+    elif master_config_path is None and master_config is None:
+        master_config = salt.config.master_config(
+            overrides.get(
+                # use the value from the cloud config file
+                'master_config',
+                # if not found, use the default path
+                '/etc/salt/master'
+            )
+        )
+    elif master_config_path is not None and master_config is None:
+        master_config = salt.config.master_config(master_config_path)
+
+    if providers_config_path is not None and providers_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `providers_config` or `providers_config_path`, '
+            'not both.'
+        )
+    elif providers_config_path is None and providers_config is None:
+        providers_config_path = overrides.get(
+            # use the value from the cloud config file
+            'providers_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.providers'
+        )
+
+    if vm_config_path is not None and vm_config is not None:
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Only pass `vm_config` or `vm_config_path`, not both.'
+        )
+    elif vm_config_path is None and vm_config is None:
+        vm_config_path = overrides.get(
+            # use the value from the cloud config file
+            'vm_config',
+            # if not found, use the default path
+            '/etc/salt/cloud.providers'
+        )
+
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
-    overrides = salt.config.load_config(path, env_var)
+    # Grab data from the 4 sources
+    # 1st - Master config
+    # 2nd Override master config with salt-cloud config
+    master_config.update(cloud_config)
+
+    # We now set the gathered data as the overrides
+    overrides = master_config
+
     default_include = overrides.get(
         'default_include', defaults['default_include']
     )
@@ -104,7 +158,28 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None):
         deploy_scripts_search_path=tuple(deploy_scripts_search_path)
     )
 
-    return apply_cloud_config(overrides, defaults)
+    opts = apply_cloud_config(overrides, defaults)
+
+    # 3rd - Include Cloud Providers
+    if 'providers' in opts and (providers_config or providers_config_path):
+        raise saltcloud.exceptions.SaltCloudConfigError(
+            'Do not mix the old cloud providers configuration with '
+            'the new one. The providers configuration should now go in '
+            'the file `/etc/salt/cloud.providers` or a separate `*.conf` '
+            'file within `cloud.providers.d/` which is relative to '
+            '`/etc/salt/cloud.providers`.'
+        )
+    elif 'providers' not in opts and providers_config is None:
+        providers_config = cloud_providers_config(providers_config_path)
+    opts['providers'] = providers_config
+
+    # 4th - Include VM config
+    if vm_config is None:
+        vm_config = vm_profiles_config(vm_config_path)
+    opts['vm'] = vm_config
+
+    # Return the final options
+    return opts
 
 
 def apply_cloud_config(overrides, defaults=None):
@@ -163,8 +238,7 @@ def old_to_new(opts):
     return opts
 
 
-def vm_profiles_config(opts,
-                       path,
+def vm_profiles_config(path,
                        env_var='SALT_CLOUDVM_CONFIG',
                        defaults=None):
     '''
@@ -185,10 +259,10 @@ def vm_profiles_config(opts,
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_vm_profiles_config(opts, overrides, defaults)
+    return apply_vm_profiles_config(overrides, defaults)
 
 
-def apply_vm_profiles_config(opts, overrides, defaults=None):
+def apply_vm_profiles_config(overrides, defaults=None):
     if defaults is None:
         defaults = VM_CONFIG_DEFAULTS
 
@@ -235,8 +309,7 @@ def apply_vm_profiles_config(opts, overrides, defaults=None):
     return vms.values()
 
 
-def cloud_providers_config(opts,
-                           path,
+def cloud_providers_config(path,
                            env_var='SALT_CLOUD_PROVIDERS_CONFIG',
                            defaults=None):
     '''
@@ -257,10 +330,10 @@ def cloud_providers_config(opts,
     overrides.update(
         salt.config.include_config(include, path, verbose=True)
     )
-    return apply_cloud_providers_config(opts, overrides, defaults)
+    return apply_cloud_providers_config(overrides, defaults)
 
 
-def apply_cloud_providers_config(opts, overrides, defaults=None):
+def apply_cloud_providers_config(overrides, defaults=None):
     '''
     Apply the loaded cloud providers configuration.
     '''
