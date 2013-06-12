@@ -1561,11 +1561,16 @@ class Matcher(object):
                         else:
                             results.append('and')
                     results.append(match)
+                else:
+                    # seq start with oper, fail
+                    if match not in ['(', ')']:
+                        return False
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
+        results = ' '.join(results)
         try:
-            return eval(' '.join(results))
+            return eval(results)
         except Exception:
             log.error('Invalid compound target: {0}'.format(tgt))
             return False

@@ -58,10 +58,7 @@ def _cpv_to_name(cpv):
 
 
 def _cpv_to_version(cpv):
-    if cpv == '':
-        return ''
-    return str(cpv[len(_cpv_to_name(cpv) + '-'):])
-
+    return portage.versions.cpv_getversion(cpv)
 
 def _process_emerge_err(stderr):
     '''

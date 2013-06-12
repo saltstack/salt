@@ -34,7 +34,7 @@ class TimedProc(object):
                 def terminate():
                     if rt.isAlive():
                         self.process.terminate()
-                threading.Timer(10, terminate)
+                threading.Timer(10, terminate).start()
                 raise salt.exceptions.TimedProcTimeoutError('%s : Timed out after %s seconds' % (
                     self.command,
                     str(timeout),

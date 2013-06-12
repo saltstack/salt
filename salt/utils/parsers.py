@@ -843,6 +843,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Return the documentation for the specified module or for '
                   'all modules if none are specified.')
         )
+        self.add_option(
+            '--args-separator',
+            dest='args_separator',
+            default=',',
+            help=('Set the special argument used as a delimiter between '
+                  'command arguments of compound commands. This is useful '
+                  'when one wants to pass commas as arguments to '
+                  'some of the commands in a compound command.')
+        )
 
     def _mixin_after_parsed(self):
         # Catch invalid invocations of salt such as: salt run
@@ -869,12 +878,33 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Detect compound command and set up the data for it
         if ',' in self.args[1]:
             self.config['fun'] = self.args[1].split(',')
-            self.config['arg'] = []
-            for comp in ' '.join(self.args[2:]).split(','):
-                self.config['arg'].append(comp.split())
-            if len(self.config['fun']) != len(self.config['arg']):
-                self.exit(42, 'Cannot execute compound command without '
-                              'defining all arguments.')
+            self.config['arg'] = [[]]
+            cmd_index = 0
+            if (self.args[2:].count(self.options.args_separator) ==
+                len(self.config['fun']) - 1):
+                # new style parsing: standalone argument separator
+                for arg in self.args[2:]:
+                    if arg == self.options.args_separator:
+                        cmd_index += 1
+                        self.config['arg'].append([])
+                    else:
+                        self.config['arg'][cmd_index].append(arg)
+            else:
+                # old style parsing: argument separator can be inside args
+                for arg in self.args[2:]:
+                    if self.options.args_separator in arg:
+                        sub_args = arg.split(self.options.args_separator)
+                        for sub_arg_index, sub_arg in enumerate(sub_args):
+                            if sub_arg:
+                                self.config['arg'][cmd_index].append(sub_arg)
+                            if sub_arg_index != len(sub_args) - 1:
+                                cmd_index += 1
+                                self.config['arg'].append([])
+                    else:
+                        self.config['arg'][cmd_index].append(arg)
+                if len(self.config['fun']) != len(self.config['arg']):
+                    self.exit(42, 'Cannot execute compound command without '
+                                  'defining all arguments.')
         else:
             self.config['fun'] = self.args[1]
             self.config['arg'] = self.args[2:]

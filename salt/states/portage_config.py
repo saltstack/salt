@@ -22,25 +22,36 @@ def mod_init(low):
     '''
     Enforce a nice structure on the configuration files.
     '''
-    __salt__['portage_config.enforce_nice_config']()
+    try:
+        __salt__['portage_config.enforce_nice_config']()
+    except:
+        return False
     return True
 
 def _flags_helper(conf, atom, flags, test=False):
-    flags = __salt__['portage_config.get_missing_flags'](conf, atom, flags)
+    import traceback
+    try:
+        flags = __salt__['portage_config.get_missing_flags'](conf, atom, flags)
+    except:
+        return {'result': False, 'comment': traceback.format_exc()}
     if flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
         if not test:
             __salt__['portage_config.append_to_package_conf'](conf, atom, flags)
-        return {'old': old_flags, 'new': flags}
-    return None
+        return {'result': True,'changes':{'old': old_flags, 'new': flags}}
+    return {'result': None}
 
 def _mask_helper(conf, atom, test=False):
-    is_present = __salt__['portage_config.is_present'](conf, atom)
+    import traceback
+    try:
+        is_present = __salt__['portage_config.is_present'](conf, atom)
+    except:
+        return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:
         if not test:
             __salt__['portage_config.append_to_package_conf'](conf, string = atom)
-        return True
-    return False
+        return {'result': True}
+    return {'result': None}
 
 def flags(name, use=[], accept_keywords=[], env=[], license=[], properties=[], unmask=False, mask=False):
     '''
@@ -72,37 +83,67 @@ def flags(name, use=[], accept_keywords=[], env=[], license=[], properties=[], u
            'result': True}
 
     if use:
-        changes = _flags_helper('use', name, use, __opts__['test'])
-        if changes:
-            ret['changes']['use'] = changes
+        result = _flags_helper('use', name, use, __opts__['test'])
+        if result['result']:
+            ret['changes']['use'] = c
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if accept_keywords:
-        changes = _flags_helper('accept_keywords', name, accept_keywords, __opts__['test'])
-        if changes:
-            ret['changes']['accept_keywords'] = changes
+        result = _flags_helper('accept_keywords', name, accept_keywords, __opts__['test'])
+        if result['result']:
+            ret['changes']['accept_keywords'] = result['changes']
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if env:
-        changes = _flags_helper('env', name, env, __opts__['test'])
-        if changes:
-            ret['changes']['env'] = changes
+        result = _flags_helper('env', name, env, __opts__['test'])
+        if result['result']:
+            ret['changes']['env'] = result['changes']
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if license:
-        changes = _flags_helper('license', name, license, __opts__['test'])
-        if changes:
-            ret['changes']['license'] = changes
+        result = _flags_helper('license', name, license, __opts__['test'])
+        if result['result']:
+            ret['changes']['license'] = result['changes']
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if properties:
-        changes = _flags_helper('properties', name, properties, __opts__['test'])
-        if changes:
-            ret['changes']['properties'] = changes
+        result = _flags_helper('properties', name, properties, __opts__['test'])
+        if result['result']:
+            ret['changes']['properties'] = result['changes']
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if mask:
-        if _mask_helper('mask', name, __opts__['test']):
+        result = _mask_helper('mask', name, __opts__['test'])
+        if result['result']:
             ret['changes']['mask'] = 'masked'
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if unmask:
-        if _mask_helper('unmask', name, __opts__['test']):
+        result = _mask_helper('unmask', name, __opts__['test'])
+        if result['result']:
             ret['changes']['unmask'] = 'unmasked'
+        elif result['result']==False:
+            ret['result'] = False
+            ret['comment'] = result['comment']
+            return ret
 
     if __opts__['test']:
         ret['result'] = None
