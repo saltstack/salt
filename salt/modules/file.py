@@ -919,7 +919,7 @@ def symlink(src, link):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
-        os.symlink(src,link)
+        os.symlink(src, link)
         return True
     except (OSError, IOError):
         raise CommandExecutionError('Could not create "{0}"'.format(link))
