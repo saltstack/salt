@@ -254,9 +254,6 @@ def glsa_check_list(glsa_list):
             cmd += glsa + ' '
     elif glsa_list == 'all' or glsa_list == 'affected':
         cmd += glsa_list
-    else:
-        # TODO: Should this return some type of error? or just fail quietly?
-        return {}
 
     ret = dict()
     out = __salt__['cmd.run'](cmd).split('\n')
