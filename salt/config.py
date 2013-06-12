@@ -647,6 +647,12 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     overrides.update(include_config(include, path, verbose=True))
     opts = apply_master_config(overrides, defaults)
     _validate_opts(opts)
+    # If 'nodegroups:' is uncommented in the master config file, and there are
+    # no nodegroups defined, opts['nodegroups'] will be None. Fix this by
+    # reverting this value to the default, as if 'nodegroups:' was commented
+    # out or not present.
+    if opts.get('nodegroups') is None:
+        opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
     return opts
 
 
