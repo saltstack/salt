@@ -323,7 +323,7 @@ def _get_reg_software():
                     "DisplayName")
                 try:
                     prd_name = prd_name.decode(encoding)
-                except:
+                except Exception:
                     pass
                 prd_ver = _get_reg_value(
                     reg_hive,
