@@ -328,7 +328,7 @@ def dead(name, enable=None, sig=None, **kwargs):
            'result': True,
            'comment': ''}
 
-    # Check if the service is available:
+    # Check if the service is available
     ret = _available(name, ret)
     if not ret.pop('available', True):
         ret['result'] = True
