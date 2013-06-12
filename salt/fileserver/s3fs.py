@@ -61,7 +61,7 @@ _s3_sync_on_update = True  # sync cache on update rather than jit
 
 def envs():
     '''
-    Return a list of directories within the bucket that can be 
+    Return a list of directories within the bucket that can be
     used as environments.
     '''
 
@@ -259,7 +259,7 @@ def _init():
     cache_file = _get_buckets_cache_filename()
     exp = time.time() - _s3_cache_expire
 
-    # check mtime of the buckets files cache 
+    # check mtime of the buckets files cache
     if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
         return _read_buckets_cache_file(cache_file)
     else:

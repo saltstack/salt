@@ -25,7 +25,7 @@ def present(name, gid=None, system=False):
         The group id to assign to the named group; if left empty, then the next
         available group id will be assigned
 
-    system 
+    system
         Whether or not the named group is a system group.  This is essentially
         the '-r' option of 'groupadd'.
 

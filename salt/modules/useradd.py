@@ -115,7 +115,7 @@ def add(name,
         if createhome:
             cmd += '-m -d {0} '.format(home)
         else:
-            cmd += '-d {0} '.format(home)   
+            cmd += '-d {0} '.format(home)
     if not unique:
         cmd += '-o '
     if system:

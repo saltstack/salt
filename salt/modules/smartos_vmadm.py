@@ -45,7 +45,7 @@ def _exit_status(retcode):
 
 
 def _gen_zone_json(**kwargs):
-    ''' 
+    '''
     Generate the JSON for OS virtualization creation
     
     Example layout (all keys are mandatory) :
@@ -67,7 +67,7 @@ def _gen_zone_json(**kwargs):
     '''
     ret = {}
     nics = {}
-    check_args = ( 
+    check_args = (
         'image_uuid','alias','hostname',
         'max_physical_memory','quota','nic_tag',
         'ip','netmask','gateway')
@@ -136,7 +136,7 @@ def list_vms():
     CLI Example::
         
         salt '*' virt.list_vms
-    ''' 
+    '''
     vmadm = _check_vmadm()
     cmd = '{0} list'.format(vmadm)
     vms = []
@@ -204,12 +204,12 @@ def vm_info(uuid=None):
     if not uuid:
         raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
-    cmd = '{0} get {1}'.format(vmadm, uuid) 
+    cmd = '{0} get {1}'.format(vmadm, uuid)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
-    info = res['stdout'] 
+    info = res['stdout']
     return info
     
 
@@ -301,7 +301,7 @@ def destroy(uuid=None):
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
-    return True 
+    return True
 
 
 def vm_virt_type(uuid=None):
@@ -328,7 +328,7 @@ def vm_virt_type(uuid=None):
 
 def setmem(uuid, memory):
     '''
-    Change the amount of memory allocated to VM. 
+    Change the amount of memory allocated to VM.
     <memory> is to be specified in MB.
 
     Note for KVM : this would require a restart of the VM.
@@ -339,7 +339,7 @@ def setmem(uuid, memory):
     '''
     if not uuid:
         raise CommandExecutionError('UUID parameter is mandatory')
-    # We want to determine the nature of the VM 
+    # We want to determine the nature of the VM
     vmtype = vm_virt_type(uuid)
     vmadm = _check_vmadm()
     warning = []
@@ -353,12 +353,12 @@ def setmem(uuid, memory):
         raise CommandExecutionError(_exit_status(retcode))
     if not warning:
         return True
-    return warning 
+    return warning
 
 
 def get_macs(uuid=None):
     '''
-    Return a list off MAC addresses from the named VM 
+    Return a list off MAC addresses from the named VM
 
     CLI Example::
     

@@ -22,7 +22,7 @@ Use the following mysql database schema::
       DEFAULT CHARACTER SET utf8
       DEFAULT COLLATE utf8_general_ci;
 
-    USE `salt`;  
+    USE `salt`;
 
     --
     -- Table structure for table `jids`

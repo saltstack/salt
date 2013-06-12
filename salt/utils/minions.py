@@ -107,7 +107,7 @@ class CkMinions(object):
                 if isinstance(match, dict):
                     if comps[1] == '*':
                         # We are just checking that the key exists
-                        continue 
+                        continue
                     minions.remove(id_)
                     continue
                 if isinstance(match, list):

@@ -62,5 +62,3 @@ class SaltMakoTemplateLookup(TemplateCollection):
         if fpath not in self.cache:
             self.cache[fpath] = \
                     self.file_client.get_file(fpath, '', True, self.env)
-
-
