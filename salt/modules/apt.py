@@ -361,14 +361,25 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
     old = list_pkgs()
+    old_removed = list_pkgs(removed=True)
     targets = [x for x in pkg_params if x in old]
+    if action == 'purge':
+        targets.extend([x for x in pkg_params if x in old_removed])
     if not targets:
         return {}
     cmd = 'apt-get -q -y {0} {1}'.format(action, ' '.join(targets))
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    new_removed = list_pkgs(removed=True)
+
+    ret = {'installed': __salt__['pkg_resource.find_changes'](old, new)}
+    if action == 'purge':
+        ret['removed'] = __salt__['pkg_resource.find_changes'](old_removed,
+                                                               new_removed)
+        return ret
+    else:
+        return ret['installed']
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -462,11 +473,14 @@ def _clean_pkglist(pkgs):
                     break
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, removed=False):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
+
+    If removed is ``True``, then only packages which have been removed (but not
+    purged) will be returned.
 
     External dependencies::
 
@@ -479,32 +493,43 @@ def list_pkgs(versions_as_list=False):
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    removed = salt.utils.is_true(removed)
 
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
+        if removed:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['removed'])
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['installed'])
+        if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-            return ret
+        return ret
 
-    ret = {}
+    ret = {'installed': {}, 'removed': {}}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version}\n\' -W'
 
     out = __salt__['cmd.run_all'](cmd).get('stdout', '')
-    # Typical line of output:
+    # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1
+    # deinstall ok config-files mc 3:4.8.1-2ubuntu1
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version_num = [cols[x] for x in (0, 2, 3, 4)]
+            linetype, status, name, version_num = \
+                [cols[x] for x in (0, 2, 3, 4)]
         except ValueError:
             continue
         name = _pkgname_without_arch(name)
-        if len(cols) and ('install' in linetype or 'hold' in linetype) and \
-                'installed' in status:
-            __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+        if len(cols):
+            if ('install' in linetype or 'hold' in linetype) and \
+                    'installed' in status:
+                __salt__['pkg_resource.add_pkg'](ret['installed'],
+                                                 name,
+                                                 version_num)
+            elif 'deinstall' in linetype:
+                __salt__['pkg_resource.add_pkg'](ret['removed'],
+                                                 name,
+                                                 version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
     if __salt__['cmd.has_exec']('grep-available'):
@@ -522,9 +547,16 @@ def list_pkgs(versions_as_list=False):
             # Set virtual package versions to '1'
             __salt__['pkg_resource.add_pkg'](ret, virtname, '1')
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    _clean_pkglist(ret)
+    for pkglist_type in ('installed', 'removed'):
+        __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
+        _clean_pkglist(ret[pkglist_type])
+
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
+
+    if removed:
+        ret = ret['removed']
+    else:
+        ret = ret['installed']
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
