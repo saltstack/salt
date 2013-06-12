@@ -1326,6 +1326,10 @@ def recurse(name,
         for mdir in mdirs:
             if not mdir.startswith(srcpath):
                 continue
+            if not _check_include_exclude(os.path.relpath(mdir, srcpath),
+                                          include_pat,
+                                          exclude_pat):
+                continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             manage_directory(mdest)
             keep.add(mdest)

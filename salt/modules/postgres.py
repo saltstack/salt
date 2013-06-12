@@ -779,8 +779,8 @@ def owner_to(dbname,
     sqlfile.write('alter database {0} owner to {1};\n'.format(dbname, ownername))
 
     queries = (
-        #schemas
-        ( 
+        # schemas
+        (
          'alter schema %(n)s owner to %(owner)s;',
          'select quote_ident(schema_name) as n from information_schema.schemata;'
          ),

@@ -91,5 +91,3 @@ def list_plugins():
         if executebit:
             ret.append(plugin)
     return ret
-
-

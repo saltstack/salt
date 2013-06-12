@@ -209,7 +209,7 @@ class OverState(object):
             for minion in local_cmd(**cmd_kwargs):
                 if all(key not in minion for key in ('id', 'return', 'fun')):
                     continue
-                ret.update({minion['id']: 
+                ret.update({minion['id']:
                         {
                         'ret': minion['return'],
                         'fun': minion['fun'],
