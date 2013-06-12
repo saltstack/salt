@@ -448,9 +448,10 @@ class Loader(object):
                 exc_info=True
             )
             return mod
-        if not hasattr(mod, '__opts__'):
-            mod.__opts__ = {}
-        mod.__opts__.update(self.opts)
+        if hasattr(mod, '__opts__'):
+            mod.__opts__.update(self.opts)
+        else:
+            mod.__opts__ = self.opts
 
         mod.__grains__ = self.grains
 
@@ -642,9 +643,10 @@ class Loader(object):
             modules.append(mod)
         for mod in modules:
             virtual = ''
-            if not hasattr(mod, '__opts__'):
-                mod.__opts__ = {}
-            mod.__opts__.update(self.opts)
+            if hasattr(mod, '__opts__'):
+                mod.__opts__.update(self.opts)
+            else:
+                mod.__opts__ = self.opts
 
             mod.__grains__ = self.grains
             mod.__pillar__ = self.pillar
