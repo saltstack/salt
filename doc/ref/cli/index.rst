@@ -189,3 +189,16 @@ arguments, then there needs to be a placeholder for the absent arguments. This
 is why in the above example, there are two commas right next to each other.
 ``test.ping`` takes no arguments, so we need to add another comma, otherwise
 Salt would attempt to pass "foo" to ``test.ping``.
+
+If you need to pass arguments that include commas, then make sure you add
+spaces around the commas that separate arguments. For example:
+
+.. code-block:: bash
+
+    salt '*' cmd.run,test.ping,test.echo 'echo "1,2,3"' , , foo
+
+You may change the arguments separator using the ``args-separator`` option:
+
+.. code-block:: bash
+
+    salt --arg-separator=::: '*' some.fun,test.echo params with comma , ::: foo
