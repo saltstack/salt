@@ -24,7 +24,7 @@ def __virtual__():
     return False
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed as a dict::
 
@@ -34,6 +34,11 @@ def list_pkgs(versions_as_list=False):
 
         salt '*' pkg.list_pkgs
     '''
+    versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
+
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
             return __context__['pkg.list_pkgs']
