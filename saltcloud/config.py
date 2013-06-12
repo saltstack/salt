@@ -457,12 +457,24 @@ def is_provider_configured(opts, provider, required_keys=()):
     Check and return the first matching and fully configured cloud provider
     configuration.
     '''
-    for provider_details_list in opts['providers'].values():
-        for provider_details in provider_details_list:
-            if 'provider' not in provider_details:
-                continue
+    if ':' in provider:
+        alias, driver = provider.split('.')
+        if alias not in opts['providers']:
+            return False
+        if driver not in opts['providers'][alias]:
+            return False
+        for key in required_keys:
+            if opts['providers'][alias][driver].get(key, None) is None:
+                # There's at least one require configuration key which is not
+                # set.
+                return False
+        # If we reached this far, there's a properly configured pprovider,
+        # return it!
+        return opts['providers'][alias][driver]
 
-            if provider_details['provider'] != provider:
+    for alias, drivers in opts['providers'].iteritems():
+        for driver, provider_details in drivers.iteritems():
+            if driver != provider:
                 continue
 
             # If we reached this far, we have a matching provider, let's see if
