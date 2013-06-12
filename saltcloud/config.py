@@ -321,12 +321,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     details['provider']
                 )
 
-        providers[key] = val
+        for entry in val:
+            providers.setdefault(key, {}).update({entry['provider']: entry})
 
     # Is any provider extending data!?
     for provider_alias, entries in providers.copy().items():
 
-        for idx, details in enumerate(entries):
+        for driver, details in entries.iteritems():
             if 'extends' not in details:
                 continue
 
@@ -347,12 +348,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     )
                     continue
 
-                for entry in providers.get(alias):
-                    if entry['provider'] == provider:
-                        extended = entry.copy()
-                        break
-                else:
-                    log.error(
+                if provider not in providers.get(alias):
+                    raise saltcloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend data from \'{2}:{3}\' though {3!r} is not '
                         'defined in {1!r}'.format(
@@ -362,6 +359,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             provider
                         )
                     )
+
+                extended = providers.get(alias).get(provider).copy()
             elif providers.get(extends) and len(providers.get(extends)) > 1:
                 log.error(
                     'The {0!r} cloud provider entry in {1!r} is trying to '
@@ -381,13 +380,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 )
                 continue
             else:
-                extended = providers.get(extends)[:][0]
+                extended = providers.get(extends).get(driver).copy()
 
             # Update the data to extend with the data to be extended
             extended.update(details)
 
             # Update the provider's entry with the extended data
-            providers[provider_alias][idx] = extended
+            providers[provider_alias][driver] = extended
 
     return providers
 
