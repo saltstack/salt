@@ -25,13 +25,13 @@ def mod_init(low):
     __salt__['portage_config.enforce_nice_config']()
     return True
 
-def _flags_helper(conf, atom, flags, test=False):
-    flags = __salt__['portage_config.get_missing_flags'](conf, atom, flags)
-    if flags:
+def _flags_helper(conf, atom, new_flags, test=False):
+    new_flags = __salt__['portage_config.get_missing_flags'](conf, atom, new_flags)
+    if new_flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
         if not test:
-            __salt__['portage_config.append_to_package_conf'](conf, atom, flags)
-        return {'old': old_flags, 'new': flags}
+            __salt__['portage_config.append_to_package_conf'](conf, atom, new_flags)
+        return {'old': old_flags, 'new': new_flags}
     return None
 
 def _mask_helper(conf, atom, test=False):
@@ -42,7 +42,14 @@ def _mask_helper(conf, atom, test=False):
         return True
     return False
 
-def flags(name, use=[], accept_keywords=[], env=[], license=[], properties=[], unmask=False, mask=False):
+def flags(name,
+          use=None,
+          accept_keywords=None,
+          env=None,
+          license=None,
+          properties=None,
+          unmask=False,
+          mask=False):
     '''
     Enforce the given flags on the given package or DEPEND atom.
     Please be warned that, in most cases, you need to rebuild the affected packages in
@@ -56,7 +63,7 @@ def flags(name, use=[], accept_keywords=[], env=[], license=[], properties=[], u
         A list of keywords to accept. "~ARCH" means current host arch, and will
         be translated in a line without keywords
     env
-        A list of enviroment files
+        A list of environment files
     license
         A list of accepted licenses
     properties
