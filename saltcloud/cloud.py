@@ -663,45 +663,48 @@ class Cloud(object):
         '''
         Perform an action on a VM which may be specific to this cloud provider
         '''
-        pmap = self.map_providers_parallel()
-
         ret = {}
+        names = set(names)
 
-        current_boxen = {}
-        for provider in pmap:
-            for box in pmap[provider]:
-                current_boxen[box] = provider
-
-        acts = {}
-        for prov, nodes in pmap.items():
-            acts[prov] = []
-            for node in nodes:
-                if node in names:
-                    acts[prov].append(node)
-
-        ret = {}
-        completed = []
-        for prov, names_ in acts.items():
-            for name in names:
-                if name in names_:
-                    fun = '{0}.{1}'.format(prov, self.opts['action'])
-                    if fun not in self.clouds:
-                        # The cloud provider does not provide the action
-                        continue
-                    if kwargs:
-                        ret[name] = self.clouds[fun](
-                            name, kwargs, call='action'
+        for alias, drivers in self.map_providers_parallel().iteritems():
+            if not names:
+                break
+            for driver, vms in drivers.iteritems():
+                if not names:
+                    break
+                fun = '{0}.{1}'.format(driver, self.opts['action'])
+                if fun not in self.clouds:
+                    log.info(
+                        '\'{0}()\' is not available. Not actioning...'.format(
+                            fun
                         )
-                    else:
-                        ret[name] = self.clouds[fun](name, call='action')
-                    completed.append(name)
+                    )
+                    continue
+                for vm_name, vm_details in vms.iteritems():
+                    if not names:
+                        break
+                    if vm_name not in names:
+                        continue
+                    with CloudProviderContext(self.clouds[fun], alias, driver):
+                        if alias not in ret:
+                            ret[alias] = {}
+                        if driver not in ret[alias]:
+                            ret[alias][driver] = {}
 
-        for name in names:
-            if name not in completed:
-                print('{0} was not found, not running {1} action'.format(
-                    name, self.opts['action'])
-                )
+                        if kwargs:
+                            ret[alias][driver][vm_name] = self.clouds[fun](
+                                vm_name, kwargs, call='action'
+                            )
+                        else:
+                            ret[alias][driver][vm_name] = self.clouds[fun](
+                                vm_name, call='action'
+                            )
+                        names.remove(vm_name)
 
+        if not names:
+            return ret
+
+        ret['Not Actioned/Not Running'] = list(names)
         return ret
 
     def do_function(self, prov, func, kwargs):
