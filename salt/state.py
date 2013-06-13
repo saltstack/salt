@@ -238,7 +238,6 @@ class Compiler(object):
                 skeys.add(key)
         return high
 
-
     def verify_high(self, high):
         '''
         Verify that the high data is viable and follows the data structure
@@ -1884,7 +1883,6 @@ class BaseHighState(object):
         else:
             state = {}
         return state, errors
-
 
     def _handle_state_decls(self, state, sls, env, errors):
         for name in state:

@@ -125,7 +125,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
         for triplet in walk(path):
             for file_name in triplet[2]:
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
-                cp = triplet[0][len(path)+1:]+'/'+file_name
+                cp = triplet[0][len(path)+1:] + '/' + file_name
 
                 copy(file_path, file_path + '.bak')
                 backup_files.append(file_path + '.bak')
@@ -167,7 +167,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
 
         if clean:
             for triplet in walk(path):
-                if len(triplet[1]) == 0 and len(triplet[2]) == 0 and triplet[0]!=path:
+                if len(triplet[1]) == 0 and len(triplet[2]) == 0 and triplet[0] != path:
                     rmtree(triplet[0])
 
 def _merge_flags(*args):
@@ -186,7 +186,7 @@ def _merge_flags(*args):
         if v:
             tmp.append(k)
         else:
-            tmp.append('-'+k)
+            tmp.append('-' + k)
     tmp.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
     return tmp
 
@@ -241,10 +241,10 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
             if not exists(pdir):
                 mkdir(pdir, 0755)
 
-        complete_file_path = base_path.format(conf)+'/'+package_file
+        complete_file_path = base_path.format(conf) + '/' + package_file
 
         try:
-            copy(complete_file_path, complete_file_path+'.bak')
+            copy(complete_file_path, complete_file_path + '.bak')
         except IOError:
             pass
 
@@ -266,7 +266,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                 if l_strip in to_delete_if_empty:
                     continue
                 if overwrite:
-                    new_contents += string.strip()+'\n'
+                    new_contents += string.strip() + '\n'
                     added = True
                 else:
                     old_flags = portage.dep.strip_empty(l_strip.split(' '))[1:]
@@ -283,13 +283,13 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                         new_contents += '{0}\n'.format(atom)
                     added = True
         if not added:
-            new_contents += string.strip()+'\n'
+            new_contents += string.strip() + '\n'
         file_handler.seek(0)
         file_handler.truncate(len(new_contents))
         file_handler.write(new_contents)
         file_handler.close()
         try:
-            rmtree(complete_file_path+'.bak')
+            rmtree(complete_file_path + '.bak')
         except OSError:
             pass
 

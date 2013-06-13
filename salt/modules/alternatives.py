@@ -38,7 +38,7 @@ def _get_cmd():
         return 'alternatives'
     else:
         return 'update-alternatives'
-    
+
 
 def display(name):
     '''

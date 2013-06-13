@@ -61,7 +61,7 @@ def _iter_dir(dir_, env):
                          'content': u'bin'}
                         )
     yield ret
-                    
+
 
 def iter_roots(roots):
     '''

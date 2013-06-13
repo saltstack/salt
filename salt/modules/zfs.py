@@ -45,7 +45,7 @@ def _available_commands():
     # in how this works upstream will require a change.
     for line in res['stderr'].splitlines():
         if re.match('	[a-zA-Z]', line):
-            for cmd in [cmd.strip() for cmd in line.split(' ')[0].split( '|' )]:
+            for cmd in [cmd.strip() for cmd in line.split(' ')[0].split('|')]:
                 if cmd not in _return:
                     _return.append(cmd)
     return _return
@@ -71,7 +71,7 @@ def __virtual__():
     return False
 
 
-def _make_function( cmd_name ):
+def _make_function(cmd_name):
     '''
     Returns a function based on the command name.
     '''

@@ -85,7 +85,7 @@ def _set_persistent_module(mod):
         __salt__['file.uncomment'](conf, escape_mod)
     else:
         __salt__['file.append'](conf, mod)
-    return set([mod_name,])
+    return set([mod_name])
 
 
 def _remove_persistent_module(mod, comment):
@@ -102,7 +102,7 @@ def _remove_persistent_module(mod, comment):
         __salt__['file.comment'](conf, "^[\t ]*{}[\t ]?".format(escape_mod))
     else:
         __salt__['file.sed'](conf, "^[\t ]*{}[\t ]?".format(escape_mod), '')
-    return set([mod_name,])
+    return set([mod_name])
 
 
 def available():

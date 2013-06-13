@@ -158,7 +158,7 @@ def query(database, query):
     # into Python objects. It leaves them as strings.
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str,] * len(orig_conv.keys())))
+    conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
 
     ret = {}
     dbc = _connect(**{'db': database, 'conv': conv})
