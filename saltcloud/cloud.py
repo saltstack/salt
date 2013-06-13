@@ -37,6 +37,10 @@ except ImportError:
     log.debug('Mako not available')
 
 
+# Simple alias to improve code readability
+CloudProviderContext = saltcloud.utils.CloudProviderContext
+
+
 class Cloud(object):
     '''
     An object for the creation of new VMs
@@ -116,7 +120,8 @@ class Cloud(object):
                     pmap[alias] = {}
 
                 try:
-                    pmap[alias][driver] = self.clouds[fun]()
+                    with CloudProviderContext(self.clouds[fun], alias, driver):
+                        pmap[alias][driver] = self.clouds[fun]()
                 except Exception as err:
                     log.debug(
                         'Failed to execute \'{0}()\' while querying for '
@@ -204,8 +209,7 @@ class Cloud(object):
                 log.debug(
                     'The {0!r} cloud driver defined under {1!r} provider '
                     'alias is unable to get the locations information'.format(
-                        driver,
-                        alias
+                        driver, alias
                     )
                 )
                 continue
@@ -214,11 +218,8 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
-                # We're not yet making use of the CloudProviderContext here
-                # because we're just listing information. If and when we find
-                # that a specific cloud provider returns a different listing
-                # based on credentials, we'll revisit this subject
-                data[alias][driver] = self.clouds[fun]()
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
                     'Failed to get the output of \'{0}()\': {1}'.format(
@@ -257,11 +258,8 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
-                # We're not yet making use of the CloudProviderContext here
-                # because we're just listing information. If and when we find
-                # that a specific cloud provider returns a different listing
-                # based on credentials, we'll revisit this subject
-                data[alias][driver] = self.clouds[fun]()
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
                     'Failed to get the output of \'{0}()\': {1}'.format(
@@ -300,11 +298,8 @@ class Cloud(object):
                 data[alias] = {}
 
             try:
-                # We're not yet making use of the CloudProviderContext here
-                # because we're just listing information. If and when we find
-                # that a specific cloud provider returns a different listing
-                # based on credentials, we'll revisit this subject
-                data[alias][driver] = self.clouds[fun]()
+                with CloudProviderContext(self.clouds[fun], alias, driver):
+                    data[alias][driver] = self.clouds[fun]()
             except Exception as err:
                 log.error(
                     'Failed to get the output of \'{0}()\': {1}'.format(
@@ -546,8 +541,7 @@ class Cloud(object):
         try:
             alias, driver = vm_['provider'].split(':')
             func = '{0}.create'.format(driver)
-            with saltcloud.utils.CloudProviderContext(self.clouds[func],
-                                                      vm_['provider']):
+            with CloudProviderContext(self.clouds[func], alias, driver):
                 output = self.clouds[func](vm_)
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
@@ -740,9 +734,7 @@ class Cloud(object):
             )
         )
 
-        provider = '{0}:{1}'.format(alias, driver)
-        with saltcloud.utils.CloudProviderContext(
-                self.clouds[fun], provider):
+        with CloudProviderContext(self.clouds[fun], alias, driver):
             if kwargs:
                 return {
                     alias: {
@@ -1172,13 +1164,16 @@ def run_paralel_map_providers_query(data):
     '''
     cloud = Cloud(data['opts'])
     try:
-        return (
-            data['alias'],
-            data['driver'],
-            saltcloud.utils.simple_types_filter(
-                cloud.clouds[data['fun']]()
+        with CloudProviderContext(cloud.clouds[data['fun']],
+                                  data['alias'],
+                                  data['driver']):
+            return (
+                data['alias'],
+                data['driver'],
+                saltcloud.utils.simple_types_filter(
+                    cloud.clouds[data['fun']]()
+                )
             )
-        )
     except Exception as err:
         log.debug(
             'Failed to execute \'{0}()\' while querying for running '

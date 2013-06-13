@@ -986,19 +986,29 @@ class CloudProviderContext(object):
     value afterwards.
     '''
 
-    def __init__(self, function, profile):
-        self.profile = profile
-        self.function = function
-        self.default = None
+    def __init__(self, function, provider_alias=None, provider_driver=None):
+        self.__function = function
+        if provider_alias is None and provider_driver is None:
+            raise SaltCloudSystemExit(
+                'Either `provider_alias` and/or `provider_driver` needs to '
+                'be passed'
+            )
+        elif provider_alias is not None and provider_driver is not None:
+            self.__provider = '{0}:{1}'.format(provider_alias, provider_driver)
+        elif provider_alias is not None:
+            self.__provider = provider_alias
+        elif provider_driver is not None:
+            self.__provider = provider_driver
+        self.__default = None
 
     def __enter__(self):
         # Let's store what the module is defining, if anything
-        mod = sys.modules[self.function.__module__]
-        self.default = mod.__active_provider_name__
+        mod = sys.modules[self.__function.__module__]
+        self.__default = mod.__active_provider_name__
         # Override the provided provider within this context
-        mod.__active_provider_name__ = self.profile
+        mod.__active_provider_name__ = self.__provider
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         # Reset to previous value
-        sys.modules[
-            self.function.__module__].__active_provider_name__ = self.default
+        mod = sys.modules[self.__function.__module__]
+        mod.__active_provider_name__ = self.__default
