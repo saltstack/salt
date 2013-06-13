@@ -499,3 +499,151 @@ def compare(pkg1='', oper='==', pkg2=''):
         salt '*' pkg.compare pkg1='0.2.4-0' oper='<' pkg2='0.2.4.1-0'
     '''
     return __salt__['pkg_resource.compare'](pkg1=pkg1, oper=oper, pkg2=pkg2)
+
+
+def mod_repo(repo, basedir=None, **kwargs):
+    '''
+    Modify one or more values for a repo. If the repo does not exist, it will
+    be created, so long as the following values are specified::
+
+        repo (name by which the yum refers to the repo)
+        name (a human-readable name for the repo)
+        baseurl or mirrorlist (the URL for yum to reference)
+
+    Key/Value pairs may also be removed from a repo's configuration by setting
+    a key to a blank value. Bear in mind that a name cannot be deleted, and a
+    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+
+    CLI Examples::
+
+        salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
+        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+    '''
+    # Build a list of keys to be deleted
+    todelete = []
+    for key in kwargs.keys():
+        if kwargs[key] != 0 and not kwargs[key]:
+            del kwargs[key]
+            todelete.append(key)
+
+    # Fail if the user tried to delete the name
+    if 'name' in todelete:
+        return 'Error: The repo name cannot be deleted'
+
+    # Give the user the ability to change the basedir
+    repos = {}
+    if basedir:
+        repos = list_repos(basedir)
+    else:
+        repos = list_repos()
+        basedir = '/etc/yum.repos.d'
+
+    repofile = ''
+    header = ''
+    filerepos = {}
+    if repo not in repos:
+        # If the repo doesn't exist, create it in a new file
+        repofile = '{0}/{1}.repo'.format(basedir, repo)
+
+        if 'name' not in kwargs:
+            return ('Error: The repo does not exist and needs to be created, '
+                    'but a name was not given')
+
+        if 'baseurl' not in kwargs and 'mirrorlist' not in kwargs:
+            return ('Error: The repo does not exist and needs to be created, '
+                    'but either a baseurl or a mirrorlist needs to be given')
+        filerepos[repo] = {}
+    else:
+        # The repo does exist, open its file
+        repofile = repos[repo]['file']
+        header, filerepos = _parse_repo_file(repofile)
+
+    # Error out if they tried to delete baseurl or mirrorlist improperly
+    if 'baseurl' in todelete:
+        if 'mirrorlist' not in kwargs and 'mirrorlist' \
+                not in filerepos[repo].keys():
+            return 'Error: Cannot delete baseurl without specifying mirrorlist'
+    if 'mirrorlist' in todelete:
+        if 'baseurl' not in kwargs and 'baseurl' \
+                not in filerepos[repo].keys():
+            return 'Error: Cannot delete mirrorlist without specifying baseurl'
+
+    # Delete anything in the todelete list
+    for key in todelete:
+        if key in filerepos[repo].keys():
+            del filerepos[repo][key]
+
+    # Old file or new, write out the repos(s)
+    filerepos[repo].update(kwargs)
+    content = header
+    for stanza in filerepos.keys():
+        comments = ''
+        if 'comments' in filerepos[stanza].keys():
+            comments = '\n'.join(filerepos[stanza]['comments'])
+            del filerepos[stanza]['comments']
+        content += '\n[{0}]'.format(stanza)
+        for line in filerepos[stanza].keys():
+            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+        content += '\n{0}\n'.format(comments)
+    fileout = open(repofile, 'w')
+    fileout.write(content)
+    fileout.close()
+
+    return {repofile: filerepos}
+
+
+def _parse_repo_file(filename):
+    '''
+    Turn a single repo file into a dict
+    '''
+    rfile = open(filename, 'r')
+    repos = {}
+    header = ''
+    repo = ''
+    for line in rfile:
+        if line.startswith('['):
+            repo = line.strip().replace('[', '').replace(']', '')
+            repos[repo] = {}
+
+        # Even though these are essentially uselss, I want to allow the user
+        # to maintain their own comments, etc
+        if not line:
+            if not repo:
+                header += line
+        if line.startswith('#'):
+            if not repo:
+                header += line
+            else:
+                if 'comments' not in repos[repo]:
+                    repos[repo]['comments'] = []
+                repos[repo]['comments'].append(line.strip())
+            continue
+
+        # These are the actual configuration lines that matter
+        if '=' in line:
+            comps = line.strip().split('=')
+            repos[repo][comps[0].strip()] = '='.join(comps[1:])
+
+    return (header, repos)
+
+
+def list_repos(basedir='/etc/yum.repos.d'):
+    '''
+    Lists all repos in <basedir> (default: /etc/yum.repos.d/).
+
+    CLI Example::
+
+        salt '*' pkg.list_repos
+    '''
+    repos = {}
+    for repofile in os.listdir(basedir):
+        repopath = '{0}/{1}'.format(basedir, repofile)
+        if not repofile.endswith('.repo'):
+            continue
+        header, filerepos = _parse_repo_file(repopath)
+        for reponame in filerepos.keys():
+            repo = filerepos[reponame]
+            repo['file'] = repopath
+            repos[reponame] = repo
+    return repos
