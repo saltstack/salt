@@ -117,28 +117,19 @@ def detect_kwargs(func, args, data=None):
     '''
     Detect the args and kwargs that need to be passed to a function call
     '''
-    spec_args, _, has_kwargs, defaults = salt.state._getargs(func)
-    defaults = [] if defaults is None else defaults
-    starti = len(spec_args) - len(defaults)
-    kwarg_spec = set()
-    for ind in range(len(defaults)):
-        kwarg_spec.add(spec_args[starti])
-        starti += 1
+    spec_args, _, has_kwargs, _ = salt.state._getargs(func)
     _args = []
     kwargs = {}
     for arg in args:
         if isinstance(arg, string_types):
-            if '=' in arg:
-                comps = arg.split('=')
-                if ' ' in comps[0]:
-                    # Invalid kwarg
-                    pass
-                elif has_kwargs:
-                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
+            arg_name, arg_value = salt.utils.parse_kwarg(arg)
+            if arg_name:
+                if has_kwargs or arg_name in spec_args:
+                    kwargs[arg_name] = yamlify_arg(arg_value)
                     continue
-                elif comps[0] in kwarg_spec:
-                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
-                    continue
+            else:
+                # Not a kwarg
+                pass
         _args.append(arg)
     if has_kwargs and isinstance(data, dict):
         # this function accepts kwargs, pack in the publish data
@@ -607,11 +598,22 @@ class Minion(object):
         for ind in range(0, len(data['arg'])):
             try:
                 arg = data['arg'][ind]
-                if '\n' not in arg:
+                kwarg_name, kwarg_value = salt.utils.parse_kwarg(arg)
+                if '\n' not in arg and not kwarg_name:
+                    # only yaml-erize string if it's not a kwarg format
+                    # and does not contain a carriage return.
+                    # detect_kwargs() will take care of yaml-erizing
+                    # kwarg values.
                     arg = yaml.safe_load(arg)
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, string_types)):
+                elif isinstance(arg, dict):
+                    # dicts must be wrapped in curly braces
+                    if data['arg'][ind].startswith("{"):
+                        data['arg'][ind] = arg
+                    else:
+                        data['arg'][ind] = str(data['arg'][ind])
+                elif isinstance(arg, (int, list, string_types)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
