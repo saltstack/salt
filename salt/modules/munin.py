@@ -38,7 +38,7 @@ def run(plugins):
 
     if isinstance(plugins, string_types):
         plugins = plugins.split(',')
-    
+
     data = {}
     for plugin in plugins:
         if plugin not in all_plugins:

@@ -30,7 +30,7 @@ def command(settings_module,
             *args, **kwargs):
     '''
     Run arbitrary django management command
-    
+
     CLI Example::
 
         salt '*' django.command <settings_module> <command>

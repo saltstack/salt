@@ -46,7 +46,7 @@ def _rvm_do(ruby, command, runas=None):
 def is_installed(runas=None):
     '''
     Check if RVM is installed.
-    
+
     CLI Example::
 
         salt '*' rvm.is_installed
@@ -175,7 +175,7 @@ def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
         The names of the binaries to create wrappers for. When nothing is given, wrappers for ruby, gem, rake, irb, rdoc, ri and testrb are generated.
 
     CLI Example::
-    
+
         salt '*' rvm.wrapper <ruby_string> <wrapper_prefix>
     '''
     return _rvm('wrapper', '{ruby_string} {wrapper_prefix} {binaries}'.
