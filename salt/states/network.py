@@ -276,8 +276,8 @@ def routes(name, **kwargs):
     kwargs['test'] = __opts__['test']
     # Build interface routes
     try:
-        old = __salt__['ip.get_routes'](**kwargs)
-        new = __salt__['ip.build_routes'](**kwargs)
+        old = __salt__['ip.get_routes'](name)
+        new = __salt__['ip.build_routes'](name, **kwargs)
         if __opts__['test']:
             if old == new:
                 return ret
@@ -306,7 +306,7 @@ def routes(name, **kwargs):
     # Apply interface routes
     if apply_net_settings:
         try:
-            __salt__['ip.apply_network_routes'](**kwargs)
+            __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
             ret['comment'] = error.message
