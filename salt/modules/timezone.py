@@ -37,9 +37,9 @@ def get_zone():
     elif 'Suse' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
-        return open('/etc/timezone','r').read()
+        return open('/etc/timezone', 'r').read()
     elif 'Gentoo' in __grains__['os_family']:
-        return open('/etc/timezone','r').read()
+        return open('/etc/timezone', 'r').read()
     elif 'FreeBSD' in __grains__['os_family']:
         return ('FreeBSD does not store a human-readable timezone. Please'
                 'consider using timezone.get_zonecode or timezone.zonecompare')

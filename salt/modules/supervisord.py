@@ -31,7 +31,7 @@ def _get_supervisorctl_bin(bin_env):
     return bin_env
 
 def _ctl_cmd(cmd, name, conf_file, bin_env):
-    ret = [ _get_supervisorctl_bin(bin_env) ]
+    ret = [_get_supervisorctl_bin(bin_env)]
     if conf_file is not None:
         ret += ['-c', conf_file]
     ret.append(cmd)
