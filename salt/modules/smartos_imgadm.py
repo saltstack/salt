@@ -75,7 +75,7 @@ def avail(search=None):
     Return a list of available images
 
     CLI Example::
-        
+
         salt '*' imgadm.avail [percona]
     '''
     ret = {}
@@ -93,14 +93,14 @@ def avail(search=None):
     else:
         ret = res['stdout'].splitlines()
     return ret
- 
+
 
 def list_installed():
     '''
     Return a list of installed images
 
     CLI Example::
-        
+
         salt '*' imgadm.list_installed
     '''
     ret = {}
@@ -120,7 +120,7 @@ def show(uuid=None):
     Show manifest of a given image
 
     CLI Example::
-    
+
         salt '*' imgadm.show e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
@@ -143,7 +143,7 @@ def get(uuid=None):
     Return info on an installed image
 
     CLI Example::
-    
+
         salt '*' imgadm.get e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
@@ -166,7 +166,7 @@ def import_image(uuid=None):
     Import an image from the repository
 
     CLI Example::
-    
+
         salt '*' imgadm.import_image e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
@@ -189,7 +189,7 @@ def delete(uuid=None):
     Remove an installed image
 
     CLI Example::
-    
+
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
