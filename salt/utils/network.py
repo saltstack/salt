@@ -9,20 +9,19 @@ import re
 import logging
 from string import ascii_letters, digits
 
+# Attempt to import wmi
+try:
+    import wmi
+    import salt.utils.winapi
+except ImportError:
+    pass
+
 # Import salt libs
 import salt.utils
 
 
 log = logging.getLogger(__name__)
 
-if salt.utils.is_windows():
-    try:
-        import wmi
-        import salt.utils.winapi
-    except ImportError:
-        log.exception(
-                'Unable to import Python wmi module.'
-        )
 
 # pylint: disable-msg=C0103
 
