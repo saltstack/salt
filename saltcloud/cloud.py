@@ -97,28 +97,6 @@ class Cloud(object):
             )
         return providers
 
-    def get_matching_provider(self, provider):
-        '''
-        This function will parse the passed provider alias and return the
-        actual cloud driver provider.
-
-        If more than one cloud provider is found under the same alias, thrown
-        an error.
-        '''
-        providers = self.build_lookup(provider)
-        if len(providers) > 1:
-            raise SaltCloudSystemExit(
-                'More than one cloud provider({0}) is defined under the same '
-                'profile({1}). You need to specify one of: {2}'.format(
-                    ', '.join(providers),
-                    provider,
-                    ', '.join([
-                        '\'{0}:{1}\''.format(provider, d) for d in providers
-                    ])
-                )
-            )
-        return providers[0]
-
     def map_providers(self, query='list_nodes'):
         '''
         Return a mapping of what named VMs are running on what VM providers
@@ -723,12 +701,24 @@ class Cloud(object):
         '''
         Perform a function against a cloud provider
         '''
-        provider = self.get_matching_provider(prov)
-        fun = '{0}.{1}'.format(provider, func)
+        matches = self.build_lookup(prov)
+        if len(matches) > 1:
+            raise SaltCloudSystemExit(
+                'More than one results matched {0!r}. Please specify '
+                'one of: {1}'.format(
+                    ', '.join([
+                        '{0}:{1}'.format((alias, driver)) for
+                        (alias, driver) in matches
+                    ])
+                )
+            )
+
+        alias, driver = matches.pop()
+        fun = '{0}.{1}'.format(driver, func)
         if fun not in self.clouds:
             raise SaltCloudSystemExit(
-                'The {0!r} provider, for the {1!r} cloud driver, does not '
-                'define the function {2!r}'.format(prov, provider, func)
+                'The {0!r} cloud provider alias, for the {1!r} driver, does '
+                'not define the function {2!r}'.format(alias, driver, func)
             )
 
         log.debug(
@@ -738,8 +728,16 @@ class Cloud(object):
         )
 
         if kwargs:
-            return self.clouds[fun](call='function', kwargs=kwargs)
-        return self.clouds[fun](call='function')
+            return {
+                alias: {
+                    driver: self.clouds[fun](call='function', kwargs=kwargs)
+                }
+            }
+        return {
+            alias: {
+                driver: self.clouds[fun](call='function')
+            }
+        }
 
 
 class Map(Cloud):
