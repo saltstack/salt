@@ -12,6 +12,9 @@ from string import ascii_letters, digits
 # Import salt libs
 import salt.utils
 
+
+log = logging.getLogger(__name__)
+
 if salt.utils.is_windows():
     try:
         import wmi
@@ -20,8 +23,6 @@ if salt.utils.is_windows():
         log.exception(
                 'Unable to import Python wmi module.'
         )
-
-log = logging.getLogger(__name__)
 
 # pylint: disable-msg=C0103
 
