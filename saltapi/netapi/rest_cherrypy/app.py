@@ -2,6 +2,8 @@
 A REST API for Salt
 ===================
 
+.. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
+
 :depends:   - CherryPy Python module
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system. Be sure that it is enabled and the user you are
