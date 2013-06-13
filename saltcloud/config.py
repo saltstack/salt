@@ -325,10 +325,11 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             log.error(
                 'The {0!r} profile is trying to extend data from {1!r} '
                 'though {1!r} is not defined in the salt profiles loaded '
-                'data. Not extending!'.format(
+                'data. Not extending and removing from listing!'.format(
                     profile, extends
                 )
             )
+            vms.pop(profile)
             continue
 
         extended = vms.get(extends).copy()
