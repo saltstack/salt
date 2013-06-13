@@ -38,7 +38,7 @@ def _p_to_cp(p):
     '''
     ret = _porttree().dbapi.xmatch("match-all", p)
     if ret:
-        return portage.dep_getkey('='+ret[0])
+        return portage.dep_getkey('=' + ret[0])
     return None
 
 def enforce_nice_config():
@@ -81,13 +81,13 @@ def _unify_keywords():
                     fh = open(file_path)
                     for line in fh:
                         if line.strip():
-                            append_to_package_conf('accept_keywords', string = line)
+                            append_to_package_conf('accept_keywords', string=line)
             rmtree(old_path)
         else:
             fh = open(old_path)
             for line in fh:
                 if line.strip():
-                    append_to_package_conf('accept_keywords', string = line)
+                    append_to_package_conf('accept_keywords', string=line)
             remove(old_path)
 
 def _package_conf_file_to_dir(file_name):
@@ -100,19 +100,19 @@ def _package_conf_file_to_dir(file_name):
             if isdir(path):
                 return False
             else:
-                rename(path, path+'.tmpbak')
+                rename(path, path + '.tmpbak')
                 mkdir(path, 0755)
-                f = open(path+'.tmpbak')
+                f = open(path + '.tmpbak')
                 for line in f:
-                    append_to_package_conf(file_name, string = line.strip())
+                    append_to_package_conf(file_name, string=line.strip())
                 f.close()
-                remove(path+'.tmpbak')
+                remove(path + '.tmpbak')
                 return True
         else:
             mkdir(path, 0755)
             return True
 
-def _package_conf_ordering(conf, clean = True, keep_backup = False):
+def _package_conf_ordering(conf, clean=True, keep_backup=False):
     '''
     Move entries in the correct file.
     '''
@@ -127,10 +127,10 @@ def _package_conf_ordering(conf, clean = True, keep_backup = False):
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path)+1:]+'/'+file_name
 
-                copy(file_path, file_path+'.bak')
-                backup_files.append(file_path+'.bak')
+                copy(file_path, file_path + '.bak')
+                backup_files.append(file_path + '.bak')
 
-                if cp[0] == '/' or cp.split('/')>2:
+                if cp[0] == '/' or cp.split('/') > 2:
                     rearrange.extend(list(open(file_path)))
                     remove(file_path)
                 else:
@@ -156,7 +156,7 @@ def _package_conf_ordering(conf, clean = True, keep_backup = False):
                         file_handler.close()
 
         for line in rearrange:
-            append_to_package_conf(conf, string = line)
+            append_to_package_conf(conf, string=line)
 
         if not keep_backup:
             for bfile in backup_files:
@@ -187,7 +187,7 @@ def _merge_flags(*args):
             tmp.append(k)
         else:
             tmp.append('-'+k)
-    tmp.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
+    tmp.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
     return tmp
 
 def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False):
@@ -225,11 +225,11 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
 
         if '~ARCH' in new_flags:
             new_flags.remove('~ARCH')
-            append_to_package_conf(conf, string = atom, overwrite = overwrite)
+            append_to_package_conf(conf, string=atom, overwrite=overwrite)
             if not new_flags:
                 return
 
-        new_flags.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
+        new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
 
         package_file = _p_to_cp(atom)
         if not package_file:

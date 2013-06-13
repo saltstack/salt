@@ -466,7 +466,7 @@ def get_disks(vm_):
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
-                disks[target.getAttribute('dev')] = {\
+                disks[target.getAttribute('dev')] = {
                     'file': qemu_target}
     for dev in disks:
         try:
