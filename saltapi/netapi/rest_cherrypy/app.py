@@ -895,9 +895,47 @@ class Run(LowDataAdapter):
 
         .. versionadded:: 0.8.0
 
-        This entry point is primarily for "one-off" commands. Each request must
-        pass full Salt external authentication credentials. Otherwise this URL
-        is identical to the root (``/``) execution URL.
+        .. http:post:: /run
+
+            This entry point is primarily for "one-off" commands. Each request
+            must pass full Salt authentication credentials. Otherwise this URL
+            is identical to the root (``/``) execution URL.
+
+            **Example request**::
+
+                % curl -sS localhost:8000/run \\
+                    -H 'Accept: application/x-yaml' \\
+                    -d client='local' \\
+                    -d tgt='*' \\
+                    -d fun='test.ping' \\
+                    -d username='saltdev' \\
+                    -d password='saltdev' \\
+                    -d eauth='pam'
+
+            .. code-block:: http
+
+                POST /run HTTP/1.1
+                Host: localhost:8000
+                Accept: application/x-yaml
+                Content-Length: 75
+                Content-Type: application/x-www-form-urlencoded
+
+                client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
+
+            **Example response**:
+
+            .. code-block:: http
+
+                HTTP/1.1 200 OK
+                Content-Length: 73
+                Content-Type: application/x-yaml
+
+                return:
+                - ms-0: true
+                  ms-1: true
+                  ms-2: true
+                  ms-3: true
+                  ms-4: true
 
         :form lowstate: A list of :term:`lowstate` data appropriate for the
             :ref:`client <client-apis>` specified client interface. Full
