@@ -59,7 +59,7 @@ class Cloud(object):
             providers.add(alias)
         return providers
 
-    def build_lookup(self, lookup):
+    def lookup_providers(self, lookup):
         if lookup == 'all':
             providers = set()
             for alias, entries in self.opts['providers'].iteritems():
@@ -197,7 +197,7 @@ class Cloud(object):
         '''
         data = {}
 
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
             return data
 
@@ -236,7 +236,7 @@ class Cloud(object):
         '''
         data = {}
 
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
             return data
 
@@ -276,7 +276,7 @@ class Cloud(object):
         '''
         data = {}
 
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
             return data
 
@@ -315,7 +315,7 @@ class Cloud(object):
         Return a mapping of all image data for available providers
         '''
         data = {}
-        lookups = self.build_lookup(lookup)
+        lookups = self.lookup_providers(lookup)
         if not lookups:
             return data
 
@@ -708,7 +708,7 @@ class Cloud(object):
         '''
         Perform a function against a cloud provider
         '''
-        matches = self.build_lookup(prov)
+        matches = self.lookup_providers(prov)
         if len(matches) > 1:
             raise SaltCloudSystemExit(
                 'More than one results matched {0!r}. Please specify '
