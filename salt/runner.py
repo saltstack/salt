@@ -42,7 +42,7 @@ class RunnerClient(object):
         if not isinstance(kwarg, dict):
             kwarg = {}
         self._verify_fun(fun)
-        args, kwargs = salt.minion.detect_kwargs(
+        args, kwargs = salt.minion.parse_args_and_kwargs(
                 self.functions[fun],
                 arg,
                 kwarg)

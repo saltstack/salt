@@ -113,9 +113,16 @@ def get_proc_dir(cachedir):
     return fn_
 
 
-def detect_kwargs(func, args, data=None):
+def parse_args_and_kwargs(func, args, data=None):
     '''
-    Detect the args and kwargs that need to be passed to a function call
+    Detect the args and kwargs that need to be passed to a function call,
+    and yamlify all arguments and key-word argument values if:
+    - they are strings
+    - they do not contain '\n'
+    If yamlify results in a dict, and the original argument or kwarg value
+    did not start with a "{", then keep the original string value.
+    This is to prevent things like 'echo "Hello: world"' to be parsed as
+    dictionaries.
     '''
     spec_args, _, has_kwargs, _ = salt.state._getargs(func)
     _args = []
@@ -130,7 +137,7 @@ def detect_kwargs(func, args, data=None):
             else:
                 # Not a kwarg
                 pass
-        _args.append(arg)
+        _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
         # this function accepts kwargs, pack in the publish data
         for key, val in data.items():
@@ -140,14 +147,28 @@ def detect_kwargs(func, args, data=None):
 
 def yamlify_arg(arg):
     '''
-    yaml.safe_load the arg unless it has a newline in it
+    yaml.safe_load the arg unless it has a newline in it.
     '''
     try:
-        if '\n' not in arg:
-            return yaml.safe_load(arg)
+        original_arg = arg
+        if isinstance(arg, string_types):
+            if '\n' not in arg:
+                arg = yaml.safe_load(arg)
+        if isinstance(arg, dict):
+            # dicts must be wrapped in curly braces
+            if (isinstance(original_arg, string_types) and
+                not original_arg.startswith("{")):
+                return original_arg
+            else:
+                return arg
+        elif isinstance(arg, (int, list, string_types)):
+            return arg
+        else:
+            # we don't support this type
+            return str(original_arg)
     except Exception:
-        pass
-    return arg
+        # In case anything goes wrong...
+        return str(original_arg)
 
 
 class SMinion(object):
@@ -595,37 +616,12 @@ class Minion(object):
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
         ret = {}
-        for ind in range(0, len(data['arg'])):
-            try:
-                arg = data['arg'][ind]
-                kwarg_name, kwarg_value = salt.utils.parse_kwarg(arg)
-                if '\n' not in arg and not kwarg_name:
-                    # only yaml-erize string if it's not a kwarg format
-                    # and does not contain a carriage return.
-                    # detect_kwargs() will take care of yaml-erizing
-                    # kwarg values.
-                    arg = yaml.safe_load(arg)
-                if isinstance(arg, bool):
-                    data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, dict):
-                    # dicts must be wrapped in curly braces
-                    if data['arg'][ind].startswith("{"):
-                        data['arg'][ind] = arg
-                    else:
-                        data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (int, list, string_types)):
-                    data['arg'][ind] = arg
-                else:
-                    data['arg'][ind] = str(data['arg'][ind])
-            except Exception:
-                pass
-
         function_name = data['fun']
         if function_name in minion_instance.functions:
             ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kwargs = detect_kwargs(func, data['arg'], data)
+                args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 ret['return'] = func(*args, **kwargs)
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
@@ -704,24 +700,10 @@ class Minion(object):
             'success': {},
         }
         for ind in range(0, len(data['fun'])):
-            for index in range(0, len(data['arg'][ind])):
-                try:
-                    arg = data['arg'][ind][index]
-                    if '\n' not in arg:
-                        arg = yaml.safe_load(arg)
-                    if isinstance(arg, bool):
-                        data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, string_types)):
-                        data['arg'][ind][index] = arg
-                    else:
-                        data['arg'][ind][index] = str(data['arg'][ind][index])
-                except Exception:
-                    pass
-
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kwargs = detect_kwargs(func, data['arg'][ind], data)
+                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
