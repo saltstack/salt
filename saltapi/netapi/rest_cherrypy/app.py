@@ -60,6 +60,18 @@ A REST API for Salt
 
         % salt-call tls.create_self_signed_cert
 
+Authentication
+--------------
+
+Authentication is performed by passing a session token with each request. The
+token may be sent either via a custom header named :mailheader:`X-Auth-Token`
+or sent inside a cookie. (The result is the same but browsers and some HTTP
+clients handle cookies automatically and transparently so it is a convenience.)
+
+Token are generated via the :py:class:`Login` URL.
+
+.. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
+
 Usage
 -----
 
