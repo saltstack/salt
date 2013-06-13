@@ -557,7 +557,7 @@ def get_id():
 
     # What IP addresses do we have?
     ip_addresses = [salt.utils.socket_util.IPv4Address(a) for a
-                    in salt.utils.socket_util.ip4_addrs()
+                    in salt.utils.socket_util.ip_addrs(include_loopback=True)
                     if not a.startswith('127.')]
 
     for a in ip_addresses:
