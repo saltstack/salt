@@ -22,10 +22,10 @@ def _exit_status(retcode):
     '''
     Translate exit status of imgadm
     '''
-    ret = { 0 : 'Successful completion.',
-            1 : 'An error occurred.',
-            2 : 'Usage error.',
-            3 : 'Image not installed.'
+    ret = {0: 'Successful completion.',
+           1: 'An error occurred.',
+           2: 'Usage error.',
+           3: 'Image not installed.'
           }[retcode]
     return ret
 

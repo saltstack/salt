@@ -432,7 +432,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     # Copy file name if needed
     tfile = war
     if war[0] != '/':
-        tfile = os.path.join( tempfile.gettempdir(), 'salt.'+os.path.basename(war) )
+        tfile = os.path.join(tempfile.gettempdir(), 'salt.' + os.path.basename(war))
         cached = __salt__['cp.get_file'](war, tfile, env)
         if not cached:
             return 'FAIL - could not cache the WAR file'
@@ -442,7 +442,7 @@ def deploy_war(war, context, force='no', url='http://localhost:8080/manager', en
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': os.path.basename(war).replace('.war',''),
+        'version': os.path.basename(war).replace('.war', ''),
     }
     if force == 'yes':
         opts['update'] = 'true'
@@ -517,4 +517,3 @@ def signal(signal=None):
         __catalina_home(), valid_signals[signal]
     )
     __salt__['cmd.run'](cmd)
-
