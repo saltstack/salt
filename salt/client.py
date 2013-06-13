@@ -1149,5 +1149,5 @@ class Caller(object):
         Call a single salt function
         '''
         func = self.sminion.functions[fun]
-        args, kwargs = salt.minion.detect_kwargs(func, args, kwargs)
+        args, kwargs = salt.minion.parse_args_and_kwargs(func, args, kwargs)
         return func(*args, **kwargs)
