@@ -12,6 +12,14 @@ from string import ascii_letters, digits
 # Import salt libs
 import salt.utils
 
+if salt.utils.is_windows():
+    try:
+        import wmi
+        import salt.utils.winapi
+    except ImportError:
+        log.exception(
+                'Unable to import Python wmi module.'
+        )
 
 log = logging.getLogger(__name__)
 
