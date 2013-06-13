@@ -606,56 +606,43 @@ class Cloud(object):
             return {'Error': msg}
 
         ret = {}
-        pmap = self.map_providers_parallel()
-        found = False
+        profile_details = self.opts['profiles'][profile]
+        alias, driver = profile_details['provider'].split(':')
+        mapped_providers = self.map_providers_parallel()
+        vms = mapped_providers[alias][driver]
         for name in names:
-            for vm_ in self.opts['profiles'].values():
-                vm_profile = vm_['profile']
-                if vm_profile != profile:
-                    continue
+            if name in vms and vms[name]['state'].lower() != 'terminated':
+                msg = '{0} already exists under {0}:{1}'.format(
+                    name, alias, driver
+                )
+                log.error(msg)
+                ret[name] = {'Error': msg}
+                continue
 
-                # It all checks out, make the VM
-                found = True
-                provider = self.profile_provider(vm_profile)
-                if provider not in pmap:
-                    ret[name] = {
-                        'Error': 'The defined profile provider {0!r} was not '
-                                 'found.'.format(vm_['provider'])
-                    }
-                    continue
+            vm_ = profile_details.copy()
+            vm_['name'] = name
+            if self.opts['parallel']:
+                process = multiprocessing.Process(
+                    target=self.create,
+                    args=(vm_,)
+                )
+                process.start()
+                ret[name] = {
+                    'Provisioning': 'VM being provisioned in parallel. '
+                                    'PID: {0}'.format(process.pid)
+                }
+                continue
 
-                boxes = pmap[provider]
-                if name in boxes and \
-                        boxes[name]['state'].lower() != 'terminated':
-                    # The specified VM already exists, don't make a new one
-                    msg = '{0} already exists on {1}'.format(
-                        name, provider
-                    )
-                    log.error(msg)
-                    ret[name] = {'Error': msg}
-                    continue
-
-                vm_['name'] = name
-                if self.opts['parallel']:
-                    process = multiprocessing.Process(
-                        target=self.create,
-                        args=(vm_,)
-                    )
-                    process.start()
-                    ret[name] = {
-                        'Provisioning': 'VM being provisioned in parallel. '
-                                        'PID: {0}'.format(process.pid)
-                    }
-                    continue
-
-                try:
-                    ret[name] = self.create(vm_)
-                    if self.opts.get('show_deploy_args', False) is False:
-                        ret[name].pop('deploy_kwargs', None)
-                except (SaltCloudSystemExit, SaltCloudConfigError), exc:
-                    if len(self.opts['names']) == 1:
-                        raise
-                    ret[name] = {'Error': exc.message}
+            try:
+                # No need to use CloudProviderContext here because self.create
+                # takes care of that
+                ret[name] = self.create(vm_)
+                if self.opts.get('show_deploy_args', False) is False:
+                    ret[name].pop('deploy_kwargs', None)
+            except (SaltCloudSystemExit, SaltCloudConfigError), exc:
+                if len(names) == 1:
+                    raise
+                ret[name] = {'Error': exc.message}
 
         return ret
 

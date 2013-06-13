@@ -251,10 +251,6 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.options.profile,
                     self.config.get('names')
                 )
-                if self.config.get('show_deploy_args', False) is False:
-                    # Strip deploy_args from the returned data since we don't
-                    # want to see it
-                    ret.pop('deploy_kwargs', None)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a profile error: {0}'
                 self.handle_exception(msg, exc)
