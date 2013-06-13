@@ -44,12 +44,6 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
-    if not apt_support:
-        err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
-        log.error(err_str.format(str(e)))
-    if not ppa_format_support and __grains__['os'] == 'Ubuntu':
-        err_str = 'Unable to import "softwareproperties.ppa": {0}'
-        log.warning(err_str.format(str(e)))
     return 'pkg'
 
 
@@ -699,7 +693,9 @@ def list_repos():
        salt '*' pkg.list_repos disabled=True
     '''
     if not apt_support:
-        return 'Error: aptsources.sourceslist python module not found'
+        msg = 'Error: aptsources.sourceslist python module not found'
+        log.error(msg)
+        return msg
 
     repos = {}
     sources = sourceslist.SourcesList()
