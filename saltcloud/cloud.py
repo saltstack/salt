@@ -595,7 +595,7 @@ class Cloud(object):
 
             return self.opts['provider']
 
-    def run_profile(self):
+    def run_profile(self, profile):
         '''
         Parse over the options passed on the command line and determine how to
         handle them
@@ -606,7 +606,7 @@ class Cloud(object):
         for name in self.opts['names']:
             for vm_ in self.opts['profiles'].values():
                 vm_profile = vm_['profile']
-                if vm_profile != self.opts['profile']:
+                if vm_profile != profile:
                     continue
 
                 # It all checks out, make the VM
