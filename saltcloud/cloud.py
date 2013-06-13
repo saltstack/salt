@@ -595,7 +595,7 @@ class Cloud(object):
 
             return self.opts['provider']
 
-    def run_profile(self, profile):
+    def run_profile(self, profile, names):
         '''
         Parse over the options passed on the command line and determine how to
         handle them
@@ -608,7 +608,7 @@ class Cloud(object):
         ret = {}
         pmap = self.map_providers_parallel()
         found = False
-        for name in self.opts['names']:
+        for name in names:
             for vm_ in self.opts['profiles'].values():
                 vm_profile = vm_['profile']
                 if vm_profile != profile:
