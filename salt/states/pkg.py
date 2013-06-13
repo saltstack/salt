@@ -754,9 +754,13 @@ def mod_init(low):
     When originally setting up the mod_init for pkg a number of corner cases
     arose with different package managers and how they refresh package data.
     '''
+    ret = True
+    if 'pkg.ex_mod_init' in __salt__:
+        ret = __salt__['pkg.ex_mod_init'](low)
+
     if low['fun'] == 'installed' or low['fun'] == 'latest':
         rtag = __gen_rtag()
         if not os.path.exists(rtag):
             salt.utils.fopen(rtag, 'w+').write('')
-        return True
+        return ret
     return False
