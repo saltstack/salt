@@ -22,7 +22,7 @@ except Exception:
 import salt.crypt
 import salt.loader
 import salt.utils
-import salt.utils.socket_util
+import salt.utils.network
 import salt.pillar
 
 log = logging.getLogger(__name__)
@@ -356,8 +356,8 @@ def _validate_opts(opts):
                     VALID_OPTS[key](val)
                 except ValueError:
                     errors.append(
-                            err.format(key, val, type(val), VALID_OPTS[key])
-                            )
+                        err.format(key, val, type(val), VALID_OPTS[key])
+                    )
     for error in errors:
         log.warning(error)
     if errors:
@@ -556,8 +556,8 @@ def get_id():
         pass
 
     # What IP addresses do we have?
-    ip_addresses = [salt.utils.socket_util.IPv4Address(a) for a
-                    in salt.utils.socket_util.ip4_addrs()
+    ip_addresses = [salt.utils.network.IPv4Address(a) for a
+                    in salt.utils.network.ip_addrs(include_loopback=True)
                     if not a.startswith('127.')]
 
     for a in ip_addresses:
@@ -622,11 +622,11 @@ def apply_minion_config(overrides=None, defaults=None, **kwargs):
         if not 'schedule' in opts:
             opts['schedule'] = {}
         opts['schedule'].update({
-                '__mine_interval':
-                {
-                    'function': 'mine.update',
-                    'minutes': opts['mine_interval']
-                }
+            '__mine_interval':
+            {
+                'function': 'mine.update',
+                'minutes': opts['mine_interval']
+            }
         })
     return opts
 

@@ -292,8 +292,8 @@ class MultiMinion(object):
                 ret[minion['master']] = minion
             else:
                 ret[minion.opts['master']] = {
-                        'minion': minion,
-                        'generator': minion.tune_in_no_block()}
+                    'minion': minion,
+                    'generator': minion.tune_in_no_block()}
         return ret
 
     # Multi Master Tune In
@@ -419,7 +419,7 @@ class MultiMinion(object):
                 if pillar_refresh:
                     minion['minion'].pillar_refresh()
                 minion['generator'].next()
-        
+
 
 class Minion(object):
     '''
@@ -627,8 +627,8 @@ class Minion(object):
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 ret['return'] = func(*args, **kwargs)
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                        'retcode',
-                        0
+                    'retcode',
+                    0
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
@@ -657,8 +657,8 @@ class Minion(object):
                 )
                 log.warning(msg)
                 log.debug(
-                        'TypeError intercepted: {0}\n{1}'.format(exc, trb),
-                        exc_info=True
+                    'TypeError intercepted: {0}\n{1}'.format(exc, trb),
+                    exc_info=True
                 )
                 ret['return'] = msg
             except Exception:
@@ -1283,9 +1283,9 @@ class Syndic(Minion):
                             jids[event['tag']]['__fun__'] = event['data'].get('fun')
                             jids[event['tag']]['__jid__'] = event['data']['jid']
                             jids[event['tag']]['__load__'] = salt.utils.jid_load(
-                                    event['data']['jid'],
-                                    self.local.opts['cachedir'],
-                                    self.opts['hash_type'])
+                                event['data']['jid'],
+                                self.local.opts['cachedir'],
+                                self.opts['hash_type'])
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                     else:
                         # Add generic event aggregation here
@@ -1487,10 +1487,16 @@ class Matcher(object):
         '''
         num_parts = len(tgt.split('/'))
         if num_parts > 2:
+            # Target is not valid CIDR
             return False
         elif num_parts == 2:
-            return self.functions['network.in_subnet'](tgt)
+            # Target is CIDR
+            return salt.utils.network.in_subnet(
+                tgt,
+                addrs=self.opts['grains'].get('ipv4', [])
+            )
         else:
+            # Target is an IPv4 address
             import socket
             try:
                 socket.inet_aton(tgt)
@@ -1498,7 +1504,7 @@ class Matcher(object):
                 # Not a valid IPv4 address
                 return False
             else:
-                return tgt in self.functions['network.ip_addrs']()
+                return tgt in self.opts['grains'].get('ipv4', [])
 
     def range_match(self, tgt):
         '''
