@@ -600,6 +600,11 @@ class Cloud(object):
         Parse over the options passed on the command line and determine how to
         handle them
         '''
+        if profile not in self.opts['profiles']:
+            msg = 'Profile {0} is not defined'.format(profile)
+            log.error(msg)
+            return {'Error': msg}
+
         ret = {}
         pmap = self.map_providers_parallel()
         found = False
@@ -651,11 +656,6 @@ class Cloud(object):
                     if len(self.opts['names']) == 1:
                         raise
                     ret[name] = {'Error': exc.message}
-
-        if not found:
-            msg = 'Profile {0} is not defined'.format(self.opts['profile'])
-            ret['Error'] = msg
-            log.error(msg)
 
         return ret
 
