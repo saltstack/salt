@@ -47,7 +47,7 @@ def _exit_status(retcode):
 def _gen_zone_json(**kwargs):
     '''
     Generate the JSON for OS virtualization creation
-    
+
     Example layout (all keys are mandatory) :
 
        {"brand": "joyent",
@@ -134,7 +134,7 @@ def list_vms():
     Return a list of virtual machine names on the minion
 
     CLI Example::
-        
+
         salt '*' virt.list_vms
     '''
     vmadm = _check_vmadm()
@@ -170,7 +170,7 @@ def list_active_vms():
             vms.append(uuid)
     return vms
 
-    
+
 def list_inactive_vms():
     '''
     Return a list of uuids for inactive virtual machine on the minion
@@ -211,14 +211,14 @@ def vm_info(uuid=None):
         raise CommandExecutionError(_exit_status(retcode))
     info = res['stdout']
     return info
-    
+
 
 def start(uuid=None):
     '''
     Start a defined domain
 
     CLI Example::
-    
+
         salt '*' virt.start <uuid>
     '''
     if not uuid:
@@ -235,7 +235,7 @@ def start(uuid=None):
         return True
     else:
         return False
-   
+
 
 def shutdown(uuid=None):
     '''
@@ -266,7 +266,7 @@ def reboot(uuid=None):
     Reboot a domain via ACPI request
 
     CLI Example::
-    
+
         salt '*' virt.reboot <uuid>
     '''
     if not uuid:
@@ -290,7 +290,7 @@ def destroy(uuid=None):
     Hard power down the virtual machine, this is equivalent to pulling the power
 
     CLI Example::
-    
+
         salt '*' virt.destroy <uuid>
     '''
     if not uuid:
@@ -309,7 +309,7 @@ def vm_virt_type(uuid=None):
     Return VM virtualization type : OS or KVM
 
     CLI Example::
-    
+
         salt '*' virt.vm_virt_type <uuid>
     '''
     if not uuid:
@@ -361,7 +361,7 @@ def get_macs(uuid=None):
     Return a list off MAC addresses from the named VM
 
     CLI Example::
-    
+
         salt '*' virt.get_macs <uuid>
     '''
     if not uuid:
