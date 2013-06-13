@@ -38,7 +38,7 @@ def _flags_helper(conf, atom, new_flags, test=False):
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
         if not test:
             __salt__['portage_config.append_to_package_conf'](conf, atom, new_flags)
-        return {'result': True,'changes':{'old': old_flags, 'new': new_flags}}
+        return {'result': True, 'changes': {'old': old_flags, 'new': new_flags}}
     return {'result': None}
 
 def _mask_helper(conf, atom, test=False):
@@ -49,7 +49,7 @@ def _mask_helper(conf, atom, test=False):
         return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:
         if not test:
-            __salt__['portage_config.append_to_package_conf'](conf, string = atom)
+            __salt__['portage_config.append_to_package_conf'](conf, string=atom)
         return {'result': True}
     return {'result': None}
 

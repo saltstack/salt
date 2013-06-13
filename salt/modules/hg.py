@@ -37,8 +37,8 @@ def revision(cwd, rev='tip', short=False, user=None):
     _check_hg()
 
     cmd = 'hg id -i{short} {rev}'.format(
-        short = ' --debug' if not short else '',
-        rev = ' -r {0}'.format(rev))
+        short=' --debug' if not short else '',
+        rev=' -r {0}'.format(rev))
 
     result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user)
 
@@ -105,10 +105,10 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     _check_hg()
 
     cmd = 'hg archive {output}{rev}{fmt}'.format(
-        rev = ' --rev {0}'.format(rev),
-        output = output,
-        fmt = ' --type {0}'.format(fmt) if fmt else '',
-        prefix = ' --prefix "{0}"'.format(prefix if prefix else ''))
+        rev=' --rev {0}'.format(rev),
+        output=output,
+        fmt=' --type {0}'.format(fmt) if fmt else '',
+        prefix=' --prefix "{0}"'.format(prefix if prefix else ''))
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 

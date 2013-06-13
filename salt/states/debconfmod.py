@@ -104,7 +104,7 @@ def set(name, data):
 
     data:
         A set of questions/answers for debconf. Note that everything under
-	this must be indented twice.
+        this must be indented twice.
 
     question:
         The question the is being pre-answered
