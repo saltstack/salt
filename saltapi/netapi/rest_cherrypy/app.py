@@ -134,9 +134,10 @@ For example (in JSON format)::
 URL reference
 -------------
 
-The main entry point is the root URL (``/``) and all functionality is available
-at that URL. The other URLs are largely convenience URLs that wrap that main
-entry point.
+The main entry point is the :py:class:`root URL (/) <LowDataAdapter>` and all
+functionality is available at that URL. The other URLs are largely convenience
+URLs that wrap that main entry point with shorthand or specialized
+functionality.
 
 '''
 # We need a custom pylintrc here...
@@ -618,7 +619,7 @@ class Minions(LowDataAdapter):
                 _links:
                   jobs:
                   - href: /jobs/20130603122505459265
-                
+
         :form lowstate: lowstate data for the
             :py:mod:`~salt.client.LocalClient`; the ``client`` parameter will
             be set to ``local_async``
