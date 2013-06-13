@@ -604,4 +604,3 @@ def _parser():
     add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
 
     return parser
-

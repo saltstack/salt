@@ -152,4 +152,3 @@ def unpause(user=None):
         cmd = cmd + ' -c ~' + user + '/.nzbget'
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

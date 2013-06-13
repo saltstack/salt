@@ -6,7 +6,7 @@ service watcher.
 
 def start(name):
     '''
-   
+
     CLI Example::
 
         salt '*' monit.start <service name>
@@ -25,7 +25,6 @@ def stop(name):
         salt '*' monit.stop <service name>
     '''
     cmd = "monit stop {0}".format(name)
-
 
     return not __salt__['cmd.retcode'](cmd)
 

@@ -114,7 +114,6 @@ def setvalue(*args):
     aug = Augeas()
     ret = {'retval': False}
 
-
     tuples = filter(lambda x: not x.startswith('prefix='), args)
     prefix = filter(lambda x: x.startswith('prefix='), args)
     if prefix:

@@ -111,4 +111,3 @@ def locate(pattern, database='', limit=0, **kwargs):
     cmd = 'locate {0} {1}'.format(options, pattern)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

@@ -247,4 +247,3 @@ def userdel(pwfile, user):
     cmd = 'htpasswd -D {0} {1}'.format(pwfile, user)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-
