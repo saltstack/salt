@@ -840,7 +840,7 @@ def hostname():
     grains['localhost'] = socket.gethostname()
     if '.' in socket.getfqdn():
         grains['fqdn'] = socket.getfqdn()
-    else :
+    else:
         grains['fqdn'] = grains['localhost']
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
@@ -942,7 +942,7 @@ def _dmidecode_data(regex_dict):
         out = __salt__['cmd.run']('dmidecode')
     elif salt.utils.which('smbios'):
         out = __salt__['cmd.run']('smbios')
-    else :
+    else:
         return ret
 
     for section in regex_dict:
