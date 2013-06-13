@@ -157,14 +157,14 @@ def swap(name, persist=True, config='/etc/fstab'):
         __salt__['mount.swapon'](name)
 
         on_ = __salt__['mount.swaps']()
-        
+
         if name in on_:
             ret['comment'] = 'Swap {0} activated'.format(name)
             ret['changes'] = on_[name]
         else:
             ret['comment'] = 'Swap {0} failed to activate'.format(name)
             ret['result'] = False
-    
+
     if persist:
         fstab_data = __salt__['mount.fstab'](config)
         if __opts__['test']:

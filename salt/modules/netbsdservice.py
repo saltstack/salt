@@ -177,7 +177,7 @@ def _rcconf_status(name, service_status):
         ret = __salt__['file.append'](rcconf, newstatus)
 
     return ret
-    
+
 
 def enable(name, **kwargs):
     '''
