@@ -237,8 +237,9 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
 
         psplit = package_file.split('/')
         if len(psplit) == 2:
-            if not exists(base_path.format(conf)+'/'+psplit[0]):
-                mkdir(base_path.format(conf)+'/'+psplit[0], 0755)
+            pdir = base_path.format(conf) + '/' + psplit[0]
+            if not exists(pdir):
+                mkdir(pdir, 0755)
 
         complete_file_path = base_path.format(conf)+'/'+package_file
 
