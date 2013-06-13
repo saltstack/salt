@@ -38,7 +38,7 @@ def _p_to_cp(p):
     '''
     ret = _porttree().dbapi.xmatch("match-all", p)
     if ret:
-        return portage.dep_getkey('='+ret[0])
+        return portage.dep_getkey('=' + ret[0])
     return None
 
 def enforce_nice_config():
@@ -56,15 +56,15 @@ def _convert_all_package_confs_to_dir():
     '''
     Convert all /etc/portage/package.* configuration files to directories.
     '''
-    for file in supported_confs:
-        _package_conf_file_to_dir(file)
+    for conf_file in supported_confs:
+        _package_conf_file_to_dir(conf_file)
 
 def _order_all_package_confs():
     '''
     Place all entries in /etc/portage/package.* config dirs in the correct file.
     '''
-    for file in supported_confs:
-        _package_conf_ordering(file)
+    for conf_file in supported_confs:
+        _package_conf_ordering(conf_file)
     _unify_keywords()
 
 def _unify_keywords():
@@ -81,13 +81,13 @@ def _unify_keywords():
                     fh = open(file_path)
                     for line in fh:
                         if line.strip():
-                            append_to_package_conf('accept_keywords', string = line)
+                            append_to_package_conf('accept_keywords', string=line)
             rmtree(old_path)
         else:
             fh = open(old_path)
             for line in fh:
                 if line.strip():
-                    append_to_package_conf('accept_keywords', string = line)
+                    append_to_package_conf('accept_keywords', string=line)
             remove(old_path)
 
 def _package_conf_file_to_dir(file_name):
@@ -100,19 +100,19 @@ def _package_conf_file_to_dir(file_name):
             if isdir(path):
                 return False
             else:
-                rename(path, path+'.tmpbak')
+                rename(path, path + '.tmpbak')
                 mkdir(path, 0755)
-                f = open(path+'.tmpbak')
+                f = open(path + '.tmpbak')
                 for line in f:
-                    append_to_package_conf(file_name, string = line.strip())
+                    append_to_package_conf(file_name, string=line.strip())
                 f.close()
-                remove(path+'.tmpbak')
+                remove(path + '.tmpbak')
                 return True
         else:
             mkdir(path, 0755)
             return True
 
-def _package_conf_ordering(conf, clean = True, keep_backup = False):
+def _package_conf_ordering(conf, clean=True, keep_backup=False):
     '''
     Move entries in the correct file.
     '''
@@ -127,10 +127,10 @@ def _package_conf_ordering(conf, clean = True, keep_backup = False):
                 file_path = '{0}/{1}'.format(triplet[0], file_name)
                 cp = triplet[0][len(path)+1:]+'/'+file_name
 
-                copy(file_path, file_path+'.bak')
-                backup_files.append(file_path+'.bak')
+                copy(file_path, file_path + '.bak')
+                backup_files.append(file_path + '.bak')
 
-                if cp[0] == '/' or cp.split('/')>2:
+                if cp[0] == '/' or cp.split('/') > 2:
                     rearrange.extend(list(open(file_path)))
                     remove(file_path)
                 else:
@@ -156,7 +156,7 @@ def _package_conf_ordering(conf, clean = True, keep_backup = False):
                         file_handler.close()
 
         for line in rearrange:
-            append_to_package_conf(conf, string = line)
+            append_to_package_conf(conf, string=line)
 
         if not keep_backup:
             for bfile in backup_files:
@@ -187,10 +187,10 @@ def _merge_flags(*args):
             tmp.append(k)
         else:
             tmp.append('-'+k)
-    tmp.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
+    tmp.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
     return tmp
 
-def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite = False):
+def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False):
     '''
     Append a string or a list of flags for a given package or DEPEND atom to a given configuration file.
 
@@ -199,6 +199,8 @@ def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite =
         salt '*' portage_config.append_to_package_conf use string="app-admin/salt ldap -libvirt"
         salt '*' portage_config.append_to_package_conf use atom="> = app-admin/salt-0.14.1" flags="['ldap', '-libvirt']"
     '''
+    if flags is None:
+        flags = []
     if conf in supported_confs:
         if not string:
             if atom.find('/') == -1:
@@ -216,18 +218,18 @@ def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite =
                 if not atom:
                     return
 
-        to_delete_if_empty=[]
+        to_delete_if_empty = []
         if '-~ARCH' in new_flags:
             new_flags.remove('-~ARCH')
             to_delete_if_empty.append(atom)
 
         if '~ARCH' in new_flags:
             new_flags.remove('~ARCH')
-            append_to_package_conf(conf, string = atom, overwrite = overwrite)
+            append_to_package_conf(conf, string=atom, overwrite=overwrite)
             if not new_flags:
                 return
 
-        new_flags.sort(cmp = lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
+        new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-'))) # just aesthetic, can be commented for a small perfomance boost
 
         package_file = _p_to_cp(atom)
         if not package_file:
@@ -290,7 +292,7 @@ def append_to_package_conf(conf, atom = '', flags = [], string = '', overwrite =
         except OSError:
             pass
 
-def append_use_flags(atom, uses = [], overwrite = False):
+def append_use_flags(atom, uses=None, overwrite=False):
     '''
     Append a list of use flags for a given package or DEPEND atom
 
@@ -304,7 +306,7 @@ def append_use_flags(atom, uses = [], overwrite = False):
     if len(uses) == 0:
         return
     atom = atom[:atom.rfind('[')]
-    append_to_package_conf('use', atom = atom, flags = uses, overwrite = overwrite)
+    append_to_package_conf('use', atom=atom, flags=uses, overwrite=overwrite)
 
 def get_flags_from_package_conf(conf, atom):
     '''
@@ -318,7 +320,7 @@ def get_flags_from_package_conf(conf, atom):
     if conf in supported_confs:
         package_file = '{0}/{1}'.format(base_path.format(conf), _p_to_cp(atom))
         if atom.find('/') == -1:
-            atom == _p_to_cp(atom)
+            atom = _p_to_cp(atom)
         match_list = set(_porttree().dbapi.xmatch("match-all", atom))
         flags = []
         try:

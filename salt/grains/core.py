@@ -27,7 +27,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 # Import salt libs
 import salt.log
 import salt.utils
-import salt.utils.socket_util
+import salt.utils.network
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -510,7 +510,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'VMware'
             # NetBSD has Xen dom0 support
             elif __salt__['cmd.run'](
-                '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
+                    '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
@@ -840,7 +840,7 @@ def hostname():
     grains['localhost'] = socket.gethostname()
     if '.' in socket.getfqdn():
         grains['fqdn'] = socket.getfqdn()
-    else :
+    else:
         grains['fqdn'] = grains['localhost']
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
@@ -860,9 +860,8 @@ def ip4():
     '''
     Return a list of ipv4 addrs
     '''
-    ips = []
-    ips = salt.utils.socket_util.ip4_addrs()
-    return {'ipv4': ips}
+    return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
+
 
 def ip_interfaces():
     '''
@@ -871,7 +870,7 @@ def ip_interfaces():
     # Provides:
     #   ip_interfaces
     ret = {}
-    ifaces = salt.utils.socket_util.interfaces()
+    ifaces = salt.utils.network.interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -879,6 +878,7 @@ def ip_interfaces():
                 iface_ips.append(inet['address'])
         ret[face] = iface_ips
     return {'ip_interfaces': ret}
+
 
 def path():
     '''
@@ -942,7 +942,7 @@ def _dmidecode_data(regex_dict):
         out = __salt__['cmd.run']('dmidecode')
     elif salt.utils.which('smbios'):
         out = __salt__['cmd.run']('smbios')
-    else :
+    else:
         return ret
 
     for section in regex_dict:
@@ -1060,6 +1060,7 @@ def _hw_data(osdata):
 
     return grains
 
+
 def _smartos_zone_data():
     '''
     Return useful information from a SmartOS zone
@@ -1090,6 +1091,7 @@ def _smartos_zone_data():
 
     return grains
 
+
 def get_server_id():
     '''
     Provides an integer based on the FQDN of a machine.
@@ -1098,6 +1100,7 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
+
 
 def get_master():
     '''

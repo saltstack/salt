@@ -121,8 +121,7 @@ def remove(name, path):
 
     ret['result'] = False
     ret['comment'] = (
-	'Alternative for {0} doesn\'t exist'
+        'Alternative for {0} doesn\'t exist'
     ).format(name)
 
     return ret
-

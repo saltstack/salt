@@ -416,6 +416,11 @@ def run(name,
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
     '''
+    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    ###       cannot be removed from the function definition, otherwise the use
+    ###       of unsupported arguments in a cmd.run state will result in a
+    ###       traceback.
+
     ret = {'name': name,
            'changes': {},
            'result': False,

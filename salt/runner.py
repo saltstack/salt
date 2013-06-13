@@ -30,8 +30,7 @@ class RunnerClient(object):
         Return a dictionary of functions and the inline documentation for each
         '''
         ret = [(fun, self.functions[fun].__doc__)
-                for fun in sorted(self.functions)
-                if fun.startswith(self.opts['fun'])]
+                for fun in sorted(self.functions)]
 
         return dict(ret)
 
