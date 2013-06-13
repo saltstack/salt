@@ -115,5 +115,3 @@ def clear(mnt):
     for nbd in nbds:
         __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
     return ret
-
-

@@ -38,4 +38,3 @@ def to_dict(xmltree):
                 xmldict[name] = [xmldict[name]]
             xmldict[name].append(to_dict(item))
     return xmldict
-

@@ -49,7 +49,6 @@ def configtest():
     return ret[-1]
 
 
-
 def signal(signal=None):
     '''
     Signals nginx to start, reload, reopen or stop.

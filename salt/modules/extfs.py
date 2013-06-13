@@ -261,4 +261,3 @@ def dump(device, args=None):
                 line = line.strip()
                 ret['blocks'][group]['extra'].append(line)
     return ret
-

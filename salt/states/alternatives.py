@@ -66,12 +66,9 @@ def install(name, link, path, priority):
                           'link': link,
                           'path': path,
                           'priority': priority}
-
         return ret
 
-
     ret['comment'] = 'Alternatives for {0} is already set to {1}'.format(name, path)
-
     return ret
 
 
@@ -117,7 +114,6 @@ def remove(name, path):
             'Alternative for {0} is set to it\'s default path {1}'
         ).format(name, current)
         return ret
-
 
     ret['result'] = False
     ret['comment'] = (
