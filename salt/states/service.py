@@ -55,6 +55,11 @@ def _enable(name, started, **kwargs):
            'result': True,
            'comment': ''}
 
+    # is service available?
+    ret = _available(name, ret)
+    if not ret.pop('available', True):
+        return ret
+
     # Check to see if this minion supports enable
     if not 'service.enable' in __salt__ or not 'service.enabled' in __salt__:
         if started is True:
@@ -138,6 +143,12 @@ def _disable(name, started, **kwargs):
            'changes': {},
            'result': True,
            'comment': ''}
+
+    # is service available?
+    ret = _available(name, ret)
+    if not ret.pop('available', True):
+        ret['result'] = True
+        return ret
 
     # is enable/disable available?
     if not 'service.disable' in __salt__ or not 'service.disabled' in __salt__:
@@ -247,6 +258,12 @@ def running(name, enable=None, sig=None, **kwargs):
            'changes': {},
            'result': True,
            'comment': ''}
+
+    # Check if the service is available
+    ret = _available(name, ret)
+    if not ret.pop('available', True):
+        return ret
+
     # See if the service is already running
     if __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already running'.format(name)
@@ -256,11 +273,6 @@ def running(name, enable=None, sig=None, **kwargs):
             return _disable(name, None, **kwargs)
         else:
             return ret
-
-    # Check if the service is available:
-    ret = _available(name, ret)
-    if not ret.pop('available', True):
-        return ret
 
     # Run the tests
     if __opts__['test']:
@@ -315,6 +327,13 @@ def dead(name, enable=None, sig=None, **kwargs):
            'changes': {},
            'result': True,
            'comment': ''}
+
+    # Check if the service is available
+    ret = _available(name, ret)
+    if not ret.pop('available', True):
+        ret['result'] = True
+        return ret
+
     if not __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True:
@@ -323,11 +342,6 @@ def dead(name, enable=None, sig=None, **kwargs):
             return _disable(name, None, **kwargs)
         else:
             return ret
-
-    # Check if the service is available:
-    ret = _available(name, ret)
-    if not ret.pop('available', True):
-        return ret
 
     if __opts__['test']:
         ret['result'] = None
