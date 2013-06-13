@@ -278,7 +278,7 @@ def rewrite_sls_includes_excludes(data, sls, env):
                     slsenv = env
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: sls+incl[1:]}
+                    includes[i] = {slsenv: (sls + incl[1:])}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):

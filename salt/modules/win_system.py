@@ -17,9 +17,9 @@ def __virtual__():
 def halt(timeout=5):
     '''
     Halt a running system
-    
+
     CLI Example::
-    
+
         salt '*' system.halt
     '''
     return shutdown(timeout)
@@ -28,9 +28,9 @@ def halt(timeout=5):
 def init(runlevel):
     '''
     Change the system runlevel on sysV compatible systems
-    
+
     CLI Example::
-    
+
         salt '*' system.init 3
     '''
     #cmd = 'init {0}'.format(runlevel)
@@ -46,9 +46,9 @@ def init(runlevel):
 def poweroff(timeout=5):
     '''
     Poweroff a running system
-    
+
     CLI Example::
-    
+
         salt '*' system.poweroff
     '''
     return shutdown(timeout)
@@ -57,9 +57,9 @@ def poweroff(timeout=5):
 def reboot(timeout=5):
     '''
     Reboot the system
-    
+
     CLI Example::
-    
+
         salt '*' system.reboot
     '''
     cmd = 'shutdown /r /t {0}'.format(timeout)
@@ -70,9 +70,9 @@ def reboot(timeout=5):
 def shutdown(timeout=5):
     '''
     Shutdown a running system
-    
+
     CLI Example::
-    
+
         salt '*' system.shutdown
     '''
     cmd = 'shutdown /s /t {0}'.format(timeout)
@@ -83,9 +83,9 @@ def shutdown(timeout=5):
 def shutdown_hard():
     '''
     Shutdown a running system with no timeout or warning
-    
+
     CLI Example::
-    
+
         salt '*' system.shutdown_hard
     '''
     cmd = 'shutdown /p /f'
