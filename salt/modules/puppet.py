@@ -64,7 +64,6 @@ class _Puppet(object):
             self.vardir = '/var/opt/lib/pe-puppet'
             self.confdir = '/etc/puppetlabs/puppet'
 
-
     def __repr__(self):
         '''
         Format the command string to executed using cmd.run_all.
