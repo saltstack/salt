@@ -50,7 +50,7 @@ def search(pkg_name):
     pkgin = _check_pkgin()
 
     if pkgin:
-        for p in  __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
+        for p in __salt__['cmd.run']('{0} se ^{1}$'.format(pkgin, pkg_name)
                                      ).splitlines():
             if p:
                 s = _splitpkg(p.split()[0])
@@ -84,13 +84,13 @@ def latest_version(*names, **kwargs):
                 p = line.split() # pkgname-version status
                 if p:
                     s = _splitpkg(p[0])
-                    if s :
+                    if s:
                         if len(p) > 1 and p[1] == '<':
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
 
-    if len(names) == 1 and pkglist :
+    if len(names) == 1 and pkglist:
         return pkglist[names[0]]
 
     return pkglist
