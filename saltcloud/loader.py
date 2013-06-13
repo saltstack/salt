@@ -55,11 +55,11 @@ def clouds(opts):
             base_path=salt_base_path,
         )
 
-    # Let's bring __active_profile_name__, defaulting to None, to all cloud
+    # Let's bring __active_provider_name__, defaulting to None, to all cloud
     # drivers. This will get temporarily updated/overridden with a context
     # manager when needed.
     pack = {
-        'name': '__active_profile_name__',
+        'name': '__active_provider_name__',
         'value': None
     }
 

@@ -982,7 +982,7 @@ def simple_types_filter(datadict):
 class CloudProviderContext(object):
     '''
     This context manager is responsible for overriding the value of
-    ``__active_profile_name__`` at the module level, reseting to the previous
+    ``__active_provider_name__`` at the module level, reseting to the previous
     value afterwards.
     '''
 
@@ -994,11 +994,11 @@ class CloudProviderContext(object):
     def __enter__(self):
         # Let's store what the module is defining, if anything
         mod = sys.modules[self.function.__module__]
-        self.default = mod.__active_profile_name__
+        self.default = mod.__active_provider_name__
         # Override the provided provider within this context
-        mod.__active_profile_name__ = self.profile
+        mod.__active_provider_name__ = self.profile
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         # Reset to previous value
         sys.modules[
-            self.function.__module__].__active_profile_name__ = self.default
+            self.function.__module__].__active_provider_name__ = self.default

@@ -76,7 +76,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_profile_name__ or 'digital_ocean',
+        __active_provider_name__ or 'digital_ocean',
         ('api_key',)
     )
 

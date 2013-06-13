@@ -103,7 +103,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_profile_name__ or 'ibmsce',
+        __active_provider_name__ or 'ibmsce',
         ('user', 'password')
     )
 
