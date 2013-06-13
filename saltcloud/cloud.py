@@ -233,7 +233,7 @@ class Cloud(object):
                 )
                 continue
 
-            if alias not in locations:
+            if alias not in data:
                 data[alias] = {}
 
             try:
@@ -272,7 +272,7 @@ class Cloud(object):
                 )
                 continue
 
-            if alias not in locations:
+            if alias not in data:
                 data[alias] = {}
 
             try:
@@ -311,7 +311,7 @@ class Cloud(object):
                 )
                 continue
 
-            if alias not in locations:
+            if alias not in data:
                 data[alias] = {}
 
             try:
