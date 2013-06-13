@@ -815,15 +815,15 @@ def owner_to(dbname,
         ret = psql_query(query, user=user, host=host, port=port, maintenance_db=dbname,
                    password=password, runas=runas)
         for row in ret:
-            line = fmt % {'owner': ownername, 'n':row['n']}
-            sqlfile.write(line+"\n")
+            line = fmt % {'owner': ownername, 'n': row['n']}
+            sqlfile.write(line + "\n")
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
     os.chmod(sqlfile.name, 0644) # ensure psql can read the file
 
     # run the generated sqlfile in the db
-    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port, \
+    cmd = _psql_cmd('-f', sqlfile.name, user=user, host=host, port=port,
                 password=password, maintenance_db=dbname)
     cmdret = _run_psql(cmd, runas=runas, password=password)
     return cmdret

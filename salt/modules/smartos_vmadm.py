@@ -37,9 +37,9 @@ def _exit_status(retcode):
     '''
     Translate exit status of vmadm
     '''
-    ret = { 0 : 'Successful completion.',
-            1 : 'An error occurred.',
-            2 : 'Usage error.'
+    ret = {0: 'Successful completion.',
+           1: 'An error occurred.',
+           2: 'Usage error.'
           }[retcode]
     return ret
 
@@ -68,12 +68,12 @@ def _gen_zone_json(**kwargs):
     ret = {}
     nics = {}
     check_args = (
-        'image_uuid','alias','hostname',
-        'max_physical_memory','quota','nic_tag',
-        'ip','netmask','gateway')
+        'image_uuid', 'alias', 'hostname',
+        'max_physical_memory', 'quota', 'nic_tag',
+        'ip', 'netmask', 'gateway')
     nics_args = ('nic_tag', 'ip', 'netmask', 'gateway')
     # Lazy check of arguments
-    if not all (key in kwargs for key in check_args):
+    if not all(key in kwargs for key in check_args):
         raise CommandExecutionError('Missing arguments for JSON generation')
     # This one is mandatory for OS virt
     ret.update(brand='joyent')
@@ -101,13 +101,13 @@ def init(**kwargs):
     ret = {}
     vmadm = _check_vmadm()
     check_zone_args = (
-        'image_uuid','alias','hostname',
-        'max_physical_memory','quota','nic_tag',
-        'ip','netmask','gateway')
+        'image_uuid', 'alias', 'hostname',
+        'max_physical_memory', 'quota', 'nic_tag',
+        'ip', 'netmask', 'gateway')
     check_kvm_args = ('to_be_implemented')
     # check routines for mandatory arguments
     # Zones
-    if all (key in kwargs for key in check_zone_args):
+    if all(key in kwargs for key in check_zone_args):
         ret = _gen_zone_json(**kwargs)
         # validation first
         cmd = 'echo \'{0}\' | {1} validate create'.format(ret, vmadm)
@@ -123,7 +123,7 @@ def init(**kwargs):
             return CommandExecutionError(_exit_status(retcode))
         return True
     # KVM
-    elif all (key in kwargs for key in check_kvm_args):
+    elif all(key in kwargs for key in check_kvm_args):
         raise CommandExecutionError('KVM is not yet implemented')
     else:
         raise CommandExecutionError('Missing mandatory arguments')

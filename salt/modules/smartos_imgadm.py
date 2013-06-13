@@ -147,7 +147,7 @@ def get(uuid=None):
         salt '*' imgadm.get e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid :
+    if not uuid:
         ret['Error'] = 'UUID parameter is mandatory'
         return ret
     imgadm = _check_imgadm()
@@ -170,7 +170,7 @@ def import_image(uuid=None):
         salt '*' imgadm.import_image e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid :
+    if not uuid:
         ret['Error'] = 'UUID parameter is mandatory'
         return ret
     imgadm = _check_imgadm()
@@ -193,7 +193,7 @@ def delete(uuid=None):
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid :
+    if not uuid:
         ret['Error'] = 'UUID parameter is mandatory'
         return ret
     imgadm = _check_imgadm()

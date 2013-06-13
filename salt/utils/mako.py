@@ -39,7 +39,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
         self.file_client = salt.fileclient.get_file_client(self.opts)
         self.cache = {}
-        
+
     def adjust_uri(self, uri, filename):
         scheme = urlparse.urlparse(uri).scheme
         if scheme == 'salt':
@@ -50,13 +50,11 @@ class SaltMakoTemplateLookup(TemplateCollection):
         else:
             return self.lookup.adjust_uri(uri, filename)
 
-
     def get_template(self, uri):
         prefix = "salt://"
         salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
         self.cache_file(salt_uri)
         return self.lookup.get_template(salt_uri[len(prefix):])
-
 
     def cache_file(self, fpath):
         if fpath not in self.cache:

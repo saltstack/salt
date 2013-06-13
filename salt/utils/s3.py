@@ -98,17 +98,17 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-    
+
     A service_url may also be specified in the configuration::
-    
+
         s3.service_url: s3.amazonaws.com
-    
+
     If a service_url is not specified, the default is s3.amazonaws.com. This
     may appear in various documentation as an "endpoint". A comprehensive list
     for Amazon S3 may be found at::
-    
+
         http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-    
+
     The service_url will form the basis for the final endpoint that is used to
     query the service.
     '''
@@ -291,5 +291,3 @@ def query(key, keyid, method='GET', params=None, headers=None,
             ret['headers'].append(header.strip())
 
     return ret
-
-
