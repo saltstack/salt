@@ -42,4 +42,3 @@ class TimedProc(object):
         else:
             receive()
         return self.process.returncode
-

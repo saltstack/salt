@@ -215,7 +215,7 @@ def find_file(path, short='base', **kwargs):
             continue
         tree = ref.commit.tree
         try:
-            blob = tree/path
+            blob = tree / path
         except KeyError:
             continue
         _wait_lock(lk_fn, dest)
