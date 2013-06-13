@@ -248,7 +248,6 @@ def _run(cmd,
             msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
             raise CommandExecutionError(msg)
 
-
     if not quiet:
         # Put the most common case first
         log.info(

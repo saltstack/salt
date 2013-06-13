@@ -77,4 +77,3 @@ def shutdown():
     cmd = 'shutdown'
     ret = __salt__['cmd.run'](cmd)
     return ret
-

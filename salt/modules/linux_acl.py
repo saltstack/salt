@@ -204,4 +204,3 @@ def delfacl(acl_type, acl_name, *args):
         cmd += ' {0}'.format(dentry)
     __salt__['cmd.run'](cmd)
     return True
-

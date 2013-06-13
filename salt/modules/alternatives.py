@@ -115,4 +115,3 @@ def remove(name, path):
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
-

@@ -294,7 +294,7 @@ def node_info():
                                     ["software_version", "machine"]),
                 'cputhreads': _get_val(host_rec,
                                     ["cpu_configuration", "threads_per_core"]),
-                'phymemory': int(host_metrics_rec["memory_total"])/ 1024 / 1024,
+                'phymemory': int(host_metrics_rec["memory_total"]) / 1024 / 1024,
                 'cores_per_sockets': _get_val(host_rec,
                                     ["cpu_configuration", "cores_per_socket"]),
                 'free_cpus': getFreeCpuCount(),

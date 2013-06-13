@@ -103,8 +103,3 @@ def returner(ret):
     # Shut down and close socket
     carbon_sock.shutdown(socket.SHUT_RDWR)
     carbon_sock.close()
-
-
-
-
-

@@ -186,4 +186,3 @@ def set_date(name, date):
     '''
     cmd = 'chage -d {0} {1}'.format(date, name)
     __salt__['cmd.run'](cmd)
-
