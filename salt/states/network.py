@@ -31,6 +31,16 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - dns:
           - 8.8.8.8
           - 8.8.4.4
+      network.routes:
+        - secure_network:
+          ipaddr: 10.2.0.0
+          netmask: 255.255.255.0
+          gateway: 10.2.0.1
+        - HQ_network:
+          ipaddr: 10.100.0.0
+          netmask: 255.255.0.0
+          gateway: 10.100.0.10
+          
     eth2:
       network.managed:
         - type: slave
@@ -165,7 +175,7 @@ def managed(name, type, enabled=True, **kwargs):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'Interface {0} is up to date.'.format(name)
+        'comment': 'Interface {0} is up to date.'.format(name),
     }
     kwargs['test'] = __opts__['test']
 
@@ -244,6 +254,67 @@ def managed(name, type, enabled=True, **kwargs):
     return ret
 
 
+def routes(name, **kwargs):
+    '''
+    Manage network interface static routes.
+    
+    name
+        Interface name to apply the route to.
+        
+    kwargs
+        Named routes
+        
+    '''
+    
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'Interface {0} routes are up to date.'.format(name),
+    }
+    apply_routes = False
+    kwargs['test'] = __opts__['test']
+    # Build interface routes
+    try:
+        old = __salt__['ip.get_routes'](name)
+        new = __salt__['ip.build_routes'](name, **kwargs)
+        if __opts__['test']:
+            if old == new:
+                return ret
+            if not old and new:
+                ret['result'] = None
+                ret['comment'] = 'Interface {0} routes are set to be added.'.format(name)
+                return ret
+            elif old != new:
+                diff = difflib.unified_diff(old, new)
+                ret['result'] = None
+                ret['comment'] = 'Interface {0} routes are set to be updated.'.format(name)
+                ret['changes']['network_routes'] = ''.join(diff)
+                return ret
+        if not old and new:
+            apply_routes = True
+            ret['changes']['network_routes'] = 'Added interface {0} routes.'.format(name)
+        elif old != new:
+            diff = difflib.unified_diff(old, new)
+            apply_routes = True
+            ret['changes']['network_routes'] = ''.join(diff)
+    except AttributeError as error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
+
+    # Apply interface routes
+    if apply_net_settings:
+        try:
+            __salt__['ip.apply_network_settings'](**kwargs)
+        except AttributeError as error:
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
+
+    return ret
+                
+                
 def system(name, **kwargs):
     '''
     Ensure that global network settings are configured properly.
@@ -260,7 +331,7 @@ def system(name, **kwargs):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'Global network settings are up to date.'
+        'comment': 'Global network settings are up to date.',
     }
     apply_net_settings = False
     kwargs['test'] = __opts__['test']
