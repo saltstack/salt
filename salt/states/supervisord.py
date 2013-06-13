@@ -72,7 +72,6 @@ def running(name,
                 name, _msg, _update))
         return
 
-
     changes = []
     if needs_update:
         comment = 'Adding service: {0}'.format(name)

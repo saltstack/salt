@@ -45,7 +45,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
         if scheme == 'salt':
             return uri
         elif scheme:
-            raise ValueError("Unsupported URL scheme(%s) in %s" % \
+            raise ValueError("Unsupported URL scheme(%s) in %s" %
                              (scheme, uri))
         else:
             return self.lookup.adjust_uri(uri, filename)
@@ -53,7 +53,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def get_template(self, uri):
         prefix = "salt://"
-        salt_uri = uri if uri.startswith(prefix) else prefix+uri
+        salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
         self.cache_file(salt_uri)
         return self.lookup.get_template(salt_uri[len(prefix):])
 

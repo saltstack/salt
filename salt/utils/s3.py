@@ -84,7 +84,7 @@ def get_iam_metadata(version='latest', url='http://169.254.169.254',
     else:
         credentials['access_key'] = meta['AccessKeyId']
         credentials['secret_key'] = _convert_key_to_str(meta['SecretAccessKey'])
-        credentials['expires_at'] =  meta['Expiration']
+        credentials['expires_at'] = meta['Expiration']
         credentials['security_token'] = meta['Token']
 
     return credentials
