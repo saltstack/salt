@@ -1491,7 +1491,7 @@ class Matcher(object):
             return False
         elif num_parts == 2:
             # Target is CIDR
-            return salt.utils.socket_util.in_subnet(
+            return salt.utils.network.in_subnet(
                 tgt,
                 addrs=self.opts['grains'].get('ipv4', [])
             )

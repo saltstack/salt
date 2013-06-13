@@ -27,7 +27,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 # Import salt libs
 import salt.log
 import salt.utils
-import salt.utils.socket_util
+import salt.utils.network
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -860,7 +860,7 @@ def ip4():
     '''
     Return a list of ipv4 addrs
     '''
-    return {'ipv4': salt.utils.socket_util.ip_addrs(include_loopback=True)}
+    return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
 
 
 def ip_interfaces():
@@ -870,7 +870,7 @@ def ip_interfaces():
     # Provides:
     #   ip_interfaces
     ret = {}
-    ifaces = salt.utils.socket_util.interfaces()
+    ifaces = salt.utils.network.interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):

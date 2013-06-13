@@ -7,7 +7,6 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.utils.socket_util import sanitize_host
 
 try:
     import salt.utils.winapi
@@ -39,7 +38,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -n 4 {0}'.format(sanitize_host(host))
+    cmd = 'ping -n 4 {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -80,7 +79,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'tracert {0}'.format(sanitize_host(host))
+    cmd = 'tracert {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if not ' ' in line:
@@ -132,7 +131,7 @@ def nslookup(host):
         salt '*' network.nslookup archlinux.org
     '''
     ret = []
-    cmd = 'nslookup {0}'.format(sanitize_host(host))
+    cmd = 'nslookup {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if line.startswith('Non-authoritative'):
@@ -153,7 +152,7 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig {0}'.format(sanitize_host(host))
+    cmd = 'dig {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -165,7 +164,7 @@ def interfaces():
 
         salt '*' network.interfaces
     '''
-    return salt.utils.socket_util.interfaces()
+    return salt.utils.network.interfaces()
 
 
 def hwaddr(iface):
@@ -176,7 +175,7 @@ def hwaddr(iface):
 
         salt '*' network.hwaddr eth0
     '''
-    return salt.utils.socket_util.hwaddr(iface)
+    return salt.utils.network.hwaddr(iface)
 
 
 def subnets():
@@ -187,7 +186,7 @@ def subnets():
 
         salt '*' network.subnets
     '''
-    return salt.utils.socket_util.subnets()
+    return salt.utils.network.subnets()
 
 
 def in_subnet(cidr):
@@ -198,7 +197,7 @@ def in_subnet(cidr):
 
         salt '*' network.in_subnet 10.0.0.0/16
     '''
-    return salt.utils.socket_util.in_subnet(cidr)
+    return salt.utils.network.in_subnet(cidr)
 
 
 def ip_addrs(interface=None, include_loopback=False):
@@ -211,8 +210,8 @@ def ip_addrs(interface=None, include_loopback=False):
 
         salt '*' network.ip_addrs
     '''
-    return salt.utils.socket_util.ip_addrs(interface=interface,
-                                           include_loopback=include_loopback)
+    return salt.utils.network.ip_addrs(interface=interface,
+                                       include_loopback=include_loopback)
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -225,5 +224,5 @@ def ip_addrs6(interface=None, include_loopback=False):
 
         salt '*' network.ip_addrs6
     '''
-    return salt.utils.socket_util.ip_addrs6(interface=interface,
-                                            include_loopback=include_loopback)
+    return salt.utils.network.ip_addrs6(interface=interface,
+                                        include_loopback=include_loopback)
