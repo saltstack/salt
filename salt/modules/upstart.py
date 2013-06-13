@@ -44,6 +44,7 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+
 def __virtual__():
     '''
     Only work on Ubuntu
@@ -98,7 +99,7 @@ def _default_runlevel():
     # Kinky.
     try:
         valid_strings = set(
-                ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
+            ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
         with salt.utils.fopen('/proc/cmdline') as fp_:
             for line in fp_:
                 for arg in line.strip().split():
@@ -115,12 +116,16 @@ def _runlevel():
     '''
     Return the current runlevel
     '''
+    if 'upstart._runlevel' in __context__:
+        return __context__['upstart._runlevel']
     out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp()))
     try:
-        return out.split()[1]
+        ret = out.split()[1]
     except IndexError:
         # The runlevel is unknown, return the default
-        return _default_runlevel()
+        ret = _default_runlevel()
+    __context__['upstart._runlevel'] = ret
+    return ret
 
 
 def _is_symlink(name):
