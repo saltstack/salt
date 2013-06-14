@@ -40,18 +40,18 @@ import os
 from salt.utils import mkstemp, fopen
 
 
-def _check_cron(cmd, user, minute, hour, dom, month, dow):
+def _check_cron(user, cmd, minute, hour, daymonth, month, dayweek):
     '''
     Return the changes
     '''
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if str(minute) != cron['min'] or \
+            if str(minute) != cron['minute'] or \
                     str(hour) != cron['hour'] or \
-                    str(dom) != cron['daymonth'] or \
+                    str(daymonth) != cron['daymonth'] or \
                     str(month) != cron['month'] or \
-                    str(dow) != cron['dayweek']:
+                    str(dayweek) != cron['dayweek']:
                 return 'update'
             return 'present'
     return 'absent'
@@ -83,8 +83,7 @@ def present(name,
             hour='*',
             daymonth='*',
             month='*',
-            dayweek='*',
-            ):
+            dayweek='*'):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -122,8 +121,8 @@ def present(name,
            'name': name,
            'result': True}
     if __opts__['test']:
-        status = _check_cron(name,
-                             user,
+        status = _check_cron(user,
+                             name,
                              minute,
                              hour,
                              daymonth,
@@ -139,14 +138,13 @@ def present(name,
             ret['comment'] = 'Cron {0} is set to be updated'.format(name)
         return ret
 
-    data = __salt__['cron.set_job'](dom=daymonth,
-                                    dow=dayweek,
-                                    hour=hour,
+    data = __salt__['cron.set_job'](user=user,
                                     minute=minute,
+                                    hour=hour,
+                                    daymonth=daymonth,
                                     month=month,
-                                    cmd=name,
-                                    user=user
-                                    )
+                                    dayweek=dayweek,
+                                    cmd=name)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -208,8 +206,8 @@ def absent(name,
            'comment': ''}
 
     if __opts__['test']:
-        status = _check_cron(name,
-                             user,
+        status = _check_cron(user,
+                             name,
                              minute,
                              hour,
                              daymonth,
@@ -224,13 +222,12 @@ def absent(name,
         return ret
 
     data = __salt__['cron.rm_job'](user,
+                                   name,
                                    minute,
                                    hour,
                                    daymonth,
                                    month,
-                                   dayweek,
-                                   name,
-                                   )
+                                   dayweek)
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret
