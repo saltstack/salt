@@ -323,15 +323,23 @@ Change to salt documention directory, then::
 
     cd doc; make html
 
-- The docs then are built in the ``docs/_build/html/`` folder. If you make
-  changes and want to see the results, ``make html`` again.
+- This will build the HTML docs. Run ``make`` without any arguments to see the
+  available make targets, which include :strong:`html`, :strong:`man`, and
+  :strong:`text`.
+- The docs then are built within the :strong:`docs/_build/` folder. If you make
+  changes and want to see the results, run the ``make`` again.
 - The docs use `reStructuredText <http://sphinx-doc.org/rest.html>`_ for markup.
   See a live demo at http://rst.ninjs.org/.
 - The help information on each module or state is culled from the python code
   that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``.
-- If you are developing using Arch Linux (or any other distribution for which
-  Python 3 is the default Python installation), then ``sphinx-build`` may be
-  named ``sphinx-build2`` instead. If this is the case, then you will need to
-  run the following ``make`` command::
+
+- To build the docs on Arch Linux, you will need to install the
+  :strong:`python2-sphinx` package, and tell :strong:`make` where to find the
+  proper :strong:`sphinx-build` binary, like so::
 
     make SPHINXBUILD=sphinx-build2 html
+
+- To build the docs on RHEL/CentOS 6, you will need to install the
+  :strong:`python-sphinx10` package from EPEL, and use the following make command::
+
+    make SPHINXBUILD=sphinx-1.0-build html

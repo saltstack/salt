@@ -30,6 +30,15 @@ Match all minions with 64-bit CPUs and return number of available cores::
 
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
+You can also use globbing, as well as match grains that are nested in a
+dictionary, by adding a colon for each level you are traversing. For example,
+the following will match hosts that have a grain called ``ec2_tags``, which
+itself is a dict with a key named ``environment``, which has a value that
+contains the word ``production``::
+
+    salt -G 'ec2_tags:environment:*production*'
+
+
 Listing Grains
 ==============
 
