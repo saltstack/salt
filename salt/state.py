@@ -13,6 +13,7 @@ The data sent to the state calls is as follows:
 
 # Import python libs
 import os
+import sys
 import copy
 import inspect
 import fnmatch
@@ -483,6 +484,7 @@ class State(object):
         self.load_modules()
         self.active = set()
         self.mod_init = set()
+        self.pre = {}
         self.__run_num = 0
 
     def __gather_pillar(self):
@@ -1030,7 +1032,7 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set(['require_in', 'watch_in', 'use', 'use_in'])
+        req_in = set(['require_in', 'watch_in', 'use', 'use_in', 'prereq'])
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
@@ -1090,6 +1092,19 @@ class State(object):
                                     continue
                                 _state = next(iter(ind))
                                 name = ind[_state]
+                                if key == 'prereq':
+                                    # Add prerequired to prereqs
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    if ext_id not in extend:
+                                        extend[ext_id] = {}
+                                    if _state not in extend[ext_id]:
+                                        extend[ext_id][_state] = []
+                                    extend[ext_id][_state].append(
+                                            {'prerequired': [{state: id_}]}
+                                            )
+                                    continue
                                 if key == 'use_in':
                                     # Add the running states args to the
                                     # use_in states
@@ -1189,14 +1204,18 @@ class State(object):
             self.check_refresh(data, ret)
             return ret
 
-        log.info(
-                'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
-                    data
+        if not data.get('__prereq__'):
+            log.info(
+                    'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
+                        data
+                        )
                     )
-                )
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
+        if data.get('__prereq__'):
+            test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
+            sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
         try:
             if 'kwargs' in cdata:
                 ret = self.states[cdata['full']](
@@ -1213,11 +1232,17 @@ class State(object):
                 'comment': 'An exception occurred in this state: {0}'.format(
                     trb)
                 }
+        finally:
+            if data.get('__prereq__'):
+                sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = test
+        if 'provider' in data:
+            self.load_modules()
+        if data.get('__prereq__'):
+            data['__prereq__'] = False
+            return ret
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
-        if 'provider' in data:
-            self.load_modules()
         self.check_refresh(data, ret)
         return ret
 
@@ -1248,12 +1273,13 @@ class State(object):
             return not running[tag]['result']
         return False
 
-    def check_requisite(self, low, running, chunks):
+    def check_requisite(self, low, running, chunks, pre=False):
         '''
         Look into the running data to check the status of all requisite
         states
         '''
         present = False
+        # If mod_watch is not available make it a require
         if 'watch' in low:
             if '{0}.mod_watch'.format(low['state']) not in self.states:
                 if 'require' in low:
@@ -1264,9 +1290,15 @@ class State(object):
                 present = True
         if 'require' in low:
             present = True
+        if 'prerequired' in low:
+            present = True
+        if 'prereq' in low:
+            present = True
         if not present:
             return 'met'
-        reqs = {'require': [], 'watch': []}
+        reqs = {'require': [], 'watch': [], 'prereq': []}
+        if pre:
+            reqs['prerequired'] = []
         for r_state in reqs:
             if r_state in low:
                 for req in low[r_state]:
@@ -1289,17 +1321,23 @@ class State(object):
                         return 'unmet'
         fun_stats = set()
         for r_state, chunks in reqs.items():
+            if r_state == 'prereq':
+                run_dict = self.pre
+            else:
+                run_dict = running
             for chunk in chunks:
                 tag = _gen_tag(chunk)
-                if tag not in running:
+                if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
-                if running[tag]['result'] is False:
+                if run_dict[tag]['result'] is False:
                     fun_stats.add('fail')
                     continue
-                if r_state == 'watch' and running[tag]['changes']:
+                if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
                     continue
+                if r_state == 'prereq' and not run_dict[tag]['result'] is None:
+                    fun_stats.add('pre')
                 else:
                     fun_stats.add('met')
 
@@ -1307,6 +1345,8 @@ class State(object):
             return 'unmet'
         elif 'fail' in fun_stats:
             return 'fail'
+        elif 'pre' in fun_stats:
+            return 'pre'
         elif 'change' in fun_stats:
             return 'change'
         return 'met'
@@ -1318,13 +1358,19 @@ class State(object):
         '''
         self._mod_init(low)
         tag = _gen_tag(low)
-        self.active.add(tag)
-        requisites = ('require', 'watch')
-        status = self.check_requisite(low, running, chunks)
+        if not low.get('prerequired'):
+            self.active.add(tag)
+        requisites = ['require', 'watch', 'prereq']
+        if not low.get('__prereq__'):
+            requisites.append('prerequired')
+            status = self.check_requisite(low, running, chunks, True)
+        else:
+            status = self.check_requisite(low, running, chunks)
         if status == 'unmet':
-            lost = {'require': [], 'watch': []}
+            lost = {}
             reqs = []
             for requisite in requisites:
+                lost[requisite] = []
                 if requisite not in low:
                     continue
                 for req in low[requisite]:
@@ -1336,16 +1382,20 @@ class State(object):
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
+                                if requisite == 'prereq':
+                                    chunk['__prereq__'] = True
                                 reqs.append(chunk)
                                 found = True
                         elif req_key == 'sls':
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(chunk['__sls__'], req_val):
-                                found = True
+                                if requisite == 'prereq':
+                                    chunk['__prereq__'] = True
                                 reqs.append(chunk)
+                                found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch']:
+            if lost['require'] or lost['watch'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     for lreq in lreqs:
@@ -1382,14 +1432,17 @@ class State(object):
                 running['__FAILHARD__'] = True
                 return running
         elif status == 'met':
-            running[tag] = self.call(low)
+            if low.get('__prereq__'):
+                self.pre[tag] = self.call(low)
+            else:
+                running[tag] = self.call(low)
         elif status == 'fail':
             running[tag] = {'changes': {},
                             'result': False,
                             'comment': 'One or more requisite failed',
                             '__run_num__': self.__run_num}
             self.__run_num += 1
-        elif status == 'change':
+        elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low)
             if not ret['changes']:
                 low = low.copy()
@@ -1397,8 +1450,17 @@ class State(object):
                 low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
+        elif status == 'pre':
+            running[tag] = {'changes': {},
+                            'result': True,
+                            'comment': 'No changes detected',
+                            '__run_num__': self.__run_num}
+            self.__run_num += 1
         else:
-            running[tag] = self.call(low)
+            if low.get('__prereq__'):
+                self.pre[tag] = self.call(low)
+            else:
+                running[tag] = self.call(low)
         return running
 
     def call_high(self, high):
