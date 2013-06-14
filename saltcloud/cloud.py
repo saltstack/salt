@@ -48,6 +48,7 @@ class Cloud(object):
     def __init__(self, opts):
         self.opts = opts
         self.clouds = saltcloud.loader.clouds(self.opts)
+        self.__cached_provider_queries = {}
 
     def get_configured_providers(self):
         providers = set()
@@ -100,11 +101,14 @@ class Cloud(object):
             )
         return providers
 
-    def map_providers(self, query='list_nodes'):
+    def map_providers(self, query='list_nodes', cached=False):
         '''
         Return a mapping of what named VMs are running on what VM providers
         based on what providers are defined in the configuration and VMs
         '''
+        if cached is True and query in self.__cached_provider_queries:
+            return self.__cached_provider_queries[query]
+
         pmap = {}
         for alias, drivers in self.opts['providers'].iteritems():
             for driver, details in drivers.iteritems():
@@ -133,15 +137,18 @@ class Cloud(object):
                     # Failed to communicate with the provider, don't list any
                     # nodes
                     pmap[alias][driver] = []
+        self.__cached_provider_queries[query] = pmap
         return pmap
 
-    def map_providers_parallel(self, query='list_nodes'):
+    def map_providers_parallel(self, query='list_nodes', cached=False):
         '''
         Return a mapping of what named VMs are running on what VM providers
         based on what providers are defined in the configuration and VMs
 
         Same as map_providers but query in parallel.
         '''
+        if cached is True and query in self.__cached_provider_queries:
+            return self.__cached_provider_queries[query]
 
         opts = self.opts.copy()
         multiprocessing_data = []
@@ -189,6 +196,7 @@ class Cloud(object):
                 output[alias] = {}
             output[alias][driver] = details
 
+        self.__cached_provider_queries[query] = output
         return output
 
     def location_list(self, lookup='all'):
