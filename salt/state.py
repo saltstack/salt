@@ -238,7 +238,6 @@ class Compiler(object):
                 skeys.add(key)
         return high
 
-
     def verify_high(self, high):
         '''
         Verify that the high data is viable and follows the data structure
@@ -904,6 +903,9 @@ class State(object):
                         for key, val in arg.items():
                             if key == 'names':
                                 names.update(val)
+                            elif key == 'state':
+                                # Don't pass down a state override
+                                continue
                             elif (key == 'name' and
                                   not isinstance(val, string_types)):
                                 # Invalid name, fall back to ID
@@ -1881,7 +1883,6 @@ class BaseHighState(object):
         else:
             state = {}
         return state, errors
-
 
     def _handle_state_decls(self, state, sls, env, errors):
         for name in state:

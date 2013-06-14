@@ -60,10 +60,9 @@ class _Puppet(object):
 
         self.vardir = '/var/lib/puppet'
         self.confdir = '/etc/puppet'
-        if 'Enterprise' in  __salt__['cmd.run']('puppet --version'):
+        if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
             self.vardir = '/var/opt/lib/pe-puppet'
             self.confdir = '/etc/puppetlabs/puppet'
-
 
     def __repr__(self):
         '''

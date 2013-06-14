@@ -80,4 +80,3 @@ def returner(ret):
         server.login(user, passwd)
     server.sendmail(from_addr, to_addrs, message)
     server.quit()
-

@@ -6,7 +6,7 @@ The service module for NetBSD
 import os
 import glob
 
-__func_alias__ = { 
+__func_alias__ = {
     'reload_': 'reload'
 }
 
@@ -177,7 +177,7 @@ def _rcconf_status(name, service_status):
         ret = __salt__['file.append'](rcconf, newstatus)
 
     return ret
-    
+
 
 def enable(name, **kwargs):
     '''

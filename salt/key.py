@@ -46,7 +46,6 @@ class KeyCLI(object):
                 self.opts
             )
 
-
     def list_all(self):
         '''
         Print out all keys

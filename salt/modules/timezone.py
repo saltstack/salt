@@ -37,9 +37,9 @@ def get_zone():
     elif 'Suse' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
-        return open('/etc/timezone','r').read()
+        return open('/etc/timezone', 'r').read()
     elif 'Gentoo' in __grains__['os_family']:
-        return open('/etc/timezone','r').read()
+        return open('/etc/timezone', 'r').read()
     elif 'FreeBSD' in __grains__['os_family']:
         return ('FreeBSD does not store a human-readable timezone. Please'
                 'consider using timezone.get_zonecode or timezone.zonecompare')
@@ -206,11 +206,11 @@ def set_hwclock(clock):
 
     if 'Solaris' in __grains__['os_family']:
         if 'sparc' in __grains__['cpuarch']:
-            return 'UTC is the only choice for SPARC architecture' 
-        if clock == 'localtime': 
+            return 'UTC is the only choice for SPARC architecture'
+        if clock == 'localtime':
             cmd = 'rtc -z {0}'.format(timezone)
             __salt__['cmd.run'](cmd)
-            return True 
+            return True
         elif clock == 'UTC':
             cmd = 'rtc -z GMT'
             __salt__['cmd.run'](cmd)

@@ -107,4 +107,3 @@ def write(data, path, env='base', index=0):
     with salt.utils.fopen(dest, 'w+') as fp_:
         fp_.write(data)
     return 'Wrote data to file {0}'.format(dest)
-

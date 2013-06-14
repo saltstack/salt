@@ -3,6 +3,7 @@ Publish a command from a minion to a target
 '''
 
 # Import python libs
+import time
 import ast
 import logging
 
@@ -50,7 +51,7 @@ def _publish(
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
-    load = {'cmd': 'minion_publish',
+    load = {'cmd': 'minion_pub',
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
@@ -62,10 +63,19 @@ def _publish(
             'id': __opts__['id']}
 
     try:
-        return auth.crypticle.loads(
+        peer_data = auth.crypticle.loads(
             sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
+    if not peer_data:
+        return {}
+    time.sleep(timeout)
+    load = {'cmd': 'pub_ret',
+            'id': __opts__['id'],
+            'tok': tok,
+            'jid': peer_data['jid']}
+    return auth.crypticle.loads(
+            sreq.send('aes', auth.crypticle.dumps(load), 5))
 
 
 def _normalize_arg(arg):

@@ -43,7 +43,7 @@ def status(name=''):
     CLI Example::
 
         salt '*' zpool.status
-    ''' 
+    '''
     zpool = _check_zpool()
     res = __salt__['cmd.run']('{0} status {1}'.format(zpool, name))
     ret = res.splitlines()
@@ -52,12 +52,12 @@ def status(name=''):
 
 def iostat(name=''):
     '''
-    Display I/O statistics for the given pools 
+    Display I/O statistics for the given pools
 
     CLI Example::
 
         salt '*' zpool.iostat
-    ''' 
+    '''
     zpool = _check_zpool()
     res = __salt__['cmd.run']('{0} iostat -v {1}'.format(zpool, name))
     ret = res.splitlines()
@@ -67,10 +67,10 @@ def iostat(name=''):
 def zpool_list():
     '''
     Return a list of all pools in the system with health status and space usage
-    
+
     CLI Example::
 
-        salt '*' zpool.zpool_list 
+        salt '*' zpool.zpool_list
     '''
     zpool = _check_zpool()
     res = __salt__['cmd.run']('{0} list'.format(zpool))
@@ -83,7 +83,7 @@ def exists(pool_name):
     Check if a ZFS storage pool is active
 
     CLI Example::
-    
+
         salt '*' zpool.exists myzpool
     '''
     current_pools = zpool_list()
@@ -230,7 +230,7 @@ def replace(pool_name, old, new):
         ret['Error'] = '{0}: is not on the file system.'.format(new)
         return ret
 
-    # Replace vdevs 
+    # Replace vdevs
     zpool = _check_zpool()
     cmd = '{0} replace {1} {2} {3}'.format(zpool, pool_name, old, new)
     __salt__['cmd.run'](cmd)
@@ -253,7 +253,7 @@ def create_file_vdev(size, *vdevs):
 
     CLI Example::
 
-        salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...] 
+        salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...]
 
         Depending on file size this may take a while to return
     '''

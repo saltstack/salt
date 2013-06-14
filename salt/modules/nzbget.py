@@ -30,7 +30,7 @@ def version():
     cmd = 'nzbget -v'
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
-    return {'version': ret[1] }
+    return {'version': ret[1]}
 
 
 def serverversion():
@@ -152,4 +152,3 @@ def unpause(user=None):
         cmd = cmd + ' -c ~' + user + '/.nzbget'
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-

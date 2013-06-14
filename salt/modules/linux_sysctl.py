@@ -67,10 +67,10 @@ def assign(name, value):
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
-    ret  = {}
-    cmd  = 'sysctl -w {0}="{1}"'.format(name, value)
+    ret = {}
+    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
-    out  = data['stdout']
+    out = data['stdout']
 
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"

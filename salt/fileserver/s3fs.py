@@ -61,7 +61,7 @@ _s3_sync_on_update = True  # sync cache on update rather than jit
 
 def envs():
     '''
-    Return a list of directories within the bucket that can be 
+    Return a list of directories within the bucket that can be
     used as environments.
     '''
 
@@ -144,7 +144,7 @@ def file_hash(load, fnd):
             fnd['bucket'],
             load['env'],
             fnd['path'])
-    
+
     if os.path.isfile(cached_file_path):
         ret['hsum'] = salt.utils.get_hash(cached_file_path)
         ret['hash_type'] = 'md5'
@@ -232,7 +232,7 @@ def dir_list(load):
         return ret
 
     # grab all the dirs from the buckets cache file
-    for dirs in _find_files(metadata[env], dirs_only = True).values():
+    for dirs in _find_files(metadata[env], dirs_only=True).values():
         # trim env and trailing slash
         dirs = _trim_env_off_path(dirs, env, trim_slash=True)
         # remove empty string left by the base env dir in single bucket mode
@@ -259,7 +259,7 @@ def _init():
     cache_file = _get_buckets_cache_filename()
     exp = time.time() - _s3_cache_expire
 
-    # check mtime of the buckets files cache 
+    # check mtime of the buckets files cache
     if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
         return _read_buckets_cache_file(cache_file)
     else:
@@ -313,10 +313,10 @@ def _refresh_buckets_cache_file(cache_file):
     # helper s3 query fuction
     def __get_s3_meta(bucket, key=key, keyid=keyid):
         return s3.query(
-                key = key,
-                keyid = keyid,
-                bucket = bucket,
-                return_bin = False)
+                key=key,
+                keyid=keyid,
+                bucket=bucket,
+                return_bin=False)
 
     if _is_env_per_bucket():
         # Single environment per bucket
@@ -384,7 +384,7 @@ def _read_buckets_cache_file(cache_file):
 
     return data
 
-def _find_files(metadata, dirs_only = False):
+def _find_files(metadata, dirs_only=False):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
@@ -409,7 +409,7 @@ def _find_file_meta(metadata, bucket_name, env, path):
 
     env_meta = metadata[env] if env in metadata else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
-    files_meta = filter(lambda k: k.has_key('Key'), bucket_meta)
+    files_meta = filter((lambda k: 'Key' in k), bucket_meta)
 
     for item_meta in files_meta:
         if 'Key' in item_meta and item_meta['Key'] == path:
@@ -444,11 +444,11 @@ def _get_file_from_s3(metadata, env, bucket_name, path, cached_file_path):
     # ... or get the file from S3
     key, keyid = _get_s3_key()
     s3.query(
-            key = key,
-            keyid = keyid,
-            bucket = bucket_name,
-            path = urllib.quote(path),
-            local_file = cached_file_path)
+            key=key,
+            keyid=keyid,
+            bucket=bucket_name,
+            path=urllib.quote(path),
+            local_file=cached_file_path)
 
 def _trim_env_off_path(paths, env, trim_slash=False):
     '''

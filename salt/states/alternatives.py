@@ -62,16 +62,13 @@ def install(name, link, path, priority):
         ret['comment'] = (
             'Setting alternative for {0} to {1} with priority {2}'
         ).format(name, path, priority)
-        ret['changes'] =  {'name': name,
+        ret['changes'] = {'name': name,
                           'link': link,
                           'path': path,
                           'priority': priority}
-
         return ret
 
-
     ret['comment'] = 'Alternatives for {0} is already set to {1}'.format(name, path)
-
     return ret
 
 
@@ -103,7 +100,7 @@ def remove(name, path):
             ret['comment'] = (
                 'Alternative for {0} removed. Falling back to path {1}'
             ).format(name, current)
-            ret['changes'] =  {'path': current}
+            ret['changes'] = {'path': current}
             return ret
 
         ret['comment'] = 'Alternative for {0} removed'.format(name)
@@ -118,11 +115,9 @@ def remove(name, path):
         ).format(name, current)
         return ret
 
-
     ret['result'] = False
     ret['comment'] = (
-	'Alternative for {0} doesn\'t exist'
+        'Alternative for {0} doesn\'t exist'
     ).format(name)
 
     return ret
-

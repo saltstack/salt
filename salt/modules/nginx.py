@@ -39,7 +39,7 @@ def configtest():
     test configuration and exit
 
     CLI Example::
-       
+
         salt '*' nginx.configtest
     '''
 
@@ -48,7 +48,6 @@ def configtest():
     ret = out[0].split(': ')
     return ret[-1]
 
-    
 
 def signal(signal=None):
     '''

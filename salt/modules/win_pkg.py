@@ -74,19 +74,20 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
             if name in pkgs:
                 version_num = pkgs[name]
-            if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                    str(version_num)) > 0:
+            if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
+                                       pkg2=str(version_num)):
                 ret[name] = candidate
             continue
         for ver in pkginfo.keys():
-            if __salt__['pkg_resource.perform_cmp'](str(ver), str(candidate)) > 0:
+            if __salt__['pkg.compare'](pkg1=str(ver), oper='>',
+                                       pkg2=str(candidate)):
                 candidate = ver
         name = pkginfo[candidate]['full_name']
         ret[name] = ''
         if name in pkgs:
             version_num = pkgs[name]
-        if __salt__['pkg_resource.perform_cmp'](str(candidate),
-                                                str(version_num)) > 0:
+        if __salt__['pkg.compare'](pkg1=str(candidate), oper='>',
+                                   pkg2=str(version_num)):
             ret[name] = candidate
     return ret
 
@@ -191,7 +192,7 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(versions_as_list=False):
+def list_pkgs(versions_as_list=False, **kwargs):
     '''
         List the packages currently installed in a dict::
 
@@ -203,6 +204,9 @@ def list_pkgs(versions_as_list=False):
             salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
+    # 'removed' not yet implemented or not applicable
+    if salt.utils.is_true(kwargs.get('removed')):
+        return {}
 
     if 'pkg.list_pkgs' in __context__:
         if versions_as_list:
@@ -295,6 +299,7 @@ def _get_reg_software():
                    'WIC'
                    ]
     encoding = locale.getpreferredencoding()
+
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
     reg_entries = dict(list(_get_user_keys().items()) +
@@ -319,8 +324,10 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     "DisplayName")
-                try: prd_name=prd_name.decode(encoding)
-                except: pass
+                try:
+                    prd_name = prd_name.decode(encoding)
+                except Exception:
+                    pass
                 prd_ver = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,

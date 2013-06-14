@@ -33,7 +33,7 @@ def connect(image):
     Activate nbd for an image file.
 
     CLI Example::
-        
+
         salt '*' qemu_nbd.connect /tmp/image.raw
     '''
     if not os.path.isfile(image):
@@ -115,5 +115,3 @@ def clear(mnt):
     for nbd in nbds:
         __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
     return ret
-
-

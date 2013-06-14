@@ -1,12 +1,12 @@
 '''
-Monit service module. This module will create a monit type 
+Monit service module. This module will create a monit type
 service watcher.
 '''
 
 
 def start(name):
     '''
-   
+
     CLI Example::
 
         salt '*' monit.start <service name>
@@ -25,7 +25,6 @@ def stop(name):
         salt '*' monit.stop <service name>
     '''
     cmd = "monit stop {0}".format(name)
-
 
     return not __salt__['cmd.retcode'](cmd)
 

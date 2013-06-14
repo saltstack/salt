@@ -56,6 +56,10 @@ def wrap_tmpl_func(render_str):
             tmplsrc.close()
         try:
             output = render_str(tmplstr, context, tmplpath)
+            if salt.utils.is_windows():
+                # Write out with Windows newlines
+                output = os.linesep.join(output.splitlines())
+
         except SaltTemplateRenderError as exc:
             return dict(result=False, data=str(exc))
         except Exception:

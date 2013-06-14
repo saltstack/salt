@@ -153,7 +153,7 @@ def _clone_repo(ret, target, name, runas, rev):
 
     if not os.path.isdir(target):
         return _fail(ret, result)
-    
+
     if rev:
         __salt__['hg.update'](target, rev, user=runas)
 

@@ -466,7 +466,7 @@ def get_disks(vm_):
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
-                disks[target.getAttribute('dev')] = {\
+                disks[target.getAttribute('dev')] = {
                     'file': qemu_target}
     for dev in disks:
         try:
@@ -1023,7 +1023,7 @@ def vm_cputime(vm_=None):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
                 'cputime': int(raw[4]),
-                'cputime_percent': int('%.0f' %cputime_percent)
+                'cputime_percent': int('%.0f' % cputime_percent)
                }
     info = {}
     if vm_:
@@ -1063,14 +1063,14 @@ def vm_netstats(vm_=None):
         dom = _get_dom(vm_)
         nics = get_nics(vm_)
         ret = {
-                'rx_bytes'   : 0,
-                'rx_packets' : 0,
-                'rx_errs'    : 0,
-                'rx_drop'    : 0,
-                'tx_bytes'   : 0,
-                'tx_packets' : 0,
-                'tx_errs'    : 0,
-                'tx_drop'    : 0
+                'rx_bytes'  : 0,
+                'rx_packets': 0,
+                'rx_errs'   : 0,
+                'rx_drop'   : 0,
+                'tx_bytes'  : 0,
+                'tx_packets': 0,
+                'tx_errs'   : 0,
+                'tx_drop'   : 0
                }
         for attrs in nics.values():
             if 'target' in attrs:
@@ -1132,11 +1132,11 @@ def vm_diskstats(vm_=None):
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
         ret = {
-                'rd_req'   : 0,
-                'rd_bytes' : 0,
-                'wr_req'   : 0,
-                'wr_bytes' : 0,
-                'errs'     : 0
+                'rd_req'  : 0,
+                'rd_bytes': 0,
+                'wr_req'  : 0,
+                'wr_bytes': 0,
+                'errs'    : 0
                }
         for disk in disks:
             stats = dom.blockStats(disk)

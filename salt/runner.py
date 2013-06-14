@@ -30,8 +30,7 @@ class RunnerClient(object):
         Return a dictionary of functions and the inline documentation for each
         '''
         ret = [(fun, self.functions[fun].__doc__)
-                for fun in sorted(self.functions)
-                if fun.startswith(self.opts['fun'])]
+                for fun in sorted(self.functions)]
 
         return dict(ret)
 
@@ -42,7 +41,7 @@ class RunnerClient(object):
         if not isinstance(kwarg, dict):
             kwarg = {}
         self._verify_fun(fun)
-        args, kwargs = salt.minion.detect_kwargs(
+        args, kwargs = salt.minion.parse_args_and_kwargs(
                 self.functions[fun],
                 arg,
                 kwarg)

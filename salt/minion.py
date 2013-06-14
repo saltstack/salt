@@ -113,33 +113,31 @@ def get_proc_dir(cachedir):
     return fn_
 
 
-def detect_kwargs(func, args, data=None):
+def parse_args_and_kwargs(func, args, data=None):
     '''
-    Detect the args and kwargs that need to be passed to a function call
+    Detect the args and kwargs that need to be passed to a function call,
+    and yamlify all arguments and key-word argument values if:
+    - they are strings
+    - they do not contain '\n'
+    If yamlify results in a dict, and the original argument or kwarg value
+    did not start with a "{", then keep the original string value.
+    This is to prevent things like 'echo "Hello: world"' to be parsed as
+    dictionaries.
     '''
-    spec_args, _, has_kwargs, defaults = salt.state._getargs(func)
-    defaults = [] if defaults is None else defaults
-    starti = len(spec_args) - len(defaults)
-    kwarg_spec = set()
-    for ind in range(len(defaults)):
-        kwarg_spec.add(spec_args[starti])
-        starti += 1
+    spec_args, _, has_kwargs, _ = salt.state._getargs(func)
     _args = []
     kwargs = {}
     for arg in args:
         if isinstance(arg, string_types):
-            if '=' in arg:
-                comps = arg.split('=')
-                if ' ' in comps[0]:
-                    # Invalid kwarg
-                    pass
-                elif has_kwargs:
-                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
+            arg_name, arg_value = salt.utils.parse_kwarg(arg)
+            if arg_name:
+                if has_kwargs or arg_name in spec_args:
+                    kwargs[arg_name] = yamlify_arg(arg_value)
                     continue
-                elif comps[0] in kwarg_spec:
-                    kwargs[comps[0]] = yamlify_arg('='.join(comps[1:]))
-                    continue
-        _args.append(arg)
+            else:
+                # Not a kwarg
+                pass
+        _args.append(yamlify_arg(arg))
     if has_kwargs and isinstance(data, dict):
         # this function accepts kwargs, pack in the publish data
         for key, val in data.items():
@@ -149,14 +147,28 @@ def detect_kwargs(func, args, data=None):
 
 def yamlify_arg(arg):
     '''
-    yaml.safe_load the arg unless it has a newline in it
+    yaml.safe_load the arg unless it has a newline in it.
     '''
     try:
-        if '\n' not in arg:
-            return yaml.safe_load(arg)
+        original_arg = arg
+        if isinstance(arg, string_types):
+            if '\n' not in arg:
+                arg = yaml.safe_load(arg)
+        if isinstance(arg, dict):
+            # dicts must be wrapped in curly braces
+            if (isinstance(original_arg, string_types) and
+                not original_arg.startswith("{")):
+                return original_arg
+            else:
+                return arg
+        elif isinstance(arg, (int, list, string_types)):
+            return arg
+        else:
+            # we don't support this type
+            return str(original_arg)
     except Exception:
-        pass
-    return arg
+        # In case anything goes wrong...
+        return str(original_arg)
 
 
 class SMinion(object):
@@ -292,8 +304,8 @@ class MultiMinion(object):
                 ret[minion['master']] = minion
             else:
                 ret[minion.opts['master']] = {
-                        'minion': minion,
-                        'generator': minion.tune_in_no_block()}
+                    'minion': minion,
+                    'generator': minion.tune_in_no_block()}
         return ret
 
     # Multi Master Tune In
@@ -419,7 +431,7 @@ class MultiMinion(object):
                 if pillar_refresh:
                     minion['minion'].pillar_refresh()
                 minion['generator'].next()
-        
+
 
 class Minion(object):
     '''
@@ -604,31 +616,17 @@ class Minion(object):
             with salt.utils.fopen(fn_, 'w+') as fp_:
                 fp_.write(minion_instance.serial.dumps(sdata))
         ret = {}
-        for ind in range(0, len(data['arg'])):
-            try:
-                arg = data['arg'][ind]
-                if '\n' not in arg:
-                    arg = yaml.safe_load(arg)
-                if isinstance(arg, bool):
-                    data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, string_types)):
-                    data['arg'][ind] = arg
-                else:
-                    data['arg'][ind] = str(data['arg'][ind])
-            except Exception:
-                pass
-
         function_name = data['fun']
         if function_name in minion_instance.functions:
             ret['success'] = False
             try:
                 func = minion_instance.functions[data['fun']]
-                args, kwargs = detect_kwargs(func, data['arg'], data)
+                args, kwargs = parse_args_and_kwargs(func, data['arg'], data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 ret['return'] = func(*args, **kwargs)
                 ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                        'retcode',
-                        0
+                    'retcode',
+                    0
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
@@ -657,8 +655,8 @@ class Minion(object):
                 )
                 log.warning(msg)
                 log.debug(
-                        'TypeError intercepted: {0}\n{1}'.format(exc, trb),
-                        exc_info=True
+                    'TypeError intercepted: {0}\n{1}'.format(exc, trb),
+                    exc_info=True
                 )
                 ret['return'] = msg
             except Exception:
@@ -702,24 +700,10 @@ class Minion(object):
             'success': {},
         }
         for ind in range(0, len(data['fun'])):
-            for index in range(0, len(data['arg'][ind])):
-                try:
-                    arg = data['arg'][ind][index]
-                    if '\n' not in arg:
-                        arg = yaml.safe_load(arg)
-                    if isinstance(arg, bool):
-                        data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, string_types)):
-                        data['arg'][ind][index] = arg
-                    else:
-                        data['arg'][ind][index] = str(data['arg'][ind][index])
-                except Exception:
-                    pass
-
             ret['success'][data['fun'][ind]] = False
             try:
                 func = minion_instance.functions[data['fun'][ind]]
-                args, kwargs = detect_kwargs(func, data['arg'][ind], data)
+                args, kwargs = parse_args_and_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kwargs)
                 ret['success'][data['fun'][ind]] = True
             except Exception as exc:
@@ -1283,9 +1267,9 @@ class Syndic(Minion):
                             jids[event['tag']]['__fun__'] = event['data'].get('fun')
                             jids[event['tag']]['__jid__'] = event['data']['jid']
                             jids[event['tag']]['__load__'] = salt.utils.jid_load(
-                                    event['data']['jid'],
-                                    self.local.opts['cachedir'],
-                                    self.opts['hash_type'])
+                                event['data']['jid'],
+                                self.local.opts['cachedir'],
+                                self.opts['hash_type'])
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                     else:
                         # Add generic event aggregation here
@@ -1487,10 +1471,16 @@ class Matcher(object):
         '''
         num_parts = len(tgt.split('/'))
         if num_parts > 2:
+            # Target is not valid CIDR
             return False
         elif num_parts == 2:
-            return self.functions['network.in_subnet'](tgt)
+            # Target is CIDR
+            return salt.utils.network.in_subnet(
+                tgt,
+                addrs=self.opts['grains'].get('ipv4', [])
+            )
         else:
+            # Target is an IPv4 address
             import socket
             try:
                 socket.inet_aton(tgt)
@@ -1498,7 +1488,7 @@ class Matcher(object):
                 # Not a valid IPv4 address
                 return False
             else:
-                return tgt in self.functions['network.ip_addrs']()
+                return tgt in self.opts['grains'].get('ipv4', [])
 
     def range_match(self, tgt):
         '''
@@ -1561,11 +1551,16 @@ class Matcher(object):
                         else:
                             results.append('and')
                     results.append(match)
+                else:
+                    # seq start with oper, fail
+                    if match not in ['(', ')']:
+                        return False
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
+        results = ' '.join(results)
         try:
-            return eval(' '.join(results))
+            return eval(results)
         except Exception:
             log.error('Invalid compound target: {0}'.format(tgt))
             return False

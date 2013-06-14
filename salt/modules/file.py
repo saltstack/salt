@@ -63,15 +63,6 @@ def _error(ret, err_msg):
     return ret
 
 
-def _is_bin(path):
-    '''
-    Return True if a file is a bin, just checks for NULL char, this should be
-    expanded to reflect how git checks for bins
-    '''
-    with salt.utils.fopen(path, 'rb') as ifile:
-        return '\0' in ifile.read(2048)
-
-
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
@@ -918,6 +909,21 @@ def touch(name, atime=None, mtime=None):
 
     return os.path.exists(name)
 
+def symlink(src, link):
+    '''
+    Create a symbolic link to a file
+    CLI Example::
+        salt '*' file.symlink /path/to/file /path/to/link
+    '''
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        os.symlink(src, link)
+        return True
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create "{0}"'.format(link))
+    return False
 
 def stats(path, hash_type='md5', follow_symlink=False):
     '''
@@ -1513,7 +1519,8 @@ def manage_file(name,
                     return ret
 
             # Check to see if the files are bins
-            if _is_bin(sfn) or _is_bin(name):
+            if not salt.utils.istextfile(sfn) \
+                    or not salt.utils.istextfile(name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 with contextlib.nested(

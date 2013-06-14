@@ -21,7 +21,7 @@ def __virtual__():
 
 def parse_hosts(hostsfile='/etc/hosts', hosts=None):
     '''
-    Parse /etc/hosts file. 
+    Parse /etc/hosts file.
 
     CLI Example::
 

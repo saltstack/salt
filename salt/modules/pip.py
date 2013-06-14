@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 logger = logging.getLogger(__name__)  # pylint: disable-msg=C0103
 
-# Don't shadow built-in's. 
+# Don't shadow built-in's.
 __func_alias__ = {
     'list_': 'list'
 }
@@ -39,7 +39,10 @@ def _get_pip_bin(bin_env):
 
     # try to get pip bin from env
     if os.path.isdir(bin_env):
-        pip_bin = os.path.join(bin_env, 'bin', 'pip')
+        if salt.utils.is_windows():
+            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
+        else:
+            pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
             return pip_bin
         raise CommandNotFoundError('Could not find a `pip` binary')
@@ -72,7 +75,10 @@ def _get_env_activate(bin_env):
         raise CommandNotFoundError('Could not find a `activate` binary')
 
     if os.path.isdir(bin_env):
-        activate_bin = os.path.join(bin_env, 'bin', 'activate')
+        if salt.utils.is_windows():
+            pip_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
+        else:
+            activate_bin = os.path.join(bin_env, 'bin', 'activate')
         if os.path.isfile(activate_bin):
             return activate_bin
     raise CommandNotFoundError('Could not find a `activate` binary')
@@ -189,7 +195,7 @@ def install(pkgs=None,
     cwd
         Current working directory to run pip from
     activate
-        Activates the virtual environment, if given via bin_env, 
+        Activates the virtual environment, if given via bin_env,
         before running install.
 
 
@@ -220,7 +226,11 @@ def install(pkgs=None,
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
 
     if activate and bin_env:
-        cmd = '. {0} && {1}'.format(_get_env_activate(bin_env), cmd)
+        if salt.utils.is_windows():
+            source_cmd = ''
+        else:
+            source_cmd = '. '
+        cmd = '{0}{1} && {2}'.format(source_cmd, _get_env_activate(bin_env), cmd)
 
     if pkgs:
         pkg = pkgs.replace(',', ' ')
@@ -512,15 +522,7 @@ def freeze(bin_env=None,
 
     pip_bin = _get_pip_bin(bin_env)
 
-    activate = os.path.join(os.path.dirname(pip_bin), 'activate')
-    if not os.path.isfile(activate):
-        raise CommandExecutionError(
-            "Could not find the path to the virtualenv's 'activate' binary"
-        )
-
-    # We use dot(.) instead of source because it's apparently the better and/or
-    # more supported way to source files on the various "major" Linux shells.
-    cmd = '. {0}; {1} freeze'.format(activate, pip_bin)
+    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
 
     result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
 

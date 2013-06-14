@@ -85,7 +85,6 @@ def _service_by_name(name):
     return False
 
 
-
 def get_all():
     '''
     Return all installed services

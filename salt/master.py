@@ -587,12 +587,16 @@ class MWorker(multiprocessing.Process):
         Take care of a cleartext command
         '''
         log.info('Clear payload received with command {cmd}'.format(**load))
+        if load['cmd'].startswith('__'):
+            return False
         return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
         '''
+        if load['cmd'].startswith('__'):
+            return False
         log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
@@ -607,6 +611,8 @@ class MWorker(multiprocessing.Process):
             log.error('Received malformed command {0}'.format(data))
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
+        if data['cmd'].startswith('__'):
+            return False
         return self.aes_funcs.run_func(data['cmd'], data)
 
     def _update_aes(self):
@@ -714,6 +720,53 @@ class AESFuncs(object):
                   'communicate with the master and could not be verified'
                   .format(id_))
         return False
+
+    def __verify_minion_publish(self, clear_load):
+        '''
+        Verify that the passed information authorized a minion to execute
+        '''
+        # Verify that the load is valid
+        if 'peer' not in self.opts:
+            return False
+        if not isinstance(self.opts['peer'], dict):
+            return False
+        if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
+            return False
+        # If the command will make a recursive publish don't run
+        if re.match('publish.*', clear_load['fun']):
+            return False
+        # Check the permissions for this minion
+        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                ('Minion id {0} is not who it says it is and is attempting '
+                 'to issue a peer command').format(
+                    clear_load['id']
+                )
+            )
+            return False
+        perms = []
+        for match in self.opts['peer']:
+            if re.match(match, clear_load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer'][match], list):
+                    perms.extend(self.opts['peer'][match])
+        if ',' in clear_load['fun']:
+            # 'arg': [['cat', '/proc/cpuinfo'], [], ['foo']]
+            clear_load['fun'] = clear_load['fun'].split(',')
+            arg_ = []
+            for arg in clear_load['arg']:
+                arg_.append(arg.split())
+            clear_load['arg'] = arg_
+        good = self.ckminions.auth_check(
+                perms,
+                clear_load['fun'],
+                clear_load['tgt'],
+                clear_load.get('tgt_type', 'glob'))
+        if not good:
+            return False
+        return True
 
     def _ext_nodes(self, load):
         '''
@@ -1102,6 +1155,89 @@ class AESFuncs(object):
         runner = salt.runner.Runner(opts)
         return runner.run()
 
+    def pub_ret(self, load):
+        '''
+        Request the return data from a specific jid, only allowed
+        if the requesting minion also initialted the execution.
+        '''
+        if any(key not in load for key in ('jid', 'id', 'tok')):
+            return {}
+        if not self.__verify_minion(load['id'], load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                )
+            )
+            return {}
+        # Check that this minion can access this data
+        auth_cache = os.path.join(
+                self.opts['cachedir'],
+                'publish_auth')
+        if not os.path.isdir(auth_cache):
+            os.makedirs(auth_cache)
+        jid_fn = os.path.join(auth_cache, load['jid'])
+        with open(jid_fn, 'r') as fp_:
+            if not load['id'] == fp_.read():
+                return {}
+        # Grab the latest and return
+        return self.local.get_cache_returns(load['jid'])
+
+    def minion_pub(self, clear_load):
+        '''
+        Publish a command initiated from a minion, this method executes minion
+        restrictions so that the minion publication will only work if it is
+        enabled in the config.
+        The configuration on the master allows minions to be matched to
+        salt functions, so the minions can only publish allowed salt functions
+        The config will look like this:
+        peer:
+            .*:
+                - .*
+        This configuration will enable all minions to execute all commands.
+        peer:
+            foo.example.com:
+                - test.*
+        This configuration will only allow the minion foo.example.com to
+        execute commands from the test module
+        '''
+        if not self.__verify_minion_publish(clear_load):
+            return {}
+        # Set up the publication payload
+        load = {
+                'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'expr_form': clear_load.get('tgt_type', 'glob'),
+                'tgt': clear_load['tgt'],
+                'ret': clear_load['ret'],
+                'id': clear_load['id'],
+               }
+        if 'tgt_type' in clear_load:
+            if clear_load['tgt_type'].startswith('node'):
+                if clear_load['tgt'] in self.opts['nodegroups']:
+                    load['tgt'] = self.opts['nodegroups'][clear_load['tgt']]
+                    load['expr_form_type'] = 'compound'
+                    load['expr_form'] = clear_load['tgt_type']
+                else:
+                    return {}
+            else:
+                load['expr_form'] = clear_load['tgt_type']
+        ret = {}
+        ret['jid'] = self.local.cmd_async(**load)
+        ret['minions'] = self.ckminions.check_minions(
+                clear_load['tgt'],
+                load['expr_form'])
+        auth_cache = os.path.join(
+                self.opts['cachedir'],
+                'publish_auth')
+        if not os.path.isdir(auth_cache):
+            os.makedirs(auth_cache)
+        jid_fn = os.path.join(auth_cache, ret['jid'])
+        with open(jid_fn, 'w+') as fp_:
+            fp_.write(clear_load['id'])
+        return ret
+
     def minion_publish(self, clear_load):
         '''
         Publish a command initiated from a minion, this method executes minion
@@ -1120,46 +1256,7 @@ class AESFuncs(object):
         This configuration will only allow the minion foo.example.com to
         execute commands from the test module
         '''
-        # Verify that the load is valid
-        if 'peer' not in self.opts:
-            return {}
-        if not isinstance(self.opts['peer'], dict):
-            return {}
-        if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
-            return {}
-        # If the command will make a recursive publish don't run
-        if re.match('publish.*', clear_load['fun']):
-            return {}
-        # Check the permissions for this minion
-        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                ('Minion id {0} is not who it says it is and is attempting '
-                 'to issue a peer command').format(
-                    clear_load['id']
-                )
-            )
-            return {}
-        perms = []
-        for match in self.opts['peer']:
-            if re.match(match, clear_load['id']):
-                # This is the list of funcs/modules!
-                if isinstance(self.opts['peer'][match], list):
-                    perms.extend(self.opts['peer'][match])
-        if ',' in clear_load['fun']:
-            # 'arg': [['cat', '/proc/cpuinfo'], [], ['foo']]
-            clear_load['fun'] = clear_load['fun'].split(',')
-            arg_ = []
-            for arg in clear_load['arg']:
-                arg_.append(arg.split())
-            clear_load['arg'] = arg_
-        good = self.ckminions.auth_check(
-                perms,
-                clear_load['fun'],
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'))
-        if not good:
+        if not self.__verify_minion_publish(clear_load):
             return {}
         # Set up the publication payload
         load = {
