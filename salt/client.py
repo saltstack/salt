@@ -632,11 +632,21 @@ class LocalClient(object):
                     yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            time.sleep(1)
+                            continue
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                if self.opts['order_masters']:
+                    if syndic_wait < self.opts.get('syndic_wait', 1):
+                        syndic_wait += 1
+                        time.sleep(1)
+                        continue
                 break
             if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
@@ -882,6 +892,7 @@ class LocalClient(object):
         if not os.path.isdir(jid_dir):
             yield {}
         # Wait for the hosts to check in
+        syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
             if raw is not None:
@@ -898,11 +909,21 @@ class LocalClient(object):
                 yield ret
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            time.sleep(1)
+                            continue
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
+                if self.opts['order_masters']:
+                    if syndic_wait < self.opts.get('syndic_wait', 1):
+                        syndic_wait += 1
+                        time.sleep(1)
+                        continue
                 break
             if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
