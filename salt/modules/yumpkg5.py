@@ -6,9 +6,13 @@ Support for YUM
 import copy
 import logging
 import collections
+import os
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
+from salt.modules.yumpkg import (mod_repo, _parse_repo_file, list_repos,
+                                 get_repo, expand_repo_def, del_repo)
 
 log = logging.getLogger(__name__)
 
@@ -27,21 +31,32 @@ def __virtual__():
     except Exception:
         return False
 
+    valid = False
     # Fedora <= 10 need to use this module
     if os_grain == 'Fedora' and os_major_version < 11:
-        return 'pkg'
+        valid = True
     # XCP == 1.x uses a CentOS 5 base
     elif os_grain == 'XCP':
         if os_major_version == 1:
-            return 'pkg'
+            valid = True
     # XenServer 6 and earlier uses a CentOS 5 base
     elif os_grain == 'XenServer':
         if os_major_version <= 6:
-            return 'pkg'
+            valid = True
     else:
         # RHEL <= 5 and all variants need to use this module
         if os_family == 'RedHat' and os_major_version <= 5:
-            return 'pkg'
+            valid = True
+    if valid:
+        global mod_repo, _parse_repo_file, list_repos, get_repo
+        global expand_repo_def, del_repo
+        mod_repo = namespaced_function(mod_repo, globals())
+        _parse_repo_file = namespaced_function(_parse_repo_file, globals())
+        list_repos = namespaced_function(list_repos, globals())
+        get_repo = namespaced_function(get_repo, globals())
+        expand_repo_def = namespaced_function(expand_repo_def, globals())
+        del_repo = namespaced_function(del_repo, globals())
+        return 'pkg'
     return False
 
 
