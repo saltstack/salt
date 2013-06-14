@@ -370,21 +370,38 @@ def win_interfaces():
                 ifaces[iface.Description]['hwaddr'] = iface.MACAddress
             if iface.IPEnabled:
                 ifaces[iface.Description]['up'] = True
-                ifaces[iface.Description]['inet'] = []
                 for ip in iface.IPAddress:
-                    item = {}
-                    item['broadcast'] = ''
-                    try:
-                        item['broadcast'] = iface.DefaultIPGateway[0]
-                    except Exception:
-                        pass
-                    item['netmask'] = iface.IPSubnet[0]
-                    item['label'] = iface.Description
-                    item['address'] = ip
-                    ifaces[iface.Description]['inet'].append(item)
+                    if '.' in ip:
+                        if 'inet' not in ifaces[iface.Description]:
+                            ifaces[iface.Description]['inet'] = []
+                        item = {'address': ip,
+                                'label': iface.Description}
+                        if iface.DefaultIPGateway:
+                            broadcast = next(( i for i in iface.DefaultIPGateway if '.' in i ), '')
+                            if broadcast:
+                                item['broadcast'] = broadcast
+                        if iface.IPSubnet:
+                            netmask = next(( i for i in iface.IPSubnet if '.' in i ), '')
+                            if netmask:
+                                item['netmask'] = netmask
+                        ifaces[iface.Description]['inet'].append(item)
+                    if ':' in ip:
+                        if 'inet6' not in ifaces[iface.Description]:
+                            ifaces[iface.Description]['inet6'] = []
+                        item = {'address': ip}
+                        if iface.DefaultIPGateway:
+                            broadcast = next(( i for i in iface.DefaultIPGateway if ':' in i ), '')
+                            if broadcast:
+                                item['broadcast'] = broadcast
+                        if iface.IPSubnet:
+                            netmask = next(( i for i in iface.IPSubnet if ':' in i ), '')
+                            if netmask:
+                                item['netmask'] = netmask
+                        ifaces[iface.Description]['inet6'].append(item)
             else:
                 ifaces[iface.Description]['up'] = False
     return ifaces
+
 
 
 def interfaces():
