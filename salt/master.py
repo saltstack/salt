@@ -766,6 +766,7 @@ class AESFuncs(object):
                 clear_load.get('tgt_type', 'glob'))
         if not good:
             return False
+        return True
 
     def _ext_nodes(self, load):
         '''
