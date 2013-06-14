@@ -403,7 +403,6 @@ def win_interfaces():
     return ifaces
 
 
-
 def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
