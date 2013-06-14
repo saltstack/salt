@@ -1532,7 +1532,7 @@ class ClearFuncs(object):
                 if fnmatch.fnmatch(keyid, line):
                     return True
                 try:
-                    if re.match(r'\A{0}\z'.format(line), keyid):
+                    if re.match(r'\A{0}\Z'.format(line), keyid):
                         return True
                 except re.error:
                     log.warn(
