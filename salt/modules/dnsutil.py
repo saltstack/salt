@@ -4,6 +4,7 @@ Compendium of generic DNS utilities
 
 # Import salt libs
 import salt.utils
+import socket
 
 # Import python libs
 import logging
@@ -234,6 +235,13 @@ def A(host, nameserver=None):
     '''
     if _has_dig():
         return __salt__['dig.A'](host, nameserver)
+    elif nameserver is None:
+        # fall back to the socket interface, if we don't care who resolves
+        try:
+            (hostname, aliases, addresses) = socket.gethostbyname_ex(host)
+            return addresses
+        except socket.error:
+            return 'Unabled to resolve {0}'.format(host)
 
     return 'This function requires dig, which is not currently available'
 
