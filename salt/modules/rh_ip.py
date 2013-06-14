@@ -646,7 +646,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     return result
 
-def _parse_routes(opts, iface_type, enabled, iface):
+def _parse_routes(iface, opts):
     '''
     Filters given options and outputs valid settings for
     the route settings file.
@@ -657,7 +657,7 @@ def _parse_routes(opts, iface_type, enabled, iface):
     result = {}
 
     if not 'routes' in opts:
-        _raise_error_routes('routes', 'Dictionary of routes')
+        _raise_error_routes(iface, 'routes', 'Dictionary of routes')
 
     for opt in opts:
         result[opt] = opts[opt]
@@ -878,31 +878,26 @@ def build_interface(iface, iface_type, enabled, **settings):
     return _read_file(path)
 
 
-def build_routes(iface, iface_type, enabled, **settings):
+def build_routes(iface, **settings):
     '''
     Build an route script for a network interface.
 
     CLI Example::
 
-        salt '*' ip.build_routes eth0 route <settings>
+        salt '*' ip.build_routes eth0 <settings>
     '''
 
     iface = iface.lower()
-    iface_type = iface_type.lower()
 
-    if iface_type not in _IFACE_TYPES:
-        _raise_error_iface(iface, iface_type, _IFACE_TYPES)
-
-    if iface_type == 'route':
-        opts = _parse_routes(settings, iface_type, enabled, iface)
-        try:
-            template = ENV.get_template('route_eth.jinja')
-        except jinja2.exceptions.TemplateNotFound:
-            log.error(
-                'Could not load template route_eth.jinja'
-            )
-            return = ''
-        routecfg = template.render(opts)
+    opts = _parse_routes(iface, settings)
+    try:
+        template = ENV.get_template('route_eth.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error(
+            'Could not load template route_eth.jinja'
+        )
+        return ''
+    routecfg = template.render(opts)
 
     if settings['test']:
         return _read_temp(routecfg)
@@ -963,6 +958,18 @@ def up(iface, iface_type):  # pylint: disable-msg=C0103
     if iface_type not in ['slave']:
         return __salt__['cmd.run']('ifup {0}'.format(iface))
     return None
+
+
+def get_routes(iface):
+    '''
+    Return the contents of the interface routes script.
+
+    CLI Example::
+
+        salt '*' ip.get_routes eth0
+    '''
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    return _read_file(path)
 
 
 def get_network_settings():
