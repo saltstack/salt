@@ -587,12 +587,16 @@ class MWorker(multiprocessing.Process):
         Take care of a cleartext command
         '''
         log.info('Clear payload received with command {cmd}'.format(**load))
+        if load['cmd'].startswith('__'):
+            return False
         return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
         '''
+        if load['cmd'].startswith('__'):
+            return False
         log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
@@ -607,6 +611,8 @@ class MWorker(multiprocessing.Process):
             log.error('Received malformed command {0}'.format(data))
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
+        if load['cmd'].startswith('__'):
+            return False
         return self.aes_funcs.run_func(data['cmd'], data)
 
     def _update_aes(self):
