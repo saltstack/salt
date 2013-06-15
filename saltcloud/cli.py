@@ -257,25 +257,40 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.config.get('map', None) and \
                 self.selected_query_option is None:
-            if len(mapper.map) == 0:
+            if len(mapper.rendered_map) == 0:
                 sys.stderr.write('No nodes defined in this map')
                 self.exit(1)
             try:
-                dmap = mapper.map_data()
-                if 'destroy' not in dmap and len(dmap['create']) == 0:
-                    sys.stderr.write('All nodes in this map already exist')
-                    self.exit(1)
-
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
+                dmap = mapper.map_data()
 
-                msg = 'The following virtual machines are set to be created:\n'
-                for name in dmap['create']:
-                    msg += '  {0}\n'.format(name)
+                msg = ''
+                if 'errors' in dmap:
+                    msg += 'Found the following errors:\n'
+                    for profile_name, error in dmap['errors'].iteritems():
+                        msg += '  {0}: {1}\n'.format(profile_name, error)
+
+                if 'existing' in dmap:
+                    msg += ('The following virtual machines were found '
+                            'already running:\n')
+                    for name in dmap['existing']:
+                        msg += '  {0}\n'.format(name)
+
+                if dmap['create']:
+                    msg += ('The following virtual machines are set to be '
+                            'created:\n')
+                    for name in dmap['create']:
+                        msg += '  {0}\n'.format(name)
+
                 if 'destroy' in dmap:
                     msg += ('The following virtual machines are set to be '
                             'destroyed:\n')
                     for name in dmap['destroy']:
                         msg += '  {0}\n'.format(name)
+
+                if not dmap['create'] and not dmap.get('destroy', None):
+                    print(msg)
+                    self.exit(1)
 
                 if self.print_confirm(msg):
                     ret = mapper.run_map(dmap)

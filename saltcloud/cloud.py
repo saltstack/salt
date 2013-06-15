@@ -754,13 +754,13 @@ class Map(Cloud):
     '''
     def __init__(self, opts):
         Cloud.__init__(self, opts)
-        self.map = self.read()
+        self.rendered_map = self.read()
 
     def interpolated_map(self, query=None):
         query_map = self.map_providers_parallel(query=query)
         full_map = {}
-        dmap = self.read()
-        for profile, vmap in dmap.items():
+        rendered_map = self.read()
+        for profile, vmap in rendered_map.items():
             provider = self.profile_provider(profile)
             if provider is None:
                 log.info(
@@ -825,7 +825,7 @@ class Map(Cloud):
         # Create expected data format if needed
         for profile, mapped in map_.copy().items():
             if isinstance(mapped, (list, tuple)):
-                entries = []
+                entries = {}
                 for mapping in mapped:
                     if isinstance(mapping, basestring):
                         # Foo:
@@ -839,7 +839,7 @@ class Map(Cloud):
                             #   - bar2:
                             overrides = {}
                         overrides.setdefault('name', name)
-                        entries.append(overrides)
+                        entries[name] = overrides
                 map_[profile] = entries
                 continue
 
@@ -852,10 +852,10 @@ class Map(Cloud):
                 #  bar2:
                 #    grains:
                 #      foo: bar
-                entries = []
+                entries = {}
                 for name, overrides in mapped.iteritems():
                     overrides.setdefault('name', name)
-                    entries.append(overrides)
+                    entries[name] = overrides
                 map_[profile] = entries
                 continue
 
@@ -864,32 +864,39 @@ class Map(Cloud):
                 # the next step
                 mapped = [mapped]
 
-            map_[profile] = [{'name': name} for name in mapped]
+            map_[profile] = {}
+            for name in mapped:
+                map_[profile][name] = {'name': name}
         return map_
 
-    def map_data(self):
+    def map_data(self, cached=False):
         '''
         Create a data map of what to execute on
         '''
-        ret = {}
-        pmap = self.map_providers_parallel()
-        ret['create'] = {}
+        ret = {'create': {}}
+        pmap = self.map_providers_parallel(cached=cached)
         exist = set()
         defined = set()
-        for profile in self.map:
-            pdata = {}
-            for pdef in self.opts['profiles'].values():
-                # The named profile does not exist
-                if pdef.get('profile', None) == profile:
-                    pdata = pdef
-
-            if not pdata:
+        for profile_name, nodes in self.rendered_map.iteritems():
+            if profile_name not in self.opts['profiles']:
+                msg = (
+                    'The required profile, {0!r}, defined in the map '
+                    'does not exist. The defined nodes, {1}, will not '
+                    'be created.'.format(
+                        profile_name,
+                        ', '.join('{0!r}'.format(node) for node in nodes)
+                    )
+                )
+                log.error(msg)
+                if 'errors' not in ret:
+                    ret['errors'] = {}
+                ret['errors'][profile_name] = msg
                 continue
 
-            for overrides in self.map[profile]:
+            profile_data = self.opts['profiles'].get(profile_name)
+            for nodename, overrides in nodes.iteritems():
                 # Get the VM name
-                nodename = overrides.get('name')
-                nodedata = pdata.copy()
+                nodedata = profile_data.copy()
                 # Update profile data with the map overrides
                 for setting in ('grains', 'master', 'minion', 'volumes'):
                     deprecated = 'map_{0}'.format(setting)
@@ -908,34 +915,58 @@ class Map(Cloud):
                 # Add the computed information to the return data
                 ret['create'][nodename] = nodedata
                 # Add the node name to the defined set
-                defined.add(nodename)
+                alias, driver = nodedata['provider'].split(':')
+                defined.add((alias, driver, nodename))
 
-        for prov in pmap:
-            for name in pmap[prov]:
-                exist.add(name)
-                if name not in ret['create']:
-                    continue
+        def get_matching_by_name(name):
+            matches = {}
+            for alias, drivers in pmap.iteritems():
+                for driver, vms in drivers.iteritems():
+                    for vm_name, details in vms.iteritems():
+                        if vm_name == name:
+                            if driver not in matches:
+                                matches[driver] = details['state']
+            return matches
 
-                # FIXME: what about other providers?
-                if prov in ('aws', 'ec2'):
-                    if ('aws' in pmap and
-                            pmap['aws'][name]['state'] != 'TERMINATED') or (
-                            'ec2' in pmap and
-                            pmap['ec2'][name]['state'] != 'TERMINATED'):
-                        log.info(
-                            '{0!r} already exists, removing from the '
-                            'create map'.format(name)
-                        )
-                        ret['create'].pop(name)
-                    continue
+        for alias, drivers in pmap.iteritems():
+            for driver, vms in drivers.iteritems():
+                for name, details in vms.iteritems():
+                    exist.add((alias, driver, name))
+                    if name not in ret['create']:
+                        continue
 
-                # Regarding other providers, simply remove them for the create
-                # map.
-                log.warn(
-                    '{0!r} already exists, removing from the '
-                    'create map'.format(name)
-                )
-                ret['create'].pop(name)
+                    # The machine is set to be created. Does it already exist?
+                    matching = get_matching_by_name(name)
+                    if not matching:
+                        continue
+
+                    # A machine by the same name exists
+                    for mdriver, state in matching.iteritems():
+                        if name not in ret['create']:
+                            # Machine already removed
+                            break
+
+                        if mdriver not in ('aws', 'ec2') and \
+                                state.lower() != 'terminated':
+                            # Regarding other providers, simply remove
+                            # them for the create map.
+                            log.warn(
+                                '{0!r} already exists, removing from '
+                                'the create map'.format(name)
+                            )
+                            if 'existing' not in ret:
+                                ret['existing'] = {}
+                            ret['existing'][name] = ret['create'].pop(name)
+                            continue
+
+                        if state.lower() != 'terminated':
+                            log.info(
+                                '{0!r} already exists, removing '
+                                'from the create map'.format(name)
+                            )
+                            if 'existing' not in ret:
+                                ret['existing'] = {}
+                            ret['existing'][name] = ret['create'].pop(name)
 
         if self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
