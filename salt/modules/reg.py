@@ -79,8 +79,6 @@ def read_key(hkey, path, key):
         return False
 
 
-
-
 def set_key(hkey, path, key, value):
     '''
     Set a registry key
@@ -151,5 +149,3 @@ def delete_key(hkey, path, key):
     except Exception:
         _winreg.CloseKey(handle)
     return True
-
-
