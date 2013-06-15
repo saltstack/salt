@@ -1032,7 +1032,13 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set(['require_in', 'watch_in', 'use', 'use_in', 'prereq'])
+        req_in = set([
+            'require_in',
+            'watch_in',
+            'use',
+            'use_in',
+            'prereq',
+            ])
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
