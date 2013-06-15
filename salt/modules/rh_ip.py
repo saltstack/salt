@@ -63,7 +63,6 @@ _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
-    'route',
 ]
 
 
@@ -646,6 +645,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     return result
 
+
 def _parse_routes(iface, opts):
     '''
     Filters given options and outputs valid settings for
@@ -661,6 +661,7 @@ def _parse_routes(iface, opts):
         result[opt] = opts[opt]
 
     return result
+
 
 def _parse_network_settings(opts, current):
     '''
