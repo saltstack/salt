@@ -16,7 +16,14 @@ def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
     '''
-    return salt.utils.which('pkgin')
+    ppath = salt.utils.which('pkgin')
+    if ppath is None:
+        # can't find pkgin in default PATH, try default location
+        ppath = '/usr/pkg/bin/pkgin'
+        if os.path.exists(ppath) is False:
+            return None
+
+    return ppath
 
 
 def __virtual__():
