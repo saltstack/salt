@@ -82,7 +82,7 @@ def _error_msg_routes(iface, option, expected):
     a list of expected values.
     '''
     msg = 'Invalid option -- Route interface: {0}, Option: {1}, Expected: [{2}]'
-    return msg.format(iface, option, '|'.join(expected))
+    return msg.format(iface, option, expected)
 
 
 def _log_default_iface(iface, opt, value):
@@ -653,11 +653,9 @@ def _parse_routes(iface, opts):
     '''
     # Normalize keys
     opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
-    current = dict((k.lower(), v) for (k, v) in current.iteritems())
     result = {}
-
     if not 'routes' in opts:
-        _raise_error_routes(iface, 'routes', 'Dictionary of routes')
+        _raise_error_routes(iface, 'routes', 'List of routes')
 
     for opt in opts:
         result[opt] = opts[opt]
@@ -888,7 +886,6 @@ def build_routes(iface, **settings):
     '''
 
     iface = iface.lower()
-
     opts = _parse_routes(iface, settings)
     try:
         template = ENV.get_template('route_eth.jinja')
@@ -897,7 +894,7 @@ def build_routes(iface, **settings):
             'Could not load template route_eth.jinja'
         )
         return ''
-    routecfg = template.render(opts)
+    routecfg = template.render(routes=opts['routes'])
 
     if settings['test']:
         return _read_temp(routecfg)
@@ -1031,3 +1028,4 @@ def build_network_settings(**settings):
     _write_file_network(network, _RH_NETWORK_FILE)
 
     return _read_file(_RH_NETWORK_FILE)
+

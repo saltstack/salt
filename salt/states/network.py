@@ -32,15 +32,16 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
           - 8.8.8.8
           - 8.8.4.4
       network.routes:
-        - secure_network:
-          ipaddr: 10.2.0.0
-          netmask: 255.255.255.0
-          gateway: 10.2.0.1
-        - HQ_network:
-          ipaddr: 10.100.0.0
-          netmask: 255.255.0.0
-          gateway: 10.100.0.10
-          
+        - routes:
+          - name: secure_network
+            ipaddr: 10.2.0.0
+            netmask: 255.255.255.0
+            gateway: 10.1.0.3
+          - name: HQ_network
+            ipaddr: 10.100.0.0
+            netmask: 255.255.0.0
+            gateway: 10.1.0.10
+
     eth2:
       network.managed:
         - type: slave
@@ -304,7 +305,7 @@ def routes(name, **kwargs):
         return ret
 
     # Apply interface routes
-    if apply_net_settings:
+    if apply_routes:
         try:
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
