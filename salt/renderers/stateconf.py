@@ -278,7 +278,7 @@ def rewrite_sls_includes_excludes(data, sls, env):
                     slsenv = env
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: sls+incl[1:]}
+                    includes[i] = {slsenv: (sls + incl[1:])}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):
@@ -480,7 +480,7 @@ def add_start_state(data, sls):
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
     reqin = {state_name(data[sid].iterkeys().next()): sid}
-    data[start_sid] = { STATE_FUNC: [ {'require_in': [reqin]} ] }
+    data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
 def add_goal_state(data):

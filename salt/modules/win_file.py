@@ -57,7 +57,7 @@ def __virtual__():
             source_list = namespaced_function(source_list, globals())
             mkdir = namespaced_function(mkdir, globals())
             __clean_tmp = namespaced_function(__clean_tmp, globals())
-            
+
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False

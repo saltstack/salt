@@ -254,6 +254,53 @@ Objects NOT Loaded into the Salt Minion
 
     cheese = {} # Not a callable Python object
 
+Useful Decorators for Modules
+==========================
+Sometimes when writing modules for large scale deployments you run into some small
+things that end up severely complicating the code. To alleviate some of this pain
+Salt has some useful decorators for use within modules!
+
+Depends Decorator
+-----------------
+When writing custom modules there are many times where some of the module will
+work on all hosts, but some functions require (for example) a service to be installed.
+Instead of trying to wrap much of the code in large try/except blocks you can use
+a simple decorator to do this. If the dependancies passed to the decorator don't
+exist, then the salt minion will remove those functions from the module on that host.
+If a "fallback_funcion" is defined, it will replace the function instead of removing it
+
+.. code-block:: python
+
+    from salt.utils.decorators import depends
+    try:
+        import dependancy_that_sometimes_exists
+    except ImportError:
+        pass
+
+    @depends('dependancy_that_sometimes_exists')
+    def foo():
+        '''
+        Function with a dependancy on the "dependancy_that_sometimes_exists" module,
+        if the "dependancy_that_sometimes_exists" is missing this function will not exist
+        '''
+        return True
+
+    def _fallback():
+        '''
+        Fallback function for the depends decorator to replace a function with
+        '''
+        return '"dependancy_that_sometimes_exists" needs to be installed for this function to exist'
+
+    @depends('dependancy_that_sometimes_exists', fallback_funcion=_fallback)
+    def foo():
+        '''
+        Function with a dependancy on the "dependancy_that_sometimes_exists" module.
+        If the "dependancy_that_sometimes_exists" is missing this function will be
+        replaced with "_fallback"
+        '''
+        return True
+
+
 Examples of Salt Modules
 ========================
 

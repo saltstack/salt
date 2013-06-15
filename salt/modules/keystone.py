@@ -11,7 +11,7 @@ Module for handling openstack keystone calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.insecure: False   #(optional)
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
-        
+
         OR (for token based authentication)
 
         keystone.token: 'ADMIN'

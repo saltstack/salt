@@ -150,7 +150,26 @@ Optional, keyword arguments are also supported:
 
     salt '*' pip.install salt timeout=5 upgrade=True
 
-They are always in the form of ``kwarg=argument``. 
+They are always in the form of ``kwarg=argument``.
+
+Arguments are formatted as YAML:
+
+.. code-block:: bash
+
+    salt '*' cmd.run 'echo "Hello: $FIRST_NAME"' env='{FIRST_NAME: "Joe"}'
+
+Note: dictionaries must have curly braces around them (like the ``env``
+keyword argument above).  This was changed in 0.15.1: in the above example,
+the first argument used to be parsed as the dictionary
+``{'echo "Hello': '$FIRST_NAME"'}``. This was generally not the expected
+behavior.
+
+If you want to test what parameters are actually passed to a module, use the
+``test.arg_repr`` command:
+
+.. code-block:: bash
+
+    salt '*' test.arg_repr 'echo "Hello: $FIRST_NAME"' env='{FIRST_NAME: "Joe"}'
 
 Finding available minion functions
 ``````````````````````````````````
@@ -197,8 +216,8 @@ spaces around the commas that separate arguments. For example:
 
     salt '*' cmd.run,test.ping,test.echo 'echo "1,2,3"' , , foo
 
-You may change the arguments separator using the ``args-separator`` option:
+You may change the arguments separator using the ``--args-separator`` option:
 
 .. code-block:: bash
 
-    salt --arg-separator=::: '*' some.fun,test.echo params with comma , ::: foo
+    salt --args-separator=:: '*' some.fun,test.echo params with , comma :: foo

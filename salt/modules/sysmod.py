@@ -126,9 +126,9 @@ def argspec(module=''):
             except TypeError:
                 # this happens if not callable
                 continue
-            
+
             args, varargs, kwargs, defaults = aspec
-            
+
             ret[fun] = {}
             ret[fun]['args'] = args if args else None
             ret[fun]['defaults'] = defaults if defaults else None

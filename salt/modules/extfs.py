@@ -56,7 +56,7 @@ def mkfs(device, fs_type, **kwargs):
         fs_type: set the filesystem type (REQUIRED)
         usage_type: how the filesystem is going to be used
         uuid: set the UUID for the file system
-        
+
         see man 8 mke2fs for a more complete description of these options
     '''
     kwarg_map = {'block_size': 'b',
@@ -83,7 +83,7 @@ def mkfs(device, fs_type, **kwargs):
                  'super': 'S',
                  'usage_type': 'T',
                  'uuid': 'U'}
-        
+
     opts = ''
     for key in kwargs.keys():
         opt = kwarg_map[key]
@@ -261,4 +261,3 @@ def dump(device, args=None):
                 line = line.strip()
                 ret['blocks'][group]['extra'].append(line)
     return ret
-

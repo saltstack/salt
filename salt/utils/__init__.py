@@ -65,6 +65,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
+#KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$", re.UNICODE) # python 3
+KWARG_REGEX = re.compile(r"^([^\d\W]\w*)=(.*)$")
 
 log = logging.getLogger(__name__)
 
@@ -1164,3 +1166,22 @@ def namespaced_function(function, global_dict, defaults=None):
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
+
+def parse_kwarg(string):
+    '''
+    Parses the string and looks for the kwarg format:
+    "{argument name}={argument value}"
+    For example:
+    "my_message=Hello world"
+    The argument name must have a valid python identifier format (it should
+    match the following regular expression: [^\\d\\W]\\w*).
+    If the string matches, then this function returns the following tuple:
+    ({argument name}, {value})
+    Or else it returns:
+    (None, None)
+    '''
+    match = KWARG_REGEX.match(string)
+    if match:
+        return match.groups()
+    else:
+        return None, None

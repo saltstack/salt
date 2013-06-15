@@ -248,7 +248,6 @@ def _run(cmd,
             msg = 'Environment could not be retrieved for User \'{0}\''.format(runas)
             raise CommandExecutionError(msg)
 
-
     if not quiet:
         # Put the most common case first
         log.info(
@@ -386,13 +385,13 @@ def run(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     out = _run(cmd,
@@ -427,13 +426,13 @@ def run_stdout(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stdout template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     stdout = _run(cmd,
@@ -467,13 +466,13 @@ def run_stderr(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_stderr template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     stderr = _run(cmd,
@@ -507,13 +506,13 @@ def run_all(cmd,
 
     CLI Example::
 
-        salt '*' cmd.run_all "ls -l | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_all "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
     For example::
 
-        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \$2}'"
+        salt '*' cmd.run_all template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     '''
     ret = _run(cmd,

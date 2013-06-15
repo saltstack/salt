@@ -142,10 +142,35 @@ def kwarg(**kwargs):
 
     CLI Example::
 
-        salt '*' test.kwarg
+        salt '*' test.kwarg num=1 txt="two" env='{a: 1, b: "hello"}'
     '''
     return kwargs
 
+def arg(*args, **kwargs):
+    '''
+    Print out the data passed into the function ``*args`` and ```kwargs``, this
+    is used to both test the publication data and cli argument passing, but
+    also to display the information available within the publication data.
+    Returns {"args": args, "kwargs": kwargs}.
+
+    CLI Example::
+
+        salt '*' test.arg 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
+    '''
+    return {"args": args, "kwargs": kwargs}
+
+def arg_repr(*args, **kwargs):
+    '''
+    Print out the data passed into the function ``*args`` and ```kwargs``, this
+    is used to both test the publication data and cli argument passing, but
+    also to display the information available within the publication data.
+    Returns {"args": repr(args), "kwargs": repr(kwargs)}.
+
+    CLI Example::
+
+        salt '*' test.arg_repr 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
+    '''
+    return {"args": repr(args), "kwargs": repr(kwargs)}
 
 def fib(num):
     '''

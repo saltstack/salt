@@ -44,12 +44,6 @@ def __virtual__():
     '''
     if __grains__['os_family'] != 'Debian':
         return False
-    if not apt_support:
-        err_str = 'Unable to import "sourceslist" from "aptsources" module: {0}'
-        log.error(err_str.format(str(e)))
-    if not ppa_format_support and __grains__['os'] == 'Ubuntu':
-        err_str = 'Unable to import "softwareproperties.ppa": {0}'
-        log.warning(err_str.format(str(e)))
     return 'pkg'
 
 
@@ -311,6 +305,9 @@ def install(name=None,
         except Exception as e:
             log.exception(e)
 
+    old = list_pkgs()
+
+    downgrade = False
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -329,11 +326,17 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
+                cver = old.get(param)
+                if cver is not None \
+                        and __salt__['pkg.compare'](pkg1=version_num,
+                                                    oper='<', pkg2=cver):
+                    downgrade = True
                 targets.append('"{0}={1}"'.format(param, version_num))
         if fromrepo:
             log.info('Targeting repo "{0}"'.format(fromrepo))
-        cmd = 'apt-get -q -y {confold} {confdef} {verify} {target} install ' \
-              '{pkg}'.format(
+        cmd = 'apt-get -q -y {force_yes} {confold} {confdef} {verify} ' \
+              '{target} install {pkg}'.format(
+                  force_yes='--force-yes' if downgrade else '',
                   confold='-o DPkg::Options::=--force-confold',
                   confdef='-o DPkg::Options::=--force-confdef',
                   verify='--allow-unauthenticated' if skip_verify else '',
@@ -341,7 +344,6 @@ def install(name=None,
                   pkg=' '.join(targets),
               )
 
-    old = list_pkgs()
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -699,7 +701,9 @@ def list_repos():
        salt '*' pkg.list_repos disabled=True
     '''
     if not apt_support:
-        return 'Error: aptsources.sourceslist python module not found'
+        msg = 'Error: aptsources.sourceslist python module not found'
+        log.error(msg)
+        return msg
 
     repos = {}
     sources = sourceslist.SourcesList()

@@ -38,13 +38,13 @@ def run(plugins):
 
     if isinstance(plugins, string_types):
         plugins = plugins.split(',')
-    
+
     data = {}
     for plugin in plugins:
         if plugin not in all_plugins:
             continue
         data[plugin] = {}
-        muninout =  __salt__['cmd.run']('munin-run ' + plugin)
+        muninout = __salt__['cmd.run']('munin-run ' + plugin)
         for line in muninout.split('\n'):
             if 'value' in line: # This skips multigraph lines, etc
                 key, val = line.split(' ')

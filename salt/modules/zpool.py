@@ -67,7 +67,7 @@ def iostat(name=''):
 def zpool_list():
     '''
     Return a list of all pools in the system with health status and space usage
-    
+
     CLI Example::
 
         salt '*' zpool.zpool_list
@@ -83,7 +83,7 @@ def exists(pool_name):
     Check if a ZFS storage pool is active
 
     CLI Example::
-    
+
         salt '*' zpool.exists myzpool
     '''
     current_pools = zpool_list()

@@ -24,7 +24,7 @@ def mod_init(low):
     '''
     try:
         __salt__['portage_config.enforce_nice_config']()
-    except:
+    except Exception:
         return False
     return True
 
@@ -32,7 +32,7 @@ def _flags_helper(conf, atom, new_flags, test=False):
     import traceback
     try:
         new_flags = __salt__['portage_config.get_missing_flags'](conf, atom, new_flags)
-    except:
+    except Exception:
         return {'result': False, 'comment': traceback.format_exc()}
     if new_flags:
         old_flags = __salt__['portage_config.get_flags_from_package_conf'](conf, atom)
@@ -45,7 +45,7 @@ def _mask_helper(conf, atom, test=False):
     import traceback
     try:
         is_present = __salt__['portage_config.is_present'](conf, atom)
-    except:
+    except Exception:
         return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:
         if not test:
@@ -92,8 +92,8 @@ def flags(name,
     if use:
         result = _flags_helper('use', name, use, __opts__['test'])
         if result['result']:
-            ret['changes']['use'] = c
-        elif result['result']==False:
+            ret['changes']['use'] = result['changes']
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -102,7 +102,7 @@ def flags(name,
         result = _flags_helper('accept_keywords', name, accept_keywords, __opts__['test'])
         if result['result']:
             ret['changes']['accept_keywords'] = result['changes']
-        elif result['result']==False:
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -111,7 +111,7 @@ def flags(name,
         result = _flags_helper('env', name, env, __opts__['test'])
         if result['result']:
             ret['changes']['env'] = result['changes']
-        elif result['result']==False:
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -120,7 +120,7 @@ def flags(name,
         result = _flags_helper('license', name, license, __opts__['test'])
         if result['result']:
             ret['changes']['license'] = result['changes']
-        elif result['result']==False:
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -129,7 +129,7 @@ def flags(name,
         result = _flags_helper('properties', name, properties, __opts__['test'])
         if result['result']:
             ret['changes']['properties'] = result['changes']
-        elif result['result']==False:
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -138,7 +138,7 @@ def flags(name,
         result = _mask_helper('mask', name, __opts__['test'])
         if result['result']:
             ret['changes']['mask'] = 'masked'
-        elif result['result']==False:
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret
@@ -147,7 +147,7 @@ def flags(name,
         result = _mask_helper('unmask', name, __opts__['test'])
         if result['result']:
             ret['changes']['unmask'] = 'unmasked'
-        elif result['result']==False:
+        elif result['result'] == False:
             ret['result'] = False
             ret['comment'] = result['comment']
             return ret

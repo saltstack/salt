@@ -38,7 +38,7 @@ def _get_cmd():
         return 'alternatives'
     else:
         return 'update-alternatives'
-    
+
 
 def display(name):
     '''
@@ -115,4 +115,3 @@ def remove(name, path):
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
-

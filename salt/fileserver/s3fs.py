@@ -144,7 +144,7 @@ def file_hash(load, fnd):
             fnd['bucket'],
             load['env'],
             fnd['path'])
-    
+
     if os.path.isfile(cached_file_path):
         ret['hsum'] = salt.utils.get_hash(cached_file_path)
         ret['hash_type'] = 'md5'

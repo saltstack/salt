@@ -62,9 +62,8 @@ class Caller(object):
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(-1)
         try:
-            args, kwargs = salt.minion.detect_kwargs(
+            args, kwargs = salt.minion.parse_args_and_kwargs(
                 self.minion.functions[fun], self.opts['arg'])
-            args, kwargs = self.parse_args(args, kwargs)
             sdata = {
                     'fun': fun,
                     'pid': os.getpid(),
@@ -107,34 +106,6 @@ class Caller(object):
                 except Exception:
                     pass
         return ret
-
-    def parse_arg(self, arg):
-        '''
-        Yaml-erize an argument
-        '''
-        try:
-            if '\n' not in arg:
-                arg = yaml.safe_load(arg)
-            if isinstance(arg, bool):
-                return str(arg)
-            return arg
-        except Exception:
-            return arg
-
-    def parse_args(self, args=None, kwargs=None):
-        '''
-        Read in the args and kwargs and return the structures with parsed
-        arguments
-        '''
-        r_args = []
-        r_kwargs = {}
-        if args:
-            for arg in args:
-                r_args.append(self.parse_arg(arg))
-        if kwargs:
-            for key, val in kwargs.items():
-                r_kwargs[key] = self.parse_arg(val)
-        return r_args, r_kwargs
 
     def print_docs(self):
         '''

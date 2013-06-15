@@ -104,6 +104,7 @@ def install(pkgs=None,
             upgrade=False,
             force_reinstall=False,
             ignore_installed=False,
+            exists_action=None,
             no_deps=False,
             no_install=False,
             no_download=False,
@@ -172,6 +173,8 @@ def install(pkgs=None,
         up-to-date.
     ignore_installed
         Ignore the installed packages (reinstalling instead)
+    exists_action
+        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe, (b)ackup
     no_deps
         Ignore package dependencies
     no_install
@@ -364,6 +367,10 @@ def install(pkgs=None,
 
     if ignore_installed:
         cmd = '{cmd} --ignore-installed '.format(cmd=cmd)
+
+    if exists_action:
+        cmd = '{cmd} --exists-action={action} '.format(
+            cmd=cmd, action=exists_action)
 
     if no_deps:
         cmd = '{cmd} --no-deps '.format(cmd=cmd)

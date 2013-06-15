@@ -43,7 +43,7 @@ def _get_serv():
         return
     #Combine host and port to conform syntax of python memcache client
     memcacheoptions = (host, port)
-   
+
     return memcache.Client([':'.join(memcacheoptions)], debug=0)
     ## TODO: make memcacheoptions cluster aware
     # Servers can be passed in two forms:
