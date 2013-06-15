@@ -612,6 +612,7 @@ class LocalClient(object):
         if not os.path.isdir(jid_dir):
             yield {}
         # Wait for the hosts to check in
+        syndic_wait = 0
         while True:
             raw = self.event.get_event(timeout, jid)
             if raw is not None:
