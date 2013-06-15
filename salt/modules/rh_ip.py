@@ -75,6 +75,15 @@ def _error_msg_iface(iface, option, expected):
     return msg.format(iface, option, '|'.join(expected))
 
 
+def _error_msg_routes(iface, option, expected):
+    '''
+    Build an appropriate error message from a given option and
+    a list of expected values.
+    '''
+    msg = 'Invalid option -- Route interface: {0}, Option: {1}, Expected: [{2}]'
+    return msg.format(iface, option, expected)
+
+
 def _log_default_iface(iface, opt, value):
     msg = 'Using default option -- Interface: {0} Option: {1} Value: {2}'
     log.info(msg.format(iface, opt, value))
@@ -637,6 +646,23 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     return result
 
 
+def _parse_routes(iface, opts):
+    '''
+    Filters given options and outputs valid settings for
+    the route settings file.
+    '''
+    # Normalize keys
+    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    result = {}
+    if not 'routes' in opts:
+        _raise_error_routes(iface, 'routes', 'List of routes')
+
+    for opt in opts:
+        result[opt] = opts[opt]
+
+    return result
+
+
 def _parse_network_settings(opts, current):
     '''
     Filters given options and outputs valid settings for
@@ -704,6 +730,15 @@ def _raise_error_network(option, expected):
     Log and raise an error with a logical formated message.
     '''
     msg = _error_msg_network(option, expected)
+    log.error(msg)
+    raise AttributeError(msg)
+
+
+def _raise_error_routes(iface, option, expected):
+    '''
+    Log and raise an error with a logical formated message.
+    '''
+    msg = _error_msg_routes(iface, option, expected)
     log.error(msg)
     raise AttributeError(msg)
 
@@ -842,6 +877,35 @@ def build_interface(iface, iface_type, enabled, **settings):
     return _read_file(path)
 
 
+def build_routes(iface, **settings):
+    '''
+    Build an route script for a network interface.
+
+    CLI Example::
+
+        salt '*' ip.build_routes eth0 <settings>
+    '''
+
+    iface = iface.lower()
+    opts = _parse_routes(iface, settings)
+    try:
+        template = ENV.get_template('route_eth.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error(
+            'Could not load template route_eth.jinja'
+        )
+        return ''
+    routecfg = template.render(routes=opts['routes'])
+
+    if settings['test']:
+        return _read_temp(routecfg)
+
+    _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, 'route-{0}')
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+
+    return _read_file(path)
+
+
 def down(iface, iface_type):
     '''
     Shutdown a network interface
@@ -892,6 +956,18 @@ def up(iface, iface_type):  # pylint: disable-msg=C0103
     if iface_type not in ['slave']:
         return __salt__['cmd.run']('ifup {0}'.format(iface))
     return None
+
+
+def get_routes(iface):
+    '''
+    Return the contents of the interface routes script.
+
+    CLI Example::
+
+        salt '*' ip.get_routes eth0
+    '''
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    return _read_file(path)
 
 
 def get_network_settings():
@@ -953,3 +1029,4 @@ def build_network_settings(**settings):
     _write_file_network(network, _RH_NETWORK_FILE)
 
     return _read_file(_RH_NETWORK_FILE)
+
